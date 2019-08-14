@@ -38,6 +38,7 @@ import com.southernstorm.noise.crypto.SHA512MessageDigest;
  * Utility functions for the Noise protocol library.
  */
 public final class Noise {
+	private Noise() {}
 
 	/**
 	 * Maximum length for Noise packets.
@@ -74,15 +75,16 @@ public final class Noise {
 	}
 
 	/**
-	 * Creates a Diffie-Hellman object from its Noise protocol name.
+	 * Creates a Diffie-Hellman object from its Noise protocol name. You can use
+	 * "25519", "448" or "NewHope". The first two use the Curve25519 and Curve448
+	 * algorithms from DJ Bernstein, which implement fast, modern elliptic curve
+	 * key agreement. NewHope is an algorithm conjectured to be safe against
+	 * quantum computers.
 	 * 
-	 * @param name The name of the DH algorithm; e.g. "25519", "448", etc.
-	 * 
+	 * @param name The name of the DH algorithm.
 	 * @return The Diffie-Hellman object if the name is recognized.
-	 * 
-	 * @throws NoSuchAlgorithmException The name is not recognized as a
-	 * valid Noise protocol name, or there is no cryptography provider
-	 * in the system that implements the algorithm.
+	 * @see <a href="https://eprint.iacr.org/2015/1092.pdf">The New Hope algorithm paper</a>
+	 * @throws NoSuchAlgorithmException The name is not recognized as a valid Noise protocol name.
 	 */
 	public static DHState createDH(String name) throws NoSuchAlgorithmException
 	{

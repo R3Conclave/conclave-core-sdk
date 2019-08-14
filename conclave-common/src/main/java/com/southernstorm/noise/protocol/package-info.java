@@ -2,6 +2,6 @@
 /**
  * Provides classes for communicating via the Noise protocol.
  *
- * Reference: http://noiseprotocol.org
+ * @see <a href="http://noiseprotocol.org">The Noise Framework</a>
  */
 package com.southernstorm.noise.protocol;

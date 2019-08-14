@@ -29,7 +29,7 @@ import javax.crypto.ShortBufferException;
  * Interface to an authenticated cipher for use in the Noise protocol.
  *
  * CipherState objects are used to encrypt or decrypt data during a
- * session.  Once the handshake has completed, HandshakeState.split()
+ * session. Once the handshake has completed, {@link HandshakeState#split()}
  * will create two CipherState objects for encrypting packets sent to
  * the other party, and decrypting packets received from the other party.
  */
@@ -59,13 +59,13 @@ public interface CipherState extends Destroyable {
 
 	/**
 	 * Initializes the key on this cipher object.
-	 * 
+	 *
+	 * The key buffer must contain at least {@link #getKeyLength()} bytes
+	 * starting at offset.
+	 *
 	 * @param key Points to a buffer that contains the key.
 	 * @param offset The offset of the key in the key buffer.
-	 * 
-	 * The key buffer must contain at least getKeyLength() bytes
-	 * starting at offset.
-	 * 
+	 *
 	 * @see #hasKey()
 	 */
 	void initializeKey(byte[] key, int offset);
@@ -82,7 +82,17 @@ public interface CipherState extends Destroyable {
 	
 	/**
 	 * Encrypts a plaintext buffer using the cipher and a block of associated data.
-	 * 
+	 * The associated data is not included but is taken into account during
+	 * the authentication checks, so it must be provided at decryption time and
+	 * not have been tampered with.
+	 *
+	 * The plaintext and ciphertext buffers can be the same for in-place
+	 * encryption.  In that case, plaintextOffset must be identical to
+	 * ciphertextOffset.
+	 *
+	 * There must be enough space in the ciphertext buffer to accommodate
+	 * length + getMACLength() bytes of data starting at ciphertextOffset.
+	 *
 	 * @param ad The associated data, or null if there is none.
 	 * @param plaintext The buffer containing the plaintext to encrypt.
 	 * @param plaintextOffset The offset within the plaintext buffer of the
@@ -92,26 +102,24 @@ public interface CipherState extends Destroyable {
 	 * @param ciphertextOffset The first offset within the ciphertext buffer
 	 * to place the ciphertext and the MAC tag.
 	 * @param length The length of the plaintext.
-	 * @return The length of the ciphertext plus the MAC tag, or -1 if the
-	 * ciphertext buffer is not large enough to hold the result.
+	 * @return The length of the ciphertext plus the MAC tag.
 	 * 
 	 * @throws ShortBufferException The ciphertext buffer does not have
 	 * enough space to hold the ciphertext plus MAC.
 	 * 
 	 * @throws IllegalStateException The nonce has wrapped around.
-	 * 
-	 * The plaintext and ciphertext buffers can be the same for in-place
-	 * encryption.  In that case, plaintextOffset must be identical to
-	 * ciphertextOffset.
-	 * 
-	 * There must be enough space in the ciphertext buffer to accomodate
-	 * length + getMACLength() bytes of data starting at ciphertextOffset.
 	 */
 	int encryptWithAd(byte[] ad, byte[] plaintext, int plaintextOffset, byte[] ciphertext, int ciphertextOffset, int length) throws ShortBufferException;
 
 	/**
 	 * Decrypts a ciphertext buffer using the cipher and a block of associated data.
-	 * 
+	 * The associated data must match the data provided at encryption time, otherwise
+	 * {@link BadPaddingException} will be thrown.
+	 *
+	 * The plaintext and ciphertext buffers can be the same for in-place
+	 * decryption.  In that case, ciphertextOffset must be identical to
+	 * plaintextOffset.
+	 *
 	 * @param ad The associated data, or null if there is none.
 	 * @param ciphertext The buffer containing the ciphertext to decrypt.
 	 * @param ciphertextOffset The offset within the ciphertext buffer of
@@ -129,10 +137,6 @@ public interface CipherState extends Destroyable {
 	 * @throws BadPaddingException The MAC value failed to verify.
 	 * 
 	 * @throws IllegalStateException The nonce has wrapped around.
-	 * 
-	 * The plaintext and ciphertext buffers can be the same for in-place
-	 * decryption.  In that case, ciphertextOffset must be identical to
-	 * plaintextOffset.
 	 */
 	int decryptWithAd(byte[] ad, byte[] ciphertext, int ciphertextOffset, byte[] plaintext, int plaintextOffset, int length) throws ShortBufferException, BadPaddingException;
 
@@ -147,12 +151,12 @@ public interface CipherState extends Destroyable {
 	
 	/**
 	 * Sets the nonce value.
-	 * 
-	 * @param nonce The new nonce value, which must be greater than or equal
-	 * to the current value.
-	 * 
+	 *
 	 * This function is intended for testing purposes only.  If the nonce
 	 * value goes backwards then security may be compromised.
+	 *
+	 * @param nonce The new nonce value, which must be greater than or equal
+	 * to the current value.
 	 */
 	void setNonce(long nonce);
 }

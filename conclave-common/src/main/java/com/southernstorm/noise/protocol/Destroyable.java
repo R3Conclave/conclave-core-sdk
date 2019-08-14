@@ -23,19 +23,23 @@
 package com.southernstorm.noise.protocol;
 
 /**
- * Interface for objects that implement destroying.
+ * Interface for objects that can wipe their in-memory state by
+ * zeroing out arrays.
  * 
  * Applications that use the Noise protocol can inadvertently leave
- * sensitive data in the heap if steps are not taken to clean up.
+ * sensitive data in the heap if steps are not taken to clean them up.
+ *
+ * Please note that as most JVMs use copying garbage collectors,
+ * there is no way to completely remove all traces of a destroyable
+ * from memory. Additionally this step only matters if you believe
+ * an adversary may obtain read access to your address space, in
+ * which case you may be leaking keys and other valuable secrets
+ * more directly.
  * 
- * This interface can be implemented by objects that know how to
- * securely clean up after themselves.
- * 
- * The Noise.destroy() function can help with destroying byte arrays
+ * The {@link Noise#destroy(byte[])} function can help with destroying byte arrays
  * that hold sensitive values.
  */
 public interface Destroyable {
-
 	/**
 	 * Destroys all sensitive state in the current object.
 	 */
