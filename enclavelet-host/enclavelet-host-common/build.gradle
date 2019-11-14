@@ -14,7 +14,6 @@ repositories {
 dependencies {
     api "io.grpc:grpc-protobuf:$grpc_version"
     api "io.grpc:grpc-stub:$grpc_version"
-    api "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
 }
 
 protobuf {

@@ -1,7 +1,11 @@
 package com.r3.sgx.enclavelethost.client
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.sgx.core.common.*
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.r3.sgx.core.common.Cursor
+import com.r3.sgx.core.common.SgxAttributes
+import com.r3.sgx.core.common.SgxEnclaveFlags
+import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.common.attestation.SgxQuoteReader
@@ -55,8 +59,9 @@ class EpidAttestationVerification(
             throw GeneralSecurityException("Report failed IAS signature check")
         }
 
-        val objectMapper = ObjectMapper()
-        val response = objectMapper.readValue<ReportResponse>(attestation.iasResponse.toByteArray(), ReportResponse::class.java)
+        val response = reportResponseDeserialiseMapper.readValue<ReportResponse>(attestation.iasResponse.newInput())
+        check(response.version == 3)  // As advised in the SGX docs
+
         val status = response.isvEnclaveQuoteStatus
         when {
             status == QuoteStatus.OK -> {}
@@ -108,6 +113,10 @@ class EpidAttestationVerification(
         val certPathChecker = CertPathValidator.getInstance("PKIX").revocationChecker as PKIXRevocationChecker
         pkixParameters.addCertPathChecker(certPathChecker)
         return pkixParameters
+    }
+
+    companion object {
+        private val reportResponseDeserialiseMapper = ReportResponseDeserializer.register(ObjectMapper())
     }
 
     private class TrustedSgxQuote(

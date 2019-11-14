@@ -13,26 +13,21 @@ import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
+import java.time.Instant
 import java.util.*
 
 /**
  * A mock implementation of [AttestationService] permitting to reproduce the attestation flow in simulation mode
  */
 class MockAttestationService : AttestationService {
-
-    private val signingKey = decodePrivateKey(getResourceBytes("mock-as.key"))
-    private val certificate = String(getResourceBytes("mock-as-certificate.pem"))
-
     override fun requestSignature(signedQuote: Cursor<ByteBuffer, SgxSignedQuote>): AttestationServiceReportResponse {
         val response = ReportResponse(
-                id = "MOCK-RESPONSE: " + UUID.randomUUID().toString(),
+                id = "MOCK-RESPONSE: ${UUID.randomUUID()}",
                 isvEnclaveQuoteStatus = QuoteStatus.OK,
                 isvEnclaveQuoteBody = signedQuote[SgxSignedQuote(signedQuote.getBuffer().capacity()).quote].toByteArray(),
-                timestamp = "0",
-                version = "MOCK-v0"
-        ).let {
-            ObjectMapper().writeValueAsBytes(it)
-        }
+                timestamp = Instant.now(),
+                version = 3
+        ).let(reportResponseSerializeMapper::writeValueAsBytes)
 
         val signature = Signature.getInstance("SHA256withRSA").apply {
             initSign(signingKey)
@@ -47,6 +42,10 @@ class MockAttestationService : AttestationService {
     }
 
     companion object {
+        private val signingKey = decodePrivateKey(getResourceBytes("mock-as.key"))
+        private val certificate = String(getResourceBytes("mock-as-certificate.pem"))
+        private val reportResponseSerializeMapper = ReportResponseSerializer.register(ObjectMapper())
+
         private fun Cursor<ByteBuffer, SgxQuote>.toByteArray(): ByteArray {
             val buffer = getBuffer()
             return ByteArray(buffer.remaining()).also { buffer.get(it) }
