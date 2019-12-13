@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+option java_package = "com.r3.sgx.core.common";
+option java_outer_classname = "Attestation";
+option objc_class_prefix = "HLW";
+
+message EpidHostMessage {
+    oneof EpidHostMessage {
+        GetReportRequest get_report_request = 1;
+    }
+}
+
+message EpidEnclaveMessage {
+    oneof EpidEnclaveMessage {
+        GetReportReply get_report_reply = 1;
+    }
+}
+
+message GetReportRequest {
+    required bytes quoting_enclave_target_info = 1;
+}
+
+message GetReportReply {
+    required bytes report = 1;
+}

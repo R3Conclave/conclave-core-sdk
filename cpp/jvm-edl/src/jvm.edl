@@ -1,0 +1,18 @@
+enclave {
+    from "start_thread.edl" import *;
+    trusted {
+        public void jvm_ecall(
+            [in, size=bufferInLen] void* bufferIn,
+            int bufferInLen
+        );
+        public void ecall_finalize_enclave(void);
+    };
+
+    untrusted {
+        void jvm_ocall(
+            [in, size=bufferInLen] void* bufferIn,
+            int bufferInLen
+        ) allow(jvm_ecall);
+        void debug_print([in, string] const char *string, int n);
+    };
+};

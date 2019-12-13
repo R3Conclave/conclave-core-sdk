@@ -1,0 +1,36 @@
+def cppBuildDir = project(":cpp").buildDir
+
+subprojects { Project project ->
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+
+    def type = project.name.drop("native-host-".size()).capitalize()
+    project.tasks.getByName("jar") { Jar task ->
+        task.dependsOn(":cpp:compileLinuxSgx$type")
+        task.dependsOn(":cpp:compileHost$type")
+        def linuxSgxBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/build/linux"
+        def hostBuildDir = "$cppBuildDir/$type/jvm-host"
+        def libCryptoDir = "/lib/x86_64-linux-gnu"
+        def libProtobufDir = "/usr/lib/x86_64-linux-gnu"
+        def simSuffix = type == "Simulation" ? "_sim" : ""
+        task.into "com/r3/sgx/host-libraries/$type", {
+            from (linuxSgxBuildDir) {
+                include "libsgx_enclave_common.so"
+                rename "libsgx_enclave_common.so", "libsgx_enclave_common.so.1"
+                include "libsgx_urts${simSuffix}.so"
+                include "libsgx_uae_service${simSuffix}.so"
+            }
+            from (hostBuildDir) {
+                include "libjvm_host.so"
+            }
+            from (libCryptoDir) {
+                include "libcrypto.so.1.0.0"
+            }
+            if (type != "Simulation") {
+                from (libProtobufDir) {
+                    include "libprotobuf.so.9"
+                }
+            }
+        }
+    }
+}

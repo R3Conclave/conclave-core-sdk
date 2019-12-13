@@ -1,0 +1,75 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.30' apply false
+    id 'com.google.protobuf' version '0.8.7' apply false
+    id 'com.r3.sgx.host' apply false
+}
+
+import static org.gradle.api.JavaVersion.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+subprojects {
+    ext {
+        oblivium_version = System.getenv('OBLIVIUM_DEPENDENCY_VERSION')
+    }
+
+    group = "com.r3.sgx"
+    version = System.getenv('OBLIVIUM_VERSION')
+
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven {
+            url = "https://software.r3.com/artifactory/sgxjvm"
+        }
+    }
+
+    configurations {
+        all {
+            resolutionStrategy {
+                // We need this to ensure that the Signing Enclave uses the correct
+                // version of Kotlin. It can be removed once the Signing Enclave is
+                // refactored out of the "samples" project.
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Ensure that the Signing Enclave uses the correct version of Guava.
+                force "com.google.guava:guava:$guava_version"
+
+                //  Ensure that the Signing Enclave uses the correct version of SLF4J.
+                eachDependency { details ->
+                    if (details.requested.group == 'org.slf4j') {
+                        details.useVersion slf4j_version
+                    }
+                }
+            }
+        }
+
+        compile {
+            // Use jcl-over-slf4j instead of commons-logging.
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = VERSION_1_8
+        targetCompatibility = VERSION_1_8
+    }
+
+    tasks.withType(KotlinCompile) {
+        kotlinOptions {
+            jvmTarget = VERSION_1_8
+            apiVersion = '1.3'
+            languageVersion = '1.3'
+            freeCompilerArgs += [
+                '-Xjvm-default=enable',
+                '-XXLanguage:+NewInference'
+            ]
+        }
+    }
+}
+
+wrapper {
+    gradleVersion = "5.2.1"
+    distributionType = Wrapper.DistributionType.ALL
+}

@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+    id 'com.r3.sgx.enclave'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    implementation "com.r3.sgx:api-core-enclave"
+
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "com.r3.sgx:api-core-host"
+    testImplementation "com.r3.sgx:enclave-testing"
+    testRuntimeOnly "com.r3.sgx:native-host-simulation"
+}
+
+shadowJar {
+    archiveBaseName = "echo-java-enclave"
+    archiveClassifier = ''
+    zip64 = true
+    
+    manifest {
+        attributes("Enclave-Class": "com.r3.sgx.enclave.jecho.EchoEnclave")
+    }
+}
+
+jar {
+    archiveClassifier = 'ignore'
+}
+
+test {
+    dependsOn signEnclaveWithDummyKeySimulation
+    systemProperty("com.r3.sgx.enclave.path", signEnclaveWithDummyKeySimulation.signedEnclavePath)
+}

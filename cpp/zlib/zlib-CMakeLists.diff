@@ -1,0 +1,17 @@
+--- zlib-1.2.11/CMakeLists.txt.orig	2017-01-15 17:29:40.000000000 +0000
++++ zlib-1.2.11/CMakeLists.txt	2018-11-02 10:39:51.754786531 +0000
+@@ -3,6 +3,8 @@
+ 
+ project(zlib C)
+ 
++include(${ZLIB_SOURCE_DIR}/../Determinise.cmake)
++
+ set(VERSION "1.2.11")
+ 
+ option(ASM686 "Enable building i686 assembly implementation")
+@@ -247,3 +249,5 @@
+     target_link_libraries(minigzip64 zlib)
+     set_target_properties(minigzip64 PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64")
+ endif()
++
++determinise_compile(${ZLIB_SRCS})

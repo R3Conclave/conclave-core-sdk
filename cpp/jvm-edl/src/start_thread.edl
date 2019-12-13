@@ -1,0 +1,12 @@
+enclave {
+    from "sgx_tstdc.edl" import *;
+    include "sgx_report.h"
+    trusted {
+        public void ecall_attach_thread(void);
+    };
+    untrusted {
+        // returns SGX error code
+        sgx_status_t ocall_request_thread(void);
+        void ocall_complete_request_thread(void);
+    };
+};

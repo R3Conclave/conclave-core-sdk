@@ -1,0 +1,30 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        sgxEnclavePlugin {
+            id = 'com.r3.sgx.enclave'
+            implementationClass = 'com.r3.sgx.plugin.enclave.SgxEnclavePlugin'
+        }
+    }
+}
+
+dependencies {
+    // This plugin will use Gradle's own built-in Kotlin library at runtime.
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
+
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.jetbrains.kotlin:kotlin-test"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+jar {
+    manifest {
+        attributes("Oblivium-Version": environment.OBLIVIUM_DEPENDENCY_VERSION)
+        attributes("Oblivium-Maven-Repository": "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}")
+    }
+}

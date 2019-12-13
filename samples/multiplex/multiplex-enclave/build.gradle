@@ -1,0 +1,71 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.sgx.host'
+}
+
+ext {
+    grpcTestPort = 44446
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation project(':multiplex:multiplex-common')
+    implementation 'com.r3.sgx:api-core-enclave'
+    implementation 'com.r3.sgx:enclave-utils'
+
+    testImplementation project(':multiplex:multiplex-client')
+    testImplementation 'com.r3.sgx:enclave-dynamic-testing'
+    testImplementation "org.slf4j:slf4j-api:$slf4j_version"
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"
+    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+}
+
+docker {
+    registryCredentials {
+        url = "localhost:5000"
+        username = "testUsername"
+        password = "testPassword"
+    }
+}
+
+shadowJar {
+    archiveBaseName = "multiplex-enclave"
+    archiveClassifier = ''
+    zip64 = true
+
+    manifest {
+        attributes("Enclave-Class": "com.r3.sgx.multiplex.enclave.MultiplexEnclave")
+    }
+}
+
+jar {
+    archiveClassifier = 'ignore'
+}
+
+assemble.dependsOn shadowJar
+
+enclaveImageSimulation {
+    testing {
+        grpcPort = grpcTestPort
+        startTimeout = 60
+    }
+}
+
+def sgxjvmProject = gradle.includedBuild('sgxjvm')
+def publishBaseContainer = sgxjvmProject.task(':containers:enclavelet-host:buildImagePublish')
+
+if (publishBaseContainer) {
+    buildEnclaveImageDebug.dependsOn publishBaseContainer
+    buildEnclaveImageSimulation.dependsOn publishBaseContainer
+}
+
+test {
+    dependsOn buildSignedEnclaveSimulation, startEnclaveContainerSimulation
+    finalizedBy stopEnclaveContainerSimulation
+    doFirst {
+        systemProperty 'enclave_path', buildSignedEnclaveSimulation.signedEnclavePath
+        systemProperty 'com.r3.sgx.enclave.simulated.grpc.port', grpcTestPort
+    }
+}

@@ -1,0 +1,29 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.google.protobuf'
+    id 'net.corda.plugins.api-scanner'
+}
+
+dependencies {
+    compile "com.google.protobuf:protobuf-java:$protobuf_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
+    compile "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
+    // Curve25519 by Moxie Marlinspike: modern elliptic curve key agreement.
+    implementation "org.whispersystems:curve25519-java:$whispersystems_ed25519_version"
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$protobuf_version"
+    }
+    generateProtoTasks.generatedFilesBaseDir = "${project.projectDir}/src/"
+    generateProtoTasks {
+        all().each { task ->
+            task.inputs.dir("${projectDir}/src/main/proto")
+            task.builtins {
+                java { }
+            }
+        }
+    }
+}

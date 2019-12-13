@@ -1,0 +1,118 @@
+plugins {
+    id 'com.bmuschko.docker-remote-api' version '5.2.0'
+}
+
+import com.bmuschko.gradle.docker.tasks.image.*
+import com.bmuschko.gradle.docker.DockerRegistryCredentials
+
+def cleanTask = task clean {
+}
+
+subprojects {
+    apply plugin: 'base'
+    apply plugin: 'com.bmuschko.docker-remote-api'
+
+    cleanTask.dependsOn(tasks.getByName("clean"))
+
+    extensions.create("publishRegistryCredentials", DockerRegistryCredentials, project.objects)
+    extensions.create("testRegistryCredentials", DockerRegistryCredentials, project.objects)
+
+    def publishRegistryUrl = System.getenv("OBLIVIUM_CONTAINER_REGISTRY_URL")
+    publishRegistryCredentials {
+        url = publishRegistryUrl
+        username = System.getenv("OBLIVIUM_CONTAINER_REGISTRY_USERNAME")
+        password = System.getenv("OBLIVIUM_CONTAINER_REGISTRY_PASSWORD")
+    }
+
+    def testRegistryUrl = "localhost:5000"
+    testRegistryCredentials {
+        url = testRegistryUrl
+        username = "testUsername"
+        password = "testPassword"
+    }
+
+    task copyDockerfile(type: Copy) {
+        from "$projectDir/src/docker"
+        into "$buildDir/docker/build"
+    }
+
+    task buildImagePublish(type: DockerBuildImage, dependsOn: copyDockerfile) {
+        registryCredentials = publishRegistryCredentials
+        inputDir = file("$buildDir/docker/build")
+        def imageName = "$publishRegistryUrl/com.r3.sgx/${project.name}"
+        tags = ["$imageName:$docker_image_release_tag", "$imageName:latest"]
+        def dummyOutput = file("${project.buildDir}/docker/dummy-build")
+        outputs.file(dummyOutput)
+        doLast {
+            dummyOutput.write(imageId.get())
+        }
+    }
+
+    task pushImagePublish(type: DockerPushImage, dependsOn: buildImagePublish) {
+        registryCredentials = publishRegistryCredentials
+        imageName = "$publishRegistryUrl/com.r3.sgx/${project.name}"
+        tag = docker_image_release_tag
+        inputs.files(buildImagePublish.outputs)
+        def dummyOutput = file("${project.buildDir}/docker/dummy-push")
+        outputs.file(dummyOutput)
+        doLast {
+            dummyOutput << file("${project.buildDir}/docker/dummy-build").readBytes()
+        }
+    }
+
+    task pushImageAsLatestPublish(type: DockerPushImage, dependsOn: pushImagePublish) {
+        registryCredentials = publishRegistryCredentials
+        imageName = "$publishRegistryUrl/com.r3.sgx/${project.name}"
+        tag = "latest"
+        inputs.files(buildImagePublish.outputs)
+        def dummyOutput = file("${project.buildDir}/docker/dummy-push-latest")
+        outputs.file(dummyOutput)
+        doLast {
+            dummyOutput << file("${project.buildDir}/docker/dummy-build").readBytes()
+        }
+    }
+
+    task buildImageTest(type: DockerBuildImage, dependsOn: copyDockerfile) {
+        registryCredentials = testRegistryCredentials
+        inputDir = file("$buildDir/docker/build")
+        tags = [ "$testRegistryUrl/com.r3.sgx/${project.name}:latest" ] as Set
+        def dummyOutput = file("${project.buildDir}/docker/dummy-build")
+        outputs.file(dummyOutput)
+        doLast {
+            dummyOutput.write(imageId.get())
+        }
+    }
+
+    task pushImageTest(type: DockerPushImage, dependsOn: buildImageTest) {
+        registryCredentials = testRegistryCredentials
+        imageName = "$testRegistryUrl/com.r3.sgx/${project.name}"
+        tag = "latest"
+        inputs.files(buildImageTest.outputs)
+        def dummyOutput = file("${project.buildDir}/docker/dummy-push")
+        outputs.file(dummyOutput)
+        doLast {
+            dummyOutput << file("${project.buildDir}/docker/dummy-build").readBytes()
+        }
+    }
+}
+
+task publish {
+    def publishedImages = [
+        "aesmd",
+        "enclavelet-host",
+        "kubernetes-sgx-device-plugin",
+        "sgxjvm-build",
+        "sgxjvm-devenv"
+    ]
+
+    def donefiles = []
+    for (image in publishedImages) {
+        def publishTask = project(":containers:$image").tasks.getByName("pushImageAsLatestPublish")
+        dependsOn publishTask
+        donefiles.addAll(publishTask.outputs)
+    }
+    inputs.files(donefiles)
+    doLast {
+        logger.lifecycle('Published containers')
+    }
+}

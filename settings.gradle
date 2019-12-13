@@ -1,0 +1,46 @@
+rootProject.name = "sgxjvm"
+
+def includeNative = true
+try {
+    if (excludeNative) {
+        includeNative = false
+    }
+} catch (MissingPropertyException ignored) {
+}
+
+if (includeNative) {
+    include 'cpp'
+    include 'cpp:native-host:native-host-simulation'
+    include 'cpp:native-host:native-host-debug'
+    include 'cpp:native-host:native-host-release'
+    include 'cpp:native-enclave:native-enclave-simulation'
+    include 'cpp:native-enclave:native-enclave-debug'
+    include 'cpp:native-enclave:native-enclave-release'
+    include 'cpp:native-sign-tool'
+    include 'cpp:native-gdb'
+    include 'cpp:native-binutils'
+}
+
+include 'api-core:api-core-enclave'
+include 'api-core:api-core-host'
+include 'api-core:api-core-common'
+
+include 'enclave-utils'
+
+include 'enclave-testing'
+include 'enclave-dynamic-testing'
+
+include 'enclavelet-host:enclavelet-host-common'
+include 'enclavelet-host:enclavelet-host-client'
+include 'enclavelet-host:enclavelet-host-server'
+
+include 'containers:aesmd'
+include 'containers:enclavelet-host'
+include 'containers:sgxjvm-build'
+include 'containers:sgxjvm-devenv'
+include 'containers:kubernetes-sgx-device-plugin'
+
+include 'hsm-tool'
+
+include 'load-test:load-test-runner'
+include 'load-test:load-test-sampler-rng'

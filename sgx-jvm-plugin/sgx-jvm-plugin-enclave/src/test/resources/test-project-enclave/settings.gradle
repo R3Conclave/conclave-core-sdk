@@ -1,0 +1,2 @@
+includeBuild("../../../../../..") // sgxjvm
+includeBuild("../../../../..")	// sgx-jvm-plugin

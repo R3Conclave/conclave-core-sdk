@@ -1,0 +1,43 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+evaluationDependsOn(':signing-enclave')
+
+repositories {
+    maven {
+        url 'https://software.r3.com/artifactory/r3-corda-releases'
+        credentials {
+            username = 'qa-test'
+            password = 'TestItNowOrNever'
+        }
+    }
+}
+
+dependencies {
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test"
+    testImplementation "io.fabric8:kubernetes-client:$fabric8_kubernetes_client_version"
+    testImplementation "io.grpc:grpc-testing:$grpc_version"
+    testImplementation "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"
+    testImplementation 'com.r3.sgx:api-core-enclave'
+    testImplementation 'com.r3.sgx:enclavelet-host-client'
+    testImplementation 'com.r3.sgx:enclavelet-host-server'
+    testImplementation 'com.r3.sgx:enclave-dynamic-testing'
+    testImplementation project(':signing-enclave')
+
+    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testRuntimeOnly 'com.r3.sgx:native-host-simulation'
+}
+
+
+test {
+    testLogging.showStandardStreams = true
+    dependsOn gradle.includedBuild('sgxjvm').task(":containers:kubernetes-sgx-device-plugin:pushImageTest")
+    dependsOn gradle.includedBuild('sgxjvm').task(":containers:aesmd:pushImageTest")
+    def genEnclaveletMetadataTask = project(':signing-enclave').tasks.getByName("generateEnclaveletMetadataDebug")
+    def enclaveContainerPublishingTask = project(':signing-enclave:').tasks.getByName('pushEnclaveImageDebug')
+    dependsOn enclaveContainerPublishingTask, genEnclaveletMetadataTask
+    systemProperty("enclave_metadata", genEnclaveletMetadataTask.outputEnclaveMetadata.getAsFile().get().path)
+}

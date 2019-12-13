@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+option java_package = "com.r3.sgx.core.common";
+option java_outer_classname = "TryOrFail";
+option objc_class_prefix = "HLW";
+
+message Try {
+    oneof SuccessOrFail {
+        bytes success = 1;
+        Exception failure = 2;
+    }
+}
+
+message StackTraceElement {
+    required string className = 1;
+    required string methodName = 2;
+    optional string fileName = 3;
+    required int32 lineNumber = 4;
+}
+
+message Exception {
+    required string message = 1;
+    required string exceptionClass = 2;
+    repeated StackTraceElement stackTrace = 3;
+}

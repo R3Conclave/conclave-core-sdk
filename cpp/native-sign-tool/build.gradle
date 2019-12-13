@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+def cppBuildDir = project(":cpp").buildDir
+
+jar {
+    dependsOn(":cpp:compileLinuxSgxSimulation")
+    def signToolBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
+    into "com/r3/sgx/sign-tool", {
+        from(signToolBuildDir) {
+            include "sgx_sign"
+        }
+    }
+}

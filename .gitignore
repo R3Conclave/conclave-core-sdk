@@ -1,0 +1,9 @@
+**/build/
+**/cmake-build-debug/
+**/.idea
+**/a.out
+**/out/
+**/*.log
+.gradle/
+**/*.retry
+**/*.iml

@@ -1,0 +1,254 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.30' apply false
+    id 'com.google.protobuf' version '0.8.7' apply false
+    id 'com.github.johnrengelman.shadow' version '4.0.4' apply false
+    id 'org.akhikhl.gretty' version '2.0.0' apply false
+    id 'net.corda.plugins.api-scanner' version '4.0.45' apply false
+    id 'idea'
+}
+
+static Map<String, String> createEnvironment(String... names) {
+    return names.collectEntries { [(it): System.getenv(it)] }
+}
+
+ext {
+    environment = createEnvironment(
+            'OBLIVIUM_VERSION',
+            'OBLIVIUM_DEPENDENCY_VERSION',
+            'OBLIVIUM_MAVEN_URL',
+            'OBLIVIUM_MAVEN_REPOSITORY',
+            'OBLIVIUM_MAVEN_USERNAME',
+            'OBLIVIUM_MAVEN_PASSWORD',
+    )
+    docker_image_release_tag = environment.OBLIVIUM_VERSION
+    oblivium_dependency_version = environment.OBLIVIUM_DEPENDENCY_VERSION
+}
+
+import static org.gradle.api.JavaVersion.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+def includeNative = findProperty('excludeNative') == null
+def nativeSubmodulesToSubstitute = [
+        ':cpp:native-host:native-host-simulation',
+        ':cpp:native-host:native-host-debug',
+        ':cpp:native-host:native-host-release',
+        ':cpp:native-enclave:native-enclave-simulation',
+        ':cpp:native-enclave:native-enclave-debug',
+        ':cpp:native-enclave:native-enclave-release',
+        ':cpp:native-sign-tool',
+        ':cpp:native-gdb',
+        ':cpp:native-binutils'
+]
+
+subprojects {
+    group = "com.r3.sgx"
+    version = environment.OBLIVIUM_VERSION
+
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven {
+            url = "https://software.r3.com/artifactory/sgxjvm"
+            credentials {
+                username = environment.OBLIVIUM_MAVEN_USERNAME
+                password = environment.OBLIVIUM_MAVEN_PASSWORD
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = VERSION_1_8
+        targetCompatibility = VERSION_1_8
+    }
+
+    tasks.withType(KotlinCompile) {
+        kotlinOptions {
+            jvmTarget = VERSION_1_8
+            apiVersion = '1.3'
+            languageVersion = '1.3'
+            freeCompilerArgs = [ '-Xjvm-default=enable' ]
+        }
+    }
+
+    tasks.withType(Test) {
+        systemProperty 'java.io.tmpdir', buildDir.absolutePath
+        failFast = true
+
+        beforeTest { descriptor ->
+            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
+        }
+        afterTest { descriptor ->
+            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
+        }
+    }
+
+    configurations {
+        compile {
+            // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+            // Remove any transitive dependency on Apache's version.
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+
+        if (includeNative) {
+            all {
+                for (submodule in nativeSubmodulesToSubstitute) {
+                    def submoduleProject = project(submodule)
+                    resolutionStrategy.dependencySubstitution {
+                        substitute module("${submoduleProject.getGroup()}:${submoduleProject.getName()}") with project(submodule)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ---- PUBLISHING ---- */
+class PublishedProject {
+    String projectPath
+    String description
+    boolean shouldPublishSource
+}
+List<PublishedProject> publishedProjects = [
+        new PublishedProject(
+                projectPath: ':cpp:native-enclave:native-enclave-simulation',
+                description: 'Partially linked Oblivium enclave linked with simulation libraries',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-enclave:native-enclave-debug',
+                description: 'Partially linked Oblivium enclave linked with debug libraries',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-enclave:native-enclave-release',
+                description: 'Partially linked Oblivium enclave linked with release libraries',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host:native-host-simulation',
+                description: 'Native Oblivium host libraries linked with simulation libraries',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host:native-host-debug',
+                description: 'Native Oblivium host libraries linked with debug libraries',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host:native-host-release',
+                description: 'Native Oblivium host libraries linked with release libraries',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-gdb',
+                description: 'The Intel Linux SDK gdb plugin and wrapper',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-sign-tool',
+                description: 'The Intel Linux SDK signing tool',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-binutils',
+                description: 'Pinned version of essential binutils tools',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':api-core:api-core-common',
+                description: 'Core API common to both enclave and host',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':api-core:api-core-enclave',
+                description: 'Core enclave API',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':api-core:api-core-host',
+                description: 'Core enclave host API',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':enclave-utils',
+                description: 'Utllity classes for working inside an enclave.',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':enclave-testing',
+                description: 'Enclave testing library',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':enclavelet-host:enclavelet-host-client',
+                description: 'Client-side API of enclavelet host',
+                shouldPublishSource: false
+        ),
+        new PublishedProject(
+                projectPath: ':enclavelet-host:enclavelet-host-common',
+                description: 'Enclavelet host API common to server and client',
+                shouldPublishSource: false
+        ),
+]
+
+// We only enable publish if native parts of the build are included.
+// We create a safeguard task to check this.
+task publish {
+    doFirst {
+        if (!includeNative) {
+            throw new Exception('Native artifacts aren\'t built, not publishing')
+        }
+    }
+}
+if (includeNative) {
+    for (published in publishedProjects) {
+        def project = project(published.projectPath)
+        def description = published.description
+        def shouldPublishSource = published.shouldPublishSource
+        project.pluginManager.apply('java')
+        project.pluginManager.apply('maven-publish')
+        if (shouldPublishSource) {
+            project.tasks.create('sourcesJarForPublish', Jar) {
+                archiveClassifier = 'sources'
+                from project.sourceSets.main.allSource
+            }
+        }
+        project.publishing {
+            publications {
+                maven(MavenPublication) {
+                    from project.components.java
+                    if (shouldPublishSource) {
+                        artifact project.tasks.getByName('sourcesJarForPublish')
+                    }
+                    pom.description = description
+                }
+            }
+            repositories {
+                maven {
+                    url = "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}"
+                    credentials {
+                        username = environment.OBLIVIUM_MAVEN_USERNAME
+                        password = environment.OBLIVIUM_MAVEN_PASSWORD
+                    }
+                }
+            }
+        }
+    }
+}
+
+// To speed up IntelliJ indexing
+idea {
+    module {
+        excludeDirs = [
+                file("$projectDir/cpp/avian/build"),
+                file("$projectDir/cpp/openjdk8"),
+                file("$projectDir/cpp/.idea"),
+                file("$projectDir/scripts/build")
+        ]
+    }
+}
+
+wrapper {
+    gradleVersion = "5.2.1"
+    distributionType = Wrapper.DistributionType.ALL
+}

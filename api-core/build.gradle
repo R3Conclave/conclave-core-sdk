@@ -1,0 +1,16 @@
+import net.corda.plugins.GenerateApi
+
+plugins {
+    id 'base'
+}
+
+/**
+ * Summarises the SGXJVM public API into a text file in
+ * the $buildDir/api directory. This is just for our own
+ * information - and primarily to verify that our API
+ * doesn't expose any Kotlin-specific classes.
+ */
+task generateApi(type: GenerateApi) {
+    baseName = 'sgxjvm-apicore'
+    version = environment.OBLIVIUM_VERSION
+}

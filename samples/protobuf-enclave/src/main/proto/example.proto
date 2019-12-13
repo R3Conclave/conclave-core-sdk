@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+option java_package = "com.r3.sgx.enclave.example";
+option java_outer_classname = "Example";
+option objc_class_prefix = "HLW";
+
+message ExampleEcall {
+    required string message = 1;
+}
+
+message ExampleOcall {
+    required string message = 2;
+}

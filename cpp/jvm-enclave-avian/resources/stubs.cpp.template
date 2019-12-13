@@ -1,0 +1,15 @@
+// Some symbols conflict with GCC intrinsics like strcat, and don't match the proper prototype: silence GCC on that topic.
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
+#endif
+
+extern "C" {
+
+extern void abort();
+extern void throw_jvm_runtime_exception(const char *str);
+
+#define STUB(x) void x() { throw_jvm_runtime_exception(#x); abort(); }
+
+// STUBS HERE
+
+}

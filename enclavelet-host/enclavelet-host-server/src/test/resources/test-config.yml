@@ -1,0 +1,8 @@
+bindPort: 8080
+attestationServiceUrl: xxx
+threadPoolSize: 8
+epidSpid: "***REMOVED***"
+iasSubscriptionKey: "***REMOVED***"
+epidQuoteType: LINKABLE
+enclaveLoadMode: RELEASE
+mockAttestationServiceInSimulation: true

@@ -1,0 +1,7 @@
+bindPort: 8080
+threadPoolSize: 8
+attestationServiceUrl: https://api.trustedservices.intel.com/sgx/dev
+epidSpid: "***REMOVED***"
+iasSubscriptionKey: "***REMOVED***"
+epidQuoteType: LINKABLE
+enclaveLoadMode: DEBUG

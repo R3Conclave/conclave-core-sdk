@@ -1,0 +1,11 @@
+apply plugin: 'kotlin'
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.ow2.asm:asm:$asm_version"
+    compile project(":api-core:api-core-enclave")
+    compile project(":api-core:api-core-host")
+    compile project(":enclavelet-host:enclavelet-host-client")
+    compile "junit:junit:$junit_version"
+    runtimeOnly "com.r3.sgx:native-host-simulation:$oblivium_dependency_version"
+}

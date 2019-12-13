@@ -1,0 +1,16 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.johnrengelman.shadow'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compileOnly "org.apache.jmeter:ApacheJMeter_java:$jmeter_version"
+    implementation project(':enclavelet-host:enclavelet-host-client')
+}
+
+shadowJar {
+    archiveFileName = 'sampler.jar'
+    relocate('com.google', 'shadow.com.google') // clashes with JMeter
+    zip64 = true
+}

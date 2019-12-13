@@ -1,0 +1,120 @@
+import java.text.SimpleDateFormat
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.sgx.host'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven { url 'https://jitpack.io' }
+    maven {
+        url 'https://software.r3.com/artifactory/r3-corda-releases'
+        credentials {
+            username = 'qa-test'
+            password = 'TestItNowOrNever'
+        }
+    }
+}
+
+ext {
+    grpcTestPort = 44445
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.r3.sgx:api-core-enclave"
+    compile "net.corda:corda-serialization:$corda_version"
+    implementation "com.google.guava:guava:$guava_version"
+
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test"
+    testImplementation "com.r3.sgx:api-core-host"
+    testImplementation "com.r3.sgx:enclave-testing"
+    testImplementation "com.r3.sgx:enclavelet-host-client"
+    testImplementation "org.slf4j:slf4j-api:$slf4j_version"
+    testRuntimeOnly "com.r3.sgx:native-host-simulation"
+    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+}
+
+docker {
+    registryCredentials {
+        url = "localhost:5000"
+        username = "testUsername"
+        password = "testPassword"
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'signing-enclave'
+    archiveClassifier = ''
+    zip64 = true
+
+    manifest {
+        attributes("Enclave-Class": "com.r3.sgx.enclave.signing.SigningEnclave")
+    }
+}
+
+jar {
+    archiveClassifier = 'ignore'
+}
+
+def publicDummyKey = file("$buildDir/dummy.public.pem")
+def dummySignature = file("$buildDir/Simulation/signature.bin")
+
+// We plug in an explicit signing step here
+enclaveSimulation {
+    shouldUseDummyKey = false
+    mrsignerPublicKey = publicDummyKey
+    mrsignerSignature = dummySignature
+    signatureDate = (new SimpleDateFormat("yyyymmdd")).parse("20190301")
+}
+
+task getPublicDummyKey(type: Exec) {
+    dependsOn createDummyKey
+    def publicKey = publicDummyKey
+    commandLine '/usr/bin/env', 'openssl', 'rsa',
+            '-pubout',
+            '-in', createDummyKey.outputKey.get(),
+            '-out', publicKey
+    outputs.file(publicKey)
+}
+
+task signWithDummyKey(type: Exec) {
+    dependsOn getEnclaveSigningMaterialSimulation, createDummyKey
+    inputs.file(getEnclaveSigningMaterialSimulation.outputSigningMaterial)
+
+    commandLine '/usr/bin/env', 'openssl', 'dgst', '-sha256',
+            '-sign', createDummyKey.outputKey.get(),
+            '-out', dummySignature,
+            getEnclaveSigningMaterialSimulation.outputSigningMaterial.get()
+    outputs.file(dummySignature)
+}
+
+addEnclaveSignatureSimulation {
+    dependsOn signWithDummyKey, getPublicDummyKey
+}
+
+def sgxjvmProject = gradle.includedBuild('sgxjvm')
+def publishBaseContainer = sgxjvmProject.task(':containers:enclavelet-host:buildImagePublish')
+
+if (publishBaseContainer) {
+    buildEnclaveImageDebug.dependsOn publishBaseContainer
+    buildEnclaveImageSimulation.dependsOn publishBaseContainer
+}
+
+enclaveImageSimulation {
+    testing {
+        grpcPort = grpcTestPort
+        startTimeout = 60
+    }
+}
+
+test {
+    dependsOn addEnclaveSignatureSimulation, startEnclaveContainerSimulation, generateEnclaveletMetadataSimulation
+    systemProperty('com.r3.sgx.enclave.path', addEnclaveSignatureSimulation.signedEnclavePath)
+    systemProperty('com.r3.sgx.enclave.simulated.grpc.port', grpcTestPort)
+    systemProperty("com.r3.sgx.enclave_metadata", generateEnclaveletMetadataSimulation.outputEnclaveMetadata.getAsFile().get().path)
+    finalizedBy stopEnclaveContainerSimulation
+}

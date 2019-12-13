@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+option java_package = "com.r3.sgx.proto.host";
+option java_outer_classname = "Test";
+option objc_class_prefix = "HLW";
+
+message Ecall {
+    optional bool is_request = 1;
+    optional bytes bytes = 2;
+}
+
+message Ocall {
+    optional bool is_request = 1;
+    optional bytes bytes = 2;
+}

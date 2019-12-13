@@ -1,0 +1,27 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        sgxHostPlugin {
+            id = 'com.r3.sgx.host'
+            implementationClass = 'com.r3.sgx.plugin.host.SgxHostPlugin'
+        }
+    }
+}
+
+dependencies {
+    // This plugin will use Gradle's own built-in Kotlin library at runtime.
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.bmuschko:gradle-docker-plugin:$docker_version"
+    implementation project(':sgx-jvm-plugin-enclave')
+}
+
+jar {
+    manifest {
+        // This is the specific version, and not the dynamic version that Gradle uses.
+        attributes("Oblivium-Version": environment.OBLIVIUM_VERSION)
+        attributes("Oblivium-Docker-Registry": environment.OBLIVIUM_CONTAINER_REGISTRY_URL)
+    }
+}

@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+def cppBuildDir = project(":cpp").buildDir
+
+jar {
+    dependsOn(":cpp:compileLinuxSgxSimulation")
+    def ptraceBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
+    into "com/r3/sgx/gdb", {
+        from(ptraceBuildDir) {
+            include "libsgx_ptrace.so"
+            include "gdb-sgx-plugin/**"
+        }
+    }
+}

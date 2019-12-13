@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+def cppBuildDir = project(":cpp").buildDir
+
+jar {
+    dependsOn(":cpp:compileBinutilsLdSimulation")
+    def ldBuildDir = "$cppBuildDir/Simulation/binutils/binutils-ext-prefix/src/binutils-ext/ld"
+    into "com/r3/sgx/binutils", {
+        from(ldBuildDir) {
+            include "ld-new"
+            rename "ld-new", "ld-static"
+        }
+    }
+}
