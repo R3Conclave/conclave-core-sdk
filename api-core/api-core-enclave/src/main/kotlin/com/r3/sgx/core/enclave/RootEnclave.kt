@@ -17,7 +17,7 @@ abstract class RootEnclave : Enclave {
         val exposeErrors = api.isSimulation() || api.isDebugMode()
         val rootHandler = ExceptionSendingHandler(exposeErrors = exposeErrors)
         val root = rootHandler.connect(upstream)
-        val mux = root.addDownstream(SimpleMuxingHandler())
+        val mux = root.setDownstream(SimpleMuxingHandler())
         try {
             initialize(api, mux)
         } catch (exception: Throwable) {

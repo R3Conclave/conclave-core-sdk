@@ -29,7 +29,7 @@ class EnclaveletHostBuilder(
     fun build(): EnclaveletHost {
         val attestationService = when (configuration.enclaveLoadMode) {
             EnclaveLoadMode.SIMULATION -> MockAttestationService()
-            else -> IntelAttestationService(configuration)
+            else -> IntelAttestationService(configuration.attestationServiceUrl, configuration.iasSubscriptionKey)
         }
         log.info("Loading enclave from: ${enclaveletFile.path}")
         val loadedEnclavelet = EnclaveletState.load(enclaveletFile, configuration.enclaveLoadMode)

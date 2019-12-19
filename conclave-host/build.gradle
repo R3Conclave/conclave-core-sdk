@@ -1,0 +1,38 @@
+plugins {
+    id 'java-library'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+group 'com.r3.conclave'
+version '0.1-SNAPSHOT'
+
+// TODO Use Zulu build with EC bug fix, or wait until they release their next JDK 11 version
+//compileJava {
+//    sourceCompatibility = JavaVersion.VERSION_11
+//    targetCompatibility = JavaVersion.VERSION_11
+//}
+
+test {
+    failFast = false
+    useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
+}
+
+dependencies {
+    api project(":conclave-common")
+
+    implementation project(':api-core:api-core-host')
+    implementation project(":enclavelet-host:enclavelet-host-server")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.google.guava:guava:$guava_version"
+
+    testImplementation project(":conclave-enclave")
+    testImplementation project(":enclave-dynamic-testing")
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}

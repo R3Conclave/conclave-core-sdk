@@ -13,7 +13,11 @@ import java.nio.ByteOrder
 class Cursor<R, out T : Encoder<R>>(val encoder: T, buffer: ByteBuffer) {
     companion object {
         @JvmStatic
-        fun <R, T : Encoder<R>> allocate(type: T) = Cursor(type, ByteBuffer.allocate(type.size()).order(ByteOrder.LITTLE_ENDIAN))
+        fun <R, T : Encoder<R>> allocate(type: T): Cursor<R, T> {
+            return Cursor(type, ByteBuffer.allocate(type.size()).order(ByteOrder.LITTLE_ENDIAN))
+        }
+
+        fun <R, T : Encoder<R>> wrap(type: T, bytes: ByteArray): Cursor<R, T> = Cursor(type, ByteBuffer.wrap(bytes))
     }
 
     init {

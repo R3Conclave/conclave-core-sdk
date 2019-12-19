@@ -1,0 +1,27 @@
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.20'
+    id 'com.r3.sgx.enclave'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-enclave"
+}
+
+jar {
+    archiveClassifier = 'ignore'
+}
+
+shadowJar {
+    archiveBaseName = 'test-enclave'
+    archiveClassifier = ''
+    zip64 = true
+
+    manifest {
+        attributes("Enclave-Class": "com.r3.sgx.plugin.enclave.test.TestEnclave")
+    }
+}

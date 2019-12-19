@@ -100,8 +100,7 @@ class MultiplexEnclaveTest(mode: EnclaveTestMode) : TestEnclavesBasedTest(mode) 
 
     @Test
     fun testUploadingEnclaveWithIncorrectHash() {
-        exception.expect(RuntimeException::class.java)
-        exception.expectMessage(IllegalArgumentException::class.java.name)
+        exception.expect(IllegalArgumentException::class.java)
         exception.expectMessage("SHA-256 of enclave ")
 
         val shouterFile = testEnclaves.getEnclaveJar(ShoutingEnclavelet::class.java)
@@ -176,8 +175,7 @@ class MultiplexEnclaveTest(mode: EnclaveTestMode) : TestEnclavesBasedTest(mode) 
 
     @Test
     fun testLoadingGarbageInsteadOfJar() {
-        exception.expect(RuntimeException::class.java)
-        exception.expectMessage(IllegalStateException::class.java.name)
+        exception.expect(IllegalStateException::class.java)
         exception.expectMessage("jar.manifest must not be null")
 
         assertEquals(0, URLSchemes.size)

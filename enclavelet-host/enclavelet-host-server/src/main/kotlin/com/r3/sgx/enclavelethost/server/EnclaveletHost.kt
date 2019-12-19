@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.*
 
 class EnclaveletHost(val enclavelet: EnclaveletState.Created,
-                     val configuration: EnclaveletHostConfiguration): AutoCloseable, ExceptionListener {
+                     val configuration: EnclaveletHostConfiguration) : AutoCloseable, ExceptionListener {
     private val grpcService: EnclaveletHostGrpc.EnclaveletHostImplBase
     private val grpcServer: io.grpc.Server
     private val threadPool: ScheduledThreadPoolExecutor

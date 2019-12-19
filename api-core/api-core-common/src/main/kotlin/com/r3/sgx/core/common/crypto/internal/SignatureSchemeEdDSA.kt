@@ -29,7 +29,7 @@ class SignatureSchemeEdDSA(
             256)
 
     companion object {
-        val eddsaProvider = EdDSASecurityProvider()
+        private val eddsaProvider = EdDSASecurityProvider()
     }
 
     init {

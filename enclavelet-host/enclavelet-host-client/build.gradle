@@ -11,12 +11,10 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.kotlin:kotlin-reflect"
-    implementation "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 
     runtimeOnly "io.grpc:grpc-netty:$grpc_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
-    testImplementation "org.assertj:assertj-core:3.13.2"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }

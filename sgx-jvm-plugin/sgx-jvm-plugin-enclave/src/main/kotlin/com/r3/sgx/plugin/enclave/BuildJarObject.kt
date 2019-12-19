@@ -1,6 +1,8 @@
 package com.r3.sgx.plugin.enclave
 
 import com.r3.sgx.plugin.SgxTask
+import com.r3.sgx.plugin.enclave.BuildJarObject.Companion.CONCLAVE_ENCLAVE_CLASS_NAME
+import com.r3.sgx.plugin.enclave.BuildJarObject.Companion.OLD_ENCLAVE_CLASS_NAME
 import org.gradle.api.InvalidUserCodeException
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.DirectoryProperty
@@ -17,13 +19,14 @@ import javax.inject.Inject
 
 open class BuildJarObject @Inject constructor(objects: ObjectFactory) : SgxTask() {
     companion object {
-        fun readEnclaveletClassName(jar: URL): String {
+        fun readEnclaveClassName(jar: URL): String {
             val manifest = JarInputStream(jar.openStream()).use { it.manifest }
             return manifest.mainAttributes.getValue(ENCLAVE_CLASS_ATTRIBUTE) ?:
                 throw InvalidUserDataException("Attribute '$ENCLAVE_CLASS_ATTRIBUTE' missing from $jar")
         }
 
-        private const val ENCLAVE_CLASS_NAME = "com.r3.sgx.core.enclave.Enclave"
+        private const val OLD_ENCLAVE_CLASS_NAME = "com.r3.sgx.core.enclave.Enclave"
+        private const val CONCLAVE_ENCLAVE_CLASS_NAME = "com.r3.conclave.enclave.Enclave"
         private const val ENCLAVE_CLASS_ATTRIBUTE = "Enclave-Class"
     }
 
@@ -54,7 +57,8 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : SgxTask(
         inputJar.asFile.get().copyTo(outputJar, overwrite = true)
         project.exec { spec ->
             spec.workingDir(outputDir)
-            spec.commandLine(File(binutilsDirectory, "ld-static"),
+            spec.commandLine(
+                    File(binutilsDirectory, "ld-static"),
                     "-r",
                     "-b", "binary",
                     embeddedJarName,
@@ -63,22 +67,22 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : SgxTask(
         }
     }
 
-    private fun treatClassNotFoundException(className: String): InvalidUserCodeException {
-        return InvalidUserCodeException("Class $className could not be found in $inputJar.")
+    private fun enclaveClassSanityCheck() {
+        val inputJarUrl = inputJar.asFile.get().toURI().toURL()
+        val enclaveClassName = readEnclaveClassName(inputJarUrl)
+        URLClassLoader(arrayOf(inputJarUrl), null).use { classLoader ->
+            val appEnclaveClass = classLoader.loadRequiredClass(enclaveClassName)
+            if (classLoader.loadRequiredClass(OLD_ENCLAVE_CLASS_NAME).isAssignableFrom(appEnclaveClass)) return@use
+            if (classLoader.loadRequiredClass(CONCLAVE_ENCLAVE_CLASS_NAME).isAssignableFrom(appEnclaveClass)) return@use
+            throw InvalidUserCodeException("Enclave-Class set on manifest ($enclaveClassName) does not extend $CONCLAVE_ENCLAVE_CLASS_NAME")
+        }
     }
 
-    private fun enclaveClassSanityCheck() {
-        val className = readEnclaveletClassName(inputJar.asFile.get().toURI().toURL())
-        URLClassLoader(arrayOf(inputJar.asFile.get().toURI().toURL()), null).use { classLoader ->
-            val appEnclaveClass = try {
-                classLoader.loadClass(className)
-            } catch (e: ClassNotFoundException) { throw treatClassNotFoundException(className) }
-            val enclaveClass = try {
-                classLoader.loadClass(ENCLAVE_CLASS_NAME)
-            } catch (e: ClassNotFoundException) { throw treatClassNotFoundException(ENCLAVE_CLASS_NAME) }
-            if (!enclaveClass.isAssignableFrom(appEnclaveClass)) {
-                throw InvalidUserCodeException("Enclave-Class set on manifest does not implement $ENCLAVE_CLASS_NAME")
-            }
+    private fun ClassLoader.loadRequiredClass(className: String): Class<*> {
+        try {
+            return loadClass(className)
+        } catch (e: ClassNotFoundException) {
+            throw InvalidUserCodeException("Class $className could not be found in $inputJar.")
         }
     }
 }

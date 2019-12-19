@@ -155,6 +155,21 @@ List<PublishedProject> publishedProjects = [
                 shouldPublishSource: false
         ),
         new PublishedProject(
+                projectPath: ':conclave-common',
+                description: 'Conclave API common to both enclave and host',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-enclave',
+                description: 'Conclave enclave API',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-host',
+                description: 'Conclave host API',
+                shouldPublishSource: true
+        ),
+        new PublishedProject(
                 projectPath: ':api-core:api-core-common',
                 description: 'Core API common to both enclave and host',
                 shouldPublishSource: true

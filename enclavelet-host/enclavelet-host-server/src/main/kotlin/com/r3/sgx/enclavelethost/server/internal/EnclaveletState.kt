@@ -26,11 +26,11 @@ sealed class EnclaveletState {
                                attestationConfig: EpidAttestationHostConfiguration)
                 : Attested {
 
-            EnclaveletState.log.info("Getting quote from enclave")
+            log.info("Getting quote from enclave")
             val attestation = mux.addDownstream(EpidAttestationHostHandler(attestationConfig))
             val rawQuote = attestation.getQuote()
 
-            EnclaveletState.log.info("Getting IAS signature")
+            log.info("Getting IAS signature")
             val iasResponse = attestationService.requestSignature(rawQuote)
             return Attested(this, rawQuote, iasResponse)
         }
@@ -38,7 +38,7 @@ sealed class EnclaveletState {
         companion object {
             fun fromErrorHandler(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): Created {
                 val error = enclaveHandle.connection
-                val mux = error.addDownstream(SimpleMuxingHandler())
+                val mux = error.setDownstream(SimpleMuxingHandler())
                 val channels = mux.addDownstream(ChannelInitiatingHandler())
                 return Created(enclaveHandle, channels, mux)
             }

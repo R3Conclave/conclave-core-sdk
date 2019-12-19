@@ -2,9 +2,16 @@ package com.r3.sgx.core.common
 
 /**
  * @see ErrorHandler
+ *
+ * Preserves Java langauge behaviour with regards to checked exceptions, i.e. checked exceptions are thrown wrapped in
+ * a RuntimeException and unchecked exceptions are thrown as is.
  */
 class ThrowingErrorHandler : ErrorHandler() {
     override fun onError(throwable: Throwable) {
-        throw throwable
+        if (throwable is RuntimeException || throwable is Error) {
+            throw throwable
+        } else {
+            throw RuntimeException(throwable)
+        }
     }
 }

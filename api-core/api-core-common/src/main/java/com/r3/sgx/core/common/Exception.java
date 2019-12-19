@@ -16,8 +16,8 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private Exception() {
-    message_ = "";
     exceptionClass_ = "";
+    message_ = "";
     stackTrace_ = java.util.Collections.emptyList();
   }
 
@@ -55,13 +55,13 @@ private static final long serialVersionUID = 0L;
           case 10: {
             com.google.protobuf.ByteString bs = input.readBytes();
             bitField0_ |= 0x00000001;
-            message_ = bs;
+            exceptionClass_ = bs;
             break;
           }
           case 18: {
             com.google.protobuf.ByteString bs = input.readBytes();
             bitField0_ |= 0x00000002;
-            exceptionClass_ = bs;
+            message_ = bs;
             break;
           }
           case 26: {
@@ -101,58 +101,16 @@ private static final long serialVersionUID = 0L;
   }
 
   private int bitField0_;
-  public static final int MESSAGE_FIELD_NUMBER = 1;
-  private volatile java.lang.Object message_;
+  public static final int EXCEPTIONCLASS_FIELD_NUMBER = 1;
+  private volatile java.lang.Object exceptionClass_;
   /**
-   * <code>required string message = 1;</code>
+   * <code>required string exceptionClass = 1;</code>
    */
-  public boolean hasMessage() {
+  public boolean hasExceptionClass() {
     return ((bitField0_ & 0x00000001) == 0x00000001);
   }
   /**
-   * <code>required string message = 1;</code>
-   */
-  public java.lang.String getMessage() {
-    java.lang.Object ref = message_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      if (bs.isValidUtf8()) {
-        message_ = s;
-      }
-      return s;
-    }
-  }
-  /**
-   * <code>required string message = 1;</code>
-   */
-  public com.google.protobuf.ByteString
-      getMessageBytes() {
-    java.lang.Object ref = message_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      message_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int EXCEPTIONCLASS_FIELD_NUMBER = 2;
-  private volatile java.lang.Object exceptionClass_;
-  /**
-   * <code>required string exceptionClass = 2;</code>
-   */
-  public boolean hasExceptionClass() {
-    return ((bitField0_ & 0x00000002) == 0x00000002);
-  }
-  /**
-   * <code>required string exceptionClass = 2;</code>
+   * <code>required string exceptionClass = 1;</code>
    */
   public java.lang.String getExceptionClass() {
     java.lang.Object ref = exceptionClass_;
@@ -169,7 +127,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>required string exceptionClass = 2;</code>
+   * <code>required string exceptionClass = 1;</code>
    */
   public com.google.protobuf.ByteString
       getExceptionClassBytes() {
@@ -179,6 +137,48 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       exceptionClass_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int MESSAGE_FIELD_NUMBER = 2;
+  private volatile java.lang.Object message_;
+  /**
+   * <code>optional string message = 2;</code>
+   */
+  public boolean hasMessage() {
+    return ((bitField0_ & 0x00000002) == 0x00000002);
+  }
+  /**
+   * <code>optional string message = 2;</code>
+   */
+  public java.lang.String getMessage() {
+    java.lang.Object ref = message_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      if (bs.isValidUtf8()) {
+        message_ = s;
+      }
+      return s;
+    }
+  }
+  /**
+   * <code>optional string message = 2;</code>
+   */
+  public com.google.protobuf.ByteString
+      getMessageBytes() {
+    java.lang.Object ref = message_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      message_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -226,10 +226,6 @@ private static final long serialVersionUID = 0L;
     if (isInitialized == 1) return true;
     if (isInitialized == 0) return false;
 
-    if (!hasMessage()) {
-      memoizedIsInitialized = 0;
-      return false;
-    }
     if (!hasExceptionClass()) {
       memoizedIsInitialized = 0;
       return false;
@@ -247,10 +243,10 @@ private static final long serialVersionUID = 0L;
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (((bitField0_ & 0x00000001) == 0x00000001)) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, message_);
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, exceptionClass_);
     }
     if (((bitField0_ & 0x00000002) == 0x00000002)) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, exceptionClass_);
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
     }
     for (int i = 0; i < stackTrace_.size(); i++) {
       output.writeMessage(3, stackTrace_.get(i));
@@ -264,10 +260,10 @@ private static final long serialVersionUID = 0L;
 
     size = 0;
     if (((bitField0_ & 0x00000001) == 0x00000001)) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, message_);
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, exceptionClass_);
     }
     if (((bitField0_ & 0x00000002) == 0x00000002)) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, exceptionClass_);
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
     }
     for (int i = 0; i < stackTrace_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
@@ -289,15 +285,15 @@ private static final long serialVersionUID = 0L;
     com.r3.sgx.core.common.Exception other = (com.r3.sgx.core.common.Exception) obj;
 
     boolean result = true;
-    result = result && (hasMessage() == other.hasMessage());
-    if (hasMessage()) {
-      result = result && getMessage()
-          .equals(other.getMessage());
-    }
     result = result && (hasExceptionClass() == other.hasExceptionClass());
     if (hasExceptionClass()) {
       result = result && getExceptionClass()
           .equals(other.getExceptionClass());
+    }
+    result = result && (hasMessage() == other.hasMessage());
+    if (hasMessage()) {
+      result = result && getMessage()
+          .equals(other.getMessage());
     }
     result = result && getStackTraceList()
         .equals(other.getStackTraceList());
@@ -312,13 +308,13 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (hasMessage()) {
-      hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
-      hash = (53 * hash) + getMessage().hashCode();
-    }
     if (hasExceptionClass()) {
       hash = (37 * hash) + EXCEPTIONCLASS_FIELD_NUMBER;
       hash = (53 * hash) + getExceptionClass().hashCode();
+    }
+    if (hasMessage()) {
+      hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
+      hash = (53 * hash) + getMessage().hashCode();
     }
     if (getStackTraceCount() > 0) {
       hash = (37 * hash) + STACKTRACE_FIELD_NUMBER;
@@ -454,9 +450,9 @@ private static final long serialVersionUID = 0L;
     }
     public Builder clear() {
       super.clear();
-      message_ = "";
-      bitField0_ = (bitField0_ & ~0x00000001);
       exceptionClass_ = "";
+      bitField0_ = (bitField0_ & ~0x00000001);
+      message_ = "";
       bitField0_ = (bitField0_ & ~0x00000002);
       if (stackTraceBuilder_ == null) {
         stackTrace_ = java.util.Collections.emptyList();
@@ -491,11 +487,11 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
         to_bitField0_ |= 0x00000001;
       }
-      result.message_ = message_;
+      result.exceptionClass_ = exceptionClass_;
       if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
         to_bitField0_ |= 0x00000002;
       }
-      result.exceptionClass_ = exceptionClass_;
+      result.message_ = message_;
       if (stackTraceBuilder_ == null) {
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           stackTrace_ = java.util.Collections.unmodifiableList(stackTrace_);
@@ -547,14 +543,14 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.r3.sgx.core.common.Exception other) {
       if (other == com.r3.sgx.core.common.Exception.getDefaultInstance()) return this;
-      if (other.hasMessage()) {
+      if (other.hasExceptionClass()) {
         bitField0_ |= 0x00000001;
-        message_ = other.message_;
+        exceptionClass_ = other.exceptionClass_;
         onChanged();
       }
-      if (other.hasExceptionClass()) {
+      if (other.hasMessage()) {
         bitField0_ |= 0x00000002;
-        exceptionClass_ = other.exceptionClass_;
+        message_ = other.message_;
         onChanged();
       }
       if (stackTraceBuilder_ == null) {
@@ -589,9 +585,6 @@ private static final long serialVersionUID = 0L;
     }
 
     public final boolean isInitialized() {
-      if (!hasMessage()) {
-        return false;
-      }
       if (!hasExceptionClass()) {
         return false;
       }
@@ -622,91 +615,15 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.lang.Object message_ = "";
+    private java.lang.Object exceptionClass_ = "";
     /**
-     * <code>required string message = 1;</code>
+     * <code>required string exceptionClass = 1;</code>
      */
-    public boolean hasMessage() {
+    public boolean hasExceptionClass() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required string message = 1;</code>
-     */
-    public java.lang.String getMessage() {
-      java.lang.Object ref = message_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          message_ = s;
-        }
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>required string message = 1;</code>
-     */
-    public com.google.protobuf.ByteString
-        getMessageBytes() {
-      java.lang.Object ref = message_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        message_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>required string message = 1;</code>
-     */
-    public Builder setMessage(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-      message_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>required string message = 1;</code>
-     */
-    public Builder clearMessage() {
-      bitField0_ = (bitField0_ & ~0x00000001);
-      message_ = getDefaultInstance().getMessage();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>required string message = 1;</code>
-     */
-    public Builder setMessageBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-      message_ = value;
-      onChanged();
-      return this;
-    }
-
-    private java.lang.Object exceptionClass_ = "";
-    /**
-     * <code>required string exceptionClass = 2;</code>
-     */
-    public boolean hasExceptionClass() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    /**
-     * <code>required string exceptionClass = 2;</code>
+     * <code>required string exceptionClass = 1;</code>
      */
     public java.lang.String getExceptionClass() {
       java.lang.Object ref = exceptionClass_;
@@ -723,7 +640,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>required string exceptionClass = 2;</code>
+     * <code>required string exceptionClass = 1;</code>
      */
     public com.google.protobuf.ByteString
         getExceptionClassBytes() {
@@ -739,37 +656,113 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>required string exceptionClass = 2;</code>
+     * <code>required string exceptionClass = 1;</code>
      */
     public Builder setExceptionClass(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000002;
+  bitField0_ |= 0x00000001;
       exceptionClass_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>required string exceptionClass = 2;</code>
+     * <code>required string exceptionClass = 1;</code>
      */
     public Builder clearExceptionClass() {
-      bitField0_ = (bitField0_ & ~0x00000002);
+      bitField0_ = (bitField0_ & ~0x00000001);
       exceptionClass_ = getDefaultInstance().getExceptionClass();
       onChanged();
       return this;
     }
     /**
-     * <code>required string exceptionClass = 2;</code>
+     * <code>required string exceptionClass = 1;</code>
      */
     public Builder setExceptionClassBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000002;
+  bitField0_ |= 0x00000001;
       exceptionClass_ = value;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object message_ = "";
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public boolean hasMessage() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          message_ = s;
+        }
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public Builder setMessage(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+      message_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public Builder clearMessage() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      message_ = getDefaultInstance().getMessage();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public Builder setMessageBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+      message_ = value;
       onChanged();
       return this;
     }

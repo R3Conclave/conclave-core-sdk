@@ -36,7 +36,7 @@ dependencies {
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
-    testImplementation "org.assertj:assertj-core:3.13.2"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "io.fabric8:kubernetes-client:$fabric8_kubernetes_client_version"
     testImplementation "io.grpc:grpc-testing:$grpc_version"
     testImplementation "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"

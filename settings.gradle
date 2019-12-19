@@ -21,6 +21,10 @@ if (includeNative) {
     include 'cpp:native-binutils'
 }
 
+include 'conclave-common'
+include 'conclave-enclave'
+include 'conclave-host'
+
 include 'api-core:api-core-enclave'
 include 'api-core:api-core-host'
 include 'api-core:api-core-common'

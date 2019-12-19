@@ -1,14 +1,12 @@
 package com.r3.sgx.dynamictesting
 
 import com.google.protobuf.GeneratedMessageV3
+import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.sgx.core.common.Sender
-import com.r3.sgx.core.enclave.RootEnclave
-import com.r3.sgx.core.enclave.internal.Native
 import com.r3.sgx.testing.StringHandler
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import java.io.File
 import java.io.FileOutputStream
-import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -18,10 +16,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.jvm.internal.Intrinsics
 
-typealias ClassStringSlashes = String
-
 object BuildEnclaveJarFromClass {
-
     sealed class Entry {
         abstract val path: Path
         data class Directory(override val path: Path) : Entry()
@@ -50,16 +45,16 @@ object BuildEnclaveJarFromClass {
             // CLASSES
             val rootClasses = listOf(
                     entryClass,
+                    com.r3.sgx.core.enclave.Enclave::class.java,
                     Sender::class.java,
-                    RootEnclave::class.java,
+                    com.r3.conclave.enclave.Enclave::class.java,
+                    EnclaveCall::class.java,
                     StringHandler::class.java,
-                    Native::class.java,
                     Intrinsics::class.java,
                     GeneratedMessageV3::class.java,
                     EdDSANamedCurveTable::class.java
             ) + includeClasses
-            val roots = rootClasses.map { it.name.replace('.', '/') }
-            val locations = roots.mapNotNull { getLocation(it) }.toSet()
+            val locations = rootClasses.mapNotNull { it.protectionDomain?.codeSource?.location }.toSet()
             for (location in locations) {
                 val file = File(location.file)
                 println("Including $location")
@@ -83,7 +78,7 @@ object BuildEnclaveJarFromClass {
                     queue.add(file)
                     while (queue.isNotEmpty()) {
                         val next = queue.removeFirst()
-                        val children = next.listFiles()
+                        val children = next.listFiles()!!
                         for (child in children) {
                             if (child.isDirectory) {
                                 queue.add(child)
@@ -127,10 +122,5 @@ object BuildEnclaveJarFromClass {
             val entry = ZipEntry("$pathToCreate/")
             putNextEntry(entry)
         }
-    }
-
-    private fun getLocation(className: ClassStringSlashes): URL? {
-        val clazz = Class.forName(className.replace('/', '.'))
-        return clazz.protectionDomain?.codeSource?.location
     }
 }

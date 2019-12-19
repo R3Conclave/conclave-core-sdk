@@ -1,28 +1,34 @@
 package com.r3.sgx.core.enclave.internal
 
-import com.r3.sgx.core.enclave.*
+import com.r3.sgx.core.enclave.Enclave
+import com.r3.sgx.core.enclave.EnclaveApi
 import java.nio.ByteBuffer
+import java.util.*
 import java.util.jar.JarInputStream
 
 object NativeEnclaveApi : EnclaveApi {
     const val ENCLAVE_CLASS_ATTRIBUTE_NAME = "Enclave-Class"
 
-    override fun getEnclaveClassName(): String = JarInputStream(RawAppJarInputStream()).use { jar ->
-        jar.manifest.mainAttributes.getValue(ENCLAVE_CLASS_ATTRIBUTE_NAME)
-                ?: throw IllegalStateException("Enclave class not specified. Expected $ENCLAVE_CLASS_ATTRIBUTE_NAME attribute in manifest")
+    override fun getEnclaveClassName(): String {
+        val manifest = JarInputStream(RawAppJarInputStream()).use { it.manifest }
+        return checkNotNull(manifest.mainAttributes.getValue(ENCLAVE_CLASS_ATTRIBUTE_NAME)) {
+            "Enclave class not specified. Expected $ENCLAVE_CLASS_ATTRIBUTE_NAME attribute in manifest"
+        }
     }
 
-    /** The singleton instance of the user supplied [Enclave]. */
+    /** The singleton instance of the user supplied enclave. */
     private val singletonHandler by lazy {
-        val enclaveClass = Class.forName(getEnclaveClassName()).let {
-            require(Enclave::class.java.isAssignableFrom(it)) {
+        val enclaveClass = Class.forName(getEnclaveClassName())
+        if (Enclave::class.java.isAssignableFrom(enclaveClass)) {
+            enclaveClass.asSubclass(Enclave::class.java).newInstance().initialize(this, NativeOcallSender)
+        } else {
+            val conclaveLoader = ServiceLoader.load(ConclaveLoader::class.java).firstOrNull()
+            // If there isn't a ConclaveLaoder on the classpath assume the app is trying to use the old API.
+            requireNotNull(conclaveLoader) {
                 "Class specified in manifest $ENCLAVE_CLASS_ATTRIBUTE_NAME does not extend ${Enclave::class.java.name}"
             }
-            @Suppress("unchecked_cast")
-            it as Class<out Enclave>
+            conclaveLoader.loadEnclave(enclaveClass, this, NativeOcallSender)
         }
-        val enclave = enclaveClass.newInstance()
-        enclave.initialize(this, NativeOcallSender)
     }
 
     /**

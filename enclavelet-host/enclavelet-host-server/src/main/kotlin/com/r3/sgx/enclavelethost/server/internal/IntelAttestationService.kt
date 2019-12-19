@@ -1,15 +1,16 @@
 package com.r3.sgx.enclavelethost.server.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxSignedQuote
 import com.r3.sgx.enclavelethost.server.AttestationService
 import com.r3.sgx.enclavelethost.server.AttestationServiceReportResponse
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.r3.sgx.enclavelethost.server.EnclaveletHostConfiguration
-import com.r3.sgx.enclavelethost.server.internal.ias.*
+import com.r3.sgx.enclavelethost.server.internal.ias.AttestationError
+import com.r3.sgx.enclavelethost.server.internal.ias.ReportRequest
 import org.apache.http.HttpResponse
-import org.apache.http.HttpStatus.*
+import org.apache.http.HttpStatus.SC_FORBIDDEN
+import org.apache.http.HttpStatus.SC_OK
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.config.RegistryBuilder
@@ -23,26 +24,16 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager
 import org.apache.http.ssl.SSLContextBuilder
 import org.apache.http.util.EntityUtils
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.util.io.pem.PemReader
-import org.slf4j.LoggerFactory
-import java.io.ByteArrayInputStream
 import org.jboss.resteasy.util.Base64
-import java.io.InputStreamReader
+import org.slf4j.LoggerFactory
 import java.net.URLDecoder
 import java.nio.ByteBuffer
-import java.security.KeyFactory
-import java.security.KeyStore
 import java.security.SecureRandom
-import java.security.cert.CertificateFactory
-import java.security.spec.PKCS8EncodedKeySpec
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutorService
 import javax.ws.rs.ForbiddenException
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.UriBuilder
 
-class IntelAttestationService(val config: EnclaveletHostConfiguration) : AttestationService {
+class IntelAttestationService(private val url: String, private val subscriptionKey: String) : AttestationService {
 
     companion object {
         @JvmStatic
@@ -65,7 +56,7 @@ class IntelAttestationService(val config: EnclaveletHostConfiguration) : Attesta
         val rawQuote = signedQuote.getBuffer().array()
         try {
             createHttpClient().use { client ->
-                val reportURI = UriBuilder.fromUri(config.attestationServiceUrl)
+                val reportURI = UriBuilder.fromUri(url)
                         .path("attestation/v3/report")
                         .build()
                 log.info("Invoking IAS: {}", reportURI)
@@ -73,7 +64,7 @@ class IntelAttestationService(val config: EnclaveletHostConfiguration) : Attesta
                 val httpRequest = HttpPost(reportURI)
                 val reportRequest = ReportRequest(rawQuote)
                 httpRequest.entity = StringEntity(mapper.writeValueAsString(reportRequest), ContentType.APPLICATION_JSON)
-                httpRequest.setHeader("Ocp-Apim-Subscription-Key", config.iasSubscriptionKey)
+                httpRequest.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey)
                 client.execute(httpRequest).use { httpResponse ->
                     if (httpResponse.statusLine.statusCode != SC_OK) {
                         val content = String(httpResponse.entity.content.readBytes())
@@ -102,8 +93,9 @@ class IntelAttestationService(val config: EnclaveletHostConfiguration) : Attesta
                 .build()
     }
 
-    private fun HttpResponse.requireHeader(name: String): String
-            = (this.getFirstHeader(name) ?: throw ForbiddenException(toResponse("Response header '$name' missing", SC_FORBIDDEN))).value
+    private fun HttpResponse.requireHeader(name: String): String {
+        return getFirstHeader(name)?.value ?: throw ForbiddenException(toResponse("Response header '$name' missing", SC_FORBIDDEN))
+    }
 
     private fun createHttpClient(): CloseableHttpClient {
         val sslContext = SSLContextBuilder()
@@ -123,7 +115,7 @@ class IntelAttestationService(val config: EnclaveletHostConfiguration) : Attesta
     private fun String.decodeURL(): String = URLDecoder.decode(this, "UTF-8")
 }
 
-data class IasProxyResponse(
+class IasProxyResponse(
         override val httpResponse: ByteArray,
         override val signature: ByteArray,
         override val certificate: String

@@ -42,8 +42,8 @@ public final class TryOrFail {
       "\007failure\030\002 \001(\0132\n.ExceptionH\000B\017\n\rSuccessO" +
       "rFail\"`\n\021StackTraceElement\022\021\n\tclassName\030" +
       "\001 \002(\t\022\022\n\nmethodName\030\002 \002(\t\022\020\n\010fileName\030\003 " +
-      "\001(\t\022\022\n\nlineNumber\030\004 \002(\005\"\\\n\tException\022\017\n\007" +
-      "message\030\001 \002(\t\022\026\n\016exceptionClass\030\002 \002(\t\022&\n" +
+      "\001(\t\022\022\n\nlineNumber\030\004 \002(\005\"\\\n\tException\022\026\n\016" +
+      "exceptionClass\030\001 \002(\t\022\017\n\007message\030\002 \001(\t\022&\n" +
       "\nstackTrace\030\003 \003(\0132\022.StackTraceElementB+\n" +
       "\026com.r3.sgx.core.commonB\tTryOrFailP\001\242\002\003H" +
       "LW"
@@ -77,7 +77,7 @@ public final class TryOrFail {
     internal_static_Exception_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Exception_descriptor,
-        new java.lang.String[] { "Message", "ExceptionClass", "StackTrace", });
+        new java.lang.String[] { "ExceptionClass", "Message", "StackTrace", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

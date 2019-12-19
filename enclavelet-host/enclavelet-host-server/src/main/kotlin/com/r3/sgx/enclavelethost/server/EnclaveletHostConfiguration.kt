@@ -40,7 +40,7 @@ data class EnclaveletHostConfiguration(
     companion object {
         private val mapper: ObjectMapper = ObjectMapper(YAMLFactory()).registerModule(KotlinModule())
 
-        val defaults = read(this::class.java.getResourceAsStream("/default-host-settings.yml"))
+        val defaults: EnclaveletHostConfiguration = read(this::class.java.getResourceAsStream("/default-host-settings.yml"))
 
         fun read(configuration: File): EnclaveletHostConfiguration {
             return Files.newBufferedReader(configuration.toPath()).use {

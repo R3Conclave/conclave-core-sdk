@@ -47,7 +47,7 @@ class ExceptionSendingHandler(private val exposeErrors: Boolean): Handler<Except
         }
 
         fun sendException(throwable: Throwable) {
-            val exception = SerializeException.exceptionFromThrowable(throwable)
+            val exception = SerializeException.javaToProtobuf(throwable)
             errorSender.send(exception.serializedSize, Consumer { buffer ->
                 val output = CodedOutputStream.newInstance(buffer)
                 exception.writeTo(output)
@@ -56,7 +56,7 @@ class ExceptionSendingHandler(private val exposeErrors: Boolean): Handler<Except
         }
 
         @Synchronized
-        fun <CONNECTION> addDownstream(downstream: Handler<CONNECTION>): CONNECTION {
+        fun <CONNECTION> setDownstream(downstream: Handler<CONNECTION>): CONNECTION {
             if (this.downstream != null) {
                 throw IllegalArgumentException("Can only have a single downstream")
             } else {

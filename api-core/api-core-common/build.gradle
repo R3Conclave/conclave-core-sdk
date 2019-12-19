@@ -11,6 +11,10 @@ dependencies {
     compile "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
     // Curve25519 by Moxie Marlinspike: modern elliptic curve key agreement.
     implementation "org.whispersystems:curve25519-java:$whispersystems_ed25519_version"
+
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
 }
 
 protobuf {

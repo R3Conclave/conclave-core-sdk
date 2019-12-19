@@ -8,32 +8,32 @@ public interface ExceptionOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>required string message = 1;</code>
-   */
-  boolean hasMessage();
-  /**
-   * <code>required string message = 1;</code>
-   */
-  java.lang.String getMessage();
-  /**
-   * <code>required string message = 1;</code>
-   */
-  com.google.protobuf.ByteString
-      getMessageBytes();
-
-  /**
-   * <code>required string exceptionClass = 2;</code>
+   * <code>required string exceptionClass = 1;</code>
    */
   boolean hasExceptionClass();
   /**
-   * <code>required string exceptionClass = 2;</code>
+   * <code>required string exceptionClass = 1;</code>
    */
   java.lang.String getExceptionClass();
   /**
-   * <code>required string exceptionClass = 2;</code>
+   * <code>required string exceptionClass = 1;</code>
    */
   com.google.protobuf.ByteString
       getExceptionClassBytes();
+
+  /**
+   * <code>optional string message = 2;</code>
+   */
+  boolean hasMessage();
+  /**
+   * <code>optional string message = 2;</code>
+   */
+  java.lang.String getMessage();
+  /**
+   * <code>optional string message = 2;</code>
+   */
+  com.google.protobuf.ByteString
+      getMessageBytes();
 
   /**
    * <code>repeated .StackTraceElement stackTrace = 3;</code>

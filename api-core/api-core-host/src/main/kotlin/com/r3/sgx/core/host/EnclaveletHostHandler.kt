@@ -19,7 +19,7 @@ class EnclaveletHostHandler(
 
     override fun connect(upstream: Sender): Connection {
         val errorConnection = errorHandler.connect(upstream)
-        val muxConnection = errorConnection.addDownstream(muxingHandler)
+        val muxConnection = errorConnection.setDownstream(muxingHandler)
         val channelsConnection = muxConnection.addDownstream(channelsHandler)
         val attestationConnection = muxConnection.addDownstream(attestationHandler)
         return Connection(errorConnection, muxConnection, attestationConnection, channelsConnection)

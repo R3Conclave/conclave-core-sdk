@@ -22,7 +22,7 @@ abstract class ErrorHandler: Handler<ErrorHandler.Connection> {
             }
 
             SerializeException.Discriminator.NO_ERROR.value -> {
-                val downstream = connection.getDownstream() ?: throw IllegalStateException("Downstream not set")
+                val downstream = connection.downstream ?: throw IllegalStateException("Downstream not set")
                 downstream.onReceive(input)
             }
 
@@ -37,7 +37,7 @@ abstract class ErrorHandler: Handler<ErrorHandler.Connection> {
     private fun parseException(input: ByteBuffer): Throwable {
         return try {
             val exception = Exception.parseFrom(CodedInputStream.newInstance(input))
-            SerializeException.throwableFromException(exception)
+            SerializeException.protobufToJava(exception)
         } catch (throwable: Throwable) {
             input.mark()
             val size = Integer.min(input.remaining(), 64)
@@ -49,19 +49,16 @@ abstract class ErrorHandler: Handler<ErrorHandler.Connection> {
     }
 
     class Connection(private val upstream: Sender) {
-            private var downstream: HandlerConnected<*>? = null
-
-        fun getDownstream(): HandlerConnected<*>? {
-            return downstream
-        }
+        private var _downstream: HandlerConnected<*>? = null
+        val downstream: HandlerConnected<*>? get() = _downstream
 
         @Synchronized
-        fun <CONNECTION> addDownstream(downstream: Handler<CONNECTION>): CONNECTION {
-            if (this.downstream != null) {
+        fun <CONNECTION> setDownstream(downstream: Handler<CONNECTION>): CONNECTION {
+            if (this._downstream != null) {
                 throw IllegalArgumentException("Can only have a single downstream")
             } else {
                 val connection = downstream.connect(upstream)
-                this.downstream = HandlerConnected(downstream, connection)
+                this._downstream = HandlerConnected(downstream, connection)
                 return connection
             }
         }

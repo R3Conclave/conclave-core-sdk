@@ -33,6 +33,16 @@ class BuildJarObjectTest {
         assertThat(buildResult.task(":shadowJarObject")!!.outcome).isEqualTo(TaskOutcome.FAILED)
     }
 
+    @Test
+    fun conclaveEnclaveSanityCheck() {
+        val projectDirectory = getProjectDirectory("test-project-conclave-enclave")
+        val runner = gradleRunner(projectDirectory)
+        val buildResult = runner.build()
+        val output = buildResult.output
+        println(output)
+        assertThat(buildResult.task(":shadowJarObject")!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+    }
+
     private fun getProjectDirectory(projectDirectory: String) = File(javaClass.classLoader.getResource(projectDirectory).toURI())
 
     private fun gradleRunner(projectDirectory: File): GradleRunner {

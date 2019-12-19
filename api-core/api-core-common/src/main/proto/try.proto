@@ -20,7 +20,7 @@ message StackTraceElement {
 }
 
 message Exception {
-    required string message = 1;
-    required string exceptionClass = 2;
+    required string exceptionClass = 1;
+    optional string message = 2;
     repeated StackTraceElement stackTrace = 3;
 }

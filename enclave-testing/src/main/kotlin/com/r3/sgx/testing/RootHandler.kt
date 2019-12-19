@@ -2,7 +2,6 @@ package com.r3.sgx.testing
 
 import com.r3.sgx.core.common.*
 import java.nio.ByteBuffer
-import java.util.function.Consumer
 
 /**
  * A common base [Handler] that handles errors and muxes additional functionality.
@@ -17,7 +16,7 @@ class RootHandler : Handler<RootHandler.Connection> {
 
     override fun connect(upstream: Sender): Connection {
         val errorConnected = errorHandler.connect(upstream)
-        val muxConnected = errorConnected.addDownstream(muxingHandler)
+        val muxConnected = errorConnected.setDownstream(muxingHandler)
         return Connection(errorConnected, muxConnected)
     }
 

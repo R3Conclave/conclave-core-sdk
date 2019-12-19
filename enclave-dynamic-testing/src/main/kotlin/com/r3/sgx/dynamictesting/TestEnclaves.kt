@@ -18,7 +18,7 @@ class TestEnclaves : ExternalResource() {
     private var cache: Cache? = null
     private var entropy: Long? = null
 
-    override fun before() {
+    public override fun before() {
         executorService = Executors.newFixedThreadPool(4)
         val cacheDirectory = File("build/cache")
         cacheDirectory.deleteRecursively()
@@ -27,7 +27,7 @@ class TestEnclaves : ExternalResource() {
         entropy = random.nextLong()
     }
 
-    override fun after() {
+    public override fun after() {
         executorService.apply {
             shutdown()
             if (!awaitTermination(30, SECONDS)) {
@@ -37,7 +37,7 @@ class TestEnclaves : ExternalResource() {
         cache = null
     }
 
-    private fun createEnclaveJar(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
+    private fun createEnclaveJar(entryClass: Class<*>, builder: EnclaveBuilder): Cached<File> {
         return Cached.singleFile("${entryClass.name}-$entropy-${builder.type.name}", "${entryClass.simpleName}.jar") { output ->
             BuildEnclaveJarFromClass.buildEnclaveJarFromClass(entryClass, builder.includeClasses, output)
         }
@@ -52,11 +52,11 @@ class TestEnclaves : ExternalResource() {
         return getEnclaveJar(enclaveClass, EnclaveBuilder())
     }
 
-    fun getEnclave(entryClass: Class<out Enclave>): File {
+    fun getEnclave(entryClass: Class<*>): File {
         return getEnclave(entryClass, EnclaveBuilder())
     }
 
-    fun getEnclave(entryClass: Class<out Enclave>, builder: EnclaveBuilder): File {
+    fun getEnclave(entryClass: Class<*>, builder: EnclaveBuilder): File {
         if (cache == null) {
             throw IllegalStateException("Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field")
         }

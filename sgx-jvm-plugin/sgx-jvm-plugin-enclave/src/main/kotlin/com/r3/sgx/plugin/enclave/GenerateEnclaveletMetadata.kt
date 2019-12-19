@@ -1,6 +1,5 @@
 package com.r3.sgx.plugin.enclave
 
-import org.gradle.api.InvalidUserDataException
 import com.r3.sgx.plugin.SgxTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
@@ -8,8 +7,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import java.io.EOFException
 import java.io.File
-import java.net.URL
-import java.util.jar.JarInputStream
 import javax.inject.Inject
 
 /**
@@ -29,7 +26,7 @@ open class GenerateEnclaveletMetadata @Inject constructor(objects: ObjectFactory
     val enclaveletJar: RegularFileProperty = objects.fileProperty()
 
     override fun sgxAction() {
-        val trustKey  = BuildJarObject.readEnclaveletClassName(enclaveletJar.asFile.get().toURI().toURL())
+        val trustKey  = BuildJarObject.readEnclaveClassName(enclaveletJar.asFile.get().toURI().toURL())
         val measurement = getEnclaveMeasurement(outputSignedEnclave.asFile.get())
         logger.lifecycle("Enclave measurement: $measurement")
         generateOutput(outputEnclaveMetadata.asFile.get(), trustKey, measurement)
