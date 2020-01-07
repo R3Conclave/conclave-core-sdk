@@ -1,0 +1,57 @@
+/**
+ * This module contains the enclave code which handles and runs user code in the DJVM.
+ */
+plugins {
+    id 'com.github.johnrengelman.shadow'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.sgx.host'
+}
+
+configurations {
+    jdkRt.resolutionStrategy {
+        // Always check the repository for a newer SNAPSHOT.
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation "org.slf4j:slf4j-nop:$slf4j_version"
+    implementation "net.corda.djvm:corda-djvm:$djvm_version"
+    implementation "com.r3.sgx:api-core-enclave"
+    implementation "com.r3.sgx:enclave-utils"
+
+    implementation "junit:junit:$junit_version"
+    implementation "org.assertj:assertj-core:$assertj_version"
+
+    testImplementation "com.r3.sgx:api-core-host"
+    testImplementation 'com.r3.sgx:enclave-dynamic-testing'
+
+    jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
+}
+
+processResources {
+    with copySpec {
+        from configurations.jdkRt.asPath
+        rename { 'deterministic-rt.zip' } // Renamed to zip so shadowJar doesn't expand it: https://github.com/johnrengelman/shadow/issues/111
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'djvm-enclave'
+    archiveClassifier = ''
+    zip64 = true
+
+    manifest {
+        attributes("Enclave-Class": "com.r3.sgx.djvm.enclave.DJVMEnclave")
+    }
+}
+
+test {
+    dependsOn ':djvm:user-code:shadowJar', signEnclaveWithDummyKeySimulation
+    doFirst {
+        systemProperty 'enclave_path', signEnclaveWithDummyKeySimulation.signedEnclavePath
+        systemProperty 'user-jar.path', tasks.getByPath(':djvm:user-code:shadowJar').outputs.files.asPath
+    }
+}

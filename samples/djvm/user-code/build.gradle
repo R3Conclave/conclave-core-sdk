@@ -1,0 +1,16 @@
+/**
+ * This module contains the user code which will be streamed into the DJVM enclave.
+ */
+plugins {
+    id 'com.github.johnrengelman.shadow'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+
+shadowJar {
+    archiveBaseName = 'integration-tests'
+    zip64 = true
+}

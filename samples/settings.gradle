@@ -7,6 +7,8 @@ include ':protobuf-enclave'
 include ':signing-enclave'
 include ':end-to-end-test'
 
+include ':djvm:djvm-enclave'
+include ':djvm:user-code'
 include ':multiplex:multiplex-common'
 include ':multiplex:multiplex-client'
 include ':multiplex:multiplex-enclave'
