@@ -4,7 +4,7 @@ import static org.gradle.api.JavaVersion.VERSION_1_8
 
 subprojects {
     repositories {
-        maven { url 'https://software.r3.com/artifactory/corda-dev' }
+        maven { url 'https://software.r3.com/artifactory/corda-dependencies' }
     }
 
     tasks.withType(JavaCompile) {

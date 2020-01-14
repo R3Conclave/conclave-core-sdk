@@ -128,7 +128,6 @@ abstract class DJVMBase {
                             rules.distinctBy(Any::javaClass),
                             emitters.distinctBy(Any::javaClass),
                             definitionProviders.distinctBy(Any::javaClass),
-                            enableTracing,
                             analysisConfiguration
                     )).use(Consumer { ctx ->
                         ctx.action()

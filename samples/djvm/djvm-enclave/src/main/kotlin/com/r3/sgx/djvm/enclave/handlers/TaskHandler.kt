@@ -37,7 +37,6 @@ class TaskHandler {
                 SandboxConfiguration.ALL_RULES,
                 SandboxConfiguration.ALL_EMITTERS,
                 SandboxConfiguration.ALL_DEFINITION_PROVIDERS,
-                true,
                 rootConfiguration
         )
     }
