@@ -1,24 +1,24 @@
 package com.r3.sgx.core.enclave.internal
 
-import sun.security.action.PutAllAction
 import java.security.AccessController
+import java.security.PrivilegedAction
 import java.security.Provider
 import java.security.Security
 
 object EnclaveSecurityProvider : Provider(
         "EnclaveSecurityProvider", 0.0, "Registry of basic cryptographic algorithm for Enclave JVM"
 ) {
-    private val BLOCK_MODES = "ECB|CBC|PCBC|CTR|CTS|CFB|OFB" +
+    private const val BLOCK_MODES = "ECB|CBC|PCBC|CTR|CTS|CFB|OFB" +
             "|CFB8|CFB16|CFB24|CFB32|CFB40|CFB48|CFB56|CFB64" +
             "|OFB8|OFB16|OFB24|OFB32|OFB40|OFB48|OFB56|OFB64"
-    private val BLOCK_MODES128 = BLOCK_MODES +
+    private const val BLOCK_MODES128 = BLOCK_MODES +
             "|GCM|CFB72|CFB80|CFB88|CFB96|CFB104|CFB112|CFB120|CFB128" +
             "|OFB72|OFB80|OFB88|OFB96|OFB104|OFB112|OFB120|OFB128"
-    private val BLOCK_PADS = "NOPADDING|PKCS5PADDING|ISO10126PADDING"
+    private const val BLOCK_PADS = "NOPADDING|PKCS5PADDING|ISO10126PADDING"
 
-    private val dsaKeyClasses = "java.security.interfaces.DSAPublicKey" + "|java.security.interfaces.DSAPrivateKey"
+    private const val dsaKeyClasses = "java.security.interfaces.DSAPublicKey" + "|java.security.interfaces.DSAPrivateKey"
 
-    private val rsaKeyClasses = "java.security.interfaces.RSAPublicKey" + "|java.security.interfaces.RSAPrivateKey"
+    private const val rsaKeyClasses = "java.security.interfaces.RSAPublicKey" + "|java.security.interfaces.RSAPrivateKey"
 
     /*
      * Note: RSA signature classes involved in certificate verification
@@ -215,5 +215,11 @@ object EnclaveSecurityProvider : Provider(
     fun register() {
         Security.addProvider(this)
     }
-}
 
+    private class PutAllAction(private val provider: Provider, private val map: Map<*, *>) : PrivilegedAction<Void?> {
+        override fun run(): Void? {
+            provider.putAll(map)
+            return null
+        }
+    }
+}

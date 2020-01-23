@@ -1,31 +1,26 @@
 package com.r3.sgx.core.common.attestation
 
+import com.r3.conclave.common.internal.parseHex
+import com.r3.conclave.common.internal.toHexString
 import com.r3.sgx.core.common.SgxMeasurement
 import java.nio.ByteBuffer
-import java.util.*
-import javax.xml.bind.DatatypeConverter
 
 /**
  * Represents an SGX enclave measurement
  */
+// TODO This should be an OpaqueByte
 class Measurement(private val data: ByteArray) {
     init {
         require(data.size == SgxMeasurement.size)
     }
 
-    constructor(hex: String): this(DatatypeConverter.parseHexBinary(hex))
+    constructor(hex: String): this(parseHex(hex.toUpperCase()))
 
-    override fun equals(other: Any?): Boolean {
-        return if ( other is Measurement) {
-            Arrays.equals(data, other.data)
-        } else false
-    }
+    override fun equals(other: Any?): Boolean = other is Measurement && data.contentEquals(other.data)
 
-    override fun hashCode(): Int {
-        return Arrays.hashCode(data)
-    }
+    override fun hashCode(): Int = data.contentHashCode()
 
-    override fun toString(): String = DatatypeConverter.printHexBinary(data)
+    override fun toString(): String = data.toHexString()
 
     val encoded get() = data.copyOf()
 
