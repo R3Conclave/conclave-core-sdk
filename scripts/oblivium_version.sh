@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -xeuo pipefail
+set -euo pipefail
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 
 case ${OBLIVIUM_VERSIONING} in

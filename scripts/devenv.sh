@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -xeuo pipefail
+set -euo pipefail
 
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 CLION_VERSION=2018.1.2
@@ -28,10 +28,12 @@ CODE_HOST_DIR=$PWD
 export CONTAINER_NAME=$(echo "code${CODE_HOST_DIR}" | sed -e 's/[^a-zA-Z0-9_.-]/_/g')
 CODE_DOCKER_DIR=$CODE_HOST_DIR
 export CONTAINER_ID=$(docker ps -aqf name=^/$CONTAINER_NAME\$ || echo "")
-if [[ -z ${CONTAINER_ID} ]]
-then
-  docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
-  docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-devenv
+if [[ -z ${CONTAINER_ID} ]]; then
+  # We don't want to / can't log in to the local registry. This step is only useful for remote registries.
+  if [[ "$OBLIVIUM_CONTAINER_REGISTRY_URL" != "localhost:5000" ]]; then
+    docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+    docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-devenv
+  fi
 
   ENV_DISPLAY=""
   if [[ ! -z ${DISPLAY+x} ]]
@@ -70,6 +72,7 @@ then
        --name=$CONTAINER_NAME \
        --privileged \
        --network host \
+       --label "sgxjvm" \
        --ulimit core=256000000 \
        --add-host="$(hostname):${docker_ip}" \
        --rm \
@@ -100,9 +103,9 @@ then
   # Add entry to container's hostname in /etc/hosts, if it's not there, due to different behaviour in macOS.
   docker exec -u root $CONTAINER_ID sh -c 'grep "\$\(hostname\)" /etc/hosts || printf "%s\t%s\n" $(ip address show docker0 2> /dev/null | sed -n "s/^.*inet \(addr:[ ]*\)*\([^ ]*\).*/\2/p" | cut -d/ -f1) $(hostname) >> /etc/hosts'
 
+  # Let us read/write to the home directory.
   docker exec -u root $CONTAINER_ID chown $(id -u):$(id -g) /home
-  if [[ ! -z ${cardreader_gid} ]]
-  then
+  if [[ ! -z ${cardreader_gid} ]]; then
     docker exec -it $@ -u root $CONTAINER_ID groupadd -g ${cardreader_gid} cardreader_ext
   fi
 fi
