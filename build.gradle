@@ -27,6 +27,9 @@ ext {
 import static org.gradle.api.JavaVersion.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+// This code allows the user to run gradle like this: ./gradlew -PexcludeNative
+// and the native components will be downloaded instead of built locally. This
+// can speed things up a lot if you aren't intending to change them!
 def includeNative = findProperty('excludeNative') == null
 def nativeSubmodulesToSubstitute = [
         ':cpp:native-host:native-host-simulation',
@@ -89,6 +92,7 @@ subprojects {
             exclude group: 'commons-logging', module: 'commons-logging'
         }
 
+        // Allow -PexcludeNative to do builds with downloaded artifacts instead of locally built artifacts.
         if (includeNative) {
             all {
                 for (submodule in nativeSubmodulesToSubstitute) {
