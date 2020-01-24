@@ -18,6 +18,7 @@ RUN tar -xaf /opt/idea.tar.gz -C /opt
 # Enable ptrace
 COPY root/etc/sysctl.d/10-ptrace.conf /etc/sysctl.d/10-ptrace.conf
 COPY root/scripts/setup-users.sh /scripts/setup-users.sh
+RUN apt-get update
 RUN apt-get install -qqy sudo bc && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     /scripts/setup-users.sh
