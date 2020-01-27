@@ -25,3 +25,5 @@ RUN apt-get install -qqy sudo bc && \
 
 # Configure a nicer/more useful prompt that doesn't show the (bogus/artificial) username, but does show git branch.
 RUN echo "export PS1=\"conclave \e[32m\$(git branch | awk '/^\* / { print \$2 }')\e[0m \w> \"" >>/etc/bash.bashrc
+# Make ls use colors.
+RUN echo "alias ls='ls --color'" >>/etc/bash.bashrc
