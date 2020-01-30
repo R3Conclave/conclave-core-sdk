@@ -1,0 +1,22 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id "com.github.johnrengelman.shadow"
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.r3.conclave:conclave-host"
+
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}
+
+test {
+    useJUnitPlatform()
+    dependsOn project(":conclave:enclave").buildSignedEnclaveSimulation
+    systemProperty(
+            "com.r3.conclave.sample.enclavepath",
+            project(":conclave:enclave").buildSignedEnclaveSimulation.outputSignedEnclave.getAsFile().get().path
+    )
+}

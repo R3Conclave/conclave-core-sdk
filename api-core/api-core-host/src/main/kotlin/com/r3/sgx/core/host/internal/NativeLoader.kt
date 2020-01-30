@@ -1,10 +1,9 @@
 package com.r3.sgx.core.host.internal
 
 import com.r3.sgx.core.host.EnclaveLoadMode
-import java.io.File
-import java.net.URL
-import java.nio.file.*
-import java.util.*
+import io.github.classgraph.ClassGraph
+import java.nio.file.Files
+import java.nio.file.Path
 
 object NativeLoader {
     private var linkedEnclaveLoadMode: EnclaveLoadMode? = null
@@ -33,56 +32,29 @@ object NativeLoader {
                 )
             }
         }
-        val classLoader = NativeLoader::class.java.classLoader
-        val resourcePaths = getHostLibPaths(classLoader, enclaveLoadMode)
-        val temporaryDirectory = createTemporaryDirectory()
-        for (path in resourcePaths) {
-            val destination = File(temporaryDirectory, path.fileName.toString())
-            val fileStream = classLoader.getResourceAsStream(path.toString().drop(1))
-                    ?: throw Exception("Can't open $path as resource")
-            Files.copy(fileStream, destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
-        System.load(File(temporaryDirectory, "libjvm_host.so").absolutePath)
+
+        val tempDirectory = createTempDirectory()
+
+        val hostLibrariesResourcePath = "com/r3/sgx/host-libraries/${enclaveLoadMode.name.toLowerCase().capitalize()}"
+
+        ClassGraph()
+                .whitelistPaths(hostLibrariesResourcePath)
+                .scan()
+                .use {
+                    it.allResources.forEachInputStream { resource, stream ->
+                        val name = resource.path.substringAfterLast('/')
+                        val destination = tempDirectory.resolve(name)
+                        Files.copy(stream, destination)
+                    }
+                }
+
+        System.load(tempDirectory.resolve("libjvm_host.so").toAbsolutePath().toString())
         linkedEnclaveLoadMode = enclaveLoadMode
     }
 
-    private fun createTemporaryDirectory(): File {
-        val id = UUID.randomUUID().toString()
-        val temporaryDirectory = File(System.getProperty("java.io.tmpdir"), "com.r3.sgx.host-libraries.$id")
-        temporaryDirectory.mkdir()
-        temporaryDirectory.deleteOnExit()
-        Runtime.getRuntime().addShutdownHook(Thread {
-            temporaryDirectory.deleteRecursively()
-        })
-        return temporaryDirectory
-    }
-
-    private fun getHostLibPaths(classLoader: ClassLoader, enclaveLoadMode: EnclaveLoadMode): List<Path> {
-        val hostLibPrefix = "com/r3/sgx/host-libraries/"
-        val hostLibrariesResourcePath = hostLibPrefix + when (enclaveLoadMode) {
-            EnclaveLoadMode.SIMULATION -> "Simulation"
-            EnclaveLoadMode.DEBUG -> "Debug"
-            EnclaveLoadMode.RELEASE -> "Release"
-        }
-        val librariesUrls = classLoader.getResources(hostLibrariesResourcePath).toList()
-        when (librariesUrls.size) {
-            0 -> throw IllegalStateException(
-                    "Cannot find native host libraries, make sure they are on the classpath (com.r3.sgx:native-host-*)")
-            1 -> return getNativeResourcePaths(librariesUrls[0], hostLibrariesResourcePath)
-            else -> throw IllegalStateException(
-                    "Found several sources of native host libraries ($librariesUrls), make sure to only provide a single one")
-        }
-    }
-
-    private fun getNativeResourcePaths(libraryUrl: URL, hostLibrariesResourcePath: String): List<Path> {
-        val resourcePaths = ArrayList<Path>()
-        FileSystems.newFileSystem(libraryUrl.toURI(), emptyMap<String, Any?>()).use {
-            for (path in Files.walk(it.getPath(hostLibrariesResourcePath))) {
-                if (!Files.isDirectory(path)) {
-                    resourcePaths.add(path)
-                }
-            }
-        }
-        return resourcePaths
+    private fun createTempDirectory(): Path {
+        val tempDirectory = Files.createTempDirectory("com.r3.sgx.host-libraries")
+        Runtime.getRuntime().addShutdownHook(Thread { tempDirectory.toFile().deleteRecursively() })
+        return tempDirectory
     }
 }

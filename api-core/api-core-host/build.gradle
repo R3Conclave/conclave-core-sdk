@@ -5,9 +5,11 @@ plugins {
 }
 
 dependencies {
+    api project(":api-core:api-core-common")
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
-    compile project(":api-core:api-core-common")
+    implementation "io.github.classgraph:classgraph:$classgraph_version"
 
     testImplementation project(":enclave-dynamic-testing")
     testImplementation "org.jetbrains.kotlin:kotlin-test"
