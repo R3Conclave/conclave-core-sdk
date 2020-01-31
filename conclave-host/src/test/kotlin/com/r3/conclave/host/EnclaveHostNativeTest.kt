@@ -52,7 +52,7 @@ class EnclaveHostNativeTest {
 
     private inline fun <reified T : Enclave> hostTo(): EnclaveHost {
         val enclaveFile = testEnclaves.getEnclave(T::class.java)
-        return EnclaveHost.create(enclaveFile.toPath(), EnclaveLoadMode.SIMULATION)
+        return EnclaveHost.create(enclaveFile.toPath(), EnclaveLoadMode.SIMULATION, tempFile = false)
     }
 
     class StatefulEnclave : EnclaveCall, Enclave() {

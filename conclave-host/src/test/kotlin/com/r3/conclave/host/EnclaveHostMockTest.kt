@@ -7,7 +7,8 @@ import com.r3.sgx.core.common.ThrowingErrorHandler
 import com.r3.sgx.core.enclave.RootEnclave
 import com.r3.sgx.enclavelethost.server.internal.MockAttestationService
 import com.r3.sgx.testing.MockEcallSender
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
 
 class EnclaveHostMockTest {
@@ -162,7 +163,7 @@ class EnclaveHostMockTest {
         // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
         val rootEnclave = Enclave::class.java.getDeclaredField("rootEnclave").apply { isAccessible = true }.get(enclave) as RootEnclave
         val handle = MockEcallSender(ThrowingErrorHandler(), rootEnclave)
-        return EnclaveHost.create(handle, MockAttestationService())
+        return EnclaveHost.create(handle, MockAttestationService(), fileToDelete = null)
     }
 
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {

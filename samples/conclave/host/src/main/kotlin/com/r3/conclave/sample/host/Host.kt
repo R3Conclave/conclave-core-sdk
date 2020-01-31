@@ -2,16 +2,14 @@ package com.r3.conclave.sample.host
 
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.EnclaveMode
-import java.nio.file.Path
-import java.nio.file.Paths
 
 fun main(args: Array<String>) {
-    val answer = callEnclave(Paths.get(args[0]), args[1].toByteArray())
+    val answer = callEnclave(args[0].toByteArray(), EnclaveMode.valueOf(args[1]))
     println(answer?.let(::String))
 }
 
-fun callEnclave(enclaveFile: Path, payload: ByteArray): ByteArray? {
-    val host = EnclaveHost.loadFromDisk(enclaveFile, EnclaveMode.SIMULATION)
+fun callEnclave(payload: ByteArray, mode: EnclaveMode): ByteArray? {
+    val host = EnclaveHost.loadFromResources("com.r3.conclave.sample.enclave.ReverseEnclave", mode)
     host.start()
     return host.use {
         host.callEnclave(payload)

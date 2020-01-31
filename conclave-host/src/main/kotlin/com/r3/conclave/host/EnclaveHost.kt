@@ -12,8 +12,11 @@ import com.r3.sgx.enclavelethost.server.EnclaveletHostConfiguration
 import com.r3.sgx.enclavelethost.server.internal.IntelAttestationService
 import com.r3.sgx.enclavelethost.server.internal.MockAttestationService
 import java.io.DataOutputStream
+import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.function.Consumer
 import kotlin.Exception
 
@@ -34,7 +37,8 @@ import kotlin.Exception
  */
 class EnclaveHost @PotentialPackagePrivate private constructor(
         private val handle: EnclaveHandle<ErrorHandler.Connection>,
-        private val attestationService: AttestationService
+        private val attestationService: AttestationService,
+        private val fileToDelete: Path?
 ) : AutoCloseable {
     companion object {
         // TODO Require the user to provide these
@@ -48,20 +52,25 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         )
 
         // This wouldn't be needed if the c'tor was package-private.
-        internal fun create(handle: EnclaveHandle<ErrorHandler.Connection>, attestationService: AttestationService): EnclaveHost {
-            return EnclaveHost(handle, attestationService)
+        @VisibleForTesting
+        internal fun create(
+                handle: EnclaveHandle<ErrorHandler.Connection>,
+                attestationService: AttestationService,
+                fileToDelete: Path?
+        ): EnclaveHost {
+            return EnclaveHost(handle, attestationService, fileToDelete)
         }
 
         @PotentialPackagePrivate
         @VisibleForTesting
-        internal fun create(enclaveFile: Path, mode: EnclaveLoadMode): EnclaveHost {
+        internal fun create(enclaveFile: Path, mode: EnclaveLoadMode, tempFile: Boolean): EnclaveHost {
             val handle = NativeHostApi(mode).createEnclave(ThrowingErrorHandler(), enclaveFile.toFile())
             val attestationService = when (mode) {
                 EnclaveLoadMode.RELEASE -> IntelAttestationService("https://api.trustedservices.intel.com/sgx", r3SubscriptionKey)
                 EnclaveLoadMode.DEBUG -> IntelAttestationService("https://api.trustedservices.intel.com/sgx/dev", r3SubscriptionKey)
                 EnclaveLoadMode.SIMULATION -> MockAttestationService()
             }
-            return create(handle, attestationService)
+            return create(handle, attestationService, if (tempFile) enclaveFile else null)
         }
 
         /**
@@ -73,21 +82,74 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
          */
         // TODO Remove the need for EnclaveMode
         @JvmStatic
+        @Throws(InvalidEnclaveException::class)
         fun loadFromDisk(enclaveFile: Path, mode: EnclaveMode): EnclaveHost {
-            val internalMode = when (mode) {
-                EnclaveMode.RELEASE -> EnclaveLoadMode.RELEASE
-                EnclaveMode.DEBUG -> EnclaveLoadMode.DEBUG
-                EnclaveMode.SIMULATION -> EnclaveLoadMode.SIMULATION
-            }
             try {
-                return create(enclaveFile, internalMode)
+                return create(enclaveFile, mode.toInternalMode(), tempFile = false)
             } catch (e: Exception) {
                 throw InvalidEnclaveException("Unable to load enclave", e)
             }
         }
 
+        /**
+         * Looks up the signed enclave library file from the Java class/module
+         * path and loads it. The signed file is expected to be placed in the
+         * default location used by the Gradle plugin, formed by taking the
+         * file name the class name would be in and transforming it like so:
+         *
+         * com.example.FoobarEnclave
+         *
+         * becomes
+         *
+         * com/example/FoobarEnclave.signed.so
+         *
+         * @throws IllegalArgumentException if the enclave file cannot be found.
+         * @throws InvalidEnclaveException if something goes wrong during the load.
+         */
+        @JvmStatic
+        @Throws(InvalidEnclaveException::class)
+        fun loadFromResources(enclaveClassName: String, mode: EnclaveMode): EnclaveHost {
+            val resourceName = "/${enclaveClassName.replace('.', '/')}.signed.so"
+            val stream = EnclaveHost::class.java.getResourceAsStream(resourceName)
+            requireNotNull(stream) {
+                """Enclave file for $enclaveClassName does not exist on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
+                    |    runtimeOnly project(path: ":enclave project", configuration: mode)
+                    |    
+                    |    where:
+                    |      mode is either "release", "debug" or "simulation"
+                """.trimMargin()
+            }
+            val enclaveFile = try {
+                Files.createTempFile(enclaveClassName, "signed.so")
+            } catch (e: Exception) {
+                throw InvalidEnclaveException("Unable to load enclave", e)
+            }
+            try {
+                stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
+                return create(enclaveFile, mode.toInternalMode(), tempFile = true)
+            } catch (e: Exception) {
+                enclaveFile.deleteQuietly()
+                throw InvalidEnclaveException("Unable to load enclave", e)
+            }
+        }
+
+        private fun EnclaveMode.toInternalMode(): EnclaveLoadMode {
+            return when (this) {
+                EnclaveMode.RELEASE -> EnclaveLoadMode.RELEASE
+                EnclaveMode.DEBUG -> EnclaveLoadMode.DEBUG
+                EnclaveMode.SIMULATION -> EnclaveLoadMode.SIMULATION
+            }
+        }
+
+        private fun Path.deleteQuietly() {
+            try {
+                Files.deleteIfExists(this)
+            } catch (e: IOException) {
+                // Ignore
+            }
+        }
+
         // TODO load enclave file from memory
-        // TODO load enclave file from resource
     }
 
     private val stateManager = StateManager<State>(New)
@@ -204,8 +266,8 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
                 // after we've first called into it using callEnclave.
                 //
                 // isEnclaveCallReturn tells us whether the enclave is sending back the result of its EnclaveCall.invoke
-                // or if it's a call back to the host from within EnclaveCall.invoke. In the former case this is returned
-                // from callEnclave, in the later case it's instead sent to the calllback provided to callEnclave.
+                // or if it's a call back to the host from within EnclaveCall.invoke. In the former case the result is
+                // returned from callEnclave, in the later case it's instead sent to the calllback provided to callEnclave.
                 val isEnclaveCallReturn = input.getBoolean()
                 val bytes = input.getRemainingBytes()
                 if (isEnclaveCallReturn) {
@@ -238,6 +300,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
     // TODO deliverMail
 
     override fun close() {
+        fileToDelete?.deleteQuietly()
         stateManager.state = Closed
     }
 

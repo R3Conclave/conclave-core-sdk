@@ -1,7 +1,6 @@
 package com.r3.sgx.core.common.crypto.internal
 
 import com.r3.sgx.core.common.crypto.SignatureScheme
-import com.r3.sgx.core.common.crypto.SignatureSchemeId
 import com.r3.sgx.core.common.crypto.SignatureSchemeSpec
 import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -18,8 +17,9 @@ import java.security.spec.X509EncodedKeySpec
 class SignatureSchemeEdDSA(
         private val randomnessSource: SecureRandom = SecureRandom()
 ) : SignatureScheme {
-
-    val params: EdDSANamedCurveSpec
+    companion object {
+        val securityProvider = EdDSASecurityProvider()
+    }
 
     override val spec = SignatureSchemeSpec(
             "EDDSA_ED25519_SHA512",
@@ -27,10 +27,7 @@ class SignatureSchemeEdDSA(
             EdDSAEngine.SIGNATURE_ALGORITHM,
             EdDSANamedCurveTable.getByName("ED25519"),
             256)
-
-    companion object {
-        private val eddsaProvider = EdDSASecurityProvider()
-    }
+    private val params: EdDSANamedCurveSpec
 
     init {
         require(spec.algorithmName == EdDSAEngine.SIGNATURE_ALGORITHM) {
@@ -41,7 +38,7 @@ class SignatureSchemeEdDSA(
 
     override fun sign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
-        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, eddsaProvider)
+        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, securityProvider)
         signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()
@@ -50,7 +47,7 @@ class SignatureSchemeEdDSA(
     override fun verify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) {
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to check!")
-        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, eddsaProvider)
+        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, securityProvider)
         signature.initVerify(publicKey)
         signature.update(clearData)
         if (!signature.verify(signatureData)) {
@@ -67,12 +64,12 @@ class SignatureSchemeEdDSA(
     }
 
     override fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
-        val keyFactory = KeyFactory.getInstance(EdDSAKey.KEY_ALGORITHM, eddsaProvider)
+        val keyFactory = KeyFactory.getInstance(EdDSAKey.KEY_ALGORITHM, securityProvider)
         return keyFactory.generatePrivate(X509EncodedKeySpec(encodedKey))
     }
 
     override fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        val keyFactory = KeyFactory.getInstance(EdDSAKey.KEY_ALGORITHM, eddsaProvider)
+        val keyFactory = KeyFactory.getInstance(EdDSAKey.KEY_ALGORITHM, securityProvider)
         return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
     }
 }

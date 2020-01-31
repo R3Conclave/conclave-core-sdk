@@ -23,7 +23,7 @@ object NativeEnclaveApi : EnclaveApi {
             enclaveClass.asSubclass(Enclave::class.java).newInstance().initialize(this, NativeOcallSender)
         } else {
             val conclaveLoader = ServiceLoader.load(ConclaveLoader::class.java).firstOrNull()
-            // If there isn't a ConclaveLaoder on the classpath assume the app is trying to use the old API.
+            // If there isn't a ServiceLoader on the classpath assume the app is trying to use the old API.
             requireNotNull(conclaveLoader) {
                 "Class specified in manifest $ENCLAVE_CLASS_ATTRIBUTE_NAME does not extend ${Enclave::class.java.name}"
             }

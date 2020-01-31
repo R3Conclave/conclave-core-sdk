@@ -3,20 +3,25 @@ plugins {
     id "com.github.johnrengelman.shadow"
 }
 
+// Override the default (simulation) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.r3.conclave:conclave-host"
 
+    runtimeOnly project(path: ":conclave:enclave", configuration: mode)
+
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}
+
+shadowJar {
+    archiveClassifier.set(mode)
 }
 
 test {
     useJUnitPlatform()
-    dependsOn project(":conclave:enclave").buildSignedEnclaveSimulation
-    systemProperty(
-            "com.r3.conclave.sample.enclavepath",
-            project(":conclave:enclave").buildSignedEnclaveSimulation.outputSignedEnclave.getAsFile().get().path
-    )
 }

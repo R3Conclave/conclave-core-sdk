@@ -7,14 +7,15 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import java.io.EOFException
 import java.io.File
+import java.nio.file.Files
 import javax.inject.Inject
 
 /**
  * This task generates a yaml metadata file containing the enclavelet class name and measurement.
  */
 open class GenerateEnclaveletMetadata @Inject constructor(objects: ObjectFactory) : SgxTask() {
-    @get:OutputFile
-    val outputSignedEnclave: RegularFileProperty = objects.fileProperty()
+    @get:InputFile
+    val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
     val outputEnclaveMetadata: RegularFileProperty = objects.fileProperty()
@@ -22,14 +23,11 @@ open class GenerateEnclaveletMetadata @Inject constructor(objects: ObjectFactory
     @get:InputFile
     val signTool: RegularFileProperty = objects.fileProperty()
 
-    @get:InputFile
-    val enclaveletJar: RegularFileProperty = objects.fileProperty()
-
     override fun sgxAction() {
-        val trustKey  = BuildJarObject.readEnclaveClassName(enclaveletJar.asFile.get().toURI().toURL())
-        val measurement = getEnclaveMeasurement(outputSignedEnclave.asFile.get())
+        val className = SgxEnclavePlugin.readEnclaveClassNameFromEnclaveFile(inputSignedEnclave.asFile.get().toPath())
+        val measurement = getEnclaveMeasurement(inputSignedEnclave.asFile.get())
         logger.lifecycle("Enclave measurement: $measurement")
-        generateOutput(outputEnclaveMetadata.asFile.get(), trustKey, measurement)
+        generateOutput(className, measurement)
     }
 
     private fun getEnclaveMeasurement(file: File): String {
@@ -57,12 +55,10 @@ open class GenerateEnclaveletMetadata @Inject constructor(objects: ObjectFactory
         throw EOFException("Unable to read enclave measurement from metadata dump file: ${metadata.absolutePath}")
     }
 
-    private fun generateOutput(destination: File, metadataKey: String, measurement: String) {
-        destination.outputStream().bufferedWriter().use { outputWriter->
-            outputWriter.write("className: $metadataKey")
-            outputWriter.newLine()
-            outputWriter.write("measurement: $measurement")
-            outputWriter.newLine()
-        }
+    private fun generateOutput(className: String, measurement: String) {
+        Files.write(
+                outputEnclaveMetadata.asFile.get().toPath(),
+                listOf("className: $className", "measurement: $measurement")
+        )
     }
 }
