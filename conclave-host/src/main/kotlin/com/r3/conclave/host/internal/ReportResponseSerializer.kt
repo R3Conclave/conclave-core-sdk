@@ -1,4 +1,4 @@
-package com.r3.sgx.enclavelethost.server.internal
+package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -10,8 +10,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.google.common.io.BaseEncoding
-import com.r3.sgx.enclavelethost.ias.schemas.ReportResponse
+import com.r3.conclave.common.internal.toHexString
 import java.time.Instant
 
 object ReportResponseSerializer {
@@ -37,7 +36,7 @@ object ReportResponseSerializer {
 
     private class Base16Serializer : StdSerializer<ByteArray>(ByteArray::class.java) {
         override fun serialize(value: ByteArray, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeString(BaseEncoding.base16().encode(value))
+            gen.writeString(value.toHexString())
         }
     }
 }

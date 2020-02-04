@@ -2,6 +2,8 @@ package com.r3.sgx.enclavelethost.client
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.r3.conclave.host.internal.QuoteStatus
+import com.r3.conclave.host.internal.ReportResponse
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxAttributes
 import com.r3.sgx.core.common.SgxEnclaveFlags
@@ -10,8 +12,6 @@ import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.common.attestation.SgxQuoteReader
 import com.r3.sgx.enclavelethost.grpc.EpidAttestation
-import com.r3.sgx.enclavelethost.ias.schemas.QuoteStatus
-import com.r3.sgx.enclavelethost.ias.schemas.ReportResponse
 import java.nio.ByteBuffer
 import java.security.GeneralSecurityException
 import java.security.Signature

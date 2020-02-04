@@ -11,6 +11,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.file.Files
+import java.util.*
 
 @CommandLine.Command
 data class EnclaveletHostConfiguration(
@@ -40,7 +41,16 @@ data class EnclaveletHostConfiguration(
     companion object {
         private val mapper: ObjectMapper = ObjectMapper(YAMLFactory()).registerModule(KotlinModule())
 
-        val defaults: EnclaveletHostConfiguration = read(this::class.java.getResourceAsStream("/default-host-settings.yml"))
+        internal val defaults: EnclaveletHostConfiguration = read(this::class.java.getResourceAsStream("/default-host-settings.yml")).run {
+            // Overwrite the placeholder values for epidSpid and iasSubscriptionKey from ra.properties.
+            // These values are not in default-host-settings.yml as they're also needed by conclave-host.
+            val raProperties = this::class.java.getResourceAsStream("/ra.properties").use {
+                Properties().apply { load(it) }
+            }
+            val epidSpid = raProperties.getProperty("epidSpid")
+            val iasSubscriptionKey = raProperties.getProperty("iasSubscriptionKey")
+            copy(epidSpid = epidSpid, iasSubscriptionKey = iasSubscriptionKey)
+        }
 
         fun read(configuration: File): EnclaveletHostConfiguration {
             return Files.newBufferedReader(configuration.toPath()).use {

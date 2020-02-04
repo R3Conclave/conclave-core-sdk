@@ -1,22 +1,20 @@
 package com.r3.conclave.host
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.io.BaseEncoding
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.EnclaveHost.State.*
+import com.r3.conclave.host.internal.AttestationService
+import com.r3.conclave.host.internal.IntelAttestationService
+import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.*
-import com.r3.sgx.enclavelethost.server.AttestationService
-import com.r3.sgx.enclavelethost.server.EnclaveletHostConfiguration
-import com.r3.sgx.enclavelethost.server.internal.IntelAttestationService
-import com.r3.sgx.enclavelethost.server.internal.MockAttestationService
 import java.io.DataOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.util.*
 import java.util.function.Consumer
 import kotlin.Exception
 
@@ -42,8 +40,16 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
 ) : AutoCloseable {
     companion object {
         // TODO Require the user to provide these
-        private val r3EpidSpid = BaseEncoding.base16().decode(EnclaveletHostConfiguration.defaults.epidSpid)
-        private val r3SubscriptionKey = EnclaveletHostConfiguration.defaults.iasSubscriptionKey
+        private val r3EpidSpid: ByteArray
+        private val r3SubscriptionKey: String
+
+        init {
+            val raProperties = this::class.java.getResourceAsStream("/ra.properties").use {
+                Properties().apply { load(it) }
+            }
+            r3EpidSpid = parseHex(raProperties.getProperty("epidSpid"))
+            r3SubscriptionKey = raProperties.getProperty("iasSubscriptionKey")
+        }
 
         private val attestationConfig = EpidAttestationHostConfiguration(
                 // TODO Does the quote type need to be configurable?
@@ -52,7 +58,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         )
 
         // This wouldn't be needed if the c'tor was package-private.
-        @VisibleForTesting
         internal fun create(
                 handle: EnclaveHandle<ErrorHandler.Connection>,
                 attestationService: AttestationService,
@@ -62,7 +67,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         }
 
         @PotentialPackagePrivate
-        @VisibleForTesting
         internal fun create(enclaveFile: Path, mode: EnclaveLoadMode, tempFile: Boolean): EnclaveHost {
             val handle = NativeHostApi(mode).createEnclave(ThrowingErrorHandler(), enclaveFile.toFile())
             val attestationService = when (mode) {

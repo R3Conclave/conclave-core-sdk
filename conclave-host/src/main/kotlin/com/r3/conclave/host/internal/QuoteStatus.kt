@@ -1,4 +1,4 @@
-package com.r3.sgx.enclavelethost.ias.schemas
+package com.r3.conclave.host.internal
 
 /**
  * Definition of each enum value is taken from https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf

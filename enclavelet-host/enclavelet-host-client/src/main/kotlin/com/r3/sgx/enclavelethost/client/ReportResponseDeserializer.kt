@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.google.common.io.BaseEncoding
-import com.r3.sgx.enclavelethost.ias.schemas.ReportResponse
+import com.r3.conclave.host.internal.ReportResponse
 import java.time.Instant
 
 object ReportResponseDeserializer {

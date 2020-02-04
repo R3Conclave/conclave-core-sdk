@@ -1,18 +1,15 @@
 apply plugin: 'kotlin'
 
 dependencies {
-    compile project(':enclavelet-host:enclavelet-host-common')
-    compile project(':api-core:api-core-common')
-    compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
-    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    api project(':enclavelet-host:enclavelet-host-common')
+
+    implementation project(':conclave-host')
+    implementation project(':api-core:api-core-common')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
-
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "org.jetbrains.kotlin:kotlin-reflect"
-
-    runtimeOnly "io.grpc:grpc-netty:$grpc_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"

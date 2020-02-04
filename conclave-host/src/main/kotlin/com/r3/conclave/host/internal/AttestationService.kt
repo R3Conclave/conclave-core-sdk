@@ -1,9 +1,8 @@
-package com.r3.sgx.enclavelethost.server
+package com.r3.conclave.host.internal
 
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxSignedQuote
 import java.nio.ByteBuffer
-import java.util.concurrent.CompletableFuture
 
 interface AttestationService {
     fun requestSignature(signedQuote: Cursor<ByteBuffer, SgxSignedQuote>): AttestationServiceReportResponse

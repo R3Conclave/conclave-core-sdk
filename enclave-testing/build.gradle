@@ -1,11 +1,13 @@
 apply plugin: 'kotlin'
 
 dependencies {
+    api project(":api-core:api-core-enclave")
+    api project(":enclavelet-host:enclavelet-host-common")
+    api "junit:junit:$junit_version"
+
+    implementation project(":api-core:api-core-host")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "org.ow2.asm:asm:$asm_version"
-    compile project(":api-core:api-core-enclave")
-    compile project(":api-core:api-core-host")
-    compile project(":enclavelet-host:enclavelet-host-client")
-    compile "junit:junit:$junit_version"
+
+    runtimeOnly "io.grpc:grpc-netty:$grpc_version"
     runtimeOnly "com.r3.sgx:native-host-simulation:$oblivium_dependency_version"
 }

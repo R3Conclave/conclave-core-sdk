@@ -1,16 +1,12 @@
-package com.r3.sgx.enclavelethost.server.internal
+package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.SgxSignedQuote
-import com.r3.sgx.enclavelethost.ias.schemas.QuoteStatus
-import com.r3.sgx.enclavelethost.ias.schemas.ReportResponse
-import com.r3.sgx.enclavelethost.server.AttestationService
-import com.r3.sgx.enclavelethost.server.AttestationServiceReportResponse
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.security.KeyFactory
-import java.security.PrivateKey
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
@@ -42,8 +38,11 @@ class MockAttestationService : AttestationService {
     }
 
     companion object {
-        private val signingKey = decodePrivateKey(getResourceBytes("mock-as.key"))
-        private val certificate = String(getResourceBytes("mock-as-certificate.pem"))
+        private val signingKey = readResource("mock-as.key") {
+            KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(it.readBytes()))
+        }
+        private val certificate = readResource("mock-as-certificate.pem") { it.reader().readText() }
+
         private val reportResponseSerializeMapper = ReportResponseSerializer.register(ObjectMapper())
 
         private fun Cursor<ByteBuffer, SgxQuote>.toByteArray(): ByteArray {
@@ -51,14 +50,11 @@ class MockAttestationService : AttestationService {
             return ByteArray(buffer.remaining()).also { buffer.get(it) }
         }
 
-        private fun getResourceBytes(name: String): ByteArray {
-            val stream = MockAttestationService::class.java.getResourceAsStream("/mock-as/$name")
-                    ?: throw IllegalStateException("Cannot find resource file $name")
-            return stream.readBytes()
-        }
-
-        private fun decodePrivateKey(bytes: ByteArray): PrivateKey {
-            return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(bytes))
+        private inline fun <R> readResource(name: String, block: (InputStream) -> R): R {
+            val stream = checkNotNull(MockAttestationService::class.java.getResourceAsStream("/mock-as/$name")) {
+                "Cannot find resource file $name"
+            }
+            return stream.use(block)
         }
     }
 

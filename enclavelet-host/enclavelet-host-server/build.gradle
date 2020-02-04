@@ -11,28 +11,23 @@ repositories {
 }
 
 dependencies {
+    implementation project(':enclavelet-host:enclavelet-host-common')
+    implementation project(':conclave-host')
+    implementation project(':api-core:api-core-host')
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
     implementation "org.slf4j:jcl-over-slf4j:$slf4j_version"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
     implementation "info.picocli:picocli:$picocli_version"
-    implementation "org.glassfish.jersey.core:jersey-client:$jersey_version"
-    implementation "org.apache.httpcomponents:httpclient:$httpclient_version"
     implementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     implementation "org.jboss.resteasy:resteasy-jaxrs:$resteasy_version"
     implementation "org.jboss.resteasy:resteasy-jackson2-provider:$resteasy_version"
     implementation "org.jboss.resteasy:resteasy-servlet-initializer:$resteasy_version"
     implementation "org.apache.commons:commons-compress:1.18"
-    implementation project(':enclavelet-host:enclavelet-host-common')
-    implementation project(':api-core:api-core-host')
-    runtimeOnly "io.grpc:grpc-netty:$grpc_version"
 
-    runtimeOnly "com.r3.sgx:native-host-release:$oblivium_dependency_version"
-    runtimeOnly "com.r3.sgx:native-host-debug:$oblivium_dependency_version"
-    runtimeOnly "com.r3.sgx:native-host-simulation:$oblivium_dependency_version"
+    runtimeOnly "io.grpc:grpc-netty:$grpc_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"

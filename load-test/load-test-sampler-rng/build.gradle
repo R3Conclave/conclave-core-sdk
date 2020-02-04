@@ -4,9 +4,12 @@ plugins {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    compileOnly "org.apache.jmeter:ApacheJMeter_java:$jmeter_version"
     implementation project(':enclavelet-host:enclavelet-host-client')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    compileOnly "org.apache.jmeter:ApacheJMeter_java:$jmeter_version"
+
+    runtimeOnly "io.grpc:grpc-netty:$grpc_version"
 }
 
 shadowJar {

@@ -1,15 +1,10 @@
-package com.r3.sgx.enclavelethost.server.internal
+package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxSignedQuote
-import com.r3.sgx.enclavelethost.server.AttestationService
-import com.r3.sgx.enclavelethost.server.AttestationServiceReportResponse
-import com.r3.sgx.enclavelethost.server.internal.ias.AttestationError
-import com.r3.sgx.enclavelethost.server.internal.ias.ReportRequest
 import org.apache.http.HttpResponse
-import org.apache.http.HttpStatus.SC_FORBIDDEN
 import org.apache.http.HttpStatus.SC_OK
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpPost
@@ -24,19 +19,15 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager
 import org.apache.http.ssl.SSLContextBuilder
 import org.apache.http.util.EntityUtils
-import org.jboss.resteasy.util.Base64
 import org.slf4j.LoggerFactory
 import java.net.URLDecoder
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-import javax.ws.rs.ForbiddenException
-import javax.ws.rs.core.Response
-import javax.ws.rs.core.UriBuilder
+import java.util.*
 
 class IntelAttestationService(private val url: String, private val subscriptionKey: String) : AttestationService {
 
     companion object {
-        @JvmStatic
         private val log = LoggerFactory.getLogger(IntelAttestationService::class.java)
 
         private val mapper = ObjectMapper().registerModule(JavaTimeModule())
@@ -56,9 +47,7 @@ class IntelAttestationService(private val url: String, private val subscriptionK
         val rawQuote = signedQuote.getBuffer().array()
         try {
             createHttpClient().use { client ->
-                val reportURI = UriBuilder.fromUri(url)
-                        .path("attestation/v3/report")
-                        .build()
+                val reportURI = "$url/attestation/v3/report"
                 log.info("Invoking IAS: {}", reportURI)
 
                 val httpRequest = HttpPost(reportURI)
@@ -72,7 +61,7 @@ class IntelAttestationService(private val url: String, private val subscriptionK
                         throw RuntimeException("Error from Intel Attestation Service: $content")
                     }
                     return IasProxyResponse(
-                            signature = Base64.decode(httpResponse.requireHeader("X-IASReport-Signature")),
+                            signature = Base64.getDecoder().decode(httpResponse.requireHeader("X-IASReport-Signature")),
                             certificate = httpResponse.requireHeader("X-IASReport-Signing-Certificate").decodeURL(),
                             httpResponse = EntityUtils.toByteArray(httpResponse.entity))
                 }
@@ -83,18 +72,10 @@ class IntelAttestationService(private val url: String, private val subscriptionK
         }
     }
 
-    private fun HttpResponse.toResponse(message: String, statusCode: Int = statusLine.statusCode): Response {
-        return Response.status(statusCode)
-                .entity(AttestationError(message))
-                .apply {
-                    val requestIdHeader = getFirstHeader("Request-ID") ?: return@apply
-                    this.header(requestIdHeader.name, requestIdHeader.value)
-                }
-                .build()
-    }
-
     private fun HttpResponse.requireHeader(name: String): String {
-        return getFirstHeader(name)?.value ?: throw ForbiddenException(toResponse("Response header '$name' missing", SC_FORBIDDEN))
+        return checkNotNull(getFirstHeader(name)?.value) {
+            "Response header '$name' missing (${getFirstHeader("Request-ID")})"
+        }
     }
 
     private fun createHttpClient(): CloseableHttpClient {

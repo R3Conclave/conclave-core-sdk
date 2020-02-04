@@ -1,14 +1,16 @@
 apply plugin: "kotlin"
 
 dependencies {
+    api project(":enclave-testing")
+    api project(":api-core:api-core-host")
+
+    implementation project(":conclave-enclave")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
+
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:2.3.1"
     runtimeOnly "com.r3.sgx:native-enclave-simulation:$oblivium_dependency_version"
     runtimeOnly "com.r3.sgx:native-enclave-debug:$oblivium_dependency_version"
     runtimeOnly "com.r3.sgx:native-enclave-release:$oblivium_dependency_version"
     runtimeOnly "com.r3.sgx:native-sign-tool:$oblivium_dependency_version"
-    testImplementation group: 'junit', name: 'junit', version: junit_version
-    compile project(":enclave-testing")
-    implementation project(":conclave-enclave")
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }

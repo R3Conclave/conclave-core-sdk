@@ -11,8 +11,8 @@ class MockEcallSender<CONNECTION>(
         hostHandler: Handler<CONNECTION>,
         val enclave: Enclave
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
-    override val connection = hostHandler.connect(this)
-    val ocallSender = MockOcallSender(HandlerConnected(hostHandler, connection))
+    override val connection: CONNECTION = hostHandler.connect(this)
+    private val ocallSender = MockOcallSender(HandlerConnected(hostHandler, connection))
     private val api = MockEnclaveApi(enclave)
     private val enclaveHandler = enclave.initialize(api, ocallSender)
 

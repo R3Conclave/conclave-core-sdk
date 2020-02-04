@@ -3,9 +3,9 @@ package com.r3.conclave.host
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.callUntrustedHost
+import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.ThrowingErrorHandler
 import com.r3.sgx.core.enclave.RootEnclave
-import com.r3.sgx.enclavelethost.server.internal.MockAttestationService
 import com.r3.sgx.testing.MockEcallSender
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException

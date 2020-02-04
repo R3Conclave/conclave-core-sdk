@@ -2,8 +2,8 @@ package com.r3.sgx.enclavelethost.server.internal
 
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.*
-import com.r3.sgx.enclavelethost.server.AttestationService
-import com.r3.sgx.enclavelethost.server.AttestationServiceReportResponse
+import com.r3.conclave.host.internal.AttestationService
+import com.r3.conclave.host.internal.AttestationServiceReportResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File

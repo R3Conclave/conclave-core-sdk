@@ -6,8 +6,8 @@ import com.r3.sgx.core.common.SgxSpid
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration
 import com.r3.sgx.enclavelethost.server.internal.EnclaveletState
-import com.r3.sgx.enclavelethost.server.internal.IntelAttestationService
-import com.r3.sgx.enclavelethost.server.internal.MockAttestationService
+import com.r3.conclave.host.internal.IntelAttestationService
+import com.r3.conclave.host.internal.MockAttestationService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.ByteBuffer

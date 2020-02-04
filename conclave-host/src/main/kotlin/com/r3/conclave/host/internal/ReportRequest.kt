@@ -1,4 +1,4 @@
-package com.r3.sgx.enclavelethost.server.internal.ias
+package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.*

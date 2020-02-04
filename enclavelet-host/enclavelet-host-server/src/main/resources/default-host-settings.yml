@@ -8,12 +8,14 @@ attestationServiceUrl: https://api.trustedservices.intel.com/sgx/dev
 # enclave
 threadPoolSize: 8
 
-# The EPID SPID to use when quoting. By default this is set to an R3-specific SPID.
-epidSpid: "***REMOVED***"
+# The EPID SPID to use when quoting.
+# This is set to a placeholder value, to be replaced by an R3-specific SPID in EnclaveletHostConfiguration.defaults
+epidSpid: "<placeholder>"
 
-# Subscription key for connecting to Intel Attestation Service. This is by default set to an R3
-# key granting access to the test version of IAS.
-iasSubscriptionKey: "***REMOVED***"
+# Subscription key for connecting to Intel Attestation Service.
+# This is set to a placeholder value, to be replaced by an R3 key in EnclaveletHostConfiguration.defaults which grants
+# us access to the test version of IAS.
+iasSubscriptionKey: "<placeholder>"
 
 # What type of EPID quote we want (LINKABLE or UNLINKABLE)
 epidQuoteType: LINKABLE

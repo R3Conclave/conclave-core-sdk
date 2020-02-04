@@ -3,9 +3,9 @@ package com.r3.sgx.enclavelethost.client
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.io.BaseEncoding
-import com.r3.sgx.enclavelethost.ias.schemas.ManifestStatus
-import com.r3.sgx.enclavelethost.ias.schemas.QuoteStatus
-import com.r3.sgx.enclavelethost.ias.schemas.ReportResponse
+import com.r3.conclave.host.internal.ManifestStatus
+import com.r3.conclave.host.internal.QuoteStatus
+import com.r3.conclave.host.internal.ReportResponse
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.time.ZoneOffset.UTC
