@@ -119,7 +119,7 @@ mock==2.0.0
 msrest==0.5.1
 msrestazure==0.4.34
 oauthlib==2.1.0
-paramiko==2.4.1
+paramiko==2.4.2
 pbr==4.1.0
 prompt-toolkit==1.0.15
 pyasn1==0.4.3
