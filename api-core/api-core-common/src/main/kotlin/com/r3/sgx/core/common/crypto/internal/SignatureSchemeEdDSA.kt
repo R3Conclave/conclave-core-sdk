@@ -18,7 +18,8 @@ class SignatureSchemeEdDSA(
         private val randomnessSource: SecureRandom = SecureRandom()
 ) : SignatureScheme {
     companion object {
-        val securityProvider = EdDSASecurityProvider()
+        val securityProvider: Provider = EdDSASecurityProvider()
+        const val ALGORITHM: String = EdDSAEngine.SIGNATURE_ALGORITHM
     }
 
     override val spec = SignatureSchemeSpec(

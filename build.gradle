@@ -4,6 +4,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '4.0.4' apply false
     id 'org.akhikhl.gretty' version '2.0.0' apply false
     id 'net.corda.plugins.api-scanner' version '4.0.45' apply false
+    id "com.github.ben-manes.versions" version "0.27.0"
     id 'idea'
 }
 

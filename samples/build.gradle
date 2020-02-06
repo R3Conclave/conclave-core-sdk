@@ -2,6 +2,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.3.30' apply false
     id 'com.google.protobuf' version '0.8.7' apply false
     id 'com.r3.sgx.host' apply false
+    id "com.github.ben-manes.versions" version "0.27.0"
 }
 
 import static org.gradle.api.JavaVersion.*
@@ -32,9 +33,6 @@ subprojects {
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-
-                // Ensure that the Signing Enclave uses the correct version of Guava.
-                force "com.google.guava:guava:$guava_version"
 
                 //  Ensure that the Signing Enclave uses the correct version of SLF4J.
                 eachDependency { details ->

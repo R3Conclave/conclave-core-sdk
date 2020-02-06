@@ -8,7 +8,6 @@ import com.r3.sgx.core.common.crypto.internal.SignatureSchemeEdDSA
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.core.enclave.RootEnclave
-import net.i2p.crypto.eddsa.EdDSAEngine
 import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.security.Signature
@@ -49,7 +48,7 @@ abstract class Enclave {
      */
     // TODO Tests
     protected fun createSignature(): Signature {
-        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, SignatureSchemeEdDSA.securityProvider)
+        val signature = Signature.getInstance(SignatureSchemeEdDSA.ALGORITHM, SignatureSchemeEdDSA.securityProvider)
         signature.initSign(signingKeyPair.private)
         return signature
     }

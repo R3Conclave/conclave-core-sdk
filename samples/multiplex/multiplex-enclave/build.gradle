@@ -18,7 +18,6 @@ dependencies {
     testImplementation "org.slf4j:slf4j-api:$slf4j_version"
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
     testImplementation "junit:junit:$junit_version"
-    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
 

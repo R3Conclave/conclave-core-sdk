@@ -26,7 +26,6 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.r3.sgx:api-core-enclave"
     compile "net.corda:corda-serialization:$corda_version"
-    implementation "com.google.guava:guava:$guava_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"

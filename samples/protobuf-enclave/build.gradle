@@ -9,13 +9,15 @@ repositories {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.r3.sgx:api-core-enclave"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "com.r3.sgx:api-core-host"
     testImplementation "com.r3.sgx:enclave-testing"
+
     testRuntimeOnly "com.r3.sgx:native-host-simulation"
 }
 

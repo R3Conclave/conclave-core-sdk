@@ -4,9 +4,12 @@ dependencies {
     api project(":enclave-testing")
     api project(":api-core:api-core-host")
 
+    // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
     implementation project(":conclave-enclave")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
+    // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
+    implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
 
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:2.3.1"
     runtimeOnly "com.r3.sgx:native-enclave-simulation:$oblivium_dependency_version"

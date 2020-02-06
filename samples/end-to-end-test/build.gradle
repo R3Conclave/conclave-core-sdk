@@ -20,7 +20,6 @@ dependencies {
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "io.fabric8:kubernetes-client:$fabric8_kubernetes_client_version"
     testImplementation "io.grpc:grpc-testing:$grpc_version"
-    testImplementation "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"
     testImplementation 'com.r3.sgx:api-core-enclave'
     testImplementation 'com.r3.sgx:enclavelet-host-client'
     testImplementation 'com.r3.sgx:enclavelet-host-server'
