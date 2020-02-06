@@ -3,7 +3,6 @@ package com.r3.conclave.host
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.callUntrustedHost
-import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.ThrowingErrorHandler
 import com.r3.sgx.core.enclave.RootEnclave
 import com.r3.sgx.testing.MockEcallSender
@@ -163,7 +162,7 @@ class EnclaveHostMockTest {
         // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
         val rootEnclave = Enclave::class.java.getDeclaredField("rootEnclave").apply { isAccessible = true }.get(enclave) as RootEnclave
         val handle = MockEcallSender(ThrowingErrorHandler(), rootEnclave)
-        return EnclaveHost.create(handle, MockAttestationService(), fileToDelete = null)
+        return EnclaveHost.create(EnclaveMode.SIMULATION, handle, fileToDelete = null)
     }
 
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {

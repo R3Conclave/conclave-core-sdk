@@ -2,7 +2,6 @@ package com.r3.conclave.host
 
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.enclave.Enclave
-import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.dynamictesting.TestEnclaves
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -52,7 +51,7 @@ class EnclaveHostNativeTest {
 
     private inline fun <reified T : Enclave> hostTo(): EnclaveHost {
         val enclaveFile = testEnclaves.getEnclave(T::class.java)
-        return EnclaveHost.create(enclaveFile.toPath(), EnclaveLoadMode.SIMULATION, tempFile = false)
+        return EnclaveHost.create(enclaveFile.toPath(), EnclaveMode.SIMULATION, tempFile = false)
     }
 
     class StatefulEnclave : EnclaveCall, Enclave() {

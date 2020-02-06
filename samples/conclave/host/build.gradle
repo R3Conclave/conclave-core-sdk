@@ -11,6 +11,7 @@ dependencies {
     implementation "com.r3.conclave:conclave-host"
 
     runtimeOnly project(path: ":conclave:enclave", configuration: mode)
+    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"

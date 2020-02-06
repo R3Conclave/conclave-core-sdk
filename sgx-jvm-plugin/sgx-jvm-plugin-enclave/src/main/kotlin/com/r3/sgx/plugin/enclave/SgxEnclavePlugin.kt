@@ -291,7 +291,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
                     val enclaveClassName = readEnclaveClassNameFromEnclaveFile(signedEnclaveFile.get().asFile.toPath())
                     val packagePath = enclaveClassName.substringBeforeLast('.').replace('.', '/')
                     task.into(packagePath)
-                    task.rename { "${enclaveClassName.substringAfterLast('.')}.signed.so" }
+                    task.rename { "${enclaveClassName.substringAfterLast('.')}-$typeLowerCase.signed.so" }
                 }
             }
 
