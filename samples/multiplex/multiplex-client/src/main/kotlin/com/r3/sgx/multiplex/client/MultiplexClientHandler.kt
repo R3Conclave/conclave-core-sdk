@@ -7,6 +7,7 @@ import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
 
 class MultiplexClientHandler : Handler<MultiplexClientHandler.Connection> {
     private val muxingHandler = MuxingHandler()
@@ -46,12 +47,12 @@ private class LoadingConnectionImpl(private val upstream: Sender) : LoadingConne
         val requestId = requestCounter.getAndIncrement()
         connectionMap[requestId] = future
 
-        upstream.send(jarData.remaining() + SHA256_BYTES + Byte.SIZE_BYTES + Int.SIZE_BYTES) { buffer ->
+        upstream.send(jarData.remaining() + SHA256_BYTES + Byte.SIZE_BYTES + Int.SIZE_BYTES, Consumer { buffer ->
             buffer.putInt(requestId)
             buffer.put(jarHash.duplicate())
             buffer.put(LoadEnclaveDiscriminator.CREATE.value)
             buffer.put(jarData.duplicate())
-        }
+        })
 
         return future
     }
@@ -66,11 +67,11 @@ private class LoadingConnectionImpl(private val upstream: Sender) : LoadingConne
         val requestId = requestCounter.getAndIncrement()
         connectionMap[requestId] = future
 
-        upstream.send(SHA256_BYTES + Byte.SIZE_BYTES + Int.SIZE_BYTES) { buffer ->
+        upstream.send(SHA256_BYTES + Byte.SIZE_BYTES + Int.SIZE_BYTES, Consumer { buffer ->
             buffer.putInt(requestId)
             buffer.put(jarHash.duplicate())
             buffer.put(LoadEnclaveDiscriminator.USE.value)
-        }
+        })
 
         return future
     }
@@ -105,9 +106,9 @@ private class LoadingHandler(private val dynamicRoot: MuxingHandler.Connection) 
 
 private class UnloadingConnectionImpl(private val upstream: Sender) : UnloadingConnection {
     override fun unload(enclaveConnection: EnclaveConnection) {
-        upstream.send(MuxId.SIZE_BYTES) { buffer ->
+        upstream.send(MuxId.SIZE_BYTES, Consumer {  buffer ->
             buffer.putInt(enclaveConnection.id)
-        }
+        })
     }
 }
 

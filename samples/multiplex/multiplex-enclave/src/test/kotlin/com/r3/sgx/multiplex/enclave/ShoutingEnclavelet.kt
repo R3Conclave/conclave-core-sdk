@@ -7,6 +7,7 @@ import com.r3.sgx.core.common.SgxReportData
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import java.nio.ByteBuffer
+import java.util.function.Consumer
 
 class ShoutingEnclavelet : Enclavelet() {
     override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
@@ -22,9 +23,9 @@ class ShoutingEnclavelet : Enclavelet() {
             val data = ByteArray(input.remaining())
             input.get(data)
             val newData = String(data).toUpperCase().toByteArray()
-            connection.send(newData.size) { buffer ->
+            connection.send(newData.size, Consumer { buffer ->
                 buffer.put(newData)
-            }
+            })
         }
     }
 }

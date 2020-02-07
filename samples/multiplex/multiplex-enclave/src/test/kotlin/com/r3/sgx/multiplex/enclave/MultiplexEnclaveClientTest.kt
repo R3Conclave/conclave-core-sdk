@@ -232,7 +232,7 @@ class MultiplexEnclaveClientTest {
                 val endTime = startTime + Duration.ofSeconds(seconds).toNanos()
                 var totalCount = 0
                 while (!future.isDone && !isClosed && System.nanoTime() < endTime)  {
-                    totalCount += receiveMessages { throwable -> future.completeExceptionally(throwable) }
+                    totalCount += receiveMessages(Consumer { throwable -> future.completeExceptionally(throwable) })
                     if (future.isDone) {
                         break
                     }
@@ -246,7 +246,7 @@ class MultiplexEnclaveClientTest {
                 val startTime = System.nanoTime()
                 val endTime = startTime + Duration.ofSeconds(seconds).toNanos()
                 while (!isClosed && System.nanoTime() < endTime) {
-                    val count = receiveMessages {}
+                    val count = receiveMessages(Consumer { })
                     if (count != 0) {
                         return count
                     }

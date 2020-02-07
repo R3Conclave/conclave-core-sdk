@@ -4,12 +4,13 @@ import com.r3.sgx.core.common.*
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import java.nio.ByteBuffer
+import java.util.function.Consumer
 
 internal class EchoHandler : Handler<Sender> {
     override fun onReceive(connection: Sender, input: ByteBuffer) {
-        connection.send(input.remaining()) { buffer ->
+        connection.send(input.remaining(), Consumer { buffer ->
             buffer.put(input)
-        }
+        })
     }
 
     override fun connect(upstream: Sender) = upstream

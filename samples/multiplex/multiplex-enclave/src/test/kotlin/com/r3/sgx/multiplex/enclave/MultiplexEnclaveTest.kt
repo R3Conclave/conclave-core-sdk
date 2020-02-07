@@ -25,6 +25,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit.*
+import java.util.function.Supplier
 
 @RunWith(Parameterized::class)
 class MultiplexEnclaveTest(mode: EnclaveTestMode) : TestEnclavesBasedTest(mode) {
@@ -273,7 +274,7 @@ class MultiplexEnclaveTest(mode: EnclaveTestMode) : TestEnclavesBasedTest(mode) 
     }
 
     private fun assertDynamicEnclavesAreDeallocatedWithin(seconds: Int) {
-        if (!expectWithin(seconds) { URLSchemes.size == 0 }) {
+        if (!expectWithin(seconds, Supplier { URLSchemes.size == 0 })) {
             fail("${URLSchemes.size} memory URL(s) still allocated.")
         }
     }

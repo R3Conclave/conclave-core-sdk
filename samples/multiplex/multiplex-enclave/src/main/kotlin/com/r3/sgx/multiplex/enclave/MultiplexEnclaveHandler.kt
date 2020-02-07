@@ -6,6 +6,7 @@ import com.r3.sgx.multiplex.common.*
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
 
 class MultiplexEnclaveHandler internal constructor(private val api: EnclaveApi): Handler<MuxingHandler.Connection> {
     private val muxingHandler = MuxingHandler()
@@ -47,11 +48,11 @@ class MultiplexEnclaveHandler internal constructor(private val api: EnclaveApi):
 
             val dynamicId = muxIdCounter.getAndIncrement()
             dynamicRoot.addDownstream(dynamicId, DynamicEnclaveHandler(dynamicEnclave, api))
-            connection.send(Int.SIZE_BYTES + MuxId.SIZE_BYTES + SHA256_BYTES) { buffer ->
+            connection.send(Int.SIZE_BYTES + MuxId.SIZE_BYTES + SHA256_BYTES, Consumer { buffer ->
                 buffer.putInt(requestId)
                 buffer.putInt(dynamicId)
                 buffer.put(jarHash)
-            }
+            })
         }
     }
 }
@@ -68,9 +69,9 @@ private class UnloadingHandler(private val dynamicRoot: MuxingHandler.Connection
     override fun onReceive(connection: Sender, input: ByteBuffer) {
         val dynamicId: MuxId = input.getInt()
         dynamicRoot.removeDownstream(dynamicId) ?: throw IllegalStateException("No dynamic enclave '$dynamicId'")
-        connection.send(MuxId.SIZE_BYTES) { buffer ->
+        connection.send(MuxId.SIZE_BYTES, Consumer { buffer ->
             buffer.putInt(dynamicId)
-        }
+        })
     }
 }
 
