@@ -6,6 +6,10 @@ plugins {
     id 'net.corda.plugins.api-scanner' version '4.0.45' apply false
     id "com.github.ben-manes.versions" version "0.27.0"
     id 'idea'
+    id 'org.jetbrains.dokka' version '0.10.1'
+}
+repositories {
+    jcenter()
 }
 
 static Map<String, String> createEnvironment(String... names) {
@@ -270,4 +274,29 @@ idea {
 
 wrapper {
     distributionType = Wrapper.DistributionType.ALL
+}
+
+dokka {
+    outputFormat = 'javadoc'
+    outputDirectory = "external-docs/site/api"
+    subProjects = ["conclave-common", "conclave-enclave", "conclave-host"]
+
+    configuration {
+        moduleName = "Conclave"
+        jdkVersion = 8
+        reportUndocumented = false
+
+        perPackageOption {
+            prefix = "com.r3.conclave.common.internal"
+            suppress = true
+        }
+        perPackageOption {
+            prefix = "com.r3.conclave.enclave.internal"
+            suppress = true
+        }
+        perPackageOption {
+            prefix = "com.r3.conclave.host.internal"
+            suppress = true
+        }
+    }
 }

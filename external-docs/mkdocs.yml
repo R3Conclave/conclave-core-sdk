@@ -1,0 +1,31 @@
+# To render this docsite:
+#
+# 1. Install mkdocs (https://mkdocs.org) by running "pip install mkdocs"
+# 2. Install mkdocs-material theme: "pip install mkdocs-material"
+# 3. Run "mkdocs serve" in this directory and browse to localhost. Edits to the files will be reflected immediately.
+
+site_name: Conclave documentation
+
+nav:
+  - Welcome: index.md
+  - Enclaves: enclaves.md
+  - Development:
+    - Architecture: architecture.md
+    - Tutorial: tutorial.md
+    - Security: security.md
+    - API: /api/index.html
+  - Operations:
+    - Server deployment: deployment.md
+    - TCB recovery: tcb-recovery.md
+
+theme:
+  name: 'material'
+  palette:
+    primary: 'red'
+    accent: 'red'
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
