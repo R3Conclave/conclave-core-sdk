@@ -1,5 +1,7 @@
 includeBuild("../sgx-jvm-plugin")
-includeBuild("..")
+includeBuild("..") {
+    name = "sgxjvm"
+}
 
 include ':conclave:host'
 include ':conclave:enclave'
