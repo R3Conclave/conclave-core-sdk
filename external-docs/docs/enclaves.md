@@ -63,7 +63,7 @@ Enclave host programs can generate a small data structure called a **remote atte
 states the following facts:
 
 1. A genuine, un-revoked Intel CPU is running ...
-2. ... an enclave into which a code module with hash H was loaded ...
+2. ... an enclave into which a code module with a specific hash (measurement) was loaded ...
 3. ... and which has generated public key P ...
 4. ... and the computer is up to date with security patches, and configured in the recommended way.
 
@@ -76,9 +76,9 @@ In Conclave, a remote attestation is an instance of the [`EnclaveInstanceInfo`](
 
 ### Measurements vs signers
 
-The code hash included in a remote attestation is called a **measurement**. It's not the hash of the enclave file
-itself but rather a more complex hash that must be calculated with special tools. The measurement hash covers the code
-that will be loaded into an enclave, along with metadata.
+The code hash included in a remote attestation is called a **measurement**. It's not the hash of any particular file
+but rather a more complex hash that must be calculated with special tools. It covers the entire module and all of its
+dependencies loaded into an enclave (a fat JAR).
 
 A measurement hash is pretty unhelpful by itself. It's just a large number. To be meaningful you must _reproduce_ the
 measurement from the source code of the enclave. With Conclave this is easy, as we've fixed everything that might cause
@@ -133,9 +133,9 @@ hackers that gained access to the operating system) but if the code running insi
 be used to get in those protections are of no use. Thus it's important for an enclave to be written securely.
 
 Conclave helps with this dramatically because it lets you write enclave logic in memory-safe, type-safe languages like
-Java or Kotlin. These languages eliminate by construction huge swathes of bugs. The embedded JVM ensures all buffer
-bounds are checked, no memory is freed before use and all casts are valid. This makes it much easier to process data
-from outside the enclave because you don't have to worry that you might accidentally let an attacker is.
+Java or Kotlin. These languages eliminate by construction huge swathes of bugs. All buffer bounds are checked,
+no memory is freed before use and all casts are valid. This makes it much easier to process data
+from outside the enclave because you don't have to worry that you might accidentally let an attacker in.
 
 !!! warning
 

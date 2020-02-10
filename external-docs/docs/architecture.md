@@ -117,7 +117,7 @@ developers to do their own framing, can break due to NAT boxes timing them out, 
 one-way firewalls, require high-availability servers with load balancing, require databases for stored state and so on.
 Many businesses have sophisticated infrastructure for message routing and persistence between firms already in place.
 
-MPC enclaves may often wish to process a collection of messages all at once. For instance all messages submitted to
+Enclaves doing multi-party computations may often wish to process a collection of messages all at once. For instance all messages submitted to
 a shared calculation, or a run of messages sent by a client for aggregation. Buffering messages and storing them to
 disk is not security sensitive and doesn't need to be remotely attested, which implies the host should be able to
 take care of this on its own. Putting a normal serving stack inside the enclave increases its size significantly, which
