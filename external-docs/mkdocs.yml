@@ -26,6 +26,8 @@ theme:
 
 markdown_extensions:
   - admonition
-  - codehilite
+  - pymdownx.snippets
+  - codehilite:
+      linenums: true
   - toc:
       permalink: true
