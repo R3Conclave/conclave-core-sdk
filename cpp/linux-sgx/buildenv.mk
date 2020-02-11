@@ -77,9 +77,11 @@ else
     COMMON_FLAGS += -fstack-protector-strong
 endif
 
+# CONCLAVE: We comment out trace debug logging as it prints enormous amounts of unnecessary junk to the console,
+# which is of no use to users who just want to debug their enclaves, not the SDK.
 ifdef DEBUG
     COMMON_FLAGS += -O0 -ggdb -DDEBUG -UNDEBUG
-    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
+#   COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
 else
     COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
 endif
@@ -89,7 +91,7 @@ ifdef SE_SIM
 endif
 
 # Disable ref-LE build by default.
-# Users could enable the ref-LE build 
+# Users could enable the ref-LE build
 # by explicitly specifying 'BUILD_REF_LE=1'
 BUILD_REF_LE ?= 0
 ifeq ($(BUILD_REF_LE), 1)
