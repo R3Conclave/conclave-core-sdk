@@ -10,9 +10,9 @@ RUN echo "7528d779cffeb3596266bf2f1c307c07 /opt/clion.tar.gz" | md5sum -c -
 RUN tar -xaf /opt/clion.tar.gz -C /opt
 
 # IDEA
-RUN curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2018.3.tar.gz
+RUN curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2019.3.2.tar.gz
 RUN md5sum /opt/idea.tar.gz
-RUN echo "eff11907e5266b548e1d75b2ec29b3dd /opt/idea.tar.gz" | md5sum -c -
+RUN echo "cdb7c2169f608124ff1f40b84ef4fccd /opt/idea.tar.gz" | md5sum -c -
 RUN tar -xaf /opt/idea.tar.gz -C /opt
 
 # Enable ptrace

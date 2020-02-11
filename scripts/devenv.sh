@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 CLION_VERSION=2018.1.2
-IDEA_VERSION=IC-183.4284.148
+IDEA_VERSION=IC-193.6015.39
 if [ -f ~/.oblivium_credentials.sh ]
 then
   source ~/.oblivium_credentials.sh
