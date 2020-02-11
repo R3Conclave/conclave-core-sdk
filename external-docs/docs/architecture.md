@@ -6,24 +6,40 @@ There are three entities in an application that uses Conclave:
 2. Hosts
 3. Clients
 
-**Enclaves** can be thought of as a JAR that runs in a small sub-JVM inside your main host JVM. Once loaded you can exchange
-byte buffers with the enclave (direct method calls don't work, that would require you to add some sort of RPC system).
-In this way it's similar to interacting with a server over a network, except the enclave is fully local. Enclaves run
-on a specialised JVM suited for the small enclave environment. In current Conclave versions that JVM is called Avian.
-In future versions we plan to upgrade to SubstrateVM, which will bring various advantages.
+**Clients** send and receive encrypted messages to/from enclaves by interacting with the host over the network.
+Conclave doesn't mandate any particular network protocol for client<->host communication. It's up to you. However
+the content of the messages *is* defined, using the [Mail](#mail) API. Mail is described below.
+
+**Host programs** load enclaves. From a security perspective they are fully untrusted and assumed to be malicious at all
+times. Hosts are relied on to provide the enclave with resources but beyond that work only with encrypted data. In some
+kinds of app their function is primarily proxying communications from clients to enclaves, but sometimes they also assist
+with application logic. Hosts use a standard JVM like HotSpot.
+
+**Enclaves** are classes that are loaded into a dedicated sub-JVM with a protected memory space, running inside the same
+operating system process as the host JVM. Because they don't share heaps the host may exchange only byte buffers with
+the enclave. Direct method calls also don't work out of the box: that would require you to add some sort of RPC system
+on top. In this way it's similar to interacting with a server over a network, except the enclave is fully local.
+Enclaves run on a specialised JVM suited for the small enclave environment. In current Conclave versions that JVM is
+called Avian. In future versions we plan to upgrade to SubstrateVM, which will bring various advantages.
+
+![Architecture Diagram](arch-diagram.png)
+
+In the above diagram red shaded boxes are untrusted and could attack the enclave: the host and operating system
+(which includes the BIOS, drivers and peripherals). Blue shaded boxes are part of the _trusted computing base_ -
+the set of components that must be correct and non-malicious for the system to work. That includes the enclave and
+of course the CPU.  The client communicates with the enclave via the host. Both client and host interact with
+Intel servers to obtain relevant pieces of data proving the CPU is genuine and considered secure (see below for more
+information on this process). The enclave has a complex interaction with both operating system and host, in which the
+OS schedules the enclave onto the CPU and provides resources but is otherwise locked out of the enclave's operation.
+For its part, the enclave cannot interact with the OS directly and runs in what is effectively a "bare metal" embedded
+style environment. It cannot load DLLs/.so files or do system calls, so there's no way for it to do things like load
+files directly. It must ask the host to do it and use cryptography to prevent the malicious host from tampering with
+the data as it's loaded or saved.
 
 !!! notice
 
-    Because the JVM isn't the same as a normal HotSpot JVM, you will need to test your enclave code carefully and avoid
-    advanced features that the embedded JVM doesn't support, such as Java Flight Recorder.
-
-**Host programs** load enclaves. From a security perspective they are fully untrusted and assumed to be malicious at all
-times. Hosts are relied on to provide the enclave with resources but beyond that work only with encrypted data. Hosts
-use a standard JVM like HotSpot.
-
-**Clients** send and receive messages to/from enclaves by interacting with the host over the network. Conclave doesn't
-mandate any particular network protocol for client<->host communication. It's up to you. However the content of the
-messages *is* defined, using the [Mail](#mail) API.
+    Because the enclave JVM isn't the same as a normal HotSpot JVM, you will need to test your enclave code
+    carefully and avoid advanced features that the embedded JVM doesn't support, such as Java Flight Recorder.
 
 ## Remote attestation
 
@@ -68,7 +84,7 @@ This is what a typical interaction looks like:
 
 <!---
 
-https://mermaid-js.github.io/mermaid-live-editor/#/edit/eyJjb2RlIjoic2VxdWVuY2VEaWFncmFtXG4gICAgXG4gICAgcGFydGljaXBhbnQgRW5jbGF2ZVxuICAgIHBhcnRpY2lwYW50IENsb3VkL0ludGVsXG4gICAgcGFydGljaXBhbnQgSG9zdFxuICAgIHBhcnRpY2lwYW50IENsaWVudFxuICAgIHBhcnRpY2lwYW50IEludGVsXG4gICAgXG4gICAgQ2xvdWQvSW50ZWwtPj5Ib3N0OiBQcm92aXNpb25pbmcgY2VydHNcbiAgICBIb3N0LT4-Q2xpZW50OiBTZW5kIHJlbW90ZSBhdHRlc3RhdGlvblxuICAgIE5vdGUgb3ZlciBDbGllbnQ6IFZlcmlmeSBtZWFzdXJlbWVudFxuICAgIG9wdCBPY2Nhc2lvbmFsbHlcbiAgICAgICAgQ2xpZW50LS0-PkludGVsOiBSZXF1ZXN0IGFzc2Vzc21lbnRcbiAgICAgICAgSW50ZWwtLT4-Q2xpZW50OiBIb3N0IHN0aWxsIHNlY3VyZSFcbiAgICBlbmRcbiAgICBDbGllbnQtPj5Ib3N0OiBFbmNyeXB0ZWQgbWVzc2FnZSBvdmVyIElQXG4gICAgSG9zdC0-PkVuY2xhdmU6IEVuY3J5cHRlZCBtZXNzYWdlXG4gICAgRW5jbGF2ZS0-Pkhvc3Q6IEVuY3J5cHRlZCByZXNwb25zZVxuICAgIEhvc3QtPj5DbGllbnQ6IEVuY3J5cHRlZCByZXNwb25zZSBvdmVyIElQIiwibWVybWFpZCI6eyJ0aGVtZSI6ImRlZmF1bHQifSwidXBkYXRlRWRpdG9yIjpmYWxzZX0
+https://mermaid-js.github.io/mermaid-live-editor/#/edit/eyJjb2RlIjoic2VxdWVuY2VEaWFncmFtXG4gICAgXG4gICAgcGFydGljaXBhbnQgRW5jbGF2ZVxuICAgIHBhcnRpY2lwYW50IENsb3VkL0ludGVsXG4gICAgcGFydGljaXBhbnQgSG9zdFxuICAgIHBhcnRpY2lwYW50IENsaWVudFxuICAgIHBhcnRpY2lwYW50IEludGVsXG4gICAgXG4gICAgcmVjdCByZ2JhKDI1NSwgMCwgMjU1LCAwLjEpXG4gICAgICAgIE5vdGUgbGVmdCBvZiBIb3N0OiBPbiBpbml0aWFsIGRlcGxveVxuICAgICAgICBDbG91ZC9JbnRlbC0-Pkhvc3Q6IFByb3Zpc2lvbmluZyBjZXJ0c1xuICAgIGVuZFxuICAgIEhvc3QtPj5DbGllbnQ6IFNlbmQgcmVtb3RlIGF0dGVzdGF0aW9uXG4gICAgTm90ZSBvdmVyIENsaWVudDogVmVyaWZ5IG1lYXN1cmVtZW50XG4gICAgb3B0IE9jY2FzaW9uYWxseVxuICAgICAgICBDbGllbnQtLT4-SW50ZWw6IFJlcXVlc3QgYXNzZXNzbWVudFxuICAgICAgICBJbnRlbC0tPj5DbGllbnQ6IEhvc3Qgc3RpbGwgc2VjdXJlIVxuICAgIGVuZFxuICAgIENsaWVudC0-Pkhvc3Q6IEVuY3J5cHRlZCBtZXNzYWdlIG92ZXIgSVBcbiAgICBIb3N0LT4-RW5jbGF2ZTogRW5jcnlwdGVkIG1lc3NhZ2VcbiAgICBFbmNsYXZlLT4-SG9zdDogRW5jcnlwdGVkIHJlc3BvbnNlXG4gICAgSG9zdC0-PkNsaWVudDogRW5jcnlwdGVkIHJlc3BvbnNlIG92ZXIgSVAiLCJtZXJtYWlkIjp7InRoZW1lIjoiZGVmYXVsdCJ9LCJ1cGRhdGVFZGl0b3IiOmZhbHNlfQ
 sequenceDiagram
 
     participant Enclave
@@ -77,7 +93,10 @@ sequenceDiagram
     participant Client
     participant Intel
 
-    Cloud/Intel->>Host: Provisioning certs
+    rect rgba(255, 0, 255, 0.1)
+        Note left of Host: On initial deploy
+        Cloud/Intel->>Host: Provisioning certs
+    end
     Host->>Client: Send remote attestation
     Note over Client: Verify measurement
     opt Occasionally
