@@ -24,7 +24,7 @@ called Avian. In future versions we plan to upgrade to SubstrateVM, which will b
 
 ![Architecture Diagram](arch-diagram.png)
 
-In the above diagram red shaded boxes are untrusted and could attack the enclave: the host and operating system
+In the above diagram orange shaded boxes are untrusted and could attack the enclave: the host and operating system
 (which includes the BIOS, drivers and peripherals). Blue shaded boxes are part of the _trusted computing base_ -
 the set of components that must be correct and non-malicious for the system to work. That includes the enclave and
 of course the CPU.  The client communicates with the enclave via the host. Both client and host interact with
