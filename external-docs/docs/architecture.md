@@ -174,7 +174,7 @@ authenticated as having come from that user. This avoids the need for complex us
 process can be handled outside of the enclave, without compromising security.
 
 **Encryption.** The encryption key used by the enclave is private to that enclave but stable across restarts and
-*enclave upgrades. This means messages encrypted and delivered by older clients can still be decrypted. The format
+enclave upgrades. This means messages encrypted and delivered by older clients can still be decrypted. The format
 uses the respected [Noise protocol framework](https://noiseprotocol.org/) (with the one-way X handshake), which is
 the same cryptography used by WhatsApp, WireGuard and I2P.
 
