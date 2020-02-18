@@ -1,13 +1,12 @@
 package com.r3.sgx.enclavelethost.server.internal
 
-import com.r3.sgx.core.common.*
-import com.r3.sgx.core.host.*
 import com.r3.conclave.host.internal.AttestationService
 import com.r3.conclave.host.internal.AttestationServiceReportResponse
+import com.r3.sgx.core.common.*
+import com.r3.sgx.core.host.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.nio.ByteBuffer
 
 /**
  * Represents the possible states of an hosted enclavelet and provides the logic to
@@ -50,7 +49,7 @@ sealed class EnclaveletState {
      * Enclavelet loaded with attestation report attached
      */
     class Attested(created: Created,
-                   val rawQuote: Cursor<ByteBuffer, SgxSignedQuote>,
+                   val rawQuote: ByteCursor<SgxSignedQuote>,
                    val iasResponse: AttestationServiceReportResponse):
             Created(created.enclaveHandle,
                     created.channels,

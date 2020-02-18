@@ -20,7 +20,7 @@ internal class EchoHandler : Handler<Sender> {
  * An enclave that simply echoes the input to the enclavelet
  */
 class EchoEnclave : Enclavelet() {
-    override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+    override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
         val report = Cursor.allocate(SgxReportData)
         val buffer = report.getBuffer()
         buffer.put(ByteArray(buffer.capacity()) {0})

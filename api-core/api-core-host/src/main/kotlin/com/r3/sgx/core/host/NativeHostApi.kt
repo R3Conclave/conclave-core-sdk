@@ -1,11 +1,11 @@
 package com.r3.sgx.core.host
 
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.Handler
 import com.r3.sgx.core.common.SgxMetadata
 import com.r3.sgx.core.host.internal.*
 import java.io.File
-import java.nio.ByteBuffer
 
 class NativeHostApi(val loadMode: EnclaveLoadMode) {
     val isDebug = when (loadMode) {
@@ -27,7 +27,7 @@ class NativeHostApi(val loadMode: EnclaveLoadMode) {
         Native.destroyEnclave(enclaveId)
     }
 
-    fun readMetadata(enclaveFile: File): Cursor<ByteBuffer, SgxMetadata> {
+    fun readMetadata(enclaveFile: File): ByteCursor<SgxMetadata> {
         val cursor = Cursor.allocate(SgxMetadata)
         Native.getMetadata(enclaveFile.absolutePath, cursor.getBuffer().array())
         return cursor

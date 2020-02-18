@@ -1,7 +1,8 @@
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
-import com.r3.sgx.core.common.crypto.*
+import com.r3.sgx.core.common.crypto.SignatureScheme
+import com.r3.sgx.core.common.crypto.SignatureSchemeId
 import com.r3.sgx.core.common.internal.encryption.DecryptorAESGCM
 import com.r3.sgx.core.common.internal.encryption.EncryptorAESGCM
 import com.r3.sgx.core.enclave.EnclaveApi
@@ -27,7 +28,7 @@ class EncryptionHandlerTest: TestEnclavesBasedTest() {
         lateinit var signatureScheme: SignatureScheme
         lateinit var txSigningKeyPair: KeyPair
 
-        override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+        override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
             signatureScheme = api.getSignatureScheme(SignatureSchemeId.EDDSA_ED25519_SHA512)
             txSigningKeyPair = signatureScheme.generateKeyPair()
             val reportData = Cursor.allocate(SgxReportData)

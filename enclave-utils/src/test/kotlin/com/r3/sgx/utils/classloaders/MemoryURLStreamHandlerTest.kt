@@ -1,5 +1,6 @@
 package com.r3.sgx.utils.classloaders
 
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.Handler
 import com.r3.sgx.core.common.SgxReportData
@@ -8,15 +9,18 @@ import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.core.enclave.internal.NativeEnclaveApi.ENCLAVE_CLASS_ATTRIBUTE_NAME
 import com.r3.sgx.dynamictesting.TestEnclaves
 import com.r3.sgx.testing.HelperUtilities.expectWithin
-import org.junit.*
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.ClassRule
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URLClassLoader
 import java.nio.ByteBuffer
 import java.util.function.Supplier
-import java.util.jar.Attributes.Name.*
+import java.util.jar.Attributes.Name.MANIFEST_VERSION
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 
@@ -65,7 +69,7 @@ class MemoryURLStreamHandlerTest {
     }
 
     class ExampleEnclavelet : Enclavelet() {
-        override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+        override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
             return Cursor.allocate(SgxReportData)
         }
 

@@ -93,7 +93,7 @@ abstract class Enclave {
         mux.addDownstream(Enclavelet.EnclaveletEpidAttestationEnclaveHandler(api, reportData))
     }
 
-    private fun createReportData(): Cursor<ByteBuffer, SgxReportData> {
+    private fun createReportData(): ByteCursor<SgxReportData> {
         // TODO
         return Cursor.allocate(SgxReportData)
     }

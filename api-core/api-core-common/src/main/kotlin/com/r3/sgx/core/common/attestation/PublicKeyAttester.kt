@@ -1,5 +1,6 @@
 package com.r3.sgx.core.common.attestation
 
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.SgxReportData
@@ -17,12 +18,12 @@ import java.security.PublicKey
  * default "SHA-512" is used.
  */
 class PublicKeyAttester(
-        val attestedQuote: AttestedOutput<Cursor<ByteBuffer, SgxQuote>>,
+        val attestedQuote: AttestedOutput<ByteCursor<SgxQuote>>,
         val quotedKeyDigest: String
 ) {
     private val quoteReader = SgxQuoteReader(attestedQuote.data)
 
-    constructor(attestedQuote: AttestedOutput<Cursor<ByteBuffer, SgxQuote>>)
+    constructor(attestedQuote: AttestedOutput<ByteCursor<SgxQuote>>)
             : this(attestedQuote, DEFAULT_KEY_DIGEST)
 
     init {

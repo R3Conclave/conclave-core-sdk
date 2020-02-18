@@ -7,7 +7,7 @@ import java.util.*
  * A pretty printer for [Cursor]s.
  */
 object CursorPrettyPrint {
-    fun <R> print(cursor: Cursor<R, Encoder<R>>): String {
+    fun <R> print(cursor: Cursor<Encoder<R>, R>): String {
         val builder = StringBuilder()
         printCursor(builder, cursor, 0)
         return builder.toString()
@@ -20,7 +20,7 @@ object CursorPrettyPrint {
         return this
     }
 
-    private fun <S : Struct> printStructCursor(builder: StringBuilder, cursor: Cursor<ByteBuffer, S>, indent: Int): StringBuilder {
+    private fun <S : Struct> printStructCursor(builder: StringBuilder, cursor: ByteCursor<S>, indent: Int): StringBuilder {
         builder.append(cursor.encoder.javaClass.simpleName).append('(').append(cursor.encoder.size()).append(") {\n")
         val fields = cursor.encoder.javaClass.fields
         for (field in fields) {
@@ -35,11 +35,11 @@ object CursorPrettyPrint {
         return builder.appendIndent(indent).append('}')
     }
 
-    private fun <R> printCursor(builder: StringBuilder, cursor: Cursor<R, Encoder<R>>, indent: Int): StringBuilder {
+    private fun <R> printCursor(builder: StringBuilder, cursor: Cursor<Encoder<R>, R>, indent: Int): StringBuilder {
         return when (cursor.encoder) {
             is Struct -> {
                 @Suppress("UNCHECKED_CAST")
-                printStructCursor(builder, cursor as Cursor<ByteBuffer, Struct>, indent)
+                printStructCursor(builder, cursor as ByteCursor<Struct>, indent)
             }
             is FixedBytes -> {
                 val buffer = cursor.read() as ByteBuffer
@@ -83,7 +83,7 @@ object CursorPrettyPrint {
             }
             is CArray<*, *> -> {
                 @Suppress("UNCHECKED_CAST")
-                cursor as Cursor<List<Any?>, CArray<Any?, Encoder<Any?>>>
+                cursor as Cursor<CArray<Any?, Encoder<Any?>>, List<Any?>>
                 builder.append("[\n")
                 for (i in 0 until cursor.encoder.length) {
                     builder.appendIndent(indent + 1)

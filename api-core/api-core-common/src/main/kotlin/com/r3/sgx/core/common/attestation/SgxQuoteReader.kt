@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 /**
  * Helper class providing access to a subset of the fields in a quote structure.
  */
-class SgxQuoteReader(private val quoteCursor: Cursor<ByteBuffer, SgxQuote>) {
+class SgxQuoteReader(private val quoteCursor: ByteCursor<SgxQuote>) {
 
     /**
      * The enclave measurement reported in the quote
@@ -23,6 +23,6 @@ class SgxQuoteReader(private val quoteCursor: Cursor<ByteBuffer, SgxQuote>) {
     /**
      * A cursor object to access the attributes mask
      */
-    val attributesCursor: Cursor<ByteBuffer, SgxAttributes>
+    val attributesCursor: ByteCursor<SgxAttributes>
         get() = quoteCursor[SgxQuote.reportBody][SgxReportBody.attributes]
 }

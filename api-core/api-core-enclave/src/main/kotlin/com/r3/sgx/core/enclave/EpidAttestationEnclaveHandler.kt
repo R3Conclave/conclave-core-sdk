@@ -2,14 +2,13 @@ package com.r3.sgx.core.enclave
 
 import com.google.protobuf.ByteString
 import com.r3.sgx.core.common.*
-import java.nio.ByteBuffer
 
 /**
  * The enclave side of the EPID attestation protocol. It receives report requests from the host, containing the target
  * Quoting Enclave's information, and sends back a report.
  */
 abstract class EpidAttestationEnclaveHandler(val api: EnclaveApi) : SimpleProtoHandler<EpidHostMessage, EpidEnclaveMessage>(EpidHostMessage.parser()) {
-    abstract val reportData: Cursor<ByteBuffer, SgxReportData>
+    abstract val reportData: ByteCursor<SgxReportData>
 
     override fun onReceive(connection: ProtoSender<EpidEnclaveMessage>, message: EpidHostMessage) {
         when {

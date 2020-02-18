@@ -3,21 +3,23 @@ package com.r3.sgx.core.common
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+typealias ByteCursor<T> = Cursor<T, ByteBuffer>
+
 /**
  * This class implements a cursor into a [ByteBuffer]. It's purpose is to provide a C-like typed view over serialized
  * data using [Encoder]s.
  *
- * @param R the pointed-to data's Kotlin representation type.
  * @param T the [Encoder] describing how to read/write the pointed-to data.
+ * @param R the pointed-to data's Kotlin representation type.
  */
-class Cursor<R, out T : Encoder<R>>(val encoder: T, buffer: ByteBuffer) {
+class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
+    constructor(encoder: T, bytes: ByteArray) : this(encoder, ByteBuffer.wrap(bytes))
+
     companion object {
         @JvmStatic
-        fun <R, T : Encoder<R>> allocate(type: T): Cursor<R, T> {
+        fun <T : Encoder<R>, R> allocate(type: T): Cursor<T, R> {
             return Cursor(type, ByteBuffer.allocate(type.size()).order(ByteOrder.LITTLE_ENDIAN))
         }
-
-        fun <R, T : Encoder<R>> wrap(type: T, bytes: ByteArray): Cursor<R, T> = Cursor(type, ByteBuffer.wrap(bytes))
     }
 
     init {
@@ -63,7 +65,7 @@ class Cursor<R, out T : Encoder<R>>(val encoder: T, buffer: ByteBuffer) {
      * val report = Cursor([SgxReport], reportBytes)
      * val measurement = report[[SgxReport.body]][[SgxReportBody.measurement]]
      */
-    operator fun <FR, FT : Encoder<FR>> get(field: Struct.Field<T, FT>): Cursor<FR, FT> {
+    operator fun <FT : Encoder<FR>, FR> get(field: Struct.Field<T, FT>): Cursor<FT, FR> {
         val buffer = getBuffer()
         buffer.position(buffer.position() + field.offset)
         buffer.limit(buffer.position() + field.type.size())
@@ -72,13 +74,13 @@ class Cursor<R, out T : Encoder<R>>(val encoder: T, buffer: ByteBuffer) {
 
 }
 
-operator fun <ER, ET : Encoder<ER>> Cursor<List<ER>, CArray<ER, ET>>.get(index: Int): Cursor<ER, ET> {
+operator fun <ET : Encoder<ER>, ER> Cursor<CArray<ER, ET>, List<ER>>.get(index: Int): Cursor<ET, ER> {
     val buffer = getBuffer()
     buffer.position(buffer.position() + index * encoder.elementType.size())
     buffer.limit(buffer.position() + encoder.elementType.size())
     return Cursor(encoder.elementType, buffer)
 }
 
-operator fun <ER, ET : Encoder<ER>> Cursor<List<ER>, CArray<ER, ET>>.set(index: Int, value: ER) {
+operator fun <ET : Encoder<ER>, ER> Cursor<CArray<ER, ET>, List<ER>>.set(index: Int, value: ER) {
     get(index).write(value)
 }

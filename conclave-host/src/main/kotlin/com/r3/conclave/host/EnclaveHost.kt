@@ -57,7 +57,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         private val attestationConfig = EpidAttestationHostConfiguration(
                 // TODO Does the quote type need to be configurable?
                 quoteType = SgxQuoteType.LINKABLE.value,
-                spid = Cursor.wrap(SgxSpid, r3EpidSpid)
+                spid = Cursor(SgxSpid, r3EpidSpid)
         )
 
         // This wouldn't be needed if the c'tor was package-private.

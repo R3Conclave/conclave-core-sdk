@@ -98,7 +98,7 @@ class AttestationTest : TestEnclavesBasedTest() {
     }
 
     class TestEpidAttestationEnclaveHandler(api: EnclaveApi, reportDataString: String) : EpidAttestationEnclaveHandler(api) {
-        override val reportData: Cursor<ByteBuffer, SgxReportData> by lazy {
+        override val reportData: ByteCursor<SgxReportData> by lazy {
             val reportData = Cursor.allocate(SgxReportData)
             val encoder = Charsets.UTF_8.newEncoder()
             encoder.encode(CharBuffer.wrap(reportDataString), reportData.getBuffer(), true)

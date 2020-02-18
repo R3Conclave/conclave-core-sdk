@@ -1,16 +1,13 @@
 package com.r3.sgx.utils.classloaders
 
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.Handler
-import com.r3.sgx.core.common.Sender
-import com.r3.sgx.core.common.SgxReportData
+import com.r3.sgx.core.common.*
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
 class ShoutingEnclavelet : Enclavelet() {
-    override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+    override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
         return Cursor.allocate(SgxReportData)
     }
 

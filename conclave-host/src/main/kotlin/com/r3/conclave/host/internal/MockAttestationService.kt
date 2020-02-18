@@ -1,11 +1,10 @@
 package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.sgx.core.common.Cursor
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.SgxSignedQuote
 import java.io.InputStream
-import java.nio.ByteBuffer
 import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
@@ -16,7 +15,7 @@ import java.util.*
  * A mock implementation of [AttestationService] permitting to reproduce the attestation flow in simulation mode
  */
 class MockAttestationService : AttestationService {
-    override fun requestSignature(signedQuote: Cursor<ByteBuffer, SgxSignedQuote>): AttestationServiceReportResponse {
+    override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationServiceReportResponse {
         val response = ReportResponse(
                 id = "MOCK-RESPONSE: ${UUID.randomUUID()}",
                 isvEnclaveQuoteStatus = QuoteStatus.OK,
@@ -45,7 +44,7 @@ class MockAttestationService : AttestationService {
 
         private val reportResponseSerializeMapper = ReportResponseSerializer.register(ObjectMapper())
 
-        private fun Cursor<ByteBuffer, SgxQuote>.toByteArray(): ByteArray {
+        private fun ByteCursor<SgxQuote>.toByteArray(): ByteArray {
             val buffer = getBuffer()
             return ByteArray(buffer.remaining()).also { buffer.get(it) }
         }

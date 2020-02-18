@@ -1,11 +1,10 @@
 package com.r3.sgx.enclavelethost.client
 
-import com.r3.sgx.core.common.Cursor
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.SgxMeasurement
 import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.SgxReportBody
 import com.r3.sgx.core.common.attestation.Measurement
-import java.nio.ByteBuffer
 import java.security.GeneralSecurityException
 
 /**
@@ -17,14 +16,14 @@ sealed class QuoteConstraint {
     /**
      * Verify input quote satisfies this constraints, throwing an exception if it doesnt
      */
-    abstract fun verify(quote: Cursor<ByteBuffer, SgxQuote>)
+    abstract fun verify(quote: ByteCursor<SgxQuote>)
 
     /**
      * A QuoteConstraint enforcing the enclave measurement is part of a given trusted set
      */
     data class ValidMeasurements(val trustedMeasurements: Set<Measurement>): QuoteConstraint() {
         constructor(vararg measurements: Measurement): this(setOf(*measurements))
-        override fun verify(quote: Cursor<ByteBuffer, SgxQuote>) {
+        override fun verify(quote: ByteCursor<SgxQuote>) {
             val measurementBytes = ByteArray(SgxMeasurement.size).also {
                 quote[SgxQuote.reportBody][SgxReportBody.measurement].read().get(it)
             }

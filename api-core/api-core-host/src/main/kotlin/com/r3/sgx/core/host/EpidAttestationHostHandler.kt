@@ -4,11 +4,10 @@ import com.google.protobuf.ByteString
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.internal.Native
 import org.slf4j.LoggerFactory
-import java.nio.ByteBuffer
 
 data class EpidAttestationHostConfiguration(
         val quoteType: Int,
-        val spid: Cursor<ByteBuffer, SgxSpid>
+        val spid: ByteCursor<SgxSpid>
 )
 
 class EpidAttestationHostHandler(
@@ -21,15 +20,9 @@ class EpidAttestationHostHandler(
 
     private sealed class State {
         object Unstarted : State()
-        data class QuoteInitialized(
-                val initQuoteResponse: Cursor<ByteBuffer, SgxInitQuoteResponse>
-        ) : State()
-        data class ReportRetrieved(
-                val report: Cursor<ByteBuffer, SgxReport>
-        ) : State()
-        data class QuoteRetrieved(
-                val signedQuote: Cursor<ByteBuffer, SgxSignedQuote>
-        ) : State()
+        data class QuoteInitialized(val initQuoteResponse: ByteCursor<SgxInitQuoteResponse>) : State()
+        data class ReportRetrieved(val report: ByteCursor<SgxReport>) : State()
+        data class QuoteRetrieved(val signedQuote: ByteCursor<SgxSignedQuote>) : State()
     }
 
     private var state: State = State.Unstarted
@@ -60,10 +53,10 @@ class EpidAttestationHostHandler(
     }
 
     inner class Connection(val upstream: ProtoSender<EpidHostMessage>) {
-        fun getQuote(): Cursor<ByteBuffer, SgxSignedQuote> {
+        fun getQuote(): ByteCursor<SgxSignedQuote> {
             val initialState = state
             return when (initialState) {
-                EpidAttestationHostHandler.State.Unstarted -> {
+                State.Unstarted -> {
                     log.info("Initializing quote")
                     val quotingEnclaveTargetInfo = initializeQuote()
                     log.info("Quoting enclave's target info $quotingEnclaveTargetInfo")
@@ -73,7 +66,7 @@ class EpidAttestationHostHandler(
                     log.info("Got quote $quote")
                     quote
                 }
-                is EpidAttestationHostHandler.State.QuoteRetrieved -> {
+                is State.QuoteRetrieved -> {
                     initialState.signedQuote
                 }
                 else -> {
@@ -82,14 +75,14 @@ class EpidAttestationHostHandler(
             }
         }
 
-        private fun initializeQuote(): Cursor<ByteBuffer, SgxTargetInfo> {
+        private fun initializeQuote(): ByteCursor<SgxTargetInfo> {
             val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
             Native.initQuote(quoteResponse.getBuffer().array())
             state = State.QuoteInitialized(quoteResponse)
             return quoteResponse[SgxInitQuoteResponse.quotingEnclaveTargetInfo]
         }
 
-        private fun retrieveReport(quotingEnclaveTargetInfo: Cursor<ByteBuffer, SgxTargetInfo>): Cursor<ByteBuffer, SgxReport> {
+        private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>): ByteCursor<SgxReport> {
             val getReport = EpidHostMessage.newBuilder()
                     .setGetReportRequest(GetReportRequest.newBuilder()
                             .setQuotingEnclaveTargetInfo(ByteString.copyFrom(quotingEnclaveTargetInfo.read())))
@@ -99,7 +92,7 @@ class EpidAttestationHostHandler(
             return reportRetrieved.report
         }
 
-        private fun retrieveQuote(report: Cursor<ByteBuffer, SgxReport>): Cursor<ByteBuffer, SgxSignedQuote> {
+        private fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
             val quoteSize = Native.calcQuoteSize(null)
             val getQuoteRequest = Cursor.allocate(SgxGetQuote)
             getQuoteRequest[SgxGetQuote.report] = report.read()

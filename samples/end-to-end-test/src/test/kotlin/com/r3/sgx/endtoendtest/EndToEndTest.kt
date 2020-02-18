@@ -1,10 +1,14 @@
 package com.r3.sgx.endtoendtest
 
-import com.r3.sgx.core.common.*
+import com.r3.sgx.core.common.ByteCursor
+import com.r3.sgx.core.common.EncryptionInitiatingHandler
+import com.r3.sgx.core.common.EncryptionProtocolId
+import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
-import com.r3.sgx.core.common.crypto.*
+import com.r3.sgx.core.common.crypto.SignatureSchemeId
+import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import com.r3.sgx.enclave.signing.SignedStuff
 import com.r3.sgx.enclave.signing.Stuff
 import com.r3.sgx.enclave.signing.internal.MyAMQPSerializationScheme
@@ -12,9 +16,9 @@ import com.r3.sgx.enclave.signing.internal.asContextEnv
 import com.r3.sgx.enclavelethost.client.EnclaveletMetadata
 import com.r3.sgx.enclavelethost.client.EpidAttestationVerificationBuilder
 import com.r3.sgx.enclavelethost.client.QuoteConstraint
-import com.r3.sgx.enclavelethost.grpc.*
+import com.r3.sgx.enclavelethost.grpc.GetEpidAttestationRequest
+import com.r3.sgx.enclavelethost.grpc.GetEpidAttestationResponse
 import com.r3.sgx.testing.*
-import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -26,7 +30,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.ByteBuffer
-import java.util.concurrent.*
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.function.Supplier
 
 class EndToEndTest : TestEnclavesBasedTest() {
@@ -132,7 +139,7 @@ class EndToEndTest : TestEnclavesBasedTest() {
         log.info("Done!")
     }
 
-    private fun getAndVerifyAttestation(): AttestedOutput<Cursor<ByteBuffer, SgxQuote>> {
+    private fun getAndVerifyAttestation(): AttestedOutput<ByteCursor<SgxQuote>> {
         val quoteResponses = ArrayBlockingQueue<StreamMessage<GetEpidAttestationResponse>>(2)
         enclaveletHost.getEpidAttestation(
                 GetEpidAttestationRequest.getDefaultInstance(),

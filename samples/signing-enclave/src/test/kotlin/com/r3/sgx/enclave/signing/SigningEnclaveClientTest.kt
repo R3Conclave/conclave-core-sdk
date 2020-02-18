@@ -85,7 +85,7 @@ class SigningEnclaveClientTest {
         log.info("Done!")
     }
 
-    private fun getAndVerifyAttestation(): AttestedOutput<Cursor<ByteBuffer, SgxQuote>> {
+    private fun getAndVerifyAttestation(): AttestedOutput<ByteCursor<SgxQuote>> {
         val quoteResponses = ArrayBlockingQueue<StreamMessage<GetEpidAttestationResponse>>(2)
         enclavelet.getEpidAttestation(
                 GetEpidAttestationRequest.getDefaultInstance(),

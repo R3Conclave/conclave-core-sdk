@@ -1,11 +1,10 @@
 package com.r3.conclave.host.internal
 
-import com.r3.sgx.core.common.Cursor
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.SgxSignedQuote
-import java.nio.ByteBuffer
 
 interface AttestationService {
-    fun requestSignature(signedQuote: Cursor<ByteBuffer, SgxSignedQuote>): AttestationServiceReportResponse
+    fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationServiceReportResponse
 }
 
 interface AttestationServiceReportResponse {

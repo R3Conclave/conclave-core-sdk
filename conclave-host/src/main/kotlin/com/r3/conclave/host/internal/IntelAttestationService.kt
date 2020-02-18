@@ -2,7 +2,7 @@ package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.r3.sgx.core.common.Cursor
+import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.SgxSignedQuote
 import org.apache.http.HttpResponse
 import org.apache.http.HttpStatus.SC_OK
@@ -21,7 +21,6 @@ import org.apache.http.ssl.SSLContextBuilder
 import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
 import java.net.URLDecoder
-import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.util.*
 
@@ -43,7 +42,7 @@ class IntelAttestationService(private val url: String, private val subscriptionK
                 .build()
     }
 
-    override fun requestSignature(signedQuote: Cursor<ByteBuffer, SgxSignedQuote>): AttestationServiceReportResponse {
+    override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationServiceReportResponse {
         val rawQuote = signedQuote.getBuffer().array()
         try {
             createHttpClient().use { client ->

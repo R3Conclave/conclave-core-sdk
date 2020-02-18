@@ -20,7 +20,7 @@ class EnclaveletTest : TestEnclavesBasedTest() {
     class SigningEnclave : Enclavelet() {
         lateinit var scheme: SignatureScheme
         lateinit var keyPair: KeyPair
-        override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+        override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
             val reportDataCursor = Cursor.allocate(SgxReportData)
             scheme = api.getSignatureScheme(SignatureSchemeId.EDDSA_ED25519_SHA512)
             keyPair = scheme.generateKeyPair()

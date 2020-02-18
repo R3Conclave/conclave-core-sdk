@@ -15,7 +15,6 @@ import net.corda.core.serialization.serialize
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.MessageDigest
-import java.util.*
 
 @CordaSerializable
 data class Stuff(val x: Int, val y: Double, val z: List<Int>)
@@ -29,9 +28,7 @@ data class SignedStuff(val stuff: Stuff, val key: ByteArray, val signature: Byte
                 && signature.contentEquals(other.signature))
     }
 
-    override fun hashCode(): Int {
-        return (stuff.hashCode()*31 + Arrays.hashCode(key))*31 + Arrays.hashCode(signature)
-    }
+    override fun hashCode(): Int = (stuff.hashCode()*31 + key.contentHashCode())*31 + signature.contentHashCode()
 }
 
 /**
@@ -49,7 +46,7 @@ class SigningEnclave : Enclavelet() {
         }
     }
 
-    override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+    override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
         signatureScheme = getSignatureScheme(api)
         txSigningKeyPair = signatureScheme.generateKeyPair()
         val reportData = Cursor.allocate(SgxReportData)

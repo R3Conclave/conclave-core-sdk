@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.r3.conclave.host.internal.QuoteStatus
 import com.r3.conclave.host.internal.ReportResponse
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxAttributes
-import com.r3.sgx.core.common.SgxEnclaveFlags
-import com.r3.sgx.core.common.SgxQuote
+import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.common.attestation.SgxQuoteReader
@@ -44,7 +41,7 @@ class EpidAttestationVerification(
      * @param attestation the attestation to check, retrieved from an enclavelet host.
      * @return the quote body extracted from the signed IAS response.
      */
-    fun verify(pkixParameters: PKIXParameters, attestation: EpidAttestation): AttestedOutput<Cursor<ByteBuffer, SgxQuote>> {
+    fun verify(pkixParameters: PKIXParameters, attestation: EpidAttestation): AttestedOutput<ByteCursor<SgxQuote>> {
         val certificatePath = parseCertificates(attestation.iasCertificate)
 
         val certValidator = CertPathValidator.getInstance("PKIX")
@@ -120,7 +117,7 @@ class EpidAttestationVerification(
     }
 
     private class TrustedSgxQuote(
-            override val data: Cursor<ByteBuffer, SgxQuote>,
+            override val data: ByteCursor<SgxQuote>,
             override val source: Measurement
-    ): AttestedOutput<Cursor<ByteBuffer, SgxQuote>>
+    ): AttestedOutput<ByteCursor<SgxQuote>>
 }

@@ -22,8 +22,8 @@ class ProtobufEnclaveTest {
     }
 
     class GetMeasurementHost : BytesHandler() {
-        var measurement: Cursor<ByteBuffer, SgxMeasurement>? = null
-        override fun onReceive(connection: BytesHandler.Connection, input: ByteBuffer) {
+        var measurement: ByteCursor<SgxMeasurement>? = null
+        override fun onReceive(connection: Connection, input: ByteBuffer) {
             measurement = Cursor(SgxMeasurement, input)
         }
     }

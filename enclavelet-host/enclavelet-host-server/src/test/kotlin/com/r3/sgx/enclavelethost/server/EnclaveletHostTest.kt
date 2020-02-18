@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
 class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
 
     class EchoEnclavelet : Enclavelet() {
-        override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+        override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
             return Cursor.allocate(SgxReportData)
         }
 
@@ -40,7 +40,7 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
     class ThrowingEnclavelet: Enclavelet() {
         class EnclaveletError: Throwable("Boom")
 
-        override fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData> {
+        override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
             return Cursor.allocate(SgxReportData)
         }
 
@@ -50,8 +50,8 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
                 override fun connect(upstream: Sender) = upstream
 
                 override fun onReceive(connection: Sender, input: ByteBuffer) {
-                        System.err.println("Error")
-                        throw EnclaveletError()
+                    System.err.println("Error")
+                    throw EnclaveletError()
                 }
             }
         }
@@ -60,7 +60,7 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
     companion object {
         const val port = 30011
         val serverJar: String = System.getProperty("test.hostjar")
-        private fun Cursor<ByteBuffer, SgxQuote>.getMeasurement(): Measurement {
+        private fun ByteCursor<SgxQuote>.getMeasurement(): Measurement {
             val data = ByteArray(SgxMeasurement.size) { 0 }
             this[SgxQuote.reportBody][SgxReportBody.measurement].getBuffer().get(data)
             return Measurement(data)
@@ -75,15 +75,11 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
                 val rpcProxy = EnclaveletHostGrpc.newStub(channel).withWaitForReady()
                 val serverMessages = ArrayBlockingQueue<ServerMessage>(10)
                 val requestObserver = rpcProxy.openSession(object : StreamObserver<ServerMessage> {
-                    override fun onNext(value: ServerMessage?) {
+                    override fun onNext(value: ServerMessage) {
                         serverMessages.add(value)
                     }
-
-                    override fun onCompleted() {
-                    }
-
-                    override fun onError(t: Throwable?) {
-                    }
+                    override fun onCompleted() = Unit
+                    override fun onError(t: Throwable) = Unit
                 })
                 requestObserver.onNext(ClientMessage.newBuilder()
                         .setBlob(ByteString.copyFromUtf8("Hello"))
@@ -198,9 +194,9 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
 
     private fun getTmpFileNames(): String {
         return File(System.getProperty("java.io.tmpdir"))
-            .listFiles()
-            .sorted()
-            .joinToString(",") { it.path }
+                .listFiles()
+                .sorted()
+                .joinToString(",") { it.path }
     }
 
     private fun withEnclaveletHost(enclaveClass: Class<out Enclavelet>, block: (Process) -> Unit) {

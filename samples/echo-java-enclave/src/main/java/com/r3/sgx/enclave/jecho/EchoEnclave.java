@@ -9,8 +9,8 @@ import java.nio.ByteBuffer;
 
 public class EchoEnclave extends Enclavelet {
     @Override
-    public Cursor<ByteBuffer, SgxReportData> createReportData(EnclaveApi api) {
-        Cursor<ByteBuffer, SgxReportData> report = Cursor.allocate(SgxReportData.INSTANCE);
+    public Cursor<SgxReportData, ByteBuffer> createReportData(EnclaveApi api) {
+        Cursor<SgxReportData, ByteBuffer> report = Cursor.allocate(SgxReportData.INSTANCE);
         ByteBuffer buffer = report.getBuffer();
         buffer.put(new byte[buffer.capacity()]);
         return report;

@@ -1,7 +1,6 @@
 package com.r3.sgx.core.enclave
 
 import com.r3.sgx.core.common.*
-import java.nio.ByteBuffer
 
 /**
  * An [Enclavelet] is an enclave adhering to a specific binary protocol that allows it to be loaded onto a generic
@@ -22,7 +21,7 @@ abstract class Enclavelet : RootEnclave() {
      * authenticate the enclave during DH, provide signatures over computed data, or perhaps to sign further keys.
      * @param api the enclave API.
      */
-    abstract fun createReportData(api: EnclaveApi): Cursor<ByteBuffer, SgxReportData>
+    abstract fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData>
     /**
      * Create a [Handler] for a requested channel. The channels themselves are created by the host (possibly triggered
      * remotely) using [ChannelInitiatingHandler.Connection.addDownstream], which creates the channel and adds the host
@@ -46,6 +45,6 @@ abstract class Enclavelet : RootEnclave() {
 
     class EnclaveletEpidAttestationEnclaveHandler(
             api: EnclaveApi,
-            override val reportData: Cursor<ByteBuffer, SgxReportData>
+            override val reportData: ByteCursor<SgxReportData>
     ) : EpidAttestationEnclaveHandler(api)
 }
