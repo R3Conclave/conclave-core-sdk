@@ -8,34 +8,29 @@ public interface EpidAttestationOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>required bytes ias_response = 1;</code>
+   * <code>required bytes report = 1;</code>
    */
-  boolean hasIasResponse();
+  boolean hasReport();
   /**
-   * <code>required bytes ias_response = 1;</code>
+   * <code>required bytes report = 1;</code>
    */
-  com.google.protobuf.ByteString getIasResponse();
+  com.google.protobuf.ByteString getReport();
 
   /**
-   * <code>required string ias_certificate = 2;</code>
+   * <code>required bytes signature = 2;</code>
    */
-  boolean hasIasCertificate();
+  boolean hasSignature();
   /**
-   * <code>required string ias_certificate = 2;</code>
+   * <code>required bytes signature = 2;</code>
    */
-  java.lang.String getIasCertificate();
-  /**
-   * <code>required string ias_certificate = 2;</code>
-   */
-  com.google.protobuf.ByteString
-      getIasCertificateBytes();
+  com.google.protobuf.ByteString getSignature();
 
   /**
-   * <code>required bytes ias_signature = 3;</code>
+   * <code>required bytes cert_path = 3;</code>
    */
-  boolean hasIasSignature();
+  boolean hasCertPath();
   /**
-   * <code>required bytes ias_signature = 3;</code>
+   * <code>required bytes cert_path = 3;</code>
    */
-  com.google.protobuf.ByteString getIasSignature();
+  com.google.protobuf.ByteString getCertPath();
 }

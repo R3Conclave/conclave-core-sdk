@@ -1,17 +1,16 @@
 package com.r3.sgx.enclavelethost.client
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.r3.conclave.host.internal.AttestationResponse
 import com.r3.conclave.host.internal.QuoteStatus
-import com.r3.conclave.host.internal.ReportResponse
-import com.r3.sgx.core.common.*
+import com.r3.sgx.core.common.ByteCursor
+import com.r3.sgx.core.common.SgxAttributes
+import com.r3.sgx.core.common.SgxEnclaveFlags
+import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.common.attestation.SgxQuoteReader
 import com.r3.sgx.enclavelethost.grpc.EpidAttestation
-import java.nio.ByteBuffer
 import java.security.GeneralSecurityException
-import java.security.Signature
 import java.security.cert.*
 
 /**
@@ -42,24 +41,13 @@ class EpidAttestationVerification(
      * @return the quote body extracted from the signed IAS response.
      */
     fun verify(pkixParameters: PKIXParameters, attestation: EpidAttestation): AttestedOutput<ByteCursor<SgxQuote>> {
-        val certificatePath = parseCertificates(attestation.iasCertificate)
+        val report = AttestationResponse(
+                reportBytes = attestation.report.toByteArray(),
+                signature = attestation.signature.toByteArray(),
+                certPath = certificateFactory.generateCertPath(attestation.certPath.newInput())
+        ).verify(pkixParameters)
 
-        val certValidator = CertPathValidator.getInstance("PKIX")
-        certValidator.validate(certificatePath, pkixParameters)
-
-        val signature = Signature.getInstance("SHA256withRSA").apply {
-            initVerify(certificatePath.certificates[0])
-        }
-
-        signature.update(attestation.iasResponse.asReadOnlyByteBuffer())
-        if (!signature.verify(attestation.iasSignature.toByteArray())) {
-            throw GeneralSecurityException("Report failed IAS signature check")
-        }
-
-        val response = reportResponseDeserialiseMapper.readValue<ReportResponse>(attestation.iasResponse.newInput())
-        check(response.version == 3)  // As advised in the SGX docs
-
-        val status = response.isvEnclaveQuoteStatus
+        val status = report.isvEnclaveQuoteStatus
         when {
             status == QuoteStatus.OK -> {}
             status == QuoteStatus.GROUP_OUT_OF_DATE && acceptGroupOutOfDate -> {}
@@ -69,7 +57,7 @@ class EpidAttestationVerification(
             }
         }
 
-        val quoteCursor = Cursor(SgxQuote, ByteBuffer.wrap(response.isvEnclaveQuoteBody))
+        val quoteCursor = report.isvEnclaveQuoteBody
         val quoteReader = SgxQuoteReader(quoteCursor)
         quoteConstraints.forEach { constraint -> constraint.verify(quoteCursor) }
         val flagsCursor = quoteReader.attributesCursor[SgxAttributes.flags]
@@ -86,16 +74,6 @@ class EpidAttestationVerification(
         return TrustedSgxQuote(quoteCursor, Measurement.read(quoteReader.measurement))
     }
 
-    private fun parseCertificates(iasCertificateHeader: String): CertPath {
-        val certificates = mutableListOf<Certificate>()
-        iasCertificateHeader.byteInputStream().use { input ->
-            while (input.available() > 0) {
-                certificates.add(certificateFactory.generateCertificate(input))
-            }
-        }
-        return certificateFactory.generateCertPath(certificates)
-    }
-
     private fun loadIntelCaCertificate(): Certificate {
         return certificateFactory.generateCertificate(javaClass.getResourceAsStream("/AttestationReportSigningCACert.pem"))
     }
@@ -110,10 +88,6 @@ class EpidAttestationVerification(
         val certPathChecker = CertPathValidator.getInstance("PKIX").revocationChecker as PKIXRevocationChecker
         pkixParameters.addCertPathChecker(certPathChecker)
         return pkixParameters
-    }
-
-    companion object {
-        private val reportResponseDeserialiseMapper = ReportResponseDeserializer.register(ObjectMapper())
     }
 
     private class TrustedSgxQuote(

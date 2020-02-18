@@ -52,15 +52,15 @@ public final class EnclaveletHostApi {
       "dAttestationRequest\"I\n\032GetEpidAttestatio" +
       "nResponse\022+\n\013attestation\030\001 \002(\0132\026.proto.E" +
       "pidAttestation\"\035\n\rClientMessage\022\014\n\004blob\030" +
-      "\001 \002(\014\"\035\n\rServerMessage\022\014\n\004blob\030\001 \002(\014\"W\n\017" +
-      "EpidAttestation\022\024\n\014ias_response\030\001 \002(\014\022\027\n" +
-      "\017ias_certificate\030\002 \002(\t\022\025\n\rias_signature\030" +
-      "\003 \002(\0142\252\001\n\016EnclaveletHost\022Y\n\022GetEpidAttes" +
-      "tation\022 .proto.GetEpidAttestationRequest" +
-      "\032!.proto.GetEpidAttestationResponse\022=\n\013O" +
-      "penSession\022\024.proto.ClientMessage\032\024.proto" +
-      ".ServerMessage(\0010\001B;\n\036com.r3.sgx.enclave" +
-      "lethost.grpcB\021EnclaveletHostApiP\001\242\002\003HLW"
+      "\001 \002(\014\"\035\n\rServerMessage\022\014\n\004blob\030\001 \002(\014\"G\n\017" +
+      "EpidAttestation\022\016\n\006report\030\001 \002(\014\022\021\n\tsigna" +
+      "ture\030\002 \002(\014\022\021\n\tcert_path\030\003 \002(\0142\252\001\n\016Enclav" +
+      "eletHost\022Y\n\022GetEpidAttestation\022 .proto.G" +
+      "etEpidAttestationRequest\032!.proto.GetEpid" +
+      "AttestationResponse\022=\n\013OpenSession\022\024.pro" +
+      "to.ClientMessage\032\024.proto.ServerMessage(\001" +
+      "0\001B;\n\036com.r3.sgx.enclavelethost.grpcB\021En" +
+      "claveletHostApiP\001\242\002\003HLW"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -103,7 +103,7 @@ public final class EnclaveletHostApi {
     internal_static_proto_EpidAttestation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_proto_EpidAttestation_descriptor,
-        new java.lang.String[] { "IasResponse", "IasCertificate", "IasSignature", });
+        new java.lang.String[] { "Report", "Signature", "CertPath", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

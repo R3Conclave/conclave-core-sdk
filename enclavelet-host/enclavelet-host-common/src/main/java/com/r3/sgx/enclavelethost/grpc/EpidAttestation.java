@@ -16,9 +16,9 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private EpidAttestation() {
-    iasResponse_ = com.google.protobuf.ByteString.EMPTY;
-    iasCertificate_ = "";
-    iasSignature_ = com.google.protobuf.ByteString.EMPTY;
+    report_ = com.google.protobuf.ByteString.EMPTY;
+    signature_ = com.google.protobuf.ByteString.EMPTY;
+    certPath_ = com.google.protobuf.ByteString.EMPTY;
   }
 
   @java.lang.Override
@@ -54,18 +54,17 @@ private static final long serialVersionUID = 0L;
           }
           case 10: {
             bitField0_ |= 0x00000001;
-            iasResponse_ = input.readBytes();
+            report_ = input.readBytes();
             break;
           }
           case 18: {
-            com.google.protobuf.ByteString bs = input.readBytes();
             bitField0_ |= 0x00000002;
-            iasCertificate_ = bs;
+            signature_ = input.readBytes();
             break;
           }
           case 26: {
             bitField0_ |= 0x00000004;
-            iasSignature_ = input.readBytes();
+            certPath_ = input.readBytes();
             break;
           }
         }
@@ -93,76 +92,49 @@ private static final long serialVersionUID = 0L;
   }
 
   private int bitField0_;
-  public static final int IAS_RESPONSE_FIELD_NUMBER = 1;
-  private com.google.protobuf.ByteString iasResponse_;
+  public static final int REPORT_FIELD_NUMBER = 1;
+  private com.google.protobuf.ByteString report_;
   /**
-   * <code>required bytes ias_response = 1;</code>
+   * <code>required bytes report = 1;</code>
    */
-  public boolean hasIasResponse() {
+  public boolean hasReport() {
     return ((bitField0_ & 0x00000001) == 0x00000001);
   }
   /**
-   * <code>required bytes ias_response = 1;</code>
+   * <code>required bytes report = 1;</code>
    */
-  public com.google.protobuf.ByteString getIasResponse() {
-    return iasResponse_;
+  public com.google.protobuf.ByteString getReport() {
+    return report_;
   }
 
-  public static final int IAS_CERTIFICATE_FIELD_NUMBER = 2;
-  private volatile java.lang.Object iasCertificate_;
+  public static final int SIGNATURE_FIELD_NUMBER = 2;
+  private com.google.protobuf.ByteString signature_;
   /**
-   * <code>required string ias_certificate = 2;</code>
+   * <code>required bytes signature = 2;</code>
    */
-  public boolean hasIasCertificate() {
+  public boolean hasSignature() {
     return ((bitField0_ & 0x00000002) == 0x00000002);
   }
   /**
-   * <code>required string ias_certificate = 2;</code>
+   * <code>required bytes signature = 2;</code>
    */
-  public java.lang.String getIasCertificate() {
-    java.lang.Object ref = iasCertificate_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      if (bs.isValidUtf8()) {
-        iasCertificate_ = s;
-      }
-      return s;
-    }
-  }
-  /**
-   * <code>required string ias_certificate = 2;</code>
-   */
-  public com.google.protobuf.ByteString
-      getIasCertificateBytes() {
-    java.lang.Object ref = iasCertificate_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      iasCertificate_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+  public com.google.protobuf.ByteString getSignature() {
+    return signature_;
   }
 
-  public static final int IAS_SIGNATURE_FIELD_NUMBER = 3;
-  private com.google.protobuf.ByteString iasSignature_;
+  public static final int CERT_PATH_FIELD_NUMBER = 3;
+  private com.google.protobuf.ByteString certPath_;
   /**
-   * <code>required bytes ias_signature = 3;</code>
+   * <code>required bytes cert_path = 3;</code>
    */
-  public boolean hasIasSignature() {
+  public boolean hasCertPath() {
     return ((bitField0_ & 0x00000004) == 0x00000004);
   }
   /**
-   * <code>required bytes ias_signature = 3;</code>
+   * <code>required bytes cert_path = 3;</code>
    */
-  public com.google.protobuf.ByteString getIasSignature() {
-    return iasSignature_;
+  public com.google.protobuf.ByteString getCertPath() {
+    return certPath_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -171,15 +143,15 @@ private static final long serialVersionUID = 0L;
     if (isInitialized == 1) return true;
     if (isInitialized == 0) return false;
 
-    if (!hasIasResponse()) {
+    if (!hasReport()) {
       memoizedIsInitialized = 0;
       return false;
     }
-    if (!hasIasCertificate()) {
+    if (!hasSignature()) {
       memoizedIsInitialized = 0;
       return false;
     }
-    if (!hasIasSignature()) {
+    if (!hasCertPath()) {
       memoizedIsInitialized = 0;
       return false;
     }
@@ -190,13 +162,13 @@ private static final long serialVersionUID = 0L;
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (((bitField0_ & 0x00000001) == 0x00000001)) {
-      output.writeBytes(1, iasResponse_);
+      output.writeBytes(1, report_);
     }
     if (((bitField0_ & 0x00000002) == 0x00000002)) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, iasCertificate_);
+      output.writeBytes(2, signature_);
     }
     if (((bitField0_ & 0x00000004) == 0x00000004)) {
-      output.writeBytes(3, iasSignature_);
+      output.writeBytes(3, certPath_);
     }
     unknownFields.writeTo(output);
   }
@@ -208,14 +180,15 @@ private static final long serialVersionUID = 0L;
     size = 0;
     if (((bitField0_ & 0x00000001) == 0x00000001)) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(1, iasResponse_);
+        .computeBytesSize(1, report_);
     }
     if (((bitField0_ & 0x00000002) == 0x00000002)) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, iasCertificate_);
+      size += com.google.protobuf.CodedOutputStream
+        .computeBytesSize(2, signature_);
     }
     if (((bitField0_ & 0x00000004) == 0x00000004)) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(3, iasSignature_);
+        .computeBytesSize(3, certPath_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -233,20 +206,20 @@ private static final long serialVersionUID = 0L;
     com.r3.sgx.enclavelethost.grpc.EpidAttestation other = (com.r3.sgx.enclavelethost.grpc.EpidAttestation) obj;
 
     boolean result = true;
-    result = result && (hasIasResponse() == other.hasIasResponse());
-    if (hasIasResponse()) {
-      result = result && getIasResponse()
-          .equals(other.getIasResponse());
+    result = result && (hasReport() == other.hasReport());
+    if (hasReport()) {
+      result = result && getReport()
+          .equals(other.getReport());
     }
-    result = result && (hasIasCertificate() == other.hasIasCertificate());
-    if (hasIasCertificate()) {
-      result = result && getIasCertificate()
-          .equals(other.getIasCertificate());
+    result = result && (hasSignature() == other.hasSignature());
+    if (hasSignature()) {
+      result = result && getSignature()
+          .equals(other.getSignature());
     }
-    result = result && (hasIasSignature() == other.hasIasSignature());
-    if (hasIasSignature()) {
-      result = result && getIasSignature()
-          .equals(other.getIasSignature());
+    result = result && (hasCertPath() == other.hasCertPath());
+    if (hasCertPath()) {
+      result = result && getCertPath()
+          .equals(other.getCertPath());
     }
     result = result && unknownFields.equals(other.unknownFields);
     return result;
@@ -259,17 +232,17 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (hasIasResponse()) {
-      hash = (37 * hash) + IAS_RESPONSE_FIELD_NUMBER;
-      hash = (53 * hash) + getIasResponse().hashCode();
+    if (hasReport()) {
+      hash = (37 * hash) + REPORT_FIELD_NUMBER;
+      hash = (53 * hash) + getReport().hashCode();
     }
-    if (hasIasCertificate()) {
-      hash = (37 * hash) + IAS_CERTIFICATE_FIELD_NUMBER;
-      hash = (53 * hash) + getIasCertificate().hashCode();
+    if (hasSignature()) {
+      hash = (37 * hash) + SIGNATURE_FIELD_NUMBER;
+      hash = (53 * hash) + getSignature().hashCode();
     }
-    if (hasIasSignature()) {
-      hash = (37 * hash) + IAS_SIGNATURE_FIELD_NUMBER;
-      hash = (53 * hash) + getIasSignature().hashCode();
+    if (hasCertPath()) {
+      hash = (37 * hash) + CERT_PATH_FIELD_NUMBER;
+      hash = (53 * hash) + getCertPath().hashCode();
     }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
@@ -400,11 +373,11 @@ private static final long serialVersionUID = 0L;
     }
     public Builder clear() {
       super.clear();
-      iasResponse_ = com.google.protobuf.ByteString.EMPTY;
+      report_ = com.google.protobuf.ByteString.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000001);
-      iasCertificate_ = "";
+      signature_ = com.google.protobuf.ByteString.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000002);
-      iasSignature_ = com.google.protobuf.ByteString.EMPTY;
+      certPath_ = com.google.protobuf.ByteString.EMPTY;
       bitField0_ = (bitField0_ & ~0x00000004);
       return this;
     }
@@ -433,15 +406,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
         to_bitField0_ |= 0x00000001;
       }
-      result.iasResponse_ = iasResponse_;
+      result.report_ = report_;
       if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
         to_bitField0_ |= 0x00000002;
       }
-      result.iasCertificate_ = iasCertificate_;
+      result.signature_ = signature_;
       if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
         to_bitField0_ |= 0x00000004;
       }
-      result.iasSignature_ = iasSignature_;
+      result.certPath_ = certPath_;
       result.bitField0_ = to_bitField0_;
       onBuilt();
       return result;
@@ -484,16 +457,14 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.r3.sgx.enclavelethost.grpc.EpidAttestation other) {
       if (other == com.r3.sgx.enclavelethost.grpc.EpidAttestation.getDefaultInstance()) return this;
-      if (other.hasIasResponse()) {
-        setIasResponse(other.getIasResponse());
+      if (other.hasReport()) {
+        setReport(other.getReport());
       }
-      if (other.hasIasCertificate()) {
-        bitField0_ |= 0x00000002;
-        iasCertificate_ = other.iasCertificate_;
-        onChanged();
+      if (other.hasSignature()) {
+        setSignature(other.getSignature());
       }
-      if (other.hasIasSignature()) {
-        setIasSignature(other.getIasSignature());
+      if (other.hasCertPath()) {
+        setCertPath(other.getCertPath());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -501,13 +472,13 @@ private static final long serialVersionUID = 0L;
     }
 
     public final boolean isInitialized() {
-      if (!hasIasResponse()) {
+      if (!hasReport()) {
         return false;
       }
-      if (!hasIasCertificate()) {
+      if (!hasSignature()) {
         return false;
       }
-      if (!hasIasSignature()) {
+      if (!hasCertPath()) {
         return false;
       }
       return true;
@@ -532,148 +503,107 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private com.google.protobuf.ByteString iasResponse_ = com.google.protobuf.ByteString.EMPTY;
+    private com.google.protobuf.ByteString report_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>required bytes ias_response = 1;</code>
+     * <code>required bytes report = 1;</code>
      */
-    public boolean hasIasResponse() {
+    public boolean hasReport() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required bytes ias_response = 1;</code>
+     * <code>required bytes report = 1;</code>
      */
-    public com.google.protobuf.ByteString getIasResponse() {
-      return iasResponse_;
+    public com.google.protobuf.ByteString getReport() {
+      return report_;
     }
     /**
-     * <code>required bytes ias_response = 1;</code>
+     * <code>required bytes report = 1;</code>
      */
-    public Builder setIasResponse(com.google.protobuf.ByteString value) {
+    public Builder setReport(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-      iasResponse_ = value;
+      report_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>required bytes ias_response = 1;</code>
+     * <code>required bytes report = 1;</code>
      */
-    public Builder clearIasResponse() {
+    public Builder clearReport() {
       bitField0_ = (bitField0_ & ~0x00000001);
-      iasResponse_ = getDefaultInstance().getIasResponse();
+      report_ = getDefaultInstance().getReport();
       onChanged();
       return this;
     }
 
-    private java.lang.Object iasCertificate_ = "";
+    private com.google.protobuf.ByteString signature_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>required string ias_certificate = 2;</code>
+     * <code>required bytes signature = 2;</code>
      */
-    public boolean hasIasCertificate() {
+    public boolean hasSignature() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required string ias_certificate = 2;</code>
+     * <code>required bytes signature = 2;</code>
      */
-    public java.lang.String getIasCertificate() {
-      java.lang.Object ref = iasCertificate_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          iasCertificate_ = s;
-        }
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
+    public com.google.protobuf.ByteString getSignature() {
+      return signature_;
     }
     /**
-     * <code>required string ias_certificate = 2;</code>
+     * <code>required bytes signature = 2;</code>
      */
-    public com.google.protobuf.ByteString
-        getIasCertificateBytes() {
-      java.lang.Object ref = iasCertificate_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        iasCertificate_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>required string ias_certificate = 2;</code>
-     */
-    public Builder setIasCertificate(
-        java.lang.String value) {
+    public Builder setSignature(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000002;
-      iasCertificate_ = value;
+      signature_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>required string ias_certificate = 2;</code>
+     * <code>required bytes signature = 2;</code>
      */
-    public Builder clearIasCertificate() {
+    public Builder clearSignature() {
       bitField0_ = (bitField0_ & ~0x00000002);
-      iasCertificate_ = getDefaultInstance().getIasCertificate();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>required string ias_certificate = 2;</code>
-     */
-    public Builder setIasCertificateBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-      iasCertificate_ = value;
+      signature_ = getDefaultInstance().getSignature();
       onChanged();
       return this;
     }
 
-    private com.google.protobuf.ByteString iasSignature_ = com.google.protobuf.ByteString.EMPTY;
+    private com.google.protobuf.ByteString certPath_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>required bytes ias_signature = 3;</code>
+     * <code>required bytes cert_path = 3;</code>
      */
-    public boolean hasIasSignature() {
+    public boolean hasCertPath() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>required bytes ias_signature = 3;</code>
+     * <code>required bytes cert_path = 3;</code>
      */
-    public com.google.protobuf.ByteString getIasSignature() {
-      return iasSignature_;
+    public com.google.protobuf.ByteString getCertPath() {
+      return certPath_;
     }
     /**
-     * <code>required bytes ias_signature = 3;</code>
+     * <code>required bytes cert_path = 3;</code>
      */
-    public Builder setIasSignature(com.google.protobuf.ByteString value) {
+    public Builder setCertPath(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000004;
-      iasSignature_ = value;
+      certPath_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>required bytes ias_signature = 3;</code>
+     * <code>required bytes cert_path = 3;</code>
      */
-    public Builder clearIasSignature() {
+    public Builder clearCertPath() {
       bitField0_ = (bitField0_ & ~0x00000004);
-      iasSignature_ = getDefaultInstance().getIasSignature();
+      certPath_ = getDefaultInstance().getCertPath();
       onChanged();
       return this;
     }

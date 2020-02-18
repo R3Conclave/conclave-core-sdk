@@ -31,7 +31,7 @@ message ServerMessage {
 }
 
 message EpidAttestation {
-    required bytes ias_response = 1;
-    required string ias_certificate = 2;
-    required bytes ias_signature = 3;
+    required bytes report = 1;
+    required bytes signature = 2;
+    required bytes cert_path = 3;
 }

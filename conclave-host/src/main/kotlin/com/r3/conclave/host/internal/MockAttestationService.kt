@@ -2,7 +2,6 @@ package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.SgxSignedQuote
 import java.io.InputStream
 import java.security.KeyFactory
@@ -15,39 +14,30 @@ import java.util.*
  * A mock implementation of [AttestationService] permitting to reproduce the attestation flow in simulation mode
  */
 class MockAttestationService : AttestationService {
-    override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationServiceReportResponse {
-        val response = ReportResponse(
+    override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse {
+        val reportBytes = AttestationReport(
                 id = "MOCK-RESPONSE: ${UUID.randomUUID()}",
                 isvEnclaveQuoteStatus = QuoteStatus.OK,
-                isvEnclaveQuoteBody = signedQuote[SgxSignedQuote(signedQuote.getBuffer().capacity()).quote].toByteArray(),
+                isvEnclaveQuoteBody = signedQuote[signedQuote.encoder.quote],
                 timestamp = Instant.now(),
                 version = 3
-        ).let(reportResponseSerializeMapper::writeValueAsBytes)
+        ).let(reportMapper::writeValueAsBytes)
 
         val signature = Signature.getInstance("SHA256withRSA").apply {
             initSign(signingKey)
-            update(response)
+            update(reportBytes)
         }.sign()
 
-        return Response(
-                httpResponse = response,
-                signature = signature,
-                certificate = certificate
-        )
+        return AttestationResponse(reportBytes, signature, certPath)
     }
 
     companion object {
         private val signingKey = readResource("mock-as.key") {
             KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(it.readBytes()))
         }
-        private val certificate = readResource("mock-as-certificate.pem") { it.reader().readText() }
+        private val certPath = readResource("mock-as-certificate.pem") { it.reader().readText().parsePemCertPath() }
 
-        private val reportResponseSerializeMapper = ReportResponseSerializer.register(ObjectMapper())
-
-        private fun ByteCursor<SgxQuote>.toByteArray(): ByteArray {
-            val buffer = getBuffer()
-            return ByteArray(buffer.remaining()).also { buffer.get(it) }
-        }
+        private val reportMapper = AttestationReport.register(ObjectMapper())
 
         private inline fun <R> readResource(name: String, block: (InputStream) -> R): R {
             val stream = checkNotNull(MockAttestationService::class.java.getResourceAsStream("/mock-as/$name")) {
@@ -56,11 +46,4 @@ class MockAttestationService : AttestationService {
             return stream.use(block)
         }
     }
-
-    private class Response(
-            override val httpResponse: ByteArray,
-            override val signature: ByteArray,
-            override val certificate: String
-    ) : AttestationServiceReportResponse
 }
-

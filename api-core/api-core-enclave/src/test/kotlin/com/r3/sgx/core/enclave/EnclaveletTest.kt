@@ -1,10 +1,10 @@
+package com.r3.sgx.core.enclave
+
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
 import com.r3.sgx.core.common.crypto.SignatureScheme
 import com.r3.sgx.core.common.crypto.SignatureSchemeId
-import com.r3.sgx.core.enclave.EnclaveApi
-import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.core.host.EnclaveletHostHandler
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration
 import com.r3.sgx.dynamictesting.TestEnclavesBasedTest

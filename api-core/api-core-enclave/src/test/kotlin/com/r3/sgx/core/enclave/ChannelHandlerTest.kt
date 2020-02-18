@@ -1,9 +1,9 @@
+package com.r3.sgx.core.enclave
+
 import com.r3.sgx.core.common.ChannelHandlingHandler
 import com.r3.sgx.core.common.ChannelInitiatingHandler
 import com.r3.sgx.core.common.MuxId
 import com.r3.sgx.core.common.SimpleMuxingHandler
-import com.r3.sgx.core.enclave.EnclaveApi
-import com.r3.sgx.core.enclave.RootEnclave
 import com.r3.sgx.dynamictesting.EnclaveBuilder
 import com.r3.sgx.dynamictesting.EnclaveConfig
 import com.r3.sgx.dynamictesting.TestEnclavesBasedTest

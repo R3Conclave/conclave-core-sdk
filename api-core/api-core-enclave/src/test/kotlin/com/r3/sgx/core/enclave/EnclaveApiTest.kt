@@ -1,5 +1,6 @@
+package com.r3.sgx.core.enclave
+
 import com.r3.sgx.core.common.BytesHandler
-import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.dynamictesting.EnclaveBuilder
 import com.r3.sgx.dynamictesting.EnclaveConfig
 import com.r3.sgx.dynamictesting.EnclaveTestMode

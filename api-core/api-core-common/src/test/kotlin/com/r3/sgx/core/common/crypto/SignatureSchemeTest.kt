@@ -1,8 +1,10 @@
-import com.r3.sgx.core.common.crypto.SignatureSchemeId
+package com.r3.sgx.core.common.crypto
+
 import com.r3.sgx.core.common.crypto.internal.SignatureSchemeFactory
-import org.junit.Test
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.jupiter.api.Test
+import java.security.SignatureException
 import java.util.*
-import kotlin.test.assertFails
 
 class SignatureSchemeTest {
     @Test
@@ -16,7 +18,7 @@ class SignatureSchemeTest {
 
         input[0] = ((input[0] + 1) % 256).toByte()
 
-        assertFails {
+        assertThatExceptionOfType(SignatureException::class.java).isThrownBy {
             eddsa.verify(eddsa.decodePublicKey(encodedKey), signature, input)
         }
     }

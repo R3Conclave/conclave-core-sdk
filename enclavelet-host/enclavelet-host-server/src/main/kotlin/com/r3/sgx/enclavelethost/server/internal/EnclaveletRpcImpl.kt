@@ -10,9 +10,10 @@ import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import java.nio.ByteBuffer
 
-class EnclaveletRpcImpl(val enclaveletState: EnclaveletState.Created,
-                        val exceptionListener: ExceptionListener)
-    : EnclaveletHostGrpc.EnclaveletHostImplBase() {
+class EnclaveletRpcImpl(
+        val enclaveletState: EnclaveletState.Created,
+        val exceptionListener: ExceptionListener
+) : EnclaveletHostGrpc.EnclaveletHostImplBase() {
 
     override fun openSession(responseObserver: StreamObserver<ServerMessage>): StreamObserver<ClientMessage> {
         val enclaveHandler = EnclaveletOutputHandler(responseObserver)
@@ -22,15 +23,14 @@ class EnclaveletRpcImpl(val enclaveletState: EnclaveletState.Created,
 
     override fun getEpidAttestation(request: GetEpidAttestationRequest, responseObserver: StreamObserver<GetEpidAttestationResponse>) {
         if (enclaveletState is EnclaveletState.Attested) {
-            enclaveletState.iasResponse.let { response ->
-                val attestation = EpidAttestation.newBuilder()
-                        .setIasResponse(ByteString.copyFrom(response.httpResponse))
-                        .setIasCertificate(response.certificate)
-                        .setIasSignature(ByteString.copyFrom(response.signature))
-                        .build()
-                responseObserver.onNext(GetEpidAttestationResponse.newBuilder().setAttestation(attestation).build())
-                responseObserver.onCompleted()
-            }
+            val response = enclaveletState.attestationResponse
+            val attestation = EpidAttestation.newBuilder()
+                    .setReport(ByteString.copyFrom(response.reportBytes))
+                    .setSignature(ByteString.copyFrom(response.signature))
+                    .setCertPath(ByteString.copyFrom(response.certPath.encoded))
+                    .build()
+            responseObserver.onNext(GetEpidAttestationResponse.newBuilder().setAttestation(attestation).build())
+            responseObserver.onCompleted()
         } else {
                 responseObserver.onError(Status.UNAVAILABLE.withDescription(
                         "Remote attestation not supported in simulation mode").asException())
@@ -38,8 +38,8 @@ class EnclaveletRpcImpl(val enclaveletState: EnclaveletState.Created,
     }
 
     // Handler propagating Enclave output to client-side StreamObserver
-    class EnclaveletOutputHandler(val responseObserver: StreamObserver<ServerMessage>) : BytesHandler() {
-        override fun onReceive(connection: BytesHandler.Connection, input: ByteBuffer) {
+    class EnclaveletOutputHandler(private val responseObserver: StreamObserver<ServerMessage>) : BytesHandler() {
+        override fun onReceive(connection: Connection, input: ByteBuffer) {
             val message = ServerMessage.newBuilder().setBlob(ByteString.copyFrom(input)).build()
             responseObserver.onNext(message)
         }

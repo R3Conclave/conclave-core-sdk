@@ -55,7 +55,7 @@ open class Int64 : Encoder<Long>() {
 
 open class FixedBytes(val size: Int) : Encoder<ByteBuffer>() {
     init {
-        require(size >= 0)
+        require(size >= 0) { size }
     }
     final override fun size() = size
     final override fun read(buffer: ByteBuffer): ByteBuffer {

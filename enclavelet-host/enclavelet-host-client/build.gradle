@@ -6,10 +6,8 @@ dependencies {
     implementation project(':conclave-host')
     implementation project(':api-core:api-core-common')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"

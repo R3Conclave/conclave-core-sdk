@@ -1,7 +1,7 @@
 package com.r3.sgx.enclavelethost.server.internal
 
+import com.r3.conclave.host.internal.AttestationResponse
 import com.r3.conclave.host.internal.AttestationService
-import com.r3.conclave.host.internal.AttestationServiceReportResponse
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.*
 import org.slf4j.Logger
@@ -48,12 +48,11 @@ sealed class EnclaveletState {
     /**
      * Enclavelet loaded with attestation report attached
      */
-    class Attested(created: Created,
-                   val rawQuote: ByteCursor<SgxSignedQuote>,
-                   val iasResponse: AttestationServiceReportResponse):
-            Created(created.enclaveHandle,
-                    created.channels,
-                    created.mux)
+    class Attested(
+            created: Created,
+            val rawQuote: ByteCursor<SgxSignedQuote>,
+            val attestationResponse: AttestationResponse
+    ) : Created(created.enclaveHandle, created.channels, created.mux)
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(EnclaveletState::class.java)
