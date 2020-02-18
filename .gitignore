@@ -9,4 +9,6 @@
 **/*.iml
 ?/
 internal-docs/site
-external-docs/site
+docs/docs/api
+docs/virtualenv
+.DS_Store

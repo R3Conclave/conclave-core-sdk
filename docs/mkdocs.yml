@@ -13,7 +13,7 @@ nav:
     - Architecture: architecture.md
     - Tutorial: tutorial.md
     - Security: security.md
-    - API: /api/index.html
+    - API: api/index.html
   - Operations:
     - Server deployment: deployment.md
     - TCB recovery: tcb-recovery.md
