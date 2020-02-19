@@ -335,7 +335,7 @@ task apidocs(dependsOn: ['dokka'])
 
 task mkdocs(type: Exec, dependsOn: ['apidocs']) {
     description = "Runs the mkdocs tool to produce the static HTML website we expose to end users."
-    commandLine("make-docsite.sh")
+    commandLine("./make-docsite.sh")
     workingDir("docs")
     inputs.files(fileTree("docs/docs"))
     outputs.dir("docs/build")
