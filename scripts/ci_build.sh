@@ -21,7 +21,8 @@ runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE --ref
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
 
 # Then run the tests. We expose the host network so that the test container can connect to the k8s cluster directly.
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test -i && cd $CODE_DOCKER_DIR/samples && \$GRADLE test -i -x end-to-end-test:test"
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test -i && cd $CODE_DOCKER_DIR/samples && \$GRADLE test -i -x end-to-end-test:test \
+    && cd $CODE_DOCKER_DIR/test-infrastructure && \$GRADLE test -i"
 
 # Run the sgx-jvm-plugin tests.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/sgx-jvm-plugin && \$GRADLE test -i"

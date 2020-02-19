@@ -1,0 +1,7 @@
+includeBuild("../sgx-jvm-plugin")
+includeBuild("..")
+
+include ':api'
+include ':djvm:test-utils'
+include ':test-enclave'
+include ':tests:maths'

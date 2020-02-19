@@ -1,0 +1,18 @@
+/**
+ * This module contains sample test code implementing the test API
+ */
+plugins {
+    id 'com.github.johnrengelman.shadow'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation project(':api')
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+    implementation "org.assertj:assertj-core:$assertj_version"
+}
+
+shadowJar {
+    archiveBaseName = 'maths-fat'
+    zip64 = true
+}
