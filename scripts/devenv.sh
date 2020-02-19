@@ -55,11 +55,12 @@ if [[ -z ${CONTAINER_ID} ]]; then
 
   if [ "$(uname)" == "Darwin" ]; then
     docker_group_add=""
+    cardreader_gid=""
   else
     docker_gid=$(cut -d: -f3 < <(getent group docker))
     docker_group_add="--group-add ${docker_gid}"
+    cardreader_gid=$(cut -d: -f3 < <(getent group cardreader) || echo "")
   fi
-  cardreader_gid=$(cut -d: -f3 < <(getent group cardreader) || echo "")
 
   if [[ ! -z ${cardreader_gid} ]]
   then
