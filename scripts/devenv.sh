@@ -69,10 +69,16 @@ if [[ -z ${CONTAINER_ID} ]]; then
     GROUP_CARDREADER=""
   fi
 
-  export CONTAINER_ID=$(docker run \
+  if [ "$(uname)" == "Darwin" ]; then
+    network_cmd="-p 8000:8000 -p 8001:8001"
+  else
+    network_cmd="--network host"
+  fi
+
+  CONTAINER_ID=$(docker run \
        --name=$CONTAINER_NAME \
        --privileged \
-       --network host \
+       $network_cmd \
        --label "sgxjvm" \
        --ulimit core=256000000 \
        --add-host="$(hostname):${docker_ip}" \
@@ -95,6 +101,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        -w $CODE_DOCKER_DIR \
        $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-devenv \
        bash)
+
   # Set access to docker daemon socket
   if [ "$(uname)" == "Darwin" ]; then
     docker exec -u root $CONTAINER_ID chgrp $(id -g) /var/run/docker.sock
@@ -109,4 +116,8 @@ if [[ -z ${CONTAINER_ID} ]]; then
   if [[ ! -z ${cardreader_gid} ]]; then
     docker exec -it $@ -u root $CONTAINER_ID groupadd -g ${cardreader_gid} cardreader_ext
   fi
+
+  # Start the docsite servers. They have hot-reload so editing the files in docs (for docs.conclave.net) or
+  # internal-docs (not published on the web) will automatically cause any open browsers to refresh.
+  docker exec -d $CONTAINER_ID bash ./scripts/serve-docsites.sh
 fi
