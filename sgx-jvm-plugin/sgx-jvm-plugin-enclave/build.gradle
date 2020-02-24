@@ -27,7 +27,7 @@ dependencies {
 
 jar {
     manifest {
-        attributes("Oblivium-Version": environment.OBLIVIUM_DEPENDENCY_VERSION)
-        attributes("Oblivium-Maven-Repository": "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}")
+        attributes("Conclave-Version": environment.OBLIVIUM_DEPENDENCY_VERSION)
+        attributes("Conclave-Maven-Repository": "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}")
     }
 }

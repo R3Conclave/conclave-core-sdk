@@ -87,19 +87,19 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
             } ?: throw InvalidUserDataException("Attribute '$ENCLAVE_CLASS_MANIFEST_ATTRIBUTE' missing from $jarFile")
         }
 
-        private fun readObliviumArtifactMetadataFromManifest(): ArtifactMetadata {
+        private fun readProductMetadataFromManifest(): ArtifactMetadata {
             val classLoader = SgxEnclavePlugin::class.java.classLoader
             val manifestUrls = classLoader.getResources(MANIFEST_NAME).toList()
             for (manifestUrl in manifestUrls) {
                 return manifestUrl.openStream().use(::getArtifactMetadataFromManifestStream) ?: continue
             }
-            throw IllegalStateException("Could not find Oblivium-Version in plugin's manifest")
+            throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
         }
 
         private fun getArtifactMetadataFromManifestStream(manifestStream: InputStream): ArtifactMetadata? {
             val manifest = Manifest(manifestStream)
-            val version = manifest.mainAttributes.getValue("Oblivium-Version") ?: return null
-            val repository = manifest.mainAttributes.getValue("Oblivium-Maven-Repository") ?: return null
+            val version = manifest.mainAttributes.getValue("Conclave-Version") ?: return null
+            val repository = manifest.mainAttributes.getValue("Conclave-Maven-Repository") ?: return null
             return ArtifactMetadata(
                     version = version,
                     mavenRepository = repository
@@ -108,7 +108,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
     }
 
     override fun apply(target: Project) {
-        val metadata = readObliviumArtifactMetadataFromManifest()
+        val metadata = readProductMetadataFromManifest()
         val baseDirectory = target.buildDir.toPath().resolve("sgx-plugin")
         // Enclave
         target.logger.info("Applying the shadow plugin")

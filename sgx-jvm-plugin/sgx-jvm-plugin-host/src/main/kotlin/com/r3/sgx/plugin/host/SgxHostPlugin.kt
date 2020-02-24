@@ -47,28 +47,28 @@ inline fun <reified T> ObjectFactory.emptyListOf(): ListProperty<T> = listProper
 inline fun <reified K, reified V> ObjectFactory.emptyMapOf(): MapProperty<K, V> = mapProperty(K::class.java, V::class.java).empty()
 
 /**
- * Oblivium metadata object that is populated from the plugin's MANIFEST.MF.
+ * Conclave metadata object that is populated from the plugin's MANIFEST.MF.
  */
 private data class ArtifactMetadata(
     val dockerRegistry: String,
     val version: String
 )
 
-private val OBLIVIUM_METADATA = readObliviumArtifactMetadataFromManifest()
+private val CONCLAVE_METADATA= readProductMetadataFromManifest()
 
-private fun readObliviumArtifactMetadataFromManifest(): ArtifactMetadata {
+private fun readProductMetadataFromManifest(): ArtifactMetadata {
     val classLoader = SgxHostPlugin::class.java.classLoader
     val manifestUrls = classLoader.getResources(MANIFEST_NAME).toList()
     for (manifestUrl in manifestUrls) {
         return manifestUrl.openStream().use(::getArtifactMetadataFrom) ?: continue
     }
-    throw IllegalStateException("Could not find Oblivium tags in plugin's manifest")
+    throw IllegalStateException("Could not find Conclave tags in plugin's manifest")
 }
 
 private fun getArtifactMetadataFrom(manifestStream: InputStream): ArtifactMetadata? {
     val manifest = Manifest(manifestStream)
-    val registry = manifest.mainAttributes.getValue("Oblivium-Docker-Registry") ?: return null
-    val version = manifest.mainAttributes.getValue("Oblivium-Version") ?: return null
+    val registry = manifest.mainAttributes.getValue("Conclave-Docker-Registry") ?: return null
+    val version = manifest.mainAttributes.getValue("Conclave-Version") ?: return null
     return ArtifactMetadata(
         dockerRegistry = registry,
         version = version
@@ -88,13 +88,13 @@ class SgxHostPlugin @Inject constructor(private val factory: ObjectFactory): Plu
             logger.info("Applying the SGX Enclave plugin")
             pluginManager.apply(SgxEnclavePlugin::class.java)
 
-            logger.lifecycle("Base Docker Registry: {}", OBLIVIUM_METADATA.dockerRegistry)
-            logger.lifecycle("SGX-JVM Version: {}", OBLIVIUM_METADATA.version)
+            logger.lifecycle("Base Docker Registry: {}", CONCLAVE_METADATA.dockerRegistry)
+            logger.lifecycle("SGX-JVM Version: {}", CONCLAVE_METADATA.version)
 
             val docker = extensions.getByName("docker") as DockerExtension
             val registryCredentials = (docker as ExtensionAware).extensions.getByName("registryCredentials") as DockerRegistryCredentials
             val baseCredentials = target.extensions.create("baseRegistry", DockerRegistryCredentials::class.java, project.objects).apply {
-                url.set(OBLIVIUM_METADATA.dockerRegistry)
+                url.set(CONCLAVE_METADATA.dockerRegistry)
                 username.set(registryCredentials.username)
                 password.set(registryCredentials.password)
             }
@@ -128,9 +128,9 @@ private open class EnclaveImage @Inject constructor(
         EnclaveImageExtension::class.java,
         registryCredentials,
         DEFAULT_BASE_IMAGE_NAME,
-        OBLIVIUM_METADATA.version,
+        CONCLAVE_METADATA.version,
         target.provider { "${target.group}/${target.name}" }, // group is configurable, so read it lazily
-        OBLIVIUM_METADATA.version,
+        CONCLAVE_METADATA.version,
         DEFAULT_TEST_GRPC_PORT,
         DEFAULT_TEST_START_TIMEOUT
     )
@@ -162,7 +162,7 @@ private open class EnclaveImage @Inject constructor(
     private fun createPrepareImageTask(): PrepareEnclaveImage = with(target) {
         return tasks.create("prepareEnclaveImage$buildType", PrepareEnclaveImage::class.java) { task ->
             task.dockerDir.set(buildDir.resolve("docker-$buildTypeTag"))
-            task.repositoryUrl.set(OBLIVIUM_METADATA.dockerRegistry)
+            task.repositoryUrl.set(CONCLAVE_METADATA.dockerRegistry)
             task.baseImageName.set(imageExtension.baseImageName)
             task.enclaveObject.set(imageExtension.enclaveObject)
             task.tag.set(imageExtension.baseTag)

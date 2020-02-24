@@ -21,7 +21,7 @@ dependencies {
 jar {
     manifest {
         // This is the specific version, and not the dynamic version that Gradle uses.
-        attributes("Oblivium-Version": environment.OBLIVIUM_VERSION)
-        attributes("Oblivium-Docker-Registry": environment.OBLIVIUM_CONTAINER_REGISTRY_URL)
+        attributes("Conclave-Version": environment.OBLIVIUM_VERSION)
+        attributes("Conclave-Docker-Registry": environment.OBLIVIUM_CONTAINER_REGISTRY_URL)
     }
 }

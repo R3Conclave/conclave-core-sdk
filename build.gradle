@@ -8,6 +8,7 @@ plugins {
     id 'idea'
     id 'org.jetbrains.dokka' version '0.10.1'
 }
+
 repositories {
     jcenter()
 }
@@ -33,6 +34,7 @@ ext {
 import groovy.io.FileType
 
 import static org.gradle.api.JavaVersion.*
+// NB: For some reason IntelliJ thinks this import line is in error, but Gradle accepts it.
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // This code allows the user to run gradle like this: ./gradlew -PexcludeNative
@@ -118,103 +120,75 @@ subprojects {
 class PublishedProject {
     String projectPath
     String description
-    boolean shouldPublishSource
 }
 List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':cpp:native-enclave:native-enclave-simulation',
-                description: 'Partially linked Oblivium enclave linked with simulation libraries',
-                shouldPublishSource: false
+                description: 'Partially linked Conclave enclave linked with simulation libraries',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-enclave:native-enclave-debug',
-                description: 'Partially linked Oblivium enclave linked with debug libraries',
-                shouldPublishSource: false
+                description: 'Partially linked Conclave enclave linked with debug libraries',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-enclave:native-enclave-release',
-                description: 'Partially linked Oblivium enclave linked with release libraries',
-                shouldPublishSource: false
+                description: 'Partially linked Conclave enclave linked with release libraries',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-host:native-host-simulation',
-                description: 'Native Oblivium host libraries linked with simulation libraries',
-                shouldPublishSource: false
+                description: 'Native Conclave host libraries linked with simulation libraries',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-host:native-host-debug',
-                description: 'Native Oblivium host libraries linked with debug libraries',
-                shouldPublishSource: false
+                description: 'Native Conclave host libraries linked with debug libraries',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-host:native-host-release',
-                description: 'Native Oblivium host libraries linked with release libraries',
-                shouldPublishSource: false
+                description: 'Native Conclave host libraries linked with release libraries',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-gdb',
                 description: 'The Intel Linux SDK gdb plugin and wrapper',
-                shouldPublishSource: false
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-sign-tool',
                 description: 'The Intel Linux SDK signing tool',
-                shouldPublishSource: false
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-binutils',
                 description: 'Pinned version of essential binutils tools',
-                shouldPublishSource: false
         ),
         new PublishedProject(
                 projectPath: ':conclave-common',
                 description: 'Conclave API common to both enclave and host',
-                shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-enclave',
                 description: 'Conclave enclave API',
-                shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
-                shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':api-core:api-core-common',
                 description: 'Core API common to both enclave and host',
-                shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':api-core:api-core-enclave',
                 description: 'Core enclave API',
-                shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':api-core:api-core-host',
                 description: 'Core enclave host API',
-                shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':enclave-utils',
-                description: 'Utllity classes for working inside an enclave.',
-                shouldPublishSource: true
+                description: 'Utility classes for working inside an enclave.',
         ),
         new PublishedProject(
                 projectPath: ':enclave-testing',
                 description: 'Enclave testing library',
-                shouldPublishSource: true
-        ),
-        new PublishedProject(
-                projectPath: ':enclavelet-host:enclavelet-host-client',
-                description: 'Client-side API of enclavelet host',
-                shouldPublishSource: false
-        ),
-        new PublishedProject(
-                projectPath: ':enclavelet-host:enclavelet-host-common',
-                description: 'Enclavelet host API common to server and client',
-                shouldPublishSource: false
         ),
 ]
 
@@ -227,26 +201,17 @@ task publish {
         }
     }
 }
+
 if (includeNative) {
     for (published in publishedProjects) {
         def project = project(published.projectPath)
         def description = published.description
-        def shouldPublishSource = published.shouldPublishSource
         project.pluginManager.apply('java')
         project.pluginManager.apply('maven-publish')
-        if (shouldPublishSource) {
-            project.tasks.create('sourcesJarForPublish', Jar) {
-                archiveClassifier = 'sources'
-                from project.sourceSets.main.allSource
-            }
-        }
         project.publishing {
             publications {
                 maven(MavenPublication) {
                     from project.components.java
-                    if (shouldPublishSource) {
-                        artifact project.tasks.getByName('sourcesJarForPublish')
-                    }
                     pom.description = description
                 }
             }

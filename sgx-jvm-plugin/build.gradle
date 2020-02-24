@@ -64,12 +64,12 @@ class PublishedProject {
 List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':sgx-jvm-plugin-enclave',
-                description: 'The Oblivium SGX Enclave plugin',
+                description: 'The Conclave SGX Enclave plugin',
                 shouldPublishSource: true
         ),
         new PublishedProject(
                 projectPath: ':sgx-jvm-plugin-host',
-                description: 'The Oblivium SGX Host plugin',
+                description: 'The Conclave SGX Host plugin',
                 shouldPublishSource: true
         )
 ]
