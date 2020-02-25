@@ -29,10 +29,44 @@ TODO: Complete this tutorial:
 
 ## Configure Gradle
 
-There will be two modules defined in our project: the host and the enclave. The host program may be an
+Create a new Gradle project via whatever mechanism you prefer, e.g. IntelliJ can do this via the New Project wizard.
+Create two modules defined in ther project: one for the host and one for the enclave. The host program may be an
 existing server program of some kind, e.g. a web server, but in this tutorial we'll write a dedicated host.
 
-<!--- TODO: Explain how to add the Conclave Maven repository -->
+You will need to add plugins and libraries to your project, using artifacts from the Conclave SDK. 
+
+!!! note 
+    If you don't have a Conclave SDK, please contact R3 and request a trial.
+    
+In the unzipped SDK there is a directory called `repo` that contains a local Maven repository. Add it to your Gradle
+modules with a snippet of code like this at the top level `build.gradle` file:
+
+```groovy
+repositories {
+    maven {
+        url = "path/to/the/sdk/repo"
+    }
+}
+```
+
+You may wish to extract this out into a property each developer can set locally. It can be done like this:
+
+```groovy 
+repositories {
+    maven {
+        url = findProperty('conclave.repo') ?: throw Exception("You must set the property conclave.path in your gradle.properties file.") 
+    }
+}
+```
+
+Now a developer can add to [the `gradle.properties` file](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html#declare_properties_in_gradle_properties_file)
+a line like this:
+
+```
+conclave.repo=/path/to/sdk/repo
+```
+
+<!--- TODO: Check these instructions actually work -->
 
 ### Configure the host build
 

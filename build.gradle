@@ -30,7 +30,6 @@ ext {
     oblivium_dependency_version = environment.OBLIVIUM_DEPENDENCY_VERSION
 }
 
-
 import groovy.io.FileType
 
 import static org.gradle.api.JavaVersion.*
@@ -52,6 +51,19 @@ def nativeSubmodulesToSubstitute = [
         ':cpp:native-gdb',
         ':cpp:native-binutils'
 ]
+
+// Allow the user to move the default build location. This is helpful for improving the
+// atrocious performance of Mac Docker, which otherwise will try to build everything on
+// the super-slow osxfuse filesystem. This way it can be relocated to a (faster) Linux
+// native FS, or in extremis even a ramdisk.
+def topDir = project.rootDir
+def buildDirLocationOverride = findProperty('buildDirOverride')
+if (buildDirLocationOverride != null) {
+    println("Storing build output in $buildDirLocationOverride")
+    allprojects {
+        buildDir = "$buildDirLocationOverride/${topDir.relativePath(project.buildDir)}"
+    }
+}
 
 subprojects {
     group = "com.r3.sgx"
@@ -217,11 +229,16 @@ if (includeNative) {
             }
             repositories {
                 maven {
+                    name = "artifactory"
                     url = "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}"
                     credentials {
                         username = environment.OBLIVIUM_MAVEN_USERNAME
                         password = environment.OBLIVIUM_MAVEN_PASSWORD
                     }
+                }
+                maven {
+                    name = "sdkRepo"
+                    url = "$buildDir/sdk/repo"
                 }
             }
         }
@@ -316,5 +333,43 @@ task clean {
 // https://github.com/corda/corda-docs-builder tool from CI.
 task buildDocs(dependsOn: ['mkdocs'])
 dokka.shouldRunAfter mkdocs
-
 // endregion
+
+//region SDK artifact creation
+//
+// This rule creates the tarball of the SDK that we ship to our users. It consists of a local Maven repository
+// which contains all the JARs and native artifacts needed for the plugins, the docsite, and extra files like
+// a readme and the patches we are obliged to release under the GPL.
+def libArtifacts = publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }
+task zipGPL2Sources(type: Zip) {
+    description = "Zip up codebases we statically link with OpenJDK, to comply with our GPL2 obligations"
+    archiveFileName = "sources.zip"
+    destinationDirectory = file("$buildDir/sdk")
+    reproducibleFileOrder = true
+    from("cpp/avian") {
+        into "avian"
+        // Avian doesn't respect the default build location yet.
+        exclude "build/**"
+    }
+    from("cpp/jvm-enclave-avian") {
+        into "jvm-enclave-avian"
+    }
+    from("cpp/jvm-enclave-common") {
+        into "jvm-enclave-common"
+    }
+
+    from("cpp/jvm-edl") {
+        into "jvm-edl"
+    }
+}
+task sdkCopyReadme(type: Copy) {
+    from "docs/sdk-extras/README.md"
+    into "$buildDir/sdk"
+}
+
+task sdk(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Sources", "sdkCopyReadme"]) {
+    description = "Build the SDK artifact that we ship to end users."
+    from("docs/build")
+    into "$buildDir/sdk/docs"
+}
+//endregion
