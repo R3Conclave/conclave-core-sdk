@@ -15,7 +15,7 @@ nav:
     - Security: security.md
     - API: api/index.html
   - Operations:
-    - Server deployment: deployment.md
+    - Server deployment: machine-setup.md
     - TCB recovery: tcb-recovery.md
 
 theme:

@@ -23,6 +23,8 @@ design. This will explain the concepts referred to in the rest of the documentat
 
 [**Architectural overview.**](architecture.md) This explains the core Conclave APIs.
 
+[**Machine setup.**](machine-setup.md) You need a correctly configured Linux server to run Conclave in production. 
+
 [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
 
 [**Deployment.**](deployment.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
