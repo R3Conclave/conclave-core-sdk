@@ -91,6 +91,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        -v $CODE_HOST_DIR:$CODE_DOCKER_DIR \
        -v /var/run/docker.sock:/var/run/docker.sock \
        -v /tmp/.X11-unix:/tmp/.X11-unix \
+       -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket \
        ${VOLUME_USB} \
        -e HOME=/home \
        ${ENV_DISPLAY} \
