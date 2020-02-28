@@ -1,6 +1,6 @@
 # Machine setup
 
-Before you can develop with or deploy SGX you need to configure the host system. At the time
+Before you can deploy an enclave to use real SGX hardware you need to configure the host system. At the time
 the host must be Linux and requires the following steps:
 
 1. Installing the SGX kernel driver, which isn't yet included in upstream kernels.
@@ -8,6 +8,10 @@ the host must be Linux and requires the following steps:
 
 The latter sets up a daemon called `aesmd` that handles various aspects of machine provisioning
 and remote attestation.
+
+!!! note
+    To just *develop* enclaves it's sufficient to have any Linux host, as the simulation mode requires no special
+    machine setup.
 
 ## Hardware support
 
