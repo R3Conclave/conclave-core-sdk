@@ -1,0 +1,56 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+option java_package = "com.r3.sgx.djvm.proto";
+option java_outer_classname = "DJVM";
+
+message IntArray {
+    repeated int32 values = 1;
+}
+
+message ReadingDataTestResult {
+    required int64 bigNumber = 1;
+    required int32 number = 2;
+    required string message = 3;
+    required double bigFraction = 4;
+}
+
+message StringList {
+    repeated string values = 1;
+}
+
+message LambdaTestResult {
+    required string result = 1;
+    required bool thrown = 2;
+}
+
+message Instant {
+    required int64 seconds = 1;
+    required int32 nanos = 2;
+}
+
+message TestCurrencyParameterList {
+    repeated TestCurrencyParameter values = 1;
+}
+
+message TestCurrencyParameter {
+    optional string currencyCode = 1;
+    optional string displayName = 2;
+    optional string symbol = 3;
+    optional int32 fractionDigits = 4;
+}
+
+message DoubleArray {
+    repeated double values = 1;
+}
+
+message TestStrictMaxMinParameters {
+    optional double d1 = 1;
+    optional double d2 = 2;
+    optional float f1 = 3;
+    optional float f2 = 4;
+    optional int64 l1 = 5;
+    optional int64 l2 = 6;
+    optional int32 i1 = 7;
+    optional int32 i2 = 8;
+}

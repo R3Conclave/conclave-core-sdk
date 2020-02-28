@@ -49,6 +49,12 @@ class TestEnclave : Enclavelet() {
                 return MessageType.BYTECODE_DUMP
             }
         }
+        private val djvmTestHandler = object : TestRunner, SandboxTestHandler() {
+            override fun messageType(): MessageType {
+                return MessageType.DJVM_TEST
+            }
+
+        }
 
         override fun connect(upstream: Sender) = EnclaveConnection(upstream)
 
@@ -60,6 +66,7 @@ class TestEnclave : Enclavelet() {
                 MessageType.TEST.ordinal -> runTest(connection, input.slice(), testHandler)
                 MessageType.SANDBOX_TEST.ordinal -> runTest(connection, input.slice(), sandboxTestHandler)
                 MessageType.BYTECODE_DUMP.ordinal -> generateByteCode(connection, input.slice(), byteCodeHandler)
+                MessageType.DJVM_TEST.ordinal -> runTest(connection, input.slice(), djvmTestHandler)
             }
         }
 

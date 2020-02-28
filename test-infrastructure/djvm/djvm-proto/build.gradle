@@ -1,0 +1,27 @@
+/**
+ * This module contains the protocol messages between host and enclave, from generic integration test input and output
+ * representation to individual messages for particular tests.
+ */
+plugins {
+    id 'java'
+    id 'com.google.protobuf'
+}
+
+dependencies {
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$protobuf_version"
+    }
+    generateProtoTasks.generatedFilesBaseDir = "$projectDir/src"
+    generateProtoTasks {
+        all().each { task ->
+            task.inputs.dir("$projectDir/src/main/proto")
+            task.builtins {
+                java { }
+            }
+        }
+    }
+}

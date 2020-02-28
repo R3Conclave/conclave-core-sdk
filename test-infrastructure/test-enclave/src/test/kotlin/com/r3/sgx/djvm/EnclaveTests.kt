@@ -37,7 +37,7 @@ class EnclaveTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
         val enclavePath = System.getProperty("enclave.path")
                 ?: throw AssertionError("System property 'enclave.path' not set.")
 
-        private val testCodeJar = HostTests.testCodeJarPath
+        private val testCodeJarPath = HostTests.mathsJarPath
 
         private var isEnclaveInitialized = false
         private val hostHandler = HostHandler()
@@ -84,7 +84,7 @@ class EnclaveTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
             enclaveSender = sender
 
             val message = SendJar.newBuilder()
-                    .setData(ByteString.copyFrom(testCodeJar.toFile().readBytes()))
+                    .setData(ByteString.copyFrom(testCodeJarPath.toFile().readBytes()))
                     .build().toByteArray()
             sender.send(Int.SIZE_BYTES + message.size, Consumer { buffer ->
                 buffer.putInt(MessageType.JAR.ordinal)

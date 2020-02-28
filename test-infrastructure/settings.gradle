@@ -4,4 +4,10 @@ includeBuild("..")
 include ':api'
 include ':djvm:test-utils'
 include ':test-enclave'
+
+include ':djvm:assertions'
+include ':djvm:djvm-tests'
+include ':djvm:djvm-tests-auxiliary'
+include ':djvm:djvm-proto'
+
 include ':tests:maths'

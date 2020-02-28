@@ -65,10 +65,11 @@ tasks.withType(Test) {
 test {
     maxHeapSize = "8g"
     useJUnitPlatform()
-    dependsOn ':tests:maths:shadowJar', signEnclaveWithDummyKeySimulation
+    dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar', signEnclaveWithDummyKeySimulation
     doFirst {
         systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
         systemProperty 'enclave.path', signEnclaveWithDummyKeySimulation.signedEnclavePath
-        systemProperty 'test-code-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath
+        systemProperty 'maths-tests-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath
+        systemProperty 'djvm-unit-tests-jar.path', tasks.getByPath(':djvm:djvm-tests:shadowJar').outputs.files.asPath
     }
 }

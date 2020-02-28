@@ -18,15 +18,18 @@ class HostTests {
         private val deterministicRTJarPath = Paths.get(System.getProperty("deterministic-rt.path"))
                 ?: throw AssertionError("System property 'deterministic-rt.path' not set.")
 
+        val mathsJarPath = Paths.get(System.getProperty("maths-tests-jar.path"))
+                ?: throw AssertionError("System property 'maths-tests-jar.path' not set.")
+        
         @JvmStatic
-        val testCodeJarPath = Paths.get(System.getProperty("test-code-jar.path"))
+        val testCodeJarPath = Paths.get(System.getProperty("djvm-unit-tests-jar.path"))
                 ?: throw AssertionError("System property 'test-code-jar.path' not set.")
 
         @Suppress("unused")
         @BeforeAll
         @JvmStatic
         fun beforeAll() {
-            val userSourcesJars = arrayOf(testCodeJarPath.toUri().toURL())
+            val userSourcesJars = arrayOf(mathsJarPath.toUri().toURL())
             val bootstrapJars = arrayOf(deterministicRTJarPath.toUri().toURL())
             setup(bootstrapJars, userSourcesJars)
         }

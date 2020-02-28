@@ -13,6 +13,7 @@ class HostHandler : Handler<Sender> {
     val assertedTests = mutableListOf<String>()
     val assertedSandboxedTests = mutableListOf<String>()
     val classesByteCodeReceived = mutableListOf<String>()
+    val assertedDJVMTests = mutableListOf<String>()
 
     override fun connect(upstream: Sender) = upstream
 
@@ -22,6 +23,7 @@ class HostHandler : Handler<Sender> {
             MessageType.TEST.ordinal -> assertTest(assertedTests, input.slice())
             MessageType.SANDBOX_TEST.ordinal -> assertTest(assertedSandboxedTests, input.slice())
             MessageType.BYTECODE_DUMP.ordinal -> writeByteCodeToFile(classesByteCodeReceived, input.slice())
+            MessageType.DJVM_TEST.ordinal -> assertTest(assertedDJVMTests, input.slice())
         }
     }
 

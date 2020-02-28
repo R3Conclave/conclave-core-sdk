@@ -5,6 +5,7 @@ import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.messages.Severity.WARNING
+import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.UserPathSource
@@ -94,4 +95,6 @@ abstract class DJVMBase {
         }.join()
         throw thrownException ?: return
     }
+
+    fun SandboxRuntimeContext.loadClass(className: String): LoadedClass = classLoader.loadForSandbox(className)
 }

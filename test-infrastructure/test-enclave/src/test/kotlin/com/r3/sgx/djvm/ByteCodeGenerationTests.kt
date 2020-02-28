@@ -50,7 +50,7 @@ class ByteCodeGenerationTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
             val (_, sender) = channels.addDownstream(hostHandler).get()
             enclaveSender = sender
 
-            val userJar = HostTests.testCodeJarPath.toFile().readBytes()
+            val userJar = HostTests.mathsJarPath.toFile().readBytes()
             val sendJarBytes = SendJar.newBuilder()
                     .setData(ByteString.copyFrom(userJar))
                     .build()

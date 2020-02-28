@@ -5,5 +5,6 @@ enum class MessageType {
     CLEAR_JARS,
     TEST,
     SANDBOX_TEST,
-    BYTECODE_DUMP
+    BYTECODE_DUMP,
+    DJVM_TEST
 }
