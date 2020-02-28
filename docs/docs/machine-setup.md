@@ -82,3 +82,10 @@ To configure Docker for use with SGX, you must pass at least these flags when cr
 Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an enclave. 
 
 <!--- TODO: We should offer a machine setup test tool here or use the one from Fortanix -->
+
+## Handling GROUP_OUT_OF_DATE errors
+
+After following the above instructions, you may discover your `EnclaveInstanceInfo` objects report the enclave as 
+"stale". This means the machine requires either BIOS, PSW or microcode updates. Applying all available updates and
+rebooting should make the security evaluation of 'stale' go away. See [TCB recovery](tcb-recovery.md) to learn more
+about this topic.
