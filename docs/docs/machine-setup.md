@@ -37,20 +37,44 @@ The following Linux distros are formally supported by Intel:
 
 However, others will probably still work.
 
-## Install the kernel driver
-
-Download the driver from the [linux-sgx-driver Github project](https://github.com/intel/linux-sgx-driver)
-and follow the instructions in the README to install it.  You will need to repeat the installation process
-each time the kernel changes.
-
-## Install the system software
+## Install the kernel driver and system software
 
 Installers for the system software can be [obtained from Intel](https://01.org/intel-software-guard-extensions/downloads).
+We recommend reading the [installation user guide](https://download.01.org/intel-sgx/sgx-linux/2.8/docs/Intel_SGX_Installation_Guide_Linux_2.8_Open_Source.pdf) available from Intel.
+The installation process is not complex. Intel provide:
+
+* APT repositories for Ubuntu
+* Cross-distro installer binaries for other platforms, which set up the system software and compile/install the kernel driver.
 
 !!! important
 
-    You need to download the 2.4 release of the system software, not the latest version.
+    The installer will need to be re-run when the kernel is upgraded.
 
-Alternatively, you can [compile the system software from the sources yourself](https://github.com/intel/linux-sgx/releases/tag/sgx_2.4).
+Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.8) yourself.
+The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).  
+
+For SGX remote attestation to operate and machine provisioning to succeed, a small daemon called `aesmd` is used. This
+comes as part of the SGX platform services software and will be set up during the install process.
+
+The quick summary looks like this:
+
+1. Download and run the driver installer binary (all distros)
+2. For Ubuntu users, as root run:
+   * For Ubuntu 16 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu xenial main' > /etc/apt/sources.list.d/intelsgx.list`
+   * For Ubuntu 18 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' > /etc/apt/sources.list.d/intelsgx.list`
+   * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`
+   * Then run `apt-get update`
+   * And finally `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-launch libsgx-urts libsgx-epid libsgx-urts libsgx-quote-ex libsgx-urts`
+3. For other users, use the SDK installer (which installs the platform services software as well)
+4. These steps will start the `aesm_service`, which has a configuration file in `/etc/aesmd.conf`. You may wish to edit 
+   it if your environment requires proxy servers.
+   
+## Using containers
+
+To configure Docker for use with SGX, you must pass at least these flags when creating the container: 
+
+`--device=/dev/isgx -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket`
+
+Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an enclave. 
 
 <!--- TODO: We should offer a machine setup test tool here or use the one from Fortanix -->
