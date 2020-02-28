@@ -68,7 +68,7 @@ The quick summary looks like this:
    * For Ubuntu 18 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' > /etc/apt/sources.list.d/intelsgx.list`
    * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`
    * Then run `apt-get update`
-   * And finally `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-launch libsgx-urts libsgx-epid libsgx-urts libsgx-quote-ex libsgx-urts`
+   * And finally `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`
 3. For other users, use the SDK installer (which installs the platform services software as well)
 4. These steps will start the `aesm_service`, which has a configuration file in `/etc/aesmd.conf`. You may wish to edit 
    it if your environment requires proxy servers.
