@@ -58,6 +58,13 @@ if [[ -z ${CONTAINER_ID} ]]; then
     cardreader_gid=""
   else
     docker_gid=$(cut -d: -f3 < <(getent group docker))
+    if [[ "$docker_gid" == "" ]]; then
+      echo "You don't appear to have a docker UNIX group configured. This script requires one."
+      echo
+      echo "Follow the post-install instructions at https://docs.docker.com/install/linux/linux-postinstall/"
+      echo "to finish the Docker setup process."
+      exit 1
+    fi
     docker_group_add="--group-add ${docker_gid}"
     cardreader_gid=$(cut -d: -f3 < <(getent group cardreader) || echo "")
   fi
