@@ -5,6 +5,7 @@ plugins {
     id 'org.akhikhl.gretty' version '2.0.0' apply false
     id 'net.corda.plugins.api-scanner' version '4.0.45' apply false
     id "com.github.ben-manes.versions" version "0.27.0"
+    id 'base'
     id 'idea'
     id 'org.jetbrains.dokka' version '0.10.1'
 }
@@ -236,7 +237,7 @@ if (includeNative) {
                         password = environment.OBLIVIUM_MAVEN_PASSWORD
                     }
                 }
-                maven {
+                maven {    // This section implicitly creates the  publishAllPublicationsToSdkRepoRepository target.
                     name = "sdkRepo"
                     url = "$buildDir/sdk/repo"
                 }
@@ -323,11 +324,13 @@ task mkdocs(type: Exec, dependsOn: ['apidocs']) {
     outputs.dir("docs/build")
 }
 
-task clean {
+task cleanDocs {
     delete 'docs/build'
     delete 'docs/docs/api'
     delete 'docs/virtualenv'
 }
+
+tasks['clean'].dependsOn(cleanDocs)
 
 // This task has to be called "buildDocs" because it's invoked by the
 // https://github.com/corda/corda-docs-builder tool from CI.
@@ -337,9 +340,12 @@ dokka.shouldRunAfter mkdocs
 
 //region SDK artifact creation
 //
-// This rule creates the tarball of the SDK that we ship to our users. It consists of a local Maven repository
+// This set of rules creates the tarball of the SDK that we ship to our users. It consists of a local Maven repository
 // which contains all the JARs and native artifacts needed for the plugins, the docsite, and extra files like
 // a readme and the patches we are obliged to release under the GPL.
+//
+// The publishAllPublicationsToSdkRepoRepository target is synthesised automatically by the maven-publish Gradle
+// plugin, based on the repositories block inside the if(includeNative) block above.
 def libArtifacts = publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }
 task zipGPL2Sources(type: Zip) {
     description = "Zip up codebases we statically link with OpenJDK, to comply with our GPL2 obligations"
@@ -357,7 +363,9 @@ task zipGPL2Sources(type: Zip) {
     from("cpp/jvm-enclave-common") {
         into "jvm-enclave-common"
     }
-
+    from("cpp/jvm-host-enclave-common") {
+        into "jvm-host-enclave-common"
+    }
     from("cpp/jvm-edl") {
         into "jvm-edl"
     }
@@ -367,9 +375,21 @@ task sdkCopyReadme(type: Copy) {
     into "$buildDir/sdk"
 }
 
-task sdk(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Sources", "sdkCopyReadme"]) {
-    description = "Build the SDK artifact that we ship to end users."
+task sdkFiles(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Sources", "sdkCopyReadme"]) {
+    description = "Build the SDK directory tree that we ship to end users."
     from("docs/build")
     into "$buildDir/sdk/docs"
+}
+
+task sdk(type: Zip, dependsOn: ["sdkFiles"]) {
+    archiveFileName = "conclave-sdk-${environment.OBLIVIUM_VERSION}.zip"
+    description = "Build the SDK downloadable file that we ship to end users."
+    def outName = "conclave-sdk-${environment.OBLIVIUM_VERSION}"
+    from("$buildDir/sdk") {
+        into(outName)
+    }
+    doLast {
+        println("SDK zip has been placed in $buildDir/distributions/$outName")
+    }
 }
 //endregion
