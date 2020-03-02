@@ -75,6 +75,14 @@ if [[ -z ${CONTAINER_ID} ]]; then
     network_cmd="--network host"
   fi
 
+  # If running on a Linux host with SGX properly installed and configured,
+  # tunnel through the SGX driver and AES daemon socket. This means you can
+  # still run the devenv on a non-SGX host or a Mac without it breaking.
+  SGX_HARDWARE_FLAGS=""
+  if [ -e /dev/isgx ] && [ -d /var/run/aesmd ]; then
+      SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
+  fi
+
   CONTAINER_ID=$(docker run \
        --name=$CONTAINER_NAME \
        --privileged \
@@ -91,8 +99,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        -v $CODE_HOST_DIR:$CODE_DOCKER_DIR \
        -v /var/run/docker.sock:/var/run/docker.sock \
        -v /tmp/.X11-unix:/tmp/.X11-unix \
-       --device=/dev/isgx \
-       -v /var/run/aesmd:/var/run/aesmd \
+       ${SGX_HARDWARE_FLAGS} \
        ${VOLUME_USB} \
        -e HOME=/home \
        ${ENV_DISPLAY} \
