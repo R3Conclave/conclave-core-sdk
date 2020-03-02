@@ -29,6 +29,7 @@ dependencies {
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
+    testImplementation "com.r3.conclave:conclave-host"
     testImplementation "com.r3.sgx:api-core-host"
     testImplementation "com.r3.sgx:enclave-testing"
     testImplementation "com.r3.sgx:enclavelet-host-client"
