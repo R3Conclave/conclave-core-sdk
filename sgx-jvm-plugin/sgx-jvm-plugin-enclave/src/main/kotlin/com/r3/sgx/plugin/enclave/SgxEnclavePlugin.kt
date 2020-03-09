@@ -10,12 +10,13 @@ import org.apache.commons.io.input.BoundedInputStream
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.jvm.tasks.Jar
 import java.io.InputStream
-import java.net.URI
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.nio.channels.FileChannel.MapMode.READ_ONLY
@@ -27,10 +28,7 @@ import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import javax.inject.Inject
 
-data class ArtifactMetadata(
-        val version: String,
-        val mavenRepository: String
-)
+typealias SDKVersion = String
 
 @Suppress("UnstableApiUsage")
 class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
@@ -41,7 +39,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         /**
          * Returns an input stream over the application jar segment embedded in the enclave .so file.
          */
-        fun getAppJarSegmentInputStream(enclaveFile: Path): InputStream {
+        private fun getAppJarSegmentInputStream(enclaveFile: Path): InputStream {
             val channel = FileChannel.open(enclaveFile)
             // We use a mapped byte buffer as that's the only entry point where ElfFile doesn't read in the entire file.
             val elfFile = ElfFile.from(channel.map(READ_ONLY, 0, channel.size()))
@@ -87,7 +85,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
             } ?: throw InvalidUserDataException("Attribute '$ENCLAVE_CLASS_MANIFEST_ATTRIBUTE' missing from $jarFile")
         }
 
-        private fun readProductMetadataFromManifest(): ArtifactMetadata {
+        private fun readVersionFromPluginManifest(): SDKVersion {
             val classLoader = SgxEnclavePlugin::class.java.classLoader
             val manifestUrls = classLoader.getResources(MANIFEST_NAME).toList()
             for (manifestUrl in manifestUrls) {
@@ -96,30 +94,24 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
             throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
         }
 
-        private fun getArtifactMetadataFromManifestStream(manifestStream: InputStream): ArtifactMetadata? {
-            val manifest = Manifest(manifestStream)
-            val version = manifest.mainAttributes.getValue("Conclave-Version") ?: return null
-            val repository = manifest.mainAttributes.getValue("Conclave-Maven-Repository") ?: return null
-            return ArtifactMetadata(
-                    version = version,
-                    mavenRepository = repository
-            )
+        private fun getArtifactMetadataFromManifestStream(manifestStream: InputStream): SDKVersion? {
+            return Manifest(manifestStream).mainAttributes.getValue("Conclave-Version") ?: return null
         }
     }
 
     override fun apply(target: Project) {
-        val metadata = readProductMetadataFromManifest()
+        val sdkVersion = readVersionFromPluginManifest()
         val baseDirectory = target.buildDir.toPath().resolve("sgx-plugin")
-        // Enclave
-        target.logger.info("Applying the shadow plugin")
+
+        target.logger.info("[Conclave] Applying the shadow plugin")
+        if (!target.pluginManager.hasPlugin("java")) {
+            // The Shadow plugin doesn't do anything unless either the java or application
+            // plugins are present, so we must ensure it's applied.
+            target.pluginManager.apply(JavaPlugin::class.java)
+        }
         target.pluginManager.apply(ShadowPlugin::class.java)
 
-        target.logger.info("Adding maven repository")
-        target.repositories.maven {
-            it.url = URI.create(metadata.mavenRepository)
-        }
-
-        target.logger.info("Configuring shadowJar task")
+        target.logger.info("[Conclave] Configuring shadowJar task")
         val shadowJar = target.tasks.getByName("shadowJar") { task ->
             task as ShadowJar
             task.isPreserveFileTimestamps = false
@@ -134,10 +126,10 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         target.configurations.create(ENCLAVE_CONFIGURATION_NAME)
         target.artifacts.add(ENCLAVE_CONFIGURATION_NAME, shadowJar)
 
-        target.logger.info("Adding copyBinutils task")
+        target.logger.info("[Conclave] Adding copyBinutils task")
         val binutilsConfigurationName = "sgxBinutils"
-        val binutilsConfiguration = target.configurations.create(binutilsConfigurationName)
-        target.dependencies.add(binutilsConfigurationName, "com.r3.sgx:native-binutils:${metadata.version}")
+        val binutilsConfiguration: Configuration = target.configurations.create(binutilsConfigurationName)
+        target.dependencies.add(binutilsConfigurationName, "com.r3.sgx:native-binutils:$sdkVersion")
         val copyBinutils = target.tasks.create("copyBinutils", Copy::class.java) { task ->
             task.group = SGX_GROUP
             task.dependsOn(binutilsConfiguration)
@@ -146,7 +138,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         }
         val binutilsDirectory = target.file("${copyBinutils.destinationDir}/com/r3/sgx/binutils")
 
-        target.logger.info("Adding shadowJarObject task")
+        target.logger.info("[Conclave] Adding shadowJarObject task")
         val shadowJarObject = target.tasks.create("shadowJarObject", BuildJarObject::class.java) { task ->
             task.dependsOn(shadowJar, copyBinutils)
             task.inputBinutilsDirectory.set(binutilsDirectory)
@@ -154,14 +146,14 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
             task.outputDir.set(target.file("$baseDirectory/app-jar"))
         }
 
-        target.logger.info("Adding partial enclave dependencies")
+        target.logger.info("[Conclave] Adding partial enclave dependencies")
         for (type in BuildType.values()) {
             val configurationName = "partialEnclave${type.name}"
             target.configurations.create(configurationName)
-            target.dependencies.add(configurationName, "com.r3.sgx:native-enclave-${type.name.decapitalize()}:${metadata.version}")
+            target.dependencies.add(configurationName, "com.r3.sgx:native-enclave-${type.name.decapitalize()}:$sdkVersion")
         }
 
-        target.logger.info("Adding copyPartialEnclave* tasks")
+        target.logger.info("[Conclave] Adding copyPartialEnclave* tasks")
         for (type in BuildType.values()) {
             target.tasks.create("copyPartialEnclave${type.name}", Copy::class.java) { task ->
                 task.group = SGX_GROUP
@@ -172,7 +164,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
             }
         }
 
-        target.logger.info("Adding buildUnsignedEnclave* tasks")
+        target.logger.info("[Conclave] Adding buildUnsignedEnclave* tasks")
         for (type in BuildType.values()) {
             with(target.tasks.create("buildUnsignedEnclave$type", BuildUnsignedEnclave::class.java)) {
                 val copyTask = target.tasks.getByName("copyPartialEnclave${type.name}") as Copy
@@ -186,9 +178,9 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         }
 
         // Testing
-        target.logger.info("Adding copySignTool task")
+        target.logger.info("[Conclave] Adding copySignTool task")
         val signToolConfiguration = target.configurations.create("signTool")
-        target.dependencies.add("signTool", "com.r3.sgx:native-sign-tool:${metadata.version}")
+        target.dependencies.add("signTool", "com.r3.sgx:native-sign-tool:$sdkVersion")
         val copySignTool = target.tasks.create("copySignTool", Copy::class.java) { task ->
             task.group = SGX_GROUP
             task.dependsOn(signToolConfiguration)
@@ -199,10 +191,11 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         val signToolFile = target.file("${copySignTool.destinationDir}/com/r3/sgx/sign-tool/sgx_sign")
 
         // Dummy key
-        target.logger.info("Adding createDummyKey task")
+        target.logger.info("[Conclave] Adding createDummyKey task")
         val createDummyKey = target.tasks.create("createDummyKey", GenerateDummyMrsignerKey::class.java) { task ->
             task.outputKey.set(target.file("${target.buildDir}/dummy_key.pem"))
         }
+
 
         // Enclave configuration, signing
         for (type in BuildType.values()) {

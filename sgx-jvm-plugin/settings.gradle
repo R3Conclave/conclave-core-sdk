@@ -1,3 +1,0 @@
-rootProject.name = "sgx-jvm-plugin"
-include 'sgx-jvm-plugin-enclave'
-include 'sgx-jvm-plugin-host'

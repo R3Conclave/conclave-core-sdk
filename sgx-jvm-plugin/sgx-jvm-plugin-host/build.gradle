@@ -1,5 +1,6 @@
 plugins {
     id 'java-gradle-plugin'
+    id 'org.jetbrains.kotlin.jvm'
 }
 
 gradlePlugin {
@@ -11,17 +12,24 @@ gradlePlugin {
     }
 }
 
+tasks.withType(Test) {
+    // Tell the tests where Gradle's current module cache is.
+    // We need the tests to share this module cache to prevent the
+    // Gradle Test-Kit from downloading its own copy of Kotlin etc.
+    systemProperty 'test.gradle.user.home', project.gradle.gradleUserHomeDir
+}
+
 dependencies {
     // This plugin will use Gradle's own built-in Kotlin library at runtime.
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.bmuschko:gradle-docker-plugin:$docker_version"
-    implementation project(':sgx-jvm-plugin-enclave')
+    implementation project(':sgx-jvm-plugin:sgx-jvm-plugin-enclave')
 }
 
 jar {
     manifest {
         // This is the specific version, and not the dynamic version that Gradle uses.
-        attributes("Conclave-Version": environment.OBLIVIUM_VERSION)
-        attributes("Conclave-Docker-Registry": environment.OBLIVIUM_CONTAINER_REGISTRY_URL)
+        attributes("Conclave-Version": rootProject.ext.environment.OBLIVIUM_VERSION)
+        attributes("Conclave-Docker-Registry": rootProject.ext.environment.OBLIVIUM_CONTAINER_REGISTRY_URL)
     }
 }
