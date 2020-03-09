@@ -1,0 +1,13 @@
+plugins {
+    id 'com.r3.sgx.enclave'
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-enclave:0.1-SNAPSHOT"
+}
+
+jar {
+    manifest {
+        attributes("Enclave-Class": "com.r3.conclave.sample.enclave.ReverseEnclave")
+    }
+}

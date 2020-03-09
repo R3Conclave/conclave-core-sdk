@@ -26,6 +26,7 @@ ext {
             'OBLIVIUM_MAVEN_REPOSITORY',
             'OBLIVIUM_MAVEN_USERNAME',
             'OBLIVIUM_MAVEN_PASSWORD',
+            'OBLIVIUM_CONTAINER_REGISTRY_URL'
     )
     docker_image_release_tag = environment.OBLIVIUM_VERSION
     oblivium_dependency_version = environment.OBLIVIUM_DEPENDENCY_VERSION
@@ -203,6 +204,10 @@ List<PublishedProject> publishedProjects = [
                 projectPath: ':enclave-testing',
                 description: 'Enclave testing library',
         ),
+        new PublishedProject(
+                projectPath: ':sgx-jvm-plugin:sgx-jvm-plugin-enclave',
+                description: 'Conclave Gradle plugin for creating enclaves'
+        ),
 ]
 
 // We only enable publish if native parts of the build are included.
@@ -348,6 +353,7 @@ dokka.shouldRunAfter mkdocs
 // plugin, based on the repositories block inside the if(includeNative) block above.
 def libArtifacts = publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }
 task zipGPL2Sources(type: Zip) {
+    group = "SDK Build"
     description = "Zip up codebases we statically link with OpenJDK, to comply with our GPL2 obligations"
     archiveFileName = "sources.zip"
     destinationDirectory = file("$buildDir/sdk")
@@ -370,18 +376,31 @@ task zipGPL2Sources(type: Zip) {
         into "jvm-edl"
     }
 }
-task sdkCopyReadme(type: Copy) {
-    from "docs/sdk-extras/README.md"
+
+// Copy things like the README file, the sample apps, the license text.
+task sdkCopyExtras(type: Copy) {
+    group = "SDK Build"
+    description = "Copy the docs/sdk-extras directory into the $buildDir/sdk directory"
+    from("docs/sdk-extras") {
+        exclude("hello-world/.gradle")
+        exclude("**/build")
+    }
     into "$buildDir/sdk"
+    doLast {
+        // Patch the gradle.properties file in the sample app so it uses the SDK copy of the repository.
+        file("$buildDir/sdk/hello-world/gradle.properties").write("conclave.repo=../repo\r\n")
+    }
 }
 
-task sdkFiles(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Sources", "sdkCopyReadme"]) {
+task sdkFiles(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Sources", "sdkCopyExtras"]) {
+    group = "SDK Build"
     description = "Build the SDK directory tree that we ship to end users."
     from("docs/build")
     into "$buildDir/sdk/docs"
 }
 
 task sdk(type: Zip, dependsOn: ["sdkFiles"]) {
+    group = "SDK Build"
     archiveFileName = "conclave-sdk-${environment.OBLIVIUM_VERSION}.zip"
     description = "Build the SDK downloadable file that we ship to end users."
     def outName = "conclave-sdk-${environment.OBLIVIUM_VERSION}"

@@ -1,0 +1,12 @@
+plugins {
+    id 'com.r3.sgx.enclave' version '2.0-nightly-224-g32e160dbae' apply false
+}
+
+subprojects {
+    repositories {
+        maven {
+            url = rootProject.file(findProperty("conclave.repo"))
+        }
+        mavenCentral()
+    }
+}

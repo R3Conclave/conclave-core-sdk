@@ -3,8 +3,6 @@ includeBuild("..") {
     name = "sgxjvm"
 }
 
-include ':conclave:host'
-include ':conclave:enclave'
 include ':echo-enclave'
 include ':echo-java-enclave'
 include ':protobuf-enclave'
