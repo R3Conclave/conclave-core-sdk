@@ -11,10 +11,10 @@ of the computer on which they run. It is ideally suited to solving complex busin
 - Full support for auditing enclaves over the internet, including remote attestation and fully deterministic,
   reproducible builds. A user can verify what the source code of the remotely running enclave is, to ensure it will
   behave as they expect.
-- A set of Gradle build plugins, so compiling and signing your enclave is handled automatically.
-- A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, using just JUnit.
+- A Gradle plugin, so compiling and signing your enclave is handled automatically.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
 - Many tutorials, guides and commercial support from the SGX experts at R3.
+<!--- - A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, using just JUnit. -->
 
 ## Documentation
 

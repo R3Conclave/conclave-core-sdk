@@ -1,10 +1,14 @@
 # First enclave
 
-!!! tip
+!!! note
 
     This tutorial assumes you've read and understood the [conceptual overview](enclaves.md).
 
-We'll go through these steps to make an enclave:
+You can find a **sample app** in the `hello-world` directory of your SDK. You can use this app as a template 
+for your own if you want a quick start, or follow the instructions below to add Conclave to an existing project.
+It's recommended to read the tutorial in all cases so you understand what the code is doing.
+
+We'll do these things to make our own version of the hello enclave:
 
 1. Configure Gradle. At this time Conclave projects must use Gradle as their build system.
 2. Create a new subclass of [`Enclave`](api/com/r3/conclave/enclave/Enclave.html)
@@ -23,50 +27,85 @@ TODO: Complete this tutorial:
       Update as API is completed.
 -->
 
-!!! note
+!!! important
 
-    At this time Conclave development must be done on Linux.
+    * You need the Conclave SDK. If you don't have it please [contact R3 and request a trial](https://www.conclave.net).
+    * At this time Conclave development must be done on Linux.
 
 ## Configure Gradle
 
 Create a new Gradle project via whatever mechanism you prefer, e.g. IntelliJ can do this via the New Project wizard.
-Create two modules defined in ther project: one for the host and one for the enclave. The host program may be an
-existing server program of some kind, e.g. a web server, but in this tutorial we'll write a dedicated host.
-
-You will need to add plugins and libraries to your project, using artifacts from the Conclave SDK. 
-
-!!! note 
-    If you don't have a Conclave SDK, please contact R3 and request a trial.
+Create two modules defined in the project: one for the host and one for the enclave. The host program may be an
+existing server program of some kind, e.g. a web server, but in this tutorial we'll write a command line host.   
     
-In the unzipped SDK there is a directory called `repo` that contains a local Maven repository. Add it to your Gradle
-modules with a snippet of code like this at the top level `build.gradle` file:
+### `settings.gradle`
+
+In the unzipped SDK there is a directory called `repo` that contains a local Maven repository. This is where the libraries
+and Gradle plugin can be found. We need to tell Gradle to look there for plugins.
+
+Create or modify a file called `settings.gradle` in your project root directory so it looks like this:
 
 ```groovy
-repositories {
-    maven {
-        url = "path/to/the/sdk/repo"
+pluginManagement {
+    repositories {
+        maven {
+            def repoPath = file(rootDir.relativePath(file(settings['conclave.repo'])))
+            if (repoPath == null)
+                throw new Exception("Make sure the 'conclave.repo' setting exists in gradle.properties, or your \$HOME/gradle.properties file. See the Conclave tutorial on https://docs.conclave.net")
+            else if (!new File(repoPath, "com").isDirectory())
+                throw new Exception("The $repoPath directory doesn't seem to exist or isn't a Maven repository; it should be the SDK 'repo' subdirectory. See the Conclave tutorial on https://docs.conclave.net")
+            url = repoPath
+        }
+        // Add standard repositories back.
+        gradlePluginPortal()
+        jcenter()
+        mavenCentral()
     }
 }
+
+include 'enclave'
+include 'host'
 ```
+    
+The `pluginManagement` block tells Gradle to use a property called `conclave.repo` to find the `repo` directory
+in your SDK download. Because developers on your team could unpack the SDK anywhere, they must configure the path
+before the build will work. The code above will print a helpful error if they forget or get it wrong.
 
-You may wish to extract this out into a property each developer can set locally. It can be done like this:
-
-```groovy 
-repositories {
-    maven {
-        url = findProperty('conclave.repo') ?: throw Exception("You must set the property conclave.path in your gradle.properties file.") 
-    }
-}
-```
-
-Now a developer can add to [the `gradle.properties` file](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html#declare_properties_in_gradle_properties_file)
+To set the value a developer can add to [the `gradle.properties` file](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html#declare_properties_in_gradle_properties_file)
 a line like this:
 
 ```
 conclave.repo=/path/to/sdk/repo
 ```
 
-<!--- TODO: Check these instructions actually work -->
+Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory. 
+    
+### `build.gradle`
+    
+Add the following code to your root `build.gradle` file to import the repository and
+load the enclave Gradle plugin:
+
+```groovy
+plugins {
+    id 'com.r3.sgx.enclave' version '2.0-nightly-224-g32e160dbae' apply false
+}
+
+subprojects {
+    repositories {
+        maven {
+            url = rootProject.file(findProperty("conclave.repo"))
+        }
+        mavenCentral()
+    }
+}
+```
+
+This will ensure the SDK repository can be found in both `enclave` and `host` projects. The `plugin` block tells
+Gradle to load but not integrate the enclave plugin.
+
+!!! warning
+    Although tempting to load and apply the plugin in the enclave module only, this can cause trouble with Gradle.
+    Loading the plugin without applying it like in the above example avoids the issue.
 
 ### Configure the host build
 
@@ -74,9 +113,11 @@ In the host module add a dependency on the Conclave host library:
 
 ```groovy hl_lines="2"
 dependencies {
-    implementation "com.r3.conclave:conclave-host"
+    implementation "com.r3.conclave:conclave-host:0.1-SNAPSHOT"
 }
 ```
+
+<!--- TODO(mike): CON-61: Sort out versioning -->
 
 SGX enclaves can be be built in one of three modes: simulation, debug and release. Simulation mode doesn't require any
 SGX capable hardware. Debug executes the enclave as normal but allows the host process to snoop on and modify the
@@ -102,8 +143,6 @@ dependencies {
 This says that at runtime (but not compile time) the enclave must be on the classpath, and configures dependencies to
 respect the three different variants of the enclave.
 
-<!--- TODO: fat jar? -->
-
 ### Configure the enclave build
 
 Add the Conclave Gradle plugin:
@@ -118,7 +157,7 @@ and a dependency on the Conclave enclave library:
 
 ```groovy hl_lines="2"
 dependencies {
-    implementation "com.r3.conclave:conclave-enclave"
+    implementation "com.r3.conclave:conclave-enclave:0.1-SNAPSHOT"
 }
 ```
 
@@ -126,7 +165,7 @@ Enclaves are similar to standalone programs and as such have an equivalent to a 
 subclass of [`Enclave`](/api/com/r3/conclave/enclave/Enclave.html) and we'll write it in a moment. The name of the
 class must be specified in the JAR manifest like this, so Conclave can find it:
 
-```groovy
+```groovy hl_lines="3"
 jar {
     manifest {
         attributes("Enclave-Class": "com.superfirm.enclave.MyEnclave")    // CHANGE THIS NAME!
@@ -134,24 +173,37 @@ jar {
 }
 ```
 
+And with that, we're done configuring the build.
+
 ## Create a new subclass of `Enclave`
 
 Create your enclave class:
 
-```kotlin
-package com.superfirm.enclave
+```java
+package com.superfirm.enclave;   // CHANGE THIS
 
-class MyEnclave : EnclaveCall, Enclave() {
-    override fun invoke(bytes: ByteArray): ByteArray? {
-        return bytes.reversedArray()
+import com.r3.conclave.common.enclave.EnclaveCall;
+import com.r3.conclave.enclave.Enclave;
+
+/**
+ * Simply reverses the bytes that are passed in.
+ */
+public class ReverseEnclave extends Enclave implements EnclaveCall {
+    @Override
+    public byte[] invoke(byte[] bytes) {
+        byte[] result = new byte[bytes.length];
+        for (int i = 0; i < bytes.length; i++)
+            result[i] = bytes[bytes.length - 1 - i];
+        return result;
     }
 }
 ```
 
-The `Enclave` class by itself doesn't support direct communication with the host. This is because sometimes you
-don't need that and shouldn't have to implement message handlers. In this case we'll use that functionality because
-it's a good place to start learning, so we also implement the `EnclaveCall` interface. There's one method we must
-supply: `invoke` which takes a byte array and optionally returns a byte array back. Here we just reverse the contents.
+The `Enclave` class by itself doesn't require you to support direct communication with the host. This is because
+sometimes you don't need that and shouldn't have to implement message handlers. In this case we'll use that
+functionality because it's a good place to start learning, so we also implement the `EnclaveCall` interface.
+There's one method we must supply: `invoke` which takes a byte array and optionally returns a byte array back. Here
+we just reverse the contents.
 
 !!! tip
     In a real app you would use the byte array to hold serialised data structures. You can use whatever data formats you
@@ -204,13 +256,40 @@ a host program.
 
 It's easy to load then pass data to and from an enclave:
 
-```kotlin
-fun main() {
-    val host: EnclaveHost = EnclaveHost.loadFromResources("com.superfirm.enclave.MyEnclave", EnclaveMode.SIMULATION)
-    host.start()
-    host.use {
-        val answer: ByteArray = host.callEnclave("Hello World!".toBytes())
-        println(String(answer))
+```java
+/**
+ * This class demonstrates how to load an enclave and exchange byte arrays with it.
+ */
+public class Host {
+    public static void main(String[] args) throws InvalidEnclaveException {
+        // We start by loading the enclave using EnclaveHost, and passing the class name of the Enclave subclass
+        // that we defined in our enclave module.
+        EnclaveHost enclave = EnclaveHost.load("com.superfirm.enclave.ReverseEnclave");   // CHANGE THIS
+        // Start it up.
+        enclave.start();
+        try {
+            // !dlrow olleH      :-)
+            System.out.println(callEnclave(enclave,  "Hello world!"));
+        } finally {
+            // We make sure the .close() method is called on the enclave no matter what.
+            //
+            // This doesn't actually matter in such a tiny hello world sample, because the enclave will be unloaded by
+            // the kernel once we exit like any other resource. It's just here to remind you that an enclave must be
+            // explicitly unloaded if you need to reinitialise it for whatever reason, or if you need the memory back.
+            //
+            // Don't load and unload enclaves too often as it's quite slow.
+            enclave.close();
+        }
+    }
+
+    public static String callEnclave(EnclaveHost enclave, String input) {
+        // We'll convert strings to bytes and back.
+        final byte[] inputBytes = input.getBytes();
+
+        // Enclaves in general don't have to give bytes back if we send data, but in our case we know it always
+        // will so we can just assert it's non-null here.
+        final byte[] outputBytes = Objects.requireNonNull(enclave.callEnclave(inputBytes));
+        return new String(outputBytes);
     }
 }
 ```
@@ -225,7 +304,7 @@ Starting and stopping an enclave is not free, so **don't** load the enclave, use
 as in the above example. Treat the enclave like any other expensive resource and keep it around for as long as you
 might need it.
 
-Once we started the enclave, we call it, passing in a string as bytes. The enclave will reverse it and we'll print out
+Once we started the enclave, we call it passing in a string as bytes. The enclave will reverse it and we'll print out
 the answer.
 
 !!! tip
@@ -258,3 +337,9 @@ time you alter the code of your enclave, the version of Conclave in use or the m
 The measurement is reported in an `EnclaveInstanceInfo` remote attestation structure (see [enclaves](enclaves.md) for
 a discussion of remote attestation). Everyone should be able to get the exact same value when doing the build, so in
 this way your users can audit the contents of a remote enclave over the network.
+
+## Unit testing
+
+In the unit tests you can just load and invoke the enclave as normal. Future versions of Conclave will provide mocked
+out APIs so the enclave logic can be tested without involving the real SGX build process, for cross platform portability
+and speed.
