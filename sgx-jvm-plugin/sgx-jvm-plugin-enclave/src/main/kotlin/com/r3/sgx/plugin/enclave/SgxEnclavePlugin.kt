@@ -95,7 +95,7 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         }
 
         private fun getArtifactMetadataFromManifestStream(manifestStream: InputStream): SDKVersion? {
-            return Manifest(manifestStream).mainAttributes.getValue("Conclave-Version") ?: return null
+            return Manifest(manifestStream).mainAttributes.getValue("Conclave-Version")
         }
     }
 
