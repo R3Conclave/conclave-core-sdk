@@ -32,3 +32,14 @@ and then keep your machine trusted by applying updates.
 
 [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
 
+## Beta 1
+
+!!! warning
+    This is a beta release of Conclave. It's not yet suitable for running in production.
+    
+Known issues:
+
+1. There's currently no API for sending and receiving encrypted messages to/from enclaves.
+2. The JVM we use doesn't presently implement any side channel mitigations.
+3. Enclave keys aren't yet stable and change across enclave restarts, forcing re-attestation.
+4. Some system level exceptions like divide by zero or de-referencing a null pointer crash the enclave/host process.
