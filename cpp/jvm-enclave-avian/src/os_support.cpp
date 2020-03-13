@@ -390,7 +390,7 @@ long sysconf(int name) {
 char *realpath(const char *path, char *resolved_path) {
     if (!strcmp(path, "/."))
         return strcpy(resolved_path, "/");
-    else if (!strncmp(path, "/[", 2))
+    else if (!strncmp(path, "/[", 2) || !strcmp(path, "/avian-embedded/javahomeJar/lib/logging.properties") || !strcmp(path, "/avian-embedded/javahomeJar/lib"))
         return strcpy(resolved_path, path + 1);
     else {
         printf("STUB: realpath(%s)\n", path);

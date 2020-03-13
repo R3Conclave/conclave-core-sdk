@@ -64,7 +64,6 @@ jlong JNICALL Java_com_r3_sgx_core_host_internal_Native_createEnclave
     sgx_enclave_id_t enclave_id = {0};
     int updated = 0;
     auto returnCode = sgx_create_enclave(path.c_str, isDebug, &token, &updated, &enclave_id, nullptr);
-    printf("Create enclave return code %i\n", returnCode);
     if (returnCode == SGX_SUCCESS) {
         return enclave_id;
     } else {
