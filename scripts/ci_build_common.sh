@@ -3,7 +3,6 @@ set -xeuo pipefail
 # Sets up common build script parameters and functions
 
 SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
-source ${SCRIPT_DIR}/oblivium_version.sh
 
 HOST_CORE_DUMP_DIR=/var/crash
 CODE_HOST_DIR=$PWD

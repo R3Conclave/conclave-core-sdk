@@ -40,7 +40,7 @@ subprojects {
         registryCredentials = publishRegistryCredentials
         inputDir = file("$buildDir/docker/build")
         def imageName = "$publishRegistryUrl/com.r3.sgx/${project.name}"
-        tags = ["$imageName:$docker_image_release_tag", "$imageName:latest"]
+        tags = ["$imageName:${rootProject.version}", "$imageName:latest"]
         def dummyOutput = file("${project.buildDir}/docker/dummy-build")
         outputs.file(dummyOutput)
         doLast {
@@ -51,7 +51,7 @@ subprojects {
     task pushImagePublish(type: DockerPushImage, dependsOn: buildImagePublish) {
         registryCredentials = publishRegistryCredentials
         imageName = "$publishRegistryUrl/com.r3.sgx/${project.name}"
-        tag = docker_image_release_tag
+        tag = rootProject.version.toString()
         inputs.files(buildImagePublish.outputs)
         def dummyOutput = file("${project.buildDir}/docker/dummy-push")
         outputs.file(dummyOutput)

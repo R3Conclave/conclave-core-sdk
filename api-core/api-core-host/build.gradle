@@ -15,5 +15,5 @@ dependencies {
     testImplementation project(":enclave-dynamic-testing")
     testImplementation "org.jetbrains.kotlin:kotlin-test"
 
-    testRuntimeOnly "com.r3.sgx:native-host-simulation:$oblivium_dependency_version"
+    testRuntimeOnly "com.r3.sgx:native-host-simulation:${rootProject.version}"
 }
