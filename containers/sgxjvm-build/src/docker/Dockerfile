@@ -1,11 +1,11 @@
-FROM ubuntu:xenial-20180417
+FROM ubuntu:bionic-20200219
 
 # A build container for the full sgxjvm project.
 # TODO Separate out the enclave build and make it completely reproducible.
 
-LABEL version="1.0"
+LABEL version="1.1"
 LABEL description="SGXJVM build container"
-LABEL maintainer="andras.slemmer@r3.com"
+LABEL maintainer="SGX@r3.com"
 
 RUN apt-get update -qqy
 RUN apt-get install -qqy \
@@ -16,8 +16,11 @@ RUN apt-get install -qqy \
 
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-RUN add-apt-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
+RUN add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
 RUN apt-get update -y
 RUN apt-get install -y \
     autoconf \
@@ -30,7 +33,6 @@ RUN apt-get install -y \
     gdb \
     gdbserver \
     git \
-    libcurl3 \
     libcurl4-openssl-dev \
     libprotobuf-dev \
     libssl-dev \
@@ -38,6 +40,7 @@ RUN apt-get install -y \
     libunwind8 \
     make \
     ocaml \
+    ocamlbuild \
     openjdk-8-jdk \
     openssl \
     patch \
