@@ -11,6 +11,7 @@ import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Copy
@@ -89,19 +90,20 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
             val classLoader = SgxEnclavePlugin::class.java.classLoader
             val manifestUrls = classLoader.getResources(MANIFEST_NAME).toList()
             for (manifestUrl in manifestUrls) {
-                return manifestUrl.openStream().use(::getArtifactMetadataFromManifestStream) ?: continue
+                return manifestUrl.openStream().use {
+                    Manifest(it).mainAttributes.getValue("Conclave-Version")
+                } ?: continue
             }
             throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
-        }
-
-        private fun getArtifactMetadataFromManifestStream(manifestStream: InputStream): SDKVersion? {
-            return Manifest(manifestStream).mainAttributes.getValue("Conclave-Version")
         }
     }
 
     override fun apply(target: Project) {
         val sdkVersion = readVersionFromPluginManifest()
         val baseDirectory = target.buildDir.toPath().resolve("sgx-plugin")
+
+        // Allow users to specify the enclave dependency like this: implementation "com.r3.conclave:conclave-enclave"
+        autoconfigureDependencyVersions(target, sdkVersion)
 
         target.logger.info("[Conclave] Applying the shadow plugin")
         if (!target.pluginManager.hasPlugin("java")) {
@@ -195,7 +197,6 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
         val createDummyKey = target.tasks.create("createDummyKey", GenerateDummyMrsignerKey::class.java) { task ->
             task.outputKey.set(target.file("${target.buildDir}/dummy_key.pem"))
         }
-
 
         // Enclave configuration, signing
         for (type in BuildType.values()) {
@@ -299,6 +300,20 @@ class SgxEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : 
 
         target.tasks.create("signedEnclaveJars") { task ->
             task.setDependsOn(BuildType.values().map { "signedEnclave${it}Jar" })
+        }
+    }
+
+    private fun autoconfigureDependencyVersions(target: Project, sdkVersion: SDKVersion) {
+        target.configurations.all { configuration ->
+            configuration.withDependencies { dependencySet ->
+                dependencySet.filterIsInstance<ExternalDependency>()
+                        .filter { it.group == "com.r3.conclave" && it.version.isNullOrEmpty() }
+                        .forEach { dep ->
+                            dep.version {
+                                it.require(sdkVersion)
+                            }
+                        }
+            }
         }
     }
 }

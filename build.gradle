@@ -18,18 +18,18 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
+// 0.1-SNAPSHOT = "the release preparing for beta 1"
+version = "0.1-SNAPSHOT"
+
 ext {
     environment = createEnvironment(
-            'OBLIVIUM_VERSION',
-            'OBLIVIUM_DEPENDENCY_VERSION',
             'OBLIVIUM_MAVEN_URL',
             'OBLIVIUM_MAVEN_REPOSITORY',
             'OBLIVIUM_MAVEN_USERNAME',
             'OBLIVIUM_MAVEN_PASSWORD',
             'OBLIVIUM_CONTAINER_REGISTRY_URL'
     )
-    docker_image_release_tag = environment.OBLIVIUM_VERSION
-    oblivium_dependency_version = environment.OBLIVIUM_DEPENDENCY_VERSION
+    oblivium_dependency_version = project.version.toString()
 }
 
 import groovy.io.FileType
@@ -69,7 +69,7 @@ if (buildDirLocationOverride != null) {
 
 subprojects {
     group = "com.r3.sgx"
-    version = environment.OBLIVIUM_VERSION
+    version = rootProject.version
 
     repositories {
         mavenCentral()
@@ -388,7 +388,7 @@ task sdkCopyExtras(type: Copy) {
     into "$buildDir/sdk"
     doLast {
         // Patch the gradle.properties file in the sample app so it uses the SDK copy of the repository.
-        file("$buildDir/sdk/hello-world/gradle.properties").write("conclave.repo=../repo\r\n")
+        file("$buildDir/sdk/hello-world/gradle.properties").write("conclaveRepo=../repo\r\nconclaveVersion=${rootProject.version}")
     }
 }
 
@@ -401,9 +401,9 @@ task sdkFiles(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Source
 
 task sdk(type: Zip, dependsOn: ["sdkFiles"]) {
     group = "SDK Build"
-    archiveFileName = "conclave-sdk-${environment.OBLIVIUM_VERSION}.zip"
+    archiveFileName = "conclave-sdk-${rootProject.version}.zip"
     description = "Build the SDK downloadable file that we ship to end users."
-    def outName = "conclave-sdk-${environment.OBLIVIUM_VERSION}"
+    def outName = "conclave-sdk-${rootProject.version}"
     from("$buildDir/sdk") {
         into(outName)
     }

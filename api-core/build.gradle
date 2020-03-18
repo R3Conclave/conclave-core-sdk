@@ -12,5 +12,5 @@ plugins {
  */
 task generateApi(type: GenerateApi) {
     baseName = 'sgxjvm-apicore'
-    version = environment.OBLIVIUM_VERSION
+    version = rootProject.version.toString()
 }

@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    implementation "com.r3.conclave:conclave-enclave:0.1-SNAPSHOT"
+    implementation "com.r3.conclave:conclave-enclave"
 }
 
 jar {

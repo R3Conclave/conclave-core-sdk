@@ -9,12 +9,7 @@ import static org.gradle.api.JavaVersion.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 subprojects {
-    ext {
-        oblivium_version = System.getenv('OBLIVIUM_DEPENDENCY_VERSION')
-    }
-
     group = "com.r3.sgx"
-    version = System.getenv('OBLIVIUM_VERSION')
 
     repositories {
         mavenCentral()

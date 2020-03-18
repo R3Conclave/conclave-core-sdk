@@ -49,9 +49,9 @@ Create or modify a file called `settings.gradle` in your project root directory 
 pluginManagement {
     repositories {
         maven {
-            def repoPath = file(rootDir.relativePath(file(settings['conclave.repo'])))
+            def repoPath = file(rootDir.relativePath(file(conclaveRepo)))
             if (repoPath == null)
-                throw new Exception("Make sure the 'conclave.repo' setting exists in gradle.properties, or your \$HOME/gradle.properties file. See the Conclave tutorial on https://docs.conclave.net")
+                throw new Exception("Make sure the 'conclaveRepo' setting exists in gradle.properties, or your \$HOME/gradle.properties file. See the Conclave tutorial on https://docs.conclave.net")
             else if (!new File(repoPath, "com").isDirectory())
                 throw new Exception("The $repoPath directory doesn't seem to exist or isn't a Maven repository; it should be the SDK 'repo' subdirectory. See the Conclave tutorial on https://docs.conclave.net")
             url = repoPath
@@ -61,51 +61,52 @@ pluginManagement {
         jcenter()
         mavenCentral()
     }
+
+    plugins {
+        id 'com.r3.sgx.enclave' version conclaveVersion apply false
+    }
 }
 
 include 'enclave'
 include 'host'
 ```
+
+This boilerplate is unfortunately necessary to copy/paste into each project that uses Conclave. It sets up Gradle to
+locate the plugin that configures the rest of the boilerplate build logic for you ;)
     
-The `pluginManagement` block tells Gradle to use a property called `conclave.repo` to find the `repo` directory
+The `pluginManagement` block tells Gradle to use a property called `conclaveRepo` to find the `repo` directory
 in your SDK download. Because developers on your team could unpack the SDK anywhere, they must configure the path
 before the build will work. The code above will print a helpful error if they forget or get it wrong.
 
 To set the value a developer can add to [the `gradle.properties` file](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html#declare_properties_in_gradle_properties_file)
-a line like this:
+a couple of lines like this:
 
-```
-conclave.repo=/path/to/sdk/repo
+```text
+conclaveRepo=/path/to/sdk/repo
+conclaveVersion=0.1
 ```
 
-Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory. 
+0.1 here means use beta 1.
+
+Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory.
+You may wish to put the version in the project's `gradle.properties` file and the path in each developer's personal
+`gradle.properties`. Alternatively just add a `sdk` directory to the `.gitignore` and require everyone to unpack the
+SDK to the source tree. 
     
 ### `build.gradle`
     
-Add the following code to your root `build.gradle` file to import the repository and
-load the enclave Gradle plugin:
+Add the following code to your root `build.gradle` file to import the repository:
 
 ```groovy
-plugins {
-    id 'com.r3.sgx.enclave' version '2.0-nightly-224-g32e160dbae' apply false
-}
-
 subprojects {
     repositories {
         maven {
-            url = rootProject.file(findProperty("conclave.repo"))
+            url = rootProject.file(conclaveRepo)
         }
         mavenCentral()
     }
 }
 ```
-
-This will ensure the SDK repository can be found in both `enclave` and `host` projects. The `plugin` block tells
-Gradle to load but not integrate the enclave plugin.
-
-!!! warning
-    Although tempting to load and apply the plugin in the enclave module only, this can cause trouble with Gradle.
-    Loading the plugin without applying it like in the above example avoids the issue.
 
 ### Configure the host build
 
@@ -113,11 +114,12 @@ In the host module add a dependency on the Conclave host library:
 
 ```groovy hl_lines="2"
 dependencies {
-    implementation "com.r3.conclave:conclave-host:0.1-SNAPSHOT"
+    implementation "com.r3.conclave:conclave-host"
 }
 ```
 
-<!--- TODO(mike): CON-61: Sort out versioning -->
+You don't need to specify the version number for Conclave libraries. The plugin will set the version to match the
+plugin version automatically.
 
 SGX enclaves can be be built in one of three modes: simulation, debug and release. Simulation mode doesn't require any
 SGX capable hardware. Debug executes the enclave as normal but allows the host process to snoop on and modify the
@@ -157,7 +159,7 @@ and a dependency on the Conclave enclave library:
 
 ```groovy hl_lines="2"
 dependencies {
-    implementation "com.r3.conclave:conclave-enclave:0.1-SNAPSHOT"
+    implementation "com.r3.conclave:conclave-enclave"
 }
 ```
 
