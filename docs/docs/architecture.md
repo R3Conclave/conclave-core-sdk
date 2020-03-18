@@ -113,7 +113,7 @@ sequenceDiagram
 The first time SGX is used on a machine there are interactions with either the cloud provider or Intel to retrieve
 machine certificates proving authenticity. The host then gets a remote attestation (`EnclaveInstanceInfo`) to the
 client somehow, the client verifies it and optionally asks Intel if the hardware setup of the machine is still
-considered to be secure, or if there are known vulnerabilities (see [TCB recovery](tcb-recovery.md)). This can be
+considered to be secure, or if there are known vulnerabilities (see [TCB recovery](renewability.md)). This can be
 repeated as often as the client wants, e.g. every day. Once this is done the client can send messages to the enclave
 through the host.
 

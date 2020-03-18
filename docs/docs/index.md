@@ -23,23 +23,26 @@ design. This will explain the concepts referred to in the rest of the documentat
 
 [**Architectural overview.**](architecture.md) This explains the core Conclave APIs.
 
-[**Machine setup.**](machine-setup.md) You need a correctly configured Linux server to run Conclave in production. 
-
 [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
 
-[**Deployment.**](deployment.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
-and then keep your machine trusted by applying updates.
+[**Machine setup.**](/machine-setup/) Learn how to obtain SGX capable hardware, set it up, deploy to production
+and then keep your machine trusted by applying updates. 
 
 [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
 
-## Beta 1
+## Known issues
 
 !!! warning
-    This is a beta release of Conclave. It's not yet suitable for running in production.
-    
-Known issues:
+    This is a beta release of Conclave. You may not run enclaves built with it in production.
 
-1. There's currently no API for sending and receiving encrypted messages to/from enclaves.
-2. The JVM we use doesn't presently implement any side channel mitigations.
-3. Enclave keys aren't yet stable and change across enclave restarts, forcing re-attestation.
-4. Some system level exceptions like divide by zero or de-referencing a null pointer crash the enclave/host process.
+Beta 1 ships with the following known issues:
+
+1. The API may change up until version 1.0. Although we have no current plans to change the API, small changes like 
+   package names may still occur and we may adapt the API based on user feedback during the beta period.
+2. There's currently no API for sending and receiving encrypted messages to/from enclaves.
+3. Conclave doesn't presently implement any side channel attack mitigations.
+4. Enclave keys aren't yet stable and change across enclave restarts, forcing re-attestation each time the host
+   process starts.
+5. Some system level exceptions like divide by zero or de-referencing a null pointer crash the enclave/host process.
+6. The type of attestation used currently requires you to sign up with and be whitelisted by Intel. Future versions
+   will implement "DCAP attestation" which will allow the owner of the hardware to whiteliste enclaves, not just Intel.

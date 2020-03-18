@@ -15,14 +15,19 @@ nav:
     - Security: security.md
     - API: api/index.html
   - Operations:
-    - Server deployment: machine-setup.md
-    - TCB recovery: tcb-recovery.md
+    - Server deployment:
+      - Machine setup: machine-setup.md
+      - IAS: ias.md
+    - Enclave signing: signing.md
+    - Renewability: renewability.md
 
 theme:
   name: 'material'
   palette:
     primary: 'red'
     accent: 'red'
+  feature:
+    tabs: true
 
 markdown_extensions:
   - admonition
