@@ -61,7 +61,8 @@ the protagonist has anterograde amenesia](https://en.wikipedia.org/wiki/Memento_
 ## Side channel attacks
 
 Side channel attacks are a way to break encryption without actually defeating the underlying algorithms, by making very
-precise timing observations from the outside of a machine or program doing a secure computation.
+precise observations from the outside of a machine or program doing a secure computation. Those observations may be
+of timings or power draw fluctuations.
 
 Because enclaves run in an environment controlled by an untrusted host, we must assume the operator of the host hardware
 is doing these kinds of observations in an attempt to break the security of the enclave.
@@ -138,7 +139,7 @@ Not all enclaves operate on secret data. Some types of enclave are used for thei
 work with secret data unaccessible to the host. For those kinds of enclave it's sufficient to protect the signing keys
 rather than all data the enclave accesses. Other types of enclave work purely with secret data, but expect that the host
 isn't normally malicious: in this scenario enclaves are being used to slow down or stop attackers in the face of a 
-hacked host network. It thus makes up one part of a the standard suite of security measures.   
+hacked host network. It thus makes up one part of a standard suite of security measures.   
 
 Because the performance/privacy tradeoff presented by side channel attacks can vary so widely, and this is an active area
 of academic research, the expectation is that every new Conclave version will provide new tools and tunable settings 

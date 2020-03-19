@@ -43,6 +43,6 @@ Beta 1 ships with the following known issues:
 3. Conclave doesn't presently implement any side channel attack mitigations.
 4. Enclave keys aren't yet stable and change across enclave restarts, forcing re-attestation each time the host
    process starts.
-5. Some system level exceptions like divide by zero or de-referencing a null pointer crash the enclave/host process.
+5. Some system level exceptions like divide by zero or using null reference crash the enclave/host process.
 6. The type of attestation used currently requires you to sign up with and be whitelisted by Intel. Future versions
    will implement "DCAP attestation" which will allow the owner of the hardware to whiteliste enclaves, not just Intel.
