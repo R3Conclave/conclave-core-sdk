@@ -28,8 +28,11 @@ dependencies {
 
 jar {
     manifest {
-        // This is the specific version, and not the dynamic version that Gradle uses.
-        attributes("Conclave-Version": rootProject.ext.environment.OBLIVIUM_VERSION)
-        attributes("Conclave-Docker-Registry": rootProject.ext.environment.OBLIVIUM_CONTAINER_REGISTRY_URL)
+        attributes("Conclave-Version": rootProject.version.toString())
+        def url = rootProject.ext.environment.OBLIVIUM_CONTAINER_REGISTRY_URL
+        // Handle syncing an IDE outside the devenv environment.
+        if (url == null)
+            url = "localhost:5000"
+        attributes("Conclave-Docker-Registry": url)
     }
 }

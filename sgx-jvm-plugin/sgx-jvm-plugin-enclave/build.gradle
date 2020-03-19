@@ -44,9 +44,7 @@ compileKotlin {
 
 jar {
     manifest {
-        // TODO(mike): Simplify how we handle versioning. Do we really need this to be passed in via environment vars?
-        def ver = rootProject.environment.OBLIVIUM_DEPENDENCY_VERSION
-        if (ver == null) ver = "Unknown"  // Probably syncing in an IDE that's outside the devenv container.
-        attributes("Conclave-Version": ver)
+        // This is used in the plugin to add implicit dependencies of the right version.
+        attributes("Conclave-Version": rootProject.version.toString())
     }
 }

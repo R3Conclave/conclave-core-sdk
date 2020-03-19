@@ -41,9 +41,9 @@ dependencies {
     // TODO There's really no need to include all three dependencies. The host can only use the one that matches with
     //      the mode the enclave was built against. So consider a gradle plugin for the host that automatically adds the
     //      relevant dependency based on the enclave.
-    runtimeOnly "com.r3.sgx:native-host-release:$oblivium_dependency_version"
-    runtimeOnly "com.r3.sgx:native-host-debug:$oblivium_dependency_version"
-    runtimeOnly "com.r3.sgx:native-host-simulation:$oblivium_dependency_version"
+    runtimeOnly "com.r3.sgx:native-host-release:${rootProject.version}"
+    runtimeOnly "com.r3.sgx:native-host-debug:${rootProject.version}"
+    runtimeOnly "com.r3.sgx:native-host-simulation:${rootProject.version}"
 
     testImplementation project(":conclave-enclave")
     testImplementation project(":enclave-dynamic-testing")

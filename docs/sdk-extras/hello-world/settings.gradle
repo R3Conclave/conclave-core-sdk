@@ -1,9 +1,9 @@
 pluginManagement {
     repositories {
         maven {
-            def repoPath = file(rootDir.relativePath(file(settings['conclave.repo'])))
+            def repoPath = file(rootDir.relativePath(file(conclaveRepo)))
             if (repoPath == null)
-                throw new Exception("Make sure the 'conclave.repo' setting exists in gradle.properties, or your \$HOME/gradle.properties file. See the Conclave tutorial on https://docs.conclave.net")
+                throw new Exception("Make sure the 'conclaveRepo' setting exists in gradle.properties, or your \$HOME/gradle.properties file. See the Conclave tutorial on https://docs.conclave.net")
             else if (!new File(repoPath, "com").isDirectory())
                 throw new Exception("The $repoPath directory doesn't seem to exist or isn't a Maven repository; it should be the SDK 'repo' subdirectory. See the Conclave tutorial on https://docs.conclave.net")
             url = repoPath
@@ -12,6 +12,10 @@ pluginManagement {
         gradlePluginPortal()
         jcenter()
         mavenCentral()
+    }
+
+    plugins {
+        id 'com.r3.sgx.enclave' version conclaveVersion apply false
     }
 }
 
