@@ -22,6 +22,10 @@
 		return SGX_ERROR_INVALID_PARAMETER;\
 } while (0)
 
+#define ADD_ASSIGN_OVERFLOW(a, b) (	\
+	((a) += (b)) < (b)	\
+)
+
 
 typedef struct ms_jvm_ecall_t {
 	void* ms_bufferIn;
@@ -106,9 +110,9 @@ static sgx_status_t SGX_CDECL sgx_jvm_ecall(void* pms)
 	}
 
 	jvm_ecall(_in_bufferIn, _tmp_bufferInLen);
+
 err:
 	if (_in_bufferIn) free(_in_bufferIn);
-
 	return status;
 }
 
@@ -130,13 +134,13 @@ static sgx_status_t SGX_CDECL sgx_ecall_attach_thread(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[3];
+	struct {void* ecall_addr; uint8_t is_priv; uint8_t is_switchless;} ecall_table[3];
 } g_ecall_table = {
 	3,
 	{
-		{(void*)(uintptr_t)sgx_jvm_ecall, 0},
-		{(void*)(uintptr_t)sgx_ecall_finalize_enclave, 0},
-		{(void*)(uintptr_t)sgx_ecall_attach_thread, 0},
+		{(void*)(uintptr_t)sgx_jvm_ecall, 0, 0},
+		{(void*)(uintptr_t)sgx_ecall_finalize_enclave, 0, 0},
+		{(void*)(uintptr_t)sgx_ecall_attach_thread, 0, 0},
 	}
 };
 
@@ -171,7 +175,8 @@ sgx_status_t SGX_CDECL jvm_ocall(void* bufferIn, int bufferInLen)
 
 	CHECK_ENCLAVE_POINTER(bufferIn, _len_bufferIn);
 
-	ocalloc_size += (bufferIn != NULL) ? _len_bufferIn : 0;
+	if (ADD_ASSIGN_OVERFLOW(ocalloc_size, (bufferIn != NULL) ? _len_bufferIn : 0))
+		return SGX_ERROR_INVALID_PARAMETER;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
 	if (__tmp == NULL) {
@@ -215,7 +220,8 @@ sgx_status_t SGX_CDECL debug_print(const char* string, int n)
 
 	CHECK_ENCLAVE_POINTER(string, _len_string);
 
-	ocalloc_size += (string != NULL) ? _len_string : 0;
+	if (ADD_ASSIGN_OVERFLOW(ocalloc_size, (string != NULL) ? _len_string : 0))
+		return SGX_ERROR_INVALID_PARAMETER;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
 	if (__tmp == NULL) {
@@ -228,6 +234,10 @@ sgx_status_t SGX_CDECL debug_print(const char* string, int n)
 
 	if (string != NULL) {
 		ms->ms_string = (const char*)__tmp;
+		if (_len_string % sizeof(*string) != 0) {
+			sgx_ocfree();
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
 		if (memcpy_s(__tmp, ocalloc_size, string, _len_string)) {
 			sgx_ocfree();
 			return SGX_ERROR_UNEXPECTED;
@@ -294,7 +304,8 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 
 	CHECK_ENCLAVE_POINTER(cpuinfo, _len_cpuinfo);
 
-	ocalloc_size += (cpuinfo != NULL) ? _len_cpuinfo : 0;
+	if (ADD_ASSIGN_OVERFLOW(ocalloc_size, (cpuinfo != NULL) ? _len_cpuinfo : 0))
+		return SGX_ERROR_INVALID_PARAMETER;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
 	if (__tmp == NULL) {
@@ -308,6 +319,10 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 	if (cpuinfo != NULL) {
 		ms->ms_cpuinfo = (int*)__tmp;
 		__tmp_cpuinfo = __tmp;
+		if (_len_cpuinfo % sizeof(*cpuinfo) != 0) {
+			sgx_ocfree();
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
 		memset(__tmp_cpuinfo, 0, _len_cpuinfo);
 		__tmp = (void *)((size_t)__tmp + _len_cpuinfo);
 		ocalloc_size -= _len_cpuinfo;
@@ -428,7 +443,8 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 
 	CHECK_ENCLAVE_POINTER(waiters, _len_waiters);
 
-	ocalloc_size += (waiters != NULL) ? _len_waiters : 0;
+	if (ADD_ASSIGN_OVERFLOW(ocalloc_size, (waiters != NULL) ? _len_waiters : 0))
+		return SGX_ERROR_INVALID_PARAMETER;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
 	if (__tmp == NULL) {
@@ -441,6 +457,10 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 
 	if (waiters != NULL) {
 		ms->ms_waiters = (const void**)__tmp;
+		if (_len_waiters % sizeof(*waiters) != 0) {
+			sgx_ocfree();
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
 		if (memcpy_s(__tmp, ocalloc_size, waiters, _len_waiters)) {
 			sgx_ocfree();
 			return SGX_ERROR_UNEXPECTED;

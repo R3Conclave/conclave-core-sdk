@@ -15,6 +15,7 @@ then
 else
     export EXCLUDE_NATIVE=""
 fi
+export GRADLE_OPTS="-Dorg.gradle.workers.max=$(nproc)"
 
 mkdir -p /home/$(id -un)/.gradle
 mkdir -p /home/$(id -un)/.ccache

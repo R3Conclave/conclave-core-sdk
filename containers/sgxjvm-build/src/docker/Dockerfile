@@ -59,6 +59,11 @@ RUN apt-get install -y \
     kubectl \
     docker-ce
 
+# Linux SGX mitigation binaries
+RUN curl -sSL -o /opt/as.ld.objdump.gold.r1.tar.gz https://download.01.org/intel-sgx/sgx-linux/2.9/as.ld.objdump.gold.r1.tar.gz
+RUN echo "eff285796ba97b4bcafc1e2c88534e486524d3295448207381cc9664a155e70d  /opt/as.ld.objdump.gold.r1.tar.gz" | sha256sum -c -
+RUN tar -xaf /opt/as.ld.objdump.gold.r1.tar.gz -C /usr/local/bin --strip=2
+
 # Some incantation that's necessary to get rid of some Python errors that appear when building docs.
 # https://stackoverflow.com/a/59596814/2248578
 RUN pip3 install wheel
