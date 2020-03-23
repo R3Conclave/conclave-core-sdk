@@ -22,7 +22,7 @@ tasks.withType(Test) {
 dependencies {
     // This plugin will use Gradle's own built-in Kotlin library at runtime.
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.bmuschko:gradle-docker-plugin:$docker_version"
+    implementation "com.bmuschko:gradle-docker-plugin:5.2.0"
     implementation project(':sgx-jvm-plugin:sgx-jvm-plugin-enclave')
 }
 
