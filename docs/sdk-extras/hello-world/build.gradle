@@ -1,4 +1,22 @@
+plugins {
+    id 'java'
+    id 'idea'
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+    }
+}
+
 subprojects {
+    apply plugin: 'idea'
+    idea {
+        module {
+            downloadJavadoc = true
+        }
+    }
+
     repositories {
         maven {
             url = rootProject.file(conclaveRepo)

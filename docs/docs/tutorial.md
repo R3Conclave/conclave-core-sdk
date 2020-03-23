@@ -97,8 +97,26 @@ SDK to the source tree.
     
 Add the following code to your root `build.gradle` file to import the repository:
 
-```groovy
+```groovy hl_lines="20 21 22 23 24 25"
+plugins {
+    id 'java'
+    id 'idea'
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+    }
+}
+
 subprojects {
+    apply plugin: 'idea'
+    idea {
+        module {
+            downloadJavadoc = true
+        }
+    }
+
     repositories {
         maven {
             url = rootProject.file(conclaveRepo)
@@ -107,6 +125,13 @@ subprojects {
     }
 }
 ```
+
+!!! tip
+    Most of this boilerplate isn't strictly necessary except for the highlighted region. However, the rest works around
+    [a bug in IntelliJ IDEA](https://youtrack.jetbrains.com/issue/IDEA-231254) if you wish to use that IDE in which 
+    interactive JavaDocs would otherwise not be available. To benefit from the workaround you should run `./gradlew idea`
+    to generate your IntelliJ project before opening it. If you use the regular "import from Gradle" workflow then
+    everything will work fine except JavaDoc integration.
 
 ### Configure the host build
 
@@ -124,8 +149,7 @@ plugin version automatically.
 SGX enclaves can be be built in one of three modes: simulation, debug and release. Simulation mode doesn't require any
 SGX capable hardware. Debug executes the enclave as normal but allows the host process to snoop on and modify the
 protected address space, so provides no protection. Release locks out the host and provides the standard SGX
-security model, but (at this time) requires the enclave to be signed with a key whitelisted by Intel. See ["Deployment"](deployment.md)
-for more information on this.
+security model, but (at this time) requires the enclave to be [signed](signing.md) with a key whitelisted by Intel. 
 
 Add this bit of code to your Gradle file to let the mode be chosen from the command line:
 
