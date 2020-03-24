@@ -30,7 +30,7 @@ ExternalProject_Add(linux-sgx-ext
         TEST_COMMAND "")
 
 ExternalProject_Add_Step(linux-sgx-ext download-prebuilt
-        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/libippcp.a] || ./download_prebuilt.sh"
+        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a] || ./download_prebuilt.sh"
         WORKING_DIRECTORY ${BUILD_SRC_DIR}
         DEPENDERS build
         DEPENDEES configure)
