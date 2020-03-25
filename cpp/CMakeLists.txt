@@ -16,7 +16,6 @@ add_subdirectory(openjdk8)
 add_subdirectory(avian)
 add_subdirectory(zlib)
 add_subdirectory(dummy)
-add_subdirectory(binutils)
 
 add_subdirectory(jvm-edl)
 add_subdirectory(jvm-host-enclave-common)

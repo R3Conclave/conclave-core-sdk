@@ -40,7 +40,7 @@ open class BuildUnsignedEnclave @Inject constructor(objects: ObjectFactory) : Sg
         val binutilsDirectory = inputBinutilsDirectory.asFile.get()
         project.exec { spec ->
             spec.commandLine(listOf(
-                "ld",
+                File(binutilsDirectory, "ld"),
                 "-pie", "--entry=enclave_entry",
                 "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic",
                 "-o", outputEnclave.asFile.get())

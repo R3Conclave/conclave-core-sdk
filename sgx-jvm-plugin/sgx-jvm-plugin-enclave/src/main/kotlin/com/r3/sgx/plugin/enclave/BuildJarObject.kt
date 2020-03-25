@@ -45,7 +45,7 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : SgxTask(
         project.exec { spec ->
             spec.workingDir(outputDir)
             spec.commandLine(
-                    "ld",
+                    File(binutilsDirectory, "ld"),
                     "-r",
                     "-b", "binary",
                     embeddedJarName,

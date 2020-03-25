@@ -5,12 +5,11 @@ plugins {
 def cppBuildDir = project(":cpp").buildDir
 
 jar {
-    dependsOn(":cpp:compileBinutilsLdSimulation")
-    def ldBuildDir = "$cppBuildDir/Simulation/binutils/binutils-ext-prefix/src/binutils-ext/ld"
+    dependsOn(":cpp:compileLinuxSgxSimulation")
+    def ldBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/external/toolset/ld"
     into "com/r3/sgx/binutils", {
         from(ldBuildDir) {
-            include "ld-new"
-            rename "ld-new", "ld-static"
+            include "ld"
         }
     }
 }

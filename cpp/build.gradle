@@ -32,7 +32,6 @@ static String createCmakeTaskName(type) { return "createCmakeBuild$type" }
 static String compileTaskNameEnclave(type) { return "compileEnclave$type" }
 static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
-static String compileTaskNameBinutilsLd(type) { return "compileBinutilsLd$type" }
 
 def maxWorkers = properties["org.gradle.workers.max"]
 
@@ -116,24 +115,6 @@ for (type in types) {
         )
 
         outputs.dir("${buildDirectory(type)}/linux-sgx")
-    }
-
-    tasks.create(compileTaskNameBinutilsLd(type), Exec) {
-        dependsOn(createCmakeTaskName(type))
-
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
-        workingDir(buildDirectory(type))
-
-        commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
-                "--target", "binutils-ext"
-        )
-
-        inputs.files(
-                "${buildDirectory(type)}/Makefile"
-        )
-
-        outputs.dir("${buildDirectory(type)}/binutils")
     }
 }
 
