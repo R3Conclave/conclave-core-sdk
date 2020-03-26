@@ -50,13 +50,13 @@ class EncryptionHandlerTest: TestEnclavesBasedTest() {
     fun testEndToEndEncryption() {
         val builder = EnclaveBuilder(includeClasses = listOf(Curve25519::class.java))
         val attestationConfiguration = EpidAttestationHostConfiguration(
-                quoteType = SgxQuoteType32.LINKABLE,
+                quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid)
         )
         val hostHandler = EnclaveletHostHandler(attestationConfiguration)
         withEnclaveHandle(hostHandler, EncryptingEchoEnclave::class.java, builder, Consumer { handle ->
             val connection = handle.connection
-            val attestedQuote = TrustedSgxQuote.fromSignedQuote(connection.attestation.getQuote())
+            val attestedQuote = TrustedSgxQuote.fromSignedQuote(connection.attestation.getSignedQuote())
             val attestedSigVerifer = AttestedSignatureVerifier(
                     SignatureSchemeId.EDDSA_ED25519_SHA512,
                     PublicKeyAttester(attestedQuote)

@@ -1,5 +1,6 @@
 package com.r3.conclave.sample.host;
 
+import com.r3.conclave.common.OpaqueBytes;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.InvalidEnclaveException;
 import org.junit.jupiter.api.AfterAll;
@@ -16,7 +17,7 @@ public class HostTest {
     @BeforeAll
     static void startup() throws InvalidEnclaveException {
         enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
-        enclave.start();
+        enclave.start(null, null);
     }
 
     @AfterAll

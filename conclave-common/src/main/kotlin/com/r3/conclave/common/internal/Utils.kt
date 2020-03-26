@@ -1,5 +1,7 @@
 package com.r3.conclave.common.internal
 
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.nio.ByteBuffer
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
@@ -54,6 +56,15 @@ fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(i
 
 fun ByteBuffer.getRemainingBytes(): ByteArray = getBytes(remaining())
 
-fun ByteBuffer.checkNoRemaining() {
-    check(!hasRemaining()) { "Expected no more remaining bytes. First 10 bytes: ${getRemainingBytes().take(10)}" }
+fun DataInputStream.readBytes(length: Int): ByteArray {
+    val bytes = ByteArray(length)
+    readFully(bytes)
+    return bytes
+}
+
+fun DataInputStream.readLengthPrefixBytes(): ByteArray = readBytes(readInt())
+
+fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray) {
+    writeInt(bytes.size)
+    write(bytes)
 }

@@ -65,7 +65,8 @@ class SigningEnclave : Enclavelet() {
         return EncryptionRespondingHandler(
                 authKeyPair = txSigningKeyPair,
                 authSignatureScheme = signatureScheme,
-                downstream = SigningHandler())
+                downstream = SigningHandler()
+        )
     }
 
     inner class SigningHandler : BytesHandler() {

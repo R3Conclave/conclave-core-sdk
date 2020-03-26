@@ -1,5 +1,6 @@
 package com.r3.sgx.core.common
 
+import com.r3.conclave.common.internal.getBytes
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -32,10 +33,14 @@ class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
 
     /** Get the [ByteBuffer] of the pointed-to data. */
     fun getBuffer(): ByteBuffer = originalBuffer.duplicate().order(ByteOrder.LITTLE_ENDIAN)
+
     /** Read the pointed-to data into [R] */
     fun read(): R = encoder.read(getBuffer())
+
     /** Write the pointed-to data from [R] */
     fun write(value: R) = encoder.write(getBuffer(), value)
+
+    fun readBytes(): ByteArray = getBuffer().getBytes(encoder.size())
 
     override fun toString(): String = CursorPrettyPrint.print(this)
 

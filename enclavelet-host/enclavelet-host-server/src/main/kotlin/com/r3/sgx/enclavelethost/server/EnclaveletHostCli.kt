@@ -1,6 +1,6 @@
 package com.r3.sgx.enclavelethost.server
 
-import org.slf4j.LoggerFactory
+import com.r3.sgx.core.host.loggerFor
 import picocli.CommandLine
 import java.io.File
 import java.lang.reflect.Field
@@ -14,7 +14,7 @@ import java.util.concurrent.Callable
 )
 class EnclaveletHostCli: Callable<Unit> {
     companion object {
-        private val log = LoggerFactory.getLogger(EnclaveletHostCli::class.java)
+        private val log = loggerFor<EnclaveletHostCli>()
 
         @JvmStatic
         fun main(args: Array<String>) {

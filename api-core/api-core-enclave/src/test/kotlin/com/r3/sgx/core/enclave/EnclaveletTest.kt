@@ -56,13 +56,13 @@ class EnclaveletTest : TestEnclavesBasedTest() {
     @Test
     fun simpleEnclaveletTest() {
         val attestationConfiguration = EpidAttestationHostConfiguration(
-                quoteType = SgxQuoteType32.LINKABLE,
+                quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid)
         )
         val handler = EnclaveletHostHandler(attestationConfiguration)
         withEnclaveHandle(handler, SigningEnclave::class.java, block = Consumer { enclaveHandle ->
             val connection = enclaveHandle.connection
-            val signedQuoteCursor = connection.attestation.getQuote()
+            val signedQuoteCursor = connection.attestation.getSignedQuote()
 
             val enclaveOcalls = BytesRecordingHandler()
             val (_, channel) = connection.channels.addDownstream(enclaveOcalls).get()

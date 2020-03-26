@@ -18,8 +18,9 @@ class SignatureSchemeEdDSA(
         private val randomnessSource: SecureRandom = SecureRandom()
 ) : SignatureScheme {
     companion object {
-        val securityProvider: Provider = EdDSASecurityProvider()
-        const val ALGORITHM: String = EdDSAEngine.SIGNATURE_ALGORITHM
+        private val securityProvider = EdDSASecurityProvider()
+
+        fun createSignature(): Signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, securityProvider)
     }
 
     override val spec = SignatureSchemeSpec(
@@ -39,7 +40,7 @@ class SignatureSchemeEdDSA(
 
     override fun sign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
-        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, securityProvider)
+        val signature = createSignature()
         signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()
@@ -48,7 +49,7 @@ class SignatureSchemeEdDSA(
     override fun verify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) {
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to check!")
-        val signature = Signature.getInstance(EdDSAEngine.SIGNATURE_ALGORITHM, securityProvider)
+        val signature = createSignature()
         signature.initVerify(publicKey)
         signature.update(clearData)
         if (!signature.verify(signatureData)) {

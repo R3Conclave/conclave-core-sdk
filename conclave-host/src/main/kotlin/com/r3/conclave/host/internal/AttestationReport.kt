@@ -10,15 +10,15 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.getRemainingBytes
-import com.r3.conclave.common.internal.parseHex
-import com.r3.conclave.common.internal.toHexString
 import com.r3.sgx.core.common.ByteCursor
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxQuote
+import com.r3.sgx.core.common.SgxSignedQuote
 import java.time.Instant
 
 /**
@@ -29,6 +29,8 @@ import java.time.Instant
  * the Trusted Computing Base (TCB) of the platform.
  *
  * @property id Representation of unique identifier of the Attestation Verification Report.
+ *
+ * @property isvEnclaveQuoteBody Body of [SgxSignedQuote] as received by the attestion service.
  *
  * @property timestamp Representation of date and time the Attestation Verification Report was created.
  *
@@ -62,7 +64,7 @@ import java.time.Instant
  * Attestation Evidence Payload contains Quote with linkable EPID signature.
  */
 @JsonInclude(NON_NULL)
-class AttestationReport(
+data class AttestationReport(
         val id: String,
 
         val isvEnclaveQuoteStatus: QuoteStatus,
@@ -71,21 +73,23 @@ class AttestationReport(
         @JsonDeserialize(using = SgxQuoteDeserializer::class)
         val isvEnclaveQuoteBody: ByteCursor<SgxQuote>,
 
-        @JsonSerialize(using = Base16Serializer::class)
+        @JsonSerialize(using = ToStringSerializer::class)
         @JsonDeserialize(using = Base16Deserializer::class)
-        val platformInfoBlob: ByteArray? = null,
+        val platformInfoBlob: OpaqueBytes? = null,
 
         val revocationReason: Int? = null,
 
         val pseManifestStatus: ManifestStatus? = null,
 
-        @JsonSerialize(using = Sha256Serializer::class)
+        @JsonSerialize(using = ToStringSerializer::class)
         @JsonDeserialize(using = Sha256Deserializer::class)
         val pseManifestHash: SHA256Hash? = null,
 
         val nonce: String? = null,
 
-        val epidPseudonym: ByteArray? = null,
+        @JsonSerialize(using = OpaqueBytesSerializer::class)
+        @JsonDeserialize(using = OpaqueBytesDeserializer::class)
+        val epidPseudonym: OpaqueBytes? = null,
 
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS", timezone = "UTC")
         val timestamp: Instant,
@@ -100,19 +104,15 @@ class AttestationReport(
         }
     }
 
-    private class Base16Serializer : StdSerializer<ByteArray>(ByteArray::class.java) {
-        override fun serialize(value: ByteArray, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeString(value.toHexString())
+    private class Base16Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
+            return OpaqueBytes.parse(p.valueAsString)
         }
-    }
-
-    private class Base16Deserializer : StdDeserializer<ByteArray>(ByteArray::class.java) {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteArray = parseHex(p.valueAsString)
     }
 
     private class SgxQuoteSerializer : JsonSerializer<ByteCursor<SgxQuote>>() {
         override fun serialize(value: ByteCursor<SgxQuote>, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeBinary(value.read().getRemainingBytes())
+            gen.writeBinary(value.readBytes())
         }
     }
 
@@ -122,15 +122,19 @@ class AttestationReport(
         }
     }
 
-    private class Sha256Serializer : StdSerializer<SHA256Hash>(SHA256Hash::class.java) {
-        override fun serialize(value: SHA256Hash, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeString(value.toString())
-        }
-    }
-
     private class Sha256Deserializer : StdDeserializer<SHA256Hash>(SHA256Hash::class.java) {
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): SHA256Hash {
             return SHA256Hash.parse(p.valueAsString)
         }
+    }
+
+    private class OpaqueBytesSerializer : StdSerializer<OpaqueBytes>(OpaqueBytes::class.java) {
+        override fun serialize(value: OpaqueBytes, gen: JsonGenerator, provider: SerializerProvider) {
+            gen.writeBinary(value.bytes)
+        }
+    }
+
+    private class OpaqueBytesDeserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes = OpaqueBytes(p.binaryValue)
     }
 }

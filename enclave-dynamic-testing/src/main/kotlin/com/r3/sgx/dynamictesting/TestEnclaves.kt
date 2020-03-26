@@ -3,6 +3,7 @@ package com.r3.sgx.dynamictesting
 import com.r3.sgx.core.enclave.Enclave
 import org.junit.rules.ExternalResource
 import java.io.File
+import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -61,20 +62,26 @@ class TestEnclaves : ExternalResource() {
             throw IllegalStateException("Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field")
         }
         val start = Instant.now()
-        val cachedJar = createEnclaveJar(entryClass, builder)
-        val cachedEnclave = BuildEnclave.buildEnclave(builder.type, cachedJar)
-        val cachedKey = builder.key?.let { Cached.Pure(it) } ?: SignEnclave.createDummyKey()
-        val cachedConfig = SignEnclave.createConfig(builder.config)
-        val cachedSignedEnclave = SignEnclave.signEnclave(
-                inputKey = cachedKey,
-                inputEnclave = cachedEnclave,
-                enclaveConfig = cachedConfig
-        )
+        val cachedSignedEnclave = signedEnclaveFile(entryClass, builder)
         val enclave = cache!![cachedSignedEnclave]
         val end = Instant.now()
         println(Duration.between(start, end))
 
         return enclave
+    }
+
+    private fun signedEnclaveFile(entryClass: Class<*>, builder: EnclaveBuilder): Cached<File> {
+        val cachedJar = createEnclaveJar(entryClass, builder)
+        val cachedEnclave = BuildEnclave.buildEnclave(builder.type, cachedJar)
+        val cachedKey = builder.key?.let { Cached.Pure(it) } ?: SignEnclave.createDummyKey()
+        val cachedConfig = SignEnclave.createConfig(builder.config)
+        return SignEnclave.signEnclave(inputKey = cachedKey, inputEnclave = cachedEnclave, enclaveConfig = cachedConfig)
+    }
+
+    fun getEnclaveMetadata(enclaveClass: Class<*>, builder: EnclaveBuilder): Path {
+        val cachedSignedEnclave = signedEnclaveFile(enclaveClass, builder)
+        val metadataFile = SignEnclave.enclaveMetadata(cachedSignedEnclave)
+        return cache!![metadataFile].toPath()
     }
 }
 

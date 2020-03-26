@@ -1,9 +1,12 @@
 package com.r3.conclave.host
 
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
+import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl
+import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl.Companion.signatureScheme
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.*
@@ -15,7 +18,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import java.util.*
+import java.security.PublicKey
 import java.util.function.Consumer
 import kotlin.Exception
 
@@ -38,35 +41,21 @@ import kotlin.Exception
  */
 class EnclaveHost @PotentialPackagePrivate private constructor(
         val enclaveMode: EnclaveMode,
-        private val handle: EnclaveHandle<ErrorHandler.Connection>,
+        private val enclaveHandle: EnclaveHandle<ErrorHandler.Connection>,
+        private val isMock: Boolean,
         private val fileToDelete: Path?
 ) : AutoCloseable {
     companion object {
-        // TODO Require the user to provide these
-        private val r3EpidSpid: ByteArray
-        private val r3SubscriptionKey: String
-
-        init {
-            val raProperties = this::class.java.getResourceAsStream("/ra.properties").use {
-                Properties().apply { load(it) }
-            }
-            r3EpidSpid = parseHex(raProperties.getProperty("epidSpid"))
-            r3SubscriptionKey = raProperties.getProperty("iasSubscriptionKey")
-        }
-
-        private val attestationConfig = EpidAttestationHostConfiguration(
-                // TODO Does the quote type need to be configurable?
-                quoteType = SgxQuoteType.LINKABLE.value,
-                spid = Cursor(SgxSpid, r3EpidSpid)
-        )
+        private val log = loggerFor<EnclaveHost>()
 
         // This wouldn't be needed if the c'tor was package-private.
         internal fun create(
                 enclaveMode: EnclaveMode,
                 handle: EnclaveHandle<ErrorHandler.Connection>,
-                fileToDelete: Path?
+                fileToDelete: Path?,
+                isMock: Boolean = false
         ): EnclaveHost {
-            return EnclaveHost(enclaveMode, handle, fileToDelete)
+            return EnclaveHost(enclaveMode, handle, isMock, fileToDelete)
         }
 
         @PotentialPackagePrivate
@@ -132,47 +121,81 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
                 // Ignore
             }
         }
-
-        // TODO load enclave file from memory
     }
 
     private val stateManager = StateManager<State>(New)
-    private val attestationService: AttestationService
-    private lateinit var sender: Sender
-
-    init {
-        attestationService = when (enclaveMode) {
-            EnclaveMode.RELEASE -> IntelAttestationService("https://api.trustedservices.intel.com/sgx", r3SubscriptionKey)
-            EnclaveMode.DEBUG -> IntelAttestationService("https://api.trustedservices.intel.com/sgx/dev", r3SubscriptionKey)
-            EnclaveMode.SIMULATION -> MockAttestationService()
-        }
-    }
+    private lateinit var enclaveSender: Sender
+    private lateinit var signedQuote: ByteCursor<SgxSignedQuote>
+    private var _enclaveInstanceInfo: EnclaveInstanceInfo? = null
 
     /**
-     * Causes the enclave to be loaded and the [Enclave] object constructed inside.
+     * Causes the enclave to be loaded and the `Enclave` object constructed inside.
      * This method must be called before sending is possible. Remember to call
      * [close] to free the associated enclave resources when you're done with it.
+     *
+     * @param spid The EPID Service Provider ID (or SPID) needed for creating the enclave quote for attesting. Please see
+     * https://api.portal.trustedservices.intel.com/EPID-attestation for further details on how to obtain one. The EPID
+     * signature mode must be Linkable Quotes.
+     *
+     * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
+     * can be provided.
+     *
+     * Note: This parameter is temporary and will be removed in future version.
+     *
+     * @param attestationKey The private attestation key needed to access the attestation service. Please see
+     * https://api.portal.trustedservices.intel.com/EPID-attestation for further details on how obtain one.
+     *
+     * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
+     * can be provided.
      */
     @Throws(InvalidEnclaveException::class)
     // TODO MailHandler parameter
-    fun start() {
+    fun start(spid: OpaqueBytes?, attestationKey: String?) {
         checkNotClosed()
+        require(spid == null || spid.size == 16) { "Invalid SPID length" }
         if (stateManager.state != New) return
         try {
-            val mux = handle.connection.setDownstream(SimpleMuxingHandler())
-            sender = mux.addDownstream(HostHandler(this))
-            // TODO RA
-            val attestation = mux.addDownstream(EpidAttestationHostHandler(attestationConfig))
-
-            // We need to send an empty message to create the Enclave object and start it up.
-            sender.send(0, Consumer { })
-            stateManager.checkStateIs<Started>()
+            val mux = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
+            enclaveSender = mux.addDownstream(HostHandler(this))
+            // TODO We could probably simplify things if we didn't multiplex the attestation, and instead rolled it into
+            //      the main host handler.
+            signedQuote = mux.addDownstream(EpidAttestationHostHandler(
+                    EpidAttestationHostConfiguration(SgxQuoteType.LINKABLE, spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid)),
+                    isMock
+            )).getSignedQuote()
+            val attestationResponse = getAttestationService(attestationKey).requestSignature(signedQuote)
+            val started = stateManager.checkStateIs<Started>()
+            val enclaveInstanceInfo = EnclaveInstanceInfoImpl(started.signatureKey, signedQuote, attestationResponse, enclaveMode)
+            log.debug { "Attestation response: ${enclaveInstanceInfo.attestationReport}" }
+            log.debug { "Advisory IDs: ${attestationResponse.advisoryIds}" }
+            log.info(enclaveInstanceInfo.toString())
+            _enclaveInstanceInfo = enclaveInstanceInfo
         } catch (e: Exception) {
             throw InvalidEnclaveException("Unable to start enclave", e)
         }
     }
 
-    // TODO val info: EnclaveInstanceInfo
+    private fun getAttestationService(attestationKey: String?): AttestationService {
+        return when (enclaveMode) {
+            EnclaveMode.RELEASE -> IntelAttestationService("https://api.trustedservices.intel.com/sgx", requiredAttestationKey(attestationKey))
+            EnclaveMode.DEBUG -> IntelAttestationService("https://api.trustedservices.intel.com/sgx/dev", requiredAttestationKey(attestationKey))
+            EnclaveMode.SIMULATION -> MockAttestationService()
+        }
+    }
+
+    private fun requiredAttestationKey(attestationKey: String?): String {
+        return requireNotNull(attestationKey) { "$enclaveMode mode requires an attestation key" }
+    }
+
+    /**
+     * Provides the info of this specific loaded instance. Note that the enclave
+     * instance info will remain valid across restarts of the host JVM/reloads of the
+     * enclave.
+     *
+     * @throws IllegalStateException if the enclave has not been started.
+     */
+    val enclaveInstanceInfo: EnclaveInstanceInfo
+        get() = checkNotNull(_enclaveInstanceInfo) { "Enclave has not been started." }
 
     /**
      * Passes the given byte array to the enclave. The format of the byte
@@ -247,12 +270,10 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
     private fun onReceive(input: ByteBuffer) {
         when (val state = stateManager.state) {
             New -> {
-                // On start the host sends a (blank) message to the enclave to start it up. It responds by sending back
-                // a boolean for whether it implements EnclaveCall or not. Upon receipt the host can flag itself as
-                // fully started.
+                // On start the host requests for the enclave's quote. Once it's sent that it also sends the init message.
                 val isEnclaveCall = input.getBoolean()
-                input.checkNoRemaining()
-                stateManager.state = Started(isEnclaveCall)
+                val signatureKey = signatureScheme.decodePublicKey(input.getRemainingBytes())
+                stateManager.state = Started(isEnclaveCall, signatureKey)
             }
             is CallIntoEnclave -> {
                 // This is unpacking Enclave.sendToHost. We only expect the enclave to respond back to us with this
@@ -284,7 +305,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
     }
 
     private fun sendToEnclave(bytes: ByteArray, isEnclaveCallReturn: Boolean) {
-        sender.send(1 + bytes.size, Consumer { buffer ->
+        enclaveSender.send(1 + bytes.size, Consumer { buffer ->
             buffer.putBoolean(isEnclaveCallReturn)
             buffer.put(bytes)
         })
@@ -293,7 +314,20 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
     // TODO deliverMail
 
     override fun close() {
+        // Closing an unstarted or already closed EnclaveHost is allowed, because this makes it easier to use
+        // Java try-with-resources and makes finally blocks more forgiving, e.g.
+        //
+        // try {
+        //    enclave.start()
+        // } finally {
+        //    enclave.close()
+        // }
+        //
+        // could yield a secondary error if an exception was thrown in enclave.start without this.
+        if (stateManager.state == Closed || stateManager.state == New) return
+
         fileToDelete?.deleteQuietly()
+        enclaveHandle.destroy()
         stateManager.state = Closed
     }
 
@@ -304,7 +338,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
 
     private sealed class State {
         object New : State()
-        class Started(val enclaveIsEnclaveCall: Boolean) : State()
+        class Started(val enclaveIsEnclaveCall: Boolean, val signatureKey: PublicKey) : State()
         class CallIntoEnclave(val callback: EnclaveCall?) : State()
         class EnclaveResponse(val bytes: ByteArray) : State()
         object Closed : State()

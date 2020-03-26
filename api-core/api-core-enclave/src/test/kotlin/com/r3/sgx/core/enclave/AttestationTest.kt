@@ -4,9 +4,9 @@ import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration
 import com.r3.sgx.core.host.EpidAttestationHostHandler
 import com.r3.sgx.core.host.internal.Native
+import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import com.r3.sgx.testing.BytesEnclave
 import com.r3.sgx.testing.BytesRecordingHandler
-import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
@@ -83,17 +83,16 @@ class AttestationTest : TestEnclavesBasedTest() {
         quoteRequest[SgxGetQuote.quoteType] = SgxQuoteType32.LINKABLE
         quoteRequest[SgxGetQuote.spid] = Cursor.allocate(SgxSpid).read()
 
-        val sgxQuote = SgxSignedQuote(quoteSize)
-        val quote = Cursor.allocate(sgxQuote)
+        val signedQuote = Cursor.allocate(SgxSignedQuote(quoteSize))
         Native.getQuote(
                 getQuoteRequestIn = quoteRequest.getBuffer().array(),
                 signatureRevocationListIn = null,
                 quotingEnclaveReportNonceIn = null,
                 quotingEnclaveReportOut = null,
-                quoteOut = quote.getBuffer().array()
+                quoteOut = signedQuote.getBuffer().array()
         )
-        println("quote: $quote")
-        assertEquals(report[SgxReport.body], quote[sgxQuote.quote][SgxQuote.reportBody])
+        println("quote: $signedQuote")
+        assertEquals(report[SgxReport.body], signedQuote.quote[SgxQuote.reportBody])
     }
 
     class TestEpidAttestationEnclaveHandler(api: EnclaveApi, reportDataString: String) : EpidAttestationEnclaveHandler(api) {
@@ -114,12 +113,12 @@ class AttestationTest : TestEnclavesBasedTest() {
     @Test
     fun attestationHandlersWork() {
         val configuration = EpidAttestationHostConfiguration(
-                quoteType = SgxQuoteType32.LINKABLE,
+                quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid)
         )
         val connection = createEnclave(EpidAttestingEnclave::class.java).addDownstream(EpidAttestationHostHandler(configuration))
-        val quote = connection.getQuote()
-        val reportData = quote[quote.encoder.quote][SgxQuote.reportBody][SgxReportBody.reportData]
+        val signedQuote = connection.getSignedQuote()
+        val reportData = signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData]
         assertTrue(Charsets.UTF_8.decode(reportData.getBuffer()).startsWith("hello"))
     }
 }

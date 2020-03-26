@@ -1,13 +1,13 @@
 package com.r3.sgx.enclavelethost.server
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.r3.sgx.core.host.internal.NativeLoader
+import com.r3.sgx.core.host.loggerFor
 import com.r3.sgx.enclavelethost.grpc.EnclaveletHostGrpc
-import com.r3.sgx.enclavelethost.server.internal.*
+import com.r3.sgx.enclavelethost.server.internal.EnclaveletRpcImpl
+import com.r3.sgx.enclavelethost.server.internal.EnclaveletState
 import io.grpc.ServerBuilder
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.util.concurrent.*
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledThreadPoolExecutor
 
 class EnclaveletHost(val enclavelet: EnclaveletState.Created,
                      val configuration: EnclaveletHostConfiguration) : AutoCloseable, ExceptionListener {
@@ -17,7 +17,7 @@ class EnclaveletHost(val enclavelet: EnclaveletState.Created,
     private var enclaveExceptions = LinkedBlockingQueue<Throwable>()
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(EnclaveletHost::class.java)
+        private val log = loggerFor<EnclaveletHost>()
     }
 
     init {

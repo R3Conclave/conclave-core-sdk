@@ -33,7 +33,7 @@ class SigningEnclaveTest {
     @Before
     fun setupEnclave() {
         configuration = EpidAttestationHostConfiguration(
-                quoteType = SgxQuoteType32.LINKABLE,
+                quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid))
 
         handle = NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(RootHandler(), File(enclavePath))
@@ -41,7 +41,6 @@ class SigningEnclaveTest {
 
     @After
     fun destroyEnclave() {
-        @Suppress("DEPRECATION")
         handle.destroy()
     }
 
@@ -50,7 +49,7 @@ class SigningEnclaveTest {
         val connection = handle.connection
         val channels = connection.addDownstream(ChannelInitiatingHandler())
         val attesting = connection.addDownstream(EpidAttestationHostHandler(configuration))
-        val attestedQuote = TrustedSgxQuote.fromSignedQuote(attesting.getQuote())
+        val attestedQuote = TrustedSgxQuote.fromSignedQuote(attesting.getSignedQuote())
         val enclaveSignatureVerifier = AttestedSignatureVerifier(
                 SignatureSchemeId.EDDSA_ED25519_SHA512,
                 PublicKeyAttester(attestedQuote))

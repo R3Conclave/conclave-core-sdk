@@ -2,9 +2,8 @@ package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.google.common.io.BaseEncoding
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.getRemainingBytes
 import com.r3.sgx.core.common.Cursor
 import com.r3.sgx.core.common.SgxQuote
 import org.assertj.core.api.Assertions.assertThat
@@ -34,7 +33,7 @@ class AttestationReportTest {
         assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
         assertThat(jsonTree["version"].intValue()).isEqualTo(3)
         assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.read().getRemainingBytes()))
+        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes()))
         assertThat(jsonTree["platformInfoBlob"]).isNull()
         assertThat(jsonTree["revocationReason"]).isNull()
         assertThat(jsonTree["pseManifestStatus"]).isNull()
@@ -53,7 +52,7 @@ class AttestationReportTest {
               "timestamp":"2015-09-29T10:07:26.711023",
               "version":3,
               "isvEnclaveQuoteStatus":"OK",
-              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.read().getRemainingBytes())}"
+              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes())}"
             }
             """.trimIndent()
 
@@ -69,9 +68,9 @@ class AttestationReportTest {
     @Test
     fun `serialise all fields`() {
         val isvEnclaveQuoteBody = Cursor(SgxQuote, Random.nextBytes(432))
-        val platformInfoBlob = Random.nextBytes(50)
+        val platformInfoBlob = OpaqueBytes(Random.nextBytes(50))
         val pseManifestHash = SHA256Hash.wrap(Random.nextBytes(32))
-        val epidPseudonym = Random.nextBytes(100)
+        val epidPseudonym = OpaqueBytes(Random.nextBytes(100))
 
         val report = AttestationReport(
                 id = "165171271757108173876306223827987629752",
@@ -92,21 +91,21 @@ class AttestationReportTest {
         assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
         assertThat(jsonTree["version"].intValue()).isEqualTo(3)
         assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.read().getRemainingBytes()))
-        assertThat(jsonTree["platformInfoBlob"].textValue()).isEqualToIgnoringCase(BaseEncoding.base16().encode(platformInfoBlob))
+        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes()))
+        assertThat(jsonTree["platformInfoBlob"].textValue()).isEqualToIgnoringCase(platformInfoBlob.toString())
         assertThat(jsonTree["revocationReason"].intValue()).isEqualTo(1)
         assertThat(jsonTree["pseManifestStatus"].textValue()).isEqualTo("INVALID")
         assertThat(jsonTree["pseManifestHash"].textValue()).isEqualToIgnoringCase(pseManifestHash.toString())
         assertThat(jsonTree["nonce"].textValue()).isEqualTo("12345")
-        assertThat(jsonTree["epidPseudonym"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(epidPseudonym))
+        assertThat(jsonTree["epidPseudonym"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(epidPseudonym.bytes))
     }
 
     @Test
     fun `deserialise all fields`() {
         val isvEnclaveQuoteBody = Cursor(SgxQuote, Random.nextBytes(432))
-        val platformInfoBlob = Random.nextBytes(50)
+        val platformInfoBlob = OpaqueBytes(Random.nextBytes(50))
         val pseManifestHash = SHA256Hash.wrap(Random.nextBytes(32))
-        val epidPseudonym = Random.nextBytes(100)
+        val epidPseudonym = OpaqueBytes(Random.nextBytes(100))
 
         val json = """
             {
@@ -114,13 +113,13 @@ class AttestationReportTest {
               "timestamp":"2015-09-29T10:07:26.711023",
               "version":3,
               "isvEnclaveQuoteStatus":"OK",
-              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.read().getRemainingBytes())}",
-              "platformInfoBlob":"${BaseEncoding.base16().encode(platformInfoBlob).toUpperCase()}",
+              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes())}",
+              "platformInfoBlob":"$platformInfoBlob",
               "revocationReason":1,
               "pseManifestStatus":"INVALID",
               "pseManifestHash":"$pseManifestHash",
               "nonce":"12345",
-              "epidPseudonym":"${Base64.getEncoder().encodeToString(epidPseudonym)}"
+              "epidPseudonym":"${Base64.getEncoder().encodeToString(epidPseudonym.bytes)}"
             }
             """.trimIndent()
 

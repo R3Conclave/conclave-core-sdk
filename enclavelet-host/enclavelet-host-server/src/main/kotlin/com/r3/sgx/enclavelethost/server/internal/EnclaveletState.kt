@@ -4,8 +4,6 @@ import com.r3.conclave.host.internal.AttestationResponse
 import com.r3.conclave.host.internal.AttestationService
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.*
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.File
 
 /**
@@ -21,17 +19,17 @@ sealed class EnclaveletState {
                        val channels: ChannelInitiatingHandler.Connection,
                        val mux: SimpleMuxingHandler.Connection): EnclaveletState() {
 
-        fun requestAttestation(attestationService: AttestationService,
-                               attestationConfig: EpidAttestationHostConfiguration)
-                : Attested {
-
+        fun requestAttestation(
+                attestationService: AttestationService,
+                attestationConfig: EpidAttestationHostConfiguration
+        ) : Attested {
             log.info("Getting quote from enclave")
             val attestation = mux.addDownstream(EpidAttestationHostHandler(attestationConfig))
-            val rawQuote = attestation.getQuote()
+            val rawQuote = attestation.getSignedQuote()
 
             log.info("Getting IAS signature")
-            val iasResponse = attestationService.requestSignature(rawQuote)
-            return Attested(this, rawQuote, iasResponse)
+            val response = attestationService.requestSignature(rawQuote)
+            return Attested(this, rawQuote, response)
         }
 
         companion object {
@@ -55,7 +53,7 @@ sealed class EnclaveletState {
     ) : Created(created.enclaveHandle, created.channels, created.mux)
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(EnclaveletState::class.java)
+        private val log = loggerFor<EnclaveletState>()
 
         fun load(enclaveFile: File, loadMode: EnclaveLoadMode): Created {
             val hostApi = NativeHostApi(loadMode)

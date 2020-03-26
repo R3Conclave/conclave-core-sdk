@@ -1,14 +1,17 @@
 # First enclave
 
-!!! note
+!!! important
 
-    This tutorial assumes you've read and understood the [conceptual overview](enclaves.md).
+    * You need the Conclave SDK. If you don't have it please [contact R3 and request a trial](https://www.conclave.net).
+    * At this time Conclave development must be done on Linux.
+    * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md).
 
 You can find a **sample app** in the `hello-world` directory of your SDK. You can use this app as a template 
 for your own if you want a quick start, or follow the instructions below to add Conclave to an existing project.
 It's recommended to read the tutorial in all cases so you understand what the code is doing.
 
-We'll do these things to make our own version of the hello enclave:
+The sample "hello world" enclave just reverses whatever string is passed into it. We'll do these things to make 
+our own version of the hello enclave project:
 
 1. Configure Gradle. At this time Conclave projects must use Gradle as their build system.
 2. Create a new subclass of [`Enclave`](api/com/r3/conclave/enclave/Enclave.html)
@@ -22,15 +25,8 @@ We'll do these things to make our own version of the hello enclave:
 TODO: Complete this tutorial:
 
       Signing/running in release mode.
-      Remote attestation.
-      Java versions of the code (mkdocs-material supports code tabs out of the box)
       Update as API is completed.
 -->
-
-!!! important
-
-    * You need the Conclave SDK. If you don't have it please [contact R3 and request a trial](https://www.conclave.net).
-    * At this time Conclave development must be done on Linux.
 
 ## Configure Gradle
 
@@ -280,89 +276,136 @@ This switches control resource usage and identity of the enclave. For now we can
 An enclave by itself is just a library. It can't (at this time) be invoked directly. Instead you load it from inside
 a host program.
 
-It's easy to load then pass data to and from an enclave:
+It's easy to load then pass data to and from an enclave. Let's start with the skeleton of a little command line app:
 
 ```java
 /**
- * This class demonstrates how to load an enclave and exchange byte arrays with it.
+ * This class demonstrates how to load an enclave and use it.
  */
 public class Host {
     public static void main(String[] args) throws InvalidEnclaveException {
-        // We start by loading the enclave using EnclaveHost, and passing the class name of the Enclave subclass
-        // that we defined in our enclave module.
-        EnclaveHost enclave = EnclaveHost.load("com.superfirm.enclave.ReverseEnclave");   // CHANGE THIS
-        // Start it up.
-        enclave.start();
-        try {
-            // !dlrow olleH      :-)
-            System.out.println(callEnclave(enclave,  "Hello world!"));
-        } finally {
-            // We make sure the .close() method is called on the enclave no matter what.
-            //
-            // This doesn't actually matter in such a tiny hello world sample, because the enclave will be unloaded by
-            // the kernel once we exit like any other resource. It's just here to remind you that an enclave must be
-            // explicitly unloaded if you need to reinitialise it for whatever reason, or if you need the memory back.
-            //
-            // Don't load and unload enclaves too often as it's quite slow.
-            enclave.close();
-        }
+        // TODO: Fill this out
     }
 
     public static String callEnclave(EnclaveHost enclave, String input) {
-        // We'll convert strings to bytes and back.
-        final byte[] inputBytes = input.getBytes();
-
-        // Enclaves in general don't have to give bytes back if we send data, but in our case we know it always
-        // will so we can just assert it's non-null here.
-        final byte[] outputBytes = Objects.requireNonNull(enclave.callEnclave(inputBytes));
-        return new String(outputBytes);
+        // TODO: Fill this out.
     }
+}
+```
+
+We'll put this inside the main method:
+
+```java
+String className = "com.r3.conclave.sample.enclave.ReverseEnclave";
+try (EnclaveHost enclave = EnclaveHost.load(className)) {
+    enclave.start();
+
+    System.out.println(callEnclave(enclave, "Hello world!"));
+    // !dlrow olleH      :-)
+
+    // TODO: Get the remote attestation
 }
 ```
 
 This code starts by creating an [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) object. It names the class
 to load and then calls `start`, which actually loads and initialises the enclave and the `MyEnclave` class inside it.
-Note that an `EnclaveHost` allocates memory out of a pool called the "enclave page cache" which is a machine-wide limited
-resource. It'll be freed if the host JVM quits, but it's good practice to close the `EnclaveHost` object by calling
-`close` on it when done.
+You can have multiple `EnclaveHost` objects in the same host JVM but they must all use same mode.
 
-Starting and stopping an enclave is not free, so **don't** load the enclave, use it and immediately close it again
-as in the above example. Treat the enclave like any other expensive resource and keep it around for as long as you
-might need it.
+Note that an `EnclaveHost` allocates memory out of a pool called the "enclave page cache" which is a machine-wide
+limited resource. It'll be freed if the host JVM quits, but it's good practice to close the `EnclaveHost` object by
+calling `close` on it when done. Therefore we also make sure the `.close()` method is called on the enclave no
+matter what using a try-with-resources statement. This doesn't actually matter in such a tiny hello world sample,
+because the enclave will be unloaded by the kernel once we exit like any other resource. It's just here to remind
+you that an enclave must be explicitly unloaded if you need to reinitialise it for whatever reason, or if you need
+the memory back.
+
+!!! warning
+    Starting and stopping an enclave is not free, so **don't** load the enclave, use it and immediately close it again
+    as in the above example. Treat the enclave like any other expensive resource and keep it around for as long as you
+    might need it.
 
 Once we started the enclave, we call it passing in a string as bytes. The enclave will reverse it and we'll print out
-the answer.
+the answer. This is as easy as calling `EnclaveHost.callEnclave`, so put this in the `callEnclave` static method
+defined above:
+
+```java
+// We'll convert strings to bytes and back.
+final byte[] inputBytes = input.getBytes();
+return new String(enclave.callEnclave(inputBytes));
+```
+
+So we just convert the string to bytes, send it to the enclave, and convert the response from bytes back to a string.
+
+## Remote attestation
+
+There's no point in using an enclave to protect purely local data, as the data must ultimately come from the
+(assumed malicious/compromised) host in that scenario. That's why you need remote attestation, which lets an enclave 
+prove its identity to the third parties who will upload secret data. If this paragraph doesn't make
+sense please review the [Architecture overview](architecture.md) and the [enclaves](enclaves.md) section.
+    
+Using remote attestation is easy! Just obtain an `EnclaveInstanceInfo` and serialize/deserialize it using the
+provided methods. There's a useful `toString` method: 
+    
+```java
+final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();
+final byte[] attestationBytes = attestation.serialize();
+System.out.println(EnclaveInstanceInfo.deserialize(attestationBytes));
+```
+
+That will print out something like this:
+
+```text
+Remote attestation for enclave 04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6:
+  - Mode: SIMULATION
+  - Code signing key hash: 0230CFF16B15F8826AB6BBF686E190C94FDC0AD725041D3E16F5216A925D0A5C
+  - Product ID: 0
+  - Revocation level: 0
+
+Assessed security level at 2020-03-13T12:40:55.819Z is INSECURE
+  - Enclave is running in simulation mode.
+```
+
+The hash in the first line is the *measurement*. This is a hash of the code of the
+enclave. It includes both all the Java code inside the enclave as a fat-JAR, and all the support and JVM runtime
+code required. As such it will change any time you alter the code of your enclave, the version of Conclave in use
+or the mode (simulation/debug/release) of the enclave. The enclave measurement should be stable across builds and
+machines, so clients can audit the enclave by repeating the Gradle build and comparing the value they get in the
+`EnclaveInstanceInfo` against what the build process prints out.
 
 !!! tip
-    You can have multiple `EnclaveHost` objects in the same host JVM but they must all use same mode.
+    All this data is available via individual getters on the `EnclaveInstanceInfo` so you should never feel a need to
+    parse the output of `toString`. 
+        
+As we can see this enclave isn't actually considered secure yet because we're running in simulation mode still.
 
-## Run the host and enclave in simulation mode
+Now get the serialized bytes to a client via whatever network mechanism you want. The bytes are essentially a large,
+complex digital signature, so it's safe to publish them publicly. An attestation doesn't inherently expire but because 
+the SGX ecosystem is always moving, client code will typically have some frequency with which it expects the host code
+to refresh the `EnclaveInstanceInfo`. At present this is done by stopping and restarting the enclave.
+
+## Run the host and enclave
 
 We can apply the Gradle `application` plugin and set the `mainClassName` property
 [in the usual manner](https://docs.gradle.org/current/userguide/application_plugin.html#application_plugin) to let us run
 the host from the command line.
 
-Now run:
-
-`gradle host:run`
-
-and it should print "Hello World!" backwards.
+Now run `gradlew host:run` and it should print "Hello World!" backwards along with the security info as shown above.
 
 During the build you should see output like this:
 
-```
+```text
 > Task :enclave:generateEnclaveletMetadataSimulation
 Succeed.
-Enclave measurement: 89cec147162cf2174d3404a2d8b3814eb7c6f818f84ee1ab202ae4e4381f4b49
+Enclave measurement: 04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6
 ```
 
-This hex value is called the *measurement*, and is a hash of the code of the enclave. It includes both all the Java
-code inside the enclave as a fat-JAR, and all the support and JVM runtime code required. As such it will change any
-time you alter the code of your enclave, the version of Conclave in use or the mode (sim/debug/release) of the enclave.
+The measurement should correspond to the value found in the `EnclaveInstanceInfo.getCodeHash()` property.
 
-The measurement is reported in an `EnclaveInstanceInfo` remote attestation structure (see [enclaves](enclaves.md) for
-a discussion of remote attestation). Everyone should be able to get the exact same value when doing the build, so in
-this way your users can audit the contents of a remote enclave over the network.
+You can switch to debug mode, whereby the enclave is run in a real SGX environment albeit with a backdoor for debugging,
+by specifying the `enclaveMode` property. You will need to run this on a machine with SGX enabled and also provide your
+EPID SPID and attestation key. See [here](ias.md#getting-access) for more information.
+
+```gradlew -PenclaveMode=debug host:run --args="<SPID> <attestation key>"```
 
 ## Unit testing
 

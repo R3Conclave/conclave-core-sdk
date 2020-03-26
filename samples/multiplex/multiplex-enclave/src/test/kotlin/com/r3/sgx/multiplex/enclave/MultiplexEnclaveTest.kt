@@ -5,7 +5,8 @@ import com.r3.sgx.core.host.EnclaveHandle
 import com.r3.sgx.core.host.EnclaveletHostHandler
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration
 import com.r3.sgx.dynamictesting.EnclaveTestMode
-import com.r3.sgx.dynamictesting.EnclaveTestMode.*
+import com.r3.sgx.dynamictesting.EnclaveTestMode.Mock
+import com.r3.sgx.dynamictesting.EnclaveTestMode.Native
 import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import com.r3.sgx.multiplex.client.MultiplexClientHandler
 import com.r3.sgx.multiplex.common.SHA256_BYTES
@@ -13,9 +14,12 @@ import com.r3.sgx.multiplex.common.sha256
 import com.r3.sgx.testing.HelperUtilities.expectWithin
 import com.r3.sgx.testing.StringHandler
 import com.r3.sgx.testing.StringSender
-import org.junit.*
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -24,7 +28,7 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit.*
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Supplier
 
 @RunWith(Parameterized::class)
@@ -36,7 +40,7 @@ class MultiplexEnclaveTest(mode: EnclaveTestMode) : TestEnclavesBasedTest(mode) 
         val log: Logger = LoggerFactory.getLogger(MultiplexEnclaveTest::class.java)
 
         val attestationConfiguration = EpidAttestationHostConfiguration(
-            quoteType = SgxQuoteType32.LINKABLE,
+            quoteType = SgxQuoteType.LINKABLE,
             spid = Cursor.allocate(SgxSpid)
         )
         fun createDynamicEnclaveletHostHandler() = EnclaveletHostHandler(attestationConfiguration)
@@ -55,8 +59,8 @@ class MultiplexEnclaveTest(mode: EnclaveTestMode) : TestEnclavesBasedTest(mode) 
         val connection = enclaveHandle.connection
 
         if (mode == Native) {
-            val quote = connection.attestation.getQuote()
-            quote[quote.encoder.quote][SgxQuote.reportBody][SgxReportBody.reportData].read()
+            val signedQuote = connection.attestation.getSignedQuote()
+            signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData].read()
         }
 
         val (_, rootChannel) = connection.channels.addDownstream(MultiplexClientHandler()).get(10, SECONDS)

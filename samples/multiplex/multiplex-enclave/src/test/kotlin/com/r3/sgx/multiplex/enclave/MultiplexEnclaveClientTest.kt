@@ -34,7 +34,7 @@ class MultiplexEnclaveClientTest {
         const val OTHER_MESSAGE = "The Sheik's sixth sheep is sick."
 
         val attestationConfiguration = EpidAttestationHostConfiguration(
-            quoteType = SgxQuoteType32.LINKABLE,
+            quoteType = SgxQuoteType.LINKABLE,
             spid = Cursor.allocate(SgxSpid)
         )
 

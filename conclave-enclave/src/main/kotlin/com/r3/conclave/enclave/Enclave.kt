@@ -1,7 +1,10 @@
 package com.r3.conclave.enclave
 
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.StateManager
+import com.r3.conclave.common.internal.getBoolean
+import com.r3.conclave.common.internal.getRemainingBytes
+import com.r3.conclave.common.internal.putBoolean
 import com.r3.conclave.enclave.Enclave.State.*
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.crypto.internal.SignatureSchemeEdDSA
@@ -9,6 +12,7 @@ import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.core.enclave.RootEnclave
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.security.PublicKey
 import java.security.Signature
 import java.util.function.Consumer
@@ -46,14 +50,13 @@ abstract class Enclave {
      * data you provide. The private key is not directly exposed to avoid accidental
      * mis-use (e.g. for encryption).
      */
-    // TODO Tests
-    protected fun createSignature(): Signature {
-        val signature = Signature.getInstance(SignatureSchemeEdDSA.ALGORITHM, SignatureSchemeEdDSA.securityProvider)
+    protected fun signer(): Signature {
+        val signature = SignatureSchemeEdDSA.createSignature()
         signature.initSign(signingKeyPair.private)
         return signature
     }
 
-    /** The public key used to sign data structures when [createSignature] is used. */
+    /** The public key used to sign data structures when [signer] is used. */
     protected val signatureKey: PublicKey get() = signingKeyPair.public
 
     /**
@@ -91,22 +94,27 @@ abstract class Enclave {
         val reportData = createReportData()
         sender = mux.addDownstream(EnclaveHandler())
         mux.addDownstream(Enclavelet.EnclaveletEpidAttestationEnclaveHandler(api, reportData))
+        sendInitConfirm()
     }
 
     private fun createReportData(): ByteCursor<SgxReportData> {
-        // TODO
-        return Cursor.allocate(SgxReportData)
+        val sha512 = MessageDigest.getInstance("SHA-512")
+        sha512.update(signatureKey.encoded)
+        // TODO Include the encryption key in the hash
+        return Cursor(SgxReportData, sha512.digest())
+    }
+
+    private fun sendInitConfirm() {
+        val encodedKey = signatureKey.encoded
+        sender.send(1 + encodedKey.size, Consumer { buffer ->
+            buffer.putBoolean(this is EnclaveCall)
+            buffer.put(encodedKey)
+        })
+        stateManager.state = if (this is EnclaveCall) ReceiveFromHost(this) else HostReceiveNotSupported
     }
 
     private fun onReceive(input: ByteBuffer) {
         when (val state = stateManager.state) {
-            New -> {
-                input.checkNoRemaining()
-                sender.send(1, Consumer { buffer ->
-                    buffer.putBoolean(this is EnclaveCall)
-                })
-                stateManager.state = if (this is EnclaveCall) ReceiveFromHost(this) else HostReceiveNotSupported
-            }
             is ReceiveFromHost -> {
                 val isEnclaveCallReturn = input.getBoolean()
                 val bytes = input.getRemainingBytes()

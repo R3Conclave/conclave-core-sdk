@@ -12,9 +12,13 @@ class MockEcallSender<CONNECTION>(
         val enclave: Enclave
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
     override val connection: CONNECTION = hostHandler.connect(this)
-    private val ocallSender = MockOcallSender(HandlerConnected(hostHandler, connection))
-    private val api = MockEnclaveApi(enclave)
-    private val enclaveHandler = enclave.initialize(api, ocallSender)
+    // This needs to be lazy to allow EnclaveHostMockTest to work
+    private val enclaveHandler by lazy {
+        enclave.initialize(
+                MockEnclaveApi(enclave),
+                MockOcallSender(HandlerConnected(hostHandler, connection))
+        )
+    }
 
     override fun sendSerialized(serializedBuffer: ByteBuffer) {
         enclaveHandler?.onReceive(serializedBuffer)

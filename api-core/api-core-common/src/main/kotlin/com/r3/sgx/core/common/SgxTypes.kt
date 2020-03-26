@@ -106,6 +106,8 @@ class SgxSignedQuote(quoteSize: Int) : Struct() {
     @JvmField val signature = field(FixedBytes(quoteSize - size()))
 }
 
+val ByteCursor<SgxSignedQuote>.quote: ByteCursor<SgxQuote> get() = this[encoder.quote]
+
 /**
 typedef struct _attributes_t
 {
