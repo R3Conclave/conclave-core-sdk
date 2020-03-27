@@ -65,6 +65,13 @@ RUN curl -sSL -o /opt/as.ld.objdump.gold.r1.tar.gz https://download.01.org/intel
 RUN echo "eff285796ba97b4bcafc1e2c88534e486524d3295448207381cc9664a155e70d  /opt/as.ld.objdump.gold.r1.tar.gz" | sha256sum -c -
 RUN tar -xaf /opt/as.ld.objdump.gold.r1.tar.gz -C /usr/local/bin --strip=2
 
+# Intel SGX SDK
+RUN mkdir -p /opt/intel
+RUN curl -sSL -o /opt/intel/sgx_linux_x64_sdk_2.9.100.2.bin https://download.01.org/intel-sgx/sgx-linux/2.9/distro/ubuntu18.04-server/sgx_linux_x64_sdk_2.9.100.2.bin
+RUN echo "0176c9ef5d4f5294a8bb39db4f0cd4a235697d3a604fff82140a061b942a5133 /opt/intel/sgx_linux_x64_sdk_2.9.100.2.bin" | sha256sum  -c -
+RUN chmod +x /opt/intel/sgx_linux_x64_sdk_2.9.100.2.bin
+RUN cd /opt/intel && yes yes | ./sgx_linux_x64_sdk_2.9.100.2.bin
+
 # Some incantation that's necessary to get rid of some Python errors that appear when building docs.
 # https://stackoverflow.com/a/59596814/2248578
 RUN pip3 install wheel

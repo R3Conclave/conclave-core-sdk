@@ -22,7 +22,7 @@ ExternalProject_Add(linux-sgx-ext
 
         CONFIGURE_COMMAND ""
 
-        BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
+        BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk psw
 
 
         INSTALL_COMMAND ""
@@ -54,7 +54,7 @@ target_include_directories(linux-sgx_urts_headers INTERFACE
         ${BUILD_SRC_DIR}/external/vtune/linux/sdk/src/ittnotify)
 
 set(LINUX_SGX_LIB_PREFIX ${BUILD_SRC_DIR}/build/linux)
-set_property(TARGET linux-sgx-ext PROPERTY BUILD_ARTIFACT_DIR ${BUILD_SRC_DIR}/linux/installer/common/sdk/output/package/lib64)
+set_property(TARGET linux-sgx-ext PROPERTY BUILD_ARTIFACT_DIR ${LINUX_SGX_LIB_PREFIX})
 foreach(SGX_STATIC_LIB_NAME
         sgx_capable
         sgx_omp
