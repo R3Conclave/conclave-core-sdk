@@ -30,10 +30,16 @@ and then keep your machine trusted by applying updates.
 
 [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
 
+## Get in touch
+
+There's a public mailing list for discussion of using Conclave and SGX. Join [conclave-discuss@groups.io](https://groups.io/g/conclave-discuss).
+
+You can also [email us directly](mailto:conclave@r3.com). In future R3 will offer ticket based commercial support. 
+
 ## Known issues
 
 !!! warning
-    This is a beta release of Conclave. You may not run enclaves built with it in production.
+    This is a beta release of Conclave. You should not run enclaves built with it in production.
 
 Beta 1 ships with the following known issues:
 
