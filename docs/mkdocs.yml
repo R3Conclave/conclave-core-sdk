@@ -36,3 +36,7 @@ markdown_extensions:
       linenums: true
   - toc:
       permalink: true
+
+google_analytics:
+  - 'UA-87760032-7'
+  - 'auto'
