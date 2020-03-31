@@ -39,6 +39,10 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : SgxTask(
     val outputJarObject: Provider<RegularFile> = outputDir.file(outputName)
 
     override fun sgxAction() {
+        if (!System.getProperty("os.name").equals("Linux")) {
+            throw Exception("At this time you may only build enclaves on a Linux host. We hope to remove this limitation in a future release of Conclave. Sorry!")
+        }
+
         enclaveClassSanityCheck()
         val binutilsDirectory = inputBinutilsDirectory.asFile.get()
         inputJar.asFile.get().copyTo(outputJar, overwrite = true)
