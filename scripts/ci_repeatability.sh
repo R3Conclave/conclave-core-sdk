@@ -25,12 +25,11 @@ cd FIRST && sha256sum !(*.signed).so > SHA256SUM && cd -
 
 # Clean the image completely.
 runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR && \$GRADLE clean && \$GRADLE --stop"
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/sgx-jvm-plugin && \$GRADLE clean && \$GRADLE --stop"
 runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/samples && \$GRADLE clean && \$GRADLE --stop"
 
 # Change the name of the container's mount-point.
 # Any lingering references to the mount-point inside the enclave
-# will therfore change its SHA256 hash.
+# will therefore change its SHA256 hash.
 export CODE_DOCKER_DIR="/code"
 
 # Rebuild the build-image and enclave Release artifacts.
