@@ -147,7 +147,7 @@ dokka {
     outputDirectory = "docs/docs/api"
 
     // These modules/directories contain source code defining the exported API.
-    subProjects = ["conclave-common", "conclave-enclave", "conclave-host"]
+    subProjects = ["conclave-common", "conclave-enclave", "conclave-host", "conclave-client"]
     def apiDirectories = files(subProjects.collect { "$it/src/main/kotlin" })
 
     // Find a list of packages that shouldn't appear in the API documentation.
@@ -254,7 +254,7 @@ List<PublishedProject> publishedProjects = [
         ),
         new PublishedProject(
                 projectPath: ':conclave-common',
-                description: 'Conclave API common to both enclave and host',
+                description: 'Conclave API common to enclave, host and client',
         ),
         new PublishedProject(
                 projectPath: ':conclave-enclave',
@@ -263,6 +263,10 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-client',
+                description: 'Conclave client API',
         ),
         new PublishedProject(
                 projectPath: ':api-core:api-core-common',

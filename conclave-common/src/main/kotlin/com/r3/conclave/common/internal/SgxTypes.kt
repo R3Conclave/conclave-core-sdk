@@ -1,4 +1,4 @@
-package com.r3.sgx.core.common
+package com.r3.conclave.common.internal
 
 // This file defines typed views reflecting the SGX API.
 

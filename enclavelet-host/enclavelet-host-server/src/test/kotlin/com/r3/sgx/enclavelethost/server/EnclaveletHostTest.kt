@@ -1,7 +1,11 @@
 package com.r3.sgx.enclavelethost.server
 
 import com.google.protobuf.ByteString
-import com.r3.conclave.host.internal.AttestationParameters
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuoteType
+import com.r3.conclave.common.internal.SgxReportData
+import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet

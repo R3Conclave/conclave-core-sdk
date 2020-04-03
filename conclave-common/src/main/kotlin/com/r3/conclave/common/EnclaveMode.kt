@@ -1,4 +1,4 @@
-package com.r3.conclave.host
+package com.r3.conclave.common
 
 // TODO This needs to replace EnclaveLoadMode but that probably means merging api-core-host into conclave-host (which
 //      needs to happen anyway).

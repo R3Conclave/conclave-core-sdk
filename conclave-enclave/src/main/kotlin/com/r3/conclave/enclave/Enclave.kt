@@ -1,13 +1,11 @@
 package com.r3.conclave.enclave
 
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.internal.StateManager
-import com.r3.conclave.common.internal.getBoolean
-import com.r3.conclave.common.internal.getRemainingBytes
-import com.r3.conclave.common.internal.putBoolean
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave.State.*
-import com.r3.sgx.core.common.*
-import com.r3.sgx.core.common.crypto.internal.SignatureSchemeEdDSA
+import com.r3.sgx.core.common.Handler
+import com.r3.sgx.core.common.Sender
+import com.r3.sgx.core.common.SimpleMuxingHandler
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.core.enclave.RootEnclave

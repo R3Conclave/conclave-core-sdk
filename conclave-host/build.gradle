@@ -35,7 +35,6 @@ dependencies {
     implementation "org.apache.httpcomponents:httpclient:$httpclient_version"
     // Needed to parse the JSON response from the IAS
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 
     // httpclient use commons-logging but we want everything to go via SLF4j (see root build.gradle)
     runtimeOnly "org.slf4j:jcl-over-slf4j:$slf4j_version"

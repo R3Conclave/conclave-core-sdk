@@ -1,10 +1,10 @@
 package com.r3.conclave.sample.host;
 
+import com.r3.conclave.common.EnclaveInstanceInfo;
+import com.r3.conclave.common.EnclaveMode;
+import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.common.OpaqueBytes;
 import com.r3.conclave.host.EnclaveHost;
-import com.r3.conclave.host.EnclaveInstanceInfo;
-import com.r3.conclave.host.EnclaveMode;
-import com.r3.conclave.host.InvalidEnclaveException;
 
 import java.util.Objects;
 

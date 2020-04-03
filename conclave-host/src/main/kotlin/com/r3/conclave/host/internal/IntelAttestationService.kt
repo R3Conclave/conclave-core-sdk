@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxSignedQuote
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.sgx.core.host.debug
 import com.r3.sgx.core.host.loggerFor
 import org.apache.http.HttpResponse
@@ -40,7 +40,7 @@ class IntelAttestationService(private val url: String, private val subscriptionK
     companion object {
         private val log = loggerFor<IntelAttestationService>()
 
-        private val mapper = ObjectMapper().registerModule(JavaTimeModule())
+        private val mapper = ObjectMapper()
         private val random = SecureRandom()
 
         private val httpRequestConfig: RequestConfig = RequestConfig.custom()

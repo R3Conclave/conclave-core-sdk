@@ -1,6 +1,5 @@
-package com.r3.sgx.core.common
+package com.r3.conclave.common.internal
 
-import com.r3.conclave.common.internal.getBytes
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

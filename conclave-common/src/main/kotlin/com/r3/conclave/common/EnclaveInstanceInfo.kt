@@ -1,13 +1,7 @@
-package com.r3.conclave.host
+package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.readBytes
-import com.r3.conclave.common.internal.readLengthPrefixBytes
-import com.r3.conclave.host.internal.AttestationResponse
-import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl
-import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl.Companion.magic
-import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl.Companion.signatureScheme
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxSignedQuote
+import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.attestation.AttestationResponse
 import java.io.DataInputStream
 import java.security.PublicKey
 import java.security.Signature
@@ -54,6 +48,9 @@ interface EnclaveInstanceInfo {
     fun serialize(): ByteArray
 
     companion object {
+        private val magic = "EII".toByteArray()
+        private val signatureScheme = SignatureSchemeEdDSA()
+
         /**
          * Deserializes this object from its custom format.
          *

@@ -1,12 +1,18 @@
 package com.r3.sgx.multiplex.enclave
 
 import com.google.protobuf.ByteString
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuoteType
+import com.r3.conclave.common.internal.SgxSpid
+import com.r3.sgx.core.common.Handler
+import com.r3.sgx.core.common.HandlerConnected
+import com.r3.sgx.core.common.LeafSender
 import com.r3.sgx.core.host.EnclaveletHostHandler
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration
 import com.r3.sgx.dynamictesting.TestEnclaves
 import com.r3.sgx.enclavelethost.grpc.ClientMessage
-import com.r3.sgx.enclavelethost.grpc.EnclaveletHostGrpc.*
+import com.r3.sgx.enclavelethost.grpc.EnclaveletHostGrpc.EnclaveletHostStub
+import com.r3.sgx.enclavelethost.grpc.EnclaveletHostGrpc.newStub
 import com.r3.sgx.enclavelethost.grpc.ServerMessage
 import com.r3.sgx.multiplex.client.MultiplexClientHandler
 import com.r3.sgx.testing.*
@@ -23,7 +29,7 @@ import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.*
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 
 class MultiplexEnclaveClientTest {

@@ -1,5 +1,8 @@
 package com.r3.sgx.enclave.signing
 
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuoteType
+import com.r3.conclave.common.internal.SgxSpid
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester

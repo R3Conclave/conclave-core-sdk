@@ -1,8 +1,7 @@
 package com.r3.conclave.sample.host;
 
-import com.r3.conclave.common.OpaqueBytes;
+import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.host.EnclaveHost;
-import com.r3.conclave.host.InvalidEnclaveException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

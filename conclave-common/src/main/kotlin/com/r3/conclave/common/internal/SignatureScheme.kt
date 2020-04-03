@@ -1,4 +1,4 @@
-package com.r3.sgx.core.common.crypto
+package com.r3.conclave.common.internal
 
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec

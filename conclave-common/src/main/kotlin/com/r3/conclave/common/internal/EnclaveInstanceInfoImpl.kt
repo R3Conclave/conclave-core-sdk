@@ -1,21 +1,18 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.common.internal
 
-import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.SHA512Hash
-import com.r3.conclave.common.internal.writeLengthPrefixBytes
-import com.r3.conclave.host.*
-import com.r3.conclave.host.EnclaveMode.*
-import com.r3.conclave.host.EnclaveSecurityInfo.Summary
-import com.r3.conclave.host.internal.QuoteStatus.*
-import com.r3.sgx.core.common.*
-import com.r3.sgx.core.common.SgxAttributes.flags
-import com.r3.sgx.core.common.SgxReportBody.attributes
-import com.r3.sgx.core.common.SgxReportBody.cpuSvn
-import com.r3.sgx.core.common.SgxReportBody.measurement
-import com.r3.sgx.core.common.SgxReportBody.mrsigner
-import com.r3.sgx.core.common.SgxReportBody.reportData
-import com.r3.sgx.core.common.crypto.internal.SignatureSchemeEdDSA
+import com.r3.conclave.common.*
+import com.r3.conclave.common.EnclaveMode.*
+import com.r3.conclave.common.EnclaveSecurityInfo.Summary
+import com.r3.conclave.common.internal.SgxAttributes.flags
+import com.r3.conclave.common.internal.SgxReportBody.attributes
+import com.r3.conclave.common.internal.SgxReportBody.cpuSvn
+import com.r3.conclave.common.internal.SgxReportBody.measurement
+import com.r3.conclave.common.internal.SgxReportBody.mrsigner
+import com.r3.conclave.common.internal.SgxReportBody.reportData
+import com.r3.conclave.common.internal.attestation.QuoteStatus.*
+import com.r3.conclave.common.internal.attestation.AttestationParameters
+import com.r3.conclave.common.internal.attestation.AttestationReport
+import com.r3.conclave.common.internal.attestation.AttestationResponse
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.security.PublicKey
@@ -28,7 +25,7 @@ class EnclaveInstanceInfoImpl(
         val enclaveMode: EnclaveMode
 ) : EnclaveInstanceInfo {
     // The verification of the parameters are done at construction time. This is especially important when deserialising.
-    internal val attestationReport: AttestationReport
+    val attestationReport: AttestationReport
     override val enclaveInfo: EnclaveInfo
     override val securityInfo: EnclaveSecurityInfo
 
@@ -113,8 +110,7 @@ class EnclaveInstanceInfoImpl(
     """.trimIndent()
 
     companion object {
-        internal val magic = "EII".toByteArray()
-        internal val signatureScheme = SignatureSchemeEdDSA()
+        private val magic = "EII".toByteArray()
 
         private fun getSummaryAndReason(response: AttestationResponse, report: AttestationReport): Pair<Summary, String> {
             return when (report.isvEnclaveQuoteStatus) {

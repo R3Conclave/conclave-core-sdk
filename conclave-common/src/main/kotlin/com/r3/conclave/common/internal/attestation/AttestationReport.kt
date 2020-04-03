@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.common.internal.attestation
 
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -15,10 +15,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxQuote
-import com.r3.sgx.core.common.SgxSignedQuote
+import com.r3.conclave.common.internal.*
 import java.time.Instant
 
 /**

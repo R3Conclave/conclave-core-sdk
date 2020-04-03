@@ -1,6 +1,6 @@
 package com.r3.sgx.multiplex.enclave
 
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.*
 import com.r3.sgx.core.host.EnclaveHandle
 import com.r3.sgx.core.host.EnclaveletHostHandler
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration

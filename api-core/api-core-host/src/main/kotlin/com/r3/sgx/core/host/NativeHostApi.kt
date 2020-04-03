@@ -1,9 +1,9 @@
 package com.r3.sgx.core.host
 
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.Cursor
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxMetadata
 import com.r3.sgx.core.common.Handler
-import com.r3.sgx.core.common.SgxMetadata
 import com.r3.sgx.core.host.internal.*
 import java.io.File
 

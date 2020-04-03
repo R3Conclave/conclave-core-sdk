@@ -1,6 +1,9 @@
 package com.r3.sgx.core.common.attestation
 
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxAttributes
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.SgxReportBody
 import java.nio.ByteBuffer
 
 /**

@@ -1,9 +1,9 @@
 package com.r3.sgx.core.enclave
 
+import com.r3.conclave.common.internal.*
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
-import com.r3.sgx.core.common.crypto.SignatureScheme
 import com.r3.sgx.core.common.crypto.SignatureSchemeId
 import com.r3.sgx.core.common.internal.encryption.DecryptorAESGCM
 import com.r3.sgx.core.common.internal.encryption.EncryptorAESGCM

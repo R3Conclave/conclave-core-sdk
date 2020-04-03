@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.common.internal.attestation
 
 /**
  * Definition of each enum value is taken from https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf

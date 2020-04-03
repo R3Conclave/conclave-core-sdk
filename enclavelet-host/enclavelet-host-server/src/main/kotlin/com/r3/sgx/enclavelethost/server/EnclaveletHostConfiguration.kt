@@ -3,7 +3,7 @@ package com.r3.sgx.enclavelethost.server
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.r3.sgx.core.common.SgxQuoteType
+import com.r3.conclave.common.internal.SgxQuoteType
 import com.r3.sgx.core.host.EnclaveLoadMode
 import picocli.CommandLine
 import java.io.BufferedReader

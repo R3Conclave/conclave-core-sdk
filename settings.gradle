@@ -24,6 +24,7 @@ if (includeNative) {
 include 'conclave-common'
 include 'conclave-enclave'
 include 'conclave-host'
+include 'conclave-client'
 
 include 'api-core:api-core-enclave'
 include 'api-core:api-core-host'

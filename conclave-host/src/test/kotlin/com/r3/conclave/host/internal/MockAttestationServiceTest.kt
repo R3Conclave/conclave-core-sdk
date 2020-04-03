@@ -1,8 +1,10 @@
 package com.r3.conclave.host.internal
 
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxSignedQuote
-import com.r3.sgx.core.common.quote
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.attestation.AttestationParameters
+import com.r3.conclave.common.internal.attestation.QuoteStatus
+import com.r3.conclave.common.internal.quote
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random

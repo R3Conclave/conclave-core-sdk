@@ -10,7 +10,21 @@ import java.security.MessageDigest
  * Container for a cryptographically secure hash value. Currently only SHA-256 and SHA-512 are supported, represented
  * by [SHA256Hash] and [SHA512Hash] respectively.
  */
-sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes)
+sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
+    companion object {
+        /**
+         * Parses the given hexadecimal string into either a [SHA256Hash] or a [SHA512Hash] depending on the length.
+         */
+        @JvmStatic
+        fun parse(str: String): SecureHash {
+            return when (str.length) {
+                64 -> SHA256Hash.parse(str)
+                128 -> SHA512Hash.parse(str)
+                else -> throw IllegalArgumentException("Provided string is neither a SHA-256 or a SHA-512 string: $str")
+            }
+        }
+    }
+}
 
 /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
 class SHA256Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
@@ -43,7 +57,7 @@ class SHA256Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         fun get(buffer: ByteBuffer): SHA256Hash = SHA256Hash(buffer.getBytes(32))
 
         /**
-         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
+         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SHA256Hash].
          * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
          * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */
@@ -90,7 +104,7 @@ class SHA512Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         fun get(buffer: ByteBuffer): SHA512Hash = SHA512Hash(buffer.getBytes(64))
 
         /**
-         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
+         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SHA512Hash].
          * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
          * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */

@@ -1,4 +1,4 @@
-package com.r3.sgx.core.common
+package com.r3.conclave.common.internal
 
 import java.nio.ByteBuffer
 import java.util.*

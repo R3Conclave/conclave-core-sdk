@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.common.internal.attestation
 
 import java.security.cert.*
 

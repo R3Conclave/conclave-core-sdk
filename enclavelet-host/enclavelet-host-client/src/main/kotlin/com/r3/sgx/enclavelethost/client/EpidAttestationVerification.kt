@@ -1,12 +1,12 @@
 package com.r3.sgx.enclavelethost.client
 
-import com.r3.conclave.host.internal.AttestationParameters
-import com.r3.conclave.host.internal.AttestationResponse
-import com.r3.conclave.host.internal.QuoteStatus
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxAttributes
-import com.r3.sgx.core.common.SgxEnclaveFlags
-import com.r3.sgx.core.common.SgxQuote
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxAttributes
+import com.r3.conclave.common.internal.SgxEnclaveFlags
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.attestation.AttestationParameters
+import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteStatus
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.common.attestation.SgxQuoteReader

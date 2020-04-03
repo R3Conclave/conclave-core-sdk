@@ -1,6 +1,7 @@
 package com.r3.sgx.core.common.crypto.internal
 
-import com.r3.sgx.core.common.crypto.SignatureScheme
+import com.r3.conclave.common.internal.SignatureScheme
+import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.sgx.core.common.crypto.SignatureSchemeId
 
 object SignatureSchemeFactory {

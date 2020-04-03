@@ -1,6 +1,5 @@
-package com.r3.conclave.host
+package com.r3.conclave.common
 
-import com.r3.conclave.common.OpaqueBytes
 import java.time.Instant
 
 /**

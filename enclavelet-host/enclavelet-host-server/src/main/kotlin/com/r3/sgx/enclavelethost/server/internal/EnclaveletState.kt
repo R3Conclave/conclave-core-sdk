@@ -1,8 +1,13 @@
 package com.r3.sgx.enclavelethost.server.internal
 
-import com.r3.conclave.host.internal.AttestationResponse
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.host.internal.AttestationService
-import com.r3.sgx.core.common.*
+import com.r3.sgx.core.common.ChannelInitiatingHandler
+import com.r3.sgx.core.common.ErrorHandler
+import com.r3.sgx.core.common.SimpleMuxingHandler
+import com.r3.sgx.core.common.ThrowingErrorHandler
 import com.r3.sgx.core.host.*
 import java.io.File
 

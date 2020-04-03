@@ -1,12 +1,12 @@
 package com.r3.sgx.testing
 
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxAttributes.flags
-import com.r3.sgx.core.common.SgxEnclaveFlags
-import com.r3.sgx.core.common.SgxReport
-import com.r3.sgx.core.common.SgxReport.body
-import com.r3.sgx.core.common.SgxReportBody.attributes
-import com.r3.sgx.core.common.SgxReportBody.reportData
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxAttributes.flags
+import com.r3.conclave.common.internal.SgxEnclaveFlags
+import com.r3.conclave.common.internal.SgxReport
+import com.r3.conclave.common.internal.SgxReport.body
+import com.r3.conclave.common.internal.SgxReportBody.attributes
+import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.sgx.core.enclave.Enclave
 import com.r3.sgx.core.enclave.EnclaveApi
 import java.nio.ByteBuffer

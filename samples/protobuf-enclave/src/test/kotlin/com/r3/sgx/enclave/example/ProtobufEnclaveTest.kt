@@ -1,6 +1,9 @@
 package com.r3.sgx.enclave.example
 
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.*
+import com.r3.sgx.core.common.BytesHandler
+import com.r3.sgx.core.common.ProtoSender
+import com.r3.sgx.core.common.SimpleProtoHandler
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.core.host.internal.Native

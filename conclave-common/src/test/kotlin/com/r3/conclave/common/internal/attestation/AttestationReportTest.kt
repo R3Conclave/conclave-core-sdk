@@ -1,11 +1,11 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.common.internal.attestation
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxQuote
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuote
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.ZoneOffset.UTC

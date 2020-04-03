@@ -1,10 +1,10 @@
 package com.r3.sgx.enclavelethost.server
 
 import com.google.common.io.BaseEncoding
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxSpid
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxSpid
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.EpidAttestationHostConfiguration
 import com.r3.sgx.core.host.loggerFor

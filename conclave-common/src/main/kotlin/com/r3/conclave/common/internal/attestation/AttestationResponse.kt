@@ -1,8 +1,6 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.common.internal.attestation
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.sgx.core.common.SgxSignedQuote
-import java.net.URI
 import java.security.GeneralSecurityException
 import java.security.Signature
 import java.security.cert.CertPath

@@ -1,7 +1,5 @@
-package com.r3.sgx.core.common.crypto.internal
+package com.r3.conclave.common.internal
 
-import com.r3.sgx.core.common.crypto.SignatureScheme
-import com.r3.sgx.core.common.crypto.SignatureSchemeSpec
 import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable

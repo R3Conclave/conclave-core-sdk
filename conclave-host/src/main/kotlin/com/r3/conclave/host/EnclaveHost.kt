@@ -1,12 +1,14 @@
 package com.r3.conclave.host
 
+import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.InvalidEnclaveException
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
-import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl
-import com.r3.conclave.host.internal.EnclaveInstanceInfoImpl.Companion.signatureScheme
+import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.*
@@ -47,6 +49,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
 ) : AutoCloseable {
     companion object {
         private val log = loggerFor<EnclaveHost>()
+        private val signatureScheme = SignatureSchemeEdDSA()
 
         // This wouldn't be needed if the c'tor was package-private.
         internal fun create(

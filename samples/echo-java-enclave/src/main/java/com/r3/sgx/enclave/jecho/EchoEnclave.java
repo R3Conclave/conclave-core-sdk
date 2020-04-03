@@ -1,7 +1,7 @@
 package com.r3.sgx.enclave.jecho;
 
-import com.r3.sgx.core.common.Cursor;
-import com.r3.sgx.core.common.SgxReportData;
+import com.r3.conclave.common.internal.Cursor;
+import com.r3.conclave.common.internal.SgxReportData;
 import com.r3.sgx.core.enclave.EnclaveApi;
 import com.r3.sgx.core.enclave.Enclavelet;
 

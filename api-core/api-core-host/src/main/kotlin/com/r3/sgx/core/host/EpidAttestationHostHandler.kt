@@ -1,6 +1,7 @@
 package com.r3.sgx.core.host
 
 import com.google.protobuf.ByteString
+import com.r3.conclave.common.internal.*
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.internal.Native
 

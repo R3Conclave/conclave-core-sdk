@@ -1,9 +1,12 @@
 package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxSignedQuote
-import com.r3.sgx.core.common.quote
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.attestation.AttestationReport
+import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteStatus
+import com.r3.conclave.common.internal.quote
 import java.io.InputStream
 import java.security.KeyFactory
 import java.security.Signature

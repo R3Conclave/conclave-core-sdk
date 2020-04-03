@@ -1,5 +1,7 @@
 package com.r3.sgx.core.enclave
 
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxReportData
 import com.r3.sgx.core.common.*
 
 /**
