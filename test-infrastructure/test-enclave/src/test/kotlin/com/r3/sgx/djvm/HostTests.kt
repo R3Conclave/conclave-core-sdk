@@ -20,10 +20,6 @@ class HostTests {
 
         val mathsJarPath = Paths.get(System.getProperty("maths-tests-jar.path"))
                 ?: throw AssertionError("System property 'maths-tests-jar.path' not set.")
-        
-        @JvmStatic
-        val testCodeJarPath = Paths.get(System.getProperty("djvm-unit-tests-jar.path"))
-                ?: throw AssertionError("System property 'test-code-jar.path' not set.")
 
         @Suppress("unused")
         @BeforeAll
