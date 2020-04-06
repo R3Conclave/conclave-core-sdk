@@ -267,7 +267,10 @@ Inside the `Simulation` directory create a file called `enclave.xml` and copy/pa
 </EnclaveConfiguration>
 ```
 
-This switches control resource usage and identity of the enclave. For now we can accept the defaults.
+This switches control resource usage and identity of the enclave. The most important
+value here is the **product ID**. This is an arbitrary number that can be used to distinguish between different
+enclaves produced by the same organisation (which may for internal reasons wish to use a single signing key).
+For now we can accept the defaults for all settings.  
 
 <!--- TODO: We should force developers to specify the ISV SVN and ProdID in future -->
 
@@ -376,12 +379,53 @@ machines, so clients can audit the enclave by repeating the Gradle build and com
     All this data is available via individual getters on the `EnclaveInstanceInfo` so you should never feel a need to
     parse the output of `toString`. 
         
-As we can see this enclave isn't actually considered secure yet because we're running in simulation mode still.
+An instance has a security assessment, which can change in response to discovery of vulnerabilities in the
+infrastructure (i.e. without anything changing about the host or enclave itself). As we can see this enclave isn't
+actually considered secure yet because we're running in simulation mode still. An enclave can be `SECURE`, `STALE`, 
+or `INSECURE`. A assessment of `STALE` means there is a software/firmware/microcode update available for the platform
+that improves security in some way. The client may wish to observe when this starts being reported and define a 
+time span in which the remote enclave operator must upgrade.                                             
 
 Now get the serialized bytes to a client via whatever network mechanism you want. The bytes are essentially a large,
 complex digital signature, so it's safe to publish them publicly. An attestation doesn't inherently expire but because 
 the SGX ecosystem is always moving, client code will typically have some frequency with which it expects the host code
 to refresh the `EnclaveInstanceInfo`. At present this is done by stopping and restarting the enclave.
+
+## Constraints
+
+How do you know the `EnclaveInstanceInfo` you've got is for the enclave you really intend to interact with? In normal
+client/server programming you connect to a host using some sort of identity, like a domain name or IP address. In
+enclave programming the location of the enclave might not matter much because the host is untrusted. Instead you have
+to verify *what* is running, not *where* it's running.
+
+One way to do it is by inspecting the properties on the `EnclaveInstanceInfo` object and hard-coding some logic. That
+works fine, but is a common pattern in enclave-oriented design so we provide an API to do it for you.
+
+The [`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) class takes an `EnclaveInstanceInfo` and
+performs some matching against it. A constraint object can be built in code, or it can be loaded from a small domain
+specific language encoded as a one-line string. The string form is helpful if you anticipate frequent upgrades that
+should be whitelisted, or other frequent changes to the acceptable enclave, as it can be easily put into a
+configuration file, JSON, XML or command line flags.
+
+The constraint lets you specify:
+
+1. Acceptable code hashes (measurements)
+2. Acceptable signing public keys
+3. The minimum revocation level 
+4. The product ID
+5. The security level of the instance: `SECURE`, `STALE`, `INSECURE`
+
+If you specify a signing public key then you must also specify the product ID, otherwise if the organisation that
+created the enclave makes a second different kind of enclave in future, a malicious host might connect you with the
+wrong one. If the input/output commands are similar then a confusion attack could be opened up. That's why you must
+always specify the product ID even if it's zero.
+
+The simplest possible string-form constraint looks like this:
+
+`C:04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6
+
+It says "accept exactly one program, with that measurement hash". In this case the value came from the output of the
+build process as shown above.
 
 ## Run the host and enclave
 

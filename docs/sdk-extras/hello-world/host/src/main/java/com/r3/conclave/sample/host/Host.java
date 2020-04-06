@@ -1,5 +1,6 @@
 package com.r3.conclave.sample.host;
 
+import com.r3.conclave.client.EnclaveConstraint;
 import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.common.EnclaveMode;
 import com.r3.conclave.common.InvalidEnclaveException;
@@ -43,6 +44,10 @@ public class Host {
 
             // It has a useful toString method.
             System.out.println(EnclaveInstanceInfo.deserialize(attestationBytes));
+
+            // Check it matches the expected code hash but otherwise can be insecure (e.g. simulation mode).
+            EnclaveConstraint constraint = EnclaveConstraint.parse("C:02fbdf9a91773af2eb1c20cdea3823ab62424a03f168d135e78ccc572cfe9190 SEC:INSECURE");
+            constraint.check(attestation);
 
             // !dlrow olleH      :-)
             System.out.println(callEnclave(enclave, "Hello world!"));

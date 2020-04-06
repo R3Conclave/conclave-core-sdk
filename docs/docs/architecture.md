@@ -47,9 +47,17 @@ To use an enclave clients need to know the network address where the host proces
 running so they can send it messages, and they also need to obtain an `EnclaveInstanceInfo` object from the host.
 This could be downloaded on demand from the host, or it could be published somewhere. This object encapsulates a
 _remote attestation_ from the host. They test the `EnclaveInstanceInfo` against a set of constraints, depending on
-how flexible they want to be about software upgrades to the enclave. When they're happy they can create
-`EnclaveMail` which encapsulates an encrypted message. By serializing and delivering the `EnclaveMail` object to
-the host (and from there to the enclave), communication is established. See the [Mail](#mail) section below.
+how flexible they want to be about software upgrades to the enclave. Constraints are represented by an
+[`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) object, which can be read from/written to
+a small domain specific language suitable for embedding in config files, command line options and so on. A
+constraint may specify that a specific set of code hashes is required i.e. every version is whitelisted and no
+upgrade is possible until the constraint is adjusted. Or, it may specify a set of allowed signing keys, enabling
+enclave authors to release new versions. In that scenario the enclave creator is trusted but the entity hosting the
+enclave instance may not be.
+
+When they're happy they can create encrypted messages using the key in the `EnclaveInstanceInfo`. By sending and
+receiving such messages to the host (and from there to the enclave), communication is established. See the [Mail
+](#mail) section below for further discussion of this.
 
 Whilst the high level setup has just those three entities, real deployments have more:
 
@@ -121,7 +129,11 @@ through the host.
 
 Communicating with an enclave requires sending and receiving encrypted and authenticated messages. One possible approach
 is to embed a TLS stack into the enclave and use something like HTTPS + REST. But this technique has some problems
-and limitations that are resolved via Conclave's Mail API.
+and limitations that will resolved in future releases via a new "Mail API".
+
+!!! notice
+
+    Mail is not implemented in the current release of Conclave. This section is provisional.
 
 ### Messages vs streams
 
@@ -158,10 +170,6 @@ encrypted database at all. The untrusted host can also take on the significant b
 storing it to disk, sorting it, applying backpressure, exposing to the admin if there are backlogs etc.
 
 ## Encrypted, authenticated and transactional messages
-
-!!! notice
-
-    Mail is not implemented in the current release of Conclave.
 
 A mail is an authenticated message with an encrypted body and a cleartext envelope. The mail can be up to two
 gigabytes in size.

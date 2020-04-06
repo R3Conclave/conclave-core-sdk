@@ -9,6 +9,7 @@ def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation
 
 dependencies {
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
+    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
 
     runtimeOnly project(path: ":enclave", configuration: mode)
     runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
