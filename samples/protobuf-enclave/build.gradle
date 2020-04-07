@@ -8,6 +8,8 @@ repositories {
     jcenter()
 }
 
+def sgxMode = project.property('sgx_mode')
+
 dependencies {
     implementation "com.r3.sgx:api-core-enclave"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
@@ -18,7 +20,7 @@ dependencies {
     testImplementation "com.r3.sgx:api-core-host"
     testImplementation "com.r3.sgx:enclave-testing"
 
-    testRuntimeOnly "com.r3.sgx:native-host-simulation"
+    testRuntimeOnly "com.r3.sgx:native-host-${sgxMode.toLowerCase()}"
 }
 
 shadowJar {
@@ -51,6 +53,8 @@ protobuf {
 }
 
 test {
-    dependsOn buildSignedEnclaveSimulation
-    systemProperty("com.r3.sgx.enclave.path", buildSignedEnclaveSimulation.signedEnclavePath)
+    def signEnclaveTask = tasks.getByPath(":protobuf-enclave:buildSignedEnclave$sgxMode")
+    dependsOn signEnclaveTask
+    systemProperty("com.r3.sgx.enclave.path", signEnclaveTask.signedEnclavePath)
+    systemProperty 'sgx.mode', project.property('sgx_mode')
 }
