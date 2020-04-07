@@ -54,3 +54,5 @@ Beta 1 ships with the following known issues:
    will implement "DCAP attestation" which will allow the owner of the hardware to whiteliste enclaves, not just Intel.
 7. There are some modules and packages under the `com.r3.sgx` namespace. These should be considered internal and may be
    changed, removed, or merged into other modules in any release.
+8. Product IDs aren't fully wired up yet. This shouldn't impact any testing or development at the moment, as it only 
+   matters when multiple different enclaves are used in production from the same publisher.
