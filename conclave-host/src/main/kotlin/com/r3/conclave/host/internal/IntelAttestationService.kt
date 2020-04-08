@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxSignedQuote
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.sgx.core.host.debug
+import com.r3.sgx.core.host.loggerFor
 import org.apache.http.HttpResponse
 import org.apache.http.HttpStatus.SC_OK
 import org.apache.http.client.config.RequestConfig
@@ -23,8 +25,6 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager
 import org.apache.http.ssl.SSLContextBuilder
 import org.apache.http.util.EntityUtils
-import org.slf4j.LoggerFactory
-import java.io.InputStream
 import java.net.URLDecoder
 import java.security.SecureRandom
 import java.security.cert.CertPath
@@ -37,11 +37,10 @@ import java.util.*
  * https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf.
  */
 class IntelAttestationService(private val url: String, private val subscriptionKey: String) : AttestationService {
-
     companion object {
-        private val log = LoggerFactory.getLogger(IntelAttestationService::class.java)
+        private val log = loggerFor<IntelAttestationService>()
 
-        private val mapper = ObjectMapper().registerModule(JavaTimeModule())
+        private val mapper = ObjectMapper()
         private val random = SecureRandom()
 
         private val httpRequestConfig: RequestConfig = RequestConfig.custom()
@@ -57,10 +56,8 @@ class IntelAttestationService(private val url: String, private val subscriptionK
     override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse {
         try {
             createHttpClient().use { client ->
-                val reportURI = "$url/attestation/v3/report"
-                log.info("Invoking IAS: {}", reportURI)
-
-                val httpRequest = HttpPost(reportURI)
+                val httpRequest = HttpPost("$url/attestation/v3/report")
+                log.debug { "IAS: $httpRequest" }
                 val reportRequest = ReportRequest(isvEnclaveQuote = signedQuote.getBuffer().array())
                 httpRequest.entity = StringEntity(mapper.writeValueAsString(reportRequest), ContentType.APPLICATION_JSON)
                 httpRequest.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey)
@@ -73,7 +70,8 @@ class IntelAttestationService(private val url: String, private val subscriptionK
                     return AttestationResponse(
                             reportBytes = EntityUtils.toByteArray(httpResponse.entity),
                             signature = Base64.getDecoder().decode(httpResponse.requireHeader("X-IASReport-Signature")),
-                            certPath = httpResponse.parseResponseCertPath()
+                            certPath = httpResponse.parseResponseCertPath(),
+                            advisoryIds = httpResponse.getFirstHeader("Advisory-IDs")?.value?.split(",") ?: emptyList()
                     )
                 }
             }

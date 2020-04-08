@@ -130,7 +130,87 @@ subprojects {
     }
 }
 
-/* ---- PUBLISHING ---- */
+// region Docsite building
+//
+// This part of the build handles the creation of the EXTERNAL docsite. The internal docsite is not built automatically
+// at this time: run `mkdocs serve` in the internal-docs directory yourself to view it.
+
+// Dokka is the tool that reads KDoc comments from Kotlin and produces an API website.
+dokka {
+    // We will use the JavaDoc styling for now, to make Conclave more appealing to Java developers. We may do what
+    // Corda does and offer a "Kotlin theme" site later.
+    outputFormat = 'javadoc'
+
+    // We output into the site source directory to avoid warnings (and associated warning blindness) caused when mkdocs
+    // tries to check links to the JavaDocs and finds they're missing. This causes a bit of disk space bloat when
+    // the files are copied to the docs/build directory but the cost is small and worth it.
+    outputDirectory = "docs/docs/api"
+
+    // These modules/directories contain source code defining the exported API.
+    subProjects = ["conclave-common", "conclave-enclave", "conclave-host", "conclave-client"]
+    def apiDirectories = files(subProjects.collect { "$it/src/main/kotlin" })
+
+    // Find a list of packages that shouldn't appear in the API documentation.
+    def internalPackagePrefixes = {
+        def prefixes = []
+        // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
+        apiDirectories.collect { sourceDir ->
+            sourceDir.traverse(type: FileType.DIRECTORIES) {
+                if (it.name == 'internal') {
+                    prefixes.add sourceDir.toPath().relativize(it.toPath()).toString().replace(File.separator, '.')
+                }
+            }
+        }
+        prefixes
+    }()
+
+    configuration {
+        moduleName = "Conclave"
+        jdkVersion = 8
+        reportUndocumented = false
+        skipDeprecated = true  // Don't want users seeing deprecated stuff, they can call it up in their IDE if they need it.
+
+        // Suppress each internal package.
+        internalPackagePrefixes.collect { packagePrefix ->
+            perPackageOption {
+                prefix = packagePrefix
+                suppress = true
+            }
+        }
+    }
+}
+
+// This is here so we can add other Dokka formats in future (e.g. Kotlin's own API docs theme)
+task apidocs(dependsOn: ['dokka'])
+
+task packageJavadoc(type: Jar, dependsOn: ['dokka']) {
+    from dokka
+    classifier = 'javadoc'
+}
+
+task mkdocs(type: Exec, dependsOn: ['apidocs']) {
+    description = "Runs the mkdocs tool to produce the static HTML website we expose to end users."
+    commandLine("./make-docsite.sh")
+    workingDir("docs")
+    inputs.files(fileTree("docs/docs"))
+    outputs.dir("docs/build")
+}
+
+task cleanDocs {
+    delete 'docs/build'
+    delete 'docs/docs/api'
+    delete 'docs/virtualenv'
+}
+
+tasks['clean'].dependsOn(cleanDocs)
+
+// This task has to be called "buildDocs" because it's invoked by the
+// https://github.com/corda/corda-docs-builder tool from CI.
+task buildDocs(dependsOn: ['mkdocs'])
+dokka.shouldRunAfter mkdocs
+// endregion
+
+//region Publishing
 class PublishedProject {
     String projectPath
     String description
@@ -174,7 +254,7 @@ List<PublishedProject> publishedProjects = [
         ),
         new PublishedProject(
                 projectPath: ':conclave-common',
-                description: 'Conclave API common to both enclave and host',
+                description: 'Conclave API common to enclave, host and client',
         ),
         new PublishedProject(
                 projectPath: ':conclave-enclave',
@@ -183,6 +263,10 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-client',
+                description: 'Conclave client API',
         ),
         new PublishedProject(
                 projectPath: ':api-core:api-core-common',
@@ -231,6 +315,9 @@ if (includeNative) {
                 maven(MavenPublication) {
                     from project.components.java
                     pom.description = description
+                    // Only publish JavaDocs for the Conclave modules, as the others aren't meant to be used.
+                    if (published.projectPath.startsWith(":conclave-"))
+                        artifact packageJavadoc
                 }
             }
             repositories {
@@ -266,82 +353,8 @@ idea {
 wrapper {
     distributionType = Wrapper.DistributionType.ALL
 }
+//endregion
 
-
-// region Docsite building
-//
-// This part of the build handles the creation of the EXTERNAL docsite. The internal docsite is not built automatically
-// at this time: run `mkdocs serve` in the internal-docs directory yourself to view it.
-
-// Dokka is the tool that reads KDoc comments from Kotlin and produces an API website.
-dokka {
-    // We will use the JavaDoc styling for now, to make Conclave more appealing to Java developers. We may do what
-    // Corda does and offer a "Kotlin theme" site later.
-    outputFormat = 'javadoc'
-
-    // We output into the site source directory to avoid warnings (and associated warning blindness) caused when mkdocs
-    // tries to check links to the JavaDocs and finds they're missing. This causes a bit of disk space bloat when
-    // the files are copied to the docs/build directory but the cost is small and worth it.
-    outputDirectory = "docs/docs/api"
-
-    // These modules/directories contain source code defining the exported API.
-    subProjects = ["conclave-common", "conclave-enclave", "conclave-host"]
-    def apiDirectories = files(subProjects.collect { "$it/src/main/kotlin" })
-
-    // Find a list of packages that shouldn't appear in the API documentation.
-    def internalPackagePrefixes = {
-        def prefixes = []
-        // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
-        apiDirectories.collect { sourceDir ->
-            sourceDir.traverse(type: FileType.DIRECTORIES) {
-                if (it.name == 'internal') {
-                    prefixes.add sourceDir.toPath().relativize(it.toPath()).toString().replace(File.separator, '.')
-                }
-            }
-        }
-        prefixes
-    }()
-
-    configuration {
-        moduleName = "Conclave"
-        jdkVersion = 8
-        reportUndocumented = false
-        skipDeprecated = true  // Don't want users seeing deprecated stuff, they can call it up in their IDE if they need it.
-
-        // Suppress each internal package.
-        internalPackagePrefixes.collect { packagePrefix ->
-            perPackageOption {
-                prefix = packagePrefix
-                suppress = true
-            }
-        }
-    }
-}
-
-// This is here so we can add other Dokka formats in future (e.g. Kotlin's own API docs theme)
-task apidocs(dependsOn: ['dokka'])
-
-task mkdocs(type: Exec, dependsOn: ['apidocs']) {
-    description = "Runs the mkdocs tool to produce the static HTML website we expose to end users."
-    commandLine("./make-docsite.sh")
-    workingDir("docs")
-    inputs.files(fileTree("docs/docs"))
-    outputs.dir("docs/build")
-}
-
-task cleanDocs {
-    delete 'docs/build'
-    delete 'docs/docs/api'
-    delete 'docs/virtualenv'
-}
-
-tasks['clean'].dependsOn(cleanDocs)
-
-// This task has to be called "buildDocs" because it's invoked by the
-// https://github.com/corda/corda-docs-builder tool from CI.
-task buildDocs(dependsOn: ['mkdocs'])
-dokka.shouldRunAfter mkdocs
-// endregion
 
 //region SDK artifact creation
 //

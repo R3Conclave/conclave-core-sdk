@@ -1,8 +1,12 @@
 package com.r3.sgx.enclavelethost.server
 
 import com.google.protobuf.ByteString
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuoteType
+import com.r3.conclave.common.internal.SgxReportData
+import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.sgx.core.common.*
-import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.core.host.EnclaveLoadMode
@@ -11,7 +15,6 @@ import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import com.r3.sgx.enclavelethost.client.EpidAttestationVerificationBuilder
 import com.r3.sgx.enclavelethost.grpc.*
 import com.r3.sgx.testing.EchoHandler
-import com.r3.sgx.testing.MockAttestationCertStore
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
@@ -60,11 +63,6 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
     companion object {
         const val port = 30011
         val serverJar: String = System.getProperty("test.hostjar")
-        private fun ByteCursor<SgxQuote>.getMeasurement(): Measurement {
-            val data = ByteArray(SgxMeasurement.size) { 0 }
-            this[SgxQuote.reportBody][SgxReportBody.measurement].getBuffer().get(data)
-            return Measurement(data)
-        }
     }
 
     @Test
@@ -122,7 +120,7 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
                 val attestationVerifier = EpidAttestationVerificationBuilder()
                         .withAcceptDebug(true)
                         .build()
-                attestationVerifier.verify(MockAttestationCertStore.loadTestPkix(), epidAttestation.attestation)
+                attestationVerifier.verify(AttestationParameters.MOCK, epidAttestation.attestation)
             } finally {
                 channel.gracefulShutdown()
             }
@@ -162,7 +160,7 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
 
     @Test
     fun testConfigParsing() {
-        val configFile = javaClass.classLoader.getResource("test-config.yml")
+        val configFile = javaClass.classLoader.getResource("test-config.yml")!!
         val config = (EnclaveletHostConfiguration.read(File(configFile.toURI())))
         val expected = EnclaveletHostConfiguration(
                 bindPort=8080,
@@ -178,7 +176,7 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
 
     @Test
     fun testConfigParsingWithDefaults() {
-        val configFile = javaClass.classLoader.getResource("test-config-overrides.yml")
+        val configFile = javaClass.classLoader.getResource("test-config-overrides.yml")!!
         val config = (EnclaveletHostConfiguration.readWithDefaults(File(configFile.toURI())))
         val expected = EnclaveletHostConfiguration(
                 bindPort = 8080,
@@ -194,14 +192,14 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
 
     private fun getTmpFileNames(): String {
         return File(System.getProperty("java.io.tmpdir"))
-                .listFiles()
+                .listFiles()!!
                 .sorted()
                 .joinToString(",") { it.path }
     }
 
     private fun withEnclaveletHost(enclaveClass: Class<out Enclavelet>, block: (Process) -> Unit) {
         val enclaveFile = testEnclaves.getEnclave(enclaveClass)
-        val config = javaClass.classLoader.getResource("test-config.yml")
+        val config = javaClass.classLoader.getResource("test-config.yml")!!
         val tmpFilesBefore = getTmpFileNames()
         val host = ProcessBuilder().
                 command("java",

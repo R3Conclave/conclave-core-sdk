@@ -1,5 +1,8 @@
 package com.r3.sgx.enclave.signing
 
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuoteType
+import com.r3.conclave.common.internal.SgxSpid
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
@@ -33,7 +36,7 @@ class SigningEnclaveTest {
     @Before
     fun setupEnclave() {
         configuration = EpidAttestationHostConfiguration(
-                quoteType = SgxQuoteType32.LINKABLE,
+                quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid))
 
         handle = NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(RootHandler(), File(enclavePath))
@@ -41,7 +44,6 @@ class SigningEnclaveTest {
 
     @After
     fun destroyEnclave() {
-        @Suppress("DEPRECATION")
         handle.destroy()
     }
 
@@ -50,7 +52,7 @@ class SigningEnclaveTest {
         val connection = handle.connection
         val channels = connection.addDownstream(ChannelInitiatingHandler())
         val attesting = connection.addDownstream(EpidAttestationHostHandler(configuration))
-        val attestedQuote = TrustedSgxQuote.fromSignedQuote(attesting.getQuote())
+        val attestedQuote = TrustedSgxQuote.fromSignedQuote(attesting.getSignedQuote())
         val enclaveSignatureVerifier = AttestedSignatureVerifier(
                 SignatureSchemeId.EDDSA_ED25519_SHA512,
                 PublicKeyAttester(attestedQuote))

@@ -1,7 +1,11 @@
 package com.r3.sgx.test.enclave
 
 import com.google.protobuf.ByteString
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxReportData
+import com.r3.sgx.core.common.Handler
+import com.r3.sgx.core.common.Sender
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
 import com.r3.sgx.djvm.DJVMBase

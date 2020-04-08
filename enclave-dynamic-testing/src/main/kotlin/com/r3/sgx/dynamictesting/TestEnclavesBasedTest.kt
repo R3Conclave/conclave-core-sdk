@@ -94,7 +94,6 @@ open class TestEnclavesBasedTest(
             block.accept(enclaveHandle)
         } finally {
             if (mode == EnclaveTestMode.Native) {
-                @Suppress("DEPRECATION")
                 enclaveHandle.destroy()
             }
         }

@@ -1,6 +1,6 @@
 package com.r3.sgx.core.common
 
-import com.r3.sgx.core.common.crypto.SignatureScheme
+import com.r3.conclave.common.internal.SignatureScheme
 import com.r3.sgx.core.common.internal.encryption.EncryptedConnection
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer

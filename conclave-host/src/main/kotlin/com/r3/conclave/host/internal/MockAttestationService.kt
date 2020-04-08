@@ -1,8 +1,12 @@
 package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxSignedQuote
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.attestation.AttestationReport
+import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteStatus
+import com.r3.conclave.common.internal.quote
 import java.io.InputStream
 import java.security.KeyFactory
 import java.security.Signature
@@ -13,23 +17,32 @@ import java.util.*
 /**
  * A mock implementation of [AttestationService] permitting to reproduce the attestation flow in simulation mode
  */
-class MockAttestationService : AttestationService {
+open class MockAttestationService : AttestationService {
     override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse {
         val reportBytes = AttestationReport(
                 id = "MOCK-RESPONSE: ${UUID.randomUUID()}",
                 isvEnclaveQuoteStatus = QuoteStatus.OK,
-                isvEnclaveQuoteBody = signedQuote[signedQuote.encoder.quote],
+                isvEnclaveQuoteBody = signedQuote.quote,
                 timestamp = Instant.now(),
                 version = 3
-        ).let(reportMapper::writeValueAsBytes)
+        ).let { reportMapper.writeValueAsBytes(modifyReport(it)) }
 
         val signature = Signature.getInstance("SHA256withRSA").apply {
             initSign(signingKey)
             update(reportBytes)
         }.sign()
 
-        return AttestationResponse(reportBytes, signature, certPath)
+        return AttestationResponse(
+                reportBytes = reportBytes,
+                signature = signature,
+                certPath = certPath,
+                advisoryIds = advisoryIds()
+        )
     }
+
+    protected open fun modifyReport(report: AttestationReport): AttestationReport = report
+
+    protected open fun advisoryIds(): List<String> = emptyList()
 
     companion object {
         private val signingKey = readResource("mock-as.key") {

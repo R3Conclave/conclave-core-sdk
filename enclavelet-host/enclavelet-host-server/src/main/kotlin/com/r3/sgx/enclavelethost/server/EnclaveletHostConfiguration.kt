@@ -3,7 +3,7 @@ package com.r3.sgx.enclavelethost.server
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.r3.sgx.core.common.SgxQuoteType
+import com.r3.conclave.common.internal.SgxQuoteType
 import com.r3.sgx.core.host.EnclaveLoadMode
 import picocli.CommandLine
 import java.io.BufferedReader
@@ -43,7 +43,8 @@ data class EnclaveletHostConfiguration(
 
         internal val defaults: EnclaveletHostConfiguration = read(this::class.java.getResourceAsStream("/default-host-settings.yml")).run {
             // Overwrite the placeholder values for epidSpid and iasSubscriptionKey from ra.properties.
-            // These values are not in default-host-settings.yml as they're also needed by conclave-host.
+            // TODO Do we need ra.properties? Conclave users need to provide their own creditionals, so having this no
+            //      longer makes sense, especially as it's now only enclavelet-host-cli that uses it.
             val raProperties = this::class.java.getResourceAsStream("/ra.properties").use {
                 Properties().apply { load(it) }
             }

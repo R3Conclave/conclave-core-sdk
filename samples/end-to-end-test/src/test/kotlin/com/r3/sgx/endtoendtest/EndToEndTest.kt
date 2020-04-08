@@ -1,9 +1,10 @@
 package com.r3.sgx.endtoendtest
 
-import com.r3.sgx.core.common.ByteCursor
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.sgx.core.common.EncryptionInitiatingHandler
 import com.r3.sgx.core.common.EncryptionProtocolId
-import com.r3.sgx.core.common.SgxQuote
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
@@ -150,8 +151,7 @@ class EndToEndTest : TestEnclavesBasedTest() {
                 .withAcceptDebug(true)
                 .build()
         log.info("Expected measurement: ${signingEnclaveMetadata.measurement}")
-        val intelPkix = verification.loadIntelPkix()
-        val quote = verification.verify(intelPkix, message.next.attestation)
+        val quote = verification.verify(AttestationParameters.INTEL, message.next.attestation)
         log.info("Verified attestation $quote")
         return quote
     }

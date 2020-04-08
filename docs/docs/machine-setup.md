@@ -1,12 +1,12 @@
-# Machine setup
-
-Before you can deploy an enclave to use real SGX hardware you need to configure the host system. At the time
-the host must be Linux and requires the following steps:
+Before you can deploy an enclave to use real SGX hardware you need to configure the host system, and get access to the
+[Intel Attestation Service](ias.md). At this time the host must be Linux and requires the following steps:
 
 1. Installing the SGX kernel driver, which isn't yet included in upstream kernels.
 2. Installing the Intel platform services software.
+3. Follow the instructions at the [IAS website](https://api.portal.trustedservices.intel.com/EPID-attestation) to get
+   access to the IAS servers using a whitelisted SSL key.
 
-The latter sets up a daemon called `aesmd` that handles various aspects of machine provisioning
+The platform services software sets up a daemon called `aesmd` that handles various aspects of machine provisioning 
 and remote attestation.
 
 !!! note
@@ -83,9 +83,9 @@ Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an e
 
 <!--- TODO: We should offer a machine setup test tool here or use the one from Fortanix -->
 
-## Handling GROUP_OUT_OF_DATE errors
+## Renewing machine security  
 
 After following the above instructions, you may discover your `EnclaveInstanceInfo` objects report the enclave as 
-"stale". This means the machine requires either BIOS, PSW or microcode updates. Applying all available updates and
-rebooting should make the security evaluation of 'stale' go away. See [TCB recovery](tcb-recovery.md) to learn more
-about this topic.
+`STALE`. This means the machine requires software updates. Applying all available updates and
+rebooting should make the security evaluation of `STALE` go away. See ["Renewability"](renewability.md) to learn more
+about this topic and what exactly is involved.

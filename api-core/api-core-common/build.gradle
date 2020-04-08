@@ -5,11 +5,10 @@ plugins {
 }
 
 dependencies {
-    implementation project(":conclave-common")
+    api project(":conclave-common")
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.google.protobuf:protobuf-java:$protobuf_version"
-    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
     // Curve25519 by Moxie Marlinspike: modern elliptic curve key agreement.
     implementation "org.whispersystems:curve25519-java:$whispersystems_ed25519_version"
 

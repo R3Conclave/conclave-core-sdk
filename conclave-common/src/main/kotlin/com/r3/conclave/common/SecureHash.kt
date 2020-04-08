@@ -2,9 +2,7 @@ package com.r3.conclave.common
 
 import com.r3.conclave.common.internal.getBytes
 import com.r3.conclave.common.internal.parseHex
-import com.r3.conclave.common.internal.toHexString
-import java.io.ByteArrayInputStream
-import java.io.OutputStream
+import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
@@ -12,29 +10,20 @@ import java.security.MessageDigest
  * Container for a cryptographically secure hash value. Currently only SHA-256 and SHA-512 are supported, represented
  * by [SHA256Hash] and [SHA512Hash] respectively.
  */
-sealed class SecureHash(private val _bytes: ByteArray) {
-    // TODO Doesn't make sense to have size when it's already known. Add this to an OpaqueBytes class if we decide to have that.
-//    val size: Int get() = _bytes.size
-
-    /** Returns a copy of the underlying byte array. */
-    val bytes: ByteArray get() = _bytes.clone()
-
-    /** Returns a [ByteArrayInputStream] of the bytes. */
-    fun open(): ByteArrayInputStream = ByteArrayInputStream(_bytes)
-
-    /** Write the bytes to an [OutputStream]. */
-    fun writeTo(output: OutputStream): Unit = output.write(_bytes)
-
-    /** Write the bytes to a [ByteBuffer]. */
-    fun putTo(buffer: ByteBuffer): ByteBuffer = buffer.put(_bytes)
-
-    override fun equals(other: Any?): Boolean {
-        return other === this || other is SecureHash && other._bytes.contentEquals(this._bytes)
+sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
+    companion object {
+        /**
+         * Parses the given hexadecimal string into either a [SHA256Hash] or a [SHA512Hash] depending on the length.
+         */
+        @JvmStatic
+        fun parse(str: String): SecureHash {
+            return when (str.length) {
+                64 -> SHA256Hash.parse(str)
+                128 -> SHA512Hash.parse(str)
+                else -> throw IllegalArgumentException("Provided string is neither a SHA-256 or a SHA-512 string: $str")
+            }
+        }
     }
-
-    override fun hashCode(): Int = _bytes.contentHashCode()
-
-    override fun toString(): String = _bytes.toHexString()
 }
 
 /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
@@ -60,15 +49,15 @@ class SHA256Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         fun wrap(bytes: ByteArray): SHA256Hash = SHA256Hash(bytes.clone())
 
         /**
-         * Returns the next 32 bytes of the buffer as a [SHA256Hash]. The position of the buffer increased by 32.
+         * Gets the next 32 bytes of the buffer and returns it as a [SHA256Hash]. The position of the buffer increased by 32.
          *
-         * @throws java.nio.BufferUnderflowException If fewer than 32 bytes are remaining in the buffer.
+         * @throws BufferUnderflowException If fewer than 32 bytes are remaining in the buffer.
          */
         @JvmStatic
         fun get(buffer: ByteBuffer): SHA256Hash = SHA256Hash(buffer.getBytes(32))
 
         /**
-         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
+         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SHA256Hash].
          * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
          * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */
@@ -107,15 +96,15 @@ class SHA512Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         fun wrap(bytes: ByteArray): SHA512Hash = SHA512Hash(bytes.clone())
 
         /**
-         * Returns the next 64 bytes of the buffer as a [SHA512Hash]. The position of the buffer increased by 64.
+         * Gets the the next 64 bytes of the buffer and returns it as a [SHA512Hash]. The position of the buffer increased by 64.
          *
-         * @throws java.nio.BufferUnderflowException If fewer than 64 bytes are remaining in the buffer.
+         * @throws BufferUnderflowException If fewer than 64 bytes are remaining in the buffer.
          */
         @JvmStatic
         fun get(buffer: ByteBuffer): SHA512Hash = SHA512Hash(buffer.getBytes(64))
 
         /**
-         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SecureHash].
+         * Converts a SHA-256 hash value represented as a hexadecimal [String] into a [SHA512Hash].
          * @param str A sequence of 64 hexadecimal digits that represents a SHA-256 hash value.
          * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */

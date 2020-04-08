@@ -1,10 +1,14 @@
 package com.r3.sgx.enclave.signing
 
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.attestation.AttestationParameters
+import com.r3.sgx.core.common.EncryptionInitiatingHandler
+import com.r3.sgx.core.common.EncryptionProtocolId
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.AttestedSignatureVerifier
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
-import com.r3.sgx.core.common.crypto.*
+import com.r3.sgx.core.common.crypto.SignatureSchemeId
 import com.r3.sgx.enclave.signing.internal.MyAMQPSerializationScheme
 import com.r3.sgx.enclave.signing.internal.asContextEnv
 import com.r3.sgx.enclavelethost.client.EnclaveletMetadata
@@ -16,8 +20,10 @@ import com.r3.sgx.testing.*
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import org.junit.*
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.BeforeClass
+import org.junit.Rule
+import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -96,8 +102,7 @@ class SigningEnclaveClientTest {
                 .withAcceptDebug(true)
                 .build()
         log.info("Expected measurement: ${signingEnclaveMetadata.measurement}")
-        val pkix = MockAttestationCertStore.loadTestPkix()
-        val quote = verification.verify(pkix, message.next.attestation)
+        val quote = verification.verify(AttestationParameters.MOCK, message.next.attestation)
         log.info("Verified attestation $quote")
         return quote
     }

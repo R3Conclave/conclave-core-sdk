@@ -2,7 +2,7 @@ package com.r3.sgx.core.common.attestation
 
 import com.r3.conclave.common.internal.parseHex
 import com.r3.conclave.common.internal.toHexString
-import com.r3.sgx.core.common.SgxMeasurement
+import com.r3.conclave.common.internal.SgxMeasurement
 import java.nio.ByteBuffer
 
 /**

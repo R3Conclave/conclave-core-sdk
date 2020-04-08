@@ -1,9 +1,8 @@
 package com.r3.sgx.core.common.attestation
 
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxQuote
-import com.r3.sgx.core.common.SgxReportData
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.SgxReportData
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.PublicKey

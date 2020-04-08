@@ -1,17 +1,19 @@
 package com.r3.sgx.enclavelethost.client
 
-import com.r3.conclave.host.internal.AttestationResponse
-import com.r3.conclave.host.internal.QuoteStatus
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxAttributes
-import com.r3.sgx.core.common.SgxEnclaveFlags
-import com.r3.sgx.core.common.SgxQuote
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxAttributes
+import com.r3.conclave.common.internal.SgxEnclaveFlags
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.attestation.AttestationParameters
+import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteStatus
 import com.r3.sgx.core.common.attestation.AttestedOutput
 import com.r3.sgx.core.common.attestation.Measurement
 import com.r3.sgx.core.common.attestation.SgxQuoteReader
 import com.r3.sgx.enclavelethost.grpc.EpidAttestation
 import java.security.GeneralSecurityException
-import java.security.cert.*
+import java.security.cert.CertificateFactory
+import java.security.cert.PKIXParameters
 
 /**
  * This is a utility class providing basic checks of an EPID-based attestation. You can use this class directly or use
@@ -35,7 +37,7 @@ class EpidAttestationVerification(
     /**
      * Verifies the passed in attestation evidence, and returns the quote data embedded in the IAS response.
      *
-     * @param pkixParameters the PKIX parameters to check the IAS signature against. See [loadIntelPkix] to create a
+     * @param pkixParameters the PKIX parameters to check the IAS signature against. See [AttestationParameters.INTEL] to create a
      *     preconfigured one.
      * @param attestation the attestation to check, retrieved from an enclavelet host.
      * @return the quote body extracted from the signed IAS response.
@@ -44,7 +46,8 @@ class EpidAttestationVerification(
         val report = AttestationResponse(
                 reportBytes = attestation.report.toByteArray(),
                 signature = attestation.signature.toByteArray(),
-                certPath = certificateFactory.generateCertPath(attestation.certPath.newInput())
+                certPath = certificateFactory.generateCertPath(attestation.certPath.newInput()),
+                advisoryIds = emptyList()
         ).verify(pkixParameters)
 
         val status = report.isvEnclaveQuoteStatus
@@ -72,22 +75,6 @@ class EpidAttestationVerification(
             throw GeneralSecurityException("Expected ${SgxEnclaveFlags::DEBUG.name} to be unset in quote attributes ($flagsCursor)")
         }
         return TrustedSgxQuote(quoteCursor, Measurement.read(quoteReader.measurement))
-    }
-
-    private fun loadIntelCaCertificate(): Certificate {
-        return certificateFactory.generateCertificate(javaClass.getResourceAsStream("/AttestationReportSigningCACert.pem"))
-    }
-
-    /**
-     * Creates a preconfigured PKIXParameters with Intel's root certificate as the trust anchor.
-     */
-    fun loadIntelPkix(): PKIXParameters {
-        val certificate = loadIntelCaCertificate()
-        val trustAnchor = TrustAnchor(certificate as X509Certificate, null)
-        val pkixParameters = PKIXParameters(setOf(trustAnchor))
-        val certPathChecker = CertPathValidator.getInstance("PKIX").revocationChecker as PKIXRevocationChecker
-        pkixParameters.addCertPathChecker(certPathChecker)
-        return pkixParameters
     }
 
     private class TrustedSgxQuote(

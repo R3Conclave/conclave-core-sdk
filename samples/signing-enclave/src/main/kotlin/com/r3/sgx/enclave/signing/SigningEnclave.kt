@@ -1,8 +1,13 @@
 package com.r3.sgx.enclave.signing
 
-import com.r3.sgx.core.common.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxReportData
+import com.r3.conclave.common.internal.SignatureScheme
+import com.r3.sgx.core.common.BytesHandler
+import com.r3.sgx.core.common.EncryptionRespondingHandler
+import com.r3.sgx.core.common.Handler
 import com.r3.sgx.core.common.attestation.PublicKeyAttester
-import com.r3.sgx.core.common.crypto.SignatureScheme
 import com.r3.sgx.core.common.crypto.SignatureSchemeId
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
@@ -65,7 +70,8 @@ class SigningEnclave : Enclavelet() {
         return EncryptionRespondingHandler(
                 authKeyPair = txSigningKeyPair,
                 authSignatureScheme = signatureScheme,
-                downstream = SigningHandler())
+                downstream = SigningHandler()
+        )
     }
 
     inner class SigningHandler : BytesHandler() {

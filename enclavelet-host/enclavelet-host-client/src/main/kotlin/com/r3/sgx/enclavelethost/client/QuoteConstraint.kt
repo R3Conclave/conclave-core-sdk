@@ -1,9 +1,9 @@
 package com.r3.sgx.enclavelethost.client
 
-import com.r3.sgx.core.common.ByteCursor
-import com.r3.sgx.core.common.SgxMeasurement
-import com.r3.sgx.core.common.SgxQuote
-import com.r3.sgx.core.common.SgxReportBody
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.SgxMeasurement
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.SgxReportBody
 import com.r3.sgx.core.common.attestation.Measurement
 import java.security.GeneralSecurityException
 

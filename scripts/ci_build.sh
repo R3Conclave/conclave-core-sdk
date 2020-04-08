@@ -24,8 +24,8 @@ runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sg
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test -i && cd $CODE_DOCKER_DIR/samples && \$GRADLE test -i -x end-to-end-test:test \
     && cd $CODE_DOCKER_DIR/test-infrastructure && \$GRADLE test -i"
 
-# Run the sgx-jvm-plugin tests.
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/sgx-jvm-plugin && \$GRADLE test -i"
+# Run the SDK tests.
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh"
 
 # Now ensure that we build the Release enclave artifacts.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"

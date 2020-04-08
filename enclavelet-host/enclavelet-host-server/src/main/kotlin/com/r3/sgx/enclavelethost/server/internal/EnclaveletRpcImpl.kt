@@ -3,8 +3,8 @@ package com.r3.sgx.enclavelethost.server.internal
 import com.google.protobuf.ByteString
 import com.r3.sgx.core.common.BytesHandler
 import com.r3.sgx.core.common.MuxId
+import com.r3.sgx.core.host.loggerFor
 import com.r3.sgx.enclavelethost.grpc.*
-import com.r3.sgx.enclavelethost.server.EnclaveletHost
 import com.r3.sgx.enclavelethost.server.ExceptionListener
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -14,6 +14,9 @@ class EnclaveletRpcImpl(
         val enclaveletState: EnclaveletState.Created,
         val exceptionListener: ExceptionListener
 ) : EnclaveletHostGrpc.EnclaveletHostImplBase() {
+    companion object {
+        private val log = loggerFor<EnclaveletRpcImpl>()
+    }
 
     override fun openSession(responseObserver: StreamObserver<ServerMessage>): StreamObserver<ClientMessage> {
         val enclaveHandler = EnclaveletOutputHandler(responseObserver)
@@ -32,8 +35,9 @@ class EnclaveletRpcImpl(
             responseObserver.onNext(GetEpidAttestationResponse.newBuilder().setAttestation(attestation).build())
             responseObserver.onCompleted()
         } else {
-                responseObserver.onError(Status.UNAVAILABLE.withDescription(
-                        "Remote attestation not supported in simulation mode").asException())
+            responseObserver.onError(
+                    Status.UNAVAILABLE.withDescription("Remote attestation not supported in simulation mode").asException()
+            )
         }
     }
 
@@ -47,12 +51,11 @@ class EnclaveletRpcImpl(
 
     // Observer processing messages sent by enclavelet client
     class EnclaveletClientObserver(
-            val owner: EnclaveletRpcImpl,
-            val sessionId: MuxId,
-            val enclaveSender: BytesHandler.Connection,
-            val responseObserver: StreamObserver<ServerMessage>
+            private val owner: EnclaveletRpcImpl,
+            private val sessionId: MuxId,
+            private val enclaveSender: BytesHandler.Connection,
+            private val responseObserver: StreamObserver<ServerMessage>
     ) : StreamObserver<ClientMessage> {
-
         override fun onNext(value: ClientMessage) {
             try {
                 enclaveSender.send(value.blob.asReadOnlyByteBuffer())
@@ -63,7 +66,7 @@ class EnclaveletRpcImpl(
         }
 
         override fun onError(throwable: Throwable) {
-            EnclaveletHost.log.info("In session-Id ${sessionId}, got error from client:", throwable)
+            log.info("In session-Id ${sessionId}, got error from client:", throwable)
             owner.enclaveletState.channels.removeDownstream(sessionId)
         }
 
@@ -72,6 +75,4 @@ class EnclaveletRpcImpl(
             owner.enclaveletState.channels.removeDownstream(sessionId)
         }
     }
-
-
 }

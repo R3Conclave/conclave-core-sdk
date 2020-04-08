@@ -1,14 +1,14 @@
 package com.r3.sgx.enclavelethost.server
 
 import com.google.common.io.BaseEncoding
-import com.r3.sgx.core.common.Cursor
-import com.r3.sgx.core.common.SgxSpid
-import com.r3.sgx.core.host.EnclaveLoadMode
-import com.r3.sgx.core.host.EpidAttestationHostConfiguration
-import com.r3.sgx.enclavelethost.server.internal.EnclaveletState
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxSpid
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
-import org.slf4j.LoggerFactory
+import com.r3.sgx.core.host.EnclaveLoadMode
+import com.r3.sgx.core.host.EpidAttestationHostConfiguration
+import com.r3.sgx.core.host.loggerFor
+import com.r3.sgx.enclavelethost.server.internal.EnclaveletState
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -16,13 +16,12 @@ class EnclaveletHostBuilder(
         private val configuration: EnclaveletHostConfiguration,
         private val enclaveletFile: File
 ) {
-
     companion object {
-        private val log = LoggerFactory.getLogger(EnclaveletHostBuilder::class.java)
+        private val log = loggerFor<EnclaveletHostBuilder>()
     }
 
     private val attestationConfiguration = EpidAttestationHostConfiguration(
-            quoteType = configuration.epidQuoteType.value,
+            quoteType = configuration.epidQuoteType,
             spid = Cursor(SgxSpid, ByteBuffer.wrap(BaseEncoding.base16().decode(configuration.epidSpid)))
     )
 
