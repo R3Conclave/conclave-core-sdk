@@ -24,7 +24,7 @@ RUN apt-get install -y \
 
 # Need to set LD_LIBRARY_PATH to directory of aesm_service executable
 
-WORKDIR /opt/intel/libsgx-enclave-common/aesm
+WORKDIR /opt/intel/sgx-aesm-service/aesm
 ENV LD_LIBRARY_PATH=.
 
 # Run the service
