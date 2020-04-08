@@ -39,6 +39,8 @@ subprojects { Project project ->
             from (linuxSgxBuildDir) {
                 include "libsgx_enclave_common.so"
                 rename "libsgx_enclave_common.so", "libsgx_enclave_common.so.1"
+                include "libsgx_launch${simSuffix}.so"
+                rename "libsgx_launch${simSuffix}.so", "libsgx_launch${simSuffix}.so.1"
                 include "libsgx_urts${simSuffix}.so"
                 include "libsgx_uae_service${simSuffix}.so"
             }
