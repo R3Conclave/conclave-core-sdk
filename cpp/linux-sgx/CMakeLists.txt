@@ -18,6 +18,8 @@ ExternalProject_Add(linux-sgx-ext
         # Copy the source into the build directory, otherwise the build litters the source tree
         SOURCE_DIR ${BUILD_SRC_DIR}
 
+        PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff
+
         UPDATE_COMMAND ""
 
         CONFIGURE_COMMAND ""
