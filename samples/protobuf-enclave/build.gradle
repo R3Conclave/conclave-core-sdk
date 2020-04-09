@@ -54,5 +54,4 @@ test {
     def signEnclaveTask = tasks.getByPath(":protobuf-enclave:buildSignedEnclave$sgxMode")
     dependsOn signEnclaveTask
     systemProperty("com.r3.sgx.enclave.path", signEnclaveTask.signedEnclavePath)
-    systemProperty 'sgx.mode', sgxMode
 }

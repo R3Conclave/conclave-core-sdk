@@ -8,11 +8,12 @@ plugins {
 import static org.gradle.api.JavaVersion.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+def sgxModeProperty = project.property('sgx_mode')
 subprojects {
     group = "com.r3.sgx"
 
     ext {
-        sgxMode = project.property('sgx_mode')
+        sgxMode = sgxModeProperty
     }
 
     repositories {
@@ -38,6 +39,10 @@ subprojects {
                 '-XXLanguage:+NewInference'
             ]
         }
+    }
+
+    tasks.withType(Test) {
+        systemProperty 'sgx.mode', sgxModeProperty
     }
 }
 

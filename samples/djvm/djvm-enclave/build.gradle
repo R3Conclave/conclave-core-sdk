@@ -58,6 +58,5 @@ test {
     doFirst {
         systemProperty 'enclave_path', signEnclaveTask.signedEnclavePath
         systemProperty 'user-jar.path', tasks.getByPath(':djvm:user-code:shadowJar').outputs.files.asPath
-        systemProperty 'sgx.mode', sgxMode
     }
 }

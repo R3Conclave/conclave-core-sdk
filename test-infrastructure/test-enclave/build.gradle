@@ -76,6 +76,5 @@ test {
         systemProperty 'enclave.path', signEnclaveTask.signedEnclavePath
         systemProperty 'maths-tests-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath
         systemProperty 'djvm-unit-tests-jar.path', tasks.getByPath(':djvm:djvm-tests:shadowJar').outputs.files.asPath
-        systemProperty 'sgx.mode', sgxMode
     }
 }
