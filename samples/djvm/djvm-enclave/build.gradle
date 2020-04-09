@@ -16,8 +16,6 @@ configurations {
     }
 }
 
-def sgxMode = project.property('sgx_mode')
-
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
@@ -60,6 +58,6 @@ test {
     doFirst {
         systemProperty 'enclave_path', signEnclaveTask.signedEnclavePath
         systemProperty 'user-jar.path', tasks.getByPath(':djvm:user-code:shadowJar').outputs.files.asPath
-        systemProperty 'sgx.mode', project.property('sgx_mode')
+        systemProperty 'sgx.mode', sgxMode
     }
 }

@@ -9,8 +9,6 @@ repositories {
     jcenter()
 }
 
-def sgxMode = project.property('sgx_mode')
-
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.r3.sgx:api-core-enclave"
@@ -40,5 +38,5 @@ test {
     def signEnclaveTask = (SignEnclave) tasks.getByPath(":echo-enclave:signEnclaveWithDummyKey$sgxMode")
     dependsOn signEnclaveTask
     systemProperty("com.r3.sgx.enclave.path", signEnclaveTask.signedEnclavePath)
-    systemProperty 'sgx.mode', project.property('sgx_mode')
+    systemProperty 'sgx.mode', sgxMode
 }

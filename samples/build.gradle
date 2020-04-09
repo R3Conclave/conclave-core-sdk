@@ -11,6 +11,10 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 subprojects {
     group = "com.r3.sgx"
 
+    ext {
+        sgxMode = project.property('sgx_mode')
+    }
+
     repositories {
         mavenCentral()
         jcenter()

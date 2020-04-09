@@ -9,6 +9,10 @@ plugins {
 }
 
 subprojects {
+    ext {
+        sgxMode = project.property('sgx_mode')
+    }
+
     repositories {
         mavenCentral()
         // DJVM and determinist-rt
