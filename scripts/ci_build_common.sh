@@ -19,6 +19,11 @@ fi
 mkdir -p /home/$(id -un)/.gradle
 mkdir -p /home/$(id -un)/.ccache
 
+SGX_HARDWARE_FLAGS=""
+if [ -e /dev/isgx ] && [ -d /var/run/aesmd ]; then
+    SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
+fi
+
 function runDocker() {
     IMAGE_NAME=$1
     docker run --rm \
@@ -31,6 +36,7 @@ function runDocker() {
        -v ${CODE_HOST_DIR}:${CODE_DOCKER_DIR} \
        -v /var/run/docker.sock:/var/run/docker.sock \
        -v ${HOST_CORE_DUMP_DIR}:${HOST_CORE_DUMP_DIR} \
+       ${SGX_HARDWARE_FLAGS} \
        -e GRADLE_USER_HOME=/gradle \
        $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
        ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${IMAGE_NAME} \
