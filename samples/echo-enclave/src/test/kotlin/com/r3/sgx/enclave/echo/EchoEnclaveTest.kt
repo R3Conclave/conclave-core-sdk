@@ -5,6 +5,7 @@ import com.r3.sgx.core.host.EnclaveHandle
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.testing.BytesRecordingHandler
+import com.r3.sgx.testing.MockEcallSender
 import com.r3.sgx.testing.RootHandler
 import org.junit.Before
 import org.junit.Test
@@ -19,9 +20,17 @@ class EchoEnclaveTest {
 
     private lateinit var enclaveHandle: EnclaveHandle<RootHandler.Connection>
 
+    private val sgxMode = System.getProperty("sgx.mode")
+            ?: throw AssertionError("System property 'sgx.mode' not set.")
+
     @Before
     fun setupEnclave() {
-        enclaveHandle = NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(RootHandler(), File(enclavePath))
+        enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
+            MockEcallSender(RootHandler(), EchoEnclave())
+        } else {
+            val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
+            hostApi.createEnclave(RootHandler(), File(enclavePath))
+        }
     }
 
     @Test

@@ -3,20 +3,20 @@ package com.r3.sgx.djvm
 import com.r3.sgx.core.common.ChannelInitiatingHandler
 import com.r3.sgx.core.common.Sender
 import com.r3.sgx.core.host.EnclaveHandle
+import com.r3.sgx.core.host.EnclaveLoadMode
+import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.djvm.enclave.DJVMEnclave
 import com.r3.sgx.djvm.enclave.messages.MessageType
 import com.r3.sgx.djvm.handlers.DJVMHandler
-import com.r3.sgx.dynamictesting.EnclaveTestMode
-import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
+import com.r3.sgx.testing.MockEcallSender
 import com.r3.sgx.testing.RootHandler
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
-import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import java.nio.file.Paths
 import java.util.function.Consumer
 
-class DJVMEnclaveTest : TestEnclavesBasedTest(EnclaveTestMode.Native) {
+class DJVMEnclaveTest {
 
     companion object {
         val enclavePath = Paths.get(System.getProperty("enclave_path")
@@ -25,27 +25,21 @@ class DJVMEnclaveTest : TestEnclavesBasedTest(EnclaveTestMode.Native) {
         val userJarPath = Paths.get(System.getProperty("user-jar.path")
                 ?: throw AssertionError("System property 'user-jar.path' not set."))
 
-        private var isEnclaveInitialized = false
+        private val sgxMode = System.getProperty("sgx.mode")
+                ?: throw AssertionError("System property 'sgx.mode' not set.")
+
         private lateinit var enclaveHandle: EnclaveHandle<RootHandler.Connection>
         private lateinit var sender: Sender
 
         @JvmStatic
-        @AfterClass
-        fun destroy() {
-            assertThat(isEnclaveInitialized).isTrue()
-            sender.send(2 * Int.SIZE_BYTES, Consumer { buffer ->
-                buffer.putInt(MessageType.JAR.ordinal)
-                buffer.putInt(0)
-            })
-//            enclaveHandle.destroy()
-        }
-
-    }
-
-    @Before
-    fun setUp() {
-        if (!isEnclaveInitialized) {
-            enclaveHandle = createEnclaveWithHandler(RootHandler(), DJVMEnclave::class.java, enclavePath.toFile())
+        @BeforeClass
+        fun setUp() {
+            enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
+                MockEcallSender(RootHandler(), DJVMEnclave())
+            } else {
+                val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
+                hostApi.createEnclave(RootHandler(), enclavePath.toFile())
+            }
 
             val connection = enclaveHandle.connection
             val channels = connection.addDownstream(ChannelInitiatingHandler())
@@ -58,9 +52,18 @@ class DJVMEnclaveTest : TestEnclavesBasedTest(EnclaveTestMode.Native) {
                 buffer.putInt(userJar.size)
                 buffer.put(userJar)
             })
-
-            isEnclaveInitialized = true
         }
+
+        @JvmStatic
+        @AfterClass
+        fun destroy() {
+            sender.send(2 * Int.SIZE_BYTES, Consumer { buffer ->
+                buffer.putInt(MessageType.JAR.ordinal)
+                buffer.putInt(0)
+            })
+//            enclaveHandle.destroy()
+        }
+
     }
 
     @Test

@@ -1,3 +1,5 @@
+import com.r3.sgx.plugin.enclave.SignEnclave
+
 /**
  * This module contains the enclave code which handles and runs user code in the DJVM.
  */
@@ -28,6 +30,8 @@ dependencies {
     testImplementation "com.r3.sgx:api-core-host"
     testImplementation 'com.r3.sgx:enclave-dynamic-testing'
 
+    testRuntimeOnly "com.r3.sgx:native-host-${sgxMode.toLowerCase()}"
+
     jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
 }
 
@@ -49,9 +53,10 @@ shadowJar {
 }
 
 test {
-    dependsOn ':djvm:user-code:shadowJar', signEnclaveWithDummyKeySimulation
+    def signEnclaveTask = (SignEnclave) tasks.getByPath(":djvm:djvm-enclave:signEnclaveWithDummyKey$sgxMode")
+    dependsOn ':djvm:user-code:shadowJar', signEnclaveTask
     doFirst {
-        systemProperty 'enclave_path', signEnclaveWithDummyKeySimulation.signedEnclavePath
+        systemProperty 'enclave_path', signEnclaveTask.signedEnclavePath
         systemProperty 'user-jar.path', tasks.getByPath(':djvm:user-code:shadowJar').outputs.files.asPath
     }
 }

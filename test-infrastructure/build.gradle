@@ -8,7 +8,12 @@ plugins {
     id 'com.r3.sgx.host' apply false
 }
 
+def sgxModeProperty = project.property('sgx_mode')
 subprojects {
+    ext {
+        sgxMode = sgxModeProperty
+    }
+
     repositories {
         mavenCentral()
         // DJVM and determinist-rt
@@ -27,6 +32,12 @@ subprojects {
             languageVersion = '1.3'
             freeCompilerArgs = [ '-Xjvm-default=enable' ]
         }
+    }
+
+    tasks.withType(Test) {
+        systemProperty 'sgx.mode', sgxModeProperty
+        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/xml")
+        reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
     }
 }
 
