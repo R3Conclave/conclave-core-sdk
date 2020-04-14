@@ -18,6 +18,7 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
+// docs/sdk-extras/hello-world/gradle.properties must also be updated
 // 0.2-SNAPSHOT = "the release preparing for beta 2"
 version = "0.2-SNAPSHOT"
 
