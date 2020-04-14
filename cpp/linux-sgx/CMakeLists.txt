@@ -15,7 +15,6 @@ ExternalProject_Add(linux-sgx-ext
         GIT_REPOSITORY https://github.com/intel/linux-sgx.git
         GIT_TAG sgx_2.9
 
-        # Copy the source into the build directory, otherwise the build litters the source tree
         SOURCE_DIR ${BUILD_SRC_DIR}
 
         PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff
@@ -24,7 +23,9 @@ ExternalProject_Add(linux-sgx-ext
 
         CONFIGURE_COMMAND ""
 
-        BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk psw
+        BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
+            && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.9.100.2.bin
+            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw
 
 
         INSTALL_COMMAND ""
