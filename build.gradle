@@ -18,8 +18,8 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
-// Beta 1
-version = "0.1"
+// 0.2-SNAPSHOT = "the release preparing for beta 2"
+version = "0.2-SNAPSHOT"
 
 ext {
     environment = createEnvironment(
