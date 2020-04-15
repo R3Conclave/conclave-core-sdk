@@ -7,6 +7,7 @@ import com.r3.sgx.core.common.SimpleProtoHandler
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.core.host.internal.Native
+import com.r3.sgx.testing.MockEcallSender
 import com.r3.sgx.testing.RootHandler
 import org.junit.Test
 import java.io.File
@@ -15,7 +16,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ProtobufEnclaveTest {
-    private val enclavePath = System.getProperty("com.r3.sgx.enclave.path")
+    companion object {
+        private val enclavePath = System.getProperty("com.r3.sgx.enclave.path")
+
+        private val sgxMode = System.getProperty("sgx.mode")
+                ?: throw AssertionError("System property 'sgx.mode' not set.")
+    }
 
     class OcallRecordingHost : SimpleProtoHandler<ExampleOcall, ExampleEcall>(ExampleOcall.parser()) {
         val ocalls = ArrayList<ExampleOcall>()
@@ -34,7 +40,11 @@ class ProtobufEnclaveTest {
     class Host(enclave: File) {
         val ocallRecordingHost = OcallRecordingHost()
         val getMeasurementHost = GetMeasurementHost()
-        val root = NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(RootHandler(), enclave).connection
+        val root = if (sgxMode.toUpperCase() == "MOCK") {
+            MockEcallSender(RootHandler(), ProtobufEnclave()).connection
+        } else {
+            NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase())).createEnclave(RootHandler(), enclave).connection
+        }
         val ocallRecordingSender = root.addDownstream(ocallRecordingHost)
         val getMeasurementSender = root.addDownstream(getMeasurementHost)
     }

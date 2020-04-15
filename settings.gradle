@@ -10,6 +10,7 @@ try {
 
 if (includeNative) {
     include 'cpp'
+    include 'cpp:native-host'
     include 'cpp:native-host:native-host-simulation'
     include 'cpp:native-host:native-host-debug'
     include 'cpp:native-host:native-host-release'

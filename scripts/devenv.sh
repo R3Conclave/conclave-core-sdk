@@ -111,6 +111,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        -e HOME=/home \
        ${ENV_DISPLAY} \
        -e GRADLE_USER_HOME=/gradle \
+       -e GRADLE_OPTS="-Dorg.gradle.workers.max=$(nproc)" \
        $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
        -d \
        -it \

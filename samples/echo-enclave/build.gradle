@@ -1,3 +1,5 @@
+import com.r3.sgx.plugin.enclave.SignEnclave
+
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'com.r3.sgx.enclave'
@@ -15,7 +17,7 @@ dependencies {
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "com.r3.sgx:api-core-host"
     testImplementation "com.r3.sgx:enclave-testing"
-    testRuntimeOnly "com.r3.sgx:native-host-simulation"
+    testRuntimeOnly "com.r3.sgx:native-host-${sgxMode.toLowerCase()}"
 }
 
 shadowJar {
@@ -33,6 +35,7 @@ jar {
 }
 
 test {
-    dependsOn signEnclaveWithDummyKeySimulation
-    systemProperty("com.r3.sgx.enclave.path", signEnclaveWithDummyKeySimulation.signedEnclavePath)
+    def signEnclaveTask = (SignEnclave) tasks.getByPath(":echo-enclave:signEnclaveWithDummyKey$sgxMode")
+    dependsOn signEnclaveTask
+    systemProperty("com.r3.sgx.enclave.path", signEnclaveTask.signedEnclavePath)
 }

@@ -1,0 +1,81 @@
+diff --git a/buildenv.mk b/buildenv.mk
+index 6d3e823a..6adcd819 100644
+--- a/buildenv.mk
++++ b/buildenv.mk
+@@ -66,6 +66,8 @@ NIPD := .nipd
+ NIPRODT := .niprod
+ CC ?= gcc
+ 
++ARFLAGS += D
++
+ # clean the content of 'INCLUDE' - this variable will be set by vcvars32.bat
+ # thus it will cause build error when this variable is used by our Makefile,
+ # when compiling the code under Cygwin tainted by MSVC environment settings.
+@@ -101,7 +103,10 @@ ifeq ($(BUILD_REF_LE), 1)
+     COMMON_FLAGS += -DREF_LE
+ endif
+ 
+-COMMON_FLAGS += -ffunction-sections -fdata-sections
++# Note that CXXFLAGS and CFLAGS are also used when linking shared objects.
++COMMON_FLAGS += -ffunction-sections -fdata-sections \
++        $(eval CXXSEED=$(patsubst %,-frandom-seed=1,$(filter %.c %.cpp %.cc %.S,$<))) \
++        $(CXXSEED)
+ 
+ # turn on compiler warnings as much as possible
+ COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
+diff --git a/external/epid-sdk/Makefile.in b/external/epid-sdk/Makefile.in
+index 3fb6d745..32c46949 100644
+--- a/external/epid-sdk/Makefile.in
++++ b/external/epid-sdk/Makefile.in
+@@ -20,7 +20,8 @@ SIZE_CFLAGS := -O2
+ CC_FLAGS := $(CFLAGS) $(SIZE_CFLAGS) -Werror -Wall -Wextra -Wno-missing-braces \
+ 	-Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-unused-function \
+ 	-fno-strict-aliasing -Wno-unused-but-set-variable -Wno-comment -Wformat \
+-	-Wformat-security -fstack-protector -DNDEBUG -D_FORTIFY_SOURCE=2 $(MITIGATION_CFLAGS)
++	-Wformat-security -fstack-protector -DNDEBUG -D_FORTIFY_SOURCE=2 $(MITIGATION_CFLAGS) \
++	-frandom-seed=1
+ 
+ #intel c compiler flags
+ ICC_FLAGS := $(CFLAGS) $(SIZE_CFLAGS) -Werror -Wall -Wextra -DNDEBUG \
+diff --git a/external/rdrand/src/Makefile.in b/external/rdrand/src/Makefile.in
+index 5a4ec8c4..aad2dbff 100644
+--- a/external/rdrand/src/Makefile.in
++++ b/external/rdrand/src/Makefile.in
+@@ -7,7 +7,7 @@ AR=ar
+ TEST_OBJ=main.o
+ 
+ %.o: %.c
+-	$(CC) $(CFLAGS) -c $<
++	$(CC) $(CFLAGS) -frandom-seed=1 -c $<
+ 
+ all: bin lib 
+ 
+@@ -16,7 +16,7 @@ bin: test
+ lib: librdrand.a
+ 
+ librdrand.a: rdrand.o
+-	$(AR) rcs $@ $?
++	$(AR) rcsD $@ $?
+ 
+ test: $(TEST_OBJ) librdrand.a
+ 	$(CC) $(CFLAGS) -o $@ $(TEST_OBJ) -L. -lrdrand
+diff --git a/external/vtune/linux/sdk/src/ittnotify/Makefile b/external/vtune/linux/sdk/src/ittnotify/Makefile
+index 6e4f565e..c73b8582 100644
+--- a/external/vtune/linux/sdk/src/ittnotify/Makefile
++++ b/external/vtune/linux/sdk/src/ittnotify/Makefile
+@@ -4,13 +4,13 @@ LIBNAME := libittnotify.a
+ 
+ INCLUDE += -I ../../../include
+ 
+-CFLAGS += $(INCLUDE) -fPIC -Wno-strict-prototypes
++CFLAGS += $(INCLUDE) -fPIC -Wno-strict-prototypes -frandom-seed=1
+ 
+ .PHONY: all
+ all: $(LIBNAME)
+ 
+ $(LIBNAME): $(OBJ)
+-	$(AR) rcs $@ $^
++	$(AR) rcsD $@ $^
+ 
+ .PHONY: clean
+ clean:

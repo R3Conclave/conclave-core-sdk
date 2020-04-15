@@ -5,7 +5,7 @@
 #include <wchar.h>
 #include <stddef.h>
 #include <string.h>
-#include "sgx_edger8r.h" /* for sgx_satus_t etc. */
+#include "sgx_edger8r.h" /* for sgx_status_t etc. */
 
 #include "sgx_report.h"
 

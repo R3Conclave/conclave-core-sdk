@@ -7,7 +7,7 @@
 #include <ecall_context.h>
 #include <sgx_errors.h>
 #include <jni_utils.h>
-#include <sgx_uae_service.h>
+#include <sgx_uae_epid.h>
 #include <sys/mman.h>
 #include <parser/elfparser.h>
 #include <internal/enclave_creator.h>

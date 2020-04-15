@@ -10,7 +10,6 @@ extern void throw_jvm_runtime_exception(const char *str);
 
 #define STUB(x) void x() { debug_print(#x); throw_jvm_runtime_exception(#x); abort(); }
 
-STUB(__assert_fail);
 STUB(accept);
 STUB(chmod);
 STUB(closedir);
@@ -34,6 +33,7 @@ STUB(lseek);
 STUB(lseek64);
 STUB(lstat);
 STUB(madvise);
+STUB(mincore);
 STUB(mkdir);
 STUB(open64);
 STUB(opendir);

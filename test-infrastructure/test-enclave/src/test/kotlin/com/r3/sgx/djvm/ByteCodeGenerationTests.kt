@@ -4,47 +4,40 @@ import com.google.protobuf.ByteString
 import com.r3.sgx.core.common.ChannelInitiatingHandler
 import com.r3.sgx.core.common.Sender
 import com.r3.sgx.core.host.EnclaveHandle
+import com.r3.sgx.core.host.EnclaveLoadMode
+import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.djvm.handlers.HostHandler
-import com.r3.sgx.dynamictesting.EnclaveTestMode
-import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import com.r3.sgx.test.enclave.TestEnclave
 import com.r3.sgx.test.enclave.messages.MessageType
 import com.r3.sgx.test.proto.ByteCodeRequest
 import com.r3.sgx.test.proto.SendJar
+import com.r3.sgx.testing.MockEcallSender
 import com.r3.sgx.testing.RootHandler
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.util.function.Consumer
 
-class ByteCodeGenerationTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
+class ByteCodeGenerationTests {
 
     companion object {
-        private var isEnclaveInitialized = false
         private lateinit var enclaveHandle: EnclaveHandle<RootHandler.Connection>
         private val hostHandler = HostHandler()
         private lateinit var enclaveSender: Sender
 
+        private val sgxMode = EnclaveTests.sgxMode
 
-        @Suppress("unused")
         @JvmStatic
-        @AfterAll
-        fun destroy() {
-            assertThat(isEnclaveInitialized).isTrue()
-            enclaveSender.send(Int.SIZE_BYTES, Consumer { buffer ->
-                buffer.putInt(MessageType.CLEAR_JARS.ordinal)
-            })
-//            enclaveHandle.destroy()
-        }
-    }
-
-    @BeforeEach
-    fun setUp() {
-        if (!isEnclaveInitialized) {
-            enclaveHandle = createEnclaveWithHandler(RootHandler(), TestEnclave::class.java, File(EnclaveTests.enclavePath))
-
+        @BeforeAll
+        fun setUp() {
+            enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
+                MockEcallSender(RootHandler(), TestEnclave())
+            } else {
+                val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
+                hostApi.createEnclave(RootHandler(), File(DJVMUnitTestSuite.enclavePath))
+            }
             val connection = enclaveHandle.connection
             val channels = connection.addDownstream(ChannelInitiatingHandler())
             val (_, sender) = channels.addDownstream(hostHandler).get()
@@ -59,8 +52,17 @@ class ByteCodeGenerationTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
                 buffer.putInt(MessageType.JAR.ordinal)
                 buffer.put(sendJarBytes)
             })
+        }
 
-            isEnclaveInitialized = true
+        @Suppress("unused")
+        @JvmStatic
+        @AfterAll
+        fun destroy() {
+            enclaveSender.send(Int.SIZE_BYTES, Consumer { buffer ->
+                buffer.putInt(MessageType.CLEAR_JARS.ordinal)
+            })
+            // destroy can trigger an assertion failure in Avian
+//            enclaveHandle.destroy()
         }
     }
 

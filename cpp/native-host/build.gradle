@@ -1,3 +1,26 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}
+
+test {
+    useJUnitPlatform()
+    dependsOn ':cpp:native-host:native-host-simulation:jar', ':cpp:native-host:native-host-debug:jar', ':cpp:native-host:native-host-release:jar'
+    doFirst {
+        systemProperty 'simulation-jar.path', tasks.getByPath(':cpp:native-host:native-host-simulation:jar').outputs.files.asPath
+        systemProperty 'debug-jar.path', tasks.getByPath(':cpp:native-host:native-host-debug:jar').outputs.files.asPath
+        systemProperty 'release-jar.path', tasks.getByPath(':cpp:native-host:native-host-release:jar').outputs.files.asPath
+    }
+}
+
 def cppBuildDir = project(":cpp").buildDir
 
 subprojects { Project project ->
@@ -10,25 +33,26 @@ subprojects { Project project ->
         task.dependsOn(":cpp:compileHost$type")
         def linuxSgxBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/build/linux"
         def hostBuildDir = "$cppBuildDir/$type/jvm-host"
-        def libCryptoDir = "/lib/x86_64-linux-gnu"
-        def libProtobufDir = "/usr/lib/x86_64-linux-gnu"
+        def libDir = "/usr/lib/x86_64-linux-gnu"
         def simSuffix = type == "Simulation" ? "_sim" : ""
         task.into "com/r3/sgx/host-libraries/$type", {
             from (linuxSgxBuildDir) {
                 include "libsgx_enclave_common.so"
                 rename "libsgx_enclave_common.so", "libsgx_enclave_common.so.1"
+                include "libsgx_launch${simSuffix}.so"
+                rename "libsgx_launch${simSuffix}.so", "libsgx_launch${simSuffix}.so.1"
                 include "libsgx_urts${simSuffix}.so"
                 include "libsgx_uae_service${simSuffix}.so"
             }
             from (hostBuildDir) {
                 include "libjvm_host.so"
             }
-            from (libCryptoDir) {
+            from (libDir) {
                 include "libcrypto.so.1.0.0"
             }
             if (type != "Simulation") {
-                from (libProtobufDir) {
-                    include "libprotobuf.so.9"
+                from (libDir) {
+                    include "libprotobuf.so.10"
                 }
             }
         }

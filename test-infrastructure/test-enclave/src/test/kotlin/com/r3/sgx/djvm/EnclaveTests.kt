@@ -4,20 +4,20 @@ import com.google.protobuf.ByteString
 import com.r3.sgx.core.common.ChannelInitiatingHandler
 import com.r3.sgx.core.common.Sender
 import com.r3.sgx.core.host.EnclaveHandle
-import com.r3.sgx.djvm.HostTests.Companion.testCodeJarPath
+import com.r3.sgx.core.host.EnclaveLoadMode
+import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.djvm.handlers.HostHandler
-import com.r3.sgx.dynamictesting.EnclaveTestMode
-import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
 import com.r3.sgx.test.EnclaveJvmTest
 import com.r3.sgx.test.enclave.TestEnclave
 import com.r3.sgx.test.enclave.messages.MessageType
 import com.r3.sgx.test.loadTestClasses
 import com.r3.sgx.test.proto.ExecuteTest
 import com.r3.sgx.test.proto.SendJar
+import com.r3.sgx.testing.MockEcallSender
 import com.r3.sgx.testing.RootHandler
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -31,15 +31,17 @@ import java.util.stream.Stream
 /**
  * Run tests in the enclave, inside and outside of the DJVM sandbox
  */
-class EnclaveTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
+class EnclaveTests {
 
     companion object {
         val enclavePath = System.getProperty("enclave.path")
                 ?: throw AssertionError("System property 'enclave.path' not set.")
 
+        val sgxMode = System.getProperty("sgx.mode")
+                ?: throw AssertionError("System property 'sgx.mode' not set.")
+
         private val testCodeJarPath = HostTests.mathsJarPath
 
-        private var isEnclaveInitialized = false
         private val hostHandler = HostHandler()
         private lateinit var enclaveHandle: EnclaveHandle<RootHandler.Connection>
         private lateinit var enclaveSender: Sender
@@ -49,13 +51,36 @@ class EnclaveTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
         @AfterAll
         @JvmStatic
         fun destroy() {
-            assertThat(isEnclaveInitialized).isTrue()
             enclaveSender.send(Int.SIZE_BYTES, Consumer { buffer ->
                 buffer.putInt(MessageType.CLEAR_JARS.ordinal)
             })
+            // destroy can trigger an assertion failure in Avian
 //            enclaveHandle.destroy()
             assertThat(hostHandler.assertedTests).containsAll(testClasses.flatMap { listOf(it.name) })
             assertThat(hostHandler.assertedSandboxedTests).containsAll(testClasses.flatMap { listOf(it.name) })
+        }
+
+        @JvmStatic
+        @BeforeAll
+        fun setUp() {
+            enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
+                MockEcallSender(RootHandler(), TestEnclave())
+            } else {
+                val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
+                hostApi.createEnclave(RootHandler(), File(enclavePath))
+            }
+            val connection = enclaveHandle.connection
+            val channels = connection.addDownstream(ChannelInitiatingHandler())
+            val (_, sender) = channels.addDownstream(hostHandler).get()
+            enclaveSender = sender
+
+            val message = SendJar.newBuilder()
+                    .setData(ByteString.copyFrom(testCodeJarPath.toFile().readBytes()))
+                    .build().toByteArray()
+            sender.send(Int.SIZE_BYTES + message.size, Consumer { buffer ->
+                buffer.putInt(MessageType.JAR.ordinal)
+                buffer.put(message)
+            })
         }
 
         @JvmStatic
@@ -71,27 +96,6 @@ class EnclaveTests : TestEnclavesBasedTest(EnclaveTestMode.Native) {
                 buffer.putInt(type.ordinal)
                 buffer.put(executeTestBytes)
             })
-        }
-    }
-
-    @BeforeEach
-    fun setUp() {
-        if (!isEnclaveInitialized) {
-            enclaveHandle = createEnclaveWithHandler(RootHandler(), TestEnclave::class.java, File(enclavePath))
-            val connection = enclaveHandle.connection
-            val channels = connection.addDownstream(ChannelInitiatingHandler())
-            val (_, sender) = channels.addDownstream(hostHandler).get()
-            enclaveSender = sender
-
-            val message = SendJar.newBuilder()
-                    .setData(ByteString.copyFrom(testCodeJarPath.toFile().readBytes()))
-                    .build().toByteArray()
-            sender.send(Int.SIZE_BYTES + message.size, Consumer { buffer ->
-                buffer.putInt(MessageType.JAR.ordinal)
-                buffer.put(message)
-            })
-
-            isEnclaveInitialized = true
         }
     }
 

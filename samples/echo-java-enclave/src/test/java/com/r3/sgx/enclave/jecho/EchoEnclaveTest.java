@@ -9,6 +9,7 @@ import com.r3.sgx.core.host.EnclaveHandle;
 import com.r3.sgx.core.host.EnclaveLoadMode;
 import com.r3.sgx.core.host.NativeHostApi;
 import com.r3.sgx.testing.BytesRecordingHandler;
+import com.r3.sgx.testing.MockEcallSender;
 import com.r3.sgx.testing.RootHandler;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,14 +21,20 @@ import java.util.concurrent.ExecutionException;
 public class EchoEnclaveTest {
     private static final String ENCLAVE_PATH = System.getProperty("com.r3.sgx.enclave.path");
 
+    private static final String SGX_MODE = System.getProperty("sgx.mode");
+
     private BytesRecordingHandler handler;
     private EnclaveHandle<RootHandler.Connection> enclaveHandle;
 
     @Before
     public void setupEnclave() {
         handler = new BytesRecordingHandler();
-        NativeHostApi hostApi = new NativeHostApi(EnclaveLoadMode.SIMULATION);
-        enclaveHandle = hostApi.createEnclave(new RootHandler(), new File(ENCLAVE_PATH));
+        if (SGX_MODE.toUpperCase().equals("MOCK")) {
+            enclaveHandle = new MockEcallSender(handler, new EchoEnclave());
+        } else {
+            NativeHostApi hostApi = new NativeHostApi(EnclaveLoadMode.valueOf(SGX_MODE.toUpperCase()));
+            enclaveHandle = hostApi.createEnclave(new RootHandler(), new File(ENCLAVE_PATH));
+        }
     }
 
     @Test

@@ -1,3 +1,5 @@
+import com.r3.sgx.plugin.enclave.SignEnclave
+
 /**
  * This module contains the enclave and host code meant to handle and run test code.
  */
@@ -30,6 +32,8 @@ dependencies {
     testImplementation 'com.r3.sgx:enclave-dynamic-testing'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+
+    testRuntimeOnly "com.r3.sgx:native-host-${sgxMode.toLowerCase()}"
 
     jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
 }
@@ -65,10 +69,11 @@ tasks.withType(Test) {
 test {
     maxHeapSize = "8g"
     useJUnitPlatform()
-    dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar', signEnclaveWithDummyKeySimulation
+    def signEnclaveTask = (SignEnclave) tasks.getByPath(":test-enclave:signEnclaveWithDummyKey$sgxMode")
+    dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar', signEnclaveTask
     doFirst {
         systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
-        systemProperty 'enclave.path', signEnclaveWithDummyKeySimulation.signedEnclavePath
+        systemProperty 'enclave.path', signEnclaveTask.signedEnclavePath
         systemProperty 'maths-tests-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath
         systemProperty 'djvm-unit-tests-jar.path', tasks.getByPath(':djvm:djvm-tests:shadowJar').outputs.files.asPath
     }
