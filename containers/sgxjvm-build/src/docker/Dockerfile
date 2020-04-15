@@ -46,7 +46,6 @@ RUN apt-get install -y \
     patch \
     protobuf-compiler \
     python \
-    python2.7 \
     virtualenv \
     python3-venv \
     python3-dev \
