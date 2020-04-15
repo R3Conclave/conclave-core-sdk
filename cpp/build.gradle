@@ -67,11 +67,12 @@ for (type in types) {
         )
 
         inputs.files(
-                "${buildDirectory(type)}/Makefile"
+                "${buildDirectory(type)}/Makefile",
+                "$projectDir/jvm-edl/CMakeList.txt"
         )
         // May need to add more here, for now this is good enough
         inputs.dir("$projectDir/avian/src") // src/ because avian puts stuff in avian/build/, failing the up-to-date check
-        inputs.dir("$projectDir/jvm-edl")
+        inputs.dir("$projectDir/jvm-edl/src")
         inputs.dir("$projectDir/jvm-enclave-avian")
         inputs.dir("$projectDir/jvm-enclave-common")
         inputs.dir("$projectDir/jvm-host-enclave-common")

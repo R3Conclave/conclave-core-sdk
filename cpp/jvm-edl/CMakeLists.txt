@@ -1,8 +1,6 @@
 project(jvm-edl)
 
-include(../Determinise.cmake)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -frandom-seed=1")
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     add_definitions(-DNDEBUG)
 else()
@@ -44,4 +42,3 @@ set_property(TARGET jvm_host_edl PROPERTY GENERATED_EDL_DIR ${GENERATED_EDL_DIR}
 
 get_property(HOST_EDL_SOURCES TARGET jvm_host_edl PROPERTY SOURCES)
 get_property(ENCLAVE_EDL_SOURCES TARGET jvm_enclave_edl PROPERTY SOURCES)
-determinise_compile(${HOST_EDL_SOURCES} ${ENCLAVE_EDL_SOURCES})
