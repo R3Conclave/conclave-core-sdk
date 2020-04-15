@@ -34,7 +34,7 @@ ExternalProject_Add(linux-sgx-ext
 
 ExternalProject_Add_Step(linux-sgx-ext download-prebuilt
         # Check a random downloaded file to avoid executing download_prebuilt.sh
-        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a] || ./download_prebuilt.sh"
+        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a ] || ./download_prebuilt.sh"
         WORKING_DIRECTORY ${BUILD_SRC_DIR}
         DEPENDERS build
         DEPENDEES configure)
