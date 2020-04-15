@@ -28,7 +28,7 @@ dependencies {
     implementation "org.assertj:assertj-core:$assertj_version"
 
     testImplementation "com.r3.sgx:api-core-host"
-    testImplementation 'com.r3.sgx:enclave-dynamic-testing'
+    testImplementation 'com.r3.sgx:enclave-testing'
 
     testRuntimeOnly "com.r3.sgx:native-host-${sgxMode.toLowerCase()}"
 
