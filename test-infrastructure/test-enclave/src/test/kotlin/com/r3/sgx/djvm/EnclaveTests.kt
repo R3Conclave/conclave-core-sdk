@@ -54,6 +54,7 @@ class EnclaveTests {
             enclaveSender.send(Int.SIZE_BYTES, Consumer { buffer ->
                 buffer.putInt(MessageType.CLEAR_JARS.ordinal)
             })
+            // destroy can trigger an assertion failure in Avian
 //            enclaveHandle.destroy()
             assertThat(hostHandler.assertedTests).containsAll(testClasses.flatMap { listOf(it.name) })
             assertThat(hostHandler.assertedSandboxedTests).containsAll(testClasses.flatMap { listOf(it.name) })

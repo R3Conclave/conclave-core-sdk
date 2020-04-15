@@ -61,6 +61,7 @@ class ByteCodeGenerationTests {
             enclaveSender.send(Int.SIZE_BYTES, Consumer { buffer ->
                 buffer.putInt(MessageType.CLEAR_JARS.ordinal)
             })
+            // destroy can trigger an assertion failure in Avian
 //            enclaveHandle.destroy()
         }
     }

@@ -61,6 +61,7 @@ class DJVMEnclaveTest {
                 buffer.putInt(MessageType.JAR.ordinal)
                 buffer.putInt(0)
             })
+            // destroy can trigger an assertion failure in Avian
 //            enclaveHandle.destroy()
         }
 
