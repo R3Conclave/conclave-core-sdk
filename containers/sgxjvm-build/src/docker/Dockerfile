@@ -7,8 +7,7 @@ LABEL version="1.1"
 LABEL description="SGXJVM build container"
 LABEL maintainer="SGX@r3.com"
 
-RUN apt-get update -qqy
-RUN apt-get install -qqy \
+RUN apt-get update -y && apt-get install -y \
     curl \
     apt-transport-https \
     ca-certificates \
@@ -21,8 +20,7 @@ RUN add-apt-repository \
    $(lsb_release -cs) \
    stable"
 RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
-RUN apt-get update -y
-RUN apt-get install -y \
+RUN apt-get update -y && apt-get install -y \
     autoconf \
     ccache \
     cmake \

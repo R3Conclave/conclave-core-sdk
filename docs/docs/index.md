@@ -41,7 +41,7 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
 !!! warning
     This is a beta release of Conclave. You should not run enclaves built with it in production.
 
-Beta 1 ships with the following known issues:
+This release ships with the following known issues:
 
 1. The API may change up until version 1.0. Although we have no current plans to change the API, small changes like 
    package names may still occur and we may adapt the API based on user feedback during the beta period.
@@ -56,3 +56,10 @@ Beta 1 ships with the following known issues:
    changed, removed, or merged into other modules in any release.
 8. Product IDs aren't fully wired up yet. This shouldn't impact any testing or development at the moment, as it only 
    matters when multiple different enclaves are used in production from the same publisher.
+
+## Release notes
+
+### Beta 2
+
+1. We've upgraded to use the version 2.9 of the Intel SGX SDK, which brings security improvements and lays the groundwork for new 
+   features. Make sure your host system is also running version 2.9.
