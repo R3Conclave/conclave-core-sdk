@@ -1,0 +1,13 @@
+diff --git a/buildenv.mk b/buildenv.mk
+index 6adcd819..1b29dd92 100644
+--- a/buildenv.mk
++++ b/buildenv.mk
+@@ -86,7 +86,7 @@ endif
+ 
+ ifdef DEBUG
+     COMMON_FLAGS += -O0 -ggdb -DDEBUG -UNDEBUG
+-    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
++#    COMMON_FLAGS += -DSE_DEBUG_LEVEL=SE_TRACE_DEBUG
+ else
+     COMMON_FLAGS += -O2 -D_FORTIFY_SOURCE=2 -UDEBUG -DNDEBUG
+ endif

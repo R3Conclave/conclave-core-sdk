@@ -17,7 +17,7 @@ ExternalProject_Add(linux-sgx-ext
 
         SOURCE_DIR ${BUILD_SRC_DIR}
 
-        PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff
+        PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff
 
         UPDATE_COMMAND ""
 
