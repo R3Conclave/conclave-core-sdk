@@ -5,8 +5,7 @@ LABEL description="Intel aesmd container"
 LABEL maintainer="SGX@r3.com"
 
 # Install dependencies
-RUN apt-get update -qqy
-RUN apt-get install -qqy \
+RUN apt-get update -y && apt-get install -y \
     curl \
     kmod \
     patch \
@@ -17,8 +16,7 @@ RUN apt-get install -qqy \
 
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | tee /etc/apt/sources.list.d/intel-sgx.list
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-RUN apt-get update -y
-RUN apt-get install -y \
+RUN apt-get update -y && apt-get install -y \
     libsgx-urts \
     libsgx-epid
 

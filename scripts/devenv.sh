@@ -78,8 +78,10 @@ if [[ -z ${CONTAINER_ID} ]]; then
 
   if [ "$(uname)" == "Darwin" ]; then
     network_cmd="-p 8000:8000 -p 8001:8001"
+    num_cpus=$( sysctl -n hw.ncpu )
   else
     network_cmd="--network host"
+    num_cpus=$( nproc )
   fi
 
   # If running on a Linux host with SGX properly installed and configured,
@@ -111,7 +113,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        -e HOME=/home \
        ${ENV_DISPLAY} \
        -e GRADLE_USER_HOME=/gradle \
-       -e GRADLE_OPTS="-Dorg.gradle.workers.max=$(nproc)" \
+       -e GRADLE_OPTS="-Dorg.gradle.workers.max=$num_cpus" \
        $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
        -d \
        -it \
