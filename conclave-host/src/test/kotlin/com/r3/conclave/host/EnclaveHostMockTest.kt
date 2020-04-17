@@ -6,7 +6,7 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.callUntrustedHost
 import com.r3.sgx.core.common.ThrowingErrorHandler
 import com.r3.sgx.core.enclave.RootEnclave
-import com.r3.sgx.testing.MockEcallSender
+import com.r3.sgx.testing.MockEnclaveHandle
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.security.PublicKey
@@ -192,7 +192,7 @@ class EnclaveHostMockTest {
     private fun hostTo(enclave: Enclave): EnclaveHost {
         // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
         val rootEnclave = Enclave::class.java.getDeclaredField("rootEnclave").apply { isAccessible = true }.get(enclave) as RootEnclave
-        val handle = MockEcallSender(ThrowingErrorHandler(), rootEnclave)
+        val handle = MockEnclaveHandle(ThrowingErrorHandler(), rootEnclave)
         return EnclaveHost.create(EnclaveMode.SIMULATION, handle, fileToDelete = null, isMock = true)
     }
 

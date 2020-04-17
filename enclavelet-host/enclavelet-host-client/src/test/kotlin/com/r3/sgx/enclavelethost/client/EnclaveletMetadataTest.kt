@@ -5,11 +5,9 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class EnclaveletMetadataTest {
-
     @Test
     fun testReadMeasurementFromMetadata() {
         val meta = EnclaveletMetadata.read(javaClass.getResourceAsStream("/enclave.metadata.yml"))
-        assertEquals("com.r3.sgx.enclave.bar", meta.className)
         assertEquals(barEnclaveMeasurement, meta.measurement)
     }
 

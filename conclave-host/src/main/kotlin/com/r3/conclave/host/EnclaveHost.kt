@@ -62,14 +62,14 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         }
 
         @PotentialPackagePrivate
-        internal fun create(enclaveFile: Path, mode: EnclaveMode, tempFile: Boolean): EnclaveHost {
+        internal fun create(enclaveFile: Path, enclaveClassName: String, mode: EnclaveMode, tempFile: Boolean): EnclaveHost {
             // TODO NativeHostApi needs to be moved to conclave-host to avoid this mapping.
             val loadMode = when (mode) {
                 EnclaveMode.RELEASE -> EnclaveLoadMode.RELEASE
                 EnclaveMode.DEBUG -> EnclaveLoadMode.DEBUG
                 EnclaveMode.SIMULATION -> EnclaveLoadMode.SIMULATION
             }
-            val handle = NativeHostApi(loadMode).createEnclave(ThrowingErrorHandler(), enclaveFile.toFile())
+            val handle = NativeHostApi(loadMode).createEnclave(ThrowingErrorHandler(), enclaveFile.toFile(), enclaveClassName)
             return create(mode, handle, if (tempFile) enclaveFile else null)
         }
 
@@ -90,7 +90,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             }
             try {
                 stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
-                return create(enclaveFile, mode, tempFile = true)
+                return create(enclaveFile, enclaveClassName, mode, tempFile = true)
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
                 throw InvalidEnclaveException("Unable to load enclave", e)
@@ -152,6 +152,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
      * can be provided.
      */
     @Throws(InvalidEnclaveException::class)
+    @Synchronized
     // TODO MailHandler parameter
     fun start(spid: OpaqueBytes?, attestationKey: String?) {
         checkNotClosed()

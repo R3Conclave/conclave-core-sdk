@@ -24,8 +24,7 @@ dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     implementation "com.github.jengelman.gradle.plugins:shadow:5.2.0"
-    implementation "net.fornwall:jelf:0.4.4"
-    implementation "commons-io:commons-io:2.6"
+    implementation "io.github.classgraph:classgraph:$classgraph_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"

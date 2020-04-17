@@ -14,7 +14,8 @@ import java.nio.ByteBuffer
 
 class EnclaveletHostBuilder(
         private val configuration: EnclaveletHostConfiguration,
-        private val enclaveletFile: File
+        private val enclaveletFile: File,
+        private val enclaveClassName: String
 ) {
     companion object {
         private val log = loggerFor<EnclaveletHostBuilder>()
@@ -31,7 +32,7 @@ class EnclaveletHostBuilder(
             else -> IntelAttestationService(configuration.attestationServiceUrl, configuration.iasSubscriptionKey)
         }
         log.info("Loading enclave from: ${enclaveletFile.path}")
-        val loadedEnclavelet = EnclaveletState.load(enclaveletFile, configuration.enclaveLoadMode)
+        val loadedEnclavelet = EnclaveletState.load(enclaveletFile, enclaveClassName, configuration.enclaveLoadMode)
         val serverEnclavelet = when (configuration.enclaveLoadMode) {
             EnclaveLoadMode.SIMULATION -> {
                 if (configuration.mockAttestationServiceInSimulation) {

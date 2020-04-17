@@ -5,7 +5,7 @@ import com.r3.sgx.core.enclave.Enclave
 import com.r3.sgx.core.host.EnclaveHandle
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.NativeHostApi
-import com.r3.sgx.testing.MockEcallSender
+import com.r3.sgx.testing.MockEnclaveHandle
 import com.r3.sgx.testing.RootHandler
 import org.junit.ClassRule
 import org.junit.runners.Parameterized.Parameters
@@ -51,9 +51,9 @@ open class TestEnclavesBasedTest(
         return when (mode) {
             EnclaveTestMode.Native -> {
                 val enclaveFile = testEnclaves.getEnclave(enclaveClass, enclaveBuilder)
-                createEnclaveWithHandler(handler, enclaveFile)
+                createNativeEnclave(handler, enclaveClass, enclaveFile)
             }
-            EnclaveTestMode.Mock -> createMockEnclaveWithHandler(handler, enclaveClass)
+            EnclaveTestMode.Mock -> createMockEnclave(handler, enclaveClass)
         }
     }
 
@@ -63,25 +63,26 @@ open class TestEnclavesBasedTest(
             enclaveFile: File
     ): EnclaveHandle<CONNECTION> {
         return when (mode) {
-            EnclaveTestMode.Native -> createEnclaveWithHandler(handler, enclaveFile)
-            EnclaveTestMode.Mock -> createMockEnclaveWithHandler(handler, enclaveClass)
+            EnclaveTestMode.Native -> createNativeEnclave(handler, enclaveClass, enclaveFile)
+            EnclaveTestMode.Mock -> createMockEnclave(handler, enclaveClass)
         }
     }
 
-    fun <CONNECTION> createEnclaveWithHandler(
+    private fun <CONNECTION> createNativeEnclave(
             handler: Handler<CONNECTION>,
+            enclaveClass: Class<out Enclave>,
             enclaveFile: File
     ): EnclaveHandle<CONNECTION> {
         val hostApi = NativeHostApi(EnclaveLoadMode.SIMULATION)
-        return hostApi.createEnclave(handler, enclaveFile)
+        return hostApi.createEnclave(handler, enclaveFile, enclaveClass.name)
     }
 
-    fun <CONNECTION> createMockEnclaveWithHandler(
+    private fun <CONNECTION> createMockEnclave(
             handler: Handler<CONNECTION>,
             enclaveClass: Class<out Enclave>
     ): EnclaveHandle<CONNECTION> {
         val enclave = enclaveClass.newInstance()
-        return MockEcallSender(handler, enclave)
+        return MockEnclaveHandle(handler, enclave)
     }
 
     @JvmOverloads

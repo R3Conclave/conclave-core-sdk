@@ -7,7 +7,7 @@ import com.r3.sgx.core.common.SimpleProtoHandler
 import com.r3.sgx.core.host.EnclaveLoadMode
 import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.core.host.internal.Native
-import com.r3.sgx.testing.MockEcallSender
+import com.r3.sgx.testing.MockEnclaveHandle
 import com.r3.sgx.testing.RootHandler
 import org.junit.Test
 import java.io.File
@@ -41,9 +41,13 @@ class ProtobufEnclaveTest {
         val ocallRecordingHost = OcallRecordingHost()
         val getMeasurementHost = GetMeasurementHost()
         val root = if (sgxMode.toUpperCase() == "MOCK") {
-            MockEcallSender(RootHandler(), ProtobufEnclave()).connection
+            MockEnclaveHandle(RootHandler(), ProtobufEnclave()).connection
         } else {
-            NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase())).createEnclave(RootHandler(), enclave).connection
+            NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase())).createEnclave(
+                    RootHandler(),
+                    enclave,
+                    "com.r3.sgx.enclave.example.ProtobufEnclave"
+            ).connection
         }
         val ocallRecordingSender = root.addDownstream(ocallRecordingHost)
         val getMeasurementSender = root.addDownstream(getMeasurementHost)

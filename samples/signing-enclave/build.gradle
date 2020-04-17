@@ -50,10 +50,6 @@ shadowJar {
     archiveBaseName = 'signing-enclave'
     archiveClassifier = ''
     zip64 = true
-
-    manifest {
-        attributes("Enclave-Class": "com.r3.sgx.enclave.signing.SigningEnclave")
-    }
 }
 
 jar {
@@ -112,9 +108,9 @@ enclaveImageSimulation {
 }
 
 test {
-    dependsOn addEnclaveSignatureSimulation, startEnclaveContainerSimulation, generateEnclaveletMetadataSimulation
+    dependsOn addEnclaveSignatureSimulation, startEnclaveContainerSimulation, generateEnclaveMetadataSimulation
     systemProperty('com.r3.sgx.enclave.path', addEnclaveSignatureSimulation.signedEnclavePath)
     systemProperty('com.r3.sgx.enclave.simulated.grpc.port', grpcTestPort)
-    systemProperty("com.r3.sgx.enclave_metadata", generateEnclaveletMetadataSimulation.outputEnclaveMetadata.getAsFile().get().path)
+    systemProperty("com.r3.sgx.enclave_metadata", generateEnclaveMetadataSimulation.outputEnclaveMetadata.getAsFile().get().path)
     finalizedBy stopEnclaveContainerSimulation
 }

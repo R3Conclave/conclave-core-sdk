@@ -10,7 +10,6 @@ import java.io.FileOutputStream
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -27,20 +26,6 @@ object BuildEnclaveJarFromClass {
         val fileOutputStream = FileOutputStream(jarOutput)
         JarOutputStream(fileOutputStream).use { jar ->
             val pathCache = hashSetOf<Path>()
-
-            // MANIFEST
-            val manifestPath = Paths.get(MANIFEST_NAME)
-            jar.writeDirectoryPath(pathCache, manifestPath)
-            pathCache.add(manifestPath)
-            jar.putNextEntry(ZipEntry(MANIFEST_NAME))
-            jar.writer(Charsets.UTF_8).apply {
-                write("Manifest-Version: 1.0\n")
-                write("Enclave-Class: ")
-                write(entryClass.name)
-                write("\n")
-                flush()
-            }
-            jar.closeEntry()
 
             // CLASSES
             val rootClasses = listOf(
@@ -105,22 +90,6 @@ object BuildEnclaveJarFromClass {
                     throw IllegalStateException("Can't identify location $location")
                 }
             }
-        }
-    }
-
-    private fun JarOutputStream.writeDirectoryPath(pathCache: HashSet<Path>, filePath: Path) {
-        val pathsToCreate = arrayListOf<Path>()
-        var current: Path? = filePath.parent
-        while (current != null) {
-            if (current !in pathCache) {
-                pathsToCreate.add(current)
-                pathCache.add(current)
-            }
-            current = current.parent
-        }
-        for (pathToCreate in pathsToCreate.reversed()) {
-            val entry = ZipEntry("$pathToCreate/")
-            putNextEntry(entry)
         }
     }
 }

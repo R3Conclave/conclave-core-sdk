@@ -13,7 +13,7 @@ import com.r3.sgx.test.enclave.messages.MessageType
 import com.r3.sgx.test.loadTestClasses
 import com.r3.sgx.test.proto.ExecuteTest
 import com.r3.sgx.test.proto.SendJar
-import com.r3.sgx.testing.MockEcallSender
+import com.r3.sgx.testing.MockEnclaveHandle
 import com.r3.sgx.testing.RootHandler
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -32,9 +32,8 @@ import java.util.stream.Stream
  * Run tests in the enclave, inside and outside of the DJVM sandbox
  */
 class EnclaveTests {
-
     companion object {
-        val enclavePath = System.getProperty("enclave.path")
+        private val enclavePath = System.getProperty("enclave.path")
                 ?: throw AssertionError("System property 'enclave.path' not set.")
 
         val sgxMode = System.getProperty("sgx.mode")
@@ -64,10 +63,10 @@ class EnclaveTests {
         @BeforeAll
         fun setUp() {
             enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
-                MockEcallSender(RootHandler(), TestEnclave())
+                MockEnclaveHandle(RootHandler(), TestEnclave())
             } else {
                 val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
-                hostApi.createEnclave(RootHandler(), File(enclavePath))
+                hostApi.createEnclave(RootHandler(), File(enclavePath), "com.r3.sgx.test.enclave.TestEnclave")
             }
             val connection = enclaveHandle.connection
             val channels = connection.addDownstream(ChannelInitiatingHandler())

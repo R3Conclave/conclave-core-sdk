@@ -17,10 +17,9 @@ class NativeHostApi(val loadMode: EnclaveLoadMode) {
         NativeLoader.loadHostLibraries(loadMode)
     }
 
-    fun <CONNECTION> createEnclave(handler: Handler<CONNECTION>, enclaveFile: File): EnclaveHandle<CONNECTION> {
+    fun <CONNECTION> createEnclave(handler: Handler<CONNECTION>, enclaveFile: File, enclaveClassName: String): EnclaveHandle<CONNECTION> {
         val enclaveId = Native.createEnclave(enclaveFile.absolutePath, isDebug)
-        val sender = NativeEcallSender(enclaveId, handler)
-        return NativeEnclaveHandle(this, enclaveId, sender.connection)
+        return NativeEnclaveHandle(this, enclaveId, handler, enclaveClassName)
     }
 
     fun destroyEnclave(enclaveId: EnclaveId) {

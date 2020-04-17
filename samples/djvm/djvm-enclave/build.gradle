@@ -46,10 +46,6 @@ shadowJar {
     archiveBaseName = 'djvm-enclave'
     archiveClassifier = ''
     zip64 = true
-
-    manifest {
-        attributes("Enclave-Class": "com.r3.sgx.djvm.enclave.DJVMEnclave")
-    }
 }
 
 test {

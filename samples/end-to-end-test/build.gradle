@@ -36,7 +36,7 @@ test {
     testLogging.showStandardStreams = true
     dependsOn gradle.includedBuild('sgxjvm').task(":containers:kubernetes-sgx-device-plugin:pushImageTest")
     dependsOn gradle.includedBuild('sgxjvm').task(":containers:aesmd:pushImageTest")
-    def genEnclaveletMetadataTask = project(':signing-enclave').tasks.getByName("generateEnclaveletMetadataDebug")
+    def genEnclaveletMetadataTask = project(':signing-enclave').tasks.getByName("generateEnclaveMetadataDebug")
     def enclaveContainerPublishingTask = project(':signing-enclave:').tasks.getByName('pushEnclaveImageDebug')
     dependsOn enclaveContainerPublishingTask, genEnclaveletMetadataTask
     systemProperty("enclave_metadata", genEnclaveletMetadataTask.outputEnclaveMetadata.getAsFile().get().path)

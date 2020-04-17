@@ -183,21 +183,12 @@ dependencies {
 }
 ```
 
-Enclaves are similar to standalone programs and as such have an equivalent to a "main class". This class must be a
-subclass of [`Enclave`](/api/com/r3/conclave/enclave/Enclave.html) and we'll write it in a moment. The name of the
-class must be specified in the JAR manifest like this, so Conclave can find it:
-
-```groovy hl_lines="3"
-jar {
-    manifest {
-        attributes("Enclave-Class": "com.superfirm.enclave.MyEnclave")    // CHANGE THIS NAME!
-    }
-}
-```
-
 And with that, we're done configuring the build.
 
 ## Create a new subclass of `Enclave`
+
+Enclaves are similar to standalone programs and as such have an equivalent to a "main class". This class must be a
+subclass of [`Enclave`](/api/com/r3/conclave/enclave/Enclave.html).
 
 Create your enclave class:
 

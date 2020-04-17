@@ -1,7 +1,5 @@
 package com.r3.sgx.enclavelethost.server.internal
 
-import com.r3.conclave.common.internal.ByteCursor
-import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.host.internal.AttestationService
 import com.r3.sgx.core.common.ChannelInitiatingHandler
@@ -34,7 +32,7 @@ sealed class EnclaveletState {
 
             log.info("Getting IAS signature")
             val response = attestationService.requestSignature(rawQuote)
-            return Attested(this, rawQuote, response)
+            return Attested(this, response)
         }
 
         companion object {
@@ -53,22 +51,16 @@ sealed class EnclaveletState {
      */
     class Attested(
             created: Created,
-            val rawQuote: ByteCursor<SgxSignedQuote>,
             val attestationResponse: AttestationResponse
     ) : Created(created.enclaveHandle, created.channels, created.mux)
-
     companion object {
         private val log = loggerFor<EnclaveletState>()
 
-        fun load(enclaveFile: File, loadMode: EnclaveLoadMode): Created {
+        fun load(enclaveFile: File, enclaveClassName: String, loadMode: EnclaveLoadMode): Created {
             val hostApi = NativeHostApi(loadMode)
             log.info("Using enclave load mode: $loadMode")
-            val handle = hostApi.createEnclave(
-                    ThrowingErrorHandler(),
-                    enclaveFile
-            )
+            val handle = hostApi.createEnclave(ThrowingErrorHandler(), enclaveFile, enclaveClassName)
             return Created.fromErrorHandler(handle)
         }
     }
 }
-

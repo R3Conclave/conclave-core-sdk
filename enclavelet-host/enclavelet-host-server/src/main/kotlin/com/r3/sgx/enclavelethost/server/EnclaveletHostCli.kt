@@ -56,6 +56,12 @@ class EnclaveletHostCli: Callable<Unit> {
     )
     lateinit var enclavelet: File
 
+    @CommandLine.Parameters(
+            index = "1",
+            description = ["The enclave class name"]
+    )
+    lateinit var enclaveClassName: String
+
     lateinit var configurationOverrides: Map<String, Any?>
 
     override fun call() {
@@ -63,7 +69,7 @@ class EnclaveletHostCli: Callable<Unit> {
             EnclaveletHostConfiguration.readWithDefaults(it)
         } ?: EnclaveletHostConfiguration.defaults
         val overriddenConfiguration = configuration.withOverrides(configurationOverrides)
-        val host = EnclaveletHostBuilder(overriddenConfiguration, enclavelet).build()
+        val host = EnclaveletHostBuilder(overriddenConfiguration, enclavelet, enclaveClassName).build()
         host.use {
             it.start()
             log.info("Enclavelet host started on port ${host.configuration.bindPort}")

@@ -13,27 +13,29 @@ import javax.inject.Inject
 /**
  * This task generates a yaml metadata file containing the enclavelet class name and measurement.
  */
-open class GenerateEnclaveletMetadata @Inject constructor(objects: ObjectFactory) : SgxTask() {
+open class GenerateEnclaveMetadata @Inject constructor(objects: ObjectFactory) : SgxTask() {
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
+
+    @get:InputFile
+    val inputSignTool: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
     val outputEnclaveMetadata: RegularFileProperty = objects.fileProperty()
 
-    @get:InputFile
-    val signTool: RegularFileProperty = objects.fileProperty()
-
     override fun sgxAction() {
-        val className = SgxEnclavePlugin.readEnclaveClassNameFromEnclaveFile(inputSignedEnclave.asFile.get().toPath())
         val measurement = getEnclaveMeasurement(inputSignedEnclave.asFile.get())
         logger.lifecycle("Enclave measurement: $measurement")
-        generateOutput(className, measurement)
+        Files.write(
+                outputEnclaveMetadata.asFile.get().toPath(),
+                listOf("measurement: $measurement")
+        )
     }
 
     private fun getEnclaveMeasurement(file: File): String {
         val metadata = temporaryDir.toPath().resolve("sign_tool_dump.txt").toFile()
         project.exec { spec ->
-            spec.commandLine(signTool.asFile.get(), "dump",
+            spec.commandLine(inputSignTool.asFile.get(), "dump",
                     "-enclave", file,
                     "-dumpfile", metadata)
         }
@@ -53,12 +55,5 @@ open class GenerateEnclaveletMetadata @Inject constructor(objects: ObjectFactory
             }
         }
         throw EOFException("Unable to read enclave measurement from metadata dump file: ${metadata.absolutePath}")
-    }
-
-    private fun generateOutput(className: String, measurement: String) {
-        Files.write(
-                outputEnclaveMetadata.asFile.get().toPath(),
-                listOf("className: $className", "measurement: $measurement")
-        )
     }
 }

@@ -6,7 +6,6 @@ import com.r3.conclave.common.internal.SgxReportData
 import com.r3.sgx.core.common.Handler
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.core.enclave.Enclavelet
-import com.r3.sgx.core.enclave.internal.NativeEnclaveApi.ENCLAVE_CLASS_ATTRIBUTE_NAME
 import com.r3.sgx.dynamictesting.TestEnclaves
 import com.r3.sgx.testing.HelperUtilities.expectWithin
 import org.junit.After
@@ -75,19 +74,6 @@ class MemoryURLStreamHandlerTest {
 
         override fun createHandler(api: EnclaveApi): Handler<*> {
             throw UnsupportedOperationException("Does not exist")
-        }
-    }
-
-    @Test
-    fun testStreamForJarInMemory() {
-        val enclaveJar = testEnclaves.getEnclaveJar(ExampleEnclavelet::class.java)
-        val enclaveData = enclaveJar.toByteBuffer()
-        val (memoryURL, _) = URLSchemes.createMemoryURL(DATA_PATH, enclaveData)
-        System.gc()
-        JarInputStream(memoryURL.openStream()).use { jar ->
-            val manifest: Manifest = jar.manifest
-            assertEquals("1.0", manifest.mainAttributes.getValue(MANIFEST_VERSION))
-            assertNotNull(manifest.mainAttributes.getValue(ENCLAVE_CLASS_ATTRIBUTE_NAME))
         }
     }
 

@@ -9,12 +9,12 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.r3.sgx.core.common.attestation.Measurement
-import java.io.*
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.InputStream
+import java.io.InputStreamReader
 
-data class EnclaveletMetadata(
-        val className: String,
-        val measurement: Measurement) {
-
+data class EnclaveletMetadata(val measurement: Measurement) {
     companion object {
         private val mapper: ObjectMapper
 

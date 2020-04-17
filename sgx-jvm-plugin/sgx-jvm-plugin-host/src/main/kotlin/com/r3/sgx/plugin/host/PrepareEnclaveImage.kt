@@ -17,13 +17,14 @@ open class PrepareEnclaveImage @Inject constructor(objects: ObjectFactory) : Sgx
 
         private val List<String>.concatenated: String get() = joinToString(separator = " ")
 
-        fun createCommand(javaOptions: List<String>, applicationOptions: List<String>): List<String> {
+        fun createCommand(javaOptions: List<String>, applicationOptions: List<String>, enclaveClassName: String): List<String> {
             return mutableListOf("java").apply {
                 addAll(javaOptions)
                 add("-jar")
                 add("/app/app.jar")
                 addAll(applicationOptions)
                 add(ENCLAVE_FILE)
+                add(enclaveClassName)
             }
         }
     }
@@ -48,6 +49,9 @@ open class PrepareEnclaveImage @Inject constructor(objects: ObjectFactory) : Sgx
     @get:InputFile
     val enclaveObject: RegularFileProperty = objects.fileProperty()
 
+    @get:Input
+    val enclaveClassName: Property<String> = objects.property(String::class.java)
+
     @get:OutputDirectory
     val dockerDir: DirectoryProperty = objects.directoryProperty()
 
@@ -64,7 +68,7 @@ open class PrepareEnclaveImage @Inject constructor(objects: ObjectFactory) : Sgx
         with(dockerFile.get().asFile) {
             writeText("FROM ${imageName.get()}:${tag.get()}${System.lineSeparator()}")
             appendText("COPY ${enclaveObjectFile.name} $ENCLAVE_FILE${System.lineSeparator()}")
-            appendText("ENTRYPOINT ${createCommand(commandOptions.get(), hostOptions.get()).concatenated}${System.lineSeparator()}")
+            appendText("ENTRYPOINT ${createCommand(commandOptions.get(), hostOptions.get(), enclaveClassName.get()).concatenated}${System.lineSeparator()}")
         }
     }
 }

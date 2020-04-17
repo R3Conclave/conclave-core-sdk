@@ -202,12 +202,15 @@ class EnclaveletHostTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) 
         val config = javaClass.classLoader.getResource("test-config.yml")!!
         val tmpFilesBefore = getTmpFileNames()
         val host = ProcessBuilder().
-                command("java",
+                command(
+                        "java",
                         "-jar", serverJar,
                         "-p", port.toString(),
                         "-m", "SIMULATION",
                         "-c", config.path,
-                        enclaveFile.absolutePath)
+                        enclaveFile.absolutePath,
+                        enclaveClass.name
+                )
                 .redirectError(ProcessBuilder.Redirect.INHERIT)
                 .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                 .start()

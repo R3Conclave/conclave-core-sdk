@@ -70,7 +70,7 @@ class EnclaveHostNativeTest {
     private inline fun <reified T : Enclave> hostTo(): EnclaveHost {
         val enclaveBuilder = EnclaveBuilder()
         val enclaveFile = testEnclaves.getEnclave(T::class.java, enclaveBuilder).toPath()
-        return EnclaveHost.create(enclaveFile, EnclaveMode.SIMULATION, tempFile = false)
+        return EnclaveHost.create(enclaveFile, T::class.java.name, EnclaveMode.SIMULATION, tempFile = false)
     }
 
     private fun getSha256Value(metadataFile: Path, key: String): SecureHash {

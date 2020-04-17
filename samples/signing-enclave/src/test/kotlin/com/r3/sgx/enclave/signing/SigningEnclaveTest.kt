@@ -39,7 +39,11 @@ class SigningEnclaveTest {
                 quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid))
 
-        handle = NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(RootHandler(), File(enclavePath))
+        handle = NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(
+                RootHandler(),
+                File(enclavePath),
+                "com.r3.sgx.enclave.signing.SigningEnclave"
+        )
     }
 
     @After

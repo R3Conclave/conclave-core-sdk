@@ -7,7 +7,7 @@ import com.r3.sgx.core.enclave.Enclave
 import com.r3.sgx.core.host.EnclaveHandle
 import java.nio.ByteBuffer
 
-class MockEcallSender<CONNECTION>(
+class MockEnclaveHandle<CONNECTION>(
         hostHandler: Handler<CONNECTION>,
         val enclave: Enclave
 ) : EnclaveHandle<CONNECTION>, LeafSender() {

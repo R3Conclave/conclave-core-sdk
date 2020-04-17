@@ -10,11 +10,15 @@ import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerStopContainer
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
-import com.r3.sgx.plugin.enclave.BuildSignedEnclave
 import com.r3.sgx.plugin.BuildType
 import com.r3.sgx.plugin.SGX_GROUP
+import com.r3.sgx.plugin.enclave.BuildSignedEnclave
+import com.r3.sgx.plugin.enclave.GetEnclaveClassName
 import com.r3.sgx.plugin.enclave.SgxEnclavePlugin
-import org.gradle.api.*
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
@@ -161,10 +165,13 @@ private open class EnclaveImage @Inject constructor(
      */
     private fun createPrepareImageTask(): PrepareEnclaveImage = with(target) {
         return tasks.create("prepareEnclaveImage$buildType", PrepareEnclaveImage::class.java) { task ->
+            val enclaveClassNameTask = target.tasks.withType(GetEnclaveClassName::class.java).single()
+            task.dependsOn(enclaveClassNameTask)
             task.dockerDir.set(buildDir.resolve("docker-$buildTypeTag"))
             task.repositoryUrl.set(CONCLAVE_METADATA.dockerRegistry)
             task.baseImageName.set(imageExtension.baseImageName)
             task.enclaveObject.set(imageExtension.enclaveObject)
+            task.enclaveClassName.set(enclaveClassNameTask.outputEnclaveClassName)
             task.tag.set(imageExtension.baseTag)
 
             task.commandOptions.set(commandOptions)

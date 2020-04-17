@@ -10,9 +10,10 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
-import java.lang.RuntimeException
 import java.nio.ByteBuffer
-import java.util.concurrent.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Consumer
@@ -23,7 +24,6 @@ import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class EnclaveApiTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
-
     @Rule
     @JvmField
     val exception: ExpectedException = ExpectedException.none()
@@ -37,24 +37,6 @@ class EnclaveApiTest : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
             connection.send(input)
             assertEquals(1, handler.calls.size)
             assertEquals(input, handler.calls[0])
-        })
-    }
-
-    class EnclaveNameReadingEnclave : StringEnclave() {
-        override fun onReceive(api: EnclaveApi, sender: StringSender, string: String) {
-            val enclaveClass = api.getEnclaveClassName()
-            sender.send(enclaveClass)
-        }
-    }
-
-    @Test
-    fun canReadOurOwnManifest() {
-        val handler = StringRecordingHandler()
-        withEnclaveHandle(RootHandler(), EnclaveNameReadingEnclave::class.java, block = Consumer { enclaveHandle ->
-            val sender = enclaveHandle.connection.addDownstream(handler)
-            sender.send("")
-            assertEquals(1, handler.calls.size)
-            assertEquals(EnclaveNameReadingEnclave::class.java.name, handler.calls[0])
         })
     }
 

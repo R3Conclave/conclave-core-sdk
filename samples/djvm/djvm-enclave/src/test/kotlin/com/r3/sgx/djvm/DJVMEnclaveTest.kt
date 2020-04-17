@@ -8,21 +8,21 @@ import com.r3.sgx.core.host.NativeHostApi
 import com.r3.sgx.djvm.enclave.DJVMEnclave
 import com.r3.sgx.djvm.enclave.messages.MessageType
 import com.r3.sgx.djvm.handlers.DJVMHandler
-import com.r3.sgx.testing.MockEcallSender
+import com.r3.sgx.testing.MockEnclaveHandle
 import com.r3.sgx.testing.RootHandler
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.function.Consumer
 
 class DJVMEnclaveTest {
-
     companion object {
-        val enclavePath = Paths.get(System.getProperty("enclave_path")
+        private val enclavePath = Paths.get(System.getProperty("enclave_path")
                 ?: throw AssertionError("System property 'enclave_path' not set"))
 
-        val userJarPath = Paths.get(System.getProperty("user-jar.path")
+        private val userJarPath = Paths.get(System.getProperty("user-jar.path")
                 ?: throw AssertionError("System property 'user-jar.path' not set."))
 
         private val sgxMode = System.getProperty("sgx.mode")
@@ -35,10 +35,10 @@ class DJVMEnclaveTest {
         @BeforeClass
         fun setUp() {
             enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
-                MockEcallSender(RootHandler(), DJVMEnclave())
+                MockEnclaveHandle(RootHandler(), DJVMEnclave())
             } else {
                 val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
-                hostApi.createEnclave(RootHandler(), enclavePath.toFile())
+                hostApi.createEnclave(RootHandler(), enclavePath.toFile(), "com.r3.sgx.djvm.enclave.DJVMEnclave")
             }
 
             val connection = enclaveHandle.connection
@@ -64,7 +64,6 @@ class DJVMEnclaveTest {
             // destroy can trigger an assertion failure in Avian
 //            enclaveHandle.destroy()
         }
-
     }
 
     @Test

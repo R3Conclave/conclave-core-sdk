@@ -27,8 +27,6 @@ class MockEnclaveApi(val enclave: Enclave, private val simulation: Boolean) : En
         report[body][attributes][flags] = SgxEnclaveFlags.DEBUG
     }
 
-    override fun getEnclaveClassName(): String = enclave.javaClass.name
-
     override fun getRandomBytes(output: ByteArray, offset: Int, length: Int) {
         val rng = Random()
         val bytes = ByteArray(length)

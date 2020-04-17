@@ -6,8 +6,6 @@ import com.r3.sgx.core.common.crypto.internal.SignatureSchemeFactory
 import com.r3.sgx.core.enclave.internal.Native
 
 interface EnclaveApi {
-    /** Get the enclave's class name */
-    fun getEnclaveClassName(): String
     /**
      * Create an SGX report.
      * @param targetInfoIn optional information of the target enclave if the report is to be used as part of local
@@ -21,10 +19,12 @@ interface EnclaveApi {
      * TODO change this to use ByteBuffers directly
      */
     fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray)
+
     /**
      * Fill [output] with indices in [[offset], [offset] + [length]) with random bytes using the RDRAND instruction.
      */
     fun getRandomBytes(output: ByteArray, offset: Int, length: Int)
+
     /**
      * Factory function giving access to cryptographic signature scheme implementations.
      */
@@ -70,4 +70,3 @@ interface EnclaveApi {
         var isEnclaveDebug: Boolean? = null
     }
 }
-

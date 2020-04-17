@@ -25,10 +25,6 @@ shadowJar {
     archiveBaseName = 'example-enclave'
     archiveClassifier = ''
     zip64 = true
-
-    manifest {
-        attributes("Enclave-Class": "com.r3.sgx.enclave.example.ProtobufEnclave")
-    }
 }
 
 jar {

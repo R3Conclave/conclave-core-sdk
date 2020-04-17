@@ -72,7 +72,7 @@ class EnclaveConstraint {
      */
     @Throws(InvalidEnclaveException::class)
     fun check(enclave: EnclaveInstanceInfo) {
-        // First mark sure the state of the constraint is valid, throwing IllegalStateException if it isn't.
+        // First make sure the state of the constraint is valid, throwing IllegalStateException if it isn't.
         check(acceptableCodeHashes.isNotEmpty() || acceptableSigners.isNotEmpty()) {
             "Either a code hash or a code signer must be provided."
         }

@@ -11,7 +11,7 @@ import com.r3.sgx.test.enclave.TestEnclave
 import com.r3.sgx.test.enclave.messages.MessageType
 import com.r3.sgx.test.proto.ByteCodeRequest
 import com.r3.sgx.test.proto.SendJar
-import com.r3.sgx.testing.MockEcallSender
+import com.r3.sgx.testing.MockEnclaveHandle
 import com.r3.sgx.testing.RootHandler
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -21,7 +21,6 @@ import java.io.File
 import java.util.function.Consumer
 
 class ByteCodeGenerationTests {
-
     companion object {
         private lateinit var enclaveHandle: EnclaveHandle<RootHandler.Connection>
         private val hostHandler = HostHandler()
@@ -33,10 +32,10 @@ class ByteCodeGenerationTests {
         @BeforeAll
         fun setUp() {
             enclaveHandle = if (sgxMode.toUpperCase() == "MOCK") {
-                MockEcallSender(RootHandler(), TestEnclave())
+                MockEnclaveHandle(RootHandler(), TestEnclave())
             } else {
                 val hostApi = NativeHostApi(EnclaveLoadMode.valueOf(sgxMode.toUpperCase()))
-                hostApi.createEnclave(RootHandler(), File(DJVMUnitTestSuite.enclavePath))
+                hostApi.createEnclave(RootHandler(), File(DJVMUnitTestSuite.enclavePath), "com.r3.sgx.test.enclave.TestEnclave")
             }
             val connection = enclaveHandle.connection
             val channels = connection.addDownstream(ChannelInitiatingHandler())
