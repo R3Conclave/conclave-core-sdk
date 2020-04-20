@@ -413,7 +413,7 @@ always specify the product ID even if it's zero.
 
 The simplest possible string-form constraint looks like this:
 
-`C:04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6
+`C:04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6`
 
 It says "accept exactly one program, with that measurement hash". In this case the value came from the output of the
 build process as shown above.
