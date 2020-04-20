@@ -56,6 +56,8 @@ fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(i
 
 fun ByteBuffer.getRemainingBytes(): ByteArray = getBytes(remaining())
 
+fun ByteBuffer.getLengthPrefixBytes(): ByteArray = getBytes(getInt())
+
 fun DataInputStream.readBytes(length: Int): ByteArray {
     val bytes = ByteArray(length)
     readFully(bytes)
