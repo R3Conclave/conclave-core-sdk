@@ -23,6 +23,7 @@ class JarTest {
             val libraries = mutableListOf(
                     "$prefix/libjvm_host.so",
                     "$prefix/libsgx_enclave_common.so.1",
+                    "$prefix/libsgx_epid${simulationSuffix}.so.1",
                     "$prefix/libsgx_launch${simulationSuffix}.so.1",
                     "$prefix/libsgx_uae_service${simulationSuffix}.so",
                     "$prefix/libsgx_urts${simulationSuffix}.so",
