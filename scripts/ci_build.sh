@@ -42,3 +42,6 @@ docker rmi localhost:5000/com.r3.sgx/aesmd
 
 # Now ensure that we build the Release enclave artifacts.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"
+
+# Publish. All testing should be done before this, i.e. running ci_build.sh
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE publish -i"

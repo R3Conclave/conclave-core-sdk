@@ -20,7 +20,7 @@ static Map<String, String> createEnvironment(String... names) {
 
 // docs/sdk-extras/hello-world/gradle.properties must also be updated
 // 0.2-SNAPSHOT = "the release preparing for beta 2"
-version = "0.2-SNAPSHOT"
+version = System.getenv('PROJECT_VERSION') ? "0.2-${System.getenv('PROJECT_VERSION')}-SNAPSHOT" : '0.2-SNAPSHOT'
 
 ext {
     environment = createEnvironment(
@@ -294,6 +294,10 @@ List<PublishedProject> publishedProjects = [
         ),
         new PublishedProject(
                 projectPath: ':enclave-testing',
+                description: 'Enclave testing library',
+        ),
+        new PublishedProject(
+                projectPath: ':enclavelet-host:enclavelet-host-common',
                 description: 'Enclave testing library',
         ),
         new PublishedProject(

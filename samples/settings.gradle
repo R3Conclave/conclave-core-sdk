@@ -1,10 +1,27 @@
-includeBuild("..") {
-    name = "sgxjvm"
+pluginManagement {
+    repositories {
+        maven {
+            gradlePluginPortal()
+            mavenCentral()
+            jcenter()
+            url = "https://software.r3.com/artifactory/sgxjvm"
+            credentials {
+                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+            }
+        }
+    }
+}
+
+if (properties['excludeProjectModules'] != "true") {
+    includeBuild("..") {
+        name = "sgxjvm"
+    }
 }
 
 include ':protobuf-enclave'
-include ':signing-enclave'
-include ':end-to-end-test'
+//include ':signing-enclave'
+//include ':end-to-end-test'
 include ':djvm:djvm-enclave'
 include ':djvm:djvm-host'
 include ':djvm:djvm-common'
