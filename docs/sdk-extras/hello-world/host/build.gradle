@@ -19,6 +19,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Pass through any -Pspid and -Pattestation-key parameters to the tests
+    systemProperties project.properties.subMap(["spid", "attestation-key"])
     testLogging {
         events "passed", "skipped", "failed"
     }

@@ -13,4 +13,8 @@ echo
 cd build/sdk/hello-world;
 ./gradlew --no-daemon test host:run
 )
-
+echo Test the sample in debug mode
+(
+cd build/sdk/hello-world;
+./gradlew --no-daemon -PenclaveMode=debug -Pspid=***REMOVED*** -Pattestation-key=***REMOVED*** test
+)
