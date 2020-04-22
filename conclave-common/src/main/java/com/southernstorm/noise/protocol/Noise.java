@@ -112,18 +112,7 @@ public final class Noise {
 	public static CipherState createCipher(String name) throws NoSuchAlgorithmException
 	{
 		if (name.equals("AESGCM")) {
-			if (forceFallbacks)
-				return new AESGCMFallbackCipherState();
-			// "AES/GCM/NoPadding" exists in some recent JDK's but it is flaky
-			// to use and not easily back-portable to older Android versions.
-			// We instead emulate AESGCM on top of "AES/CTR/NoPadding".
-			try {
-				return new AESGCMOnCtrCipherState();
-			} catch (NoSuchAlgorithmException e1) {
-				// Could not find anything useful in the JCA/JCE so
-				// use the pure Java fallback implementation instead.
-				return new AESGCMFallbackCipherState();
-			}
+			return new AESGCMOnCtrCipherState();
 		} else if (name.equals("ChaChaPoly")) {
 			return new ChaChaPolyCipherState();
 		}
