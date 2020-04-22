@@ -1,0 +1,32 @@
+/**
+ * This module provides an API for writing JVM tests
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.google.protobuf'
+    id 'idea'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$protobuf_version"
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java { }
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file("${buildDir}/generated/source/proto/main/java");
+    }
+}

@@ -1,0 +1,77 @@
+import com.r3.sgx.plugin.enclave.SignEnclave
+
+/**
+ * This module contains the enclave and host code meant to handle and run test code.
+ */
+plugins {
+    id 'com.github.johnrengelman.shadow'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.sgx.host'
+}
+
+configurations {
+    jdkRt
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation "org.slf4j:slf4j-nop:$slf4j_version"
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+    implementation "net.corda.djvm:corda-djvm:$djvm_version"
+    implementation 'com.r3.sgx:api-core-enclave'
+    implementation 'com.r3.sgx:enclave-utils'
+    implementation project(':api')
+    implementation project(':djvm:djvm-test-utils')
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
+    implementation "org.assertj:assertj-core:$assertj_version"
+
+    testImplementation 'com.r3.sgx:api-core-host'
+    testImplementation 'com.r3.sgx:enclave-testing'
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+
+    testRuntimeOnly "com.r3.sgx:native-host-${sgxMode.toLowerCase()}"
+
+    jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
+}
+
+processResources {
+    with copySpec {
+        from configurations.jdkRt
+        rename { 'deterministic-rt.zip' } // Renamed to zip so shadowJar doesn't expand it: https://github.com/johnrengelman/shadow/issues/111
+    }
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.r3.conclave.jvmtester.testenclave.Main'
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'djvm-enclave'
+    archiveClassifier = ''
+    zip64 = true
+}
+
+tasks.withType(Test) {
+    // Configure the host timezone to match the DJVM's.
+    systemProperty 'user.timezone', 'UTC'
+}
+
+test {
+    maxHeapSize = "8g"
+    useJUnitPlatform()
+    def signEnclaveTask = (SignEnclave) tasks.getByPath(":test-enclave:signEnclaveWithDummyKey$sgxMode")
+    dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar', signEnclaveTask
+    doFirst {
+        systemProperty 'bytecode.path', buildDir
+        systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
+        systemProperty 'enclave.path', signEnclaveTask.signedEnclavePath
+        systemProperty 'maths-tests-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath
+        systemProperty 'djvm-unit-tests-jar.path', tasks.getByPath(':djvm:djvm-tests:shadowJar').outputs.files.asPath
+    }
+}
