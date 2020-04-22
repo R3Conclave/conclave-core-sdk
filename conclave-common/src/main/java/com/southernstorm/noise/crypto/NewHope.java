@@ -8,8 +8,6 @@
 
 package com.southernstorm.noise.crypto;
 
-import com.southernstorm.noise.protocol.Destroyable;
-
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -54,6 +52,12 @@ public class NewHope {
 	public NewHope()
 	{
 		sk = null;
+	}
+
+	@Override
+	protected void finalize()
+	{
+		destroy();
 	}
 
 	/**
@@ -289,13 +293,18 @@ public class NewHope {
 
 	// -------------- poly.c --------------
 
-	private static class Poly implements Destroyable
+	private class Poly
 	{
 		public char[] coeffs;
 
 		public Poly()
 		{
 			coeffs = new char [PARAM_N];
+		}
+
+		protected void finalize()
+		{
+			destroy();
 		}
 
 		public void destroy()
@@ -1191,10 +1200,10 @@ public class NewHope {
 	private static int load_littleendian(byte[] x, int offset)
 	{
 	  return
-	      (x[offset + 0] & 0xff)
-	  | ((x[offset + 1] & 0xff) << 8)
-	  | ((x[offset + 2] & 0xff) << 16)
-	  | ((x[offset + 3] & 0xff) << 24);
+	      (int) (x[offset + 0] & 0xff)
+	  | (((int) (x[offset + 1] & 0xff)) << 8)
+	  | (((int) (x[offset + 2] & 0xff)) << 16)
+	  | (((int) (x[offset + 3] & 0xff)) << 24);
 	}
 
 	private static void store_littleendian(byte[] x, int offset, int u)
@@ -1318,7 +1327,7 @@ public class NewHope {
 		byte[] block = new byte [64];
 		try {
 		    crypto_core_chacha20(block,0,n,blknum,k);
-			if (clen >= 0) System.arraycopy(block, 0, c, coffset + 0, clen);
+		    for (int i = 0;i < clen;++i) c[coffset+i] = block[i];
 		} finally {
 			Arrays.fill(block, (byte)0);
 		}

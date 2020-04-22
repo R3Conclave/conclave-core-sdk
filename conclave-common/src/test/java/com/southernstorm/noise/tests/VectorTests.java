@@ -461,26 +461,22 @@ public class VectorTests {
 				InputStreamReader streamReader = new InputStreamReader(fileStream);
 				BufferedReader bufferedReader = new BufferedReader(streamReader);
 				JsonReader reader = new JsonReader(bufferedReader);
-				try {
-					reader.beginObject();
-					while (reader.hasNext()) {
-						String name = reader.nextName();
-						if (name.equals("vectors")) {
-							reader.beginArray();
-							while (reader.hasNext() /*&& total < 50*/) {
-								reader.beginObject();
-								processVector(reader);
-								reader.endObject();
-							}
-							reader.endArray();
-						} else {
-							reader.skipValue();
+				reader.beginObject();
+				while (reader.hasNext()) {
+					String name = reader.nextName();
+					if (name.equals("vectors")) {
+						reader.beginArray();
+						while (reader.hasNext() /*&& total < 50*/) {
+							reader.beginObject();
+							processVector(reader);
+							reader.endObject();
 						}
+						reader.endArray();
+					} else {
+						reader.skipValue();
 					}
-					reader.endObject();
-				} finally {
-					reader.close();
 				}
+				reader.endObject();
 			}
 		} catch (FileNotFoundException e) {
 			System.err.println(filename + ": File not found");

@@ -164,6 +164,7 @@ public final class Noise {
 					return new Blake2bMessageDigest();
 				}
 			case "BLAKE2s":
+				// TODO: Remove BLAKE support.
 				// Bouncy Castle doesn't currently (June 2016) have an
 				// implementation of BLAKE2s, but look for the most
 				// obvious provider name in case one is added in the future.

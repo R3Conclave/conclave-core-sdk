@@ -40,7 +40,7 @@ import com.southernstorm.noise.crypto.GHASH;
 /**
  * Emulates the "AESGCM" cipher for Noise using the "AES/CTR/NoPadding"
  * transformation from JCA/JCE.
- * 
+ *
  * This class is used on platforms that don't have "AES/GCM/NoPadding",
  * but which do have the older "AES/CTR/NoPadding".
  */
@@ -55,7 +55,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 
 	/**
 	 * Constructs a new cipher state for the "AESGCM" algorithm.
-	 * 
+	 *
 	 * @throws NoSuchAlgorithmException The system does not have a
 	 * provider for this algorithm.
 	 */
@@ -72,7 +72,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 		iv = new byte [16];
 		hashKey = new byte [16];
 		ghash = new GHASH();
-		
+
 		// Try to set a 256-bit key on the cipher.  Some JCE's are
 		// configured to disallow 256-bit AES if an extra policy
 		// file has not been installed.
@@ -98,7 +98,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 		try {
 			cipher.init(Cipher.ENCRYPT_MODE, keySpec, params);
 		} catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
-			// Shouldn't happen.
+			throw new IllegalStateException(e);
 		}
 	}
 
@@ -121,7 +121,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 	public void initializeKey(byte[] key, int offset) {
 		// Set the encryption key.
 		keySpec = new SecretKeySpec(key, offset, 32, "AES");
-		
+
 		// Generate the hashing key by encrypting a block of zeroes.
 		Arrays.fill(iv, (byte)0);
 		Arrays.fill(hashKey, (byte)0);
@@ -139,7 +139,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 			throw new IllegalStateException(e);
 		}
 		ghash.reset(hashKey, 0);
-		
+
 		// Reset the nonce.
 		n = 0;
 	}
@@ -151,7 +151,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 
 	/**
 	 * Set up to encrypt or decrypt the next packet.
-	 * 
+	 *
 	 * @param ad The associated data for the packet.
 	 */
 	private void setup(byte[] ad) throws InvalidKeyException, InvalidAlgorithmParameterException
@@ -159,7 +159,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 		// Check for nonce wrap-around.
 		if (n == -1L)
 			throw new IllegalStateException("Nonce has wrapped around");
-		
+
 		// Format the counter/IV block for AES/CTR/NoPadding.
 		iv[0] = 0;
 		iv[1] = 0;
@@ -178,10 +178,10 @@ class AESGCMOnCtrCipherState implements CipherState {
 		iv[14] = 0;
 		iv[15] = 1;
 		++n;
-		
+
 		// Initialize the CTR mode cipher with the key and IV.
 		cipher.init(Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(iv));
-		
+
 		// Encrypt a block of zeroes to generate the hash key to XOR
 		// the GHASH tag with at the end of the encrypt/decrypt operation.
 		Arrays.fill(hashKey, (byte)0);
@@ -191,7 +191,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 			// Shouldn't happen.
 			throw new IllegalStateException(e);
 		}
-		
+
 		// Initialize the GHASH with the associated data value.
 		ghash.reset();
 		if (ad != null) {
