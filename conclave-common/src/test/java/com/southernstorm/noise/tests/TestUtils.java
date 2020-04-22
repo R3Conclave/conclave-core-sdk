@@ -22,7 +22,7 @@
 
 package com.southernstorm.noise.tests;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -43,11 +43,7 @@ public class TestUtils {
 		if (data.startsWith("0x")) {
 			return DatatypeConverter.parseHexBinary(data.substring(2));
 		} else {
-			try {
-				return data.getBytes("UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				return new byte [0];
-			}
+			return data.getBytes(StandardCharsets.UTF_8);
 		}
 	}
 

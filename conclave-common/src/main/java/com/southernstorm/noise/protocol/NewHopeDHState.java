@@ -39,7 +39,7 @@ final class NewHopeDHState implements DHStateHybrid {
 		AlicePublic,
 		BobPrivate,
 		BobPublic,
-		BobCalculated;
+		BobCalculated
 	}
 
 	private NewHopeTor nh;
@@ -51,7 +51,7 @@ final class NewHopeDHState implements DHStateHybrid {
 	 * Special version of NewHopeTor that allows explicit random data
 	 * to be specified for test vectors.
 	 */
-	private class NewHopeWithPrivateKey extends NewHopeTor {
+	private static class NewHopeWithPrivateKey extends NewHopeTor {
 
 		byte[] randomData;
 		

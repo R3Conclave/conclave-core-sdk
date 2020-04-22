@@ -23,6 +23,7 @@
 package com.southernstorm.noise.protocol;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -35,7 +36,7 @@ import javax.crypto.ShortBufferException;
  * Symmetric state for helping manage a Noise handshake.
  */
 class SymmetricState implements Destroyable {
-	
+
 	private String name;
 	private CipherState cipher;
 	private MessageDigest hash;
@@ -45,11 +46,11 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Constructs a new symmetric state object.
-	 * 
+	 *
 	 * @param protocolName The name of the Noise protocol, which is assumed to be valid.
 	 * @param cipherName The name of the cipher within protocolName.
 	 * @param hashName The name of the hash within protocolName.
-	 * 
+	 *
 	 * @throws NoSuchAlgorithmException The cipher or hash algorithm in the
 	 * protocol name is not supported.
 	 */
@@ -62,27 +63,21 @@ class SymmetricState implements Destroyable {
 		ck = new byte [hashLength];
 		h = new byte [hashLength];
 		prev_h = new byte [hashLength];
-		
-		byte[] protocolNameBytes;
-		try {
-			protocolNameBytes = protocolName.getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// If UTF-8 is not supported, then we are definitely in trouble!
-			throw new UnsupportedOperationException("UTF-8 encoding is not supported");
-		}
-		
+
+		byte[] protocolNameBytes = protocolName.getBytes(StandardCharsets.UTF_8);
+
 		if (protocolNameBytes.length <= hashLength) {
 			System.arraycopy(protocolNameBytes, 0, h, 0, protocolNameBytes.length);
 			Arrays.fill(h, protocolNameBytes.length, h.length, (byte)0);
 		} else {
 			hashOne(protocolNameBytes, 0, protocolNameBytes.length, h, 0, h.length);
 		}
-		
+
 		System.arraycopy(h, 0, ck, 0, hashLength);
 	}
 
 	/**
-	 * Gets the name of the Noise protocol. 
+	 * Gets the name of the Noise protocol.
 	 *
 	 * @return The protocol name.
 	 */
@@ -90,10 +85,10 @@ class SymmetricState implements Destroyable {
 	{
 		return name;
 	}
-	
+
 	/**
 	 * Gets the length of MAC values in the current state.
-	 * 
+	 *
 	 * @return The length of the MAC value for the underlying cipher
 	 * or zero if the cipher has not yet been initialized with a key.
 	 */
@@ -104,7 +99,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Mixes data into the chaining key.
-	 * 
+	 *
 	 * @param data The buffer containing the data to mix in.
 	 * @param offset The offset of the first data byte to mix in.
 	 * @param length The number of bytes to mix in.
@@ -123,7 +118,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Mixes data into the handshake hash.
-	 * 
+	 *
 	 * @param data The buffer containing the data to mix in.
 	 * @param offset The offset of the first data byte to mix in.
 	 * @param length The number of bytes to mix in.
@@ -135,7 +130,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Mixes a pre-shared key into the chaining key and handshake hash.
-	 * 
+	 *
 	 * @param key The pre-shared key value.
 	 */
 	public void mixPreSharedKey(byte[] key)
@@ -151,7 +146,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Mixes a pre-supplied public key into the handshake hash.
-	 * 
+	 *
 	 * @param dh The object containing the public key.
 	 */
 	public void mixPublicKey(DHState dh)
@@ -167,7 +162,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Mixes a pre-supplied public key into the chaining key.
-	 * 
+	 *
 	 * @param dh The object containing the public key.
 	 */
 	public void mixPublicKeyIntoCK(DHState dh)
@@ -183,7 +178,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Encrypts a block of plaintext and mixes the ciphertext into the handshake hash.
-	 * 
+	 *
 	 * @param plaintext The buffer containing the plaintext to encrypt.
 	 * @param plaintextOffset The offset within the plaintext buffer of the
 	 * first byte or plaintext data.
@@ -193,14 +188,14 @@ class SymmetricState implements Destroyable {
 	 * to place the ciphertext and the MAC tag.
 	 * @param length The length of the plaintext.
 	 * @return The length of the ciphertext plus the MAC tag.
-	 * 
+	 *
 	 * @throws ShortBufferException There is not enough space in the
 	 * ciphertext buffer for the encrypted data plus MAC value.
-	 * 
+	 *
 	 * The plaintext and ciphertext buffers can be the same for in-place
 	 * encryption.  In that case, plaintextOffset must be identical to
 	 * ciphertextOffset.
-	 * 
+	 *
 	 * There must be enough space in the ciphertext buffer to accomodate
 	 * length + getMACLength() bytes of data starting at ciphertextOffset.
 	 */
@@ -213,7 +208,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Decrypts a block of ciphertext and mixes it into the handshake hash.
-	 * 
+	 *
 	 * @param ciphertext The buffer containing the ciphertext to decrypt.
 	 * @param ciphertextOffset The offset within the ciphertext buffer of
 	 * the first byte of ciphertext data.
@@ -223,12 +218,12 @@ class SymmetricState implements Destroyable {
 	 * to place the plaintext.
 	 * @param length The length of the incoming ciphertext plus the MAC tag.
 	 * @return The length of the plaintext with the MAC tag stripped off.
-	 * 
+	 *
 	 * @throws ShortBufferException There is not enough space in the plaintext
 	 * buffer for the decrypted data.
-	 * 
+	 *
 	 * @throws BadPaddingException The MAC value failed to verify.
-	 * 
+	 *
 	 * The plaintext and ciphertext buffers can be the same for in-place
 	 * decryption.  In that case, ciphertextOffset must be identical to
 	 * plaintextOffset.
@@ -242,24 +237,24 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Splits the symmetric state into two ciphers for session encryption.
-	 * 
+	 *
 	 * @return The pair of ciphers for sending and receiving.
 	 */
 	public CipherStatePair split()
 	{
 		return split(new byte[0], 0, 0);
 	}
-	
+
 	/**
 	 * Splits the symmetric state into two ciphers for session encryption,
 	 * and optionally mixes in a secondary symmetric key.
-	 * 
+	 *
 	 * @param secondaryKey The buffer containing the secondary key.
 	 * @param offset The offset of the first secondary key byte.
 	 * @param length The length of the secondary key in bytes, which
 	 * must be either 0 or 32.
 	 * @return The pair of ciphers for sending and receiving.
-	 * 
+	 *
 	 * @throws IllegalArgumentException The length is not 0 or 32.
 	 */
 	public CipherStatePair split(byte[] secondaryKey, int offset, int length)
@@ -298,9 +293,9 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Gets the current value of the handshake hash.
-	 * 
+	 *
 	 * @return The handshake hash.  This must not be modified by the caller.
-	 * 
+	 *
 	 * The handshake hash value is only of use to the application after
 	 * split() has been called.
 	 */
@@ -340,14 +335,14 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Hashes a single data buffer.
-	 * 
+	 *
 	 * @param data The buffer containing the data to hash.
 	 * @param offset Offset into the data buffer of the first byte to hash.
 	 * @param length Length of the data to be hashed.
 	 * @param output The buffer to receive the output hash value.
 	 * @param outputOffset Offset into the output buffer to place the hash value.
 	 * @param outputLength The length of the hash output.
-	 * 
+	 *
 	 * The output buffer can be the same as the input data buffer.
 	 */
 	private void hashOne(byte[] data, int offset, int length, byte[] output, int outputOffset, int outputLength)
@@ -363,7 +358,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Hashes two data buffers.
-	 * 
+	 *
 	 * @param data1 The buffer containing the first data to hash.
 	 * @param offset1 Offset into the first data buffer of the first byte to hash.
 	 * @param length1 Length of the first data to be hashed.
@@ -373,7 +368,7 @@ class SymmetricState implements Destroyable {
 	 * @param output The buffer to receive the output hash value.
 	 * @param outputOffset Offset into the output buffer to place the hash value.
 	 * @param outputLength The length of the hash output.
-	 * 
+	 *
 	 * The output buffer can be same as either of the input buffers.
 	 */
 	private void hashTwo(byte[] data1, int offset1, int length1,
@@ -392,7 +387,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Computes a HMAC value using key and data values.
-	 * 
+	 *
 	 * @param key The buffer that contains the key.
 	 * @param keyOffset The offset of the key in the key buffer.
 	 * @param keyLength The length of the key in bytes.
@@ -444,7 +439,7 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Computes a HKDF value.
-	 * 
+	 *
 	 * @param key The buffer that contains the key.
 	 * @param keyOffset The offset of the key in the key buffer.
 	 * @param keyLength The length of the key in bytes.

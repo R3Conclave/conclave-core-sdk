@@ -27,6 +27,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
+import javax.crypto.AEADBadTagException;
 import javax.crypto.BadPaddingException;
 
 import com.southernstorm.noise.crypto.Blake2bMessageDigest;
@@ -44,12 +45,12 @@ public final class Noise {
 	 * Maximum length for Noise packets.
 	 */
 	public static final int MAX_PACKET_LEN = 65535;
-	
-	private static SecureRandom random = new SecureRandom();
-	
+
+	private static final SecureRandom random = new SecureRandom();
+
 	/**
 	 * Generates random data using the system random number generator.
-	 * 
+	 *
 	 * @param data The data buffer to fill with random data.
 	 */
 	public static void random(byte[] data)
@@ -58,13 +59,13 @@ public final class Noise {
 	}
 
 	private static boolean forceFallbacks = false;
-	
+
 	/**
 	 * Force the use of plain Java fallback crypto implementations.
-	 * 
+	 *
 	 * @param force Set to true for force fallbacks, false to
 	 * try to use the system implementation before falling back.
-	 * 
+	 *
 	 * This function is intended for testing purposes to toggle between
 	 * the system JCA/JCE implementations and the plain Java fallback
 	 * reference implementations.
@@ -80,7 +81,7 @@ public final class Noise {
 	 * algorithms from DJ Bernstein, which implement fast, modern elliptic curve
 	 * key agreement. NewHope is an algorithm conjectured to be safe against
 	 * quantum computers.
-	 * 
+	 *
 	 * @param name The name of the DH algorithm.
 	 * @return The Diffie-Hellman object if the name is recognized.
 	 * @see <a href="https://eprint.iacr.org/2015/1092.pdf">The New Hope algorithm paper</a>
@@ -99,11 +100,11 @@ public final class Noise {
 
 	/**
 	 * Creates a cipher object from its Noise protocol name.
-	 * 
+	 *
 	 * @param name The name of the cipher algorithm; e.g. "AESGCM", "ChaChaPoly", etc.
-	 * 
+	 *
 	 * @return The cipher object if the name is recognized.
-	 * 
+	 *
 	 * @throws NoSuchAlgorithmException The name is not recognized as a
 	 * valid Noise protocol name, or there is no cryptography provider
 	 * in the system that implements the algorithm.
@@ -128,14 +129,14 @@ public final class Noise {
 		}
 		throw new NoSuchAlgorithmException("Unknown Noise cipher algorithm name: " + name);
 	}
-	
+
 	/**
 	 * Creates a hash object from its Noise protocol name.
-	 * 
+	 *
 	 * @param name The name of the hash algorithm; e.g. "SHA256", "BLAKE2s", etc.
-	 * 
+	 *
 	 * @return The hash object if the name is recognized.
-	 * 
+	 *
 	 * @throws NoSuchAlgorithmException The name is not recognized as a
 	 * valid Noise protocol name, or there is no cryptography provider
 	 * in the system that implements the algorithm.
@@ -146,43 +147,44 @@ public final class Noise {
 		// use the fallback implementations in this library instead.
 		// The only algorithm that is required to be implemented by a
 		// JDK is "SHA-256", although "SHA-512" is fairly common as well.
-		if (name.equals("SHA256")) {
-			if (forceFallbacks)
-				return new SHA256MessageDigest();
-			try {
-				return MessageDigest.getInstance("SHA-256");
-			} catch (NoSuchAlgorithmException e) {
-				return new SHA256MessageDigest();
-			}
-		} else if (name.equals("SHA512")) {
-			if (forceFallbacks)
-				return new SHA512MessageDigest();
-			try {
-				return MessageDigest.getInstance("SHA-512");
-			} catch (NoSuchAlgorithmException e) {
-				return new SHA512MessageDigest();
-			}
-		} else if (name.equals("BLAKE2b")) {
-			// Bouncy Castle registers the BLAKE2b variant we
-			// want under the name "BLAKE2B-512".
-			if (forceFallbacks)
-				return new Blake2bMessageDigest();
-			try {
-				return MessageDigest.getInstance("BLAKE2B-512");
-			} catch (NoSuchAlgorithmException e) {
-				return new Blake2bMessageDigest();
-			}
-		} else if (name.equals("BLAKE2s")) {
-			// Bouncy Castle doesn't currently (June 2016) have an
-			// implementation of BLAKE2s, but look for the most
-			// obvious provider name in case one is added in the future.
-			if (forceFallbacks)
-				return new Blake2sMessageDigest();
-			try {
-				return MessageDigest.getInstance("BLAKE2S-256");
-			} catch (NoSuchAlgorithmException e) {
-				return new Blake2sMessageDigest();
-			}
+		switch (name) {
+			case "SHA256":
+				if (forceFallbacks)
+					return new SHA256MessageDigest();
+				try {
+					return MessageDigest.getInstance("SHA-256");
+				} catch (NoSuchAlgorithmException e) {
+					return new SHA256MessageDigest();
+				}
+			case "SHA512":
+				if (forceFallbacks)
+					return new SHA512MessageDigest();
+				try {
+					return MessageDigest.getInstance("SHA-512");
+				} catch (NoSuchAlgorithmException e) {
+					return new SHA512MessageDigest();
+				}
+			case "BLAKE2b":
+				// Bouncy Castle registers the BLAKE2b variant we
+				// want under the name "BLAKE2B-512".
+				if (forceFallbacks)
+					return new Blake2bMessageDigest();
+				try {
+					return MessageDigest.getInstance("BLAKE2B-512");
+				} catch (NoSuchAlgorithmException e) {
+					return new Blake2bMessageDigest();
+				}
+			case "BLAKE2s":
+				// Bouncy Castle doesn't currently (June 2016) have an
+				// implementation of BLAKE2s, but look for the most
+				// obvious provider name in case one is added in the future.
+				if (forceFallbacks)
+					return new Blake2sMessageDigest();
+				try {
+					return MessageDigest.getInstance("BLAKE2S-256");
+				} catch (NoSuchAlgorithmException e) {
+					return new Blake2sMessageDigest();
+				}
 		}
 		throw new NoSuchAlgorithmException("Unknown Noise hash algorithm name: " + name);
 	}
@@ -192,7 +194,7 @@ public final class Noise {
 
 	/**
 	 * Destroys the contents of a byte array.
-	 * 
+	 *
 	 * @param array The array whose contents should be destroyed.
 	 */
 	static void destroy(byte[] array)
@@ -202,11 +204,11 @@ public final class Noise {
 
 	/**
 	 * Makes a copy of part of an array.
-	 * 
+	 *
 	 * @param data The buffer containing the data to copy.
 	 * @param offset Offset of the first byte to copy.
 	 * @param length The number of bytes to copy.
-	 * 
+	 *
 	 * @return A new array with a copy of the sub-array.
 	 */
 	static byte[] copySubArray(byte[] data, int offset, int length)
@@ -215,25 +217,14 @@ public final class Noise {
 		System.arraycopy(data, offset, copy, 0, length);
 		return copy;
 	}
-	
+
 	/**
 	 * Throws an instance of AEADBadTagException.
-	 * 
+	 *
 	 * @throws BadPaddingException The AEAD exception.
-	 * 
-	 * If the underlying JDK does not have the AEADBadTagException
-	 * class, then this function will instead throw an instance of
-	 * the superclass BadPaddingException.
 	 */
 	static void throwBadTagException() throws BadPaddingException
 	{
-		try {
-			Class<?> c = Class.forName("javax.crypto.AEADBadTagException");
-			throw (BadPaddingException)(c.newInstance());
-		} catch (ClassNotFoundException e) {
-		} catch (InstantiationException e) {
-		} catch (IllegalAccessException e) {
-		}
-		throw new BadPaddingException();
+		throw new AEADBadTagException();
 	}
 }

@@ -235,9 +235,9 @@ public class Blake2bMessageDigest extends MessageDigest implements Destroyable {
 
 	@Override
 	public void destroy() {
-		Arrays.fill(h, (long)0);
+		Arrays.fill(h, 0);
 		Arrays.fill(block, (byte)0);
-		Arrays.fill(m, (long)0);
-		Arrays.fill(v, (long)0);
+		Arrays.fill(m, 0);
+		Arrays.fill(v, 0);
 	}
 }

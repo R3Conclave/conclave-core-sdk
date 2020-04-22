@@ -55,9 +55,9 @@ public class SHA512MessageDigest extends MessageDigest implements Destroyable {
 
 	@Override
 	public void destroy() {
-		Arrays.fill(h, (long)0);
+		Arrays.fill(h, 0);
 		Arrays.fill(block, (byte)0);
-		Arrays.fill(w, (long)0);
+		Arrays.fill(w, 0);
 	}
 
 	private static void writeBE64(byte[] buf, int offset, long value)

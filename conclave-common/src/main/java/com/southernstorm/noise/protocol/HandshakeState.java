@@ -908,7 +908,7 @@ public class HandshakeState implements Destroyable {
 					default:
 					{
 						// Unknown token code.  Abort.
-						throw new IllegalStateException("Unknown handshake token " + Integer.toString(token));
+						throw new IllegalStateException("Unknown handshake token " + token);
 					}
 				}
 			}
@@ -1109,7 +1109,7 @@ public class HandshakeState implements Destroyable {
 					default:
 					{
 						// Unknown token code.  Abort.
-						throw new IllegalStateException("Unknown handshake token " + Integer.toString(token));
+						throw new IllegalStateException("Unknown handshake token " + token);
 					}
 				}
 			}

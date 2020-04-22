@@ -34,7 +34,6 @@ import javax.crypto.ShortBufferException;
  * the other party, and decrypting packets received from the other party.
  */
 public interface CipherState extends Destroyable {
-
 	/**
 	 * Gets the Noise protocol name for this cipher.
 	 * 

@@ -579,7 +579,7 @@ public final class Curve448 {
 	 * @return Returns true if the curve evaluation was successful,
 	 * false if the publicKey value is out of range.
 	 */
-	public static boolean eval(byte[] result, int offset, byte[] privateKey, byte[] publicKey)
+	public static void eval(byte[] result, int offset, byte[] privateKey, byte[] publicKey)
 	{
 		Curve448 state = new Curve448();
 		int success = -1;
@@ -617,6 +617,7 @@ public final class Curve448 {
 			// Clean up all temporary state before we exit.
 			state.destroy();
 		}
-		return (success & 0x01) != 0;
+		if ((success & 0x01) == 0)
+			throw new IllegalArgumentException("Curve evaluation not successful");
 	}
 }

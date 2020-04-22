@@ -52,9 +52,9 @@ public class SHA256MessageDigest extends MessageDigest implements Destroyable {
 
 	@Override
 	public void destroy() {
-		Arrays.fill(h, (int)0);
+		Arrays.fill(h, 0);
 		Arrays.fill(block, (byte)0);
-		Arrays.fill(w, (int)0);
+		Arrays.fill(w, 0);
 	}
 
 	private static void writeBE32(byte[] buf, int offset, int value)

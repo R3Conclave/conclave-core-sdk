@@ -694,7 +694,6 @@ class Pattern {
 	    FLAG_LOCAL_HYBRID |
 	    FLAG_REMOTE_STATIC |
 	    FLAG_REMOTE_EPHEMERAL |
-	    FLAG_REMOTE_EPHEMERAL |
 	    FLAG_REMOTE_HYBRID,
 
 	    E,
@@ -739,86 +738,88 @@ class Pattern {
 	 */
 	public static short[] lookup(String name)
 	{
-		if (name.equals("N"))
-			return noise_pattern_N;
-		else if (name.equals("K"))
-			return noise_pattern_K;
-		else if (name.equals("X"))
-			return noise_pattern_X;
-		else if (name.equals("NN"))
-			return noise_pattern_NN;
-		else if (name.equals("NK"))
-			return noise_pattern_NK;
-		else if (name.equals("NX"))
-			return noise_pattern_NX;
-		else if (name.equals("XN"))
-			return noise_pattern_XN;
-		else if (name.equals("XK"))
-			return noise_pattern_XK;
-		else if (name.equals("XX"))
-			return noise_pattern_XX;
-		else if (name.equals("KN"))
-			return noise_pattern_KN;
-		else if (name.equals("KK"))
-			return noise_pattern_KK;
-		else if (name.equals("KX"))
-			return noise_pattern_KX;
-		else if (name.equals("IN"))
-			return noise_pattern_IN;
-		else if (name.equals("IK"))
-			return noise_pattern_IK;
-		else if (name.equals("IX"))
-			return noise_pattern_IX;
-		else if (name.equals("XXfallback"))
-			return noise_pattern_XXfallback;
-		else if (name.equals("Xnoidh"))
-			return noise_pattern_Xnoidh;
-		else if (name.equals("NXnoidh"))
-			return noise_pattern_NXnoidh;
-		else if (name.equals("XXnoidh"))
-			return noise_pattern_XXnoidh;
-		else if (name.equals("KXnoidh"))
-			return noise_pattern_KXnoidh;
-		else if (name.equals("IKnoidh"))
-			return noise_pattern_IKnoidh;
-		else if (name.equals("IXnoidh"))
-			return noise_pattern_IXnoidh;
-		else if (name.equals("NNhfs"))
-			return noise_pattern_NNhfs;
-		else if (name.equals("NKhfs"))
-			return noise_pattern_NKhfs;
-		else if (name.equals("NXhfs"))
-			return noise_pattern_NXhfs;
-		else if (name.equals("XNhfs"))
-			return noise_pattern_XNhfs;
-		else if (name.equals("XKhfs"))
-			return noise_pattern_XKhfs;
-		else if (name.equals("XXhfs"))
-			return noise_pattern_XXhfs;
-		else if (name.equals("KNhfs"))
-			return noise_pattern_KNhfs;
-		else if (name.equals("KKhfs"))
-			return noise_pattern_KKhfs;
-		else if (name.equals("KXhfs"))
-			return noise_pattern_KXhfs;
-		else if (name.equals("INhfs"))
-			return noise_pattern_INhfs;
-		else if (name.equals("IKhfs"))
-			return noise_pattern_IKhfs;
-		else if (name.equals("IXhfs"))
-			return noise_pattern_IXhfs;
-		else if (name.equals("XXfallback+hfs"))
-			return noise_pattern_XXfallback_hfs;
-		else if (name.equals("NXnoidh+hfs"))
-			return noise_pattern_NXnoidh_hfs;
-		else if (name.equals("XXnoidh+hfs"))
-			return noise_pattern_XXnoidh_hfs;
-		else if (name.equals("KXnoidh+hfs"))
-			return noise_pattern_KXnoidh_hfs;
-		else if (name.equals("IKnoidh+hfs"))
-			return noise_pattern_IKnoidh_hfs;
-		else if (name.equals("IXnoidh+hfs"))
-			return noise_pattern_IXnoidh_hfs;
+		switch (name) {
+			case "N":
+				return noise_pattern_N;
+			case "K":
+				return noise_pattern_K;
+			case "X":
+				return noise_pattern_X;
+			case "NN":
+				return noise_pattern_NN;
+			case "NK":
+				return noise_pattern_NK;
+			case "NX":
+				return noise_pattern_NX;
+			case "XN":
+				return noise_pattern_XN;
+			case "XK":
+				return noise_pattern_XK;
+			case "XX":
+				return noise_pattern_XX;
+			case "KN":
+				return noise_pattern_KN;
+			case "KK":
+				return noise_pattern_KK;
+			case "KX":
+				return noise_pattern_KX;
+			case "IN":
+				return noise_pattern_IN;
+			case "IK":
+				return noise_pattern_IK;
+			case "IX":
+				return noise_pattern_IX;
+			case "XXfallback":
+				return noise_pattern_XXfallback;
+			case "Xnoidh":
+				return noise_pattern_Xnoidh;
+			case "NXnoidh":
+				return noise_pattern_NXnoidh;
+			case "XXnoidh":
+				return noise_pattern_XXnoidh;
+			case "KXnoidh":
+				return noise_pattern_KXnoidh;
+			case "IKnoidh":
+				return noise_pattern_IKnoidh;
+			case "IXnoidh":
+				return noise_pattern_IXnoidh;
+			case "NNhfs":
+				return noise_pattern_NNhfs;
+			case "NKhfs":
+				return noise_pattern_NKhfs;
+			case "NXhfs":
+				return noise_pattern_NXhfs;
+			case "XNhfs":
+				return noise_pattern_XNhfs;
+			case "XKhfs":
+				return noise_pattern_XKhfs;
+			case "XXhfs":
+				return noise_pattern_XXhfs;
+			case "KNhfs":
+				return noise_pattern_KNhfs;
+			case "KKhfs":
+				return noise_pattern_KKhfs;
+			case "KXhfs":
+				return noise_pattern_KXhfs;
+			case "INhfs":
+				return noise_pattern_INhfs;
+			case "IKhfs":
+				return noise_pattern_IKhfs;
+			case "IXhfs":
+				return noise_pattern_IXhfs;
+			case "XXfallback+hfs":
+				return noise_pattern_XXfallback_hfs;
+			case "NXnoidh+hfs":
+				return noise_pattern_NXnoidh_hfs;
+			case "XXnoidh+hfs":
+				return noise_pattern_XXnoidh_hfs;
+			case "KXnoidh+hfs":
+				return noise_pattern_KXnoidh_hfs;
+			case "IKnoidh+hfs":
+				return noise_pattern_IKnoidh_hfs;
+			case "IXnoidh+hfs":
+				return noise_pattern_IXnoidh_hfs;
+		}
 		return null;
 	}
 

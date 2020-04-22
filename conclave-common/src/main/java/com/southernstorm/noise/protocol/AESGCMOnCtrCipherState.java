@@ -80,9 +80,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 			SecretKeySpec spec = new SecretKeySpec(new byte [32], "AES");
 			IvParameterSpec params = new IvParameterSpec(iv);
 			cipher.init(Cipher.ENCRYPT_MODE, spec, params);
-		} catch (InvalidKeyException e) {
-			throw new NoSuchAlgorithmException("AES/CTR/NoPadding does not support 256-bit keys", e);
-		} catch (InvalidAlgorithmParameterException e) {
+		} catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
 			throw new NoSuchAlgorithmException("AES/CTR/NoPadding does not support 256-bit keys", e);
 		}
 	}
@@ -99,9 +97,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 		IvParameterSpec params = new IvParameterSpec(iv);
 		try {
 			cipher.init(Cipher.ENCRYPT_MODE, keySpec, params);
-		} catch (InvalidKeyException e) {
-			// Shouldn't happen.
-		} catch (InvalidAlgorithmParameterException e) {
+		} catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
 			// Shouldn't happen.
 		}
 	}
@@ -131,23 +127,14 @@ class AESGCMOnCtrCipherState implements CipherState {
 		Arrays.fill(hashKey, (byte)0);
 		try {
 			cipher.init(Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(iv));
-		} catch (InvalidKeyException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (InvalidAlgorithmParameterException e) {
+		} catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
 			// Shouldn't happen.
 			throw new IllegalStateException(e);
 		}
 		try {
 			int result = cipher.update(hashKey, 0, 16, hashKey, 0);
 			cipher.doFinal(hashKey, result);
-		} catch (ShortBufferException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (IllegalBlockSizeException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (BadPaddingException e) {
+		} catch (ShortBufferException | BadPaddingException | IllegalBlockSizeException e) {
 			// Shouldn't happen.
 			throw new IllegalStateException(e);
 		}
@@ -236,16 +223,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 			setup(ad);
 			int result = cipher.update(plaintext, plaintextOffset, length, ciphertext, ciphertextOffset);
 			cipher.doFinal(ciphertext, ciphertextOffset + result);
-		} catch (InvalidKeyException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (InvalidAlgorithmParameterException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (IllegalBlockSizeException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (BadPaddingException e) {
+		} catch (InvalidKeyException | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
 			// Shouldn't happen.
 			throw new IllegalStateException(e);
 		}
@@ -287,10 +265,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 			throw new ShortBufferException();
 		try {
 			setup(ad);
-		} catch (InvalidKeyException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (InvalidAlgorithmParameterException e) {
+		} catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
 			// Shouldn't happen.
 			throw new IllegalStateException(e);
 		}
@@ -305,10 +280,7 @@ class AESGCMOnCtrCipherState implements CipherState {
 		try {
 			int result = cipher.update(ciphertext, ciphertextOffset, dataLen, plaintext, plaintextOffset);
 			cipher.doFinal(plaintext, plaintextOffset + result);
-		} catch (IllegalBlockSizeException e) {
-			// Shouldn't happen.
-			throw new IllegalStateException(e);
-		} catch (BadPaddingException e) {
+		} catch (IllegalBlockSizeException | BadPaddingException e) {
 			// Shouldn't happen.
 			throw new IllegalStateException(e);
 		}

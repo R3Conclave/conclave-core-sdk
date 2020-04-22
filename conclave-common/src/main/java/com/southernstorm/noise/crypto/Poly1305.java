@@ -319,9 +319,9 @@ public final class Poly1305 implements Destroyable {
 	public void destroy() {
 		Arrays.fill(nonce, (byte)0);
 		Arrays.fill(block, (byte)0);
-		Arrays.fill(h, (int)0);
-		Arrays.fill(r, (int)0);
-		Arrays.fill(c, (int)0);
-		Arrays.fill(t, (long)0);
+		Arrays.fill(h, 0);
+		Arrays.fill(r, 0);
+		Arrays.fill(c, 0);
+		Arrays.fill(t, 0);
 	}
 }

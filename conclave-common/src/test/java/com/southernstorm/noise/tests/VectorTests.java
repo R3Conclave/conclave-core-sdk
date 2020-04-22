@@ -59,7 +59,7 @@ public class VectorTests {
 	/**
 	 * Information about a handshake or transport message.
 	 */
-	private class TestMessage
+	private static class TestMessage
 	{
 		public byte[] payload;
 		public byte[] ciphertext;
@@ -114,7 +114,7 @@ public class VectorTests {
 	private void assertSubArrayEquals(String msg, byte[] expected, byte[] actual)
 	{
 		for (int index = 0; index < expected.length; ++index)
-			assertEquals(expected[index], actual[index], msg + "[" + Integer.toString(index) + "]");
+			assertEquals(expected[index], actual[index], msg + "[" + index + "]");
 	}
 
 	/**
@@ -194,7 +194,7 @@ public class VectorTests {
 			TestMessage msg = vec.messages[index];
 			int len = send.writeMessage(message, 0, msg.payload, 0, msg.payload.length);
 			assertEquals(msg.ciphertext.length, len);
-			assertSubArrayEquals(Integer.toString(index) + ": ciphertext", msg.ciphertext, message);
+			assertSubArrayEquals(index + ": ciphertext", msg.ciphertext, message);
 			if (fallback) {
 				// Perform a read on the responder, which will fail.
 				try {
@@ -222,7 +222,7 @@ public class VectorTests {
 			} else {
 				int plen = recv.readMessage(message, 0, len, plaintext, 0);
 				assertEquals(msg.payload.length, plen);
-				assertSubArrayEquals(Integer.toString(index) + ": payload", msg.payload, plaintext);
+				assertSubArrayEquals(index + ": payload", msg.payload, plaintext);
 			}
 		}
 		if (vec.fallback_expected) {
@@ -274,10 +274,10 @@ public class VectorTests {
 			}
 			int len = csend.encryptWithAd(null, msg.payload, 0, message, 0, msg.payload.length);
 			assertEquals(msg.ciphertext.length, len);
-			assertSubArrayEquals(Integer.toString(index) + ": ciphertext", msg.ciphertext, message);
+			assertSubArrayEquals(index + ": ciphertext", msg.ciphertext, message);
 			int plen = crecv.decryptWithAd(null, message, 0, plaintext, 0, len);
 			assertEquals(msg.payload.length, plen);
-			assertSubArrayEquals(Integer.toString(index) + ": payload", msg.payload, plaintext);
+			assertSubArrayEquals(index + ": payload", msg.payload, plaintext);
 		}
 
 		// Clean up.
@@ -300,74 +300,101 @@ public class VectorTests {
 		TestVector vec = new TestVector();
 		while (reader.hasNext()) {
 			String name = reader.nextName();
-			if (name.equals("name"))
-				vec.name = reader.nextString();
-			else if (name.equals("pattern"))
-				vec.pattern = reader.nextString();
-			else if (name.equals("dh"))
-				vec.dh = reader.nextString();
-			else if (name.equals("hybrid"))
-				vec.hybrid = reader.nextString();
-			else if (name.equals("cipher"))
-				vec.cipher = reader.nextString();
-			else if (name.equals("hash"))
-				vec.hash = reader.nextString();
-			else if (name.equals("fallback_pattern"))
-				vec.fallback_pattern = reader.nextString();
-			else if (name.equals("init_prologue"))
-				vec.init_prologue = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("init_ephemeral"))
-				vec.init_ephemeral = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("init_hybrid_ephemeral"))
-				vec.init_hybrid = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("init_static"))
-				vec.init_static = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("init_remote_static"))
-				vec.init_remote_static = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("init_psk"))
-				vec.init_psk = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("init_ssk"))
-				vec.init_ssk = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_prologue"))
-				vec.resp_prologue = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_ephemeral"))
-				vec.resp_ephemeral = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_hybrid_ephemeral"))
-				vec.resp_hybrid = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_static"))
-				vec.resp_static = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_remote_static"))
-				vec.resp_remote_static = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_psk"))
-				vec.resp_psk = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("resp_ssk"))
-				vec.resp_ssk = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("handshake_hash"))
-				vec.handshake_hash = DatatypeConverter.parseHexBinary(reader.nextString());
-			else if (name.equals("fail"))
-				vec.failure_expected = reader.nextBoolean();
-			else if (name.equals("fallback"))
-				vec.fallback_expected = reader.nextBoolean();
-			else if (name.equals("messages")) {
-				reader.beginArray();
-				while (reader.hasNext()) {
-					TestMessage msg = new TestMessage();
-					reader.beginObject();
+			switch (name) {
+				case "name":
+					vec.name = reader.nextString();
+					break;
+				case "pattern":
+					vec.pattern = reader.nextString();
+					break;
+				case "dh":
+					vec.dh = reader.nextString();
+					break;
+				case "hybrid":
+					vec.hybrid = reader.nextString();
+					break;
+				case "cipher":
+					vec.cipher = reader.nextString();
+					break;
+				case "hash":
+					vec.hash = reader.nextString();
+					break;
+				case "fallback_pattern":
+					vec.fallback_pattern = reader.nextString();
+					break;
+				case "init_prologue":
+					vec.init_prologue = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "init_ephemeral":
+					vec.init_ephemeral = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "init_hybrid_ephemeral":
+					vec.init_hybrid = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "init_static":
+					vec.init_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "init_remote_static":
+					vec.init_remote_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "init_psk":
+					vec.init_psk = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "init_ssk":
+					vec.init_ssk = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_prologue":
+					vec.resp_prologue = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_ephemeral":
+					vec.resp_ephemeral = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_hybrid_ephemeral":
+					vec.resp_hybrid = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_static":
+					vec.resp_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_remote_static":
+					vec.resp_remote_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_psk":
+					vec.resp_psk = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "resp_ssk":
+					vec.resp_ssk = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "handshake_hash":
+					vec.handshake_hash = DatatypeConverter.parseHexBinary(reader.nextString());
+					break;
+				case "fail":
+					vec.failure_expected = reader.nextBoolean();
+					break;
+				case "fallback":
+					vec.fallback_expected = reader.nextBoolean();
+					break;
+				case "messages":
+					reader.beginArray();
 					while (reader.hasNext()) {
-						name = reader.nextName();
-						if (name.equals("payload"))
-							msg.payload = DatatypeConverter.parseHexBinary(reader.nextString());
-						else if (name.equals("ciphertext"))
-							msg.ciphertext = DatatypeConverter.parseHexBinary(reader.nextString());
-						else
-							reader.skipValue();
+						TestMessage msg = new TestMessage();
+						reader.beginObject();
+						while (reader.hasNext()) {
+							name = reader.nextName();
+							if (name.equals("payload"))
+								msg.payload = DatatypeConverter.parseHexBinary(reader.nextString());
+							else if (name.equals("ciphertext"))
+								msg.ciphertext = DatatypeConverter.parseHexBinary(reader.nextString());
+							else
+								reader.skipValue();
+						}
+						vec.addMessage(msg);
+						reader.endObject();
 					}
-					vec.addMessage(msg);
-					reader.endObject();
-				}
-				reader.endArray();
-			} else {
-				reader.skipValue();
+					reader.endArray();
+					break;
+				default:
+					reader.skipValue();
+					break;
 			}
 		}
 
@@ -430,8 +457,7 @@ public class VectorTests {
 		skipped = 0;
 		failed = 0;
 		try {
-			FileInputStream fileStream = new FileInputStream(filename);
-			try {
+			try (FileInputStream fileStream = new FileInputStream(filename)) {
 				InputStreamReader streamReader = new InputStreamReader(fileStream);
 				BufferedReader bufferedReader = new BufferedReader(streamReader);
 				JsonReader reader = new JsonReader(bufferedReader);
@@ -455,8 +481,6 @@ public class VectorTests {
 				} finally {
 					reader.close();
 				}
-			} finally {
-				fileStream.close();
 			}
 		} catch (FileNotFoundException e) {
 			System.err.println(filename + ": File not found");
