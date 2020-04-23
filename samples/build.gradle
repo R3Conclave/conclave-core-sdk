@@ -8,6 +8,28 @@ plugins {
 import static org.gradle.api.JavaVersion.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+def modulesToSubstitute = [
+        'com.r3.sgx:native-enclave-simulation',
+        'com.r3.sgx:native-enclave-debug',
+        'com.r3.sgx:native-enclave-release',
+        'com.r3.sgx:native-host-simulation',
+        'com.r3.sgx:native-host-debug',
+        'com.r3.sgx:native-host-release',
+        'com.r3.sgx:native-gdb',
+        'com.r3.sgx:native-sign-tool',
+        'com.r3.sgx:native-binutils',
+        'com.r3.conclave:conclave-common',
+        'com.r3.conclave:conclave-enclave',
+        'com.r3.conclave:conclave-host',
+        'com.r3.conclave:conclave-client',
+        'com.r3.conclave:api-core-common',
+        'com.r3.conclave:api-core-enclave',
+        'com.r3.conclave:api-core-host',
+        'com.r3.conclave:enclave-utils',
+        'com.r3.conclave:enclave-testing',
+        'com.r3.conclave:enclavelet-host-common'
+]
+
 def sgxModeProperty = project.property('sgx_mode')
 subprojects {
     group = "com.r3.sgx"
@@ -51,6 +73,18 @@ subprojects {
         systemProperty 'conclave.samples.attestation-key', '***REMOVED***'
         reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/xml")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
+    }
+
+    configurations {
+        if (System.getenv('USE_PUBLISHED_ARTIFACTS') == "true") {
+            all {
+                for (submodule in modulesToSubstitute) {
+                    resolutionStrategy.dependencySubstitution {
+                        substitute module(submodule) with module("$submodule:${System.getenv('PUBLISHED_ARTIFACTS_VERSION')}")
+                    }
+                }
+            }
+        }
     }
 }
 

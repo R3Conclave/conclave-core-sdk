@@ -5,7 +5,7 @@ plugins {
 dependencies {
     implementation project(":djvm:djvm-common")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.r3.conclave:conclave-host:${rootProject.version}"
+    implementation "com.r3.conclave:conclave-host"
 
     runtimeOnly project(path: ":djvm:djvm-enclave", configuration: sgxMode.toLowerCase())
 
