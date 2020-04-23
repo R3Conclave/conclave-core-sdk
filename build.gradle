@@ -84,6 +84,13 @@ subprojects {
         }
     }
 
+    // To create deterministic builds we want to ensure all archive tasks
+    // use a reproducible file order and use consistent file timestamps
+    tasks.withType(AbstractArchiveTask) {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+
     tasks.withType(JavaCompile) {
         sourceCompatibility = VERSION_1_8
         targetCompatibility = VERSION_1_8

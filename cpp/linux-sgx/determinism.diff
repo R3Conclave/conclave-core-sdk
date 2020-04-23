@@ -79,3 +79,16 @@ index 6e4f565e..c73b8582 100644
  
  .PHONY: clean
  clean:
+diff --git a/common/inc/tlibc/assert.h b/common/inc/tlibc/assert.h
+index 82489e80c..54ccb881d 100644
+--- a/common/inc/tlibc/assert.h
++++ b/common/inc/tlibc/assert.h
+@@ -49,7 +49,7 @@
+ #ifdef NDEBUG
+ # define assert(e) ((void)0)
+ #else
+-# define assert(e) ((e) ? (void)0 : __assert(__FILE__, __LINE__, __func__, #e))
++# define assert(e) ((e) ? (void)0 : __assert(/*__FILE__*/"", __LINE__, __func__, #e))
+ #endif
+ 
+ #ifndef _ASSERT_H_DECLS
