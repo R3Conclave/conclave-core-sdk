@@ -11,9 +11,19 @@ pluginManagement {
             }
         }
     }
+    resolutionStrategy {
+        if (System.getenv('USE_PUBLISHED_ARTIFACTS') == "true") {
+            eachPlugin {
+                if ( requested.id.id == 'com.r3.conclave.enclave') {
+                    def version = System.getenv('PUBLISHED_ARTIFACTS_VERSION')
+                    useModule("com.r3.conclave:com.r3.conclave.enclave:$version")
+                }
+            }
+        }
+    }
 }
 
-if (properties['excludeProjectModules'] != "true") {
+if (System.getenv('USE_PUBLISHED_ARTIFACTS') != "true") {
     includeBuild("..") {
         name = "sgxjvm"
     }

@@ -20,7 +20,7 @@ static Map<String, String> createEnvironment(String... names) {
 
 // docs/sdk-extras/hello-world/gradle.properties must also be updated
 // 0.2-SNAPSHOT = "the release preparing for beta 2"
-version = System.getenv('PROJECT_VERSION') ? "0.2-${System.getenv('PROJECT_VERSION')}-SNAPSHOT" : '0.2-SNAPSHOT'
+version = System.getenv('PUBLISHED_ARTIFACT_VERSION') != null ? System.getenv('PUBLISHED_ARTIFACT_VERSION') : '0.2-SNAPSHOT'
 
 ext {
     environment = createEnvironment(
