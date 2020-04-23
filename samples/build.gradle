@@ -76,11 +76,12 @@ subprojects {
     }
 
     configurations {
-        if (System.getenv('USE_PUBLISHED_ARTIFACTS') == "true") {
+        def version = System.getenv('PUBLISHED_ARTIFACTS_VERSION')
+        if (version != null) {
             all {
                 for (submodule in modulesToSubstitute) {
                     resolutionStrategy.dependencySubstitution {
-                        substitute module(submodule) with module("$submodule:${System.getenv('PUBLISHED_ARTIFACTS_VERSION')}")
+                        substitute module(submodule) with module("$submodule:$version")
                     }
                 }
             }
