@@ -112,7 +112,7 @@ public final class Noise {
 	public static CipherState createCipher(String name) throws NoSuchAlgorithmException
 	{
 		if (name.equals("AESGCM")) {
-			return new AESGCMOnCtrCipherState();
+			return new AESGCMCipherState();
 		} else if (name.equals("ChaChaPoly")) {
 			return new ChaChaPolyCipherState();
 		}
