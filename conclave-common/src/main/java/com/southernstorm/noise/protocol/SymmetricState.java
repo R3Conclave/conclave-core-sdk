@@ -22,22 +22,20 @@
 
 package com.southernstorm.noise.protocol;
 
-import java.io.UnsupportedEncodingException;
+import javax.crypto.BadPaddingException;
+import javax.crypto.ShortBufferException;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.ShortBufferException;
-
 /**
  * Symmetric state for helping manage a Noise handshake.
  */
 class SymmetricState implements Destroyable {
 
-	private String name;
+	private final String name;
 	private CipherState cipher;
 	private MessageDigest hash;
 	private byte[] ck;
@@ -70,7 +68,7 @@ class SymmetricState implements Destroyable {
 			System.arraycopy(protocolNameBytes, 0, h, 0, protocolNameBytes.length);
 			Arrays.fill(h, protocolNameBytes.length, h.length, (byte)0);
 		} else {
-			hashOne(protocolNameBytes, 0, protocolNameBytes.length, h, 0, h.length);
+			hashOne(protocolNameBytes, protocolNameBytes.length, h, h.length);
 		}
 
 		System.arraycopy(h, 0, ck, 0, hashLength);
@@ -109,7 +107,7 @@ class SymmetricState implements Destroyable {
 		int keyLength = cipher.getKeyLength();
 		byte[] tempKey = new byte [keyLength];
 		try {
-			hkdf(ck, 0, ck.length, data, offset, length, ck, 0, ck.length, tempKey, 0, keyLength);
+			hkdf(ck, ck.length, data, offset, length, ck, ck.length, tempKey, keyLength);
 			cipher.initializeKey(tempKey, 0);
 		} finally {
 			Noise.destroy(tempKey);
@@ -125,7 +123,7 @@ class SymmetricState implements Destroyable {
 	 */
 	public void mixHash(byte[] data, int offset, int length)
 	{
-		hashTwo(h, 0, h.length, data, offset, length, h, 0, h.length);
+		hashTwo(h, h.length, data, offset, length, h, h.length);
 	}
 
 	/**
@@ -137,7 +135,7 @@ class SymmetricState implements Destroyable {
 	{
 		byte[] temp = new byte [hash.getDigestLength()];
 		try {
-			hkdf(ck, 0, ck.length, key, 0, key.length, ck, 0, ck.length, temp, 0, temp.length);
+			hkdf(ck, ck.length, key, 0, key.length, ck, ck.length, temp, temp.length);
 			mixHash(temp, 0, temp.length);
 		} finally {
 			Noise.destroy(temp);
@@ -196,7 +194,7 @@ class SymmetricState implements Destroyable {
 	 * encryption.  In that case, plaintextOffset must be identical to
 	 * ciphertextOffset.
 	 *
-	 * There must be enough space in the ciphertext buffer to accomodate
+	 * There must be enough space in the ciphertext buffer to accommodate
 	 * length + getMACLength() bytes of data starting at ciphertextOffset.
 	 */
 	public int encryptAndHash(byte[] plaintext, int plaintextOffset, byte[] ciphertext, int ciphertextOffset, int length) throws ShortBufferException
@@ -265,7 +263,7 @@ class SymmetricState implements Destroyable {
 		byte[] k1 = new byte [keyLength];
 		byte[] k2 = new byte [keyLength];
 		try {
-			hkdf(ck, 0, ck.length, secondaryKey, offset, length, k1, 0, k1.length, k2, 0, k2.length);
+			hkdf(ck, ck.length, secondaryKey, offset, length, k1, k1.length, k2, k2.length);
 			CipherState c1 = null;
 			CipherState c2 = null;
 			CipherStatePair pair = null;
@@ -335,72 +333,61 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Hashes a single data buffer.
-	 *
 	 * @param data The buffer containing the data to hash.
-	 * @param offset Offset into the data buffer of the first byte to hash.
 	 * @param length Length of the data to be hashed.
 	 * @param output The buffer to receive the output hash value.
-	 * @param outputOffset Offset into the output buffer to place the hash value.
 	 * @param outputLength The length of the hash output.
 	 *
-	 * The output buffer can be the same as the input data buffer.
 	 */
-	private void hashOne(byte[] data, int offset, int length, byte[] output, int outputOffset, int outputLength)
+	private void hashOne(byte[] data, int length, byte[] output, int outputLength)
 	{
 		hash.reset();
-		hash.update(data, offset, length);
+		hash.update(data, 0, length);
 		try {
-			hash.digest(output, outputOffset, outputLength);
+			hash.digest(output, 0, outputLength);
 		} catch (DigestException e) {
-			Arrays.fill(output, outputOffset, outputLength, (byte)0);
+			Arrays.fill(output, 0, outputLength, (byte)0);
 		}
 	}
 
 	/**
 	 * Hashes two data buffers.
-	 *
 	 * @param data1 The buffer containing the first data to hash.
-	 * @param offset1 Offset into the first data buffer of the first byte to hash.
 	 * @param length1 Length of the first data to be hashed.
 	 * @param data2 The buffer containing the second data to hash.
 	 * @param offset2 Offset into the second data buffer of the first byte to hash.
 	 * @param length2 Length of the second data to be hashed.
 	 * @param output The buffer to receive the output hash value.
-	 * @param outputOffset Offset into the output buffer to place the hash value.
 	 * @param outputLength The length of the hash output.
 	 *
-	 * The output buffer can be same as either of the input buffers.
 	 */
-	private void hashTwo(byte[] data1, int offset1, int length1,
-			     		 byte[] data2, int offset2, int length2,
-			     		 byte[] output, int outputOffset, int outputLength)
+	private void hashTwo(byte[] data1, int length1,
+						 byte[] data2, int offset2, int length2,
+						 byte[] output, int outputLength)
 	{
 		hash.reset();
-		hash.update(data1, offset1, length1);
+		hash.update(data1, 0, length1);
 		hash.update(data2, offset2, length2);
 		try {
-			hash.digest(output, outputOffset, outputLength);
+			hash.digest(output, 0, outputLength);
 		} catch (DigestException e) {
-			Arrays.fill(output, outputOffset, outputLength, (byte)0);
+			Arrays.fill(output, 0, outputLength, (byte)0);
 		}
 	}
 
 	/**
 	 * Computes a HMAC value using key and data values.
-	 *
 	 * @param key The buffer that contains the key.
-	 * @param keyOffset The offset of the key in the key buffer.
 	 * @param keyLength The length of the key in bytes.
 	 * @param data The buffer that contains the data.
 	 * @param dataOffset The offset of the data in the data buffer.
 	 * @param dataLength The length of the data in bytes.
 	 * @param output The output buffer to place the HMAC value in.
-	 * @param outputOffset Offset into the output buffer for the HMAC value.
 	 * @param outputLength The length of the HMAC output.
 	 */
-	private void hmac(byte[] key, int keyOffset, int keyLength,
+	private void hmac(byte[] key, int keyLength,
 					  byte[] data, int dataOffset, int dataLength,
-					  byte[] output, int outputOffset, int outputLength)
+					  byte[] output, int outputLength)
 	{
 		// In all of the algorithms of interest to us, the block length
 		// is twice the size of the hash length.
@@ -410,11 +397,11 @@ class SymmetricState implements Destroyable {
 		int index;
 		try {
 			if (keyLength <= blockLength) {
-				System.arraycopy(key, keyOffset, block, 0, keyLength);
+				System.arraycopy(key, 0, block, 0, keyLength);
 				Arrays.fill(block, keyLength, blockLength, (byte)0);
 			} else {
 				hash.reset();
-				hash.update(key, keyOffset, keyLength);
+				hash.update(key, 0, keyLength);
 				hash.digest(block, 0, hashLength);
 				Arrays.fill(block, hashLength, blockLength, (byte)0);
 			}
@@ -423,15 +410,15 @@ class SymmetricState implements Destroyable {
 			hash.reset();
 			hash.update(block, 0, blockLength);
 			hash.update(data, dataOffset, dataLength);
-			hash.digest(output, outputOffset, hashLength);
+			hash.digest(output, 0, hashLength);
 			for (index = 0; index < blockLength; ++index)
 				block[index] ^= (byte)(0x36 ^ 0x5C);
 			hash.reset();
 			hash.update(block, 0, blockLength);
-			hash.update(output, outputOffset, hashLength);
-			hash.digest(output, outputOffset, outputLength);
+			hash.update(output, 0, hashLength);
+			hash.digest(output, 0, outputLength);
 		} catch (DigestException e) {
-			Arrays.fill(output, outputOffset, outputLength, (byte)0);
+			Arrays.fill(output, 0, outputLength, (byte)0);
 		} finally {
 			Noise.destroy(block);
 		}
@@ -439,38 +426,33 @@ class SymmetricState implements Destroyable {
 
 	/**
 	 * Computes a HKDF value.
-	 *
 	 * @param key The buffer that contains the key.
-	 * @param keyOffset The offset of the key in the key buffer.
 	 * @param keyLength The length of the key in bytes.
 	 * @param data The buffer that contains the data.
 	 * @param dataOffset The offset of the data in the data buffer.
 	 * @param dataLength The length of the data in bytes.
 	 * @param output1 The first output buffer.
-	 * @param output1Offset Offset into the first output buffer.
 	 * @param output1Length Length of the first output which can be
-	 * less than the hash length.
+* less than the hash length.
 	 * @param output2 The second output buffer.
-	 * @param output2Offset Offset into the second output buffer.
 	 * @param output2Length Length of the second output which can be
-	 * less than the hash length.
 	 */
-	private void hkdf(byte[] key, int keyOffset, int keyLength,
-			  		  byte[] data, int dataOffset, int dataLength,
-			  		  byte[] output1, int output1Offset, int output1Length,
-			  		  byte[] output2, int output2Offset, int output2Length)
+	private void hkdf(byte[] key, int keyLength,
+					  byte[] data, int dataOffset, int dataLength,
+					  byte[] output1, int output1Length,
+					  byte[] output2, int output2Length)
 	{
 		int hashLength = hash.getDigestLength();
 		byte[] tempKey = new byte [hashLength];
 		byte[] tempHash = new byte [hashLength + 1];
 		try {
-			hmac(key, keyOffset, keyLength, data, dataOffset, dataLength, tempKey, 0, hashLength);
+			hmac(key, keyLength, data, dataOffset, dataLength, tempKey, hashLength);
 			tempHash[0] = (byte)0x01;
-			hmac(tempKey, 0, hashLength, tempHash, 0, 1, tempHash, 0, hashLength);
-			System.arraycopy(tempHash, 0, output1, output1Offset, output1Length);
+			hmac(tempKey, hashLength, tempHash, 0, 1, tempHash, hashLength);
+			System.arraycopy(tempHash, 0, output1, 0, output1Length);
 			tempHash[hashLength] = (byte)0x02;
-			hmac(tempKey, 0, hashLength, tempHash, 0, hashLength + 1, tempHash, 0, hashLength);
-			System.arraycopy(tempHash, 0, output2, output2Offset, output2Length);
+			hmac(tempKey, hashLength, tempHash, 0, hashLength + 1, tempHash, hashLength);
+			System.arraycopy(tempHash, 0, output2, 0, output2Length);
 		} finally {
 			Noise.destroy(tempKey);
 			Noise.destroy(tempHash);
