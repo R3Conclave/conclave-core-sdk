@@ -1,15 +1,13 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.r3.conclave.jvmtester.djvm.proto.TestCurrencyParameter;
-import com.r3.conclave.jvmtester.djvm.proto.TestCurrencyParameterList;
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
 import com.r3.conclave.jvmtester.api.TestSerializable;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.proto.TestCurrencyParameter;
+import com.r3.conclave.jvmtester.djvm.proto.TestCurrencyParameterList;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SandboxCurrencyTest {
 
@@ -51,19 +50,22 @@ public class SandboxCurrencyTest {
             TestCurrencyParameterList inputs = (TestCurrencyParameterList) optionalInput;
             TestCurrencyParameterList.Builder outputListBuilder = TestCurrencyParameterList.newBuilder();
             sandbox(ctx -> {
-                for (TestCurrencyParameter input: inputs.getValuesList()) {
-                    SandboxExecutor<String, Object[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                    ExecutionSummaryWithResult<Object[]> taskOutput = WithJava.run(executor, GetCurrency.class, input.getCurrencyCode());
-                    Object[] result = taskOutput.getResult();
-                    assertThat(result).isEqualTo(new Object[]{ input.getDisplayName(), input.getSymbol(), input.getFractionDigits()});
-                    TestCurrencyParameter outputResult = TestCurrencyParameter.newBuilder()
-                            .setDisplayName((String) result[0])
-                            .setSymbol((String) result[1])
-                            .setFractionDigits((int) result[2])
-                            .build();
-                    outputListBuilder.addValues(outputResult);
+                try {
+                    for (TestCurrencyParameter input : inputs.getValuesList()) {
+                        TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                        Object[] result = WithJava.run(taskFactory, GetCurrency.class, input.getCurrencyCode());
+                        assertThat(result).isEqualTo(new Object[]{input.getDisplayName(), input.getSymbol(), input.getFractionDigits()});
+                        TestCurrencyParameter outputResult = TestCurrencyParameter.newBuilder()
+                                .setDisplayName((String) result[0])
+                                .setSymbol((String) result[1])
+                                .setFractionDigits((int) result[2])
+                                .build();
+                        outputListBuilder.addValues(outputResult);
+                    }
+                    output.set(outputListBuilder.build().toByteArray());
+                } catch (Exception e) {
+                    fail(e);
                 }
-                output.set(outputListBuilder.build().toByteArray());
                 return null;
             });
             return output.get();

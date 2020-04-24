@@ -1,11 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -13,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CapturingLambdaTest {
     private static final long BIG_NUMBER = 1234L;
@@ -24,10 +23,14 @@ public class CapturingLambdaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Long, Long> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult success = WithJava.run(executor, CapturingLambda.class, BIG_NUMBER);
-                assertThat(BIG_NUMBER * MULTIPLIER).isEqualTo(success.getResult());
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Long result = WithJava.run(taskFactory, CapturingLambda.class, BIG_NUMBER);
+                    assertThat(BIG_NUMBER * MULTIPLIER).isEqualTo(result);
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

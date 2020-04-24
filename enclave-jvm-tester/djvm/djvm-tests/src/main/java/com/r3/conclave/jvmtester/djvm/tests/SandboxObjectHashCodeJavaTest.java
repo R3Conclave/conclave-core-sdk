@@ -1,11 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +13,7 @@ import java.util.function.Function;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SandboxObjectHashCodeJavaTest {
 
@@ -24,10 +23,14 @@ public class SandboxObjectHashCodeJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Object, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Integer> taskOutput = WithJava.run(executor, ArrayHashCode.class, null);
-                assertThat(taskOutput.getResult()).isEqualTo(0xfed_c0de + 1);
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Integer result = WithJava.run(taskFactory, ArrayHashCode.class, null);
+                    assertThat(result).isEqualTo(0xfed_c0de + 1);
+                    output.set(result);
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -50,10 +53,14 @@ public class SandboxObjectHashCodeJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Object, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Integer> taskOutput = WithJava.run(executor, ObjectInArrayHashCode.class, null);
-                assertThat(taskOutput.getResult()).isEqualTo(0xfed_c0de + 1);
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Integer result = WithJava.run(taskFactory, ObjectInArrayHashCode.class, null);
+                    assertThat(result).isEqualTo(0xfed_c0de + 1);
+                    output.set(result);
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -79,9 +86,13 @@ public class SandboxObjectHashCodeJavaTest {
                     .isThrownBy(() -> new HashCode().apply(null));
 
             sandbox(ctx -> {
-                SandboxExecutor<Object, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable throwable = catchThrowableOfType(() -> WithJava.run(executor, HashCode.class, null), NullPointerException.class);
-                output.set(throwable.getClass().getCanonicalName());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable throwable = catchThrowableOfType(() -> WithJava.run(taskFactory, HashCode.class, null), NullPointerException.class);
+                    output.set(throwable.getClass().getCanonicalName());
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -104,10 +115,14 @@ public class SandboxObjectHashCodeJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Object, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Integer> taskOutput = WithJava.run(executor, HashCode.class, 1234);
-                assertThat(taskOutput.getResult()).isEqualTo(Integer.hashCode(1234));
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Integer result = WithJava.run(taskFactory, HashCode.class, 1234);
+                    assertThat(result).isEqualTo(Integer.hashCode(1234));
+                    output.set(result);
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -130,10 +145,14 @@ public class SandboxObjectHashCodeJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Object, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Integer> taskOutput = WithJava.run(executor, HashCode.class, "Burble");
-                assertThat(taskOutput.getResult()).isEqualTo("Burble".hashCode());
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Integer result = WithJava.run(taskFactory, HashCode.class, "Burble");
+                    assertThat(result).isEqualTo("Burble".hashCode());
+                    output.set(result);
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

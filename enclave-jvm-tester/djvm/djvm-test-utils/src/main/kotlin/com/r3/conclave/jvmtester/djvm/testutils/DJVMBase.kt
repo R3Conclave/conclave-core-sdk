@@ -12,7 +12,6 @@ import net.corda.djvm.source.UserPathSource
 import net.corda.djvm.source.UserSource
 import java.nio.file.Path
 import java.util.function.Consumer
-import java.util.function.Function
 import kotlin.concurrent.thread
 
 /**
@@ -42,24 +41,6 @@ abstract class DJVMBase {
         fun destroyRootContext() {
             bootstrapSource.close()
         }
-
-        @JvmStatic
-        @Throws(
-                ClassNotFoundException::class,
-                InstantiationException::class,
-                IllegalAccessException::class
-        )
-        fun <T, R> SandboxClassLoader.typedTaskFor(
-                taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
-                taskClass: Class<out Function<T, R>>
-        ): Function<T, R> {
-            @Suppress("unchecked_cast")
-            return createTaskFor(taskFactory, taskClass) as Function<T, R>
-        }
-
-        inline fun <T, R, reified K : Function<T, R>> SandboxClassLoader.typedTaskFor(
-                taskFactory: Function<in Any, out Function<in Any?, out Any?>>
-        ) = typedTaskFor(taskFactory, K::class.java)
     }
 
     fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: SandboxRuntimeContext.() -> Unit)

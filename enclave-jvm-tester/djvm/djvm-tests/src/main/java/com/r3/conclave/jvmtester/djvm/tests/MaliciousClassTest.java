@@ -1,10 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import net.corda.djvm.rewiring.SandboxClassLoadingException;
 import net.corda.djvm.rules.RuleViolationError;
 import org.jetbrains.annotations.NotNull;
@@ -15,6 +14,7 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class MaliciousClassTest {
 
@@ -24,11 +24,15 @@ public class MaliciousClassTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable ex = catchThrowableOfType(() -> WithJava.run(executor, EvilToString.class, ""), SandboxClassLoadingException.class);
-                assertThat(ex)
-                        .hasMessageContaining("Class is not allowed to implement toDJVMString()");
-                output.set(ex.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable ex = catchThrowableOfType(() -> WithJava.run(taskFactory, EvilToString.class, ""), SandboxClassLoadingException.class);
+                    assertThat(ex)
+                            .hasMessageContaining("Class is not allowed to implement toDJVMString()");
+                    output.set(ex.getMessage());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -62,11 +66,15 @@ public class MaliciousClassTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Object, Object> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable ex = catchThrowableOfType(() -> WithJava.run(executor, EvilFromDJVM.class, null), SandboxClassLoadingException.class);
-                assertThat(ex)
-                        .hasMessageContaining("Class is not allowed to implement fromDJVM()");
-                output.set(ex.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable ex = catchThrowableOfType(() -> WithJava.run(taskFactory, EvilFromDJVM.class, null), SandboxClassLoadingException.class);
+                    assertThat(ex)
+                            .hasMessageContaining("Class is not allowed to implement fromDJVM()");
+                    output.set(ex.getMessage());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -101,11 +109,15 @@ public class MaliciousClassTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Class<?>, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable ex = catchThrowableOfType(() -> WithJava.run(executor, EvilClass.class, String.class), RuleViolationError.class);
-                assertThat(ex)
-                        .hasMessageContaining("Cannot sandbox class java.lang.String");
-                output.set(ex.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable ex = catchThrowableOfType(() -> WithJava.run(taskFactory, EvilClass.class, String.class), RuleViolationError.class);
+                    assertThat(ex)
+                            .hasMessageContaining("Cannot sandbox class java.lang.String");
+                    output.set(ex.getMessage());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -137,11 +149,15 @@ public class MaliciousClassTest {
             try {
                 Constructor<?> constructor = getClass().getDeclaredConstructor();
                 sandbox(ctx -> {
-                    SandboxExecutor<Constructor<?>, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                    Throwable ex = catchThrowableOfType(() -> WithJava.run(executor, EvilConstructor.class, constructor), RuleViolationError.class);
-                    assertThat(ex)
-                            .hasMessageContaining("Cannot sandbox " + constructor);
-                    output.set(ex.getMessage());
+                    try {
+                        TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                        Throwable ex = catchThrowableOfType(() -> WithJava.run(taskFactory, EvilConstructor.class, constructor), RuleViolationError.class);
+                        assertThat(ex)
+                                .hasMessageContaining("Cannot sandbox " + constructor);
+                        output.set(ex.getMessage());
+                    } catch (Exception e) {
+                        fail(e);
+                    }
                     return null;
                 });
             } catch (NoSuchMethodException e) {
@@ -175,11 +191,15 @@ public class MaliciousClassTest {
             AtomicReference<Object> output = new AtomicReference<>();
             ClassLoader classLoader = getClass().getClassLoader();
             sandbox(ctx -> {
-                SandboxExecutor<ClassLoader, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable ex = catchThrowableOfType(() -> WithJava.run(executor, EvilClassLoader.class, classLoader), RuleViolationError.class);
-                assertThat(ex)
-                        .hasMessageContaining("Cannot sandbox a ClassLoader");
-                output.set(ex.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable ex = catchThrowableOfType(() -> WithJava.run(taskFactory, EvilClassLoader.class, classLoader), RuleViolationError.class);
+                    assertThat(ex)
+                            .hasMessageContaining("Cannot sandbox a ClassLoader");
+                    output.set(ex.getMessage());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

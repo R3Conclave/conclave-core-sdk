@@ -1,8 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -19,8 +20,8 @@ public class JavaPackageTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-                    Function<String, String> fetchPackage = typedTaskFor(ctx.getClassLoader(), taskFactory, FetchPackage.class);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<String, String> fetchPackage = taskFactory.create(FetchPackage.class);
                     String result = fetchPackage.apply("java.lang");
                     assertThat(result).isNull();
                     output.set(result);
@@ -58,8 +59,8 @@ public class JavaPackageTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-                    Function<Object, String[]> fetchAllPackages = typedTaskFor(ctx.getClassLoader(), taskFactory, FetchAllPackages.class);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<Object, String[]> fetchAllPackages = taskFactory.create(FetchAllPackages.class);
                     String[] result = fetchAllPackages.apply(null);
                     assertThat(result).isEmpty();
                     output.set(result);

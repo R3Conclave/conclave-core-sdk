@@ -1,13 +1,11 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
 import com.r3.conclave.jvmtester.djvm.tests.util.Log;
 import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
-import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
 import com.r3.conclave.jvmtester.djvm.testsauxiliary.ExampleEnum;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumMap;
@@ -17,6 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SandboxEnumJavaTest {
     public static class TestEnumInsideSandboxEnclaveTest extends DJVMBase implements EnclaveJvmTest {
@@ -25,11 +24,15 @@ public class SandboxEnumJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<Integer, String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String[]> taskOutput = WithJava.run(executor, TransformEnum.class, 0);
-                assertThat(taskOutput.getResult())
-                        .isEqualTo(new String[]{ "ONE", "TWO", "THREE" });
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String[] result = WithJava.run(taskFactory, TransformEnum.class, 0);
+                    assertThat(result)
+                            .isEqualTo(new String[]{ "ONE", "TWO", "THREE" });
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -63,7 +66,7 @@ public class SandboxEnumJavaTest {
                     Function<? super Object, ?> basicInputTask = ctx.getClassLoader().createBasicInput();
                     Object sandboxedInput = basicInputTask.apply("THREE");
                     Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createRawTaskFactory();
-                    Function<? super Object, ?> verifyTask = ctx.getClassLoader().createTaskFor(taskFactory, FetchEnum.class);
+                    Function<? super Object, ?> verifyTask = taskFactory.compose(ctx.getClassLoader().createSandboxFunction()).apply(FetchEnum.class);
                     Object sandboxedOutput = verifyTask.apply(sandboxedInput);
                     assertThat(sandboxedOutput.getClass().getName()).isEqualTo("sandbox." + ExampleEnum.class.getName());
                     assertThat(sandboxedOutput.toString()).isEqualTo("THREE");
@@ -99,10 +102,14 @@ public class SandboxEnumJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<ExampleEnum, Boolean> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Boolean> taskOutput = WithJava.run(executor, AssertEnum.class, ExampleEnum.THREE);
-                assertThat(taskOutput.getResult()).isTrue();
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Boolean result = WithJava.run(taskFactory, AssertEnum.class, ExampleEnum.THREE);
+                    assertThat(result).isTrue();
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -132,10 +139,14 @@ public class SandboxEnumJavaTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<ExampleEnum, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Integer> taskOutput = WithJava.run(executor, UseEnumMap.class, ExampleEnum.TWO);
-                assertThat(taskOutput.getResult()).isEqualTo(1);
-                output.set(taskOutput.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Integer result = WithJava.run(taskFactory, UseEnumMap.class, ExampleEnum.TWO);
+                    assertThat(result).isEqualTo(1);
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -168,12 +179,11 @@ public class SandboxEnumJavaTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createRawTaskFactory();
-                    Function<? super Object, ?> task = ctx.getClassLoader().createTaskFor(taskFactory, ConstantEnum.class);
-                    Object sandboxedOutput = task.apply(null);
-
-                    assertThat(sandboxedOutput.toString()).isEqualTo(ExampleEnum.ONE.toString());
-                    output.set(sandboxedOutput.toString());
+                    Function<? super Object, ? extends Function<? super Object, ? extends Object>> rawTaskFactory = ctx.getClassLoader().createRawTaskFactory();
+                    Function<? super Object, ?> task = rawTaskFactory.compose(ctx.getClassLoader().createSandboxFunction()).apply(ConstantEnum.class);
+                    Object result = task.apply(null);
+                    assertThat(result.toString()).isEqualTo(ExampleEnum.ONE.toString());
+                    output.set(result.toString());
                 } catch (Throwable throwable) {
                     output.set(Log.recursiveStackTrace(throwable, this.getClass().getCanonicalName()));
                 }
@@ -209,11 +219,11 @@ public class SandboxEnumJavaTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ? extends Object>> taskFactory = ctx.getClassLoader().createRawTaskFactory();
-                    Function<? super Object, ?> task = ctx.getClassLoader().createTaskFor(taskFactory, StaticConstantEnum.class);
-                    Object sandboxedOutput = task.apply(null);
-                    assertThat(sandboxedOutput.toString()).isEqualTo(ExampleEnum.TWO.toString());
-                    output.set(sandboxedOutput.toString());
+                    Function<? super Object, ? extends Function<? super Object, ? extends Object>> rawTaskFactory = ctx.getClassLoader().createRawTaskFactory();
+                    Function<? super Object, ?> task = rawTaskFactory.compose(ctx.getClassLoader().createSandboxFunction()).apply(StaticConstantEnum.class);
+                    Object result = task.apply(null);
+                    assertThat(result.toString()).isEqualTo(ExampleEnum.TWO.toString());
+                    output.set(result.toString());
                 } catch (Throwable throwable) {
                     output.set(Log.recursiveStackTrace(throwable, this.getClass().getCanonicalName()));
                 }

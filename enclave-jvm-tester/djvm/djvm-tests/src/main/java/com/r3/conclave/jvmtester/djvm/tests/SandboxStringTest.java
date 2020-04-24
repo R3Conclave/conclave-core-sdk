@@ -1,11 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import net.corda.djvm.execution.SandboxRuntimeException;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,7 +22,8 @@ import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SandboxStringTest {
     private static final String UNICODE_MESSAGE = "Goodbye, Cruel World! \u1F4A9";
@@ -37,10 +36,14 @@ public class SandboxStringTest {
             AtomicReference<Object> output = new AtomicReference<>();
             String[] inputs = new String[]{"one", "two", "three"};
             sandbox(ctx -> {
-                SandboxExecutor<String[], String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, JoinIterableStrings.class, inputs);
-                assertThat(success.getResult()).isEqualTo("one+two+three");
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, JoinIterableStrings.class, inputs);
+                    assertThat(result).isEqualTo("one+two+three");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -71,10 +74,14 @@ public class SandboxStringTest {
             AtomicReference<Object> output = new AtomicReference<>();
             String[] inputs = new String[]{"ONE", "TWO", "THREE"};
             sandbox(ctx -> {
-                SandboxExecutor<String[], String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, JoinVarargStrings.class, inputs);
-                assertThat(success.getResult()).isEqualTo("ONE+TWO+THREE");
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, JoinVarargStrings.class, inputs);
+                    assertThat(result).isEqualTo("ONE+TWO+THREE");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -104,11 +111,15 @@ public class SandboxStringTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                String result = WithJava.run(executor, StringConstant.class, "Wibble!").getResult();
-                assertThat(result)
-                        .isEqualTo("Wibble!");
-                output.set(result);
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, StringConstant.class, "Wibble!");
+                    assertThat(result)
+                            .isEqualTo("Wibble!");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -145,13 +156,17 @@ public class SandboxStringTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, byte[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable exception = catchThrowableOfType(() -> WithJava.run(executor, GetEncoding.class, "Nonsense-101"), RuntimeException.class);
-                assertThat(exception)
-                        .isExactlyInstanceOf(SandboxRuntimeException.class)
-                        .hasCauseExactlyInstanceOf(UnsupportedEncodingException.class)
-                        .hasMessage("Nonsense-101");
-                output.set(exception.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable exception = assertThrows(RuntimeException.class, () -> WithJava.run(taskFactory, GetEncoding.class, "Nonsense-101"));
+                    assertThat(exception)
+                            .isExactlyInstanceOf(SandboxRuntimeException.class)
+                            .hasCauseExactlyInstanceOf(UnsupportedEncodingException.class)
+                            .hasMessage("Nonsense-101");
+                    output.set(exception.getMessage());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -186,11 +201,15 @@ public class SandboxStringTest {
             String[] inputs = {"UTF-8", "UTF-16", "UTF-32"};
             ArrayList<String> outputs = new ArrayList<>(inputs.length);
             sandbox(ctx -> {
-                for (String charsetName : inputs) {
-                    SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                    ExecutionSummaryWithResult<String> success = WithJava.run(executor, CreateString.class, charsetName);
-                    assertThat(success.getResult()).isEqualTo(UNICODE_MESSAGE);
-                    outputs.add(success.getResult());
+                try {
+                    for (String charsetName : inputs) {
+                        TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                        String result = WithJava.run(taskFactory, CreateString.class, charsetName);
+                        assertThat(result).isEqualTo(UNICODE_MESSAGE);
+                        outputs.add(result);
+                    }
+                } catch (Exception e) {
+                    fail(e);
                 }
                 return null;
             });
@@ -225,12 +244,16 @@ public class SandboxStringTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, Integer> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                int[] outputs = new int[] { WithJava.run(executor, CaseInsensitiveCompare.class, "hello world!").getResult(),
-                        WithJava.run(executor, CaseInsensitiveCompare.class, "GOODBYE!").getResult(),
-                        WithJava.run(executor, CaseInsensitiveCompare.class, "zzzzz...").getResult()
-                };
-                output.set(outputs);
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    int[] outputs = new int[] { WithJava.run(taskFactory, CaseInsensitiveCompare.class, "hello world!"),
+                            WithJava.run(taskFactory, CaseInsensitiveCompare.class, "GOODBYE!"),
+                            WithJava.run(taskFactory, CaseInsensitiveCompare.class, "zzzzz...")
+                    };
+                    output.set(outputs);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -261,11 +284,15 @@ public class SandboxStringTest {
             AtomicReference<Object> output = new AtomicReference<>();
             String[] inputs = new String[] {"dog", "cat", "mouse", "squirrel"};
             sandbox(ctx -> {
-                SandboxExecutor<String[], String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                String result = WithJava.run(executor, Concatenate.class, inputs).getResult();
-                assertThat(result)
-                        .isEqualTo("{dog + cat + mouse + squirrel}");
-                output.set(result);
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, Concatenate.class, inputs);
+                    assertThat(result)
+                            .isEqualTo("{dog + cat + mouse + squirrel}");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -296,11 +323,15 @@ public class SandboxStringTest {
             AtomicReference<Object> output = new AtomicReference<>();
             String[] inputs = Stream.of("Wolf", "Cat", "Tree", "Pig").map(String::toUpperCase).toArray(String[]::new);
             sandbox(ctx -> {
-                SandboxExecutor<String[], String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                String[] result = WithJava.run(executor, Sorted.class, inputs).getResult();
-                assertThat(result)
-                        .containsExactly("CAT", "PIG", "TREE", "WOLF");
-                output.set(result);
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String[] result = WithJava.run(taskFactory, Sorted.class, inputs);
+                    assertThat(result)
+                            .containsExactly("CAT", "PIG", "TREE", "WOLF");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -333,11 +364,15 @@ public class SandboxStringTest {
             AtomicReference<Object> output = new AtomicReference<>();
             String[] inputs = new String[] { "one", "two", "three", "four", "five" };
             sandbox(ctx -> {
-                SandboxExecutor<String[], String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                String[] result = WithJava.run(executor, ComplexStream.class, inputs).getResult();
-                assertThat(result)
-                        .containsExactly("ONE", "TWO", "THREE", "FOUR", "FIVE");
-                output.set(result);
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String[] result = WithJava.run(taskFactory, ComplexStream.class, inputs);
+                    assertThat(result)
+                            .containsExactly("ONE", "TWO", "THREE", "FOUR", "FIVE");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -368,11 +403,15 @@ public class SandboxStringTest {
             AtomicReference<Object> output = new AtomicReference<>();
             String[] inputs = new String[] { "one", "two", "three", "four" };
             sandbox(ctx -> {
-                SandboxExecutor<String[], String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                String[] result = WithJava.run(executor, Spliterate.class, inputs).getResult();
-                assertThat(result)
-                        .containsExactlyInAnyOrder("one+two", "three+four");
-                output.set(result);
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String[] result = WithJava.run(taskFactory, Spliterate.class, inputs);
+                    assertThat(result)
+                            .containsExactlyInAnyOrder("one+two", "three+four");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

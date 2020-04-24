@@ -1,11 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import javax.xml.bind.DatatypeConverter;
@@ -13,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DatatypeConverterTest {
     private static final byte[] BINARY = new byte[]{ 0x1f, 0x2e, 0x3d, 0x4c, 0x5b, 0x6a, 0x70 };
@@ -24,10 +23,14 @@ public class DatatypeConverterTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, byte[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<byte[]> success = WithJava.run(executor, HexToBytes.class, TEXT);
-                assertThat(success.getResult()).isEqualTo(BINARY);
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    byte[] result = WithJava.run(taskFactory, HexToBytes.class, TEXT);
+                    assertThat(result).isEqualTo(BINARY);
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -58,10 +61,14 @@ public class DatatypeConverterTest {
             AtomicReference<Object> output = new AtomicReference<>();
 
             sandbox(ctx -> {
-                SandboxExecutor<byte[], String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, BytesToHex.class, BINARY);
-                assertThat(success.getResult()).isEqualTo(TEXT);
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, BytesToHex.class, BINARY);
+                    assertThat(result).isEqualTo(TEXT);
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

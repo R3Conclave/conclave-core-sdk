@@ -1,10 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -12,6 +11,7 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SecurityManagerTest {
 
@@ -21,13 +21,17 @@ public class SecurityManagerTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                RuntimeException ex = catchThrowableOfType(() -> WithJava.run(executor, ReplacingSecurityManager.class, ""), RuntimeException.class);
-                assertThat(ex)
-                        .isExactlyInstanceOf(RuntimeException.class)
-                        .hasMessage("sandbox.java.security.AccessControlException -> access denied")
-                        .hasNoCause();
-                output.set(ex.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    RuntimeException ex = catchThrowableOfType(() -> WithJava.run(taskFactory, ReplacingSecurityManager.class, ""), RuntimeException.class);
+                    assertThat(ex)
+                            .isExactlyInstanceOf(RuntimeException.class)
+                            .hasMessage("sandbox.java.security.AccessControlException -> access denied")
+                            .hasNoCause();
+                    output.set(ex.getMessage());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

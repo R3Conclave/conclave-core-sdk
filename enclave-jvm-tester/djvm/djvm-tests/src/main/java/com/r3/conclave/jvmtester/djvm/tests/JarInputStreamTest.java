@@ -5,12 +5,10 @@ import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
 import com.r3.conclave.jvmtester.api.TestSerializable;
 import com.r3.conclave.jvmtester.djvm.proto.StringList;
 import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
 import com.r3.conclave.jvmtester.djvm.testsauxiliary.DummyJar;
 import com.r3.conclave.jvmtester.djvm.testsauxiliary.JarStreamer;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +23,7 @@ import static com.r3.conclave.jvmtester.djvm.testsauxiliary.DummyJar.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.zip.Deflater.NO_COMPRESSION;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class JarInputStreamTest {
 
@@ -66,18 +65,22 @@ public class JarInputStreamTest {
             AtomicReference<Object> output = new AtomicReference<>();
             InputStream inputStream = (InputStream) input;
             sandbox(ctx -> {
-                SandboxExecutor<InputStream, String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String[]> success = WithJava.run(executor, JarStreamer.class, inputStream);
-                assertThat(success.getResult()).isNotNull();
-                assertThat(success.getResult())
-                        .isEqualTo(new String[] {
-                                "Manifest-Version: 1.0\r\n\r\n",
-                                DummyJar.directoryOf(getClass()).getName(),
-                                DummyJar.getResourceName(getClass()),
-                                "binary.dat",
-                                "comment.txt"
-                        });
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String[] result = WithJava.run(taskFactory, JarStreamer.class, inputStream);
+                    assertThat(result).isNotNull();
+                    assertThat(result)
+                            .isEqualTo(new String[] {
+                                    "Manifest-Version: 1.0\r\n\r\n",
+                                    directoryOf(getClass()).getName(),
+                                    getResourceName(getClass()),
+                                    "binary.dat",
+                                    "comment.txt"
+                            });
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -100,7 +103,7 @@ public class JarInputStreamTest {
                                 "binary.dat",
                                 "comment.txt"
                         });
-            } catch (InvalidProtocolBufferException e) {
+            } catch(InvalidProtocolBufferException e) {
                 throw new RuntimeException(e.getMessage());
             }
         }

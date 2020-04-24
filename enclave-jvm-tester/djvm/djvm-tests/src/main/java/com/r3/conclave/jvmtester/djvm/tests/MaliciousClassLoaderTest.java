@@ -1,11 +1,10 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
 import greymalkin.PureEvil;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.SandboxExecutor;
+import net.corda.djvm.TypedTaskFactory;
 import net.corda.djvm.rewiring.SandboxClassLoader;
 import net.corda.djvm.rules.RuleViolationError;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +14,8 @@ import java.util.function.Function;
 
 import static com.r3.conclave.jvmtester.djvm.tests.util.Utilities.throwRuleViolationError;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class MaliciousClassLoaderTest {
 
@@ -25,13 +25,17 @@ public class MaliciousClassLoaderTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable throwable = catchThrowable(() -> WithJava.run(executor, ActOfEvil.class, PureEvil.class.getName()));
-                assertThat(throwable)
-                        .isInstanceOf(NoSuchMethodError.class)
-                        .hasMessageContaining("currentTimeMillis")
-                        .hasNoCause();
-                output.set(throwable.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable ex = assertThrows(NoSuchMethodError.class, () -> WithJava.run(taskFactory, ActOfEvil.class, PureEvil.class.getName()));
+                    assertThat(ex)
+                            .isInstanceOf(NoSuchMethodError.class)
+                            .hasMessageContaining("currentTimeMillis")
+                            .hasNoCause();
+                    output.set(ex.getMessage());
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -81,13 +85,17 @@ public class MaliciousClassLoaderTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable throwable = catchThrowable(() -> WithJava.run(executor, ActOfEvilParent.class, PureEvil.class.getName()));
-                assertThat(throwable)
-                        .isInstanceOf(RuleViolationError.class)
-                        .hasMessage("Disallowed reference to API; java.lang.ClassLoader(ClassLoader)")
-                        .hasNoCause();
-                output.set(throwable.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable ex = assertThrows(RuleViolationError.class, () -> WithJava.run(taskFactory, ActOfEvilParent.class, PureEvil.class.getName()));
+                    assertThat(ex)
+                            .isInstanceOf(RuleViolationError.class)
+                            .hasMessage("Disallowed reference to API; java.lang.ClassLoader(ClassLoader)")
+                            .hasNoCause();
+                    output.set(ex.getMessage());
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -138,9 +146,8 @@ public class MaliciousClassLoaderTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-                    Function<String, ClassLoader> getParentClassLoader = typedTaskFor(ctx.getClassLoader(), taskFactory, GetParentClassLoader.class);
-                    ClassLoader result = getParentClassLoader.apply("");
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    ClassLoader result = WithJava.run(taskFactory, GetParentClassLoader.class, "");
                     assertThat(result)
                             .isExactlyInstanceOf(SandboxClassLoader.class)
                             .extracting(ClassLoader::getParent)
@@ -186,11 +193,15 @@ public class MaliciousClassLoaderTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, ClassLoader> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ClassLoader result = WithJava.run(executor, GetWhitelistedClassLoader.class, "").getResult();
-                assertThat(result)
-                        .isExactlyInstanceOf(SandboxClassLoader.class);
-                output.set(result.getClass().getCanonicalName());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    ClassLoader result = WithJava.run(taskFactory, GetWhitelistedClassLoader.class, "");
+                    assertThat(result)
+                            .isExactlyInstanceOf(SandboxClassLoader.class);
+                    output.set(result.getClass().getCanonicalName());
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

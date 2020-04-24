@@ -5,15 +5,15 @@ import com.r3.conclave.jvmtester.djvm.tests.util.Log;
 import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
 import com.r3.conclave.jvmtester.djvm.testsauxiliary.JavaAnnotation;
-import com.r3.conclave.jvmtester.djvm.testsauxiliary.ReadAnnotation;
+import com.r3.conclave.jvmtester.djvm.testsauxiliary.ReadJavaAnnotation;
 import com.r3.conclave.jvmtester.djvm.testsauxiliary.UserJavaData;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
@@ -69,10 +69,8 @@ public class AnnotatedJavaClassTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(emptySet(), singleton("com.r3.conclave.jvmtester.djvm.testsauxiliary.*"), ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-
-                    Function<String, String> task = typedTaskFor(ctx.getClassLoader(), taskFactory, ReadAnnotation.class);
-                    String result = task.apply(null);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, ReadJavaAnnotation.class, null);
 
                     assertThat(result)
                             .matches("^\\Q@sandbox.com.r3.conclave.jvmtester.djvm.testsauxiliary.JavaAnnotation(value=\\E\"?Hello Java!\"?\\)$");

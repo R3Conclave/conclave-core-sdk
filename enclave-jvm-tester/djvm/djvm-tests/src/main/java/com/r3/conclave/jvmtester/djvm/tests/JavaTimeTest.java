@@ -4,6 +4,7 @@ import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
 import com.r3.conclave.jvmtester.djvm.tests.util.Log;
 import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.*;
@@ -26,19 +27,13 @@ public class JavaTimeTest extends DJVMBase {
             Instant instant = Instant.ofEpochSecond(1L, 1L);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super Instant, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super Instant, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(instant);
                     assertThat(toStringResult).isEqualTo(instant.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super Instant, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super Instant, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(instant);
                     assertThat(identityResult).isEqualTo(instant);
                     assertThat(identityResult).isNotSameAs(instant);
@@ -70,20 +65,13 @@ public class JavaTimeTest extends DJVMBase {
             Duration duration = Duration.ofHours(2);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super Duration, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
-
+                    Function<? super Duration, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(duration);
                     assertThat(toStringResult).isEqualTo(duration.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super Duration, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super Duration, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(duration);
                     assertThat(identityResult).isEqualTo(duration);
                     assertThat(identityResult).isNotSameAs(duration);
@@ -115,19 +103,13 @@ public class JavaTimeTest extends DJVMBase {
             LocalDate localDate = LocalDate.of(1971, 2, 3);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super LocalDate, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super LocalDate, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(localDate);
                     assertThat(toStringResult).isEqualTo(localDate.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super LocalDate, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super LocalDate, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(localDate);
                     assertThat(identityResult).isEqualTo(localDate);
                     assertThat(identityResult).isNotSameAs(localDate);
@@ -159,19 +141,13 @@ public class JavaTimeTest extends DJVMBase {
             LocalTime localTime = LocalTime.of(1, 2, 3);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                            .getType();
-                    Function<? super LocalTime, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super LocalTime, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(localTime);
                     assertThat(toStringResult).isEqualTo(localTime.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super LocalTime, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super LocalTime, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(localTime);
                     assertThat(identityResult).isEqualTo(localTime);
                     assertThat(identityResult).isNotSameAs(localTime);
@@ -203,19 +179,13 @@ public class JavaTimeTest extends DJVMBase {
             LocalDateTime localDateTime = LocalDateTime.of(1971, 2, 3, 4, 5, 6, 7);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super LocalDateTime, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super LocalDateTime, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(localDateTime);
                     assertThat(toStringResult).isEqualTo(localDateTime.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super LocalDateTime, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super LocalDateTime, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(localDateTime);
                     assertThat(identityResult).isEqualTo(localDateTime);
                     assertThat(identityResult).isNotSameAs(localDateTime);
@@ -247,19 +217,13 @@ public class JavaTimeTest extends DJVMBase {
             MonthDay monthDay = MonthDay.of(1, 2);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super MonthDay, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super MonthDay, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(monthDay);
                     assertThat(toStringResult).isEqualTo(monthDay.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super MonthDay, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super MonthDay, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(monthDay);
                     assertThat(identityResult).isEqualTo(monthDay);
                     assertThat(identityResult).isNotSameAs(monthDay);
@@ -292,19 +256,13 @@ public class JavaTimeTest extends DJVMBase {
                     ZoneOffset.ofHours(7));
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super OffsetDateTime, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super OffsetDateTime, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(offsetDateTime);
                     assertThat(toStringResult).isEqualTo(offsetDateTime.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super OffsetDateTime, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super OffsetDateTime, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(offsetDateTime);
                     assertThat(identityResult).isEqualTo(offsetDateTime);
                     assertThat(identityResult).isNotSameAs(offsetDateTime);
@@ -336,19 +294,13 @@ public class JavaTimeTest extends DJVMBase {
             OffsetTime offsetTime = OffsetTime.of(LocalTime.of(1, 2, 3), ZoneOffset.ofHours(7));
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super OffsetTime, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super OffsetTime, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(offsetTime);
                     assertThat(toStringResult).isEqualTo(offsetTime.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super OffsetTime, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super OffsetTime, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(offsetTime);
                     assertThat(identityResult).isEqualTo(offsetTime);
                     assertThat(identityResult).isNotSameAs(offsetTime);
@@ -380,19 +332,13 @@ public class JavaTimeTest extends DJVMBase {
             Period period = Period.of(1, 2, 3);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super Period, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super Period, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(period);
                     assertThat(toStringResult).isEqualTo(period.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super Period, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super Period, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(period);
                     assertThat(identityResult).isEqualTo(period);
                     assertThat(identityResult).isNotSameAs(period);
@@ -424,19 +370,13 @@ public class JavaTimeTest extends DJVMBase {
             Year year = Year.of(1971);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super Year, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super Year, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(year);
                     assertThat(toStringResult).isEqualTo(year.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super Year, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super Year, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(year);
                     assertThat(identityResult).isEqualTo(year);
                     assertThat(identityResult).isNotSameAs(year);
@@ -468,19 +408,13 @@ public class JavaTimeTest extends DJVMBase {
             YearMonth yearMonth = YearMonth.of(1971, 2);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super YearMonth, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super YearMonth, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(yearMonth);
                     assertThat(toStringResult).isEqualTo(yearMonth.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super YearMonth, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super YearMonth, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(yearMonth);
                     assertThat(identityResult).isEqualTo(yearMonth);
                     assertThat(identityResult).isNotSameAs(yearMonth);
@@ -513,19 +447,13 @@ public class JavaTimeTest extends DJVMBase {
                     ZoneId.of("UTC"));
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super ZonedDateTime, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super ZonedDateTime, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(zonedDateTime);
                     assertThat(toStringResult).isEqualTo(zonedDateTime.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super ZonedDateTime, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super ZonedDateTime, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(zonedDateTime);
                     assertThat(identityResult).isEqualTo(zonedDateTime);
                     assertThat(identityResult).isNotSameAs(zonedDateTime);
@@ -557,19 +485,13 @@ public class JavaTimeTest extends DJVMBase {
             ZoneOffset zoneOffset = ZoneOffset.ofHours(7);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Class<Function<Object, String>> temporalToStringClass =
-                            (Class<Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$TemporalToString")
-                                    .getType();
-                    Function<? super ZoneOffset, String> stringTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, temporalToStringClass);
+                    Function<? super ZoneOffset, String> stringTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.TemporalToString.class);
                     String toStringResult = stringTask.apply(zoneOffset);
                     assertThat(toStringResult).isEqualTo(zoneOffset.toString());
 
-                    Class<Function<Object, Object>> identityTransformationClass =
-                            (Class<Function<Object, Object>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$IdentityTransformation")
-                                    .getType();
-                    Function<? super ZoneOffset, ?> identityTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, identityTransformationClass);
+                    Function<? super ZoneOffset, ?> identityTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.IdentityTransformation.class);
                     Object identityResult = identityTask.apply(zoneOffset);
                     assertThat(identityResult).isEqualTo(zoneOffset);
                     assertThat(identityResult).isSameAs(zoneOffset);
@@ -600,13 +522,8 @@ public class JavaTimeTest extends DJVMBase {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-
-
-                    Class<Function<Object, String[]>> allZoneIDsClass
-                            = (Class<Function<Object, String[]>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$AllZoneIDs")
-                            .getType();
-                    Function<?, String[]> allZoneIDs = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, allZoneIDsClass);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<?, String[]> allZoneIDs = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.AllZoneIDs.class);
                     String[] zoneIDs = allZoneIDs.apply(null);
                     assertThat(zoneIDs).hasSize(600);
                     output.set(zoneIDs.length);
@@ -636,11 +553,8 @@ public class JavaTimeTest extends DJVMBase {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-                    Class<? extends Function<Object, String>> defaultZoneIDClass =
-                            (Class<? extends Function<Object, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$DefaultZoneId")
-                                    .getType();
-                    Function<?, String> defaultZoneIdTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, defaultZoneIDClass);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<?, String> defaultZoneIdTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.DefaultZoneId.class);
                     String defaultZoneID = defaultZoneIdTask.apply(null);
                     assertThat(defaultZoneID).isEqualTo("UTC");
                     output.set(defaultZoneID);
@@ -670,11 +584,8 @@ public class JavaTimeTest extends DJVMBase {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-                    Class<Function<Date, String>> defaultTimeZoneClass =
-                            (Class<Function<Date, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$DefaultTimeZone")
-                                    .getType();
-                    Function<?, String> defaultTimeZoneTask = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, defaultTimeZoneClass);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<?, String> defaultTimeZoneTask = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.DefaultTimeZone.class);
                     String defaultTimeZone = defaultTimeZoneTask.apply(null);
                     assertThat(defaultTimeZone).isEqualTo("Coordinated Universal Time");
                     output.set(defaultTimeZone);
@@ -706,12 +617,8 @@ public class JavaTimeTest extends DJVMBase {
             Date date = new Date(1);
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-
-                    Class<Function<Date, String>> showDateClass =
-                            (Class<Function<Date, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$ShowDate")
-                                    .getType();
-                    Function<Date, String> showDate = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, showDateClass);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<Date, String> showDate = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.ShowDate.class);
                     String result = showDate.apply(date);
                     assertThat(result).isEqualTo(date.toString());
                     output.set(result);
@@ -744,12 +651,8 @@ public class JavaTimeTest extends DJVMBase {
 
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
-
-                    Class<Function<Date, Date>> addToDateClass =
-                            (Class<Function<Date, Date>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest$AddToDate")
-                                    .getType();
-                    Function<Date, Date> addToDate = DJVMBase.typedTaskFor(ctx.getClassLoader(), taskFactory, addToDateClass);
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Function<Date, Date> addToDate = taskFactory.create(com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.JavaTimeTest.AddToDate.class);
                     Date result = addToDate.apply(date);
                     assertThat(later).isNotSameAs(result);
                     assertThat(later).isEqualTo(result);

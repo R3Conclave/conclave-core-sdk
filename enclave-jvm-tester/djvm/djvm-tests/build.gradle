@@ -13,6 +13,7 @@ dependencies {
     implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     implementation "org.slf4j:slf4j-nop:$slf4j_version"
     implementation "org.assertj:assertj-core:$assertj_version"
+    implementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
     implementation "net.corda.djvm:corda-djvm:$djvm_version"
     
     implementation project(':api')

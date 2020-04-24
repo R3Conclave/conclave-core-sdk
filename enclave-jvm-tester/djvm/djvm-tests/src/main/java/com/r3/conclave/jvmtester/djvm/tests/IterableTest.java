@@ -4,6 +4,7 @@ import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
 import com.r3.conclave.jvmtester.djvm.tests.util.Log;
 import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Date;
@@ -19,13 +20,10 @@ public class IterableTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Class<Function<Date, String>> createIterableClass =
-                            (Class<Function<Date, String>>) loadClass(ctx, "com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.IterableTest$Create").getType();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Iterable<String> stringIterable = WithJava.run(taskFactory, com.r3.conclave.jvmtester.djvm.testsauxiliary.tests.IterableTest.Create.class, null);
 
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createRawTaskFactory();
-                    Function<? super Object, ?> iterableTask = ctx.getClassLoader().createTaskFor(taskFactory, createIterableClass);
-                    Iterable<?> iterable = (Iterable<?>) iterableTask.apply(null);
-                    Iterator<?> iterator = iterable.iterator();
+                    Iterator<?> iterator = stringIterable.iterator();
                     String result = iterator.getClass().getCanonicalName();
                     output.set(result);
                 } catch (Throwable throwable) {

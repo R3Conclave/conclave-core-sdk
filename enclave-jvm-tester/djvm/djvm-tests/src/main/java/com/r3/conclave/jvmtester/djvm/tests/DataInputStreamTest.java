@@ -4,9 +4,7 @@ import com.r3.conclave.jvmtester.djvm.proto.ReadingDataTestResult;
 import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
 import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
@@ -14,6 +12,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
+
 
 public class DataInputStreamTest {
     private static final String MESSAGE = "Hello World!";
@@ -38,22 +38,25 @@ public class DataInputStreamTest {
             AtomicReference<Object> output = new AtomicReference<>();
 
             sandbox(ctx -> {
-                SandboxExecutor<InputStream, Object[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<Object[]> success = WithJava.run(executor, DataStreamer.class, input);
-                Object[] result = success.getResult();
-                assertThat(result).isEqualTo(new Object[]{
-                        BIG_NUMBER,
-                        NUMBER,
-                        MESSAGE,
-                        BIG_FRACTION
-                });
-                ReadingDataTestResult readingDataTestResult = ReadingDataTestResult.newBuilder()
-                        .setBigNumber((long) result[0])
-                        .setNumber((int) result[1])
-                        .setMessage((String) result[2])
-                        .setBigFraction((double) result[3])
-                        .build();
-                output.set(readingDataTestResult.toByteArray());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Object[] result = WithJava.run(taskFactory, DataStreamer.class, input);
+                    assertThat(result).isEqualTo(new Object[]{
+                            BIG_NUMBER,
+                            NUMBER,
+                            MESSAGE,
+                            BIG_FRACTION
+                    });
+                    ReadingDataTestResult readingDataTestResult = ReadingDataTestResult.newBuilder()
+                            .setBigNumber((long) result[0])
+                            .setNumber((int) result[1])
+                            .setMessage((String) result[2])
+                            .setBigFraction((double) result[3])
+                            .build();
+                    output.set(readingDataTestResult.toByteArray());
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

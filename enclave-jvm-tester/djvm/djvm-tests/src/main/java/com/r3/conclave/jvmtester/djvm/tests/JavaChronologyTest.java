@@ -1,8 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.chrono.Chronology;
@@ -19,9 +20,9 @@ public class JavaChronologyTest {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
                 try {
-                    Function<? super Object, ? extends Function<? super Object, ?>> taskFactory = ctx.getClassLoader().createTaskFactory();
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
 
-                    Function<? super String, String[]> chronologyTask = typedTaskFor(ctx.getClassLoader(), taskFactory, GetChronologyNames.class);
+                    Function<? super String, String[]> chronologyTask = taskFactory.create(GetChronologyNames.class);
                     String[] chronologies = chronologyTask.apply(null);
                     assertThat(chronologies).contains(
                             "Hijrah-umalqura",

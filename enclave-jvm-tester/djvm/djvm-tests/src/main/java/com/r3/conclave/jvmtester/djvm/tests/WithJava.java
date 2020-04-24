@@ -1,10 +1,7 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxException;
-import net.corda.djvm.execution.SandboxExecutor;
+import net.corda.djvm.TypedTaskFactory;
 import net.corda.djvm.execution.SandboxRuntimeException;
-import net.corda.djvm.source.ClassSource;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
@@ -12,20 +9,11 @@ import java.util.function.Function;
 public interface WithJava {
 
     @NotNull
-    static <T,R> ExecutionSummaryWithResult<R> run(
-            SandboxExecutor<T, R> executor, Class<? extends Function<T,R>> task, T input) {
+    static <T, R> R run(TypedTaskFactory taskFactory, Class<? extends Function<T,R>> taskClass, T input) {
         try {
-            return executor.run(ClassSource.fromClassName(task.getName(), null), input);
+            return taskFactory.create(taskClass).apply(input);
         } catch (Exception e) {
-            if (e instanceof SandboxException) {
-                Throwable cause = e.getCause();
-                if (cause instanceof Error) {
-                    throw (Error) cause;
-                }
-                throw asRuntime(cause);
-            } else {
-                throw asRuntime(e);
-            }
+            throw asRuntime(e);
         }
     }
 

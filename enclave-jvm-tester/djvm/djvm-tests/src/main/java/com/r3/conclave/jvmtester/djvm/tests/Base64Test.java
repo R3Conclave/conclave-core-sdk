@@ -1,11 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Base64;
@@ -14,6 +12,7 @@ import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class Base64Test {
     private static final String MESSAGE = "Round and round the rugged rocks...";
@@ -25,11 +24,15 @@ public class Base64Test {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, byte[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<byte[]> success = WithJava.run(executor, Base64ToBytes.class, BASE64);
-                assertThat(success.getResult()).isNotNull();
-                assertThat(new String(success.getResult(), UTF_8)).isEqualTo(MESSAGE);
-                output.set(new String(success.getResult(), UTF_8));
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    byte[] result = WithJava.run(taskFactory, Base64ToBytes.class, BASE64);
+                    assertThat(result).isNotNull();
+                    assertThat(new String(result, UTF_8)).isEqualTo(MESSAGE);
+                    output.set(new String(result, UTF_8));
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -59,10 +62,14 @@ public class Base64Test {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<byte[], String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, BytesToBase64.class, MESSAGE.getBytes(UTF_8));
-                assertThat(success.getResult()).isEqualTo(BASE64);
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, BytesToBase64.class, MESSAGE.getBytes(UTF_8));
+                    assertThat(result).isEqualTo(BASE64);
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

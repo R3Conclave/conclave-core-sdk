@@ -1,18 +1,17 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SandboxCloneableTest {
 
@@ -22,10 +21,14 @@ public class SandboxCloneableTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, CloningMachine.class, "Jango Fett");
-                assertThat(success.getResult()).isEqualTo("Jango Fett");
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, CloningMachine.class, "Jango Fett");
+                    assertThat(result).isEqualTo("Jango Fett");
+                    output.set(result);
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -77,13 +80,17 @@ public class SandboxCloneableTest {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                Throwable throwable = catchThrowableOfType(() -> WithJava.run(executor, ForceProjector.class, "Obi Wan"), RuntimeException.class);
-                assertThat(throwable)
-                        .isExactlyInstanceOf(RuntimeException.class)
-                        .hasCauseExactlyInstanceOf(CloneNotSupportedException.class)
-                        .hasMessage("sandbox." + Jedi.class.getTypeName());
-                output.set(throwable.getMessage());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    Throwable throwable = assertThrows(RuntimeException.class, () -> WithJava.run(taskFactory, ForceProjector.class, "Obi Wan"));
+                    assertThat(throwable)
+                            .isExactlyInstanceOf(RuntimeException.class)
+                            .hasCauseExactlyInstanceOf(CloneNotSupportedException.class)
+                            .hasMessage("sandbox." + Jedi.class.getTypeName());
+                    output.set(throwable.getMessage());
+                } catch(Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();

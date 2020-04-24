@@ -1,11 +1,9 @@
 package com.r3.conclave.jvmtester.djvm.tests;
 
-import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
-import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest;
-import net.corda.djvm.execution.DeterministicSandboxExecutor;
-import net.corda.djvm.execution.ExecutionSummaryWithResult;
-import net.corda.djvm.execution.SandboxExecutor;
+import com.r3.conclave.jvmtester.djvm.tests.util.SerializationUtils;
+import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase;
+import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;
 import sun.security.x509.AVA;
 import sun.security.x509.X500Name;
@@ -15,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class X500Tests {
 
@@ -24,10 +23,14 @@ public class X500Tests {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, CreateX500Principal.class, "CN=Example,O=Corda,C=GB");
-                assertThat(success.getResult()).isEqualTo("cn=example,o=corda,c=gb");
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, CreateX500Principal.class, "CN=Example,O=Corda,C=GB");
+                    assertThat(result).isEqualTo("cn=example,o=corda,c=gb");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -57,12 +60,16 @@ public class X500Tests {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String[]> success = WithJava.run(executor, X500PrincipalToX500Name.class, "CN=Example,O=Corda,C=GB");
-                assertThat(success.getResult()).isEqualTo(new String[] {
-                        "c=gb", "cn=example", "o=corda"
-                });
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String[] result = WithJava.run(taskFactory, X500PrincipalToX500Name.class, "CN=Example,O=Corda,C=GB");
+                    assertThat(result).isEqualTo(new String[] {
+                            "c=gb", "cn=example", "o=corda"
+                    });
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
@@ -92,10 +99,14 @@ public class X500Tests {
         public Object apply(Object input) {
             AtomicReference<Object> output = new AtomicReference<>();
             sandbox(ctx -> {
-                SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
-                ExecutionSummaryWithResult<String> success = WithJava.run(executor, X500NameToX500Principal.class, "CN=Example,O=Corda,C=GB");
-                assertThat(success.getResult()).isEqualTo("cn=example,o=corda,c=gb");
-                output.set(success.getResult());
+                try {
+                    TypedTaskFactory taskFactory = ctx.getClassLoader().createTypedTaskFactory();
+                    String result = WithJava.run(taskFactory, X500NameToX500Principal.class, "CN=Example,O=Corda,C=GB");
+                    assertThat(result).isEqualTo("cn=example,o=corda,c=gb");
+                    output.set(result);
+                } catch (Exception e) {
+                    fail(e);
+                }
                 return null;
             });
             return output.get();
