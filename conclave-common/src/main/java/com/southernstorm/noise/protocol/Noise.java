@@ -187,7 +187,7 @@ public final class Noise {
 	 *
 	 * @param array The array whose contents should be destroyed.
 	 */
-	static void destroy(byte[] array)
+	public static void destroy(byte[] array)
 	{
 		Arrays.fill(array, (byte)0);
 	}
