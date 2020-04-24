@@ -22,22 +22,18 @@
 
 package com.southernstorm.noise.tests;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.security.NoSuchAlgorithmException;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.ShortBufferException;
-import javax.xml.bind.DatatypeConverter;
-
 import com.southernstorm.json.JsonReader;
 import com.southernstorm.noise.protocol.CipherState;
 import com.southernstorm.noise.protocol.CipherStatePair;
 import com.southernstorm.noise.protocol.HandshakeState;
+import org.junit.jupiter.api.Test;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.ShortBufferException;
+import java.io.*;
+import java.security.NoSuchAlgorithmException;
+
+import static com.southernstorm.noise.tests.TestUtils.parseHexBinary;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -45,81 +41,76 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class VectorTests {
 
-	private int total;
-	private int failed;
-	private int skipped;
+    private int total;
+    private int failed;
+    private int skipped;
 
-	public VectorTests()
-	{
-		total = 0;
-		failed = 0;
-		skipped = 0;
-	}
+	public VectorTests() {
+        total = 0;
+        failed = 0;
+        skipped = 0;
+    }
 
-	/**
-	 * Information about a handshake or transport message.
-	 */
-	private static class TestMessage
-	{
-		public byte[] payload;
-		public byte[] ciphertext;
-	}
+    /**
+     * Information about a handshake or transport message.
+     */
+    private static class TestMessage {
+        public byte[] payload;
+        public byte[] ciphertext;
+    }
 
-	/**
-	 * Information about a Noise test vector that was parsed from a JSON stream.
-	 */
-	private class TestVector
-	{
-		public String name;
-		public String pattern;
-		public String dh;
-		public String hybrid;
-		public String cipher;
-		public String hash;
-		public String fallback_pattern;
-		public byte[] init_prologue;
-		public byte[] init_ephemeral;
-		public byte[] init_hybrid;
-		public byte[] init_static;
-		public byte[] init_remote_static;
-		public byte[] init_psk;
-		public byte[] init_ssk;
-		public byte[] resp_prologue;
-		public byte[] resp_ephemeral;
-		public byte[] resp_hybrid;
-		public byte[] resp_static;
-		public byte[] resp_remote_static;
-		public byte[] resp_psk;
-		public byte[] resp_ssk;
-		public byte[] handshake_hash;
-		public boolean failure_expected;
-		public boolean fallback_expected;
-		public TestMessage[] messages;
+    /**
+     * Information about a Noise test vector that was parsed from a JSON stream.
+     */
+    private class TestVector {
+        public String name;
+        public String pattern;
+        public String dh;
+        public String hybrid;
+        public String cipher;
+        public String hash;
+        public String fallback_pattern;
+        public byte[] init_prologue;
+        public byte[] init_ephemeral;
+        public byte[] init_hybrid;
+        public byte[] init_static;
+        public byte[] init_remote_static;
+        public byte[] init_psk;
+        public byte[] init_ssk;
+        public byte[] resp_prologue;
+        public byte[] resp_ephemeral;
+        public byte[] resp_hybrid;
+        public byte[] resp_static;
+        public byte[] resp_remote_static;
+        public byte[] resp_psk;
+        public byte[] resp_ssk;
+        public byte[] handshake_hash;
+        public boolean failure_expected;
+        public boolean fallback_expected;
+        public TestMessage[] messages;
 
-		public void addMessage(TestMessage msg)
-		{
-			TestMessage[] newMessages;
-			if (messages != null) {
-				newMessages = new TestMessage [messages.length + 1];
-				System.arraycopy(messages, 0, newMessages, 0, messages.length);
-				newMessages[messages.length] = msg;
-			} else {
-				newMessages = new TestMessage [1];
-				newMessages[0] = msg;
-			}
-			messages = newMessages;
-		}
-	}
+        public void addMessage(TestMessage msg) {
+            TestMessage[] newMessages;
+            if (messages != null) {
+                newMessages = new TestMessage[messages.length + 1];
+                System.arraycopy(messages, 0, newMessages, 0, messages.length);
+                newMessages[messages.length] = msg;
+            } else {
+                newMessages = new TestMessage[1];
+                newMessages[0] = msg;
+            }
+            messages = newMessages;
+        }
+    }
 
-	private void assertSubArrayEquals(String msg, byte[] expected, byte[] actual)
-	{
-		for (int index = 0; index < expected.length; ++index)
-			assertEquals(expected[index], actual[index], msg + "[" + index + "]");
-	}
+    private void assertSubArrayEquals(String msg, byte[] expected, byte[] actual) {
+        for (int index = 0; index < expected.length; ++index)
+            assertEquals(expected[index], actual[index], msg + "[" + index + "]");
+    }
 
 	/**
 	 * Runs a Noise test vector.
-	 *
+	 * 
 	 * @param vec The test vector.
 	 * @param initiator Handshake object for the initiator.
 	 * @param responder Handshake object for the responder.
@@ -155,7 +146,7 @@ public class VectorTests {
 			responder.getFixedHybridKey().setPrivateKey(vec.resp_hybrid, 0);
 		if (vec.resp_psk != null)
 			responder.setPreSharedKey(vec.resp_psk, 0, vec.resp_psk.length);
-
+		
 		// Start both sides of the handshake.
 		assertEquals(HandshakeState.NO_ACTION, initiator.getAction());
 		assertEquals(HandshakeState.NO_ACTION, responder.getAction());
@@ -163,7 +154,7 @@ public class VectorTests {
 		responder.start();
 		assertEquals(HandshakeState.WRITE_MESSAGE, initiator.getAction());
 		assertEquals(HandshakeState.READ_MESSAGE, responder.getAction());
-
+		
 		// Work through the messages one by one until both sides "split".
 		int role = HandshakeState.INITIATOR;
 		int index = 0;
@@ -203,7 +194,7 @@ public class VectorTests {
 				} catch (BadPaddingException e) {
 					// Success!
 				}
-
+				
 				// Look up the pattern to fall back to.
 				String pattern = vec.fallback_pattern;
 				if (pattern == null)
@@ -212,11 +203,11 @@ public class VectorTests {
 				// Initiate fallback on both sides.
 				initiator.fallback(pattern);
 				responder.fallback(pattern);
-
+				
 				// Restart the protocols.
 				initiator.start();
 				responder.start();
-
+				
 				// Only need to fallback once.
 				fallback = false;
 			} else {
@@ -233,13 +224,13 @@ public class VectorTests {
 			assertEquals(HandshakeState.INITIATOR, initiator.getRole());
 			assertEquals(HandshakeState.RESPONDER, responder.getRole());
 		}
-
+		
 		// Handshake finished.  Check the handshake hash values.
 		if (vec.handshake_hash != null) {
 			assertArrayEquals(vec.handshake_hash, initiator.getHandshakeHash());
 			assertArrayEquals(vec.handshake_hash, responder.getHandshakeHash());
 		}
-
+		
 		// Split the two sides to get the transport ciphers.
 		CipherStatePair initPair;
 		CipherStatePair respPair;
@@ -255,7 +246,7 @@ public class VectorTests {
 			respPair = responder.split();
 		assertEquals(HandshakeState.COMPLETE, initiator.getAction());
 		assertEquals(HandshakeState.COMPLETE, responder.getAction());
-
+		
 		// Now handle the data transport.
 		CipherState csend, crecv;
 		for (; index < vec.messages.length; ++index) {
@@ -279,7 +270,7 @@ public class VectorTests {
 			assertEquals(msg.payload.length, plen);
 			assertSubArrayEquals(index + ": payload", msg.payload, plaintext);
 		}
-
+		
 		// Clean up.
 		initiator.destroy();
 		responder.destroy();
@@ -289,9 +280,9 @@ public class VectorTests {
 
 	/**
 	 * Processes a single test vector from an input stream.
-	 *
+	 * 
 	 * @param reader The JSON reader for the input stream.
-	 *
+	 * 
 	 * The reader is positioned on the first field of the vector object.
 	 */
 	private void processVector(JsonReader reader) throws IOException
@@ -323,49 +314,49 @@ public class VectorTests {
 					vec.fallback_pattern = reader.nextString();
 					break;
 				case "init_prologue":
-					vec.init_prologue = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_prologue = parseHexBinary(reader.nextString());
 					break;
 				case "init_ephemeral":
-					vec.init_ephemeral = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_ephemeral = parseHexBinary(reader.nextString());
 					break;
 				case "init_hybrid_ephemeral":
-					vec.init_hybrid = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_hybrid = parseHexBinary(reader.nextString());
 					break;
 				case "init_static":
-					vec.init_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_static = parseHexBinary(reader.nextString());
 					break;
 				case "init_remote_static":
-					vec.init_remote_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_remote_static = parseHexBinary(reader.nextString());
 					break;
 				case "init_psk":
-					vec.init_psk = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_psk = parseHexBinary(reader.nextString());
 					break;
 				case "init_ssk":
-					vec.init_ssk = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.init_ssk = parseHexBinary(reader.nextString());
 					break;
 				case "resp_prologue":
-					vec.resp_prologue = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_prologue = parseHexBinary(reader.nextString());
 					break;
 				case "resp_ephemeral":
-					vec.resp_ephemeral = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_ephemeral = parseHexBinary(reader.nextString());
 					break;
 				case "resp_hybrid_ephemeral":
-					vec.resp_hybrid = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_hybrid = parseHexBinary(reader.nextString());
 					break;
 				case "resp_static":
-					vec.resp_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_static = parseHexBinary(reader.nextString());
 					break;
 				case "resp_remote_static":
-					vec.resp_remote_static = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_remote_static = parseHexBinary(reader.nextString());
 					break;
 				case "resp_psk":
-					vec.resp_psk = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_psk = parseHexBinary(reader.nextString());
 					break;
 				case "resp_ssk":
-					vec.resp_ssk = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.resp_ssk = parseHexBinary(reader.nextString());
 					break;
 				case "handshake_hash":
-					vec.handshake_hash = DatatypeConverter.parseHexBinary(reader.nextString());
+					vec.handshake_hash = parseHexBinary(reader.nextString());
 					break;
 				case "fail":
 					vec.failure_expected = reader.nextBoolean();
@@ -381,9 +372,9 @@ public class VectorTests {
 						while (reader.hasNext()) {
 							name = reader.nextName();
 							if (name.equals("payload"))
-								msg.payload = DatatypeConverter.parseHexBinary(reader.nextString());
+								msg.payload = parseHexBinary(reader.nextString());
 							else if (name.equals("ciphertext"))
-								msg.ciphertext = DatatypeConverter.parseHexBinary(reader.nextString());
+								msg.ciphertext = parseHexBinary(reader.nextString());
 							else
 								reader.skipValue();
 						}
@@ -397,7 +388,7 @@ public class VectorTests {
 					break;
 			}
 		}
-
+		
 		// Format the complete protocol name.
 		String protocolName = "Noise";
 		if (vec.init_psk != null || vec.resp_psk != null)
@@ -408,7 +399,7 @@ public class VectorTests {
 		protocolName += "_" + vec.pattern + "_" + dh + "_" + vec.cipher + "_" + vec.hash;
 		if (vec.name == null)
 			vec.name = protocolName;
-
+		
 		// Execute the test vector.
 		++total;
 		System.out.print(vec.name);
@@ -446,61 +437,77 @@ public class VectorTests {
 		}
 	}
 
-	/**
-	 * Processes a file from the command-line.
-	 *
-	 * @param filename The name of the file to process.
-	 */
-	public void processFile(String filename)
-	{
-		total = 0;
-		skipped = 0;
-		failed = 0;
-		try {
-			try (FileInputStream fileStream = new FileInputStream(filename)) {
-				InputStreamReader streamReader = new InputStreamReader(fileStream);
-				BufferedReader bufferedReader = new BufferedReader(streamReader);
-				JsonReader reader = new JsonReader(bufferedReader);
-				reader.beginObject();
-				while (reader.hasNext()) {
-					String name = reader.nextName();
-					if (name.equals("vectors")) {
-						reader.beginArray();
-						while (reader.hasNext() /*&& total < 50*/) {
-							reader.beginObject();
-							processVector(reader);
-							reader.endObject();
-						}
-						reader.endArray();
-					} else {
-						reader.skipValue();
-					}
-				}
-				reader.endObject();
-			}
-		} catch (FileNotFoundException e) {
-			System.err.println(filename + ": File not found");
-		} catch (IOException e) {
-			System.err.println("Exception while parsing JSON: " + e.toString());
-			e.printStackTrace();
-		}
-		System.out.print(filename + ": ");
-		System.out.print(total);
-		System.out.print(" tests, ");
-		System.out.print(skipped);
-		System.out.print(" skipped, ");
-		System.out.print(failed);
-		System.out.println(" failed");
-	}
+    /**
+     * Processes a file from the command-line.
+     *
+     * @param filename The name of the file to process.
+     */
+    public void processFile(String filename) {
+        total = 0;
+        skipped = 0;
+        failed = 0;
+        try {
+            try (FileInputStream fileStream = new FileInputStream(filename)) {
+                processInputStream(fileStream);
+            }
+        } catch (FileNotFoundException e) {
+            System.err.println(filename + ": File not found");
+        } catch (IOException e) {
+            System.err.println("Exception while parsing JSON: " + e.toString());
+            e.printStackTrace();
+        }
+        System.out.print(filename + ": ");
+        System.out.print(total);
+        System.out.print(" tests, ");
+        System.out.print(skipped);
+        System.out.print(" skipped, ");
+        System.out.print(failed);
+        System.out.println(" failed");
+    }
 
-	public static void main(String[] args) {
-		if (args.length == 0) {
-			System.out.println("Usage: VectorTests file1 file2 ...");
-			return;
-		}
-		VectorTests app = new VectorTests();
-		for (String filename : args)
-			app.processFile(filename);
-	}
+    private void processInputStream(InputStream fileStream) throws IOException {
+        InputStreamReader streamReader = new InputStreamReader(fileStream);
+        BufferedReader bufferedReader = new BufferedReader(streamReader);
+        JsonReader reader = new JsonReader(bufferedReader);
+        try {
+            reader.beginObject();
+            while (reader.hasNext()) {
+                String name = reader.nextName();
+                if (name.equals("vectors")) {
+                    reader.beginArray();
+                    while (reader.hasNext() /*&& total < 50*/) {
+                        reader.beginObject();
+                        processVector(reader);
+                        reader.endObject();
+                    }
+                    reader.endArray();
+                } else {
+                    reader.skipValue();
+                }
+            }
+            reader.endObject();
+        } finally {
+            reader.close();
+        }
+    }
 
+    static void main(String[] args) {
+        if (args.length == 0) {
+            System.out.println("Usage: VectorTests file1 file2 ...");
+            return;
+        }
+        VectorTests app = new VectorTests();
+        for (String filename : args)
+            app.processFile(filename);
+    }
+
+    @Test
+    void executeNoiseTestVectors() throws IOException {
+        String[] testCases = { "/basic.json", "/fallback.json", "/hybrid.json" };
+        for (String testCase : testCases) {
+            try (InputStream stream = getClass().getResourceAsStream(testCase)) {
+                processInputStream(stream);
+            }
+        }
+    }
 }

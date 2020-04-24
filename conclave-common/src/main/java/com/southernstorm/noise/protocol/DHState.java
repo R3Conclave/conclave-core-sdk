@@ -69,6 +69,15 @@ public interface DHState extends Destroyable {
 	void getPublicKey(byte[] key, int offset);
 
 	/**
+	 * Returns the public key bytes.
+	 */
+	default byte[] getPublicKey() {
+		byte[] result = new byte[getPublicKeyLength()];
+		getPublicKey(result,0);
+		return result;
+	}
+
+	/**
 	 * Sets the public key for this object.
 	 * 
 	 * @param key The buffer containing the public key.
@@ -86,6 +95,15 @@ public interface DHState extends Destroyable {
 	 * @param offset The first offset in the key buffer to copy to.
 	 */
 	void getPrivateKey(byte[] key, int offset);
+
+	/**
+	 * Returns the private key bytes.
+	 */
+	default byte[] getPrivateKey() {
+		byte[] result = new byte[getPrivateKeyLength()];
+		getPrivateKey(result,0);
+		return result;
+	}
 	
 	/**
 	 * Sets the private key for this object.
