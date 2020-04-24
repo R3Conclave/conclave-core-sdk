@@ -21,7 +21,8 @@ runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE --ref
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
 
 # Then run the tests. We expose the host network so that the test container can connect to the k8s cluster directly.
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test -i && cd $CODE_DOCKER_DIR/samples && \$GRADLE test -i -x end-to-end-test:test"
+TEST_OPTS=${TEST_OPTS:--x end-to-end-test:test -x :djvm:djvm-host:test}
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test -i && cd $CODE_DOCKER_DIR/samples && \$GRADLE test -i $TEST_OPTS"
 
 # Hardware tests
 # Teardown any aesmd container that might be left running, build and start the aesmd container.
@@ -31,7 +32,7 @@ docker stop aesmd || true
 docker rm aesmd || true
 cd containers/aesmd/src/docker && docker build --no-cache -t localhost:5000/com.r3.sgx/aesmd .
 docker run -d --rm --name aesmd ${SGX_HARDWARE_FLAGS} localhost:5000/com.r3.sgx/aesmd
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE -Psgx_mode=Debug test -i -x end-to-end-test:test"
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE -Psgx_mode=Debug test -i $TEST_OPTS"
 
 # Run the SDK tests.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh"
