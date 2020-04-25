@@ -30,6 +30,7 @@ and then keep your machine trusted by applying updates.
 
 [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
 
+[**For Windows userd.**](windows.md) Enclaves can be build on Windows as well.
 ## Get in touch
 
 There's a public mailing list for discussion of using Conclave and SGX. Join [conclave-discuss@groups.io](https://groups.io/g/conclave-discuss).
