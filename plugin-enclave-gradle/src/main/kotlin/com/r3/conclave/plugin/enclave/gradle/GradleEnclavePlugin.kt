@@ -55,12 +55,19 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val sgxToolsDirectory = "${copySgxToolsTask.destinationDir}/com/r3/sgx"
-        val binutilsDirectory = target.file("$sgxToolsDirectory/binutils")
-        val signToolFile = target.file("$sgxToolsDirectory/sign-tool/sgx_sign")
+
+        val linker = getExecutable("ld")
+        val linkerToolFile = target.file("$sgxToolsDirectory/binutils/$linker")
+
+        val signer = getExecutable("sgx_sign")
+        val signToolFile = target.file("$sgxToolsDirectory/sign-tool/$signer")
+
+        var openssl = getExecutable("openssl")
+        val opensslToolFile = target.file("$sgxToolsDirectory/binutils/$openssl")
 
         val buildJarObjectTask = target.tasks.create("buildJarObject", BuildJarObject::class.java) { task ->
             task.dependsOn(copySgxToolsTask)
-            task.inputLd.set(target.file("$binutilsDirectory/ld"))
+            task.inputLd.set(linkerToolFile)
             task.inputJar.set(shadowJarTask.archiveFile)
             task.outputJarObject.set(baseDirectory.resolve("app-jar").resolve("app.jar.o").toFile())
         }
@@ -71,6 +78,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         // Dummy key
         val createDummyKeyTask = target.tasks.create("createDummyKey", GenerateDummyMrsignerKey::class.java) { task ->
+            task.opensslTool.set(opensslToolFile)
             task.outputKey.set(target.file("${target.buildDir}/dummy_key.pem"))
         }
 
@@ -83,7 +91,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val buildUnsignedEnclaveTask = target.tasks.create("buildUnsignedEnclave$type", BuildUnsignedEnclave::class.java) { task ->
                 task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask)
-                task.inputLd.set(target.file("$binutilsDirectory/ld"))
+                task.inputLd.set(linkerToolFile)
                 task.inputEnclaveObject.set(target.file("${copyPartialEnclaveTask.destinationDir}/com/r3/sgx/partial-enclave/$type/jvm_enclave_avian"))
                 task.inputJarObject.set(buildJarObjectTask.outputJarObject)
                 task.outputEnclave.set(target.file("${target.buildDir}/enclave/$type/enclave.so"))
@@ -183,6 +191,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             target.artifacts.add(typeLowerCase, signedEnclaveJarTask)
         }
+    }
+
+    private fun getExecutable(name: String ): String {
+        return if (System.getProperty("os.name").startsWith("Windows"))
+            name.plus(".exe")
+        else
+            name
     }
 
     private fun readVersionFromPluginManifest(): String {

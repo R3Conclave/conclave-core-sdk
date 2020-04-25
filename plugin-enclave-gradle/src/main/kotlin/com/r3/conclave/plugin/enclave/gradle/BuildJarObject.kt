@@ -22,11 +22,6 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : Conclave
     val outputJarObject: RegularFileProperty = objects.fileProperty()
 
     override fun sgxAction() {
-        if (System.getProperty("os.name") != "Linux") {
-            throw GradleException("At this time you may only build enclaves on a Linux host. " +
-                    "We hope to remove this limitation in a future release of Conclave. Sorry!")
-        }
-
         val workingDirectory = outputJarObject.asFile.get().parent
         val embeddedJarName = outputJarObject.asFile.get().name.removeSuffix(".o")
 
@@ -42,6 +37,7 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : Conclave
                     inputLd.get(),
                     "-r",
                     "-b", "binary",
+                    "-m", "elf_x86_64",
                     embeddedJarName,
                     "-o", outputJarObject.get().asFile
             )

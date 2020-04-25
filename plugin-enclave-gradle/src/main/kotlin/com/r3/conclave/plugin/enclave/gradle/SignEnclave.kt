@@ -28,7 +28,7 @@ open class SignEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTas
 
     override fun sgxAction() {
         project.exec { spec ->
-            spec.commandLine(signTool.asFile.get(), "sign",
+            spec.commandLine(signTool.get(), "sign",
                 "-key", inputKey.asFile.get(),
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSignedEnclave.asFile.get(),
