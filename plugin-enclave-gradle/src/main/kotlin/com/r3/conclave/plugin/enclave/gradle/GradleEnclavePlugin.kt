@@ -62,7 +62,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val signer = getExecutable("sgx_sign")
         val signToolFile = target.file("$sgxToolsDirectory/sign-tool/$signer")
 
-        var openssl = getExecutable("openssl")
+        var openssl = getExecutable("opensslw")
         val opensslToolFile = target.file("$sgxToolsDirectory/binutils/$openssl")
 
         val buildJarObjectTask = target.tasks.create("buildJarObject", BuildJarObject::class.java) { task ->

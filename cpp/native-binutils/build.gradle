@@ -15,8 +15,8 @@ jar {
         from(cygwinDir) {
            include "*.dll"
            include "ld.exe"
-           include "openssl.exe"
-           include "openssl"
+           include "opensslw.exe"
+           include "opensslw"
            include "ldscripts/*"
         }
     }
