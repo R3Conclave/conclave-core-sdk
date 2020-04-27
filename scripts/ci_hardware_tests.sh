@@ -14,5 +14,9 @@ cd containers/aesmd/src/docker && docker build --no-cache -t localhost:5000/com.
 docker run -d --rm --name aesmd ${SGX_HARDWARE_FLAGS} localhost:5000/com.r3.sgx/aesmd
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples \
     && PUBLISHED_ARTIFACTS_VERSION=${PUBLISHED_ARTIFACTS_VERSION} \$GRADLE -Psgx_mode=Debug test -i"
+
+# Test SDK tests in hardware.
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh hardware"
+
 docker stop aesmd
 docker rmi localhost:5000/com.r3.sgx/aesmd
