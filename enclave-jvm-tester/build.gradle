@@ -58,7 +58,7 @@ subprojects {
 
     tasks.withType(Test) {
         systemProperty 'sgx.mode', sgxModeProperty
-        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/xml")
+        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
     }
 

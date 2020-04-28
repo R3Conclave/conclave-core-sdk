@@ -71,7 +71,7 @@ subprojects {
         systemProperty 'sgx.mode', sgxModeProperty
         systemProperty 'conclave.samples.spid', '***REMOVED***'
         systemProperty 'conclave.samples.attestation-key', '***REMOVED***'
-        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/xml")
+        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
     }
 
