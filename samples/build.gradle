@@ -77,7 +77,10 @@ subprojects {
 
     configurations {
         def version = System.getenv('PROJECT_VERSION')
-        if (version != null && !version.empty) {
+        if (version != null) {
+            if (version.empty) {
+                version = "0.2-SNAPSHOT"
+            }
             all {
                 for (submodule in modulesToSubstitute) {
                     resolutionStrategy.dependencySubstitution {
