@@ -32,8 +32,6 @@ if (projectVersion == null || projectVersion.empty) {
 }
 
 include ':protobuf-enclave'
-//include ':signing-enclave'
-//include ':end-to-end-test'
 include ':djvm:djvm-enclave'
 include ':djvm:djvm-host'
 include ':djvm:djvm-common'
