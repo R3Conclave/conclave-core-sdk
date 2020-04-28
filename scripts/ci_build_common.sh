@@ -39,7 +39,7 @@ function runDocker() {
        -v ${HOST_CORE_DUMP_DIR}:${HOST_CORE_DUMP_DIR} \
        ${SGX_HARDWARE_FLAGS} \
        -e GRADLE_USER_HOME=/gradle \
-       -e PROJECT_VERSION=${PROJECT_VERSION} \
+       -e PROJECT_VERSION=${PROJECT_VERSION:-} \
        $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
        ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${IMAGE_NAME} \
        bash -c "GRADLE='./gradlew $EXCLUDE_NATIVE'; $2"

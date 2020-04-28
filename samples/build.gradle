@@ -76,8 +76,8 @@ subprojects {
     }
 
     configurations {
-        def version = System.getenv('PUBLISHED_ARTIFACTS_VERSION')
-        if (version != null) {
+        def version = System.getenv('PROJECT_VERSION')
+        if (version != null && !version.empty) {
             all {
                 for (submodule in modulesToSubstitute) {
                     resolutionStrategy.dependencySubstitution {

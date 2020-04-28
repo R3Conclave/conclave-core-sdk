@@ -12,8 +12,8 @@ pluginManagement {
         }
     }
     resolutionStrategy {
-        def version = System.getenv('PUBLISHED_ARTIFACTS_VERSION')
-        if (version != null) {
+        def version = System.getenv('PROJECT_VERSION')
+        if (version != null && !version.empty) {
             eachPlugin {
                 if ( requested.id.id == 'com.r3.conclave.enclave') {
                     def version = System.getenv('PUBLISHED_ARTIFACTS_VERSION')
@@ -24,7 +24,8 @@ pluginManagement {
     }
 }
 
-if (System.getenv('PUBLISHED_ARTIFACTS_VERSION') == null) {
+def projectVersion = System.getenv('PROJECT_VERSION')
+if (projectVersion == null || projectVersion.empty) {
     includeBuild("..") {
         name = "sgxjvm"
     }
