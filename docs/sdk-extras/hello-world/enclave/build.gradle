@@ -1,5 +1,5 @@
 plugins {
-    id 'com.r3.sgx.enclave'
+    id 'com.r3.conclave.enclave'
 }
 
 dependencies {

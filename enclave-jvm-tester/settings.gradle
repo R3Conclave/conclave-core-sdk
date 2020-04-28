@@ -1,4 +1,3 @@
-includeBuild("../sgx-jvm-plugin")
 includeBuild("..")
 
 include ':api'

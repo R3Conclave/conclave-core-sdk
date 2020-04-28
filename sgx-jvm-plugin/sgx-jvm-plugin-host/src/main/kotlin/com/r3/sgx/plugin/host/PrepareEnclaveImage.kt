@@ -1,6 +1,6 @@
 package com.r3.sgx.plugin.host
 
-import com.r3.sgx.plugin.SgxTask
+import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -11,7 +11,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
 import javax.inject.Inject
 
-open class PrepareEnclaveImage @Inject constructor(objects: ObjectFactory) : SgxTask() {
+open class PrepareEnclaveImage @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
         private const val ENCLAVE_FILE = "/app/enclave.signed.so"
 

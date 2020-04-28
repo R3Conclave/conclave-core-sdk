@@ -10,11 +10,11 @@ import com.bmuschko.gradle.docker.tasks.container.DockerStartContainer
 import com.bmuschko.gradle.docker.tasks.container.DockerStopContainer
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
-import com.r3.sgx.plugin.BuildType
-import com.r3.sgx.plugin.SGX_GROUP
-import com.r3.sgx.plugin.enclave.BuildSignedEnclave
-import com.r3.sgx.plugin.enclave.GetEnclaveClassName
-import com.r3.sgx.plugin.enclave.SgxEnclavePlugin
+import com.r3.conclave.plugin.enclave.gradle.BuildSignedEnclave
+import com.r3.conclave.plugin.enclave.gradle.BuildType
+import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
+import com.r3.conclave.plugin.enclave.gradle.EnclaveClassName
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin
 import org.gradle.api.InvalidUserCodeException
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Plugin
@@ -90,7 +90,7 @@ class SgxHostPlugin @Inject constructor(private val factory: ObjectFactory): Plu
             pluginManager.apply(DockerRemoteApiPlugin::class.java)
 
             logger.info("Applying the SGX Enclave plugin")
-            pluginManager.apply(SgxEnclavePlugin::class.java)
+            pluginManager.apply(GradleEnclavePlugin::class.java)
 
             logger.lifecycle("Base Docker Registry: {}", CONCLAVE_METADATA.dockerRegistry)
             logger.lifecycle("SGX-JVM Version: {}", CONCLAVE_METADATA.version)
@@ -112,12 +112,12 @@ class SgxHostPlugin @Inject constructor(private val factory: ObjectFactory): Plu
 }
 
 private open class EnclaveImage @Inject constructor(
-    private val objects: ObjectFactory,
-    layout: ProjectLayout,
-    private val target: Project,
-    private val buildType: BuildType,
-    private val registryCredentials: DockerRegistryCredentials,
-    private val baseCredentials: DockerRegistryCredentials
+        private val objects: ObjectFactory,
+        layout: ProjectLayout,
+        private val target: Project,
+        private val buildType: BuildType,
+        private val registryCredentials: DockerRegistryCredentials,
+        private val baseCredentials: DockerRegistryCredentials
 ) {
     private companion object {
         private const val WAIT_MILLIS = 100L
@@ -165,7 +165,7 @@ private open class EnclaveImage @Inject constructor(
      */
     private fun createPrepareImageTask(): PrepareEnclaveImage = with(target) {
         return tasks.create("prepareEnclaveImage$buildType", PrepareEnclaveImage::class.java) { task ->
-            val enclaveClassNameTask = target.tasks.withType(GetEnclaveClassName::class.java).single()
+            val enclaveClassNameTask = target.tasks.withType(EnclaveClassName::class.java).single()
             task.dependsOn(enclaveClassNameTask)
             task.dockerDir.set(buildDir.resolve("docker-$buildTypeTag"))
             task.repositoryUrl.set(CONCLAVE_METADATA.dockerRegistry)
@@ -185,7 +185,7 @@ private open class EnclaveImage @Inject constructor(
      */
     private fun createBuildImageTaskFor(dockerDir: DirectoryProperty): TaskProvider<DockerBuildImage> = with(target) {
         return tasks.register("buildEnclaveImage$buildType", DockerBuildImage::class.java) { task ->
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
             task.registryCredentials = baseCredentials
             task.inputDir.set(dockerDir)
             task.tags.set(imageExtension.fullImageNamesFor(publishableNameWithType))
@@ -206,7 +206,7 @@ private open class EnclaveImage @Inject constructor(
          * Always push the Docker image with the latest tag.
          */
         val pushLatestTask = tasks.register("pushEnclaveImage${buildType}AsLatest", DockerPushImage::class.java) { task ->
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
             task.registryCredentials = registryCredentials
             task.imageName.set(publishableNameWithType)
             task.tag.set(DEFAULT_TAG)
@@ -226,7 +226,7 @@ private open class EnclaveImage @Inject constructor(
          * Optionally push the Docker image with a user-supplied tag.
          */
         val pushTagTask = tasks.register("pushEnclaveImage${buildType}Tag", DockerPushImage::class.java) { task ->
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
             task.registryCredentials = registryCredentials
             task.imageName.set(publishableNameWithType)
             task.tag.set(imageExtension.publishTag)
@@ -250,7 +250,7 @@ private open class EnclaveImage @Inject constructor(
          */
         tasks.register("pushEnclaveImage$buildType") { task ->
             task.dependsOn(pushLatestTask, pushTagTask)
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
         }
     }
 
@@ -259,7 +259,7 @@ private open class EnclaveImage @Inject constructor(
      */
     private fun createContainerTasksFor(buildImageTask: TaskProvider<*>): Unit = with(target) {
         val createContainerTask = tasks.create("createEnclaveContainer$buildType", DockerCreateContainer::class.java) { task ->
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
             task.tty.set(true)
             task.autoRemove.set(imageExtension.testing.removeOnExit)
             task.imageId.set(publishableNameWithType)
@@ -279,7 +279,7 @@ private open class EnclaveImage @Inject constructor(
         }
 
         val stopContainerTask = tasks.register("stopEnclaveContainer$buildType", DockerStopContainer::class.java) { task ->
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
             task.containerId.set(createContainerTask.containerId)
 
             // The container may already have exited or even never started, so allow this task to fail quietly.
@@ -289,7 +289,7 @@ private open class EnclaveImage @Inject constructor(
         }
 
         tasks.register("startEnclaveContainer$buildType", DockerStartContainer::class.java) { task ->
-            task.group = SGX_GROUP
+            task.group = CONCLAVE_GROUP
             task.containerId.set(createContainerTask.containerId)
             task.dependsOn(createContainerTask)
             task.finalizedBy(stopContainerTask)

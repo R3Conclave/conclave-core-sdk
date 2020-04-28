@@ -78,13 +78,13 @@ task getPublicDummyKey(type: Exec) {
 }
 
 task signWithDummyKey(type: Exec) {
-    dependsOn getEnclaveSigningMaterialSimulation, createDummyKey
-    inputs.file(getEnclaveSigningMaterialSimulation.outputSigningMaterial)
+    dependsOn generateEnclaveSigningMaterialSimulation, createDummyKey
+    inputs.file(generateEnclaveSigningMaterialSimulation.outputSigningMaterial)
 
     commandLine '/usr/bin/env', 'openssl', 'dgst', '-sha256',
             '-sign', createDummyKey.outputKey.get(),
             '-out', dummySignature,
-            getEnclaveSigningMaterialSimulation.outputSigningMaterial.get()
+            generateEnclaveSigningMaterialSimulation.outputSigningMaterial.get()
     outputs.file(dummySignature)
 }
 

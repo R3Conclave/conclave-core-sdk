@@ -1,4 +1,4 @@
-import com.r3.sgx.plugin.enclave.SignEnclave
+import com.r3.conclave.plugin.enclave.gradle.SignEnclave
 
 /**
  * This module contains the enclave and host code meant to handle and run test code.

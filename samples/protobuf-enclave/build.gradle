@@ -1,7 +1,7 @@
 plugins {
     id 'com.google.protobuf'
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.r3.sgx.enclave'
+    id 'com.r3.conclave.enclave'
 }
 
 repositories {
@@ -24,7 +24,6 @@ dependencies {
 shadowJar {
     archiveBaseName = 'example-enclave'
     archiveClassifier = ''
-    zip64 = true
 }
 
 jar {

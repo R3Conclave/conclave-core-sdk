@@ -297,7 +297,7 @@ List<PublishedProject> publishedProjects = [
                 description: 'Enclave testing library',
         ),
         new PublishedProject(
-                projectPath: ':sgx-jvm-plugin:sgx-jvm-plugin-enclave',
+                projectPath: ':plugin-enclave-gradle',
                 description: 'Conclave Gradle plugin for creating enclaves'
         ),
 ]

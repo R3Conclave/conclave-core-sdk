@@ -3,7 +3,7 @@
  */
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.r3.sgx.enclave'
+    id 'com.r3.conclave.enclave'
 }
 
 configurations {

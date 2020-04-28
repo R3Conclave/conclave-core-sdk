@@ -59,7 +59,7 @@ pluginManagement {
     }
 
     plugins {
-        id 'com.r3.sgx.enclave' version conclaveVersion apply false
+        id 'com.r3.conclave.enclave' version conclaveVersion apply false
     }
 }
 
@@ -171,7 +171,7 @@ Add the Conclave Gradle plugin:
 
 ```groovy hl_lines="2"
 plugins {
-    id 'com.r3.sgx.enclave'
+    id 'com.r3.conclave.enclave'
 }
 ```
 

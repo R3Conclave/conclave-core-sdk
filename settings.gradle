@@ -51,5 +51,5 @@ include 'hsm-tool'
 include 'load-test:load-test-runner'
 include 'load-test:load-test-sampler-rng'
 
-include 'sgx-jvm-plugin:sgx-jvm-plugin-enclave'
+include 'plugin-enclave-gradle'
 include 'sgx-jvm-plugin:sgx-jvm-plugin-host'
