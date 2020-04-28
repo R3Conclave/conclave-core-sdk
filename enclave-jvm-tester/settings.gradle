@@ -1,11 +1,11 @@
 includeBuild("..")
 
 include ':api'
-include ':test-enclave'
+include ':enclave'
+include ':host'
 include ':djvm:djvm-test-utils'
 include ':djvm:djvm-asserters'
 include ':djvm:djvm-tests'
 include ':djvm:djvm-tests-auxiliary'
 include ':djvm:djvm-proto'
-
 include ':tests:maths'

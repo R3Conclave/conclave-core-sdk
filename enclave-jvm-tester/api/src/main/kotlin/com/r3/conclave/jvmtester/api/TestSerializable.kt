@@ -8,6 +8,11 @@ import java.io.IOException
  */
 interface TestSerializable {
     /**
+     * @return A serialized version of the input
+     */
+    fun getTestInput(): ByteArray
+
+    /**
      * @param data Serialized test input
      * @return An instance of the test input
      */

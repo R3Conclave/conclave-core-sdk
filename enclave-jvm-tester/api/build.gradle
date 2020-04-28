@@ -1,5 +1,8 @@
 /**
- * This module provides an API for writing JVM tests
+ * This module provides an API for writing JVM tests.
+ *
+ * It also has the messaging API between the enclave and host. This should ideally be in a separate module but isn't
+ * to keep things a bit simpler.
  */
 plugins {
     id 'org.jetbrains.kotlin.jvm'
@@ -8,8 +11,9 @@ plugins {
 }
 
 dependencies {
+    api "com.google.protobuf:protobuf-java:$protobuf_version"
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
 }
 
 protobuf {

@@ -1,0 +1,34 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+
+dependencies {
+    implementation project(':api')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'com.r3.conclave:conclave-host'
+
+    runtimeOnly project(path: ":enclave", configuration: mode)
+
+    testImplementation project(":djvm:djvm-test-utils")
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+tasks.withType(Test) {
+    // Configure the host timezone to match the DJVM's.
+    systemProperty 'user.timezone', 'UTC'
+}
+
+test {
+    maxHeapSize = "8g"
+    useJUnitPlatform()
+    systemProperty 'conclave.spid', '***REMOVED***'
+    systemProperty 'conclave.attestation-key', '***REMOVED***'
+    dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar'
+    doFirst {
+        systemProperty 'maths-tests-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath
+        systemProperty 'djvm-unit-tests-jar.path', tasks.getByPath(':djvm:djvm-tests:shadowJar').outputs.files.asPath
+    }
+}

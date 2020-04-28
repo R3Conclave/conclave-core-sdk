@@ -8,8 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 
 class Longs {
     class PositiveComparisonEnclaveEnclaveTest : EnclaveJvmTest {
-
-        override fun apply(input: Any?) : Any? {
+        override fun apply(input: Any?): Any {
             val l1 = 0L
             val l2 = 1L
             return l2 > l1
@@ -24,17 +23,12 @@ class Longs {
         }
     }
 
-    class NegativeComparisonEnclaveEnclaveTest: EnclaveJvmTest, TestSerializable {
+    class NegativeComparisonEnclaveEnclaveTest : EnclaveJvmTest, TestSerializable {
+        override fun deserializeTestInput(data: ByteArray): Any = Int64Value.parseFrom(data).value
 
-        override fun deserializeTestInput(data: ByteArray): Any? {
-            return Int64Value.parseFrom(data).value
-        }
+        override fun getTestInput(): ByteArray = Int64Value.newBuilder().setValue(-2L).build().toByteArray()
 
-        override fun getTestInput(): ByteArray? {
-            return Int64Value.newBuilder().setValue(-2L).build().toByteArray()
-        }
-
-        override fun apply(input: Any?) : Any? {
+        override fun apply(input: Any?): Any {
             val l1 = 0L
             val l2 : Long = input as Long
             return l2 > l1

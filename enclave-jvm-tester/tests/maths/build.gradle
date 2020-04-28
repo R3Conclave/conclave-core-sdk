@@ -8,11 +8,16 @@ plugins {
 
 dependencies {
     implementation project(':api')
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     implementation "org.assertj:assertj-core:$assertj_version"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 shadowJar {
-    archiveBaseName = 'maths-fat'
+    archiveBaseName = 'tests-maths-fat'
     zip64 = true
 }

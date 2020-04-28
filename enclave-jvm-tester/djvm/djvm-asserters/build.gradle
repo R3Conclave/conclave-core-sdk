@@ -9,7 +9,6 @@ plugins {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.assertj:assertj-core:$assertj_version"
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     implementation project(':api')
     implementation project(':djvm:djvm-proto')
     implementation project(':djvm:djvm-tests-auxiliary')
