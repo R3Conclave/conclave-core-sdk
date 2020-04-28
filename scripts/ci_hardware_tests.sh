@@ -13,7 +13,7 @@ docker rm aesmd || true
 cd containers/aesmd/src/docker && docker build --no-cache -t localhost:5000/com.r3.sgx/aesmd .
 docker run -d --rm --name aesmd ${SGX_HARDWARE_FLAGS} localhost:5000/com.r3.sgx/aesmd
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples \
-    && \$GRADLE -Psgx_mode=Debug test -i"
+    && \$GRADLE -Psgx_mode=Debug test -i ${TEST_OPTS:-}"
 
 # Test SDK tests in hardware.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh hardware"
