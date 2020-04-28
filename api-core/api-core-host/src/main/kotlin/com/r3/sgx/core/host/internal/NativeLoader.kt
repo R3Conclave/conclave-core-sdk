@@ -11,9 +11,9 @@ object NativeLoader {
     /**
      * Loads host libraries from the classpath, unpacking them temporarily to a directory. This code expects at least
      * one of:
-     *     com.r3.sgx:native-host-simulation,
-     *     com.r3.sgx:native-host-debug,
-     *     com.r3.sgx:native-host-release
+     *     com.r3.conclave:native-host-simulation,
+     *     com.r3.conclave:native-host-debug,
+     *     com.r3.conclave:native-host-release
      * to be on the classpath.
      * @param enclaveLoadMode indicates which type of library to use.
      */

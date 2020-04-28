@@ -69,7 +69,7 @@ if (buildDirLocationOverride != null) {
 }
 
 subprojects {
-    group = "com.r3.sgx"
+    group = "com.r3.conclave"
     version = rootProject.version
 
     repositories {
@@ -193,7 +193,7 @@ task apidocs(dependsOn: ['dokka'])
 
 task packageJavadoc(type: Jar, dependsOn: ['dokka']) {
     from dokka
-    classifier = 'javadoc'
+    archiveClassifier.set('javadoc')
 }
 
 task mkdocs(type: Exec, dependsOn: ['apidocs']) {
@@ -337,7 +337,7 @@ if (includeNative) {
                         password = environment.OBLIVIUM_MAVEN_PASSWORD
                     }
                 }
-                maven {    // This section implicitly creates the  publishAllPublicationsToSdkRepoRepository target.
+                maven {    // This section implicitly creates the publishAllPublicationsToSdkRepoRepository target.
                     name = "sdkRepo"
                     url = "$buildDir/sdk/repo"
                 }

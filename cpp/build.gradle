@@ -1,7 +1,6 @@
 import javax.inject.Inject
 
 apply plugin: "base"
-apply plugin: "maven-publish"
 
 def types = ["Simulation", "Debug", "Release"]
 

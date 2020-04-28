@@ -24,17 +24,17 @@ ext {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.r3.sgx:api-core-enclave"
+    implementation "com.r3.conclave:api-core-enclave"
     compile "net.corda:corda-serialization:$corda_version"
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "com.r3.conclave:conclave-host"
-    testImplementation "com.r3.sgx:api-core-host"
-    testImplementation "com.r3.sgx:enclave-testing"
-    testImplementation "com.r3.sgx:enclavelet-host-client"
+    testImplementation "com.r3.conclave:api-core-host"
+    testImplementation "com.r3.conclave:enclave-testing"
+    testImplementation "com.r3.conclave:enclavelet-host-client"
     testImplementation "org.slf4j:slf4j-api:$slf4j_version"
-    testRuntimeOnly "com.r3.sgx:native-host-simulation"
+    testRuntimeOnly "com.r3.conclave:native-host-simulation"
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
 

@@ -9,5 +9,5 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     runtimeOnly "io.grpc:grpc-netty:$grpc_version"
-    runtimeOnly "com.r3.sgx:native-host-simulation:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
 }

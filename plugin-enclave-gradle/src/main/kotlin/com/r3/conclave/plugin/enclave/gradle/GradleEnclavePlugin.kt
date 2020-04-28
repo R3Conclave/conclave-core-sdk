@@ -48,8 +48,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val copySgxToolsTask = target.tasks.create("copySgxTools", Copy::class.java) { task ->
             task.group = CONCLAVE_GROUP
             task.fromDependencies(
-                    "com.r3.sgx:native-binutils:$sdkVersion",
-                    "com.r3.sgx:native-sign-tool:$sdkVersion"
+                    "com.r3.conclave:native-binutils:$sdkVersion",
+                    "com.r3.conclave:native-sign-tool:$sdkVersion"
             )
             task.into(baseDirectory)
         }
@@ -77,7 +77,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         for (type in BuildType.values()) {
             val copyPartialEnclaveTask = target.tasks.create("copyPartialEnclave$type", Copy::class.java) { task ->
                 task.group = CONCLAVE_GROUP
-                task.fromDependencies("com.r3.sgx:native-enclave-${type.name.decapitalize()}:$sdkVersion")
+                task.fromDependencies("com.r3.conclave:native-enclave-${type.name.decapitalize()}:$sdkVersion")
                 task.into(baseDirectory)
             }
 

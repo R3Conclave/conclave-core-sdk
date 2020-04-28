@@ -24,9 +24,6 @@ test {
 def cppBuildDir = project(":cpp").buildDir
 
 subprojects { Project project ->
-    apply plugin: 'java'
-    apply plugin: 'maven-publish'
-
     def type = project.name.drop("native-host-".size()).capitalize()
     project.tasks.getByName("jar") { Jar task ->
         task.dependsOn(":cpp:compileLinuxSgx$type")

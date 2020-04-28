@@ -21,14 +21,14 @@ dependencies {
     testImplementation "io.fabric8:kubernetes-client:$fabric8_kubernetes_client_version"
     testImplementation "io.grpc:grpc-testing:$grpc_version"
     testImplementation 'com.r3.conclave:conclave-host'
-    testImplementation 'com.r3.sgx:api-core-enclave'
-    testImplementation 'com.r3.sgx:enclavelet-host-client'
-    testImplementation 'com.r3.sgx:enclavelet-host-server'
-    testImplementation 'com.r3.sgx:enclave-dynamic-testing'
+    testImplementation 'com.r3.conclave:api-core-enclave'
+    testImplementation 'com.r3.conclave:enclavelet-host-client'
+    testImplementation 'com.r3.conclave:enclavelet-host-server'
+    testImplementation 'com.r3.conclave:enclave-dynamic-testing'
     testImplementation project(':signing-enclave')
 
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    testRuntimeOnly 'com.r3.sgx:native-host-simulation'
+    testRuntimeOnly 'com.r3.conclave:native-host-simulation'
 }
 
 

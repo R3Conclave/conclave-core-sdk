@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'maven-publish'
     id 'net.corda.plugins.api-scanner'
 }
 

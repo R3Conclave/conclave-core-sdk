@@ -1,8 +1,6 @@
 plugins {
-    id 'java'
     id 'org.jetbrains.kotlin.jvm'
     id 'com.github.johnrengelman.shadow'
-    id 'maven-publish'
 }
 
 repositories {
@@ -48,21 +46,3 @@ test {
     dependsOn shadowJarTask
     systemProperty "test.hostjar", shadowJar.getArchiveFile().get().toString()
 }
-
-publishing {
-    publications {
-        shadow(MavenPublication) { publication ->
-            project.shadow.component(publication)
-        }
-    }
-    repositories {
-        maven {
-            url = "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}"
-            credentials {
-                username = environment.OBLIVIUM_MAVEN_USERNAME
-                password = environment.OBLIVIUM_MAVEN_PASSWORD
-            }
-        }
-    }
-}
-

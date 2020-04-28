@@ -1,10 +1,7 @@
 plugins {
     id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
-    id 'maven-publish'
 }
-
-group 'com.r3.conclave'
 
 // TODO Use Zulu build with EC bug fix, or wait until they release their next JDK 11 version
 //compileJava {
@@ -41,9 +38,9 @@ dependencies {
     // TODO There's really no need to include all three dependencies. The host can only use the one that matches with
     //      the mode the enclave was built against. So by bundling all three modes we're unnecessarily bloating the
     //      host. Consider a gradle plugin for the host that automatically adds the relevant dependency based on the enclave.
-    runtimeOnly "com.r3.sgx:native-host-release:${rootProject.version}"
-    runtimeOnly "com.r3.sgx:native-host-debug:${rootProject.version}"
-    runtimeOnly "com.r3.sgx:native-host-simulation:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-host-release:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-host-debug:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
 
     testImplementation project(":conclave-enclave")
     testImplementation project(":enclave-dynamic-testing")

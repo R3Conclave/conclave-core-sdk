@@ -1,10 +1,7 @@
 plugins {
     id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
-    id 'maven-publish'
 }
-
-group 'com.r3.conclave'
 
 test {
     failFast = false

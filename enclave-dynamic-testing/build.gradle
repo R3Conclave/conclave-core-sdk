@@ -12,8 +12,8 @@ dependencies {
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
 
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:2.3.1"
-    runtimeOnly "com.r3.sgx:native-enclave-simulation:${rootProject.version}"
-    runtimeOnly "com.r3.sgx:native-enclave-debug:${rootProject.version}"
-    runtimeOnly "com.r3.sgx:native-enclave-release:${rootProject.version}"
-    runtimeOnly "com.r3.sgx:native-sign-tool:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-enclave-simulation:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-enclave-debug:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-enclave-release:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-sign-tool:${rootProject.version}"
 }

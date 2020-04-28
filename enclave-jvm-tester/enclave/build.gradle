@@ -1,6 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.r3.sgx.enclave'
+    id 'com.r3.conclave.enclave'
 }
 
 configurations {
@@ -13,7 +13,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation 'com.r3.conclave:conclave-enclave'
     implementation "net.corda.djvm:corda-djvm:$djvm_version"
-    implementation 'com.r3.sgx:enclave-utils'
+    implementation 'com.r3.conclave:enclave-utils'
 
     jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
 }

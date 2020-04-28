@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'maven-publish'
     id 'net.corda.plugins.api-scanner'
 }
 
@@ -15,5 +14,5 @@ dependencies {
     testImplementation project(":enclave-dynamic-testing")
     testImplementation "org.jetbrains.kotlin:kotlin-test"
 
-    testRuntimeOnly "com.r3.sgx:native-host-simulation:${rootProject.version}"
+    testRuntimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
 }
