@@ -59,12 +59,14 @@ jar {
 def publicDummyKey = file("$buildDir/dummy.public.pem")
 def dummySignature = file("$buildDir/Simulation/signature.bin")
 
-// We plug in an explicit signing step here
-enclaveSimulation {
-    shouldUseDummyKey = false
-    mrsignerPublicKey = publicDummyKey
-    mrsignerSignature = dummySignature
-    signatureDate = (new SimpleDateFormat("yyyymmdd")).parse("20190301")
+conclave {
+    // We plug in an explicit signing step here
+    simulation {
+        shouldUseDummyKey = false
+        mrsignerPublicKey = publicDummyKey
+        mrsignerSignature = dummySignature
+        signatureDate = (new SimpleDateFormat("yyyymmdd")).parse("20190301")
+    }
 }
 
 task getPublicDummyKey(type: Exec) {

@@ -21,7 +21,7 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : Conclave
     @get:OutputFile
     val outputJarObject: RegularFileProperty = objects.fileProperty()
 
-    override fun sgxAction() {
+    override fun action() {
         if (System.getProperty("os.name") != "Linux") {
             throw GradleException("At this time you may only build enclaves on a Linux host. " +
                     "We hope to remove this limitation in a future release of Conclave. Sorry!")

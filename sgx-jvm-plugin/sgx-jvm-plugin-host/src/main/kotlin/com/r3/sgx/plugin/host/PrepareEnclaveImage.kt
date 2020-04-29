@@ -61,7 +61,7 @@ open class PrepareEnclaveImage @Inject constructor(objects: ObjectFactory) : Con
     @get:Internal
     val imageName: Provider<String> = repositoryUrl.flatMap { url -> baseImageName.map { name -> "$url/$name" }}
 
-    override fun sgxAction() {
+    override fun action() {
         val enclaveObjectFile = enclaveObject.get().asFile
         enclaveObjectFile.copyTo(dockerDir.file(enclaveObjectFile.name).get().asFile, overwrite = true)
 

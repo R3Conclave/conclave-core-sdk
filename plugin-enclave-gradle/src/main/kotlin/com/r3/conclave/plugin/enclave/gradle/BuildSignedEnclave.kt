@@ -16,6 +16,6 @@ open class BuildSignedEnclave @Inject constructor(objects: ObjectFactory) : Conc
     @get:Internal
     val signedEnclavePath: String get() = outputSignedEnclave.asFile.get().absolutePath
 
-    override fun sgxAction() {
+    override fun action() {
     }
 }
