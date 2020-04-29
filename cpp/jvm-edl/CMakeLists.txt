@@ -9,7 +9,7 @@ endif()
 
 # jvm-edl
 # This target generates the .c and .h files for the host and the enclave using the edger8r tool.
-set(GENERATED_EDL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/edl)
+set(GENERATED_EDL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/edl)
 set(GENERATED_EDL_FILES ${GENERATED_EDL_DIR}/host/jvm_u.c ${GENERATED_EDL_DIR}/enclave/jvm_t.c)
 GET_DIRECTORY_PROPERTY(EDGER8R_INCLUDE_DIR DIRECTORY ${PROJECT_SOURCE_DIR}/../linux-sgx DEFINITION EDGER8R_INCLUDE_DIR)
 add_custom_command(
