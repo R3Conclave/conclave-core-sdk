@@ -19,7 +19,7 @@ pluginManagement {
             }
             eachPlugin {
                 if (requested.id.id == 'com.r3.conclave.enclave') {
-                    useModule("com.r3.conclave:com.r3.conclave.enclave:$version")
+                    useModule("com.r3.conclave:plugin-enclave-gradle:$version")
                 }
             }
         }
