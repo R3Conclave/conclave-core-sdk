@@ -24,7 +24,7 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : Conclave
     override fun sgxAction() {
         val os = System.getProperty("os.name")
         if (os != "Linux" && !os.startsWith("Windows")) {
-            throw GradleExcepton("At this time you may only build enclaves on a Linux or Windows host. " +
+            throw GradleException("At this time you may only build enclaves on a Linux or Windows host. " +
                     "We hope to remove this limitation in a future release of Conclave. Sorry!")
         }
 
