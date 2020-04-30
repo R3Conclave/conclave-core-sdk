@@ -13,7 +13,7 @@ open class GenerateDummyMrsignerKey @Inject constructor(objects: ObjectFactory) 
     @get:OutputFile
     val outputKey: RegularFileProperty = objects.fileProperty()
 
-    override fun sgxAction() {
+    override fun action() {
         project.exec { spec ->
             spec.commandLine(opensslTool.get(), "genrsa",
                     "-out", outputKey.asFile.get(),

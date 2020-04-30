@@ -4,10 +4,6 @@ plugins {
     id 'com.r3.conclave.enclave'
 }
 
-repositories {
-    jcenter()
-}
-
 dependencies {
     implementation "com.r3.conclave:api-core-enclave"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"

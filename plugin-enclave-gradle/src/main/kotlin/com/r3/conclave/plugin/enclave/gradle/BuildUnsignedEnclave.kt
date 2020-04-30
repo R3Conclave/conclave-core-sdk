@@ -32,7 +32,7 @@ open class BuildUnsignedEnclave @Inject constructor(objects: ObjectFactory) : Co
         emptyList()
     }
 
-    override fun sgxAction() {
+    override fun action() {
         project.exec { spec ->
             spec.commandLine(listOf(
                 inputLd.get(),

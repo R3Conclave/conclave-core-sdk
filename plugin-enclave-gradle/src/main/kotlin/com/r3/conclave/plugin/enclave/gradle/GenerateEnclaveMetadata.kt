@@ -22,7 +22,7 @@ open class GenerateEnclaveMetadata @Inject constructor(objects: ObjectFactory) :
     @get:OutputFile
     val outputEnclaveMetadata: RegularFileProperty = objects.fileProperty()
 
-    override fun sgxAction() {
+    override fun action() {
         val measurement = getEnclaveMeasurement(inputSignedEnclave.asFile.get())
         logger.lifecycle("Enclave measurement: $measurement")
         Files.write(

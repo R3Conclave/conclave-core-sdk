@@ -33,6 +33,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.pluginManager.apply(JavaPlugin::class.java)
         target.pluginManager.apply(ShadowPlugin::class.java)
 
+        val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
+
         val shadowJarTask = target.tasks.withType(ShadowJar::class.java).getByName("shadowJar") { task ->
             task.isPreserveFileTimestamps = false
             task.isReproducibleFileOrder = true
@@ -83,6 +85,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         for (type in BuildType.values()) {
+            val enclaveExtension = when (type) {
+                BuildType.Release -> conclaveExtension.release
+                BuildType.Debug -> conclaveExtension.debug
+                BuildType.Simulation -> conclaveExtension.simulation
+            }
+
+            enclaveExtension.configuration.set(layout.projectDirectory.file("src/sgx/$type/enclave.xml"))
+            enclaveExtension.shouldUseDummyKey.set(true)
+            enclaveExtension.mrsignerPublicKey.set(layout.projectDirectory.file("src/sgx/$type/mrsigner.public.pem"))
+            enclaveExtension.mrsignerSignature.set(layout.projectDirectory.file("src/sgx/$type/mrsigner.signature.bin"))
+            enclaveExtension.signatureDate.set(SimpleDateFormat("yyyymmdd").parse("19700101"))
+
             val copyPartialEnclaveTask = target.tasks.create("copyPartialEnclave$type", Copy::class.java) { task ->
                 task.group = CONCLAVE_GROUP
                 task.fromDependencies("com.r3.conclave:native-enclave-${type.name.decapitalize()}:$sdkVersion")
@@ -98,51 +112,33 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.stripped.set(type == BuildType.Release)
             }
 
-            val defaultEnclaveConfiguration = layout.projectDirectory.file("src/sgx/$type/enclave.xml")
             val signedEnclaveFile = layout.buildDirectory.file("enclave/$type/enclave.signed.so")
-            val enclaveMetadataFile = layout.buildDirectory.file("enclave/$type/enclave.metadata.yml")
-            val signingMaterialFile = layout.buildDirectory.file("enclave/$type/signing_material.bin")
-            val defaultShouldUseDummyKey = true
-            val defaultMrsignerPublicKey = layout.projectDirectory.file("src/sgx/$type/mrsigner.public.pem")
-            val defaultMrsignerSignature = layout.projectDirectory.file("src/sgx/$type/mrsigner.signature.bin")
-            val defaultSignatureDate = SimpleDateFormat("yyyymmdd").parse("19700101")
 
-            val enclaveExtension = target.extensions.create("enclave$type",
-                    EnclaveExtension::class.java,
-                    defaultEnclaveConfiguration,
-                    defaultShouldUseDummyKey,
-                    defaultMrsignerPublicKey,
-                    defaultMrsignerSignature,
-                    defaultSignatureDate
-            )
-
-            val signEnclaveWithDummyKeyTask = target.tasks.create("signEnclaveWithDummyKey$type", SignEnclave::class.java) { task ->
-                task.dependsOn(copySgxToolsTask)
-                task.signTool.set(signToolFile)
-                task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
-                task.inputEnclaveConfig.set(enclaveExtension.configuration)
-                task.inputKey.set(createDummyKeyTask.outputKey)
-                task.outputSignedEnclave.set(signedEnclaveFile)
+            val signEnclaveWithDummyKeyTask = target.tasks.create("signEnclaveWithDummyKey$type", SignEnclave::class.java, enclaveExtension).apply {
+                dependsOn(copySgxToolsTask)
+                signTool.set(signToolFile)
+                inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
+                inputKey.set(createDummyKeyTask.outputKey)
+                outputSignedEnclave.set(signedEnclaveFile)
             }
 
-            val generateEnclaveSigningMaterialTask = target.tasks.create("generateEnclaveSigningMaterial$type", GenerateEnclaveSigningMaterial::class.java) { task ->
-                task.dependsOn(copySgxToolsTask)
-                task.signTool.set(signToolFile)
-                task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
-                task.inputEnclaveConfig.set(enclaveExtension.configuration)
-                task.signatureDate.set(enclaveExtension.signatureDate)
-                task.outputSigningMaterial.set(signingMaterialFile)
+            val generateEnclaveSigningMaterialTask = target.tasks.create(
+                    "generateEnclaveSigningMaterial$type",
+                    GenerateEnclaveSigningMaterial::class.java,
+                    enclaveExtension
+            ).apply {
+                dependsOn(copySgxToolsTask)
+                signTool.set(signToolFile)
+                inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
+                outputSigningMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
             }
 
-            val addEnclaveSignatureTask = target.tasks.create("addEnclaveSignature$type", AddEnclaveSignature::class.java) { task ->
-                task.dependsOn(copySgxToolsTask)
-                task.signTool.set(signToolFile)
-                task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
-                task.inputPublicKeyPem.set(enclaveExtension.mrsignerPublicKey)
-                task.inputSignature.set(enclaveExtension.mrsignerSignature)
-                task.inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
-                task.inputEnclaveConfig.set(enclaveExtension.configuration)
-                task.outputSignedEnclave.set(signedEnclaveFile)
+            val addEnclaveSignatureTask = target.tasks.create("addEnclaveSignature$type", AddEnclaveSignature::class.java, enclaveExtension).apply {
+                dependsOn(copySgxToolsTask)
+                signTool.set(signToolFile)
+                inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
+                inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
+                outputSignedEnclave.set(signedEnclaveFile)
             }
 
             val generateEnclaveMetadataTask = target.tasks.create("generateEnclaveMetadata$type", GenerateEnclaveMetadata::class.java) { task ->
@@ -158,7 +154,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         addEnclaveSignatureTask.outputSignedEnclave
                     }
                 })
-                task.outputEnclaveMetadata.set(enclaveMetadataFile)
+                task.outputEnclaveMetadata.set(layout.buildDirectory.file("enclave/$type/enclave.metadata.yml"))
             }
 
             val buildSignedEnclaveTask = target.tasks.create("buildSignedEnclave$type", BuildSignedEnclave::class.java) { task ->

@@ -1,12 +1,34 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.3.61' apply false
     id 'com.google.protobuf' version '0.8.9' apply false
-    id 'com.r3.sgx.host' apply false
+    id 'com.r3.conclave.enclave' apply false
     id "com.github.ben-manes.versions" version "0.27.0"
 }
 
 import static org.gradle.api.JavaVersion.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+def modulesToSubstitute = [
+        'com.r3.sgx:native-enclave-simulation',
+        'com.r3.sgx:native-enclave-debug',
+        'com.r3.sgx:native-enclave-release',
+        'com.r3.sgx:native-host-simulation',
+        'com.r3.sgx:native-host-debug',
+        'com.r3.sgx:native-host-release',
+        'com.r3.sgx:native-gdb',
+        'com.r3.sgx:native-sign-tool',
+        'com.r3.sgx:native-binutils',
+        'com.r3.conclave:conclave-common',
+        'com.r3.conclave:conclave-enclave',
+        'com.r3.conclave:conclave-host',
+        'com.r3.conclave:conclave-client',
+        'com.r3.conclave:api-core-common',
+        'com.r3.conclave:api-core-enclave',
+        'com.r3.conclave:api-core-host',
+        'com.r3.conclave:enclave-utils',
+        'com.r3.conclave:enclave-testing',
+        'com.r3.conclave:enclavelet-host-common'
+]
 
 def sgxModeProperty = project.property('sgx_mode')
 subprojects {
@@ -21,6 +43,10 @@ subprojects {
         jcenter()
         maven {
             url = "https://software.r3.com/artifactory/sgxjvm"
+            credentials {
+                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+            }
         }
     }
 
@@ -45,8 +71,24 @@ subprojects {
         systemProperty 'sgx.mode', sgxModeProperty
         systemProperty 'conclave.samples.spid', '***REMOVED***'
         systemProperty 'conclave.samples.attestation-key', '***REMOVED***'
-        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/xml")
+        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
+    }
+
+    configurations {
+        def version = System.getenv('PROJECT_VERSION')
+        if (version != null) {
+            if (version.empty) {
+                version = "0.2-SNAPSHOT"
+            }
+            all {
+                for (submodule in modulesToSubstitute) {
+                    resolutionStrategy.dependencySubstitution {
+                        substitute module(submodule) with module("$submodule:$version")
+                    }
+                }
+            }
+        }
     }
 }
 

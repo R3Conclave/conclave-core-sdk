@@ -22,7 +22,7 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
     @get:Internal
     val outputEnclaveClassName: Provider<String> get() = _outputEnclaveClassName
 
-    override fun sgxAction() {
+    override fun action() {
         logger.info("Scanning ${inputJar.get()}")
         val enclaveClassName = ClassGraph()
                 .overrideClasspath(inputJar.get())

@@ -13,12 +13,12 @@ abstract class ConclaveTask : DefaultTask() {
         group = CONCLAVE_GROUP
     }
 
-    abstract fun sgxAction()
+    abstract fun action()
 
     @TaskAction
     fun run() {
         try {
-            sgxAction()
+            action()
         } catch (e: Exception) {
             throw (e as? RuntimeException) ?: TaskExecutionException(this, e)
         }
