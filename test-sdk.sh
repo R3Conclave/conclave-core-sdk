@@ -2,7 +2,7 @@
 
 set -eou pipefail
 if [ "${1:-}" != "hardware" ]; then
-    echo Building the SDK files without bothering to zip them.
+    echo Building the SDK Zip file.
     echo
     ./gradlew -i --stacktrace sdk
     echo
