@@ -15,9 +15,13 @@ source ${SCRIPT_DIR}/devenv_envs.sh
 if [ "$(uname)" == "Darwin" ]; then
   docker_ip="192.168.65.2"
 else
-  docker_ip=$(ip address show docker0 2> /dev/null || echo "" | sed -n 's/^.*inet \(addr:[ ]*\)*\([^ ]*\).*/\2/p' | cut -d/ -f1)
-  if [ -z "$docker_ip" ]; then
+  if [[ $(uname -r) == *microsoft* ]]; then
+    docker_ip="172.17.0.2"
+  else
+    docker_ip=$(ip address show docker0 2> /dev/null | sed -n 's/^.*inet \(addr:[ ]*\)*\([^ ]*\).*/\2/p' | cut -d/ -f1)
+    if [ -z "$docker_ip" ]; then
       docker_ip="172.17.0.2"
+    fi
   fi
 fi
 
