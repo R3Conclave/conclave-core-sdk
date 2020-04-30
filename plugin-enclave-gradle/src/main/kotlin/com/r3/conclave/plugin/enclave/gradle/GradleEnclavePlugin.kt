@@ -193,9 +193,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
     }
 
-    private fun getExecutable(name: String ): String {
+    private fun getExecutable(name: String): String {
         return if (System.getProperty("os.name").startsWith("Windows"))
-            name.plus(".exe")
+            "$nam.exe"
         else
             name
     }
