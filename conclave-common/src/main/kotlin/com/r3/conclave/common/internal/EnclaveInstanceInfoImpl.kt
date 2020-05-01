@@ -6,6 +6,8 @@ import com.r3.conclave.common.EnclaveSecurityInfo.Summary
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.cpuSvn
+import com.r3.conclave.common.internal.SgxReportBody.isvProdId
+import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.measurement
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
@@ -61,9 +63,8 @@ class EnclaveInstanceInfoImpl(
         enclaveInfo = EnclaveInfo(
                 codeHash = SHA256Hash.get(reportBody[measurement].read()),
                 codeSigningKeyHash = SHA256Hash.get(reportBody[mrsigner].read()),
-                // TODO https://r3-cev.atlassian.net/browse/CON-12
-                productID = 0,
-                revocationLevel = 0,
+                productID = reportBody[isvProdId].read(),
+                revocationLevel = reportBody[isvSvn].read() - 1,
                 enclaveMode = enclaveMode
         )
 

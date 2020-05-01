@@ -17,13 +17,9 @@ dependencies {
     testRuntimeOnly "com.r3.conclave:native-host-${sgxMode.toLowerCase()}"
 }
 
-shadowJar {
-    archiveBaseName = 'example-enclave'
-    archiveClassifier = ''
-}
-
-jar {
-    archiveClassifier = 'ignore'
+conclave {
+    productID = 1
+    revocationLevel = 0
 }
 
 protobuf {

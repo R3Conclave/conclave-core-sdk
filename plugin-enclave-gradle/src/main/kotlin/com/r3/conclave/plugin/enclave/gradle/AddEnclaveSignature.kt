@@ -17,6 +17,9 @@ open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory, priva
     @get:InputFile
     val signTool: RegularFileProperty = objects.fileProperty()
 
+    @get:InputFile
+    val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
+
     @get:OutputFile
     val outputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -29,7 +32,7 @@ open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory, priva
                     "-key", enclaveExtension.mrsignerPublicKey.asFile.get(),
                     "-enclave", inputEnclave.asFile.get(),
                     "-out", outputSignedEnclave.asFile.get(),
-                    "-config", enclaveExtension.configuration.asFile.get(),
+                    "-config", inputEnclaveConfig.asFile.get(),
                     "-sig", enclaveExtension.mrsignerSignature.asFile.get(),
                     "-unsigned", inputSigningMaterial.asFile.get()
             )

@@ -24,6 +24,9 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
     @get:InputFile
     val signTool: RegularFileProperty = objects.fileProperty()
 
+    @get:InputFile
+    val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
+
     @get:OutputFile
     val outputSigningMaterial: RegularFileProperty = objects.fileProperty()
 
@@ -32,7 +35,7 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
             spec.commandLine(signTool.asFile.get(), "gendata",
                     "-enclave", inputEnclave.asFile.get(),
                     "-out", outputSigningMaterial.asFile.get(),
-                    "-config", enclaveExtension.configuration.asFile.get()
+                    "-config", inputEnclaveConfig.asFile.get()
             )
         }
        postProcess()

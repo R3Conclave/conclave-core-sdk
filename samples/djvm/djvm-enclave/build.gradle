@@ -29,3 +29,8 @@ processResources {
         rename { 'deterministic-rt.zip' } // Renamed to zip so shadowJar doesn't expand it: https://github.com/johnrengelman/shadow/issues/111
     }
 }
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+}

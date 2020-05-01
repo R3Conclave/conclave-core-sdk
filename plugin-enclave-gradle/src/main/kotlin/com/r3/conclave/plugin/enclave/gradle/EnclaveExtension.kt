@@ -7,7 +7,6 @@ import java.util.*
 import javax.inject.Inject
 
 open class EnclaveExtension @Inject constructor(objects: ObjectFactory) {
-    val configuration: RegularFileProperty = objects.fileProperty()
     val shouldUseDummyKey: Property<Boolean> = objects.property(Boolean::class.java)
     val mrsignerPublicKey: RegularFileProperty = objects.fileProperty()
     val mrsignerSignature: RegularFileProperty = objects.fileProperty()

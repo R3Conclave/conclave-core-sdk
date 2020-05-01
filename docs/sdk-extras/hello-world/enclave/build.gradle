@@ -5,3 +5,8 @@ plugins {
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
 }
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+}

@@ -18,8 +18,8 @@ object SgxSpid : FixedBytes(16)
 object SgxQuoteNonce : FixedBytes(16)
 object SgxBasename : FixedBytes(32)
 
-object SgxIsvProdId : Int16()
-object SgxIsvSvn : Int16()
+object SgxIsvProdId : UInt16()
+object SgxIsvSvn : UInt16()
 object SgxMiscSelect : Int32()
 
 object Constants {

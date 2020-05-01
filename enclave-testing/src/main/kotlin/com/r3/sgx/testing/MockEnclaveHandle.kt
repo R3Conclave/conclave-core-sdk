@@ -15,7 +15,7 @@ class MockEnclaveHandle<CONNECTION>(
     // This needs to be lazy to allow EnclaveHostMockTest to work
     private val enclaveHandler by lazy {
         enclave.initialize(
-                MockEnclaveApi(enclave),
+                MockEnclaveApi(),
                 MockOcallSender(HandlerConnected(hostHandler, connection))
         )
     }
