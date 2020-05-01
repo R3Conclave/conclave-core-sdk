@@ -27,7 +27,7 @@ pluginManagement {
 }
 
 def projectVersion = System.getenv('PROJECT_VERSION')
-if (projectVersion == null || projectVersion.empty) {
+if (projectVersion == null) {
     includeBuild("..") {
         name = "sgxjvm"
     }
