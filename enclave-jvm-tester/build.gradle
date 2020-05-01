@@ -40,6 +40,13 @@ subprojects {
         mavenCentral()
         // DJVM and determinist-rt
         maven { url 'https://software.r3.com/artifactory/corda-dependencies' }
+        maven {
+            url = "https://software.r3.com/artifactory/sgxjvm"
+            credentials {
+                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+            }
+        }
     }
 
     tasks.withType(JavaCompile) {
