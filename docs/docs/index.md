@@ -54,8 +54,6 @@ This release ships with the following known issues:
    will implement "DCAP attestation" which will allow the owner of the hardware to whiteliste enclaves, not just Intel.
 7. There are some modules and packages under the `com.r3.sgx` namespace. These should be considered internal and may be
    changed, removed, or merged into other modules in any release.
-8. Product IDs aren't fully wired up yet. This shouldn't impact any testing or development at the moment, as it only 
-   matters when multiple different enclaves are used in production from the same publisher.
 
 ## Release notes
 
@@ -63,3 +61,11 @@ This release ships with the following known issues:
 
 1. We've upgraded to use the version 2.9 of the Intel SGX SDK, which brings security improvements and lays the groundwork for new 
    features. Make sure your host system is also running version 2.9.
+
+2. The ID for the enclave plugin is now `com.r3.conclave.enclave`. You will need to change this in your enclave's
+   build.gradle file.
+
+3. You can now specify an enclave's product ID and revocation level in the enclave build file. There's a new
+   `conclave` block which let's you do this. These values are enforced in any relevant `EnclaveConstraint` object.
+
+4. Related to the above, the `enclave.xml` files are no longer needed and you can safely delete them.

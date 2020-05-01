@@ -183,6 +183,22 @@ dependencies {
 }
 ```
 
+Specify the enclave's product ID and revocation level:
+
+```groovy hl_lines="2"
+conclave {
+    productID = 1
+    revocationLevel = 0
+}
+```
+
+The product ID is an arbitrary number that can be used to distinguish between different enclaves produced by the same
+organisation (which may for internal reasons wish to use a single signing key). This value should not typically change.
+
+The revocation level should be incremented if a weakness in the enclave code discovered and fixed; doing this will enable
+clients to avoid connecting to old, compromised enclaves. The revocation level should not be incremented on every new
+release, but only when security improvements have been made.
+
 And with that, we're done configuring the build.
 
 ## Create a new subclass of `Enclave`
@@ -221,49 +237,6 @@ we just reverse the contents.
 !!! tip
     In a real app you would use the byte array to hold serialised data structures. You can use whatever data formats you
     like. You could use a simple string format or a binary format like protocol buffers.
-
-## Supply XML configurations
-
-!!! note
-    This step is temporary. Future versions of the Conclave Gradle plugin will automate it for you.
-
-Enclaves must be configured with some environmental information. This is done via an XML file, one for each type of
-release.
-
-Create directories called:
-
-* `src/sgx/Simulation`
-* `src/sgx/Debug`
-* `src/sgx/Release`
-
-where `src` is the same directory your `src/main/java` directory is in.
-
-!!! warning
-
-    The uppercase starting letter of this directory matters.
-
-Inside the `Simulation` directory create a file called `enclave.xml` and copy/paste this content:
-
-```xml
-<EnclaveConfiguration>
-    <ProdID>0</ProdID>
-    <ISVSVN>0</ISVSVN>
-    <StackMaxSize>0x280000</StackMaxSize>
-    <HeapMaxSize>0x8000000</HeapMaxSize>
-    <TCSNum>10</TCSNum>
-    <TCSPolicy>1</TCSPolicy>
-    <DisableDebug>0</DisableDebug>
-    <MiscSelect>0</MiscSelect>
-    <MiscMask>0xFFFFFFFF</MiscMask>
-</EnclaveConfiguration>
-```
-
-This switches control resource usage and identity of the enclave. The most important
-value here is the **product ID**. This is an arbitrary number that can be used to distinguish between different
-enclaves produced by the same organisation (which may for internal reasons wish to use a single signing key).
-For now we can accept the defaults for all settings.  
-
-<!--- TODO: We should force developers to specify the ISV SVN and ProdID in future -->
 
 ## Write a host program
 

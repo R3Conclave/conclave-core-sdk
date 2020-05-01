@@ -27,12 +27,14 @@ pluginManagement {
 }
 
 def projectVersion = System.getenv('PROJECT_VERSION')
-if (projectVersion == null || projectVersion.empty) {
+if (projectVersion == null) {
     includeBuild("..") {
         name = "sgxjvm"
     }
 }
 
+include ':integration-test-enclave'
+include ':integration-test-host'
 include ':protobuf-enclave'
 include ':djvm:djvm-enclave'
 include ':djvm:djvm-host'

@@ -41,6 +41,15 @@ open class Int16 : Encoder<Short>() {
     final override fun write(buffer: ByteBuffer, value: Short): ByteBuffer = buffer.putShort(value)
 }
 
+open class UInt16 : Encoder<Int>() {
+    final override fun size() = 2
+    final override fun read(buffer: ByteBuffer) = buffer.getShort().toInt() and 0xFFFF
+    final override fun write(buffer: ByteBuffer, value: Int): ByteBuffer {
+        require(value >= 0 && value <= 65535) { "Not an unsigned short: $value" }
+        return buffer.putShort((value and 0xFFFF).toShort())
+    }
+}
+
 open class Int32 : Encoder<Int>() {
     final override fun size() = Int.SIZE_BYTES
     final override fun read(buffer: ByteBuffer) = buffer.getInt()

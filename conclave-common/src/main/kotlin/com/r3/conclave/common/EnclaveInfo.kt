@@ -36,8 +36,8 @@ class EnclaveInfo(
         val enclaveMode: EnclaveMode
 ) {
     init {
-        require(productID >= 0 && productID < 65536) { "Product ID not an unsigned 16 bit number: $productID" }
-        require(revocationLevel >= 0) { "Revocation level cannot be negative." }
+        require(productID >= 0 && productID <= 65535) { "Product ID not an unsigned 16 bit number: $productID" }
+        require(revocationLevel >= 0 && revocationLevel <= 65534) { "Invalid Revocation level: $revocationLevel" }
     }
 
     override fun equals(other: Any?): Boolean = other === this || other is EnclaveInfo && other.codeHash == codeHash
