@@ -46,7 +46,7 @@ final class NewHopeDHState implements DHStateHybrid {
 	private byte[] publicKey;
 	private byte[] privateKey;
 	private KeyType keyType;
-	
+
 	/**
 	 * Special version of NewHopeTor that allows explicit random data
 	 * to be specified for test vectors.
@@ -54,7 +54,7 @@ final class NewHopeDHState implements DHStateHybrid {
 	private static class NewHopeWithPrivateKey extends NewHopeTor {
 
 		byte[] randomData;
-		
+
 		public NewHopeWithPrivateKey(byte[] randomData)
 		{
 			this.randomData = randomData;
@@ -76,7 +76,7 @@ final class NewHopeDHState implements DHStateHybrid {
 		privateKey = null;
 		keyType = KeyType.None;
 	}
-	
+
 	private boolean isAlice() {
 		return keyType == KeyType.AlicePrivate || keyType == KeyType.AlicePublic;
 	}
@@ -164,14 +164,6 @@ final class NewHopeDHState implements DHStateHybrid {
 	}
 
 	@Override
-	public void getPrivateKey(byte[] key, int offset) {
-		if (privateKey != null)
-			System.arraycopy(privateKey, 0, key, offset, getPrivateKeyLength());
-		else
-			Arrays.fill(key, 0, getPrivateKeyLength(), (byte)0);
-	}
-
-	@Override
 	public void setPrivateKey(byte[] key, int offset) {
 		clearKey();
 		// Guess the key type from the length of the test data.
@@ -181,13 +173,6 @@ final class NewHopeDHState implements DHStateHybrid {
 			keyType = KeyType.BobPrivate;
 		privateKey = new byte [getPrivateKeyLength()];
 		System.arraycopy(key, 0, privateKey, 0, privateKey.length);
-	}
-
-	@Override
-	public void setToNullPublicKey() {
-		// Null public keys are not supported by New Hope.
-		// Destroy the current values but otherwise ignore.
-		clearKey();
 	}
 
 	@Override

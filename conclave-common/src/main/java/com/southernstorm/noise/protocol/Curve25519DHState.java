@@ -31,8 +31,8 @@ import com.southernstorm.noise.crypto.Curve25519;
  */
 class Curve25519DHState implements DHState {
 
-	private byte[] publicKey;
-	private byte[] privateKey;
+	private final byte[] publicKey;
+	private final byte[] privateKey;
 	private int mode;
 
 	/**
@@ -89,23 +89,11 @@ class Curve25519DHState implements DHState {
 		mode = 0x01;
 	}
 
-	@Override
-	public void getPrivateKey(byte[] key, int offset) {
-		System.arraycopy(privateKey, 0, key, offset, 32);
-	}
-
-	@Override
+    @Override
 	public void setPrivateKey(byte[] key, int offset) {
 		System.arraycopy(key, offset, privateKey, 0, 32);
 		Curve25519.eval(publicKey, 0, privateKey, null);
 		mode = 0x03;
-	}
-
-	@Override
-	public void setToNullPublicKey() {
-		Arrays.fill(publicKey, (byte)0);
-		Arrays.fill(privateKey, (byte)0);
-		mode = 0x01;
 	}
 
 	@Override
