@@ -13,6 +13,8 @@ import java.security.NoSuchAlgorithmException;
  * which allows for authenticated and additional data.
  */
 class AESGCMCipherState implements CipherState {
+    public static final int KEY_LENGTH = 32;
+    public static final int MAC_LENGTH = 16;
     private final Cipher cipher;
     private SecretKeySpec keySpec;
     private long nonce;
@@ -43,7 +45,7 @@ class AESGCMCipherState implements CipherState {
      */
     @Override
     public int getKeyLength() {
-        return 32;
+        return KEY_LENGTH;
     }
 
     /**
@@ -54,7 +56,7 @@ class AESGCMCipherState implements CipherState {
      */
     @Override
     public int getMACLength() {
-        return hasKey() ? 16 : 0;
+        return hasKey() ? MAC_LENGTH : 0;
     }
 
     /**
