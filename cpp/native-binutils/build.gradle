@@ -7,9 +7,17 @@ def cppBuildDir = project(":cpp").buildDir
 jar {
     dependsOn(":cpp:compileLinuxSgxSimulation")
     def ldBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/external/toolset/ld"
+    def cygwinDir = "$cppBuildDir/../cygwin"
     into "com/r3/sgx/binutils", {
         from(ldBuildDir) {
             include "ld"
+        }
+        from(cygwinDir) {
+           include "*.dll"
+           include "ld.exe"
+           include "opensslw.exe"
+           include "opensslw"
+           include "ldscripts/*"
         }
     }
 }

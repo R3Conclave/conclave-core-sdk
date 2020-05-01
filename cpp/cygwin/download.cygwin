@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+dist=$(pwd)
+temp=$(mktemp -d)
+
+mirror=http://ftp.fau.de/cygwin/x86_64/release
+
+packages=(
+binutils/binutils-2.34+1git.de9c1b7cfe-1.tar.xz
+openssl/openssl-1.1.1f-1.tar.xz
+openssl/libssl1.1/libssl1.1-1.1.1f-1.tar.xz
+gcc/libgcc1/libgcc1-9.3.0-2.tar.xz
+zlib/zlib0/zlib0-1.2.11-1.tar.xz
+libiconv/libiconv2/libiconv2-1.14-3.tar.xz
+gettext/libintl8/libintl8-0.19.8.1-2.tar.xz
+gcc/libstdc++6/libstdc++6-9.3.0-2.tar.xz
+cygwin/cygwin-3.1.4-1.tar.xz
+)
+
+pushd $temp
+for pkg in ${packages[@]} ; do
+    wget $mirror/$pkg 2>&1 >/dev/null
+    tar xf $(basename $pkg)  
+done
+
+mkdir $dist/ldscripts 2> /dev/null
+
+cp usr/bin/cygcrypto-1.1.dll $dist/
+cp usr/bin/cyggcc_s-seh-1.dll $dist/
+cp usr/bin/cygiconv-2.dll $dist/
+cp usr/bin/cygintl-8.dll $dist/
+cp usr/bin/cygssl-1.1.dll $dist/
+cp usr/bin/cygstdc++-6.dll $dist/
+cp usr/bin/cygwin1.dll $dist/
+cp usr/bin/cygz.dll $dist/
+cp usr/bin/ld.exe $dist/
+cp -r usr/x86_64-pc-cygwin/lib/ldscripts/elf_x86_64.x* $dist/ldscripts/
+cp usr/bin/openssl.exe $dist/opensslw.exe
+
+popd
+rm -rf $tmp

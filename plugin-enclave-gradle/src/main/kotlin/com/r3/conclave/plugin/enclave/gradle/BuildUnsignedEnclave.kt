@@ -37,6 +37,7 @@ open class BuildUnsignedEnclave @Inject constructor(objects: ObjectFactory) : Co
             spec.commandLine(listOf(
                 inputLd.get(),
                 "-pie", "--entry=enclave_entry",
+                "-m", "elf_x86_64",
                 "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic",
                 "-o", outputEnclave.asFile.get())
                 + optionsForStripped
