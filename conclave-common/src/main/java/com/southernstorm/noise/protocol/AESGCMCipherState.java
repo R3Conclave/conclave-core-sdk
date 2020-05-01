@@ -15,17 +15,15 @@ import java.security.NoSuchAlgorithmException;
 class AESGCMCipherState implements CipherState {
     private final Cipher cipher;
     private SecretKeySpec keySpec;
-    private byte[] iv;
     private long nonce;
 
-    AESGCMCipherState() throws NoSuchAlgorithmException {
+    AESGCMCipherState() {
         try {
             cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        } catch (NoSuchPaddingException e) {
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e);  // Should never happen.
         }
         nonce = 0;
-        iv = new byte[96 / 8];  // 96 bit IV is the most efficient for AES/GCM.
     }
 
     /**
@@ -87,12 +85,44 @@ class AESGCMCipherState implements CipherState {
         return keySpec != null;
     }
 
+    // Called to encrypt a new packet.
     private void initCipher(int mode, byte[] authenticatedData) throws InvalidKeyException, InvalidAlgorithmParameterException {
         // We expect the nonce to overflow and wrap, we'll happily use the negative numbers because it's only
         // non-repetition that matters, the actual value is unimportant. If we reach -1 then we'd have to
-        // encrypt again with a nonce of zero, which would reveal valuable hints to cryptanalysts.
+        // encrypt again with a nonce of zero, which would reveal valuable hints to cryptanalysts (see below) so we
+        // refuse to proceed. This should never happen in any real program as 2^64 Noise packets is way larger than
+        // any normal session would need.
         if (nonce == -1L)
             throw new IllegalStateException("Cannot encrypt more than 2^64 - 1 times");
+
+        // We use a 96 bit IV but only fill out 64 bits of it. This is the most efficient and correct way to use
+        // AES/GCM but it's not obvious why. A full explanation is here:
+        //
+        // https://crypto.stackexchange.com/questions/41601/aes-gcm-recommended-iv-size-why-12-bytes
+        //
+        // The gist of it is:
+        //
+        // 1. AES/GCM fundamentally requires a 96 bit IV and will have to internally 'resize' whatever it's given to
+        //    this size if it doesn't match. This is because it's embedding CTR mode which requires a 128 bit IV and
+        //    then uses the last 4 bytes as the CTR counter, leaving the other 96 bits for the exposed IV.
+        //
+        // 2. This is fine because the only requirement on the IV is that you don't reuse them with the same AES key.
+        //    A simple way to satisfy that is use a counter as we do here. In practice 2^64 is so large that the user
+        //    will never exceed that number of encryptions so there's no point going beyond that, and using the
+        //    native 'long' type means we can increment the nonce using a standard incl opcode which is fast. Otherwise
+        //    we'd need to use BigInteger as Java doesn't expose 96 bit integers.
+        //
+        // We allocate a new array and new GCMParameterSpec each time because GCMParameterSpec is immutable and copies
+        // the iv array into itself. This is unfortunate, but hopefully C2 can inline and scalar replace the array
+        // + object allocation to avoid creating unnecessary garbage.
+        //
+        // Note that the nonce here must only be unique within the scope of a single Noise session. That's because
+        // each Noise handshake establishes a new random AES session key, and it's the combination of AES key plus IV
+        // that should be unique.
+        //
+        // What happens if it's not unique? Then the same input plaintext would encrypt the same output ciphertext.
+        // Repetition of ciphertext blocks can leak hints about the plaintext to cryptanalysts.
+        final byte[] iv = new byte[96 / 8];
         iv[4] = (byte)(nonce >> 56);
         iv[5] = (byte)(nonce >> 48);
         iv[6] = (byte)(nonce >> 40);
@@ -221,13 +251,9 @@ class AESGCMCipherState implements CipherState {
      */
     @Override
     public CipherState fork(byte[] key, int offset) {
-        try {
-            CipherState cipher = new AESGCMCipherState();
-            cipher.initializeKey(key, offset);
-            return cipher;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
+        CipherState cipher = new AESGCMCipherState();
+        cipher.initializeKey(key, offset);
+        return cipher;
     }
 
     /**
@@ -236,8 +262,7 @@ class AESGCMCipherState implements CipherState {
      * This function is intended for testing purposes only.  If the nonce
      * value goes backwards then security may be compromised.
      *
-     * @param nonce The new nonce value, which must be greater than or equal
-     *              to the current value.
+     * @param nonce The new nonce value.
      */
     @Override
     public void setNonce(long nonce) {
@@ -249,12 +274,11 @@ class AESGCMCipherState implements CipherState {
      */
     @Override
     public void destroy() {
-        Noise.destroy(iv);
         // There doesn't seem to be a standard API to clean out a Cipher.
         // So we instead set the key and IV to all-zeroes to hopefully
         // destroy the sensitive data in the cipher instance.
         keySpec = new SecretKeySpec(new byte[32], "AES");
-        IvParameterSpec params = new IvParameterSpec(iv);
+        GCMParameterSpec params = new GCMParameterSpec(128, new byte[96 / 8]);
         try {
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, params);
         } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {

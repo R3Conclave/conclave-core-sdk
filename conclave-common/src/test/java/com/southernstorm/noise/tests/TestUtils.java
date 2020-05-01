@@ -26,8 +26,6 @@ import com.r3.conclave.common.internal.UtilsKt;
 
 import java.nio.charset.StandardCharsets;
 
-import javax.xml.bind.DatatypeConverter;
-
 public class TestUtils {
 	/**
 	 * Convert a string into a binary byte array.

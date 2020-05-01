@@ -22,6 +22,7 @@
 
 package com.southernstorm.noise.tests;
 
+import static com.r3.conclave.common.internal.UtilsKt.parseHex;
 import com.southernstorm.json.JsonReader;
 import com.southernstorm.noise.protocol.CipherState;
 import com.southernstorm.noise.protocol.CipherStatePair;
@@ -33,7 +34,6 @@ import javax.crypto.ShortBufferException;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 
-import static com.southernstorm.noise.tests.TestUtils.parseHexBinary;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -62,7 +62,7 @@ public class VectorTests {
     /**
      * Information about a Noise test vector that was parsed from a JSON stream.
      */
-    private class TestVector {
+    private static class TestVector {
         public String name;
         public String pattern;
         public String dh;
@@ -314,49 +314,49 @@ public class VectorTests {
 					vec.fallback_pattern = reader.nextString();
 					break;
 				case "init_prologue":
-					vec.init_prologue = parseHexBinary(reader.nextString());
+					vec.init_prologue = parseHex(reader.nextString());
 					break;
 				case "init_ephemeral":
-					vec.init_ephemeral = parseHexBinary(reader.nextString());
+					vec.init_ephemeral = parseHex(reader.nextString());
 					break;
 				case "init_hybrid_ephemeral":
-					vec.init_hybrid = parseHexBinary(reader.nextString());
+					vec.init_hybrid = parseHex(reader.nextString());
 					break;
 				case "init_static":
-					vec.init_static = parseHexBinary(reader.nextString());
+					vec.init_static = parseHex(reader.nextString());
 					break;
 				case "init_remote_static":
-					vec.init_remote_static = parseHexBinary(reader.nextString());
+					vec.init_remote_static = parseHex(reader.nextString());
 					break;
 				case "init_psk":
-					vec.init_psk = parseHexBinary(reader.nextString());
+					vec.init_psk = parseHex(reader.nextString());
 					break;
 				case "init_ssk":
-					vec.init_ssk = parseHexBinary(reader.nextString());
+					vec.init_ssk = parseHex(reader.nextString());
 					break;
 				case "resp_prologue":
-					vec.resp_prologue = parseHexBinary(reader.nextString());
+					vec.resp_prologue = parseHex(reader.nextString());
 					break;
 				case "resp_ephemeral":
-					vec.resp_ephemeral = parseHexBinary(reader.nextString());
+					vec.resp_ephemeral = parseHex(reader.nextString());
 					break;
 				case "resp_hybrid_ephemeral":
-					vec.resp_hybrid = parseHexBinary(reader.nextString());
+					vec.resp_hybrid = parseHex(reader.nextString());
 					break;
 				case "resp_static":
-					vec.resp_static = parseHexBinary(reader.nextString());
+					vec.resp_static = parseHex(reader.nextString());
 					break;
 				case "resp_remote_static":
-					vec.resp_remote_static = parseHexBinary(reader.nextString());
+					vec.resp_remote_static = parseHex(reader.nextString());
 					break;
 				case "resp_psk":
-					vec.resp_psk = parseHexBinary(reader.nextString());
+					vec.resp_psk = parseHex(reader.nextString());
 					break;
 				case "resp_ssk":
-					vec.resp_ssk = parseHexBinary(reader.nextString());
+					vec.resp_ssk = parseHex(reader.nextString());
 					break;
 				case "handshake_hash":
-					vec.handshake_hash = parseHexBinary(reader.nextString());
+					vec.handshake_hash = parseHex(reader.nextString());
 					break;
 				case "fail":
 					vec.failure_expected = reader.nextBoolean();
@@ -372,9 +372,9 @@ public class VectorTests {
 						while (reader.hasNext()) {
 							name = reader.nextName();
 							if (name.equals("payload"))
-								msg.payload = parseHexBinary(reader.nextString());
+								msg.payload = parseHex(reader.nextString());
 							else if (name.equals("ciphertext"))
-								msg.ciphertext = parseHexBinary(reader.nextString());
+								msg.ciphertext = parseHex(reader.nextString());
 							else
 								reader.skipValue();
 						}
