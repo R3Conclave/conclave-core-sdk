@@ -22,25 +22,13 @@
 
 package com.southernstorm.noise.tests;
 
+import com.r3.conclave.common.internal.UtilsKt;
+
 import java.nio.charset.StandardCharsets;
 
 import javax.xml.bind.DatatypeConverter;
 
 public class TestUtils {
-	public static byte[] parseHexBinary(final String hex) {
-		if (hex.length() % 2 != 0)
-			throw new IllegalArgumentException("A hex string must contain an even number of characters: " + hex);
-		byte[] out = new byte[hex.length() / 2];
-		for (int i = 0; i < hex.length(); i += 2) {
-			int high = Character.digit(hex.charAt(i), 16);
-			int low = Character.digit(hex.charAt(i + 1), 16);
-			if (high == -1 || low == -1)
-				throw new IllegalArgumentException("A hex string can only contain the characters 0-9, A-F, a-f: " + hex);
-			out[i / 2] = (byte) (high * 16 + low);
-		}
-		return out;
-	}
-
 	/**
 	 * Convert a string into a binary byte array.
 	 *
@@ -54,7 +42,7 @@ public class TestUtils {
 	public static byte[] stringToData(String data)
 	{
 		if (data.startsWith("0x")) {
-			return parseHexBinary(data.substring(2));
+			return UtilsKt.parseHex(data.substring(2));
 		} else {
 			return data.getBytes(StandardCharsets.UTF_8);
 		}

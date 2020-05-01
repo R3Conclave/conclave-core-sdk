@@ -87,7 +87,7 @@ class AESGCMCipherState implements CipherState {
         return keySpec != null;
     }
 
-    private void initCipher(int mode, byte[] ad) throws InvalidKeyException, InvalidAlgorithmParameterException {
+    private void initCipher(int mode, byte[] authenticatedData) throws InvalidKeyException, InvalidAlgorithmParameterException {
         // We expect the nonce to overflow and wrap, we'll happily use the negative numbers because it's only
         // non-repetition that matters, the actual value is unimportant. If we reach -1 then we'd have to
         // encrypt again with a nonce of zero, which would reveal valuable hints to cryptanalysts.
@@ -103,8 +103,8 @@ class AESGCMCipherState implements CipherState {
         iv[11] = (byte)nonce;
         ++nonce;
         cipher.init(mode, keySpec, new GCMParameterSpec(128, iv));
-        if (ad != null)
-            cipher.updateAAD(ad);
+        if (authenticatedData != null)
+            cipher.updateAAD(authenticatedData);
     }
 
     /**
@@ -146,6 +146,7 @@ class AESGCMCipherState implements CipherState {
             return length;
         }
 
+        // Need space to store the authentication tag.
         if (space < 16 || length > (space - 16))
             throw new ShortBufferException();
 
@@ -258,6 +259,7 @@ class AESGCMCipherState implements CipherState {
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, params);
         } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
             // Shouldn't happen.
+            throw new IllegalStateException(e);
         }
     }
 }
