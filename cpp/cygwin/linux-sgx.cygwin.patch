@@ -1,0 +1,84 @@
+diff --git a/buildenv.mk b/buildenv.mk
+index 767bfc4f..6c038c95 100644
+--- a/buildenv.mk
++++ b/buildenv.mk
+@@ -163,8 +163,12 @@ endif
+ CFLAGS   += $(COMMON_FLAGS)
+ CXXFLAGS += $(COMMON_FLAGS)
+ 
++ifeq ($(shell uname -o),Cygwin)
++COMMON_LDFLAGS :=
++else
+ # Enable the security flags
+ COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
++endif
+ 
+ # mitigation options
+ MITIGATION_INDIRECT ?= 0
+diff --git a/common/inc/internal/se_event.h b/common/inc/internal/se_event.h
+index e2a15019..27c85f1c 100644
+--- a/common/inc/internal/se_event.h
++++ b/common/inc/internal/se_event.h
+@@ -34,7 +34,9 @@
+ 
+ # include <stdlib.h>
+ # include <unistd.h>
+-# include <sys/syscall.h>
++#ifndef __CYGWIN__
++  #include <sys/syscall.h>
++#endif
+ typedef void * se_handle_t;
+ 
+ #include "sgx_defs.h"
+diff --git a/common/inc/internal/se_string.h b/common/inc/internal/se_string.h
+index 8556e49c..27f24867 100644
+--- a/common/inc/internal/se_string.h
++++ b/common/inc/internal/se_string.h
+@@ -41,6 +41,10 @@
+ typedef int errno_t;
+ #endif
+ 
++#ifdef __CYGWIN__
++  extern size_t strnlen(const char*,size_t);
++#endif
++
+ static inline errno_t strcat_s(char *dst, size_t max_size, const char *src)
+ {
+     if(strlen(dst)+strlen(src)+1>max_size)return -1;
+diff --git a/common/inc/internal/se_thread.h b/common/inc/internal/se_thread.h
+index df39e1c3..40ecfbfe 100644
+--- a/common/inc/internal/se_thread.h
++++ b/common/inc/internal/se_thread.h
+@@ -40,7 +40,9 @@
+ #endif
+ #include <string.h>
+ #include <unistd.h>
+-#include <sys/syscall.h>
++#ifndef __CYGWIN__
++  #include <sys/syscall.h>
++#endif
+ #include <pthread.h>
+ typedef pthread_mutex_t se_mutex_t;
+ typedef pthread_cond_t se_cond_t;
+diff --git a/psw/urts/linux/isgx_user.h b/psw/urts/linux/isgx_user.h
+index 007dfd86..a01b9302 100644
+--- a/psw/urts/linux/isgx_user.h
++++ b/psw/urts/linux/isgx_user.h
+@@ -60,9 +60,14 @@
+ #ifndef _UAPI_ASM_X86_SGX_H
+ #define _UAPI_ASM_X86_SGX_H
+ 
+-
+-#include <linux/types.h>
+-#include <linux/ioctl.h>
++#ifndef __CYGWIN__
++  #include <linux/types.h>
++  #include <linux/ioctl.h>
++#else
++  #include <sys/types.h>
++  typedef __uint64_t __u64;
++  typedef __uint16_t __u16;
++#endif
+ 
+ #define SGX_MAGIC 0xA4
+ 
