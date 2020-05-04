@@ -81,6 +81,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         // Dummy key
         val createDummyKeyTask = target.createTask<GenerateDummyMrsignerKey>("createDummyKey") { task ->
+            task.dependsOn(copySgxToolsTask)
             task.opensslTool.set(opensslToolFile)
             task.outputKey.set(baseDirectory.resolve("dummy_key.pem").toFile())
         }
