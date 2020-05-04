@@ -170,7 +170,12 @@ class AESGCMCipherState implements CipherState {
     public int encryptWithAd(byte[] ad, byte[] plaintext, int plaintextOffset, byte[] ciphertext, int ciphertextOffset, int length) throws ShortBufferException {
         int space = ciphertextOffset <= ciphertext.length ? ciphertext.length - ciphertextOffset : 0;
         if (keySpec == null) {
-            // The key is not set yet - return the plaintext as-is.
+            // The key is not set yet - return the plaintext as-is. This looks wrong but is a part of how the Noise
+            // spec is written. See the definition of CipherState: http://noiseprotocol.org/noise.html#the-cipherstate-object
+            // The code doesn't have to match the spec but it's how Noise-Java expects to work. It's not an issue
+            // because CipherState is only used internally and the test vectors cover the state machine completely.
+            //
+            // Discussion here: https://moderncrypto.org/mail-archive/noise/2020/002106.html
             if (length > space)
                 throw new ShortBufferException();
             if (plaintext != ciphertext || plaintextOffset != ciphertextOffset)
