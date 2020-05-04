@@ -1,10 +1,11 @@
 package com.r3.conclave.samples.djvm.host
 
+import com.google.protobuf.ByteString
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.samples.djvm.common.MessageType
-import com.r3.conclave.samples.djvm.common.Status
-import java.nio.ByteBuffer
+import com.r3.conclave.samples.djvm.common.proto.ClearJars
+import com.r3.conclave.samples.djvm.common.proto.Request
+import com.r3.conclave.samples.djvm.common.proto.TaskResult
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -16,34 +17,27 @@ class DjvmEnclaveHost : AutoCloseable {
     }
 
     fun loadJarIntoEnclave(jarFile: Path) {
-        val jarBytes = Files.readAllBytes(jarFile)
-        val message = ByteBuffer
-                .allocate(Int.SIZE_BYTES + jarBytes.size)
-                .putInt(MessageType.JAR.ordinal)
-                .put(jarBytes)
-                .array()
-        val response = checkNotNull(enclaveHost.callEnclave(message)) { "Was expecting a response from the enclave" }
-        val reply = ByteBuffer.wrap(response).getInt()
-        check(reply == Status.OK.ordinal) { "Unable to load Jar into enclave!" }
+        callEnclave {
+            sendJarBuilder.data = ByteString.copyFrom(Files.readAllBytes(jarFile))
+        }
     }
 
-    fun runTaskInEnclave(className: String, input: String): String {
-        val classNameBytes = className.toByteArray()
-        val inputBytes = input.toByteArray()
-        val message = ByteBuffer
-                .allocate(Int.SIZE_BYTES + Int.SIZE_BYTES + classNameBytes.size + inputBytes.size)
-                .putInt(MessageType.TASK.ordinal)
-                .putInt(classNameBytes.size)
-                .put(classNameBytes)
-                .put(inputBytes)  //  We don't need to send the inputBytes size as the enclave can use the remaining bytes
-                .array()
-        val response = checkNotNull(enclaveHost.callEnclave(message)) { "Was expecting a response from the enclave" }
-        return String(response)
+    fun runTaskInEnclave(className: String, input: String): String? {
+        val response = callEnclave {
+            executeTaskBuilder.className = className
+            executeTaskBuilder.input = input
+        }
+        return TaskResult.parseFrom(response!!).let { if (it.hasResult()) it.result else null }
+    }
+
+    private inline fun callEnclave(block: Request.Builder.() -> Unit): ByteArray? {
+        val request = Request.newBuilder()
+        block(request)
+        return enclaveHost.callEnclave(request.build().toByteArray())
     }
 
     override fun close() {
-        // An empty JAR request does a clear of the enclave state
-        enclaveHost.callEnclave(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(MessageType.JAR.ordinal).array())
+        callEnclave { clearJars = ClearJars.getDefaultInstance() }
         // destroy can trigger an assertion failure in Avian
 //        enclaveHost.close()
     }

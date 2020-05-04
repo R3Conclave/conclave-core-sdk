@@ -2,11 +2,11 @@ package com.r3.conclave.samples.djvm.enclave
 
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.internal.getLengthPrefixBytes
-import com.r3.conclave.common.internal.getRemainingBytes
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.samples.djvm.common.MessageType
-import com.r3.conclave.samples.djvm.common.Status
+import com.r3.conclave.samples.djvm.common.proto.ExecuteTask
+import com.r3.conclave.samples.djvm.common.proto.Request
+import com.r3.conclave.samples.djvm.common.proto.SendJar
+import com.r3.conclave.samples.djvm.common.proto.TaskResult
 import com.r3.sgx.utils.classloaders.MemoryClassLoader
 import com.r3.sgx.utils.classloaders.MemoryURL
 import net.corda.djvm.SandboxConfiguration
@@ -50,50 +50,45 @@ class DjvmEnclave : EnclaveCall, Enclave() {
     private val userJars = ArrayList<MemoryURL>()
 
     override fun invoke(bytes: ByteArray): ByteArray? {
-        val input = ByteBuffer.wrap(bytes)
-        val messageType = input.getInt()
-        return when (messageType) {
-            MessageType.JAR.ordinal -> receiveJar(input)
-            MessageType.TASK.ordinal -> receiveTask(input)
-            else -> throw IllegalArgumentException("Unknown message type: $messageType")
-        }
-    }
-
-    private fun receiveJar(input: ByteBuffer): ByteArray? {
-        return try {
-            val jarBytes = input.getRemainingBytes()
-            if (jarBytes.isNotEmpty()) {
-                userJars.add(createMemoryURL(jarBytes))
-                reply(Status.OK)
-            } else {
+        val request = Request.parseFrom(bytes)
+        val response = when (request.requestsCase!!) {
+            Request.RequestsCase.SEND_JAR -> {
+                receiveJar(request.sendJar)
+                null
+            }
+            Request.RequestsCase.CLEAR_JARS -> {
                 DJVMMemoryURLStreamHandler.clear()
                 null
             }
-        } catch (t: Throwable) {
-            reply(Status.FAIL)
+            Request.RequestsCase.EXECUTE_TASK -> receiveTask(request.executeTask)
+            Request.RequestsCase.REQUESTS_NOT_SET -> throw IllegalArgumentException("requests not set")
         }
+        return response?.build()?.toByteArray()
     }
 
-    private fun receiveTask(input: ByteBuffer): ByteArray {
-        val className = String(input.getLengthPrefixBytes())
-        val taskInput = String(input.getRemainingBytes())
+    private fun receiveJar(request: SendJar) {
+        userJars += createMemoryURL(request.data.toByteArray())
+    }
 
+    private fun receiveTask(request: ExecuteTask): TaskResult.Builder? {
         val djvmMemoryClassLoader = DJVMBootstrapClassLoader(listOf(bootstrapJar))
         val userSource = DJVMUserClassSource(userJars)
         DJVMBase.setupClassLoader(userSource, djvmMemoryClassLoader, emptyList(), parentConfiguration)
 
-        val result: Any? = try {
-            SandboxRunner().run(className, taskInput)
+        val result = try {
+            SandboxRunner().run(request.className, request.input)?.toString()
         } catch (t: Throwable) {
             t.toString()
         }
 
         DJVMBase.destroyRootContext()
 
-        return result.toString().toByteArray()
+        return TaskResult.newBuilder().apply {
+            if (result != null) {
+                setResult(result)
+            }
+        }
     }
-
-    private fun reply(status: Status): ByteArray = ByteBuffer.allocate(Int.SIZE_BYTES).putInt(status.ordinal).array()
 }
 
 class DJVMBootstrapClassLoader(memoryURLs: List<MemoryURL>) : MemoryClassLoader(memoryURLs), ApiSource {

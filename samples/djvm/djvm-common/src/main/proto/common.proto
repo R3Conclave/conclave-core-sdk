@@ -1,0 +1,39 @@
+syntax = "proto2";
+
+option java_multiple_files = true;
+option java_package = "com.r3.conclave.samples.djvm.common.proto";
+
+message Request {
+    oneof requests {
+        SendJar send_jar = 1;
+        ClearJars clear_jars = 2;
+        ExecuteTask execute_task = 3;
+    }
+}
+
+/**
+ * Send a new jar to the enclave.
+ */
+message SendJar {
+    /**
+     * A byte array representation of the jar file
+     */
+    required bytes data = 1;
+}
+
+/** Causes the enclave to clear its jar storage */
+message ClearJars {
+
+}
+
+/**
+ * Execute task in the enclave
+ */
+message ExecuteTask {
+    required string className = 1;
+    required string input = 2;
+}
+
+message TaskResult {
+    optional string result = 1;
+}

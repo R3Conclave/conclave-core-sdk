@@ -35,7 +35,6 @@ if (projectVersion == null) {
 
 include ':integration-test-enclave'
 include ':integration-test-host'
-include ':protobuf-enclave'
 include ':djvm:djvm-enclave'
 include ':djvm:djvm-host'
 include ':djvm:djvm-common'

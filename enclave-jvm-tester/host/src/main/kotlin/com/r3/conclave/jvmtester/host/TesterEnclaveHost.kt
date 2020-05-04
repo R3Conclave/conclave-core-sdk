@@ -37,7 +37,7 @@ class TesterEnclaveHost : AutoCloseable {
                 executeTestBuilder.input = ByteString.copyFrom(test.getTestInput())
             }
         }
-        return TestResult.parseFrom(response).result.toByteArray()
+        return TestResult.parseFrom(response!!).result.toByteArray()
     }
 
     private inline fun callEnclave(block: Request.Builder.() -> Unit): ByteArray? {
