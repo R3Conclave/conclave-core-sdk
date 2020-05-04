@@ -26,8 +26,7 @@ def modulesToSubstitute = [
         'com.r3.conclave:api-core-enclave',
         'com.r3.conclave:api-core-host',
         'com.r3.conclave:enclave-utils',
-        'com.r3.conclave:enclave-testing',
-        'com.r3.conclave:enclavelet-host-common'
+        'com.r3.conclave:enclave-testing'
 ]
 
 def sgxModeProperty = project.property('sgx_mode')

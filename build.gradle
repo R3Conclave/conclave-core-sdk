@@ -301,10 +301,6 @@ List<PublishedProject> publishedProjects = [
                 description: 'Enclave testing library',
         ),
         new PublishedProject(
-                projectPath: ':enclavelet-host:enclavelet-host-common',
-                description: 'Enclave testing library',
-        ),
-        new PublishedProject(
                 projectPath: ':plugin-enclave-gradle',
                 description: 'Conclave Gradle plugin for creating enclaves'
         ),

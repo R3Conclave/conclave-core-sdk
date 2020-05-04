@@ -7,6 +7,8 @@ dependencies {
     // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
     implementation project(":conclave-enclave")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
     // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"

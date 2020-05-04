@@ -36,12 +36,7 @@ include 'enclave-utils'
 include 'enclave-testing'
 include 'enclave-dynamic-testing'
 
-include 'enclavelet-host:enclavelet-host-common'
-include 'enclavelet-host:enclavelet-host-client'
-include 'enclavelet-host:enclavelet-host-server'
-
 include 'containers:aesmd'
-include 'containers:enclavelet-host'
 include 'containers:sgxjvm-build'
 include 'containers:sgxjvm-devenv'
 include 'containers:kubernetes-sgx-device-plugin'
@@ -49,6 +44,5 @@ include 'containers:kubernetes-sgx-device-plugin'
 include 'hsm-tool'
 
 include 'load-test:load-test-runner'
-include 'load-test:load-test-sampler-rng'
 
 include 'plugin-enclave-gradle'

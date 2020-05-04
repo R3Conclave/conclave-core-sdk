@@ -99,7 +99,6 @@ subprojects {
 task publish {
     def publishedImages = [
         "aesmd",
-        "enclavelet-host",
         "kubernetes-sgx-device-plugin",
         "sgxjvm-build",
         "sgxjvm-devenv"
