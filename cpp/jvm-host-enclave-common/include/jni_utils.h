@@ -4,6 +4,7 @@
 #include <exception>
 
 void raiseException(JNIEnv *jniEnv, const char *message);
+void raiseException(JNIEnv *jniEnv, const char* message, const char* cls);
 void checkJniException(JNIEnv *jniEnv);
 
 template<class T>

@@ -32,6 +32,7 @@ subprojects { Project project ->
         task.dependsOn(":cpp:compileHost$type")
         def linuxSgxBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/build/linux"
         def hostBuildDir = "$cppBuildDir/$type/jvm-host"
+        def hostSharedBuildDir = "$cppBuildDir/$type/jvm-host-shared"
         def libDir = "/usr/lib/x86_64-linux-gnu"
         def simSuffix = type == "Simulation" ? "_sim" : ""
         task.into "com/r3/sgx/host-libraries/$type", {
@@ -44,9 +45,13 @@ subprojects { Project project ->
                 rename "libsgx_launch${simSuffix}.so", "libsgx_launch${simSuffix}.so.1"
                 include "libsgx_urts${simSuffix}.so"
                 include "libsgx_uae_service${simSuffix}.so"
+                include "libsgx_capable.so"
             }
             from (hostBuildDir) {
                 include "libjvm_host.so"
+            }
+            from (hostSharedBuildDir) {
+                include "libjvm_host_shared.so"
             }
             from (libDir) {
                 include "libcrypto.so.1.0.0"

@@ -15,10 +15,14 @@ void checkJniException(JNIEnv *jniEnv) {
     }
 }
 
-void raiseException(JNIEnv *jniEnv, const char *message) {
-    auto exceptionClass = jniEnv->FindClass("java/lang/RuntimeException");
+void raiseException(JNIEnv *jniEnv, const char* message, const char* cls) {
+    auto exceptionClass = jniEnv->FindClass(cls);
     if (exceptionClass == nullptr) {
         throw std::runtime_error("Cannot find exception class");
     }
     jniEnv->ThrowNew(exceptionClass, message);
+}
+
+void raiseException(JNIEnv *jniEnv, const char *message) {
+    raiseException(jniEnv, message, "java/lang/RuntimeException");
 }

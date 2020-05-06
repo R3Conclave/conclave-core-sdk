@@ -250,7 +250,7 @@ It's easy to load then pass data to and from an enclave. Let's start with the sk
  * This class demonstrates how to load an enclave and use it.
  */
 public class Host {
-    public static void main(String[] args) throws InvalidEnclaveException {
+    public static void main(String[] args) throws EnclaveLoadException {
         // TODO: Fill this out
     }
 
@@ -260,7 +260,35 @@ public class Host {
 }
 ```
 
-We'll put this inside the main method:
+At first we will be building and running our enclave in 'simulation' mode. This does not require the platform 
+hardware to support SGX. However, when we want to load either a debug or release build of the enclave we need 
+to ensure the platform supports SGX.
+
+By adding the code below to the main method we can determine whether the platform can load 'debug' and 'release' 
+enclaves. This method reports the actual hardware status even if you are currently working with 'simulation' 
+enclaves.
+
+If SGX is not supported the function throws an exception which describes the reason why. There are a number of 
+common reasons why SGX may not be supported including:
+
+1. The CPU or the system BIOS does not support SGX.
+2. SGX is disabled in the BIOS and must be manually enabled by the user.
+3. SGX is disabled but can be enabled in software.
+
+If SGX is disabled but can be enabled in software the code below attempts to automatically enable SGX support 
+by specifying the 'true' parameter. It might be necessary to run this application with root access and/or reboot 
+the system in order to successfully enable SGX. The exception message will describe if this is the case.
+
+```java
+        try {
+            EnclaveHost.checkPlatformSupportsEnclaves(true);
+            System.out.println("This platform supports enclaves in simulation, debug and release mode.");
+        } catch (EnclaveLoadException e) {
+            System.out.println("This platform currently only supports enclaves in simulation mode: " + e.getMessage());
+        }
+```
+
+To load the enclave we'll put this after the platform check:
 
 ```java
 String className = "com.r3.conclave.sample.enclave.ReverseEnclave";
@@ -274,8 +302,12 @@ try (EnclaveHost enclave = EnclaveHost.load(className)) {
 }
 ```
 
-This code starts by creating an [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) object. It names the class
-to load and then calls `start`, which actually loads and initialises the enclave and the `MyEnclave` class inside it.
+This code starts by creating an [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) object. This names the 
+class and then attempts to load it. This can fail if attempting to load a 'debug' or 'release' enclave and the 
+platform does not support SGX. This is why it is important to perform the platform check we made in the code 
+above. If the enclave does fail to load for any reason then an exception is thrown describing the reason why.
+
+We then call `start` which initialises the enclave and the `MyEnclave` class inside it.
 You can have multiple `EnclaveHost` objects in the same host JVM but they must all use same mode.
 
 Note that an `EnclaveHost` allocates memory out of a pool called the "enclave page cache" which is a machine-wide

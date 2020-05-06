@@ -4,7 +4,6 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.InvalidEnclaveException
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
@@ -13,6 +12,7 @@ import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.*
 import com.r3.sgx.core.host.*
+import com.r3.sgx.core.host.internal.NativeShared
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -77,23 +77,26 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
          * Load the signed enclave for the given enclave class name.
          *
          * @throws IllegalArgumentException if there is no enclave file for the given class name.
-         * @throws InvalidEnclaveException if something goes wrong during the load.
+         * @throws IllegalStateException if multiple enclave files were found for the given class name.
+         * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
+         *                              not support hardware enclaves or if enclave support is disabled.
          */
         @JvmStatic
-        @Throws(InvalidEnclaveException::class)
+        @Throws(EnclaveLoadException::class)
         fun load(enclaveClassName: String): EnclaveHost {
             val (stream, mode) = findEnclaveFile(enclaveClassName)
             val enclaveFile = try {
                 Files.createTempFile(enclaveClassName, "signed.so")
             } catch (e: Exception) {
-                throw InvalidEnclaveException("Unable to load enclave", e)
+                throw EnclaveLoadException("Unable to load enclave", e)
             }
             try {
                 stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
                 return create(enclaveFile, enclaveClassName, mode, tempFile = true)
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
-                throw InvalidEnclaveException("Unable to load enclave", e)
+                if (e is EnclaveLoadException) throw e
+                throw EnclaveLoadException("Unable to load enclave", e)
             }
         }
 
@@ -124,6 +127,37 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
                 // Ignore
             }
         }
+
+        /**
+        * Checks to see if the platform supports hardware based enclaves.
+        *
+        * This method checks to see if the CPU and the BIOS are capable of supporting enclaves and 
+        * whether support has been enabled.
+        *
+        * If enclaves are supported but not enabled some platforms allow support to be enabled via a software
+        * call. This method can optionally be used to attempt to enable support on the platform. 
+        * Enabling enclave support via software may require the application calling this method to
+        * be started with root privileges.
+        *
+        * @param enableSupport Set to true to attempt to enable enclave support on the platform if support is 
+        * currently disabled.
+        *
+        * @throws EnclaveLoadException if enclave support is not available on the platform. The exception message 
+        * gives a detailed reason why enclaves are not supported.
+        */
+        @JvmStatic
+        @Throws(EnclaveLoadException::class)
+        fun checkPlatformSupportsEnclaves(enableSupport: Boolean) {
+            try {
+                // Note the EnclaveLoadMode does not matter in this case as we are always checking the hardware
+                NativeShared.checkPlatformSupportsEnclaves(enableSupport);
+            } catch (e: EnclaveLoadException) {
+                throw e
+            } catch (e: Exception) {
+                throw EnclaveLoadException("Unable to check platform support", e)
+            }
+        }
+
     }
 
     private val stateManager = StateManager<State>(New)
@@ -151,7 +185,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
      * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
      * can be provided.
      */
-    @Throws(InvalidEnclaveException::class)
+    @Throws(EnclaveLoadException::class)
     @Synchronized
     // TODO MailHandler parameter
     fun start(spid: OpaqueBytes?, attestationKey: String?) {
@@ -175,7 +209,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             log.info(enclaveInstanceInfo.toString())
             _enclaveInstanceInfo = enclaveInstanceInfo
         } catch (e: Exception) {
-            throw InvalidEnclaveException("Unable to start enclave", e)
+            throw EnclaveLoadException("Unable to start enclave", e)
         }
     }
 

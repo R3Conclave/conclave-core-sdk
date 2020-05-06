@@ -23,6 +23,7 @@ find_package(JNI REQUIRED)
 # jvm_host_enclave_common_host.a the host side of things, linked against proper libc
 add_library(jvm_host_enclave_common_host
         src/sgx_errors.cpp
+        src/sgx_device_status.cpp
         src/jni_utils.cpp)
 target_include_directories(jvm_host_enclave_common_host PUBLIC
         include
@@ -35,6 +36,7 @@ add_dependencies(jvm_host_enclave_common_host linux-sgx-ext)
 # jvm_host_enclave_common_enclave.a the enclave side of things, linked against tstdc
 add_library(jvm_host_enclave_common_enclave
         src/sgx_errors.cpp
+        src/sgx_device_status.cpp
         src/jni_utils.cpp)
 target_include_directories(jvm_host_enclave_common_enclave PUBLIC
         ${JAVA_INCLUDE_PATH}

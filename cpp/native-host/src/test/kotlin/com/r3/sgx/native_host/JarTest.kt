@@ -3,6 +3,7 @@ package com.r3.sgx.native_host
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
+import java.nio.file.Files
 import java.util.jar.JarInputStream
 
 class JarTest {
@@ -22,11 +23,13 @@ class JarTest {
             val prefix = "com/r3/sgx/host-libraries/$build"
             val libraries = mutableListOf(
                     "$prefix/libjvm_host.so",
+                    "$prefix/libjvm_host_shared.so",
                     "$prefix/libsgx_enclave_common.so.1",
                     "$prefix/libsgx_epid${simulationSuffix}.so.1",
                     "$prefix/libsgx_launch${simulationSuffix}.so.1",
                     "$prefix/libsgx_uae_service${simulationSuffix}.so",
                     "$prefix/libsgx_urts${simulationSuffix}.so",
+                    "$prefix/libsgx_capable.so",
                     "$prefix/libcrypto.so.1.0.0"
             )
             if (simulationSuffix.isEmpty()) {
@@ -35,7 +38,7 @@ class JarTest {
             return libraries
         }
 
-        private fun getAllJarEntries(jarInputStream: JarInputStream) : List<String> {
+        private fun getAllJarEntries(jarInputStream: JarInputStream): List<String> {
             val entries = mutableListOf<String>()
             var entry = jarInputStream.nextEntry
             while (entry != null) {
@@ -49,25 +52,30 @@ class JarTest {
     @Test
     fun simulationJarContainsAllLibraries() {
         val expected = expectedLibraries("Simulation")
-        val jarInputStream = JarInputStream(simulationJarPath.toFile().inputStream())
-        val result = getAllJarEntries(jarInputStream)
-        assertThat(result).containsAll(expected)
+        Files.newInputStream(simulationJarPath).use { input ->
+            val jarInputStream = JarInputStream(input)
+            val result = getAllJarEntries(jarInputStream)
+            assertThat(result).containsAll(expected)
+        }
     }
 
     @Test
     fun debugJarContainsAllLibraries() {
         val expected = expectedLibraries("Debug")
-        val jarInputStream = JarInputStream(debugJarPath.toFile().inputStream())
-        val result = getAllJarEntries(jarInputStream)
-        assertThat(result).containsAll(expected)
-
+        Files.newInputStream(debugJarPath).use { input ->
+            val jarInputStream = JarInputStream(input)
+            val result = getAllJarEntries(jarInputStream)
+            assertThat(result).containsAll(expected)
+        }
     }
 
     @Test
     fun releaseJarContainsAllLibraries() {
         val expected = expectedLibraries("Release")
-        val jarInputStream = JarInputStream(releaseJarPath.toFile().inputStream())
-        val result = getAllJarEntries(jarInputStream)
-        assertThat(result).containsAll(expected)
+        Files.newInputStream(releaseJarPath).use { input ->
+            val jarInputStream = JarInputStream(input)
+            val result = getAllJarEntries(jarInputStream)
+            assertThat(result).containsAll(expected)
+        }
     }
 }

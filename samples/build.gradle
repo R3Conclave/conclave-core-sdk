@@ -15,6 +15,7 @@ def modulesToSubstitute = [
         'com.r3.sgx:native-host-simulation',
         'com.r3.sgx:native-host-debug',
         'com.r3.sgx:native-host-release',
+        'com.r3.sgx:native-host-shared',
         'com.r3.sgx:native-gdb',
         'com.r3.sgx:native-sign-tool',
         'com.r3.sgx:native-binutils',

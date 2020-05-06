@@ -41,6 +41,7 @@ dependencies {
     runtimeOnly "com.r3.conclave:native-host-release:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-host-debug:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
+    runtimeOnly "com.r3.conclave:native-host-shared:${rootProject.version}"
 
     testImplementation project(":conclave-enclave")
     testImplementation project(":enclave-dynamic-testing")

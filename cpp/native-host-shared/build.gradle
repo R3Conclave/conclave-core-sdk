@@ -1,0 +1,34 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+test {
+    useJUnitPlatform()
+    dependsOn ':cpp:native-host-shared:jar'
+    doFirst {
+        systemProperty 'jar.path', tasks.getByPath(':cpp:native-host-shared:jar').outputs.files.asPath
+    }
+}
+
+def cppBuildDir = project(":cpp").buildDir
+
+jar {
+    dependsOn(":cpp:compileLinuxSgxSimulation")
+    dependsOn(":cpp:compileHostSharedSimulation")
+    def linuxSgxBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
+    def hostSharedBuildDir = "$cppBuildDir/Simulation/jvm-host-shared"
+    into "com/r3/sgx/host-libraries/shared", {
+        from (linuxSgxBuildDir) {
+            include "libsgx_capable.so"
+        }
+        from (hostSharedBuildDir) {
+            include "libjvm_host_shared.so"
+        }
+    }
+}

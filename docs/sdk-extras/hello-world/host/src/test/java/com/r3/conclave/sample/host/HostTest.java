@@ -1,7 +1,7 @@
 package com.r3.conclave.sample.host;
 
-import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.common.OpaqueBytes;
+import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.host.EnclaveHost;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,7 +15,7 @@ public class HostTest {
     private static EnclaveHost enclave;
 
     @BeforeAll
-    static void startup() throws InvalidEnclaveException {
+    static void startup() throws EnclaveLoadException {
         enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
         // Optionally pass in the SPID and attestation key which are required for remote attestation. These can be null
         // if running in simulation mode, but are required in debug/release mode.

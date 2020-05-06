@@ -3,8 +3,8 @@ package com.r3.conclave.sample.host;
 import com.r3.conclave.client.EnclaveConstraint;
 import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.common.EnclaveMode;
-import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.common.OpaqueBytes;
+import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.host.EnclaveHost;
 
 import java.util.Objects;
@@ -13,7 +13,25 @@ import java.util.Objects;
  * This class demonstrates how to load an enclave and exchange byte arrays with it.
  */
 public class Host {
-    public static void main(String[] args) throws InvalidEnclaveException {
+    public static void main(String[] args) throws EnclaveLoadException {
+        
+        // Report whether the platform supports hardware enclaves.
+        //
+        // This method will always check the hardware state regardless of whether running in Simulation,
+        // Debug or Release mode. If the platform supports hardware enclaves then no exception is thrown.
+        // If the platform does not support enclaves or requires enabling, an exception is thrown with the
+        // details in the exception message.
+        //
+        // If the platform supports enabling of enclave support via software then passing true as a parameter
+        // to this function will attempt to enable enclave support on the platform. Normally this process
+        // will have to be run with root/admin priviliges in order for it to be enabled successfully.
+        try {
+            EnclaveHost.checkPlatformSupportsEnclaves(true);
+            System.out.println("This platform supports enclaves in simulation, debug and release mode.");
+        } catch (EnclaveLoadException e) {
+            System.out.println("This platform currently only supports enclaves in simulation mode: " + e.getMessage());
+        }
+
         // We start by loading the enclave using EnclaveHost, and passing the class name of the Enclave subclass
         // that we defined in our enclave module.
         //

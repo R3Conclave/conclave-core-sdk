@@ -14,6 +14,7 @@ if (includeNative) {
     include 'cpp:native-host:native-host-simulation'
     include 'cpp:native-host:native-host-debug'
     include 'cpp:native-host:native-host-release'
+    include 'cpp:native-host-shared'
     include 'cpp:native-enclave:native-enclave-simulation'
     include 'cpp:native-enclave:native-enclave-debug'
     include 'cpp:native-enclave:native-enclave-release'
