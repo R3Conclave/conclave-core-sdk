@@ -3,6 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
+import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -10,9 +11,11 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import java.text.SimpleDateFormat
 import java.util.concurrent.Callable
@@ -33,6 +36,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         target.pluginManager.apply(JavaPlugin::class.java)
         target.pluginManager.apply(ShadowPlugin::class.java)
+
+        target.convention.getPlugin(JavaPluginConvention::class.java).apply {
+            sourceCompatibility = JavaVersion.VERSION_1_8
+            targetCompatibility = JavaVersion.VERSION_1_8
+        }
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
@@ -58,15 +66,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val sgxToolsDirectory = "${copySgxToolsTask.destinationDir}/com/r3/sgx"
-
-        val linker = getExecutable("ld")
-        val linkerToolFile = target.file("$sgxToolsDirectory/binutils/$linker")
-
-        val signer = getExecutable("sgx_sign")
-        val signToolFile = target.file("$sgxToolsDirectory/sign-tool/$signer")
-
-        var openssl = getExecutable("opensslw")
-        val opensslToolFile = target.file("$sgxToolsDirectory/binutils/$openssl")
+        val linkerToolFile = target.file("$sgxToolsDirectory/binutils/${getExecutable("ld")}")
+        val signToolFile = target.file("$sgxToolsDirectory/sign-tool/${getExecutable("sgx_sign")}")
+        val opensslToolFile = target.file("$sgxToolsDirectory/binutils/${getExecutable("opensslw")}")
 
         val buildJarObjectTask = target.createTask<BuildJarObject>("buildJarObject") { task ->
             task.dependsOn(copySgxToolsTask)
@@ -194,10 +196,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private fun getExecutable(name: String): String {
-        return if (System.getProperty("os.name").startsWith("Windows"))
-            "$name.exe"
-        else
-            name
+        return if (System.getProperty("os.name").startsWith("Windows")) "$name.exe" else name
     }
 
     private fun readVersionFromPluginManifest(): String {

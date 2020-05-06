@@ -66,6 +66,8 @@ This release ships with the following known issues:
    build.gradle file.
 
 3. You can now specify an enclave's product ID and revocation level in the enclave build file. There's a new
-   `conclave` block which let's you do this. These values are enforced in any relevant `EnclaveConstraint` object.
+   `conclave` block which lets you do this. These values are enforced in any relevant `EnclaveConstraint` object.
 
 4. Related to the above, the `enclave.xml` files are no longer needed and you can safely delete them.
+
+5. The enclave measurement is now stable when built using different versions of the JDK.
