@@ -67,6 +67,13 @@ subprojects {
         systemProperty 'sgx.mode', sgxModeProperty
         reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
+
+        beforeTest { descriptor ->
+            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
+        }
+        afterTest { descriptor ->
+            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
+        }
     }
 
     configurations {
