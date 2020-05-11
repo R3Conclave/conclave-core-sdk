@@ -133,10 +133,10 @@ class EnclaveInstanceInfoImpl(
                         "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
                         "identified as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
                 SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
-                        "correctly but due to certain issues affecting the platform, additional SW Hardening in the " +
+                        "correctly but due to certain issues affecting the platform, additional software hardening in the " +
                         "attesting SGX enclaves may be needed.${advistoryIdsSentence(report)}")
                 CONFIGURATION_AND_SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE " +
-                        "has been verified correctly but additional configuration for the platform and SW Hardening in " +
+                        "has been verified correctly but additional configuration for the platform and software hardening in " +
                         "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
                         "thus it is not revoked.${advistoryIdsSentence(report)}")
             }

@@ -40,7 +40,7 @@ class TestEnclaves : ExternalResource() {
 
     private fun createEnclaveJar(entryClass: Class<*>, builder: EnclaveBuilder): Cached<File> {
         return Cached.singleFile("${entryClass.name}-$entropy-${builder.type.name}", "${entryClass.simpleName}.jar") { output ->
-            BuildEnclaveJarFromClass.buildEnclaveJarFromClass(entryClass, builder.includeClasses, output)
+            BuildEnclaveJar.build(entryClass, builder.includeClasses, output.toPath())
         }
     }
 

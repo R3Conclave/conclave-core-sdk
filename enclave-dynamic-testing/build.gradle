@@ -1,21 +1,39 @@
-apply plugin: "kotlin"
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
 
 dependencies {
     api project(":enclave-testing")
     api project(":api-core:api-core-host")
 
-    // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
-    implementation project(":conclave-enclave")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
-    // TODO This is only needed to make BuildEnclaveJarFromClass work. We can do better using ClassGraph.
-    implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
 
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:2.3.1"
     runtimeOnly "com.r3.conclave:native-enclave-simulation:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-enclave-debug:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-enclave-release:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-sign-tool:${rootProject.version}"
+}
+
+task generateEnclaveDeps {
+    def outputFile = file("$buildDir/enclave-deps.txt")
+    outputs.file(outputFile)
+    doLast {
+        outputFile.withWriter { out ->
+            out.writeLine project(":enclave-testing").jar.archiveFileName.get()
+            out.writeLine project(":conclave-enclave").jar.archiveFileName.get()
+            project(":conclave-enclave").configurations.runtimeClasspath.each {
+                out.writeLine it.name
+            }
+        }
+    }
+}
+
+// Generate a resource file that contains the file names of all the dependencies for :conclave-enclave (including itself),
+// so that BuildEnclaveJar can use the correct jars from the class path to dynamically build an enclave jar.
+processResources {
+    with copySpec {
+        from generateEnclaveDeps
+    }
 }
