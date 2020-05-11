@@ -26,14 +26,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     // Logging using the SLF4J API
     implementation "org.slf4j:slf4j-api:$slf4j_version"
-    // Needed for communicating with Intel's attestation service
-    // TODO Consider using Java 11's new HTTP client instead of this
-    implementation "org.apache.httpcomponents:httpclient:$httpclient_version"
     // Needed to parse the JSON response from the IAS
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
-    // httpclient use commons-logging but we want everything to go via SLF4j (see root build.gradle)
-    runtimeOnly "org.slf4j:jcl-over-slf4j:$slf4j_version"
     // Native libraries for creating and communicating with an enclave.
     // TODO There's really no need to include all three dependencies. The host can only use the one that matches with
     //      the mode the enclave was built against. So by bundling all three modes we're unnecessarily bloating the
@@ -45,11 +40,10 @@ dependencies {
 
     testImplementation project(":conclave-enclave")
     testImplementation project(":enclave-dynamic-testing")
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
 
     // Log4J for the runtime logging engine. We don't specify this as a production dependency to allow the client code
     // to specify their own binding.
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
 }

@@ -24,7 +24,7 @@ open class MockAttestationService : AttestationService {
                 isvEnclaveQuoteStatus = QuoteStatus.OK,
                 isvEnclaveQuoteBody = signedQuote.quote,
                 timestamp = Instant.now(),
-                version = 3
+                version = 4
         ).let { reportMapper.writeValueAsBytes(modifyReport(it)) }
 
         val signature = Signature.getInstance("SHA256withRSA").apply {
@@ -32,17 +32,10 @@ open class MockAttestationService : AttestationService {
             update(reportBytes)
         }.sign()
 
-        return AttestationResponse(
-                reportBytes = reportBytes,
-                signature = signature,
-                certPath = certPath,
-                advisoryIds = advisoryIds()
-        )
+        return AttestationResponse(reportBytes, signature, certPath)
     }
 
     protected open fun modifyReport(report: AttestationReport): AttestationReport = report
-
-    protected open fun advisoryIds(): List<String> = emptyList()
 
     companion object {
         private val signingKey = readResource("mock-as.key") {

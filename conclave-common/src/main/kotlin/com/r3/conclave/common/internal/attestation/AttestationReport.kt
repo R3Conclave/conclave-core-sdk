@@ -59,6 +59,16 @@ import java.time.Instant
  * & EPID K (64 bytes) components of EPID signature. If two linkable EPID signatures for an EPID Group have the same EPID
  * Pseudonym, the two signatures were generated using the same EPID private key. This field will only be present if
  * Attestation Evidence Payload contains Quote with linkable EPID signature.
+ *
+ * @property advisoryURL URL to Intel® Product Security Center Advisories page that provides additional information on
+ * SGX-related security issues. IDs of advisories for specific issues that may affect the attested platform are conveyed
+ * by [advisoryIDs].
+ *
+ * @property advisoryIDs List of advisory IDs that can be searched on the page indicated by [advisoryURL]. Advisory IDs
+ * refer to articles providing insight into enclave-related security issues that may affect the attested platform.
+ *
+ * This is only populated if [isvEnclaveQuoteStatus] is either [QuoteStatus.GROUP_OUT_OF_DATE], [QuoteStatus.CONFIGURATION_NEEDED],
+ * [QuoteStatus.SW_HARDENING_NEEDED] or [QuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED].
  */
 @JsonInclude(NON_NULL)
 data class AttestationReport(
@@ -87,6 +97,10 @@ data class AttestationReport(
         @JsonSerialize(using = OpaqueBytesSerializer::class)
         @JsonDeserialize(using = OpaqueBytesDeserializer::class)
         val epidPseudonym: OpaqueBytes? = null,
+
+        val advisoryURL: String? = null,
+
+        val advisoryIDs: List<String>? = null,
 
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS", timezone = "UTC")
         val timestamp: Instant,

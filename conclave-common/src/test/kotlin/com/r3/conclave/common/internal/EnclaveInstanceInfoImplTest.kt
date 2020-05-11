@@ -38,13 +38,11 @@ class EnclaveInstanceInfoImplTest {
 
     private var reportQuoteStatus: QuoteStatus = QuoteStatus.OK
     private var reportTimestamp: Instant = Instant.now()
-    private var advisoryIds: List<String> = emptyList()
 
     private val attestationService = object : MockAttestationService() {
         override fun modifyReport(report: AttestationReport): AttestationReport {
             return report.copy(isvEnclaveQuoteStatus = reportQuoteStatus, timestamp = reportTimestamp)
         }
-        override fun advisoryIds() = advisoryIds
     }
 
     @Test
@@ -100,7 +98,6 @@ class EnclaveInstanceInfoImplTest {
     @Test
     fun `serialisation round-trip`() {
         reportQuoteStatus = QuoteStatus.GROUP_OUT_OF_DATE
-        advisoryIds = listOf("Note-1", "Note-2")
         val original = newInstance()
         val deserialised = EnclaveInstanceInfo.deserialize(original.serialize()) as EnclaveInstanceInfoImpl
         assertThat(deserialised.dataSigningKey).isEqualTo(original.dataSigningKey)
@@ -108,7 +105,6 @@ class EnclaveInstanceInfoImplTest {
         assertThat(deserialised.attestationResponse.reportBytes).isEqualTo(original.attestationResponse.reportBytes)
         assertThat(deserialised.attestationResponse.signature).isEqualTo(original.attestationResponse.signature)
         assertThat(deserialised.attestationResponse.certPath).isEqualTo(original.attestationResponse.certPath)
-        assertThat(deserialised.attestationResponse.advisoryIds).isEqualTo(original.attestationResponse.advisoryIds).isEqualTo(listOf("Note-1", "Note-2"))
         assertThat(deserialised.enclaveMode).isEqualTo(original.enclaveMode)
     }
 

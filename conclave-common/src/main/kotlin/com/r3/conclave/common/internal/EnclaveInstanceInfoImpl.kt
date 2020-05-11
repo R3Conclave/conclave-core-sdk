@@ -69,7 +69,7 @@ class EnclaveInstanceInfoImpl(
         )
 
         val (summary, reason) = when (enclaveMode) {
-            RELEASE -> getSummaryAndReason(attestationResponse, attestationReport)
+            RELEASE -> getSummaryAndReason(attestationReport)
             DEBUG -> Pair(Summary.INSECURE, "Enclave is running in debug mode.")
             SIMULATION -> Pair(Summary.INSECURE, "Enclave is running in simulation mode.")
         }
@@ -93,8 +93,6 @@ class EnclaveInstanceInfoImpl(
         dos.writeLengthPrefixBytes(attestationResponse.reportBytes)
         dos.writeLengthPrefixBytes(attestationResponse.signature)
         dos.writeLengthPrefixBytes(attestationResponse.certPath.encoded)
-        dos.writeInt(attestationResponse.advisoryIds.size)
-        attestationResponse.advisoryIds.forEach(dos::writeUTF)
         dos.write(enclaveMode.ordinal)
         return baos.toByteArray()
     }
@@ -113,7 +111,7 @@ class EnclaveInstanceInfoImpl(
     companion object {
         private val magic = "EII".toByteArray()
 
-        private fun getSummaryAndReason(response: AttestationResponse, report: AttestationReport): Pair<Summary, String> {
+        private fun getSummaryAndReason(report: AttestationReport): Pair<Summary, String> {
             return when (report.isvEnclaveQuoteStatus) {
                 OK ->  Pair(Summary.SECURE, "EPID signature of the ISV enclave QUOTE was verified correctly and the TCB " +
                         "level of the SGX platform is up-to-date.")
@@ -129,18 +127,25 @@ class EnclaveInstanceInfoImpl(
                         "enclave QUOTE does not match the most recent version of the SigRL. Please try again with the " +
                         "most recent version of SigRL from the IAS. Until then the content of the QUOTE is not trustworthy.")
                 GROUP_OUT_OF_DATE -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
-                        "correctly, but the TCB level of SGX platform is outdated${advistoryIdsSentence(response)}. " +
-                        "The platform has not been identified as compromised and thus it is not revoked.")
+                        "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
+                        "as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
                 CONFIGURATION_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified" +
-                        "correctly, but additional configuration of SGX platform may be needed${advistoryIdsSentence(response)}. " +
-                        "The platform has not been identified as compromised and thus it is not revoked.")
+                        "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
+                        "identified as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
+                SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
+                        "correctly but due to certain issues affecting the platform, additional SW Hardening in the " +
+                        "attesting SGX enclaves may be needed.${advistoryIdsSentence(report)}")
+                CONFIGURATION_AND_SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE " +
+                        "has been verified correctly but additional configuration for the platform and SW Hardening in " +
+                        "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
+                        "thus it is not revoked.${advistoryIdsSentence(report)}")
             }
         }
 
-        private fun advistoryIdsSentence(response: AttestationResponse): String {
-            return when (response.advisoryIds.size) {
+        private fun advistoryIdsSentence(report: AttestationReport): String {
+            return when (report.advisoryIDs?.size ?: 0) {
                 0 -> ""
-                else -> " (for further details see Advisory IDs ${response.advisoryIds.joinToString(", ")})"
+                else -> " For further details see Advisory IDs ${report.advisoryIDs!!.joinToString(", ")}."
             }
         }
     }

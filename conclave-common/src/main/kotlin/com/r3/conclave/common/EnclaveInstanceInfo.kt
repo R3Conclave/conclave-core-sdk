@@ -65,14 +65,13 @@ interface EnclaveInstanceInfo {
             val reportBytes = dis.readLengthPrefixBytes()
             val signature = dis.readLengthPrefixBytes()
             val certPath = CertificateFactory.getInstance("X.509").generateCertPath(dis.readLengthPrefixBytes().inputStream())
-            val advisoryIds = Array(dis.readInt()) { dis.readUTF() }.asList()
             val enclaveMode = EnclaveMode.values()[dis.read()]
             // New fields need to be behind an availablity check before being read. Use dis.available() to check if there
             // are more bytes available and only parse them if there are. If not then provide defaults.
             return EnclaveInstanceInfoImpl(
                     dataSigningKey,
                     signedQuote,
-                    AttestationResponse(reportBytes, signature, certPath, advisoryIds),
+                    AttestationResponse(reportBytes, signature, certPath),
                     enclaveMode
             )
         }

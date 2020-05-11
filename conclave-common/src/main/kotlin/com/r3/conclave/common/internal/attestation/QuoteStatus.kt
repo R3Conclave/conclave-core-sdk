@@ -58,5 +58,23 @@ enum class QuoteStatus {
      * QUOTE, and whether or not to trust the platform performing the attestation to protect specific sensitive
      * information.
      */
-    CONFIGURATION_NEEDED
+    CONFIGURATION_NEEDED,
+
+    /**
+     * The EPID signature of the ISV enclave QUOTE has been verified correctly but due to certain issues affecting the
+     * platform, additional SW Hardening in the attesting SGX enclaves may be needed. The relying party should evaluate
+     * the potential risk of an attack leveraging the relevant issues on the attesting enclave, and whether the attesting
+     * enclave employs adequate software hardening to mitigate the risk.
+     */
+    SW_HARDENING_NEEDED,
+
+    /**
+     * The EPID signature of the ISV enclave QUOTE has been verified correctly but additional configuration for the
+     * platform and SW Hardening in the attesting SGX enclaves may be needed. The platform has not been identified as
+     * compromised and thus it is not revoked. It is up to the Service Provider to decide whether or not to trust the
+     * content of the QUOTE. The relying party should also evaluate the potential risk of an attack leveraging the
+     * relevant issues on the attestation enclave, and whether the attesting enclave employs adequate software hardening
+     * to mitigate the risk.
+     */
+    CONFIGURATION_AND_SW_HARDENING_NEEDED
 }

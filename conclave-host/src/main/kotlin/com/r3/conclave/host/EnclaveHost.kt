@@ -7,7 +7,6 @@ import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
-import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.sgx.core.common.*
@@ -157,7 +156,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
                 throw EnclaveLoadException("Unable to check platform support", e)
             }
         }
-
     }
 
     private val stateManager = StateManager<State>(New)
@@ -205,7 +203,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             val started = stateManager.checkStateIs<Started>()
             val enclaveInstanceInfo = EnclaveInstanceInfoImpl(started.signatureKey, signedQuote, attestationResponse, enclaveMode)
             log.debug { "Attestation response: ${enclaveInstanceInfo.attestationReport}" }
-            log.debug { "Advisory IDs: ${attestationResponse.advisoryIds}" }
             log.info(enclaveInstanceInfo.toString())
             _enclaveInstanceInfo = enclaveInstanceInfo
         } catch (e: Exception) {
@@ -215,8 +212,8 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
 
     private fun getAttestationService(attestationKey: String?): AttestationService {
         return when (enclaveMode) {
-            EnclaveMode.RELEASE -> IntelAttestationService("https://api.trustedservices.intel.com/sgx", requiredAttestationKey(attestationKey))
-            EnclaveMode.DEBUG -> IntelAttestationService("https://api.trustedservices.intel.com/sgx/dev", requiredAttestationKey(attestationKey))
+            EnclaveMode.RELEASE -> IntelAttestationService(true, requiredAttestationKey(attestationKey))
+            EnclaveMode.DEBUG -> IntelAttestationService(false, requiredAttestationKey(attestationKey))
             EnclaveMode.SIMULATION -> MockAttestationService()
         }
     }
