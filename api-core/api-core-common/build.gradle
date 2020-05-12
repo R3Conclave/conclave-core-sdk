@@ -9,8 +9,6 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.google.protobuf:protobuf-java:$protobuf_version"
-    // Curve25519 by Moxie Marlinspike: modern elliptic curve key agreement.
-    implementation "org.whispersystems:curve25519-java:$whispersystems_ed25519_version"
 
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"

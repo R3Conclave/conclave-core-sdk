@@ -12,8 +12,6 @@ dependencies {
 
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
-    // Curve25519 by Moxie Marlinspike: modern elliptic curve key agreement.
-    testImplementation "org.whispersystems:curve25519-java:$whispersystems_ed25519_version"
 
     testImplementation "org.slf4j:slf4j-api:$slf4j_version"
     testImplementation project(":api-core:api-core-host")
