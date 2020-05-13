@@ -67,9 +67,21 @@ class EnclaveHostNativeTest {
         }
     }
 
+    @Test
+    fun `host verifies signature created by enclave`() {
+        val host = hostTo<SigningEnclave>()
+        host.start(null, null)
+        val message = "Hello World".toByteArray()
+        val signature = host.callEnclave(message)!!
+        host.enclaveInstanceInfo.verifier().apply {
+            update(message)
+            assertThat(verify(signature)).isTrue()
+        }
+    }
+
     private inline fun <reified T : Enclave> hostTo(): EnclaveHost {
         val enclaveBuilder = EnclaveBuilder()
-        val enclaveFile = testEnclaves.getEnclave(T::class.java, enclaveBuilder).toPath()
+        val enclaveFile = testEnclaves.getSignedEnclaveFile(T::class.java, enclaveBuilder).toPath()
         return EnclaveHost.create(enclaveFile, T::class.java.name, EnclaveMode.SIMULATION, tempFile = false)
     }
 
@@ -110,6 +122,15 @@ class EnclaveHostNativeTest {
             val result = builder.toString()
             previousResult = result
             return result.toByteArray()
+        }
+    }
+
+    class SigningEnclave : EnclaveCall, Enclave() {
+        override fun invoke(bytes: ByteArray): ByteArray {
+            return signer().run {
+                update(bytes)
+                sign()
+            }
         }
     }
 }

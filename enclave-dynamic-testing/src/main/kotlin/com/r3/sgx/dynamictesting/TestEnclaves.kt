@@ -1,6 +1,6 @@
 package com.r3.sgx.dynamictesting
 
-import com.r3.sgx.core.enclave.Enclave
+import com.r3.conclave.enclave.Enclave
 import org.junit.rules.ExternalResource
 import java.io.File
 import java.nio.file.Path
@@ -44,26 +44,20 @@ class TestEnclaves : ExternalResource() {
         }
     }
 
-    fun getEnclaveJar(enclaveClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder): File {
-        return cache ?.let { it[createEnclaveJar(enclaveClass, enclaveBuilder)] }
-                ?: throw IllegalStateException("Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field")
+    fun getEnclaveJar(enclaveClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): File {
+        val cache = checkNotNull(cache) {
+            "Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field"
+        }
+        return cache[createEnclaveJar(enclaveClass, enclaveBuilder)]
     }
 
-    fun getEnclaveJar(enclaveClass: Class<out Enclave>): File {
-        return getEnclaveJar(enclaveClass, EnclaveBuilder())
-    }
-
-    fun getEnclave(entryClass: Class<*>): File {
-        return getEnclave(entryClass, EnclaveBuilder())
-    }
-
-    fun getEnclave(entryClass: Class<*>, builder: EnclaveBuilder): File {
-        if (cache == null) {
-            throw IllegalStateException("Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field")
+    fun getSignedEnclaveFile(entryClass: Class<*>, builder: EnclaveBuilder = EnclaveBuilder()): File {
+        val cache = checkNotNull(cache) {
+            "Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field"
         }
         val start = Instant.now()
         val cachedSignedEnclave = signedEnclaveFile(entryClass, builder)
-        val enclave = cache!![cachedSignedEnclave]
+        val enclave = cache[cachedSignedEnclave]
         val end = Instant.now()
         println(Duration.between(start, end))
 

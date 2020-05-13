@@ -1,11 +1,6 @@
 package com.r3.sgx.utils.classloaders
 
-import com.r3.conclave.common.internal.ByteCursor
-import com.r3.conclave.common.internal.Cursor
-import com.r3.conclave.common.internal.SgxReportData
-import com.r3.sgx.core.common.Handler
-import com.r3.sgx.core.enclave.EnclaveApi
-import com.r3.sgx.core.enclave.Enclavelet
+import com.r3.conclave.enclave.Enclave
 import com.r3.sgx.dynamictesting.TestEnclaves
 import com.r3.sgx.testing.HelperUtilities.expectWithin
 import org.junit.After
@@ -19,9 +14,6 @@ import java.net.MalformedURLException
 import java.net.URLClassLoader
 import java.nio.ByteBuffer
 import java.util.function.Supplier
-import java.util.jar.Attributes.Name.MANIFEST_VERSION
-import java.util.jar.JarInputStream
-import java.util.jar.Manifest
 
 class MemoryURLStreamHandlerTest {
     companion object {
@@ -67,25 +59,17 @@ class MemoryURLStreamHandlerTest {
         URLSchemes.createMemoryURL(DATA_PATH, ByteBuffer.wrap(data.toByteArray()))
     }
 
-    class ExampleEnclavelet : Enclavelet() {
-        override fun createReportData(api: EnclaveApi): ByteCursor<SgxReportData> {
-            return Cursor.allocate(SgxReportData)
-        }
-
-        override fun createHandler(api: EnclaveApi): Handler<*> {
-            throw UnsupportedOperationException("Does not exist")
-        }
-    }
+    class NoOpEnclave : Enclave()
 
     @Test
     fun testClassLoaderForJarInMemory() {
-        val enclaveJar = testEnclaves.getEnclaveJar(ExampleEnclavelet::class.java)
+        val enclaveJar = testEnclaves.getEnclaveJar(NoOpEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
         val (memoryURL, _) = URLSchemes.createMemoryURL(DATA_PATH, enclaveData)
         System.gc()
         URLClassLoader(arrayOf(memoryURL), null).use { cl ->
-            val exampleClass = Class.forName(ExampleEnclavelet::class.java.name, false, cl)
-            assertEquals(ExampleEnclavelet::class.java.name, exampleClass.name)
+            val exampleClass = Class.forName(NoOpEnclave::class.java.name, false, cl)
+            assertEquals(NoOpEnclave::class.java.name, exampleClass.name)
             assertEquals(cl, exampleClass.classLoader)
             assertEquals(memoryURL, exampleClass.protectionDomain.codeSource.location)
         }
@@ -96,7 +80,7 @@ class MemoryURLStreamHandlerTest {
         exception.expect(IOException::class.java)
         exception.expectMessage("No data for URL 'memory:/my/enclave")
 
-        val enclaveJar = testEnclaves.getEnclaveJar(ExampleEnclavelet::class.java)
+        val enclaveJar = testEnclaves.getEnclaveJar(NoOpEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
         // Ensure that we discard the strong reference key for our
         // URL data so that the garbage collector can reap it.

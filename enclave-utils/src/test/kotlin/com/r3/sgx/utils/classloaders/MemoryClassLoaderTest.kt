@@ -1,5 +1,7 @@
 package com.r3.sgx.utils.classloaders
 
+import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.enclave.Enclave
 import com.r3.sgx.core.enclave.EnclaveApi
 import com.r3.sgx.dynamictesting.TestEnclaves
 import org.junit.*
@@ -25,7 +27,7 @@ class MemoryClassLoaderTest {
 
     @Before
     fun setup() {
-        val enclaveJar = testEnclaves.getEnclaveJar(ShoutingEnclavelet::class.java)
+        val enclaveJar = testEnclaves.getEnclaveJar(ShoutingEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
         memoryURL = URLSchemes.createMemoryURL(DATA_PATH, enclaveData)
         System.gc()
@@ -39,16 +41,16 @@ class MemoryClassLoaderTest {
     @Test
     fun testMemoryClass() {
         with(MemoryClassLoader(singletonList(memoryURL), null)) {
-            val enclaveletClass = Class.forName(ShoutingEnclavelet::class.java.name, false, this)
-            assertEquals(ShoutingEnclavelet::class.java.name, enclaveletClass.name)
-            assertEquals(this, enclaveletClass.classLoader)
-            assertEquals(memoryURL.value, enclaveletClass.protectionDomain.codeSource.location)
-            enclaveletClass.newInstance()
+            val enclaveClass = Class.forName(ShoutingEnclave::class.java.name, false, this)
+            assertEquals(ShoutingEnclave::class.java.name, enclaveClass.name)
+            assertEquals(this, enclaveClass.classLoader)
+            assertEquals(memoryURL.value, enclaveClass.protectionDomain.codeSource.location)
+            enclaveClass.newInstance()
 
-            val enclaveletPackage = enclaveletClass.`package`
-            assertNotNull(enclaveletPackage)
-            assertEquals(ShoutingEnclavelet::class.java.`package`.name, enclaveletPackage.name)
-            assertEquals(enclaveletClass.name.removeSuffix(".ShoutingEnclavelet"), enclaveletPackage.name)
+            val enclavePackage = enclaveClass.`package`
+            assertNotNull(enclavePackage)
+            assertEquals(ShoutingEnclave::class.java.`package`.name, enclavePackage.name)
+            assertEquals(enclaveClass.name.removeSuffix(".ShoutingEnclave"), enclavePackage.name)
         }
     }
 
@@ -71,4 +73,8 @@ class MemoryClassLoaderTest {
             assertFalse(manifests.hasMoreElements())
         }
     }
+}
+
+class ShoutingEnclave : EnclaveCall, Enclave() {
+    override fun invoke(bytes: ByteArray): ByteArray? = String(bytes).toUpperCase().toByteArray()
 }

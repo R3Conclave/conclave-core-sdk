@@ -1,6 +1,7 @@
 apply plugin: 'kotlin'
 
 dependencies {
+    api project(":conclave-enclave")
     api project(":api-core:api-core-enclave")
     api "junit:junit:$junit_version"
 

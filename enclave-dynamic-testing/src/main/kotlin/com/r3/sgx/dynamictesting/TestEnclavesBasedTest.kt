@@ -9,7 +9,6 @@ import com.r3.sgx.testing.MockEnclaveHandle
 import com.r3.sgx.testing.RootHandler
 import org.junit.ClassRule
 import org.junit.runners.Parameterized.Parameters
-import java.io.File
 import java.util.function.Consumer
 
 enum class EnclaveTestMode {
@@ -24,9 +23,7 @@ enum class EnclaveTestMode {
  *   If [mode] = [EnclaveTestMode.Mock] the enclave is instantiated in-memory, allowing IDE debugging. This is only
  *     useful for development.
  */
-open class TestEnclavesBasedTest(
-        val mode: EnclaveTestMode = EnclaveTestMode.Native
-) {
+open class TestEnclavesBasedTest(val mode: EnclaveTestMode = EnclaveTestMode.Native) {
     companion object {
         @JvmField
         @ClassRule
@@ -50,39 +47,11 @@ open class TestEnclavesBasedTest(
     ): EnclaveHandle<CONNECTION> {
         return when (mode) {
             EnclaveTestMode.Native -> {
-                val enclaveFile = testEnclaves.getEnclave(enclaveClass, enclaveBuilder)
-                createNativeEnclave(handler, enclaveClass, enclaveFile)
+                val enclaveFile = testEnclaves.getSignedEnclaveFile(enclaveClass, enclaveBuilder)
+                NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(handler, enclaveFile, enclaveClass.name)
             }
-            EnclaveTestMode.Mock -> createMockEnclave(handler, enclaveClass)
+            EnclaveTestMode.Mock -> MockEnclaveHandle(handler, enclaveClass.newInstance())
         }
-    }
-
-    fun <CONNECTION> createEnclaveWithHandler(
-            handler: Handler<CONNECTION>,
-            enclaveClass: Class<out Enclave>,
-            enclaveFile: File
-    ): EnclaveHandle<CONNECTION> {
-        return when (mode) {
-            EnclaveTestMode.Native -> createNativeEnclave(handler, enclaveClass, enclaveFile)
-            EnclaveTestMode.Mock -> createMockEnclave(handler, enclaveClass)
-        }
-    }
-
-    private fun <CONNECTION> createNativeEnclave(
-            handler: Handler<CONNECTION>,
-            enclaveClass: Class<out Enclave>,
-            enclaveFile: File
-    ): EnclaveHandle<CONNECTION> {
-        val hostApi = NativeHostApi(EnclaveLoadMode.SIMULATION)
-        return hostApi.createEnclave(handler, enclaveFile, enclaveClass.name)
-    }
-
-    private fun <CONNECTION> createMockEnclave(
-            handler: Handler<CONNECTION>,
-            enclaveClass: Class<out Enclave>
-    ): EnclaveHandle<CONNECTION> {
-        val enclave = enclaveClass.newInstance()
-        return MockEnclaveHandle(handler, enclave)
     }
 
     @JvmOverloads
@@ -94,11 +63,8 @@ open class TestEnclavesBasedTest(
         try {
             block.accept(enclaveHandle)
         } finally {
-            if (mode == EnclaveTestMode.Native) {
-                enclaveHandle.destroy()
-            }
+            enclaveHandle.destroy()
         }
     }
-
 }
 

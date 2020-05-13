@@ -7,7 +7,7 @@ import com.r3.sgx.core.common.Handler
 import com.r3.sgx.core.common.Sender
 import com.r3.sgx.core.common.SimpleMuxingHandler
 import com.r3.sgx.core.enclave.EnclaveApi
-import com.r3.sgx.core.enclave.Enclavelet
+import com.r3.sgx.core.enclave.EpidAttestationEnclaveHandler
 import com.r3.sgx.core.enclave.RootEnclave
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -91,7 +91,9 @@ abstract class Enclave {
     private fun initialise(api: EnclaveApi, mux: SimpleMuxingHandler.Connection) {
         val reportData = createReportData()
         sender = mux.addDownstream(EnclaveHandler())
-        mux.addDownstream(Enclavelet.EnclaveletEpidAttestationEnclaveHandler(api, reportData))
+        mux.addDownstream(object : EpidAttestationEnclaveHandler(api) {
+            override val reportData = reportData
+        })
         sendInitConfirm()
     }
 
