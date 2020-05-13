@@ -1,6 +1,6 @@
 package com.r3.sgx.core.common
 
-import com.google.protobuf.CodedInputStream
+import com.r3.conclave.common.internal.getRemainingBytes
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 
@@ -36,8 +36,7 @@ abstract class ErrorHandler: Handler<ErrorHandler.Connection> {
 
     private fun parseException(input: ByteBuffer): Throwable {
         return try {
-            val exception = Exception.parseFrom(CodedInputStream.newInstance(input))
-            SerializeException.protobufToJava(exception)
+            SerializeException.deserialise(input.getRemainingBytes())
         } catch (throwable: Throwable) {
             input.mark()
             val size = Integer.min(input.remaining(), 64)

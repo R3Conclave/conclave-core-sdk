@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.google.protobuf'
     id 'net.corda.plugins.api-scanner'
 }
 
@@ -8,24 +7,7 @@ dependencies {
     api project(":conclave-common")
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
 
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
-}
-
-protobuf {
-    protoc {
-        artifact = "com.google.protobuf:protoc:$protobuf_version"
-    }
-    generateProtoTasks.generatedFilesBaseDir = "${project.projectDir}/src/"
-    generateProtoTasks {
-        all().each { task ->
-            task.inputs.dir("${projectDir}/src/main/proto")
-            task.builtins {
-                java { }
-            }
-        }
-    }
 }

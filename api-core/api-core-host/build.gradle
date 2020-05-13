@@ -8,11 +8,5 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     implementation "io.github.classgraph:classgraph:$classgraph_version"
-
-    testImplementation project(":enclave-dynamic-testing")
-    testImplementation "org.jetbrains.kotlin:kotlin-test"
-
-    testRuntimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
 }

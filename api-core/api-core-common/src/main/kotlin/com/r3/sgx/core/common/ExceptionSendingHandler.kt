@@ -1,6 +1,5 @@
 package com.r3.sgx.core.common
 
-import com.google.protobuf.CodedOutputStream
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
@@ -47,11 +46,9 @@ class ExceptionSendingHandler(private val exposeErrors: Boolean): Handler<Except
         }
 
         fun sendException(throwable: Throwable) {
-            val exception = SerializeException.javaToProtobuf(throwable)
-            errorSender.send(exception.serializedSize, Consumer { buffer ->
-                val output = CodedOutputStream.newInstance(buffer)
-                exception.writeTo(output)
-                output.flush()
+            val serialised = SerializeException.serialise(throwable)
+            errorSender.send(serialised.size, Consumer { buffer ->
+                buffer.put(serialised)
             })
         }
 

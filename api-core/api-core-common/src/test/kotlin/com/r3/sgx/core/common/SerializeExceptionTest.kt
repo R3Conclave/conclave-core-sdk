@@ -1,41 +1,43 @@
 package com.r3.sgx.core.common
 
+import com.r3.conclave.common.internal.nullableWrite
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.Exception
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 
 class SerializeExceptionTest {
     @Test
     fun `round trip with message`() {
-        val exception = Exception("BANG")
-        val protobuf = SerializeException.javaToProtobuf(exception)
-        val roundtrip = SerializeException.protobufToJava(protobuf)
-        assertExceptionEqual(roundtrip, exception)
+        val original = Exception("BANG")
+        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        assertExceptionEqual(roundtrip, original)
     }
 
     @Test
     fun `round trip with no message`() {
-        val exception = Exception()
-        val protobuf = SerializeException.javaToProtobuf(exception)
-        val roundtrip = SerializeException.protobufToJava(protobuf)
-        assertExceptionEqual(roundtrip, exception)
+        val original = Exception()
+        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        assertExceptionEqual(roundtrip, original)
     }
 
     @Test
     fun `round trip for exception class with no message constructor`() {
-        val exception = NoMessageException()
-        val protobuf = SerializeException.javaToProtobuf(exception)
-        val roundtrip = SerializeException.protobufToJava(protobuf)
-        assertExceptionEqual(roundtrip, exception)
+        val original = NoMessageException()
+        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        assertExceptionEqual(roundtrip, original)
     }
 
     @Test
     fun `deserialising unknown exception`() {
-        val protobuf = ProtobufException.newBuilder()
-                .setExceptionClass("com.foo.bar.Exception")
-                .setMessage("BOOM")
-                .build()
-        val deserialised = SerializeException.protobufToJava(protobuf)
+        val baos = ByteArrayOutputStream()
+        val dos = DataOutputStream(baos)
+        dos.writeUTF("com.foo.bar.Exception")
+        dos.nullableWrite("BOOM") { writeUTF(it) }
+        dos.writeInt(0)
+        val serialised = baos.toByteArray()
+
+        val deserialised = SerializeException.deserialise(serialised)
         assertThat(deserialised).isExactlyInstanceOf(RuntimeException::class.java)
         assertThat(deserialised).hasMessage("com.foo.bar.Exception: BOOM")
     }

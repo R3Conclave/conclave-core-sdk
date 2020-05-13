@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.google.protobuf'
     id 'net.corda.plugins.api-scanner'
 }
 
@@ -8,11 +7,10 @@ dependencies {
     api project(":api-core:api-core-common")
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
 
     testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test"
-
     testImplementation "org.slf4j:slf4j-api:$slf4j_version"
     testImplementation project(":api-core:api-core-host")
     testImplementation project(":enclave-dynamic-testing")

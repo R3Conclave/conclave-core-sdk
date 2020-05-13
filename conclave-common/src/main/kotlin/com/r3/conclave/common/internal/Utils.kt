@@ -70,3 +70,15 @@ fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray) {
     writeInt(bytes.size)
     write(bytes)
 }
+
+inline fun <T> DataOutputStream.nullableWrite(value: T?, block: DataOutputStream.(T) -> Unit) {
+    writeBoolean(value == null)
+    if (value != null) {
+        block(this, value)
+    }
+}
+
+inline fun <T> DataInputStream.nullableRead(block: DataInputStream.() -> T): T? {
+    val isNull = readBoolean()
+    return if (!isNull) block(this) else null
+}
