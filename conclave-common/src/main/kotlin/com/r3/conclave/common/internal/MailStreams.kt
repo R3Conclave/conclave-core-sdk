@@ -7,7 +7,14 @@ import java.security.NoSuchAlgorithmException
 import java.util.*
 import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
-import kotlin.experimental.and
+
+// Utils for encoding a 16 bit unsigned value in little endian.
+private fun ByteArray.writeShortTo(offset: Int, value: Short) = writeShortTo(offset, value.toInt() and 0xFFFF)
+
+private fun ByteArray.writeShortTo(offset: Int, value: Int) {
+    this[offset] = (value shr 8).toByte()
+    this[offset + 1] = value.toByte()
+}
 
 /**
  * A stream filter that encrypts the input data. Closing this stream writes a termination footer which protects the
@@ -34,22 +41,25 @@ import kotlin.experimental.and
  * This class is not thread safe and requires external synchronization.
  *
  * @param out                  The [OutputStream] to use.
- * @param cipherName           The Noise cipher name to use, "AESGCM" is a good choice.
- * @param dhName               The Noise Diffie-Hellman algorithm name, "25519" is a good choice.
- * @param hashName             The Noise hash algorithm name, "SHA256" is a good choice.
+ * @param cipherName           The Noise cipher name to use, "AESGCM" is the default.
+ * @param dhName               The Noise Diffie-Hellman algorithm name, "25519" is the default.
+ * @param hashName             The Noise hash algorithm name, "SHA256" is the default.
  * @param destinationPublicKey The public key to encrypt the stream to.
  * @param associatedData       If not null, unencrypted data that will be included in the header and authenticated.
- * @param senderPrivateKey     If not null, your private key. The recipient will receive your public key and be sure you encrypted the message.
+ * @param senderPrivateKey     If not null, your private key. The recipient will receive your public key and be sure
+ *                             you encrypted the message. Only provide one if it's stable and the public part would
+ *                             be recognised or remembered by the enclave, otherwise a dummy key meaning 'anonymous'
+ *                             will be used instead.
  */
 internal class MailEncryptingStream(
         out: OutputStream,
-        private val cipherName: String,
-        private val dhName: String,
-        private val hashName: String,
-        // TODO: Make type safe
+        // TODO: Make keys type safe
         destinationPublicKey: ByteArray,
         associatedData: ByteArray?,
-        senderPrivateKey: ByteArray?
+        senderPrivateKey: ByteArray?,
+        private val cipherName: String = "AESGCM",
+        private val dhName: String = "25519",
+        private val hashName: String = "SHA256"
 ) : FilterOutputStream(out) {
     private var cipherState: CipherState? = null
     private val destinationPublicKey: ByteArray = destinationPublicKey.clone()
@@ -60,13 +70,13 @@ internal class MailEncryptingStream(
     val protocolName = "Noise_X_${dhName}_${cipherName}_$hashName"
 
     // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
-    // The other party isn't here to handshake with us but that's OK: they will complete it when reading the stream.
+    // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
+    // they will complete it when reading the stream.
     private fun maybeHandshake() {
         if (cipherState != null) return  // Already set up the stream.
 
         // Noise can be used in various ways, identified by a string like this one. We always use the "X" handshake,
         // which means it's one way communication (receiver is entirely silent i.e. good for files).
-        val components = protocolName.split("_").toTypedArray()
         val protocolNameBytes = protocolName.toByteArray(StandardCharsets.US_ASCII)
         val handshake = HandshakeState(protocolName, HandshakeState.INITIATOR)
         try {
@@ -88,11 +98,11 @@ internal class MailEncryptingStream(
             val prologue = computePrologue(protocolNameBytes)
             handshake.setPrologue(prologue, 0, prologue.size)
             handshake.start()
-            assert(handshake.action == HandshakeState.WRITE_MESSAGE)
+            check(handshake.action == HandshakeState.WRITE_MESSAGE)
 
             // Check size of the associated data (i.e. unencrypted but authenticated mail headers).
             val associatedDataLen = associatedData?.size ?: 0
-            val maxADLen = Noise.MAX_PACKET_LEN - localKeyPair.publicKeyLength - Noise.createCipher(components[3]).macLength - 1
+            val maxADLen = Noise.MAX_PACKET_LEN - localKeyPair.publicKeyLength - Noise.createCipher(cipherName).macLength - 1
             if (associatedDataLen > maxADLen)
                 throw IOException("The associated data is too large: $associatedDataLen but must be less than $maxADLen")
 
@@ -103,12 +113,10 @@ internal class MailEncryptingStream(
             // than this and this way we avoid accidentally running out of space/off by one errors.
             val headerBytes = ByteArray(1 + protocolName.length + 2 + 8192 + associatedDataLen)
 
-            // Protocol name length byte.
+            // Set up length prefixed protocol name.
             check(protocolName.length < 256) { "${protocolName.length} < 256" }
             headerBytes[0] = protocolName.length.toByte()
-
-            // Copy the name.
-            System.arraycopy(protocolNameBytes, 0, headerBytes, 1, protocolNameBytes.size)
+            protocolNameBytes.copyInto(headerBytes, 1)
 
             // And now pass control to Noise to write out the Diffie-Hellman handshake that sets up the key to encrypt
             // with, passing the associated data and its length. It'll be written past the two bytes we reserved to
@@ -117,19 +125,18 @@ internal class MailEncryptingStream(
                     associatedData, 0, associatedDataLen)
 
             // Write two bytes of length for the handshake, now we know how big it is.
-            headerBytes[1 + protocolNameBytes.size] = (handshakeLength shr 8).toByte()
-            headerBytes[1 + protocolNameBytes.size + 1] = handshakeLength.toByte()
+            headerBytes.writeShortTo(1 + protocolNameBytes.size, handshakeLength)
 
             // Write the whole header to the output stream.
             val fullHeaderLength = 1 + protocolNameBytes.size + 2 + handshakeLength
             out.write(headerBytes, 0, fullHeaderLength)
 
             // Now we can request the ciphering object from Noise.
-            assert(handshake.action == HandshakeState.SPLIT)
+            check(handshake.action == HandshakeState.SPLIT)
             val split = handshake.split()
             split.senderOnly()   // One way not two way communication.
             cipherState = split.sender
-            assert(handshake.action == HandshakeState.COMPLETE)
+            check(handshake.action == HandshakeState.COMPLETE)
         } finally {
             handshake.destroy()
         }
@@ -146,6 +153,7 @@ internal class MailEncryptingStream(
      * Writes [len] bytes from the specified [b] array starting at [off] to this output stream.
      * **The length may not be larger than [Noise.MAX_PACKET_LEN]**. Attempts to
      * write larger arrays will throw a [ShortBufferException] wrapped in an [IOException].
+     * Zero length writes are ignored.
      *
      * @param b   the data.
      * @param off the start offset in the data.
@@ -154,16 +162,15 @@ internal class MailEncryptingStream(
      */
     @Throws(IOException::class)
     override fun write(b: ByteArray, off: Int, len: Int) {
-        maybeHandshake()
         if (len == 0) return
+        maybeHandshake()
         val cipherState = cipherState!!
         // This method should really be able to process any arbitrary length, but when wrapped in a
         // BufferedOutputStream with an appropriately sized buffer it's not really necessary.
         if (len > Noise.MAX_PACKET_LEN - cipherState.macLength - 2)
             throw IOException(ShortBufferException())
         val encryptedLength = cipherState.encryptWithAd(null, b, off, buffer, 2, len)
-        buffer[0] = (encryptedLength shr 8).toByte()
-        buffer[1] = encryptedLength.toByte()
+        buffer.writeShortTo(0, encryptedLength)
         out.write(buffer, 0, encryptedLength + 2)
     }
 
@@ -175,9 +182,8 @@ internal class MailEncryptingStream(
         try {
             val cipherState = cipherState!!
             val macLength = cipherState.encryptWithAd(null, ByteArray(0), 0, buffer, 2, 0)
-            assert(macLength == cipherState.macLength)
-            buffer[0] = (macLength shr 8).toByte()
-            buffer[1] = macLength.toByte()
+            check(macLength == cipherState.macLength)
+            buffer.writeShortTo(0, macLength)
             out.write(buffer, 0, macLength + 2)
             out.flush()
         } catch (e: ShortBufferException) {
@@ -241,7 +247,7 @@ internal class MailDecryptingStream(
 
     private val buffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
     private val currentDecryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Current decrypted packet.
-    private var currentPos = 0 // How far through the decrypted packet we got.
+    private var currentReadPos = 0 // How far through the decrypted packet we got.
     private var currentBufferLen = 0 // Real length of data in currentDecryptedBuffer.
 
     override fun markSupported(): Boolean {
@@ -251,14 +257,20 @@ internal class MailDecryptingStream(
     @Throws(IOException::class)
     override fun read(): Int {
         maybeHandshake()
-        if (currentPos == currentBufferLen) {
+        if (currentReadPos == currentBufferLen) {
             // We reached the end of the current in memory decrypted packet so read another from the stream.
             startNextPacket()
         }
-        return if (currentPos == -1)
+        return if (currentReadPos == -1)
             -1             // We reached the terminator packet and shouldn't read further.
         else
-            currentDecryptedBuffer[currentPos++].toInt() and 0xFF
+            currentDecryptedBuffer[currentReadPos++].toInt() and 0xFF
+    }
+
+    private fun readShort(): Int {
+        val b1 = `in`.read().also { if (it == -1) error("Truncated stream") }
+        val b2 = `in`.read().also { if (it == -1) error("Truncated stream") }
+        return (b1 shl 8) or b2
     }
 
     @Throws(IOException::class)
@@ -266,9 +278,7 @@ internal class MailDecryptingStream(
         // Read the length, which includes the MAC tag.
         val cipherState = cipherState!!
         val input = `in`
-        val packetLen1 = input.read().also { if (it == -1) error("Truncated stream in header") }
-        val packetLen2 = input.read().also { if (it == -1) error("Truncated stream in header") }
-        val packetLen: Int = (packetLen1 shl 8) or packetLen2
+        val packetLen: Int = readShort()
         if (packetLen < cipherState.macLength)
             error("Packet length $packetLen is less than MAC length ${cipherState.macLength}")
 
@@ -293,7 +303,7 @@ internal class MailDecryptingStream(
             throw IOException(e)
         }
         // Have we reached the terminator packet?
-        currentPos = if (currentBufferLen == 0) -1 else 0
+        currentReadPos = if (currentBufferLen == 0) -1 else 0
     }
 
     @Throws(IOException::class)
@@ -347,26 +357,24 @@ internal class MailDecryptingStream(
             val input = `in`!!
             // Read and check the header, construct the handshake based on it.
             val protocolName = readProtocolNameHeader()
-            val handshakeLen = input.read() shl 8 or input.read()
+            val handshakeLen = readShort()
             if (handshakeLen <= 0 || handshakeLen > Noise.MAX_PACKET_LEN) error("Bad handshake length $handshakeLen")
             val handshakeBytes = ByteArray(handshakeLen)
             if (input.read(handshakeBytes) < handshakeLen) error("Premature end of stream whilst reading the handshake")
-            val handshake: HandshakeState = setupHandshake(protocolName)
-            try {
+            setupHandshake(protocolName).use { handshake ->
                 readHandshake(handshakeLen, handshakeBytes, handshake)
                 checkRemotePublicKey(handshake)
-                assert(handshake.action == HandshakeState.SPLIT)
+                check(handshake.action == HandshakeState.SPLIT)
                 // Setup done, so retrieve the per-message key.
                 val split: CipherStatePair = handshake.split()
                 split.receiverOnly()
                 cipherState = split.receiver
-                assert(handshake.action == HandshakeState.COMPLETE)
-            } finally {
-                handshake.destroy()
+                check(handshake.action == HandshakeState.COMPLETE)
             }
         } catch (e: Exception) {
             handshakeFailure = IOException(e)
         } finally {
+            // No longer need the private key now we've established the session key.
             Noise.destroy(privateKey)
         }
         if (handshakeFailure != null) throw handshakeFailure!!
@@ -381,7 +389,7 @@ internal class MailDecryptingStream(
         val prologue: ByteArray = computePrologue(protocolName.toByteArray(StandardCharsets.UTF_8))
         handshake.setPrologue(prologue, 0, prologue.size)
         handshake.start()
-        assert(handshake.action == HandshakeState.READ_MESSAGE)
+        check(handshake.action == HandshakeState.READ_MESSAGE)
         return handshake
     }
 
@@ -436,9 +444,8 @@ private fun computePrologue(protocolNameBytes: ByteArray): ByteArray {
     // baking protocols. We use it here only to simplify future interop work. It's OK if the spec changes.
     val noiseSocketPrologueHeader = "NoiseSocketInit1".toByteArray(StandardCharsets.UTF_8)
     val prologue = ByteArray(noiseSocketPrologueHeader.size + 2 + protocolNameBytes.size)
-    System.arraycopy(noiseSocketPrologueHeader, 0, prologue, 0, noiseSocketPrologueHeader.size)
-    prologue[noiseSocketPrologueHeader.size] = (protocolNameBytes.size shr 8).toByte()
-    prologue[noiseSocketPrologueHeader.size + 1] = protocolNameBytes.size.toByte()
-    System.arraycopy(protocolNameBytes, 0, prologue, noiseSocketPrologueHeader.size + 2, protocolNameBytes.size)
+    noiseSocketPrologueHeader.copyInto(prologue, 0)
+    prologue.writeShortTo(noiseSocketPrologueHeader.size, protocolNameBytes.size)
+    protocolNameBytes.copyInto(prologue, noiseSocketPrologueHeader.size + 2)
     return prologue
 }

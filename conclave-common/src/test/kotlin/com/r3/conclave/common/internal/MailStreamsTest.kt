@@ -13,10 +13,8 @@ class MailStreamsTest {
     private val protocolName = "Noise_X_25519_AESGCM_SHA256"
     private val receivingPrivateKey = ByteArray(32).also { Noise.random(it) }
     private val receivingKey = Noise.createDH("25519").also { it.setPrivateKey(receivingPrivateKey, 0) }
-    private var senderKey: DHState? = null
 
-    // There's kotlin.String.encodeToByteArray but it's experimental API at the moment.
-    private val msg = java.lang.String("Hello, can you hear me?").getBytes(Charsets.UTF_8)
+    private val msg = "Hello, can you hear me?".toByteArray()
 
     @Test
     fun happyPath() {
@@ -37,8 +35,7 @@ class MailStreamsTest {
 
         // Feed the byte array into the stream in 8kb pieces.
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, "AESGCM", "25519", "SHA256",
-                receivingKey.publicKey, null, senderPrivateKey).use { encrypt ->
+        MailEncryptingStream(baos, receivingKey.publicKey, null, senderPrivateKey).use { encrypt ->
             ByteArrayInputStream(data).copyTo(encrypt, 8192)
         }
 
@@ -84,11 +81,13 @@ class MailStreamsTest {
         // Corrupt every byte in the array and check we get an exception with a reasonable
         // error message for each.
         for (i in bytes.indices) {
-            bytes[i] = (bytes[i] + 1).toByte()
+            bytes[i] = bytes[i].inc()
             val e = assertThrows<IOException> { decrypt(bytes) }
             // Is the exception message in our list of acceptable/anticipated errors?
             assertTrue(corruptionErrors.none { e.message!! in it }, "Unrecognised error: ${e.message!!}")
-            bytes[i] = (bytes[i] - 1).toByte()
+            bytes[i] = bytes[i].dec()
+            // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
+            decrypt(bytes)
         }
     }
 
@@ -104,18 +103,16 @@ class MailStreamsTest {
     @Test
     fun associatedData() {
         val baos = ByteArrayOutputStream()
-        val ad = ByteArray(4)
-        for (i in ad.indices) ad[i] = i.toByte()
-        MailEncryptingStream(baos, "AESGCM", "25519", "SHA256",
-                receivingKey.publicKey, ad, null).use { it.write(msg) }
+        val ad = ByteArray(4) { it.toByte() }
+        MailEncryptingStream(baos, receivingKey.publicKey, ad, null).use { it.write(msg) }
         val stream = decrypt(baos.toByteArray())
         assertArrayEquals(ad, stream.associatedData)
     }
 
     private fun encryptMessage(senderPrivateKey: ByteArray? = null): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream(baos, "AESGCM", "25519", "SHA256",
-                receivingKey.publicKey, null, senderPrivateKey)
+        val encrypt = MailEncryptingStream(baos, receivingKey.publicKey, null, senderPrivateKey,
+                "AESGCM", "25519", "SHA256")
         assertEquals(protocolName, encrypt.protocolName)
 
         encrypt.write(msg)

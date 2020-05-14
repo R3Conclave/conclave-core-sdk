@@ -39,9 +39,14 @@ package com.r3.conclave.common.internal.noise.protocol;
  * The {@link Noise#destroy(byte[])} function can help with destroying byte arrays
  * that hold sensitive values.
  */
-public interface Destroyable {
+public interface Destroyable extends AutoCloseable {
 	/**
 	 * Destroys all sensitive state in the current object.
 	 */
 	void destroy();
+
+	@Override
+	default void close() throws Exception {
+		destroy();
+	}
 }
