@@ -7,6 +7,11 @@ mainClassName = "com.r3.conclave.sample.host.Host"
 // Override the default (simulation) with -PenclaveMode=
 def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 
+// Create a task that can be used for generating signing materials
+tasks.register("prepareForSigning") {
+    it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
+}    
+
 dependencies {
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
     implementation "com.r3.conclave:conclave-client:$conclaveVersion"

@@ -33,4 +33,10 @@ processResources {
 conclave {
     productID = 1
     revocationLevel = 0
+
+    release {
+        // By default release enclaves will use a 2 step external signing process.
+        // Set the sample to use a dummy key.
+        signingType = dummyKey
+    }
 }

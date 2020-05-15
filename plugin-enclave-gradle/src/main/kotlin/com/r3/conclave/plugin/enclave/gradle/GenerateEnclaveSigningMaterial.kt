@@ -56,5 +56,6 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
             putInt(encodedSigDate)
         }
         signingMaterialFile.writeBytes(data)
+        project.logger.lifecycle("Enclave signing materials: ${signingMaterialFile.absolutePath}")
     }
 }

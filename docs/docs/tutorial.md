@@ -165,6 +165,22 @@ dependencies {
 This says that at runtime (but not compile time) the enclave must be on the classpath, and configures dependencies to
 respect the three different variants of the enclave.
 
+If you intend to use an [external signing process](signing.md) to sign your enclave then add the following lines to
+the Gradle file:
+
+```groovy hl_lines="4 5 6 7"
+// Override the default (simulation) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+
+// Create a task that can be used for generating signing materials
+tasks.register("prepareForSigning") {
+    it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
+}    
+```
+
+This creates a new task that can be invoked using Gradle to halt the build after generating materials that need to
+be signed by an external signing process. After the material has been signed the build can be resumed.
+
 ### Configure the enclave build
 
 Add the Conclave Gradle plugin:
@@ -199,7 +215,60 @@ The revocation level should be incremented if a weakness in the enclave code dis
 clients to avoid connecting to old, compromised enclaves. The revocation level should not be incremented on every new
 release, but only when security improvements have been made.
 
+Specify the signing methods for each of the build types:
+
+```groovy hl_lines="5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27"
+conclave {
+    productID = 1
+    revocationLevel = 0
+
+    // For simulation, we want to use the default signing type of dummyKey so
+    // we do not need to specify a configuration.
+
+    debug {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
+
+    release {
+        // The enclave needs to be built in stages.
+        // Firstly, build the signing material:
+        //  ./gradlew prepareForSigning -PenclaveMode="Release"
+        //
+        // Generate a signature from the signing material.
+        //
+        // Finally build the signed enclave:
+        //  ./gradlew build -PenclaveMode="Release"
+        //
+        signingType = externalKey
+        signatureDate = new Date(1970, 0, 1)
+        mrsignerSignature = file("../signing/signature.bin")
+        mrsignerPublicKey = file("../signing/external_signing_public.pem")
+    }
+}
+```
+
 And with that, we're done configuring the build.
+
+### Information on signing keys for the tutorial
+The example configuration above specifies different [signing configurations](signing.md#signing-configurations) for each of the different build types. 
+
+ * Simulation builds use the default dummy key. 
+ * Debug builds use a private key. 
+ * Release builds use an external signing process that requires Gradle to be invoked in two stages.
+
+The ```hello-world``` sample in the SDK contains some example keys that can be used with the ```privateKey```
+and ```externalKey``` signing types. These can be found in ```hello-world/signing/```.
+
+| Key Files | Description |
+| :----     | :----       |
+| sample_private_key.pem | A 3072 bit RSA private key that can be used to test the ```privateKey``` signing type |
+| external_signing_*.pem | An AES encrypted 3072 bit RSA public/private key pair that can be used to test the ```externalKey``` signing type. The private key can be accessed with the password '12345' |
+
+Alternatively you can provide or [generate your own](signing.md#generating-keys-for-signing-an-enclave) keys.
+
+!!! important
+    Only use these sample keys for the tutorial. Do not use them for signing your own enclaves!
 
 ## Create a new subclass of `Enclave`
 

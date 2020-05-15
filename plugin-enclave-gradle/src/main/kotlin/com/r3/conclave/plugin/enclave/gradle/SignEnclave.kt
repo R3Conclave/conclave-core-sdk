@@ -7,7 +7,11 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
 
-open class SignEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class SignEnclave @Inject constructor(
+    objects: ObjectFactory,
+    private val enclaveExtension: EnclaveExtension,
+    private val buildType: BuildType
+) : ConclaveTask() {
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -27,6 +31,12 @@ open class SignEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTas
     val signedEnclavePath: String get() = outputSignedEnclave.asFile.get().absolutePath
 
     override fun action() {
+        if (enclaveExtension.signingType.get() == SigningType.DummyKey && buildType == BuildType.Release) {
+            // Using 'quiet' logging type for 'Important information messages'.
+            // See https://docs.gradle.org/current/userguide/logging.html.
+            project.logger.quiet("A signingType of dummyKey has been specified for a release enclave. The resulting enclave will not be loadable on any SGX platform. See Conclave documentation for details");
+        }
+
         project.exec { spec ->
             spec.commandLine(signTool.get(), "sign",
                 "-key", inputKey.asFile.get(),

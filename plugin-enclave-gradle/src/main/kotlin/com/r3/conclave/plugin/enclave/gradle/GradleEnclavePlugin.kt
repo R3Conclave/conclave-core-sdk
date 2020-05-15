@@ -99,10 +99,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
-            enclaveExtension.shouldUseDummyKey.set(true)
-            enclaveExtension.mrsignerPublicKey.set(layout.projectDirectory.file("src/sgx/$type/mrsigner.public.pem"))
-            enclaveExtension.mrsignerSignature.set(layout.projectDirectory.file("src/sgx/$type/mrsigner.signature.bin"))
-            enclaveExtension.signatureDate.set(SimpleDateFormat("yyyymmdd").parse("19700101"))
+            // Simulation and debug default to using a dummy key. Release defaults to external key
+            val keyType = when (type) {
+                BuildType.Release   -> SigningType.ExternalKey
+                else                -> SigningType.DummyKey
+            }
+            enclaveExtension.signingType.set(keyType)
+
+            // Set the default signing material location as an absolute path because if the
+            // user overrides it they will use a project relative (rather than build directory
+            // relative) path name.
+            enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
 
             val copyPartialEnclaveTask = target.createTask<Copy>("copyPartialEnclave$type") { task ->
                 task.group = CONCLAVE_GROUP
@@ -123,12 +130,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
             }
 
-            val signEnclaveWithDummyKeyTask = target.createTask<SignEnclave>("signEnclaveWithDummyKey$type") { task ->
+            val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type) { task ->
                 task.dependsOn(copySgxToolsTask)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                task.inputKey.set(createDummyKeyTask.outputKey)
+                task.inputKey.set(enclaveExtension.signingType.flatMap {
+                    when (it) {
+                        SigningType.DummyKey    -> createDummyKeyTask.outputKey
+                        SigningType.PrivateKey  -> enclaveExtension.signingKey
+                        else                    -> null
+                    }
+                })
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
@@ -137,7 +150,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                task.outputSigningMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
+                task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
             }
 
             val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type", enclaveExtension) { task ->
@@ -150,16 +163,20 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type") { task ->
-                val signingTask = enclaveExtension.shouldUseDummyKey.map {
-                    if (it) signEnclaveWithDummyKeyTask else addEnclaveSignatureTask
+                val signingTask = enclaveExtension.signingType.map {
+                    when (it) {
+                        SigningType.DummyKey    -> signEnclaveWithKeyTask
+                        SigningType.PrivateKey  -> signEnclaveWithKeyTask
+                        else                    -> addEnclaveSignatureTask
+                    }
                 }
                 task.dependsOn(signingTask)
                 task.inputSignTool.set(signToolFile)
-                task.inputSignedEnclave.set(enclaveExtension.shouldUseDummyKey.flatMap {
-                    if (it) {
-                        signEnclaveWithDummyKeyTask.outputSignedEnclave
-                    } else {
-                        addEnclaveSignatureTask.outputSignedEnclave
+                task.inputSignedEnclave.set(enclaveExtension.signingType.flatMap {
+                    when (it) {
+                        SigningType.DummyKey    -> signEnclaveWithKeyTask.outputSignedEnclave
+                        SigningType.PrivateKey  -> signEnclaveWithKeyTask.outputSignedEnclave
+                        else                    -> addEnclaveSignatureTask.outputSignedEnclave
                     }
                 })
                 task.outputEnclaveMetadata.set(enclaveDirectory.resolve("metadata.yml").toFile())
@@ -175,8 +192,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.dependsOn(enclaveClassNameTask)
                 task.archiveAppendix.set("signed-so")
                 task.archiveClassifier.set(typeLowerCase)
-                // TODO This task assumes buildSignedEnclave is the sole task that can create the signed so file. This is
-                //      currently not the case: https://r3-cev.atlassian.net/browse/CON-26
+                // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
+                // to use to sign the enclave and invokes the correct task accordingly.
                 task.from(buildSignedEnclaveTask.outputSignedEnclave)
                 val packagePath = enclaveClassNameTask.outputEnclaveClassName.map { it.substringBeforeLast('.').replace('.', '/') }
                 task.into(packagePath)
