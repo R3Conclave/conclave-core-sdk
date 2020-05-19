@@ -1,6 +1,5 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.common.internal.noise.protocol.DHState
 import com.r3.conclave.common.internal.noise.protocol.Noise
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -10,7 +9,8 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 class MailStreamsTest {
-    private val protocolName = "Noise_X_25519_AESGCM_SHA256"
+    private val protocolNameX = "Noise_X_25519_AESGCM_SHA256"
+    private val protocolNameN = "Noise_N_25519_AESGCM_SHA256"
     private val receivingPrivateKey = ByteArray(32).also { Noise.random(it) }
     private val receivingKey = Noise.createDH("25519").also { it.setPrivateKey(receivingPrivateKey, 0) }
 
@@ -19,7 +19,7 @@ class MailStreamsTest {
     @Test
     fun happyPath() {
         val bytes = encryptMessage()
-        assertEquals(protocolName, String(bytes.copyOfRange(1, 1 + protocolName.length), Charsets.US_ASCII))
+        assertEquals(protocolNameN, String(bytes.copyOfRange(1, 1 + protocolNameN.length), Charsets.US_ASCII))
         // Can't find, it's encrypted.
         assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello?"))
         val stream = decrypt(bytes)
@@ -96,6 +96,9 @@ class MailStreamsTest {
         val senderPrivateKey = ByteArray(32).also { Noise.random(it) }
         val senderDHState = Noise.createDH("25519").also { it.setPrivateKey(senderPrivateKey, 0) }
         val bytes = encryptMessage(senderPrivateKey)
+        // When we authenticate ourselves, we use the X handshake pattern instead of the N pattern. X transmits the
+        // public key corresponding to senderPrivateKey to the other side so they can use it as part of EC-DH.
+        assertEquals(protocolNameX, String(bytes.copyOfRange(1, 1 + protocolNameX.length), Charsets.US_ASCII))
         val stream = decrypt(bytes)
         assertArrayEquals(senderDHState.publicKey, stream.senderPublicKey)
     }
@@ -111,9 +114,11 @@ class MailStreamsTest {
 
     private fun encryptMessage(senderPrivateKey: ByteArray? = null): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream(baos, receivingKey.publicKey, null, senderPrivateKey,
-                "AESGCM", "25519", "SHA256")
-        assertEquals(protocolName, encrypt.protocolName)
+        val encrypt = MailEncryptingStream(baos, receivingKey.publicKey, null, senderPrivateKey)
+        if (senderPrivateKey != null)
+            assertEquals(protocolNameX, encrypt.protocolName)
+        else
+            assertEquals(protocolNameN, encrypt.protocolName)
 
         encrypt.write(msg)
         encrypt.close()

@@ -56,18 +56,19 @@ internal class MailEncryptingStream(
         // TODO: Make keys type safe
         destinationPublicKey: ByteArray,
         associatedData: ByteArray?,
-        senderPrivateKey: ByteArray?,
-        private val cipherName: String = "AESGCM",
-        private val dhName: String = "25519",
-        private val hashName: String = "SHA256"
+        senderPrivateKey: ByteArray?
 ) : FilterOutputStream(out) {
     private var cipherState: CipherState? = null
     private val destinationPublicKey: ByteArray = destinationPublicKey.clone()
     private val associatedData: ByteArray? = associatedData?.clone()
     private val senderPrivateKey: ByteArray? = senderPrivateKey?.clone()
 
+    private val cipherName: String = "AESGCM"
+    private val dhName: String = "25519"
+    private val hashName: String = "SHA256"
+
     /** The standard Noise protocol name, as used in the specs. */
-    val protocolName = "Noise_X_${dhName}_${cipherName}_$hashName"
+    val protocolName = (if (senderPrivateKey != null) "Noise_X_" else "Noise_N_") + "${dhName}_${cipherName}_$hashName"
 
     // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
     // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
@@ -84,13 +85,13 @@ internal class MailEncryptingStream(
 
             // If one was provided, the recipient will get our public key in an authenticated manner i.e. we cannot
             // fake it because we need to use the corresponding private key when sending the message.
-            val localKeyPair: DHState = handshake.localKeyPair
+            //
+            // The nature of the handshake changes when a sender private key is supplied: we use the X handshake instead
+            // of the N handshake. These two types are described in the Noise specification.
+            val localKeyPair: DHState? = handshake.localKeyPair
             if (senderPrivateKey != null) {
-                localKeyPair.setPrivateKey(senderPrivateKey, 0)
-            } else {
-                // Otherwise we use a private key of zero. The other side will recognise the corresponding public key
-                // as meaning "I am anonymous".
-                localKeyPair.setPrivateKey(ByteArray(localKeyPair.privateKeyLength), 0)
+                // localKeyPair will be non-null due to the selection of the protocol name above.
+                localKeyPair!!.setPrivateKey(senderPrivateKey, 0)
             }
 
             // The prologue stops the Noise protocol name being tampered with to mismatch what we think we're using
@@ -102,7 +103,7 @@ internal class MailEncryptingStream(
 
             // Check size of the associated data (i.e. unencrypted but authenticated mail headers).
             val associatedDataLen = associatedData?.size ?: 0
-            val maxADLen = Noise.MAX_PACKET_LEN - localKeyPair.publicKeyLength - Noise.createCipher(cipherName).macLength - 1
+            val maxADLen = Noise.MAX_PACKET_LEN - (localKeyPair?.publicKeyLength ?: 0) - Noise.createCipher(cipherName).macLength - 1
             if (associatedDataLen > maxADLen)
                 throw IOException("The associated data is too large: $associatedDataLen but must be less than $maxADLen")
 
@@ -363,7 +364,9 @@ internal class MailDecryptingStream(
             if (input.read(handshakeBytes) < handshakeLen) error("Premature end of stream whilst reading the handshake")
             setupHandshake(protocolName).use { handshake ->
                 readHandshake(handshakeLen, handshakeBytes, handshake)
-                checkRemotePublicKey(handshake)
+                // The sender has the option of whether to authenticate or not. If not, it'll be a Noise_N_ handshake.
+                if (protocolName.startsWith("Noise_X_"))
+                    senderPublicKey = handshake.remotePublicKey.publicKey
                 check(handshake.action == HandshakeState.SPLIT)
                 // Setup done, so retrieve the per-message key.
                 val split: CipherStatePair = handshake.split()
@@ -400,18 +403,6 @@ internal class MailDecryptingStream(
         associatedData = if (len == 0) null else ad.copyOfRange(0, len)
     }
 
-    private fun checkRemotePublicKey(handshake: HandshakeState) {
-        // The remote public key might be provided, or might be a dummy (corresponding to a private key of zero).
-        // Calculate the dummy key and null out the sender public key if it matches that.
-        val pk = handshake.remotePublicKey.publicKey
-        val dh = Noise.createDH(handshake.protocolName.split('_')[2])
-        val privateKeyOfZero = ByteArray(dh.privateKeyLength)
-        dh.setPrivateKey(privateKeyOfZero, 0)
-        val anonymousPublicKey = dh.publicKey
-        if (!Arrays.equals(pk, anonymousPublicKey))
-            senderPublicKey = pk
-    }
-
     @Throws(IOException::class)
     private fun readProtocolNameHeader(): String {
         // A byte followed by that many characters in ASCII.
@@ -421,17 +412,29 @@ internal class MailDecryptingStream(
         // Read it in and advance the stream.
         val protocolNameBytes = ByteArray(protocolNameLen)
         if (input.read(protocolNameBytes) != protocolNameBytes.size) error("Could not read protocol name")
-        val protocolName = String(protocolNameBytes, StandardCharsets.US_ASCII)
-        // We only allow the X one-way handshake in Mail. We could also support "N" in which the sender doesn't
-        // get to pick a public key, at the saving of some bytes. For simplicity we always use "X" and if the sender
-        // doesn't have a key, they just use a key of zero. As zero is a valid value for a private key in Curve25519
-        // (all values are valid) this just yields some random looking public key which we recognise as special.
-        if (!protocolName.startsWith("Noise_X_")) error("Unsupported Noise protocol name: $protocolName")
-        return protocolName
+
+        // We limit the handshakes to just two here, with the same ciphers. Adding new ciphers won't be forwards
+        // compatible. The justification is as follows. Curve25519, AESGCM and SHA256 are by this point mature,
+        // well tested algorithms that are widely deployed to protect all internet traffic. Although new ciphers
+        // are regularly designed, in practice few are every deployed because elliptic curve crypto with AES and SHA2
+        // have no known problems, there are none on the horizon beyond quantum computers, and the places where other
+        // algorithms get deployed tend to be devices with severe power or space constraints.
+        //
+        // What of QC? Noise does support a potential post-quantum algorithm. However, no current PQ ciphersuite has
+        // been settled on by standards bodies yet, and there are multiple competing proposals, many of which have
+        // worse performance or other problems compared to the standard algorithms. Given that the QCs being built
+        // at the moment are said to be unusable for breaking encryption keys, and it's unclear when - if ever - such
+        // a machine will actually be built, it makes sense to wait for PQ standardisation and then implement the
+        // winning algorithms at that time, rather than attempt to second guess and end up with (relatively speaking)
+        // not well reviewed algorithms baked into the protocol.
+        return when (val protocolName = String(protocolNameBytes, StandardCharsets.US_ASCII)) {
+            "Noise_X_25519_AESGCM_SHA256", "Noise_N_25519_AESGCM_SHA256" -> protocolName
+            else -> error("Unsupported Noise protocol name: $protocolName")
+        }
     }
 
     @Throws(IOException::class)
-    private fun error(s: String) {
+    private fun error(s: String): Nothing {
         throw IOException("$s. Corrupt stream or not Conclave Mail.")
     }
 }
