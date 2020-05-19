@@ -35,7 +35,7 @@ subprojects { Project project ->
         def hostSharedBuildDir = "$cppBuildDir/$type/jvm-host-shared"
         def libDir = "/usr/lib/x86_64-linux-gnu"
         def simSuffix = type == "Simulation" ? "_sim" : ""
-        task.into "com/r3/sgx/host-libraries/$type", {
+        task.into "com/r3/conclave/host-libraries/$type", {
             from (linuxSgxBuildDir) {
                 include "libsgx_enclave_common.so"
                 rename "libsgx_enclave_common.so", "libsgx_enclave_common.so.1"

@@ -34,7 +34,7 @@ extern const uint8_t _binary_app_jar_start[];
 extern const uint8_t _binary_app_jar_end[];
 
 void jvm_ecall(void *bufferIn, int bufferInLen) {
-    using namespace r3::sgx;
+    using namespace r3::conclave;
     auto &jvm = Jvm::instance();
     auto jniEnv = jvm.attach_current_thread();
     if (!jniEnv) {
@@ -45,7 +45,7 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     }
     JniScopedRef<jbyteArray> jarrayIn {jniEnv->NewByteArray(bufferInLen), jniEnv.get()};
     jniEnv->SetByteArrayRegion(jarrayIn.value(), 0, bufferInLen, static_cast<const jbyte *>(bufferIn));
-    auto NativeApiClass = jniEnv->FindClass("com/r3/sgx/core/enclave/internal/NativeEnclaveApi");
+    auto NativeApiClass = jniEnv->FindClass("com/r3/conclave/core/enclave/internal/NativeEnclaveApi");
     abortOnJniException(jniEnv.get());
     auto methodId = jniEnv->GetStaticMethodID(NativeApiClass, "enclaveEntry", "([B)V");
     abortOnJniException(jniEnv.get());
@@ -54,13 +54,13 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
 }
 
 void ecall_finalize_enclave() {
-    using namespace r3::sgx;
+    using namespace r3::conclave;
     // Stop all enclave threads and prevent new one from entering
     Jvm::instance().close();
     EnclaveThreadFactory::shutdown();
 }
 
-JNIEXPORT void JNICALL Java_com_r3_sgx_core_enclave_internal_Native_jvmOcall
+JNIEXPORT void JNICALL Java_com_r3_conclave_core_enclave_internal_Native_jvmOcall
         (JNIEnv *jniEnv, jobject, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
     abortOnJniException(jniEnv);
@@ -73,7 +73,7 @@ JNIEXPORT void JNICALL Java_com_r3_sgx_core_enclave_internal_Native_jvmOcall
     }
 }
 
-JNIEXPORT jint JNICALL Java_com_r3_sgx_core_enclave_internal_Native_readAppJarChunk
+JNIEXPORT jint JNICALL Java_com_r3_conclave_core_enclave_internal_Native_readAppJarChunk
         (JNIEnv *jniEnv, jobject, jlong jarOffset, jbyteArray dest, jint destOffset, jint length) {
     static unsigned long jarSize = _binary_app_jar_end - _binary_app_jar_start;
     auto remainingBytes = jarSize - jarOffset;
@@ -89,7 +89,7 @@ JNIEXPORT jint JNICALL Java_com_r3_sgx_core_enclave_internal_Native_readAppJarCh
     return numberOfBytesToCopy;
 }
 
-JNIEXPORT void JNICALL Java_com_r3_sgx_core_enclave_internal_Native_createReport
+JNIEXPORT void JNICALL Java_com_r3_conclave_core_enclave_internal_Native_createReport
         (JNIEnv *jniEnv, jobject, jbyteArray targetInfoIn, jbyteArray reportDataIn, jbyteArray reportOut) {
     jbyte *target_info = nullptr;
     if (targetInfoIn != nullptr) {
@@ -119,7 +119,7 @@ JNIEXPORT void JNICALL Java_com_r3_sgx_core_enclave_internal_Native_createReport
     }
 }
 
-JNIEXPORT void JNICALL Java_com_r3_sgx_core_enclave_internal_Native_getRandomBytes
+JNIEXPORT void JNICALL Java_com_r3_conclave_core_enclave_internal_Native_getRandomBytes
         (JNIEnv *jniEnv, jobject, jbyteArray output, jint offset, jint length) {
     if (length < 0) {
         raiseException(jniEnv, "Please specify a non-negative length");
@@ -140,7 +140,7 @@ JNIEXPORT void JNICALL Java_com_r3_sgx_core_enclave_internal_Native_getRandomByt
     }
 }
 
-JNIEXPORT jboolean JNICALL Java_com_r3_sgx_core_enclave_internal_Native_isEnclaveSimulation
+JNIEXPORT jboolean JNICALL Java_com_r3_conclave_core_enclave_internal_Native_isEnclaveSimulation
         (JNIEnv *, jobject) {
 #ifdef SGX_SIM
     return static_cast<jboolean>(true);
@@ -150,11 +150,11 @@ JNIEXPORT jboolean JNICALL Java_com_r3_sgx_core_enclave_internal_Native_isEnclav
 }
 
 DLSYM_STATIC {
-    DLSYM_ADD(Java_com_r3_sgx_core_enclave_internal_Native_jvmOcall);
-    DLSYM_ADD(Java_com_r3_sgx_core_enclave_internal_Native_readAppJarChunk);
-    DLSYM_ADD(Java_com_r3_sgx_core_enclave_internal_Native_createReport);
-    DLSYM_ADD(Java_com_r3_sgx_core_enclave_internal_Native_getRandomBytes);
-    DLSYM_ADD(Java_com_r3_sgx_core_enclave_internal_Native_isEnclaveSimulation);
+    DLSYM_ADD(Java_com_r3_conclave_core_enclave_internal_Native_jvmOcall);
+    DLSYM_ADD(Java_com_r3_conclave_core_enclave_internal_Native_readAppJarChunk);
+    DLSYM_ADD(Java_com_r3_conclave_core_enclave_internal_Native_createReport);
+    DLSYM_ADD(Java_com_r3_conclave_core_enclave_internal_Native_getRandomBytes);
+    DLSYM_ADD(Java_com_r3_conclave_core_enclave_internal_Native_isEnclaveSimulation);
 };
 
 }

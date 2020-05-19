@@ -23,7 +23,7 @@ jar {
     dependsOn(":cpp:compileHostSharedSimulation")
     def linuxSgxBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
     def hostSharedBuildDir = "$cppBuildDir/Simulation/jvm-host-shared"
-    into "com/r3/sgx/host-libraries/shared", {
+    into "com/r3/conclave/host-libraries/shared", {
         from (linuxSgxBuildDir) {
             include "libsgx_capable.so"
         }

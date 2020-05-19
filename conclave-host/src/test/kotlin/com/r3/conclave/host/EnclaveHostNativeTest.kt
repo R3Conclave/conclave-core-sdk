@@ -5,8 +5,8 @@ import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.enclave.Enclave
-import com.r3.sgx.dynamictesting.EnclaveBuilder
-import com.r3.sgx.dynamictesting.TestEnclaves
+import com.r3.conclave.dynamictesting.EnclaveBuilder
+import com.r3.conclave.dynamictesting.TestEnclaves
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll

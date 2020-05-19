@@ -7,7 +7,7 @@
 #include "sgx.h"
 
 namespace r3 {
-namespace sgx {
+namespace conclave {
 
 /**
  * A thread implementation for SGX enclaves
@@ -72,6 +72,6 @@ public:
     static bool is_alive();
 };
 
-} // namespace sgx {
+} // namespace conclave {
 } // namespace r3  {
 

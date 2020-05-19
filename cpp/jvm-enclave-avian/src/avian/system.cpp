@@ -130,10 +130,10 @@ namespace {
             }
 
             sgx_status_t createSystemThread(Runnable *runnable) {
-                using SgxThread = r3::sgx::Thread;
-                using SgxThreadFactory = r3::sgx::EnclaveThreadFactory;
+                using SgxThread = r3::conclave::Thread;
+                using SgxThreadFactory = r3::conclave::EnclaveThreadFactory;
                 aex_assert(thread_ == nullptr);
-                // We need to get a raw pointer to r3::sgx::Thread, obtained by moving into newly constructed instance:
+                // We need to get a raw pointer to r3::conclave::Thread, obtained by moving into newly constructed instance:
                 thread_ = new SgxThread(SgxThreadFactory::create(&run, runnable));
                 return thread_->start();
             }
@@ -152,7 +152,7 @@ namespace {
             unsigned flags;
 
         private:
-            r3::sgx::Thread* thread_;
+            r3::conclave::Thread* thread_;
         };
 
         class Mutex : public System::Mutex {

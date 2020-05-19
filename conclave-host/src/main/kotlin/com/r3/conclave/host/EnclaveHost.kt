@@ -9,9 +9,9 @@ import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
-import com.r3.sgx.core.common.*
-import com.r3.sgx.core.host.*
-import com.r3.sgx.core.host.internal.NativeShared
+import com.r3.conclave.core.common.*
+import com.r3.conclave.core.host.*
+import com.r3.conclave.core.host.internal.NativeShared
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream

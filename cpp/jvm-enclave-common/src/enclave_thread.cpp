@@ -12,7 +12,7 @@
 using Task = std::function<void()>;
 
 namespace r3 {
-namespace sgx {
+namespace conclave {
 
 /************************************************************************/
 
@@ -195,9 +195,9 @@ void EnclaveThreadFactory::shutdown() {
     return EnclaveThreadFactoryImpl::instance().shutdown();
 }
 
-} // namespace sgx {
+} // namespace conclave {
 } // namespace r3  {
 
 void ecall_attach_thread() {
-    r3::sgx::EnclaveThreadFactoryImpl::instance().attach_host_thread();
+    r3::conclave::EnclaveThreadFactoryImpl::instance().attach_host_thread();
 }

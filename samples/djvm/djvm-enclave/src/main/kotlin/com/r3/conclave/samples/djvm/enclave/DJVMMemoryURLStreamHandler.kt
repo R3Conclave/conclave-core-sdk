@@ -1,6 +1,6 @@
 package com.r3.conclave.samples.djvm.enclave
 
-import com.r3.sgx.utils.classloaders.MemoryURLStreamHandler
+import com.r3.conclave.utils.classloaders.MemoryURLStreamHandler
 import java.net.MalformedURLException
 import java.net.URL
 import java.nio.ByteBuffer

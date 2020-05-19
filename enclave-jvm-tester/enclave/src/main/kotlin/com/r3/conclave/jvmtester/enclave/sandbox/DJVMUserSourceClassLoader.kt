@@ -1,7 +1,7 @@
 package com.r3.conclave.jvmtester.enclave.sandbox
 
-import com.r3.sgx.utils.classloaders.MemoryClassLoader
-import com.r3.sgx.utils.classloaders.MemoryURL
+import com.r3.conclave.utils.classloaders.MemoryClassLoader
+import com.r3.conclave.utils.classloaders.MemoryURL
 import net.corda.djvm.source.UserSource
 
 /**

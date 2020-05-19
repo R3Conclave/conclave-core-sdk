@@ -34,7 +34,7 @@ jar {
 shadowJar {
     archiveFileName = 'load-test-runner.jar'
     manifest {
-        attributes("Main-Class": "com.r3.sgx.loadtest.runner.JmeterRunnerCli")
+        attributes("Main-Class": "com.r3.conclave.loadtest.runner.JmeterRunnerCli")
     }
     zip64 = true
 }

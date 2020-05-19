@@ -26,7 +26,7 @@ abstract class DJVMBase {
         private lateinit var classPaths: List<Path>
 
         @JvmField
-        val TEST_WHITELIST = Whitelist.MINIMAL + setOf("^com/r3/sgx/djvm/util/Utilities(\\..*)?\$".toRegex())
+        val TEST_WHITELIST = Whitelist.MINIMAL + setOf("^com/r3/conclave/djvm/util/Utilities(\\..*)?\$".toRegex())
 
         @JvmStatic
         fun setupClassLoader(userSource: UserSource, bootstrapSource: ApiSource, testingLibraries: List<Path>, sandboxConfiguration: SandboxConfiguration) {

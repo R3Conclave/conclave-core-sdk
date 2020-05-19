@@ -11,7 +11,7 @@ import javax.inject.Inject
 
 open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
-        private const val OLD_ENCLAVE_CLASS_NAME = "com.r3.sgx.core.enclave.Enclave"
+        private const val OLD_ENCLAVE_CLASS_NAME = "com.r3.conclave.core.enclave.Enclave"
         private const val CONCLAVE_ENCLAVE_CLASS_NAME = "com.r3.conclave.enclave.Enclave"
     }
 

@@ -5,7 +5,7 @@
 #include <memory>
 #include <mutex>
 
-namespace r3 { namespace sgx {
+namespace r3 { namespace conclave {
 
 /**
  * Manage the enclave JVM
@@ -72,4 +72,4 @@ private:
     std::unique_ptr<JvmStateImpl> impl_;
 };
 
-}} // namespace r3 { namespace sgx {
+}} // namespace r3 { namespace conclave {

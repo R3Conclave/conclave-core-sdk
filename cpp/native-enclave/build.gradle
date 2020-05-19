@@ -7,7 +7,7 @@ subprojects {
     tasks.getByName("jar") { Jar task ->
         task.dependsOn(":cpp:compileEnclave$type")
         def partialEnclaveBuildDir = "$cppBuildDir/$type/jvm-enclave-avian"
-        task.into "com/r3/sgx/partial-enclave/$type", {
+        task.into "com/r3/conclave/partial-enclave/$type", {
             from(partialEnclaveBuildDir) {
                 include "jvm_enclave_avian"
             }

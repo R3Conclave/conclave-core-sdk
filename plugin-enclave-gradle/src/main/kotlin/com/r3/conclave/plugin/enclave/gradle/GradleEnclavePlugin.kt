@@ -65,7 +65,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.into(baseDirectory)
         }
 
-        val sgxToolsDirectory = "${copySgxToolsTask.destinationDir}/com/r3/sgx"
+        val sgxToolsDirectory = "${copySgxToolsTask.destinationDir}/com/r3/conclave"
         val linkerToolFile = target.file("$sgxToolsDirectory/binutils/${getExecutable("ld")}")
         val signToolFile = target.file("$sgxToolsDirectory/sign-tool/${getExecutable("sgx_sign")}")
         val opensslToolFile = target.file("$sgxToolsDirectory/binutils/${getExecutable("opensslw")}")
@@ -120,7 +120,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
                 task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask)
                 task.inputLd.set(linkerToolFile)
-                task.inputEnclaveObject.set(target.file("${copyPartialEnclaveTask.destinationDir}/com/r3/sgx/partial-enclave/$type/jvm_enclave_avian"))
+                task.inputEnclaveObject.set(target.file("${copyPartialEnclaveTask.destinationDir}/com/r3/conclave/partial-enclave/$type/jvm_enclave_avian"))
                 task.inputJarObject.set(buildJarObjectTask.outputJarObject)
                 task.outputEnclave.set(enclaveDirectory.resolve("enclave.so").toFile())
                 task.stripped.set(type == BuildType.Release)

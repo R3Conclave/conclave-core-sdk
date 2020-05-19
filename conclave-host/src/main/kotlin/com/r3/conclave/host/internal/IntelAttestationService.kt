@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
-import com.r3.sgx.core.host.debug
-import com.r3.sgx.core.host.loggerFor
+import com.r3.conclave.core.host.debug
+import com.r3.conclave.core.host.loggerFor
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection

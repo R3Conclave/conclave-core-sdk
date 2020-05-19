@@ -7,8 +7,8 @@ import com.r3.conclave.samples.djvm.common.proto.ExecuteTask
 import com.r3.conclave.samples.djvm.common.proto.Request
 import com.r3.conclave.samples.djvm.common.proto.SendJar
 import com.r3.conclave.samples.djvm.common.proto.TaskResult
-import com.r3.sgx.utils.classloaders.MemoryClassLoader
-import com.r3.sgx.utils.classloaders.MemoryURL
+import com.r3.conclave.utils.classloaders.MemoryClassLoader
+import com.r3.conclave.utils.classloaders.MemoryURL
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist

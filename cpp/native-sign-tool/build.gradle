@@ -8,7 +8,7 @@ jar {
     dependsOn(":cpp:compileLinuxSgxSimulation")
     def signToolBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
     def cygwinDir = "$cppBuildDir/../cygwin"
-    into "com/r3/sgx/sign-tool", {
+    into "com/r3/conclave/sign-tool", {
         from(signToolBuildDir) {
             include "sgx_sign"
         }

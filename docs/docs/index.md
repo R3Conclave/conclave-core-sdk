@@ -52,8 +52,6 @@ This release ships with the following known issues:
 5. Some system level exceptions like divide by zero or using null reference crash the enclave/host process.
 6. The type of attestation used currently requires you to sign up with and be whitelisted by Intel. Future versions
    will implement "DCAP attestation" which will allow the owner of the hardware to whiteliste enclaves, not just Intel.
-7. There are some modules and packages under the `com.r3.sgx` namespace. These should be considered internal and may be
-   changed, removed, or merged into other modules in any release.
 
 ## Release notes
 

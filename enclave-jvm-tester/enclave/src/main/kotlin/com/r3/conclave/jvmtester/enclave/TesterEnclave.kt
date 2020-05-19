@@ -11,8 +11,8 @@ import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase
 import com.r3.conclave.jvmtester.djvm.testutils.SandboxRunner
 import com.r3.conclave.jvmtester.enclave.sandbox.AbstractSandboxEnvironment
 import com.r3.conclave.jvmtester.enclave.sandbox.DJVMMemoryURLStreamHandler
-import com.r3.sgx.utils.classloaders.MemoryClassLoader
-import com.r3.sgx.utils.classloaders.MemoryURL
+import com.r3.conclave.utils.classloaders.MemoryClassLoader
+import com.r3.conclave.utils.classloaders.MemoryURL
 import java.nio.ByteBuffer
 
 class TesterEnclave : EnclaveCall, Enclave() {

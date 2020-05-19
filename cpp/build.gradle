@@ -14,19 +14,19 @@ dependencies {
     javah_enclave project(":api-core:api-core-enclave")
 }
 
-task generateHostJniHeaders(type: Javah, constructorArgs: ['com.r3.sgx.core.host.internal.Native']) {
+task generateHostJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.core.host.internal.Native']) {
     dependsOn(configurations["javah_host"])
     inputJar = configurations["javah_host"].files.first()
     outputHeader = file("$projectDir/jvm-host/include/host_jni.h")
 }
 
-task generateHostSharedJniHeaders(type: Javah, constructorArgs: ['com.r3.sgx.core.host.internal.NativeShared']) {
+task generateHostSharedJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.core.host.internal.NativeShared']) {
     dependsOn(configurations["javah_host"])
     inputJar = configurations["javah_host"].files.first()
     outputHeader = file("$projectDir/jvm-host-shared/include/host_jni_shared.h")
 }
 
-task generateEnclaveJniHeaders(type: Javah, constructorArgs: ['com.r3.sgx.core.enclave.internal.Native']) {
+task generateEnclaveJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.core.enclave.internal.Native']) {
     dependsOn(configurations["javah_enclave"])
     inputJar = configurations["javah_enclave"].files.first()
     outputHeader = file("$projectDir/jvm-enclave-common/include/enclave_jni.h")

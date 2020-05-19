@@ -8,7 +8,7 @@
 #include <vector>
 #include <mutex>
 
-namespace r3 { namespace sgx {
+namespace r3 { namespace conclave {
 
 /**************************************************************************/
 

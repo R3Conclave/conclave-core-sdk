@@ -4,9 +4,9 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.callUntrustedHost
-import com.r3.sgx.core.common.ThrowingErrorHandler
-import com.r3.sgx.core.enclave.RootEnclave
-import com.r3.sgx.testing.MockEnclaveHandle
+import com.r3.conclave.core.common.ThrowingErrorHandler
+import com.r3.conclave.core.enclave.RootEnclave
+import com.r3.conclave.testing.MockEnclaveHandle
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.security.PublicKey

@@ -1,15 +1,15 @@
 
 import avian.test.VirtualMethodsInheritance
 import avian.test.avian.OcallReadResourceBytes
-import com.r3.sgx.core.common.BytesHandler
-import com.r3.sgx.core.common.SimpleMuxingHandler
-import com.r3.sgx.core.enclave.EnclaveApi
-import com.r3.sgx.core.enclave.RootEnclave
-import com.r3.sgx.dynamictesting.EnclaveBuilder
-import com.r3.sgx.dynamictesting.EnclaveConfig
-import com.r3.sgx.dynamictesting.EnclaveTestMode
-import com.r3.sgx.dynamictesting.TestEnclavesBasedTest
-import com.r3.sgx.testing.*
+import com.r3.conclave.core.common.BytesHandler
+import com.r3.conclave.core.common.SimpleMuxingHandler
+import com.r3.conclave.core.enclave.EnclaveApi
+import com.r3.conclave.core.enclave.RootEnclave
+import com.r3.conclave.dynamictesting.EnclaveBuilder
+import com.r3.conclave.dynamictesting.EnclaveConfig
+import com.r3.conclave.dynamictesting.EnclaveTestMode
+import com.r3.conclave.dynamictesting.TestEnclavesBasedTest
+import com.r3.conclave.testing.*
 import org.junit.Test
 import org.objectweb.asm.Opcodes
 import java.io.File

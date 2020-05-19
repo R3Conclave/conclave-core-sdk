@@ -8,7 +8,7 @@ extern void debug_print(const void *msg, int n);
 
 void throw_jvm_runtime_exception(const char *message) {
   static const char* err_msg = "Error occurred in a thread spawn by Avian";
-  auto jniEnv = r3::sgx::Jvm::instance().attach_current_thread();
+  auto jniEnv = r3::conclave::Jvm::instance().attach_current_thread();
   if (!jniEnv) {
     debug_print(err_msg, strlen(err_msg));
     debug_print(message, strlen(message));
