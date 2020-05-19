@@ -84,8 +84,8 @@ class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
                 /* avian.test.Trace::class.java, //< FAIL*/
                 avian.test.UrlTest::class.java,
 //                avian.test.VerifyErrorTest::class.java  //< temporarily disabled
-                avian.test.VirtualMethodsInheritance::class.java
-
+                avian.test.VirtualMethodsInheritance::class.java,
+                avian.test.SerialFilterTest::class.java
                 /* avian.test.Zip::class.java, //< NOT RUN: requires file I/O */
                 /* avian.test.ZipOutputStreamTest::class.java //< NOT RUN: requires file I/O */
                 )
