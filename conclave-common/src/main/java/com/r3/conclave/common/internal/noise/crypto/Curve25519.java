@@ -396,20 +396,48 @@ public final class Curve25519 {
     }
 
     /**
-     * Evaluates the curve for every bit in a secret key.
+     * Evaluates the curve for the secret key. The clamping requirement of the Curve25519
+     * specification is implemented here. The secret key is not used as is, but rather with
+     * an equivalent of this transform applied:
+     *
+     * <pre>
+     * mysecret[0] &amp;= 248;
+     * mysecret[31] &amp;= 127;
+     * mysecret[31] |= 64;
+     * </pre>
+     *
+     * This is done to avoid side channel attacks, and place the key into the right (elliptic curve) cyclic subgroup.
+     * See <a href="https://cr.yp.to/ecdh.html">"Computing secret keys"</a>.
      *
      * @param s The 32-byte secret key.
      */
     private void evalCurve(byte[] s)
     {
+        // sposn tracks which byte of the secret we're working on.
         int sposn = 31;
+        // Explanation of magic numbers.
+        //
+        // sbit is which bit we're processing (zero indexed). It's initialised to 6 as part of the awkward 'clamping'
+        // that Curve25519 requires.
+        //
+        // The high bit in a Curve25519 private key must be zero. This forces the private key to be less than the
+        // curve order (the number of points that exist on the elliptic curve). Because a public key is a point on the
+        // curve derived from the private key, we can't have more private keys than there are actual equivalent points.
+        //
+        // The second high bit must be 1. This is because Curve25519 uses the Montgomery Ladder algorithm, which must
+        // be started at the most significant set bit. Finding this out would require an initial starting loop searching
+        // for that bit, which would introduce private-key dependent timings to the function, which would allow a side
+        // channel attack. Forcing the second-most high bit to 1 ensures the algorithm always starts in the same place
+        // and thus the timing is always the same.
+        //
+        // svalue holds the current byte we're working with. By ORing with 0x40 (64) we set the second most high bit to
+        // 1. Thus by skipping the first bit and fixing the second we satisfy the clamping procedure.
         int sbit = 6;
         int svalue = s[sposn] | 0x40;
         int swap = 0;
         int select;
 
-        // Iterate over all 255 bits of "s" from the highest to the lowest.
-        // We ignore the high bit of the 256-bit representation of "s".
+        // Loop over the bits of "s" except the highest (because sbit == 6 on the first iteration).
         for (;;) {
             // Conditional swaps on entry to this bit but only if we
             // didn't swap on the previous bit.
@@ -446,6 +474,15 @@ public final class Curve25519 {
                 break;
             } else if (sposn == 1) {
                 --sposn;
+                // The final byte of the key is special. We must ensure the lower 3 bits are cleared. This ensures the
+                // private key is a multiple of 8, which is the cofactor of the curve. The resulting public key can
+                // thus never fall into a small cyclic subgroup - such keys are invalid and can be used to mount a
+                // small-subgroup attack that could reveal our private key if we did an elliptic curve Diffie-Hellman
+                // key exchange with a malicious peer.
+                //
+                // Note that the Curve25519 paper describes this step as "multiplying the secret key by a small power
+                // of two". As the key is random and multiplying it by 8 would just shift some bits off the end anyway,
+                // clearing the low 3 bits is equivalent to this multiplication.
                 svalue = s[sposn] & 0xF8;
                 sbit = 7;
             } else {

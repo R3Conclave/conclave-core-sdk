@@ -73,6 +73,11 @@ class Curve25519DHState implements DHState {
 	@Override
 	public void generateKeyPair() {
 		Noise.random(privateKey);
+		// The key here is 256 random bits. Curve25519 requires secret keys to be in a very specific form, with
+		// particular bits flipped in order to ensure the key lies in the right cyclic subgroups and to eliminate
+		// side channel attacks. The "clamping" procedure isn't done here but rather is integrated into the
+		// curve evaluation itself, which is why we can pretend that a secret key is any random bit string both
+		// at generation time and for storage.
 		Curve25519.eval(publicKey, 0, privateKey, null);
 		mode = 0x03;
 	}
