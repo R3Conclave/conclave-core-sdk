@@ -5,13 +5,13 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.core.common.*
+import com.r3.conclave.core.host.*
+import com.r3.conclave.core.host.internal.NativeShared
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
-import com.r3.conclave.core.common.*
-import com.r3.conclave.core.host.*
-import com.r3.conclave.core.host.internal.NativeShared
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -21,7 +21,6 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.util.function.Consumer
-import kotlin.Exception
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -160,7 +159,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
 
     private val stateManager = StateManager<State>(New)
     private lateinit var enclaveSender: Sender
-    private lateinit var signedQuote: ByteCursor<SgxSignedQuote>
     private var _enclaveInstanceInfo: EnclaveInstanceInfo? = null
 
     /**
@@ -195,14 +193,13 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             enclaveSender = mux.addDownstream(HostHandler(this))
             // TODO We could probably simplify things if we didn't multiplex the attestation, and instead rolled it into
             //      the main host handler.
-            signedQuote = mux.addDownstream(EpidAttestationHostHandler(
+            val signedQuote = mux.addDownstream(EpidAttestationHostHandler(
                     EpidAttestationHostConfiguration(SgxQuoteType.LINKABLE, spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid)),
                     isMock
             )).getSignedQuote()
-            val attestationResponse = getAttestationService(attestationKey).requestSignature(signedQuote)
             val started = stateManager.checkStateIs<Started>()
-            val enclaveInstanceInfo = EnclaveInstanceInfoImpl(started.signatureKey, signedQuote, attestationResponse, enclaveMode)
-            log.debug { "Attestation response: ${enclaveInstanceInfo.attestationReport}" }
+            val enclaveInstanceInfo = getAttestationService(attestationKey).doAttest(started.signatureKey, signedQuote, enclaveMode)
+            log.debug { "Attestation report: ${enclaveInstanceInfo.attestationReport}" }
             log.info(enclaveInstanceInfo.toString())
             _enclaveInstanceInfo = enclaveInstanceInfo
         } catch (e: Exception) {

@@ -65,10 +65,10 @@ class IntelAttestationService(private val isProd: Boolean, private val subscript
      * string.
      */
     private fun HttpURLConnection.parseResponseCertPath(): CertPath {
-        return getHeaderField("X-IASReport-Signing-Certificate").decodeURL().parsePemCertPath()
+        val urlEncodedPemCertPath = getHeaderField("X-IASReport-Signing-Certificate")
+        val pemCertPathString = URLDecoder.decode(urlEncodedPemCertPath, "UTF-8")
+        return pemCertPathString.parsePemCertPath()
     }
-
-    private fun String.decodeURL(): String = URLDecoder.decode(this, "UTF-8")
 
     private class ReportRequest(
             val isvEnclaveQuote: ByteArray,
@@ -85,7 +85,7 @@ internal fun String.parsePemCertPath(): CertPath {
     val certificates = mutableListOf<Certificate>()
     val input = byteInputStream()
     while (input.available() > 0) {
-        certificates.add(certificateFactory.generateCertificate(input))
+        certificates += certificateFactory.generateCertificate(input)
     }
     return certificateFactory.generateCertPath(certificates)
 }

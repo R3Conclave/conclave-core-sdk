@@ -16,6 +16,7 @@ dependencies {
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
 
     testImplementation project(":conclave-host")
+    testImplementation project(":enclave-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
 

@@ -1,8 +1,8 @@
 package com.r3.conclave.utils.classloaders
 
-import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.dynamictesting.TestEnclaves
-import com.r3.conclave.testing.HelperUtilities.expectWithin
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.testing.expectWithin
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.ClassRule

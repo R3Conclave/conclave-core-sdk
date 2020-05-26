@@ -1,7 +1,10 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
+import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.readBytes
+import com.r3.conclave.common.internal.readLengthPrefixBytes
 import java.io.DataInputStream
 import java.security.PublicKey
 import java.security.Signature
@@ -61,7 +64,6 @@ interface EnclaveInstanceInfo {
             val dis = DataInputStream(from.inputStream())
             require(dis.readBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
             val dataSigningKey = signatureScheme.decodePublicKey(dis.readLengthPrefixBytes())
-            val signedQuote = dis.readLengthPrefixBytes().let { Cursor(SgxSignedQuote(it.size), it) }
             val reportBytes = dis.readLengthPrefixBytes()
             val signature = dis.readLengthPrefixBytes()
             val certPath = CertificateFactory.getInstance("X.509").generateCertPath(dis.readLengthPrefixBytes().inputStream())
@@ -70,7 +72,6 @@ interface EnclaveInstanceInfo {
             // are more bytes available and only parse them if there are. If not then provide defaults.
             return EnclaveInstanceInfoImpl(
                     dataSigningKey,
-                    signedQuote,
                     AttestationResponse(reportBytes, signature, certPath),
                     enclaveMode
             )

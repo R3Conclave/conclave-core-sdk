@@ -33,7 +33,7 @@ class AttestationResponse(
             initVerify(certPath.certificates[0])
             update(reportBytes)
             if (!verify(signature)) {
-                throw GeneralSecurityException("Report failed IAS signature check")
+                throw GeneralSecurityException("Attestation report failed signature check")
             }
         }
 

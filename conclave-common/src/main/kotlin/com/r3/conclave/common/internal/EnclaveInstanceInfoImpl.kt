@@ -11,10 +11,10 @@ import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.measurement
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.common.internal.attestation.QuoteStatus.*
 import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteStatus.*
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.security.PublicKey
@@ -22,7 +22,6 @@ import java.security.Signature
 
 class EnclaveInstanceInfoImpl(
         override val dataSigningKey: PublicKey,
-        val signedQuote: ByteCursor<SgxSignedQuote>,
         val attestationResponse: AttestationResponse,
         val enclaveMode: EnclaveMode
 ) : EnclaveInstanceInfo {
@@ -51,9 +50,6 @@ class EnclaveInstanceInfoImpl(
             DEBUG, SIMULATION -> require(isDebug) { "Mismatch between debug flag and enclaveMode" }
         }
 
-        require(attestationReport.isvEnclaveQuoteBody == signedQuote.quote) {
-            "The quote in the attestation report is not the one that was provided for attestation."
-        }
         val signingKeyHash = SHA512Hash.hash(dataSigningKey.encoded)
         val reportData = SHA512Hash.get(reportBody[reportData].read())
         require(signingKeyHash == reportData) {
@@ -89,7 +85,6 @@ class EnclaveInstanceInfoImpl(
         val dos = DataOutputStream(baos)
         dos.write(magic)
         dos.writeLengthPrefixBytes(dataSigningKey.encoded)
-        dos.writeLengthPrefixBytes(signedQuote.readBytes())
         dos.writeLengthPrefixBytes(attestationResponse.reportBytes)
         dos.writeLengthPrefixBytes(attestationResponse.signature)
         dos.writeLengthPrefixBytes(attestationResponse.certPath.encoded)
