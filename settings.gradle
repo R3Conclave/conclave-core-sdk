@@ -23,6 +23,7 @@ if (includeNative) {
     include 'cpp:native-binutils'
 }
 
+include 'conclave-mail'
 include 'conclave-common'
 include 'conclave-enclave'
 include 'conclave-host'
@@ -47,3 +48,5 @@ include 'hsm-tool'
 include 'load-test:load-test-runner'
 
 include 'plugin-enclave-gradle'
+
+

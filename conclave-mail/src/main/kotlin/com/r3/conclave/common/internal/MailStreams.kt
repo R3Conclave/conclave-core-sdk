@@ -41,9 +41,6 @@ private fun ByteArray.writeShortTo(offset: Int, value: Int) {
  * This class is not thread safe and requires external synchronization.
  *
  * @param out                  The [OutputStream] to use.
- * @param cipherName           The Noise cipher name to use, "AESGCM" is the default.
- * @param dhName               The Noise Diffie-Hellman algorithm name, "25519" is the default.
- * @param hashName             The Noise hash algorithm name, "SHA256" is the default.
  * @param destinationPublicKey The public key to encrypt the stream to.
  * @param associatedData       If not null, unencrypted data that will be included in the header and authenticated.
  * @param senderPrivateKey     If not null, your private key. The recipient will receive your public key and be sure

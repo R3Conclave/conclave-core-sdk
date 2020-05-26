@@ -14,6 +14,7 @@ dependencies {
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
+    implementation project(":conclave-mail")
 
     testImplementation project(":conclave-host")
     testImplementation project(":enclave-testing")
