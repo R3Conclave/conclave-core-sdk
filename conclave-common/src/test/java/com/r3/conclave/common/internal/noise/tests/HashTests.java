@@ -26,7 +26,7 @@ import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import com.r3.conclave.common.internal.noise.protocol.Noise;
+import com.r3.conclave.mail.internal.noise.protocol.Noise;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

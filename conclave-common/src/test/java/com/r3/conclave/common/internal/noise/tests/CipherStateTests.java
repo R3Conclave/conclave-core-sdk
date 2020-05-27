@@ -22,8 +22,8 @@
 
 package com.r3.conclave.common.internal.noise.tests;
 
-import com.r3.conclave.common.internal.noise.protocol.CipherState;
-import com.r3.conclave.common.internal.noise.protocol.Noise;
+import com.r3.conclave.mail.internal.noise.protocol.CipherState;
+import com.r3.conclave.mail.internal.noise.protocol.Noise;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.BadPaddingException;

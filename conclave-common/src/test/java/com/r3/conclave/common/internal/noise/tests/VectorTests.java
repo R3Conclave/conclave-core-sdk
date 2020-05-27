@@ -24,9 +24,9 @@ package com.r3.conclave.common.internal.noise.tests;
 
 import static com.r3.conclave.common.internal.UtilsKt.parseHex;
 
-import com.r3.conclave.common.internal.noise.protocol.CipherState;
-import com.r3.conclave.common.internal.noise.protocol.CipherStatePair;
-import com.r3.conclave.common.internal.noise.protocol.HandshakeState;
+import com.r3.conclave.mail.internal.noise.protocol.CipherState;
+import com.r3.conclave.mail.internal.noise.protocol.CipherStatePair;
+import com.r3.conclave.mail.internal.noise.protocol.HandshakeState;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.BadPaddingException;

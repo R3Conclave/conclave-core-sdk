@@ -23,7 +23,7 @@
 package com.r3.conclave.common.internal.noise.tests;
 
 import java.util.Arrays;
-import com.r3.conclave.common.internal.noise.crypto.Poly1305;
+import com.r3.conclave.mail.internal.noise.crypto.Poly1305;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
