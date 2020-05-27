@@ -285,6 +285,10 @@ List<PublishedProject> publishedProjects = [
                 description: 'Conclave client API',
         ),
         new PublishedProject(
+                projectPath: ':conclave-mail',
+                description: 'Conclave mail API',
+        ),
+        new PublishedProject(
                 projectPath: ':api-core:api-core-common',
                 description: 'Core API common to both enclave and host',
         ),
