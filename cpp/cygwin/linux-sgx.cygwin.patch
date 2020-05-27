@@ -1,7 +1,16 @@
 diff --git a/buildenv.mk b/buildenv.mk
-index 767bfc4f..6c038c95 100644
+index 767bfc4f..97d9f894 100644
 --- a/buildenv.mk
 +++ b/buildenv.mk
+@@ -115,7 +115,7 @@ CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
+ # additional warnings flags for C++
+ CXXFLAGS += -Wnon-virtual-dtor
+ 
+-CXXFLAGS += -std=c++11
++CXXFLAGS += -std=gnu++11
+ 
+ .DEFAULT_GOAL := all
+ # this turns off the RCS / SCCS implicit rules of GNU Make
 @@ -163,8 +163,12 @@ endif
  CFLAGS   += $(COMMON_FLAGS)
  CXXFLAGS += $(COMMON_FLAGS)
@@ -30,21 +39,6 @@ index e2a15019..27c85f1c 100644
  typedef void * se_handle_t;
  
  #include "sgx_defs.h"
-diff --git a/common/inc/internal/se_string.h b/common/inc/internal/se_string.h
-index 8556e49c..27f24867 100644
---- a/common/inc/internal/se_string.h
-+++ b/common/inc/internal/se_string.h
-@@ -41,6 +41,10 @@
- typedef int errno_t;
- #endif
- 
-+#ifdef __CYGWIN__
-+  extern size_t strnlen(const char*,size_t);
-+#endif
-+
- static inline errno_t strcat_s(char *dst, size_t max_size, const char *src)
- {
-     if(strlen(dst)+strlen(src)+1>max_size)return -1;
 diff --git a/common/inc/internal/se_thread.h b/common/inc/internal/se_thread.h
 index df39e1c3..40ecfbfe 100644
 --- a/common/inc/internal/se_thread.h

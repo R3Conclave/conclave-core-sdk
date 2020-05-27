@@ -1,0 +1,12 @@
+--- Makefile	2020-05-20 10:27:53.034358200 +0000
++++ Makefile.new	2020-05-20 10:40:14.104358200 +0000
+@@ -67,6 +67,9 @@
+ RDRAND_LIBDIR :=$(LINUX_EXTERNAL_DIR)/rdrand/src
+ RDRAND_MAKEFILE := $(RDRAND_LIBDIR)/Makefile
+ 
++$(BUILD_DIR):
++	@$(MKDIR) -p $(BUILD_DIR)
++
+ .PHONY: all
+ all: $(APPNAME) $(APPNAME_DEBUG) copy_data_file | $(BUILD_DIR)
+ 	$(CP) -r source/build/bin/* $|
