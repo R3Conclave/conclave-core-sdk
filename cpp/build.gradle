@@ -71,19 +71,6 @@ for (type in types) {
                 "--build", buildDirectory(type),
                 "--target", "jvm_enclave_avian"
         )
-
-        inputs.files(
-                "${buildDirectory(type)}/Makefile",
-                "$projectDir/jvm-edl/CMakeList.txt"
-        )
-        // May need to add more here, for now this is good enough
-        inputs.dir("$projectDir/avian/src") // src/ because avian puts stuff in avian/build/, failing the up-to-date check
-        inputs.dir("$projectDir/jvm-edl/src")
-        inputs.dir("$projectDir/jvm-enclave-avian")
-        inputs.dir("$projectDir/jvm-enclave-common")
-        inputs.dir("$projectDir/jvm-host-enclave-common")
-
-        outputs.files("${buildDirectory(type)}/jvm-enclave-avian/jvm_enclave_avian")
     }
 
     // Build the host object
@@ -97,13 +84,6 @@ for (type in types) {
                 "--build", buildDirectory(type),
                 "--target", "jvm_host"
         )
-
-        inputs.files(
-                "${buildDirectory(type)}/Makefile"
-        )
-        inputs.dir("$projectDir/jvm-host")
-        inputs.dir("$projectDir/jvm-host-enclave-common")
-        outputs.files("${buildDirectory(type)}/jvm-host/libjvm_host.so")
     }
 
     // Build the shared host object
@@ -117,12 +97,6 @@ for (type in types) {
                 "--build", buildDirectory(type),
                 "--target", "jvm_host_shared"
         )
-
-        inputs.files(
-                "${buildDirectory(type)}/Makefile"
-        )
-        inputs.dir("$projectDir/jvm-host-shared")
-        outputs.files("${buildDirectory(type)}/jvm-host-shared/libjvm_host_shared.so")
     }
 
     tasks.create(compileTaskNameLinuxSgx(type), Exec) {
@@ -135,12 +109,6 @@ for (type in types) {
                 "--build", buildDirectory(type),
                 "--target", "linux-sgx-ext"
         )
-
-        inputs.files(
-                "${buildDirectory(type)}/Makefile"
-        )
-
-        outputs.dir("${buildDirectory(type)}/linux-sgx")
     }
 }
 
