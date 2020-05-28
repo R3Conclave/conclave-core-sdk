@@ -58,7 +58,7 @@ RUN apt-get update -y && apt-get install -y \
     docker-ce
 
 # Linux SGX mitigation binaries
-RUN curl -sSL -o /opt/as.ld.objdump.gold.r1.tar.gz https://download.01.org/intel-sgx/sgx-linux/2.9/as.ld.objdump.gold.r1.tar.gz
+RUN curl -sSL -o /opt/as.ld.objdump.gold.r1.tar.gz https://download.01.org/intel-sgx/sgx-linux/2.9.1/as.ld.objdump.gold.r1.tar.gz
 RUN echo "eff285796ba97b4bcafc1e2c88534e486524d3295448207381cc9664a155e70d  /opt/as.ld.objdump.gold.r1.tar.gz" | sha256sum -c -
 RUN tar -xaf /opt/as.ld.objdump.gold.r1.tar.gz -C /usr/local/bin --strip=2
 
