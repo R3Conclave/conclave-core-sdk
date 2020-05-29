@@ -32,7 +32,7 @@ object NativeEnclaveApi : EnclaveApi {
         val enclaveClassName = String(input)
         val enclaveClass = Class.forName(enclaveClassName)
         val handlerConnected = if (Enclave::class.java.isAssignableFrom(enclaveClass)) {
-            enclaveClass.asSubclass(Enclave::class.java).newInstance().initialize(this, NativeOcallSender)
+            enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().newInstance().initialize(this, NativeOcallSender)
         } else {
             val conclaveLoader = ServiceLoader.load(ConclaveLoader::class.java).firstOrNull()
             // If there isn't a ServiceLoader on the classpath assume the app is trying to use the old API.

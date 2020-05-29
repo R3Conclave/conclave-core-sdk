@@ -15,7 +15,7 @@ class JmeterRunnerCli : Callable<Unit> {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            CommandLine.call(JmeterRunnerCli(), *args)
+            CommandLine(JmeterRunnerCli()).execute(*args)
         }
 
         val log: Logger = LoggerFactory.getLogger(JmeterRunnerCli::class.java)

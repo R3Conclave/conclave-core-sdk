@@ -1,5 +1,7 @@
 package avian.test;
 
+import java.nio.Buffer;
+
 public class Longs {
   private static volatile long volatileLong = getConstant();
   
@@ -318,7 +320,8 @@ public class Longs {
 
     java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
     buffer.putLong(231);
-    buffer.flip();
+    // We need the cast to support Java 9+
+    ((Buffer)buffer).flip();
     expect(buffer.getLong() == 231);
 
     expect(unsignedShiftRight32(231) == 0);

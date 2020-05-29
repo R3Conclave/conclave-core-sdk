@@ -7,8 +7,11 @@ import com.r3.conclave.dynamictesting.TestEnclaves
 import org.junit.*
 import org.junit.Assert.*
 import org.junit.rules.ExpectedException
+import java.io.File
 import java.net.URLClassLoader
+import java.net.URL
 import java.util.Collections.singletonList
+import java.util.jar.JarFile
 import kotlin.test.fail
 
 class MemoryClassLoaderTest {
@@ -24,10 +27,11 @@ class MemoryClassLoaderTest {
     val exception: ExpectedException = ExpectedException.none()
 
     private lateinit var memoryURL: MemoryURL
+    private lateinit var enclaveJar: File
 
     @Before
     fun setup() {
-        val enclaveJar = testEnclaves.getEnclaveJar(ShoutingEnclave::class.java)
+        enclaveJar = testEnclaves.getEnclaveJar(ShoutingEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
         memoryURL = URLSchemes.createMemoryURL(DATA_PATH, enclaveData)
         System.gc()
@@ -45,7 +49,7 @@ class MemoryClassLoaderTest {
             assertEquals(ShoutingEnclave::class.java.name, enclaveClass.name)
             assertEquals(this, enclaveClass.classLoader)
             assertEquals(memoryURL.value, enclaveClass.protectionDomain.codeSource.location)
-            enclaveClass.newInstance()
+            enclaveClass.getDeclaredConstructor().newInstance()
 
             val enclavePackage = enclaveClass.`package`
             assertNotNull(enclavePackage)
@@ -64,7 +68,13 @@ class MemoryClassLoaderTest {
             val resource = findResource(apiClassName) ?: fail("Resource '$apiClassName not found")
             assertEquals("memory:$DATA_PATH!/$apiClassName", resource.toString())
 
-            val actualBytes = (javaClass.classLoader as URLClassLoader).findResource(apiClassName).readBytes()
+            // Java 9+ does not guarantee that the application classloader is an instance of a URLClassLoader
+            // so we can't just use (javaClass.classLoader as URLClassLoader).
+            // Instead, build a new instance from the enclave jar
+            val enclaveUrls = arrayOf(enclaveJar.toURI().toURL())
+            val urlLoader = URLClassLoader(enclaveUrls)
+
+            val actualBytes = urlLoader.findResource(apiClassName).readBytes()
             assertArrayEquals(actualBytes, resource.readBytes())
 
             val manifests = findResources("META-INF/MANIFEST.MF")

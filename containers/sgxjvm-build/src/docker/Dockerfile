@@ -40,6 +40,7 @@ RUN apt-get update -y && apt-get install -y \
     ocaml \
     ocamlbuild \
     openjdk-8-jdk \
+    openjdk-11-jdk \
     openssl \
     patch \
     protobuf-compiler \
@@ -70,6 +71,12 @@ ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV JAVA_HOME           /usr/lib/jvm/java-8-openjdk-amd64
+
+# The Avian build requires Java 8 regardless of what JAVA_HOME is set to above.
+# If this variable does not exists then it defaults to using JAVA_HOME but it is
+# set explicitely here so if JAVA_HOME above is changed then Avian is still built
+# with the correct version
+ENV JAVA_8_HOME         /usr/lib/jvm/java-8-openjdk-amd64
 
 # Without setting the locale to UTF-8 some python3 modules just refuse to work.
 ENV LC_ALL              C.UTF-8

@@ -1,6 +1,7 @@
 package com.r3.conclave.core.common
 
 import java.nio.ByteBuffer
+import java.nio.Buffer
 import java.util.function.Consumer
 
 /**
@@ -21,7 +22,9 @@ abstract class LeafSender : Sender {
             serializer.accept(buffer)
         }
         assert(buffer.position() == needBytes)
-        buffer.flip()
+        // Cast to a Buffer as the JDK8 ByteBuffer.flip() function specification
+        // changed in JDK9+
+        (buffer as Buffer).flip()
         sendSerialized(buffer)
     }
 }

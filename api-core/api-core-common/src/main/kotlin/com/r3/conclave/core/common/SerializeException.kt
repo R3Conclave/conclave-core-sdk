@@ -31,7 +31,7 @@ object SerializeException {
 
         val throwable = try {
             val throwableClass = Class.forName(exceptionClassName).asSubclass(Throwable::class.java)
-            throwableClass.messageConstructor?.newInstance(message) ?: throwableClass.newInstance()
+            throwableClass.messageConstructor?.newInstance(message) ?: throwableClass.getDeclaredConstructor().newInstance()
         } catch (e: Exception) {
             RuntimeException("$exceptionClassName: $message")
         }

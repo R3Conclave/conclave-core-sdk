@@ -50,7 +50,7 @@ open class TestEnclavesBasedTest(val mode: EnclaveTestMode = EnclaveTestMode.Nat
                 val enclaveFile = testEnclaves.getSignedEnclaveFile(enclaveClass, enclaveBuilder)
                 NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(handler, enclaveFile, enclaveClass.name)
             }
-            EnclaveTestMode.Mock -> MockEnclaveHandle(handler, enclaveClass.newInstance())
+            EnclaveTestMode.Mock -> MockEnclaveHandle(handler, enclaveClass.getDeclaredConstructor().newInstance())
         }
     }
 

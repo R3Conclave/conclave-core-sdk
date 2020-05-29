@@ -10,7 +10,7 @@ import com.r3.conclave.core.enclave.internal.ConclaveLoader
 //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
 class ConclaveLoaderImpl : ConclaveLoader {
     override fun loadEnclave(enclaveClass: Class<*>, api: EnclaveApi, upstream: Sender): HandlerConnected<*>? {
-        val enclave = enclaveClass.asSubclass(Enclave::class.java).newInstance()
+        val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().newInstance()
         return enclave.rootEnclave.initialize(api, upstream)
     }
 }

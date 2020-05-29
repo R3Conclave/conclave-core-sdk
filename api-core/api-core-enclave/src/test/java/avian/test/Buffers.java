@@ -1,5 +1,6 @@
 package avian.test;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.BufferUnderflowException;
 import java.nio.BufferOverflowException;
@@ -12,26 +13,29 @@ public class Buffers {
   
   private static void testArrays(Factory factory1, Factory factory2) {
     final int size = 64;
+
+    // Java 9 introduced overridden methods with covariant return types in ByteBuffer.
+    // We need to cast certain methods to Buffer to make this code work on Java 8 and Java 9+
     ByteBuffer b1 = factory1.allocate(size);
     ByteBuffer b2 = factory2.allocate(size);
     
     String s = "1234567890abcdefghijklmnopqrstuvwxyz";
     b1.put(s.getBytes());
-    b1.flip();
+    ((Buffer)b1).flip();
     byte[] ba = new byte[s.length()];
     b1.get(ba);
     assertEquals(s, new String(ba));
-    b1.position(0);
+    ((Buffer)b1).position(0);
     b2.put(b1);
-    b2.flip();
+    ((Buffer)b2).flip();
     b2.get(ba);
     assertEquals(s, new String(ba));
-    b1.position(0);
-    b2.position(0);
-    b1.limit(b1.capacity());
-    b2.limit(b2.capacity());
+    ((Buffer)b1).position(0);
+    ((Buffer)b2).position(0);
+    ((Buffer)b1).limit(b1.capacity());
+    ((Buffer)b2).limit(b2.capacity());
     b1.put(s.getBytes(), 4, 5);
-    b1.flip();
+    ((Buffer)b1).flip();
     ba = new byte[5];
     b1.get(ba);
     assertEquals(s.substring(4, 9), new String(ba));
@@ -65,7 +69,7 @@ public class Buffers {
         for (int i = 0; i < size/8; i++)
           assertEquals(b1.getDouble(i*8), (double) 19.12);
         
-        b3.position(0);
+        ((Buffer)b3).position(0);
         
         for (int i = 0; i < size/8; i++)
           assertEquals(b3.getDouble(i*8), (double) 19.12);

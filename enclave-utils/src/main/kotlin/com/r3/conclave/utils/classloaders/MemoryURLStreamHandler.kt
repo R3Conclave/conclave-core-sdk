@@ -61,7 +61,11 @@ class MemoryURLStreamHandler(val scheme: String) : URLStreamHandler() {
     @Throws(IOException::class)
     override fun openConnection(url: URL): URLConnection {
         val urlValue = url.toString().split("!/")
-        val data = dataCache[urlValue.first] ?: throw IOException("No data for URL '${urlValue.first}'")
+        // The URL we just split might be for multi-release JAR followed with a #[type]. Remove
+        // the hash and the part after it.
+        val urlValueMulti = urlValue.first.split("#")
+
+        val data = dataCache[urlValueMulti.first] ?: throw IOException("No data for URL '${urlValue.first}'")
         return Connection(url, urlValue.second, data.duplicate())
     }
 

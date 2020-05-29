@@ -192,12 +192,26 @@ dokka {
     }
 }
 
-// This is here so we can add other Dokka formats in future (e.g. Kotlin's own API docs theme)
-task apidocs(dependsOn: ['dokka'])
+// Allow the option to exclude dokka from the SDK build. 
+// Important: This should only be used when building with a Java version that does not work
+// with Dokka (currently anything greater than 8) to allow the SDK build to continue. It will
+// result in an SDK build with the API documentation missing so should never be used for
+// production builds.
+def excludeDokka = findProperty('excludeDokka')
+if (excludeDokka == null) {
+    // This is here so we can add other Dokka formats in future (e.g. Kotlin's own API docs theme)
+    task apidocs(dependsOn: ['dokka'])
 
-task packageJavadoc(type: Jar, dependsOn: ['dokka']) {
-    from dokka
-    archiveClassifier.set('javadoc')
+    task packageJavadoc(type: Jar, dependsOn: ['dokka']) {
+        from dokka
+        archiveClassifier.set('javadoc')
+    }
+} else {
+    // Dummy tasks to exclude dokka
+    task apidocs()
+    task packageJavadoc(type: Jar) {
+        archiveClassifier.set('javadoc')
+    }
 }
 
 task mkdocs(type: Exec, dependsOn: ['apidocs']) {
