@@ -1,11 +1,7 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
-import com.r3.conclave.common.internal.SignatureSchemeEdDSA
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationResponse
-import com.r3.conclave.common.internal.readBytes
-import com.r3.conclave.common.internal.readLengthPrefixBytes
-import java.io.DataInputStream
 import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.CertificateFactory
@@ -61,20 +57,21 @@ interface EnclaveInstanceInfo {
          */
         @JvmStatic
         fun deserialize(from: ByteArray): EnclaveInstanceInfo {
-            val dis = DataInputStream(from.inputStream())
-            require(dis.readBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
-            val dataSigningKey = signatureScheme.decodePublicKey(dis.readLengthPrefixBytes())
-            val reportBytes = dis.readLengthPrefixBytes()
-            val signature = dis.readLengthPrefixBytes()
-            val certPath = CertificateFactory.getInstance("X.509").generateCertPath(dis.readLengthPrefixBytes().inputStream())
-            val enclaveMode = EnclaveMode.values()[dis.read()]
-            // New fields need to be behind an availablity check before being read. Use dis.available() to check if there
-            // are more bytes available and only parse them if there are. If not then provide defaults.
-            return EnclaveInstanceInfoImpl(
-                    dataSigningKey,
-                    AttestationResponse(reportBytes, signature, certPath),
-                    enclaveMode
-            )
+            return from.deserialise {
+                require(readBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
+                val dataSigningKey = readLengthPrefixBytes().let(signatureScheme::decodePublicKey)
+                val reportBytes = readLengthPrefixBytes()
+                val signature = readLengthPrefixBytes()
+                val certPath = readLengthPrefixBytes().inputStream().let(CertificateFactory.getInstance("X.509")::generateCertPath)
+                val enclaveMode = read().let { EnclaveMode.values()[it] }
+                // New fields need to be behind an availablity check before being read. Use dis.available() to check if there
+                // are more bytes available and only parse them if there are. If not then provide defaults.
+                EnclaveInstanceInfoImpl(
+                        dataSigningKey,
+                        AttestationResponse(reportBytes, signature, certPath),
+                        enclaveMode
+                )
+            }
         }
     }
 }

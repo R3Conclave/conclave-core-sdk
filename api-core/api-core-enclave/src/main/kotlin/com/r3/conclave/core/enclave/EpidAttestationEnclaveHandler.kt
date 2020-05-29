@@ -17,10 +17,10 @@ abstract class EpidAttestationEnclaveHandler(val api: EnclaveApi) : Handler<Send
 
     override fun onReceive(connection: Sender, input: ByteBuffer) {
         val quotingEnclaveTargetInfo = input.getRemainingBytes()
-        val report = Cursor.allocate(SgxReport)
-        api.createReport(quotingEnclaveTargetInfo, reportData.getBuffer().array(), report.getBuffer().array())
-        connection.send(SgxReport.size(), Consumer { buffer ->
-            buffer.put(report.getBuffer().array())
+        val report = ByteArray(SgxReport.size())
+        api.createReport(quotingEnclaveTargetInfo, reportData.getBuffer().array(), report)
+        connection.send(report.size, Consumer { buffer ->
+            buffer.put(report)
         })
     }
 }

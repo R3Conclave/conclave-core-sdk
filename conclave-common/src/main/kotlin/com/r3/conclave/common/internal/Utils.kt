@@ -1,7 +1,9 @@
 package com.r3.conclave.common.internal
 
+import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.InputStream
 import java.nio.ByteBuffer
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
@@ -56,7 +58,16 @@ fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(i
 
 fun ByteBuffer.getRemainingBytes(): ByteArray = getBytes(remaining())
 
-fun ByteBuffer.getLengthPrefixBytes(): ByteArray = getBytes(getInt())
+inline fun writeData(block: DataOutputStream.() -> Unit): ByteArray {
+    val baos = ByteArrayOutputStream()
+    val dos = DataOutputStream(baos)
+    block(dos)
+    return baos.toByteArray()
+}
+
+fun ByteArray.dataStream(): DataInputStream = DataInputStream(inputStream())
+
+inline fun <T> ByteArray.deserialise(block: DataInputStream.() -> T): T = block(dataStream())
 
 fun DataInputStream.readBytes(length: Int): ByteArray {
     val bytes = ByteArray(length)
@@ -82,3 +93,17 @@ inline fun <T> DataInputStream.nullableRead(block: DataInputStream.() -> T): T? 
     val isNull = readBoolean()
     return if (!isNull) block(this) else null
 }
+
+inline fun <T> DataOutputStream.writeList(collection: Collection<T>, block: DataOutputStream.(T) -> Unit) {
+    writeInt(collection.size)
+    for (element in collection) {
+        block(this, element)
+    }
+}
+
+inline fun <reified T> DataInputStream.readList(block: DataInputStream.() -> T): Array<T> {
+    return Array(readInt()) { block(this) }
+}
+
+/** Reads this stream completely into a byte array and then closes it. */
+fun InputStream.readFully(): ByteArray = use { it.readBytes() }

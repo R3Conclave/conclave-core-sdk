@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.readFully
 import com.r3.conclave.core.host.debug
 import com.r3.conclave.core.host.loggerFor
 import java.io.IOException
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
@@ -57,8 +57,6 @@ class IntelAttestationService(private val isProd: Boolean, private val subscript
             connection.disconnect()
         }
     }
-
-    private fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 
     /**
      * The certificate chain is stored in the `X-IASReport-Signing-Certificate` header in PEM format as an URL encoded

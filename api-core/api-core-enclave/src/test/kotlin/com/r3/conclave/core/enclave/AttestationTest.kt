@@ -18,11 +18,8 @@ class AttestationTest : TestEnclavesBasedTest() {
 
     class ReportCreatingEnclave : BytesEnclave() {
         override fun onReceive(api: EnclaveApi, connection: BytesHandler.Connection, bytes: ByteBuffer) {
-            val targetInfo = ByteArray(SgxTargetInfo.size())
-            bytes.get(targetInfo)
-
-            val reportData = ByteArray(SgxReportData.size())
-            bytes.get(reportData)
+            val targetInfo = bytes.getBytes(SgxTargetInfo.size())
+            val reportData = bytes.getBytes(SgxReportData.size())
 
             val reportBytes = Cursor.allocate(SgxReport)
             api.createReport(targetInfo, reportData, reportBytes.getBuffer().array())

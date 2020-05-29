@@ -1,13 +1,13 @@
 package com.r3.conclave.jvmtester.enclave.sandbox
 
 import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.readFully
 import com.r3.conclave.jvmtester.djvm.testutils.DJVMBase
 import com.r3.conclave.jvmtester.djvm.testutils.createSandboxConfiguration
 import com.r3.conclave.jvmtester.enclave.TestEnvironment
 import com.r3.conclave.utils.classloaders.MemoryURL
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisConfiguration
-import net.corda.djvm.execution.ExecutionProfile
 import net.corda.djvm.source.UserPathSource
 import java.nio.ByteBuffer
 
@@ -21,7 +21,7 @@ abstract class AbstractSandboxEnvironment : TestEnvironment {
         init {
             val bootstrapJarData = AbstractSandboxEnvironment::class.java.classLoader
                     .getResourceAsStream("deterministic-rt.zip")!!
-                    .use { it.readBytes() }
+                    .readFully()
             bootstrapJar = DJVMMemoryURLStreamHandler.createURL(
                     SHA256Hash.hash(bootstrapJarData).toString(),
                     ByteBuffer.wrap(bootstrapJarData)

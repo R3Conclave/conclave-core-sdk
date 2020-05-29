@@ -1,6 +1,7 @@
 
-import avian.test.VirtualMethodsInheritance
 import avian.test.avian.OcallReadResourceBytes
+import com.r3.conclave.common.internal.getRemainingBytes
+import com.r3.conclave.common.internal.readFully
 import com.r3.conclave.core.common.BytesHandler
 import com.r3.conclave.core.common.SimpleMuxingHandler
 import com.r3.conclave.core.enclave.EnclaveApi
@@ -12,7 +13,6 @@ import com.r3.conclave.dynamictesting.TestEnclavesBasedTest
 import com.r3.conclave.testing.*
 import org.junit.Test
 import org.objectweb.asm.Opcodes
-import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.util.function.Consumer
@@ -88,7 +88,7 @@ class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
                 avian.test.SerialFilterTest::class.java
                 /* avian.test.Zip::class.java, //< NOT RUN: requires file I/O */
                 /* avian.test.ZipOutputStreamTest::class.java //< NOT RUN: requires file I/O */
-                )
+        )
     }
 
     class TestRunnerEnclave : RootEnclave() {
@@ -101,7 +101,7 @@ class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
                         entry.invoke(null, emptyArray<String>())
                     } catch (e: InvocationTargetException) {
                         sender.send("FAIL")
-                        throw e.getTargetException() ?: e
+                        throw e.targetException ?: e
                     }
                     sender.send("SUCCESS")
                 }
@@ -117,10 +117,7 @@ class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
                     if (receiver.size != 1) {
                         throw RuntimeException("Asking file $path by an ocall failed")
                     }
-                    val response = receiver.nextCall
-                    return ByteArray(response.remaining()).also {
-                        response.get(it)
-                    }
+                    return receiver.nextCall.getRemainingBytes()
                 }
             })
         }
@@ -131,7 +128,9 @@ class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
             val pathBytes = ByteArray(input.remaining())
             input.get(pathBytes)    
             val path = String(pathBytes)
-            val response = File(this::class.java.getResource(path).file).readBytes()
+            val response = requireNotNull(this::class.java.getResourceAsStream(path)?.readFully()) {
+                "Cannot find resource $path"
+            }
             connection.send(ByteBuffer.wrap(response))
         }
     }

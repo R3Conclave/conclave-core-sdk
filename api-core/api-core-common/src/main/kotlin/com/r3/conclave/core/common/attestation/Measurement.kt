@@ -1,8 +1,9 @@
 package com.r3.conclave.core.common.attestation
 
+import com.r3.conclave.common.internal.SgxMeasurement
+import com.r3.conclave.common.internal.getBytes
 import com.r3.conclave.common.internal.parseHex
 import com.r3.conclave.common.internal.toHexString
-import com.r3.conclave.common.internal.SgxMeasurement
 import java.nio.ByteBuffer
 
 /**
@@ -35,10 +36,6 @@ class Measurement(private val data: ByteArray) {
          * Read measurement from buffer
          */
         @JvmStatic
-        fun read(bytes: ByteBuffer): Measurement {
-            val data = ByteArray(SgxMeasurement.size)
-            bytes.get(data)
-            return Measurement(data)
-        }
+        fun read(bytes: ByteBuffer): Measurement = Measurement(bytes.getBytes(SgxMeasurement.size))
     }
 }

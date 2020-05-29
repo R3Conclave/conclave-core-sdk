@@ -15,8 +15,6 @@ import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.QuoteStatus.*
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
 import java.security.PublicKey
 import java.security.Signature
 
@@ -81,15 +79,14 @@ class EnclaveInstanceInfoImpl(
 
     // New fields MUST be added to the end, even if they belong in AttestationResponse
     override fun serialize(): ByteArray {
-        val baos = ByteArrayOutputStream()
-        val dos = DataOutputStream(baos)
-        dos.write(magic)
-        dos.writeLengthPrefixBytes(dataSigningKey.encoded)
-        dos.writeLengthPrefixBytes(attestationResponse.reportBytes)
-        dos.writeLengthPrefixBytes(attestationResponse.signature)
-        dos.writeLengthPrefixBytes(attestationResponse.certPath.encoded)
-        dos.write(enclaveMode.ordinal)
-        return baos.toByteArray()
+        return writeData {
+            write(magic)
+            writeLengthPrefixBytes(dataSigningKey.encoded)
+            writeLengthPrefixBytes(attestationResponse.reportBytes)
+            writeLengthPrefixBytes(attestationResponse.signature)
+            writeLengthPrefixBytes(attestationResponse.certPath.encoded)
+            write(enclaveMode.ordinal)
+        }
     }
 
     override fun toString() = """

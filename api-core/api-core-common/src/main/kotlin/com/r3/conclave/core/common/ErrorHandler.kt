@@ -1,5 +1,6 @@
 package com.r3.conclave.core.common
 
+import com.r3.conclave.common.internal.getBytes
 import com.r3.conclave.common.internal.getRemainingBytes
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
@@ -40,8 +41,7 @@ abstract class ErrorHandler: Handler<ErrorHandler.Connection> {
         } catch (throwable: Throwable) {
             input.mark()
             val size = Integer.min(input.remaining(), 64)
-            val bytes = ByteArray(size)
-            input.get(bytes)
+            val bytes = input.getBytes(size)
             input.reset()
             IllegalArgumentException("Cannot parse exception bytes starting with ${bytes.toList()}", throwable)
         }

@@ -2,6 +2,7 @@ package com.r3.conclave.samples.djvm.enclave
 
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.internal.readFully
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.samples.djvm.common.proto.ExecuteTask
 import com.r3.conclave.samples.djvm.common.proto.Request
@@ -24,7 +25,7 @@ class DjvmEnclave : EnclaveCall, Enclave() {
         private val parentConfiguration: SandboxConfiguration
 
         init {
-            val bootstrapJarData = DjvmEnclave::class.java.classLoader.getResourceAsStream("deterministic-rt.zip")!!.use { it.readBytes() }
+            val bootstrapJarData = DjvmEnclave::class.java.classLoader.getResourceAsStream("deterministic-rt.zip")!!.readFully()
             bootstrapJar = createMemoryURL(bootstrapJarData)
 
             val bootstrapClassLoader = DJVMBootstrapClassLoader(listOf(bootstrapJar))

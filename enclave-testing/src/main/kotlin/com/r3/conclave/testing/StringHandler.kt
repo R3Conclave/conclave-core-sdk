@@ -1,7 +1,8 @@
 package com.r3.conclave.testing
 
-import com.r3.conclave.core.common.Sender
+import com.r3.conclave.common.internal.getRemainingBytes
 import com.r3.conclave.core.common.Handler
+import com.r3.conclave.core.common.Sender
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
@@ -12,9 +13,7 @@ abstract class StringHandler : Handler<StringSender> {
     abstract fun onReceive(sender: StringSender, string: String)
 
     final override fun onReceive(connection: StringSender, input: ByteBuffer) {
-        val bytes = ByteArray(input.remaining())
-        input.get(bytes)
-        onReceive(connection, String(bytes))
+        onReceive(connection, String(input.getRemainingBytes()))
     }
 
     final override fun connect(upstream: Sender): StringSender {

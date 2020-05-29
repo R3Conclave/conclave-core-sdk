@@ -1,10 +1,9 @@
 package com.r3.conclave.core.common
 
 import com.r3.conclave.common.internal.nullableWrite
+import com.r3.conclave.common.internal.writeData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
 
 class SerializeExceptionTest {
     @Test
@@ -30,12 +29,11 @@ class SerializeExceptionTest {
 
     @Test
     fun `deserialising unknown exception`() {
-        val baos = ByteArrayOutputStream()
-        val dos = DataOutputStream(baos)
-        dos.writeUTF("com.foo.bar.Exception")
-        dos.nullableWrite("BOOM") { writeUTF(it) }
-        dos.writeInt(0)
-        val serialised = baos.toByteArray()
+        val serialised = writeData {
+            writeUTF("com.foo.bar.Exception")
+            nullableWrite("BOOM") { writeUTF(it) }
+            writeInt(0)
+        }
 
         val deserialised = SerializeException.deserialise(serialised)
         assertThat(deserialised).isExactlyInstanceOf(RuntimeException::class.java)
