@@ -1,26 +1,21 @@
-
 import avian.test.avian.OcallReadResourceBytes
-import com.r3.conclave.common.internal.getRemainingBytes
+import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.readFully
-import com.r3.conclave.core.common.BytesHandler
-import com.r3.conclave.core.common.SimpleMuxingHandler
-import com.r3.conclave.core.enclave.EnclaveApi
-import com.r3.conclave.core.enclave.RootEnclave
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
-import com.r3.conclave.dynamictesting.EnclaveTestMode
-import com.r3.conclave.dynamictesting.TestEnclavesBasedTest
-import com.r3.conclave.testing.*
+import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.host.callEnclave
+import org.junit.ClassRule
 import org.junit.Test
 import org.objectweb.asm.Opcodes
-import java.lang.reflect.InvocationTargetException
-import java.nio.ByteBuffer
-import java.util.function.Consumer
-import kotlin.test.assertEquals
 
-class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
-
+class AvianTestSuite {
     companion object {
+        @JvmField
+        @ClassRule
+        val testEnclaves = TestEnclaves()
+
         val testCaseClasses = listOf(
                 avian.test.FileSystemEmulation::class.java,
                 avian.test.MessageFormatTest::class.java,
@@ -91,66 +86,41 @@ class AvianTestSuite : TestEnclavesBasedTest(mode = EnclaveTestMode.Native) {
         )
     }
 
-    class TestRunnerEnclave : RootEnclave() {
-        override fun initialize(api: EnclaveApi, mux: SimpleMuxingHandler.Connection) {
-            mux.addDownstream(object : StringHandler() {
-                override fun onReceive(sender: StringSender, testClassName: String) {
-                    val testClass = Class.forName(testClassName)
-                    val entry = testClass.getMethod("main", Array<String>::class.java)
-                    try {
-                        entry.invoke(null, emptyArray<String>())
-                    } catch (e: InvocationTargetException) {
-                        sender.send("FAIL")
-                        throw e.targetException ?: e
-                    }
-                    sender.send("SUCCESS")
-                }
-            })
-
+    class TestRunnerEnclave : EnclaveCall, Enclave() {
+        init {
             OcallReadResourceBytes.initialize(object : OcallReadResourceBytes() {
-                val receiver = BytesRecordingHandler()
-                val connection = mux.addDownstream(receiver)
-
-                override fun readBytes_(path: String): ByteArray {
-                    receiver.clear()
-                    connection.send(ByteBuffer.wrap(path.toByteArray()))
-                    if (receiver.size != 1) {
-                        throw RuntimeException("Asking file $path by an ocall failed")
-                    }
-                    return receiver.nextCall.getRemainingBytes()
-                }
+                override fun readBytes_(path: String): ByteArray = callUntrustedHost(path.toByteArray())!!
             })
         }
-    }
 
-    class ResourceProviderHandler : BytesHandler() {
-        override fun onReceive(connection: Connection, input: ByteBuffer) {
-            val pathBytes = ByteArray(input.remaining())
-            input.get(pathBytes)    
-            val path = String(pathBytes)
-            val response = requireNotNull(this::class.java.getResourceAsStream(path)?.readFully()) {
-                "Cannot find resource $path"
-            }
-            connection.send(ByteBuffer.wrap(response))
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            val testClass = Class.forName(String(bytes))
+            val mainMethod = testClass.getMethod("main", Array<String>::class.java)
+            mainMethod.invoke(null, emptyArray<String>())
+            return null
         }
     }
 
     @Test
-    fun runAvianTestsInEnclave() {
-        val builder = EnclaveBuilder(config = EnclaveConfig().withTCSNum(32),
-                includeClasses = testCaseClasses + Opcodes::class.java)
-        val handler = StringRecordingHandler()
-        withEnclaveHandle(RootHandler(), TestRunnerEnclave::class.java, builder, Consumer { enclaveHandle ->
-            val connection = enclaveHandle.connection.addDownstream(handler)
-            enclaveHandle.connection.addDownstream(ResourceProviderHandler())
-            for (testCase in testCaseClasses) {
-                val msg = "Avian test case $testCase.name failed"
-                connection.send(testCase.name)
-                assertEquals(1, handler.calls.size, msg)
-                assertEquals("SUCCESS", handler.calls[0], msg)
-                handler.calls.clear()
-                println("${testCase.name} PASSED")
+    fun `avian tests in enclave`() {
+        val host = testEnclaves.hostTo<TestRunnerEnclave>(EnclaveBuilder(
+                config = EnclaveConfig().withTCSNum(32),
+                includeClasses = testCaseClasses + Opcodes::class.java
+        ))
+        host.start(null, null)
+
+        for (testCase in testCaseClasses) {
+            // TODO Make this into a parameterised test when this module moves to Junit 5
+            println("Testing ${testCase.name}")
+            host.callEnclave(testCase.name.toByteArray()) {
+                // Resource requests
+                val path = String(it)
+                requireNotNull(this::class.java.getResourceAsStream(path)?.readFully()) {
+                    "Cannot find resource $path"
+                }
             }
-        })
+        }
+
+        host.close()
     }
 }

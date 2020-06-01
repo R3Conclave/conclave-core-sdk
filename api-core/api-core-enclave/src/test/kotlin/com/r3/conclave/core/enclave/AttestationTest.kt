@@ -1,36 +1,67 @@
 package com.r3.conclave.core.enclave
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.core.common.*
-import com.r3.conclave.core.host.EpidAttestationHostConfiguration
-import com.r3.conclave.core.host.EpidAttestationHostHandler
+import com.r3.conclave.core.common.Handler
+import com.r3.conclave.core.common.HandlerConnected
+import com.r3.conclave.core.common.Sender
+import com.r3.conclave.core.host.*
 import com.r3.conclave.core.host.internal.Native
-import com.r3.conclave.dynamictesting.TestEnclavesBasedTest
-import com.r3.conclave.testing.BytesEnclave
+import com.r3.conclave.dynamictesting.EnclaveBuilder
+import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.testing.BytesRecordingHandler
+import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
+import java.util.function.Consumer
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class AttestationTest : TestEnclavesBasedTest() {
+class AttestationTest {
+    companion object {
+        @JvmField
+        @ClassRule
+        val testEnclaves = TestEnclaves()
+    }
 
-    class ReportCreatingEnclave : BytesEnclave() {
-        override fun onReceive(api: EnclaveApi, connection: BytesHandler.Connection, bytes: ByteBuffer) {
-            val targetInfo = bytes.getBytes(SgxTargetInfo.size())
-            val reportData = bytes.getBytes(SgxReportData.size())
+    private lateinit var enclaveHandle: EnclaveHandle<*>
 
-            val reportBytes = Cursor.allocate(SgxReport)
-            api.createReport(targetInfo, reportData, reportBytes.getBuffer().array())
-            connection.send(reportBytes.getBuffer())
+    @Before
+    fun cleanUp() {
+        if (this::enclaveHandle.isInitialized) {
+            enclaveHandle.destroy()
+        }
+    }
+
+    class ReportCreatingEnclave : InternalEnclave, Enclave() {
+        override fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+            return HandlerConnected.connect(ReportCreatingHandler(api), upstream)
+        }
+
+        private class ReportCreatingHandler(private val api: EnclaveApi) : Handler<Sender> {
+            override fun connect(upstream: Sender): Sender = upstream
+
+            override fun onReceive(connection: Sender, input: ByteBuffer) {
+                val targetInfo = input.getBytes(SgxTargetInfo.size())
+                val reportData = input.getBytes(SgxReportData.size())
+
+                val reportBytes = ByteArray(SgxReport.size())
+                api.createReport(targetInfo, reportData, reportBytes)
+
+                connection.send(reportBytes.size, Consumer { buffer ->
+                    buffer.put(reportBytes)
+                })
+            }
         }
     }
 
     @Test
-    fun canCreateReport() {
+    fun `create report`() {
         val handler = BytesRecordingHandler()
-        val connection = createEnclave(ReportCreatingEnclave::class.java).addDownstream(handler)
+        val connection = createEnclave(handler, ReportCreatingEnclave::class.java)
         val inputBuffer = ByteBuffer.allocate(SgxTargetInfo.size() + SgxReportData.size())
         inputBuffer.position(SgxTargetInfo.size())
         inputBuffer.put("hello".toByteArray())
@@ -48,9 +79,9 @@ class AttestationTest : TestEnclavesBasedTest() {
     }
 
     @Test
-    fun canGetQuote() {
+    fun `get quote`() {
         val handler = BytesRecordingHandler()
-        val connection = createEnclave(ReportCreatingEnclave::class.java).addDownstream(handler)
+        val connection = createEnclave(handler, ReportCreatingEnclave::class.java)
 
         // 1. get the quoting enclave's measurement and the EPID group id
         val initQuoteResponse = Cursor.allocate(SgxInitQuoteResponse)
@@ -102,21 +133,33 @@ class AttestationTest : TestEnclavesBasedTest() {
         }
     }
 
-    class EpidAttestingEnclave : RootEnclave() {
-        override fun initialize(api: EnclaveApi, mux: SimpleMuxingHandler.Connection) {
-            mux.addDownstream(TestEpidAttestationEnclaveHandler(api, "hello"))
+    class EpidAttestingEnclave : InternalEnclave, Enclave() {
+        override fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+            return HandlerConnected.connect(TestEpidAttestationEnclaveHandler(api, "hello"), upstream)
         }
     }
 
     @Test
-    fun attestationHandlersWork() {
+    fun `attestation handlers`() {
         val configuration = EpidAttestationHostConfiguration(
                 quoteType = SgxQuoteType.LINKABLE,
                 spid = Cursor.allocate(SgxSpid)
         )
-        val connection = createEnclave(EpidAttestingEnclave::class.java).addDownstream(EpidAttestationHostHandler(configuration))
+        val connection = createEnclave(EpidAttestationHostHandler(configuration), EpidAttestingEnclave::class.java)
         val signedQuote = connection.getSignedQuote()
         val reportData = signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData]
         assertTrue(Charsets.UTF_8.decode(reportData.getBuffer()).startsWith("hello"))
+    }
+
+    private fun <CONNECTION> createEnclave(
+            handler: Handler<CONNECTION>,
+            enclaveClass: Class<out Enclave>,
+            enclaveBuilder: EnclaveBuilder = EnclaveBuilder()
+    ): CONNECTION {
+        val enclaveFile = testEnclaves.getSignedEnclaveFile(enclaveClass, enclaveBuilder)
+        return NativeHostApi(EnclaveLoadMode.SIMULATION).createEnclave(handler, enclaveFile, enclaveClass.name).let {
+            enclaveHandle = it
+            it.connection
+        }
     }
 }

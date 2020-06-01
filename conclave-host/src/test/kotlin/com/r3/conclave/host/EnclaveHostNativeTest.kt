@@ -1,18 +1,22 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.dynamictesting.EnclaveBuilder
+import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.testing.RecordingEnclaveCall
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.jupiter.api.*
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.stream.IntStream
 import kotlin.streams.asSequence
 
 class EnclaveHostNativeTest {
@@ -32,6 +36,15 @@ class EnclaveHostNativeTest {
         }
     }
 
+    private lateinit var host: EnclaveHost
+
+    @AfterEach
+    fun cleanUp() {
+        if (::host.isInitialized) {
+            host.close()
+        }
+    }
+
     @Test
     fun `simple stateful enclave`() {
         val lookup = mapOf(
@@ -40,8 +53,7 @@ class EnclaveHostNativeTest {
                 2.toByte() to "foo",
                 3.toByte() to "bar"
         )
-        val host = hostTo<StatefulEnclave>()
-        host.start(null, null)
+        start<StatefulEnclave>()
 
         fun callEnclave(ids: ByteArray): String? {
             val response = host.callEnclave(ids) { id ->
@@ -52,15 +64,12 @@ class EnclaveHostNativeTest {
 
         assertThat(callEnclave(byteArrayOf(2, 1))).isEqualTo("fooWorld")
         assertThat(callEnclave(byteArrayOf(3))).isEqualTo("fooWorldbar")
-
-        host.close()
     }
 
     @Test
     fun `enclave info`() {
-        val host = hostTo<StatefulEnclave>()
+        start<StatefulEnclave>()
         val metadataFile = testEnclaves.getEnclaveMetadata(StatefulEnclave::class.java, EnclaveBuilder())
-        host.start(null, null)
         host.enclaveInstanceInfo.enclaveInfo.apply {
             assertThat(codeHash).isEqualTo(getMeasurement(metadataFile))
             assertThat(codeSigningKeyHash).isEqualTo(getMrsigner(metadataFile))
@@ -68,21 +77,67 @@ class EnclaveHostNativeTest {
     }
 
     @Test
-    fun `host verifies signature created by enclave`() {
-        val host = hostTo<SigningEnclave>()
-        host.start(null, null)
+    fun `enclave signing key`() {
+        start<SigningEnclave>()
         val message = "Hello World".toByteArray()
-        val signature = host.callEnclave(message)!!
+        val dis = host.callEnclave(message)!!.dataStream()
+        val signingKeyBytes = dis.readLengthPrefixBytes()
+        val signature = dis.readLengthPrefixBytes()
+        assertThat(host.enclaveInstanceInfo.dataSigningKey.encoded).isEqualTo(signingKeyBytes)
         host.enclaveInstanceInfo.verifier().apply {
             update(message)
             assertThat(verify(signature)).isTrue()
         }
     }
 
-    private inline fun <reified T : Enclave> hostTo(): EnclaveHost {
-        val enclaveBuilder = EnclaveBuilder()
-        val enclaveFile = testEnclaves.getSignedEnclaveFile(T::class.java, enclaveBuilder).toPath()
-        return EnclaveHost.create(enclaveFile, T::class.java.name, EnclaveMode.SIMULATION, tempFile = false)
+    @Test
+    fun `several OCALLs`() {
+        start<RepeatedOcallEnclave>()
+        val ocallResponses = RecordingEnclaveCall()
+        host.callEnclave(100.toByteArray(), ocallResponses)
+        assertThat(ocallResponses.calls.map { it.toInt() }).isEqualTo(IntArray(100) { it }.asList())
+    }
+
+    @Disabled("https://r3-cev.atlassian.net/browse/CON-88")
+    @Test
+    fun `parallel ECALLs`() {
+        val n = 10000
+        start<AddingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(20)))
+        host.callEnclave(n.toByteArray())
+        val sumResponse = RecordingEnclaveCall()
+        IntStream.rangeClosed(1, n).parallel().forEach {
+            host.callEnclave(it.toByteArray(), sumResponse)
+        }
+        assertThat(sumResponse.calls.single().toInt()).isEqualTo((n * (n + 1)) / 2)
+    }
+
+    @Test
+    fun `throwing in ECALL`() {
+        start<ThrowingEnclave>()
+        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+            host.callEnclave(byteArrayOf())
+        }.withMessage(ThrowingEnclave.CHEERS)
+    }
+
+    @Test
+    fun `ECALL-OCALL recursion`() {
+        start<RecursingEnclave>()
+        val callback = object : EnclaveCall {
+            var called = 0
+            override fun invoke(bytes: ByteArray): ByteArray? {
+                called++
+                val response = bytes.toInt() - 1
+                return response.toByteArray()
+            }
+        }
+        host.callEnclave(100.toByteArray(), callback)
+        assertThat(callback.called).isEqualTo(50)
+    }
+
+    private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {
+        host = testEnclaves.hostTo<T>(enclaveBuilder).apply {
+            start(null, null)
+        }
     }
 
     private fun getSha256Value(metadataFile: Path, key: String): SecureHash {
@@ -127,10 +182,67 @@ class EnclaveHostNativeTest {
 
     class SigningEnclave : EnclaveCall, Enclave() {
         override fun invoke(bytes: ByteArray): ByteArray {
-            return signer().run {
+            val signature = signer().run {
                 update(bytes)
                 sign()
             }
+            return writeData {
+                writeLengthPrefixBytes(signatureKey.encoded)
+                writeLengthPrefixBytes(signature)
+            }
+        }
+    }
+
+    class RepeatedOcallEnclave : EnclaveCall, Enclave() {
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            val count = bytes.toInt()
+            repeat(count) { index ->
+                callUntrustedHost(index.toByteArray())
+            }
+            return null
+        }
+    }
+
+    class AddingEnclave : EnclaveCall, Enclave() {
+        private var maxCallCount: Int? = null
+        private val sum = AtomicInteger(0)
+        private val callCount = AtomicInteger(0)
+
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            val number = bytes.toInt()
+            if (maxCallCount == null) {
+                maxCallCount = number
+            } else {
+                val sum = sum.addAndGet(number)
+                if (callCount.incrementAndGet() == maxCallCount) {
+                    callUntrustedHost(sum.toByteArray())
+                }
+            }
+            return null
+        }
+    }
+
+    class ThrowingEnclave : EnclaveCall, Enclave() {
+        companion object {
+            const val CHEERS = "You are all wrong"
+        }
+
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            throw RuntimeException(CHEERS)
+        }
+    }
+
+    class RecursingEnclave : EnclaveCall, Enclave() {
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            var remaining = bytes.toInt()
+            while (remaining > 0) {
+                remaining = callUntrustedHost((remaining - 1).toByteArray())!!.toInt()
+            }
+            return null
         }
     }
 }
+
+private fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()
+
+private fun ByteArray.toInt(): Int = ByteBuffer.wrap(this).getInt()

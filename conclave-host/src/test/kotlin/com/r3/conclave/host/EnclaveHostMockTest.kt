@@ -2,14 +2,13 @@ package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.core.common.ThrowingErrorHandler
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.callUntrustedHost
-import com.r3.conclave.core.common.ThrowingErrorHandler
-import com.r3.conclave.core.enclave.RootEnclave
 import com.r3.conclave.testing.MockEnclaveHandle
+import com.r3.conclave.testing.RecordingEnclaveCall
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.security.PublicKey
 
 class EnclaveHostMockTest {
     @Test
@@ -164,44 +163,14 @@ class EnclaveHostMockTest {
         }.withMessage("Enclave has not been started.")
     }
 
-    @Test
-    fun `host verifies signature created by enclave`() {
-        val enclave = SigningEnclave()
-        val host = hostTo(enclave)
-        host.start(null, null)
-        assertThat(host.enclaveInstanceInfo.dataSigningKey).isEqualTo(enclave.exposedSignatureKey)
-        val message = "Hello World".toByteArray()
-        val signature = host.callEnclave(message)!!
-        host.enclaveInstanceInfo.verifier().apply {
-            update(message)
-            assertThat(verify(signature)).isTrue()
-        }
-    }
-
-    private class SigningEnclave : EnclaveCall, Enclave() {
-        val exposedSignatureKey: PublicKey get() = signatureKey
-
-        override fun invoke(bytes: ByteArray): ByteArray {
-            return signer().run {
-                update(bytes)
-                sign()
-            }
-        }
-    }
-
     private fun hostTo(enclave: Enclave): EnclaveHost {
-        // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
-        val rootEnclave = Enclave::class.java.getDeclaredField("rootEnclave").apply { isAccessible = true }.get(enclave) as RootEnclave
-        val handle = MockEnclaveHandle(ThrowingErrorHandler(), rootEnclave)
+        val handle = MockEnclaveHandle(ThrowingErrorHandler(), enclave)
         return EnclaveHost.create(EnclaveMode.SIMULATION, handle, fileToDelete = null, isMock = true)
     }
 
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {
-        val callbacks = ArrayList<ByteArray>()
-        val response = callEnclave(bytes) {
-            callbacks += it
-            null
-        }
-        return Pair(response, callbacks)
+        val callback = RecordingEnclaveCall()
+        val response = callEnclave(bytes, callback)
+        return Pair(response, callback.calls)
     }
 }

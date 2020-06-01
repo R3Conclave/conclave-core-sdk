@@ -18,7 +18,7 @@ dependencies {
     implementation project(':api-core:api-core-enclave')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
+    testImplementation project(":enclave-dynamic-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
 }

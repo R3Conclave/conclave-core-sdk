@@ -1,5 +1,6 @@
 package com.r3.conclave.dynamictesting
 
+import com.r3.conclave.enclave.Enclave
 import java.io.File.pathSeparator
 import java.nio.file.Files
 import java.nio.file.Path
@@ -20,7 +21,7 @@ object BuildEnclaveJar {
                 .toSet()
     }
 
-    fun build(entryClass: Class<*>, includeClasses: List<Class<*>>, outputJarFile: Path) {
+    fun build(entryClass: Class<out Enclave>, includeClasses: List<Class<*>>, outputJarFile: Path) {
         val classLocations = (includeClasses + entryClass)
                 .mapNotNull { it.protectionDomain.codeSource?.location?.let { Paths.get(it.toURI()) } }
                 .toSet()

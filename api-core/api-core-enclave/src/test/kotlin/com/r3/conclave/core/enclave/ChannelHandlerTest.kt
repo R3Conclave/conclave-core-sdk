@@ -1,39 +1,29 @@
 package com.r3.conclave.core.enclave
 
-import com.r3.conclave.core.common.ChannelHandlingHandler
-import com.r3.conclave.core.common.ChannelInitiatingHandler
-import com.r3.conclave.core.common.MuxId
-import com.r3.conclave.core.common.SimpleMuxingHandler
-import com.r3.conclave.dynamictesting.EnclaveBuilder
-import com.r3.conclave.dynamictesting.EnclaveConfig
-import com.r3.conclave.dynamictesting.TestEnclavesBasedTest
-import com.r3.conclave.testing.StringHandler
-import com.r3.conclave.testing.StringRecordingHandler
-import com.r3.conclave.testing.StringSender
+import com.r3.conclave.core.common.*
+import com.r3.conclave.core.host.loggerFor
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.enclave.internal.InternalEnclave
+import com.r3.conclave.testing.*
 import org.junit.Test
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import java.util.stream.LongStream
 import kotlin.collections.set
 import kotlin.test.assertEquals
 
-class ChannelHandlerTest : TestEnclavesBasedTest() {
-
+class ChannelHandlerTest {
     companion object {
-        private val log = LoggerFactory.getLogger(ChannelHandlerTest::class.java)
+        private val log = loggerFor<ChannelHandlerTest>()
     }
 
     class AddingHandler : StringHandler() {
         private val sum = AtomicLong(0)
         override fun onReceive(sender: StringSender, string: String) {
             when (string) {
-                "GET_SUM" -> {
-                    sender.send(sum.get().toString())
-                }
-                else -> {
-                    sum.addAndGet(java.lang.Long.parseLong(string))
-                }
+                "GET_SUM" -> sender.send(sum.get().toString())
+                else -> sum.addAndGet(string.toLong())
             }
         }
     }
@@ -44,20 +34,23 @@ class ChannelHandlerTest : TestEnclavesBasedTest() {
         }
     }
 
-    class ChannelAddingEnclave : RootEnclave() {
-        override fun initialize(api: EnclaveApi, mux: SimpleMuxingHandler.Connection) {
+    class ChannelAddingEnclave : InternalEnclave, Enclave() {
+        override fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+            val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = true), upstream)
+            val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             val channels = mux.addDownstream(object : ChannelHandlingHandler() {
                 override fun createHandler() = AddingHandler()
             })
             mux.addDownstream(ChannelsSizeReportingHandler(channels))
+            return connected
         }
     }
 
     @Test
-    fun openSendCloseWorks() {
+    fun `open send close`() {
         val addingHandler = StringRecordingHandler()
         val reportingHandler = StringRecordingHandler()
-        val root = createEnclave(ChannelAddingEnclave::class.java)
+        val root = createEnclave<ChannelAddingEnclave>()
         val channels = root.addDownstream(ChannelInitiatingHandler())
         val reportingSender = root.addDownstream(reportingHandler)
         val (muxId, addingSender) = channels.addDownstream(addingHandler).get()
@@ -85,20 +78,19 @@ class ChannelHandlerTest : TestEnclavesBasedTest() {
     }
 
     @Test
-    fun parallelChannelsWork() {
+    fun `parallel channels`() {
         val addingHandler = StringRecordingHandler()
         val reportingHandler = StringRecordingHandler()
-        val enclaveBuilder = EnclaveBuilder().withConfig(EnclaveConfig().withTCSNum(20))
-        val root = createEnclave(ChannelAddingEnclave::class.java, enclaveBuilder)
+        val root = createEnclave<ChannelAddingEnclave>()
         val channels = root.addDownstream(ChannelInitiatingHandler())
         val reportingSender = root.addDownstream(reportingHandler)
 
         val muxIds = Collections.synchronizedList(ArrayList<MuxId>())
         val senders = ConcurrentHashMap<MuxId, StringSender>()
-        val N = 10000L
+        val n = 10000L
         val random = Random()
-        log.info("Sending $N numbers for summing")
-        (1 .. N).toList().parallelStream().forEach { number ->
+        log.info("Sending $n numbers for summing")
+        LongStream.rangeClosed(1, n).parallel().forEach { number ->
             // We create a new channel if the generated number == 0. The number of channels created will be ~ log(N)
             val i = random.nextInt(muxIds.size + 1)
             if (i == 0) {
@@ -131,7 +123,7 @@ class ChannelHandlerTest : TestEnclavesBasedTest() {
         // Every channel reported
         assertEquals(senders.size, addingHandler.calls.size)
         val overallSum = addingHandler.calls.stream().mapToLong(java.lang.Long::parseLong).sum()
-        assertEquals(N * (N + 1) / 2, overallSum)
+        assertEquals(n * (n + 1) / 2, overallSum)
         log.info("Overall sum $overallSum")
 
         log.info("Closing all channels")
@@ -146,5 +138,9 @@ class ChannelHandlerTest : TestEnclavesBasedTest() {
         assertEquals(2, reportingHandler.calls.size)
         assertEquals(0, channels.getChannelIds().size)
         assertEquals("0", reportingHandler.calls[1])
+    }
+
+    private inline fun <reified E : Enclave> createEnclave(): RootHandler.Connection {
+        return MockEnclaveHandle(RootHandler(), E::class.java.newInstance()).connection
     }
 }

@@ -11,6 +11,6 @@ import com.r3.conclave.core.enclave.internal.ConclaveLoader
 class ConclaveLoaderImpl : ConclaveLoader {
     override fun loadEnclave(enclaveClass: Class<*>, api: EnclaveApi, upstream: Sender): HandlerConnected<*>? {
         val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().newInstance()
-        return enclave.rootEnclave.initialize(api, upstream)
+        return enclave.enclaveBridge.initialize(api, upstream)
     }
 }

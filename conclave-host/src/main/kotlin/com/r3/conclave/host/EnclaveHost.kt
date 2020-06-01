@@ -5,13 +5,17 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.core.common.*
+import com.r3.conclave.core.common.ErrorHandler
+import com.r3.conclave.core.common.Handler
+import com.r3.conclave.core.common.Sender
+import com.r3.conclave.core.common.SimpleMuxingHandler
 import com.r3.conclave.core.host.*
 import com.r3.conclave.core.host.internal.NativeShared
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.AttestationService
 import com.r3.conclave.host.internal.IntelAttestationService
 import com.r3.conclave.host.internal.MockAttestationService
+import com.r3.conclave.host.internal.createHost
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -59,18 +63,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             return EnclaveHost(enclaveMode, handle, isMock, fileToDelete)
         }
 
-        @PotentialPackagePrivate
-        internal fun create(enclaveFile: Path, enclaveClassName: String, mode: EnclaveMode, tempFile: Boolean): EnclaveHost {
-            // TODO NativeHostApi needs to be moved to conclave-host to avoid this mapping.
-            val loadMode = when (mode) {
-                EnclaveMode.RELEASE -> EnclaveLoadMode.RELEASE
-                EnclaveMode.DEBUG -> EnclaveLoadMode.DEBUG
-                EnclaveMode.SIMULATION -> EnclaveLoadMode.SIMULATION
-            }
-            val handle = NativeHostApi(loadMode).createEnclave(ThrowingErrorHandler(), enclaveFile.toFile(), enclaveClassName)
-            return create(mode, handle, if (tempFile) enclaveFile else null)
-        }
-
         /**
          * Load the signed enclave for the given enclave class name.
          *
@@ -90,7 +82,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             }
             try {
                 stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
-                return create(enclaveFile, enclaveClassName, mode, tempFile = true)
+                return createHost(enclaveFile, enclaveClassName, mode, tempFile = true)
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
                 if (e is EnclaveLoadException) throw e

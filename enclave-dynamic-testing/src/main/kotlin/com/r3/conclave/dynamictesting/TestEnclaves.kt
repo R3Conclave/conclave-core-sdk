@@ -1,6 +1,9 @@
 package com.r3.conclave.dynamictesting
 
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.internal.createHost
 import org.junit.rules.ExternalResource
 import java.io.File
 import java.nio.file.Path
@@ -38,7 +41,7 @@ class TestEnclaves : ExternalResource() {
         cache = null
     }
 
-    private fun createEnclaveJar(entryClass: Class<*>, builder: EnclaveBuilder): Cached<File> {
+    private fun createEnclaveJar(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
         return Cached.singleFile("${entryClass.name}-$entropy-${builder.type.name}", "${entryClass.simpleName}.jar") { output ->
             BuildEnclaveJar.build(entryClass, builder.includeClasses, output.toPath())
         }
@@ -51,7 +54,7 @@ class TestEnclaves : ExternalResource() {
         return cache[createEnclaveJar(enclaveClass, enclaveBuilder)]
     }
 
-    fun getSignedEnclaveFile(entryClass: Class<*>, builder: EnclaveBuilder = EnclaveBuilder()): File {
+    fun getSignedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder = EnclaveBuilder()): File {
         val cache = checkNotNull(cache) {
             "Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field"
         }
@@ -64,7 +67,7 @@ class TestEnclaves : ExternalResource() {
         return enclave
     }
 
-    private fun signedEnclaveFile(entryClass: Class<*>, builder: EnclaveBuilder): Cached<File> {
+    private fun signedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
         val cachedJar = createEnclaveJar(entryClass, builder)
         val cachedEnclave = BuildEnclave.buildEnclave(builder.type, cachedJar)
         val cachedKey = builder.key?.let { Cached.Pure(it) } ?: SignEnclave.createDummyKey()
@@ -72,7 +75,12 @@ class TestEnclaves : ExternalResource() {
         return SignEnclave.signEnclave(inputKey = cachedKey, inputEnclave = cachedEnclave, enclaveConfig = cachedConfig)
     }
 
-    fun getEnclaveMetadata(enclaveClass: Class<*>, builder: EnclaveBuilder): Path {
+    inline fun <reified T : Enclave> hostTo(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {
+        val enclaveFile = getSignedEnclaveFile(T::class.java, enclaveBuilder).toPath()
+        return createHost(enclaveFile, T::class.java.name, EnclaveMode.SIMULATION, tempFile = false)
+    }
+
+    fun getEnclaveMetadata(enclaveClass: Class<out Enclave>, builder: EnclaveBuilder): Path {
         val cachedSignedEnclave = signedEnclaveFile(enclaveClass, builder)
         val metadataFile = SignEnclave.enclaveMetadata(cachedSignedEnclave)
         return cache!![metadataFile].toPath()
