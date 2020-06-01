@@ -45,7 +45,7 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     }
     JniScopedRef<jbyteArray> jarrayIn {jniEnv->NewByteArray(bufferInLen), jniEnv.get()};
     jniEnv->SetByteArrayRegion(jarrayIn.value(), 0, bufferInLen, static_cast<const jbyte *>(bufferIn));
-    auto NativeApiClass = jniEnv->FindClass("com/r3/conclave/core/enclave/internal/NativeEnclaveApi");
+    auto NativeApiClass = jniEnv->FindClass("com/r3/conclave/enclave/internal/NativeEnclaveApi");
     abortOnJniException(jniEnv.get());
     auto methodId = jniEnv->GetStaticMethodID(NativeApiClass, "enclaveEntry", "([B)V");
     abortOnJniException(jniEnv.get());

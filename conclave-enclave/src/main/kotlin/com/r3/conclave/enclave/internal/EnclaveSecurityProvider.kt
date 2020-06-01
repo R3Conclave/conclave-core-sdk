@@ -1,4 +1,4 @@
-package com.r3.conclave.core.enclave.internal
+package com.r3.conclave.enclave.internal
 
 import java.security.AccessController
 import java.security.PrivilegedAction
@@ -101,7 +101,7 @@ object EnclaveSecurityProvider : Provider(
                 "Signature.SHA1withDSA" to "sun.security.provider.DSA\$SHA1withDSA",
                 "Signature.NONEwithDSA" to "sun.security.provider.DSA\$RawDSA",
                 "Alg.Alias.Signature.RawDSA" to "NONEwithDSA",
-                "Signature.SHA224withDSA" to "sun.security.provider.DSA\$SHA224withDSA", 
+                "Signature.SHA224withDSA" to "sun.security.provider.DSA\$SHA224withDSA",
                 "Signature.SHA256withDSA" to "sun.security.provider.DSA\$SHA256withDSA",
 
                 "Signature.SHA1withDSA SupportedKeyClasses" to dsaKeyClasses,
@@ -130,7 +130,7 @@ object EnclaveSecurityProvider : Provider(
                 "Alg.Alias.KeyPairGenerator.1.2.840.10040.4.1" to "DSA",
                 "Alg.Alias.KeyPairGenerator.1.3.14.3.2.12" to "DSA",
 
-                "Cipher.AES" to  "com.sun.crypto.provider.AESCipher\$General",
+                "Cipher.AES" to "com.sun.crypto.provider.AESCipher\$General",
                 "Alg.Alias.Cipher.Rijndael" to "AES",
                 "Cipher.AES SupportedModes" to BLOCK_MODES128,
                 "Cipher.AES SupportedPaddings" to BLOCK_PADS,
@@ -208,7 +208,7 @@ object EnclaveSecurityProvider : Provider(
                 "CertificateFactory.X.509" to "sun.security.provider.X509Factory",
                 "Alg.Alias.CertificateFactory.X509" to "X.509",
 
-                "SecureRandom.EnclaveSecureRandomSpi" to "com.r3.conclave.core.enclave.internal.EnclaveSecureRandomSpi"
+                "SecureRandom.EnclaveSecureRandomSpi" to "com.r3.conclave.enclave.internal.EnclaveSecureRandomSpi"
         ) + rsaSignRegistry))
     }
 

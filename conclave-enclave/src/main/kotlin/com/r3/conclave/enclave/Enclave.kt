@@ -34,7 +34,6 @@ abstract class Enclave {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
 
-    internal val enclaveBridge: com.r3.conclave.core.enclave.Enclave = EnclaveBridge()
     // TODO Persistence
     private val signingKeyPair = signatureScheme.generateKeyPair()
     private lateinit var conclaveConnection: Connection
@@ -71,16 +70,25 @@ abstract class Enclave {
      */
     fun callUntrustedHost(bytes: ByteArray, callback: EnclaveCall): ByteArray? = conclaveConnection.callUntrustedHost(bytes, callback)
 
-    private fun initialiseConclave(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
-        val exposeErrors = api.isSimulation() || api.isDebugMode()
-        val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
-        val mux = connected.connection.setDownstream(SimpleMuxingHandler())
-        val reportData = createReportData()
-        conclaveConnection = mux.addDownstream(ConclaveHandler(this@Enclave))
-        mux.addDownstream(object : EpidAttestationEnclaveHandler(api) {
-            override val reportData = reportData
-        })
-        return connected
+    @Suppress("unused")  // Accessed via reflection
+    @PotentialPackagePrivate
+    private fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+        // If the Enclave class implements InternalEnclave then the behaviour of the enclave is entirely delegated
+        // to the InternalEnclave implementation and the Conclave-specific APIs (e.g. callUntrustedHost, etc) are
+        // disabled. This allows us to test the enclave environment in scenerios where we don't want the Conclave handlers.
+        return if (this is InternalEnclave) {
+            this.internalInitialise(api, upstream)
+        } else {
+            val exposeErrors = api.isSimulation() || api.isDebugMode()
+            val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
+            val mux = connected.connection.setDownstream(SimpleMuxingHandler())
+            val reportData = createReportData()
+            conclaveConnection = mux.addDownstream(ConclaveHandler(this))
+            mux.addDownstream(object : EpidAttestationEnclaveHandler(api) {
+                override val reportData = reportData
+            })
+            connected
+        }
     }
 
     private fun createReportData(): ByteCursor<SgxReportData> {
@@ -88,19 +96,6 @@ abstract class Enclave {
         sha512.update(signatureKey.encoded)
         // TODO Include the encryption key in the hash
         return Cursor(SgxReportData, sha512.digest())
-    }
-
-    private inner class EnclaveBridge : com.r3.conclave.core.enclave.Enclave {
-        override fun initialize(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
-            // If the Enclave class implements InternalEnclave then the behaviour of the enclave is entirely delegated
-            // to the InternalEnclave implementation and the Conclave-specific APIs (e.g. callUntrustedHost, etc) are
-            // disabled. This allows us to test the enclave environment in scenerios where we don't want the Conclave handlers.
-            return if (this@Enclave is InternalEnclave) {
-                this@Enclave.initialise(api, upstream)
-            } else {
-                initialiseConclave(api, upstream)
-            }
-        }
     }
 
     private class ConclaveHandler(private val enclave: Enclave) : Handler<Connection> {

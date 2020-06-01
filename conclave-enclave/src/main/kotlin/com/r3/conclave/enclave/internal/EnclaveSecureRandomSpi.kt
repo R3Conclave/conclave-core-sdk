@@ -1,10 +1,10 @@
-package com.r3.conclave.core.enclave.internal
+package com.r3.conclave.enclave.internal
 
 import java.security.SecureRandomSpi
 
 @Suppress("unused")
 // This class is dynamically loaded when constructing Avian security provider.
-class EnclaveSecureRandomSpi: SecureRandomSpi() {
+class EnclaveSecureRandomSpi : SecureRandomSpi() {
 
     override fun engineGenerateSeed(len: Int): ByteArray {
         val result = ByteArray(len)

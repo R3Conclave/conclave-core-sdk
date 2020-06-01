@@ -1,12 +1,20 @@
-package com.r3.conclave.core.enclave.internal
+package com.r3.conclave.enclave.internal
 
+import com.r3.conclave.common.internal.PotentialPackagePrivate
 import com.r3.conclave.core.common.HandlerConnected
-import com.r3.conclave.core.enclave.Enclave
+import com.r3.conclave.core.common.Sender
 import com.r3.conclave.core.enclave.EnclaveApi
+import com.r3.conclave.core.enclave.internal.Native
+import com.r3.conclave.core.enclave.internal.NativeOcallSender
+import com.r3.conclave.enclave.Enclave
 import java.nio.ByteBuffer
-import java.util.*
 
+@PotentialPackagePrivate
 object NativeEnclaveApi : EnclaveApi {
+    // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
+    // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
+    private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveApi::class.java, Sender::class.java).apply { isAccessible = true }
+
     /** The singleton instance of the user supplied enclave. */
     private var singletonHandler: HandlerConnected<*>? = null
 
@@ -19,9 +27,9 @@ object NativeEnclaveApi : EnclaveApi {
     @Suppress("UNUSED")
     fun enclaveEntry(input: ByteArray) {
         val singletonHandler = synchronized(this) {
-            this.singletonHandler ?: run {
+            singletonHandler ?: run {
                 // The first ECALL is always the enclave class name, which we only use to instantiate the enclave.
-                this.singletonHandler = initialiseEnclave(input)
+                singletonHandler = initialiseEnclave(input)
                 null
             }
         }
@@ -30,16 +38,11 @@ object NativeEnclaveApi : EnclaveApi {
 
     private fun initialiseEnclave(input: ByteArray): HandlerConnected<*> {
         val enclaveClassName = String(input)
+        // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
+        //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
         val enclaveClass = Class.forName(enclaveClassName)
-        val handlerConnected = if (Enclave::class.java.isAssignableFrom(enclaveClass)) {
-            enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().newInstance().initialize(this, NativeOcallSender)
-        } else {
-            val conclaveLoader = ServiceLoader.load(ConclaveLoader::class.java).firstOrNull()
-            // If there isn't a ServiceLoader on the classpath assume the app is trying to use the old API.
-            requireNotNull(conclaveLoader) { "$enclaveClassName does not extend ${Enclave::class.java.name}" }
-            conclaveLoader.loadEnclave(enclaveClass, this, NativeOcallSender)
-        }
-        return checkNotNull(handlerConnected) { "Unable to initialise enclave" }
+        val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().newInstance()
+        return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
     override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {

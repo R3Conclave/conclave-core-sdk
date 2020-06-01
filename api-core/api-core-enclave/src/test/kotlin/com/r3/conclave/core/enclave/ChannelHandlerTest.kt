@@ -35,7 +35,7 @@ class ChannelHandlerTest {
     }
 
     class ChannelAddingEnclave : InternalEnclave, Enclave() {
-        override fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+        override fun internalInitialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = true), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             val channels = mux.addDownstream(object : ChannelHandlingHandler() {

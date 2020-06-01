@@ -10,11 +10,6 @@ import org.gradle.api.tasks.Internal
 import javax.inject.Inject
 
 open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-    companion object {
-        private const val OLD_ENCLAVE_CLASS_NAME = "com.r3.conclave.core.enclave.Enclave"
-        private const val CONCLAVE_ENCLAVE_CLASS_NAME = "com.r3.conclave.enclave.Enclave"
-    }
-
     @get:InputFile
     val inputJar: RegularFileProperty = objects.fileProperty()
 
@@ -29,9 +24,9 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
                 .enableClassInfo()
                 .scan()
                 .use {
-                    val enclaveClasses = (it.getSubclasses(CONCLAVE_ENCLAVE_CLASS_NAME) + it.getClassesImplementing(OLD_ENCLAVE_CLASS_NAME)).filter { !it.isAbstract }
+                    val enclaveClasses = it.getSubclasses("com.r3.conclave.enclave.Enclave").filter { !it.isAbstract }
                     when (enclaveClasses.size) {
-                        0 -> throw GradleException("There are no classes that extend $CONCLAVE_ENCLAVE_CLASS_NAME")
+                        0 -> throw GradleException("There are no classes that extend com.r3.conclave.enclave.Enclave")
                         1 -> enclaveClasses[0].name
                         else -> throw GradleException("Found multiple enclave classes: ${enclaveClasses.joinToString { it.name }}")
                     }

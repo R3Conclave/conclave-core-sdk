@@ -37,7 +37,7 @@ class AttestationTest {
     }
 
     class ReportCreatingEnclave : InternalEnclave, Enclave() {
-        override fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+        override fun internalInitialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
             return HandlerConnected.connect(ReportCreatingHandler(api), upstream)
         }
 
@@ -134,7 +134,7 @@ class AttestationTest {
     }
 
     class EpidAttestingEnclave : InternalEnclave, Enclave() {
-        override fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+        override fun internalInitialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
             return HandlerConnected.connect(TestEpidAttestationEnclaveHandler(api, "hello"), upstream)
         }
     }
