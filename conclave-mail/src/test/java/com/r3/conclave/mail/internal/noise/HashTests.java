@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package com.r3.conclave.common.internal.noise.tests;
+package com.r3.conclave.mail.internal.noise;
 
 import java.security.DigestException;
 import java.security.MessageDigest;

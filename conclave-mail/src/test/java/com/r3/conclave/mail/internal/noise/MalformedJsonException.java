@@ -20,26 +20,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package com.r3.conclave.common.internal.noise.tests;
+package com.r3.conclave.mail.internal.noise;
 
-/**
- * Types of JSON tokens.
- *
- * Intentionally compatible with android.util.JsonToken.
- */
-public enum JsonToken {
-	BEGIN_ARRAY,
-	BEGIN_OBJECT,
-	BOOLEAN,
-	END_ARRAY,
-	END_DOCUMENT,
-	END_OBJECT,
-	NAME,
-	NULL,
-	NUMBER,
-	STRING,
+import java.io.IOException;
 
-	// Internal to this implementation of JsonReader - not part of the public interface.
-	READ_FIRST,
-	COMMA
+public class MalformedJsonException extends IOException {
+
+	private static final long serialVersionUID = -1645564375062756336L;
+
+	public MalformedJsonException(String detailMessage) {
+		super(detailMessage);
+	}
+
 }

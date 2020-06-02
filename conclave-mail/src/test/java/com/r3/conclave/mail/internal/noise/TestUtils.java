@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Southern Storm Software, Pty Ltd.
+ * Copyright (C) 2016 Southern Storm Software, Pty Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,16 +20,30 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package com.r3.conclave.common.internal.noise.tests;
+package com.r3.conclave.mail.internal.noise;
 
-import java.io.IOException;
+import com.google.common.io.BaseEncoding;
 
-public class MalformedJsonException extends IOException {
+import java.nio.charset.StandardCharsets;
 
-	private static final long serialVersionUID = -1645564375062756336L;
-
-	public MalformedJsonException(String detailMessage) {
-		super(detailMessage);
+public class TestUtils {
+	/**
+	 * Convert a string into a binary byte array.
+	 *
+	 * @param data The string data to convert.
+	 * @return The binary version of the data.
+	 *
+	 * If the string starts with "0x", then the remainder of the string is
+	 * interpreted as hexadecimal.  Otherwise the string is interpreted
+	 * as a literal string (e.g. "abc") and converted with the UTF-8 encoding.
+	 */
+	public static byte[] stringToData(String data)
+	{
+		if (data.startsWith("0x")) {
+			return BaseEncoding.base16().lowerCase().decode(data.substring(2));
+		} else {
+			return data.getBytes(StandardCharsets.UTF_8);
+		}
 	}
 
 }

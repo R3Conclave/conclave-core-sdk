@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Southern Storm Software, Pty Ltd.
+ * Copyright (C) 2013 Southern Storm Software, Pty Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,30 +20,26 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package com.r3.conclave.common.internal.noise.tests;
+package com.r3.conclave.mail.internal.noise;
 
-import com.r3.conclave.common.internal.UtilsKt;
+/**
+ * Types of JSON tokens.
+ *
+ * Intentionally compatible with android.util.JsonToken.
+ */
+public enum JsonToken {
+	BEGIN_ARRAY,
+	BEGIN_OBJECT,
+	BOOLEAN,
+	END_ARRAY,
+	END_DOCUMENT,
+	END_OBJECT,
+	NAME,
+	NULL,
+	NUMBER,
+	STRING,
 
-import java.nio.charset.StandardCharsets;
-
-public class TestUtils {
-	/**
-	 * Convert a string into a binary byte array.
-	 *
-	 * @param data The string data to convert.
-	 * @return The binary version of the data.
-	 *
-	 * If the string starts with "0x", then the remainder of the string is
-	 * interpreted as hexadecimal.  Otherwise the string is interpreted
-	 * as a literal string (e.g. "abc") and converted with the UTF-8 encoding.
-	 */
-	public static byte[] stringToData(String data)
-	{
-		if (data.startsWith("0x")) {
-			return UtilsKt.parseHex(data.substring(2));
-		} else {
-			return data.getBytes(StandardCharsets.UTF_8);
-		}
-	}
-
+	// Internal to this implementation of JsonReader - not part of the public interface.
+	READ_FIRST,
+	COMMA
 }

@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package com.r3.conclave.common.internal.noise.tests;
+package com.r3.conclave.mail.internal.noise;
 
 import com.r3.conclave.mail.internal.noise.protocol.CipherState;
 import com.r3.conclave.mail.internal.noise.protocol.Noise;
