@@ -1,7 +1,5 @@
 package com.r3.conclave.common
 
-// TODO This needs to replace EnclaveLoadMode but that probably means merging api-core-host into conclave-host (which
-//      needs to happen anyway).
 /**
  * The mode that an enclave is running in, whether it's for safe for production, intended for debugging or uses simulated
  * hardware.

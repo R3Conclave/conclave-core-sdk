@@ -8,7 +8,7 @@ import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.core.enclave.EnclaveApi
+import com.r3.conclave.enclave.internal.EnclaveApi
 import java.nio.ByteBuffer
 import java.util.*
 

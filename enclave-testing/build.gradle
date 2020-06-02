@@ -2,11 +2,8 @@ apply plugin: 'kotlin'
 
 dependencies {
     api project(":conclave-enclave")
-    api project(":api-core:api-core-enclave")
     api "junit:junit:$junit_version"
 
-    implementation project(":api-core:api-core-host")
+    implementation project(":conclave-host")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
-    runtimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
 }

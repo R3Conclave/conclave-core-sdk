@@ -2,7 +2,7 @@ package com.r3.conclave.utils.classloaders
 
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.core.enclave.EnclaveApi
+import com.r3.conclave.enclave.internal.EnclaveApi
 import com.r3.conclave.dynamictesting.TestEnclaves
 import org.junit.*
 import org.junit.Assert.*

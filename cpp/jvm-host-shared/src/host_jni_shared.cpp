@@ -6,7 +6,7 @@ static void raiseEnclaveLoadException(JNIEnv *jniEnv, const char *message) {
     raiseException(jniEnv, message, "com/r3/conclave/host/EnclaveLoadException");
 }
 
-void JNICALL Java_com_r3_conclave_core_host_internal_NativeShared_checkPlatformSupportsEnclaves
+void JNICALL Java_com_r3_conclave_host_internal_NativeShared_checkPlatformSupportsEnclaves
         (JNIEnv *jniEnv, jobject, jboolean enableSupport) {
     std::string message;
     bool was_enabled = false;

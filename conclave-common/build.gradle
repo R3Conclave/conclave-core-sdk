@@ -8,18 +8,16 @@ test {
 }
 
 dependencies {
+    implementation project(":conclave-mail")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     // Needed to parse the JSON response from the IAS
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
-    implementation project(":conclave-mail")
 
     testImplementation project(":conclave-host")
     testImplementation project(":enclave-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
-
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
 }

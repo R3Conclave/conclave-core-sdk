@@ -1,11 +1,8 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.PotentialPackagePrivate
-import com.r3.conclave.core.common.HandlerConnected
-import com.r3.conclave.core.common.Sender
-import com.r3.conclave.core.enclave.EnclaveApi
-import com.r3.conclave.core.enclave.internal.Native
-import com.r3.conclave.core.enclave.internal.NativeOcallSender
+import com.r3.conclave.common.internal.handler.HandlerConnected
+import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
 import java.nio.ByteBuffer
 

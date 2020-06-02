@@ -1,12 +1,12 @@
 package com.r3.conclave.testing
 
-import com.r3.conclave.core.common.LeafSender
-import com.r3.conclave.core.common.Handler
-import com.r3.conclave.core.common.HandlerConnected
-import com.r3.conclave.core.common.Sender
-import com.r3.conclave.core.enclave.EnclaveApi
-import com.r3.conclave.core.host.EnclaveHandle
+import com.r3.conclave.common.internal.handler.Handler
+import com.r3.conclave.common.internal.handler.HandlerConnected
+import com.r3.conclave.common.internal.handler.LeafSender
+import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.enclave.internal.EnclaveApi
+import com.r3.conclave.host.internal.EnclaveHandle
 import java.nio.ByteBuffer
 
 class MockEnclaveHandle<CONNECTION>(
@@ -19,7 +19,7 @@ class MockEnclaveHandle<CONNECTION>(
     }
 
     override val connection: CONNECTION = hostHandler.connect(this)
-    
+
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
         initialiseMethod.invoke(enclave, MockEnclaveApi(), sender) as HandlerConnected<*>

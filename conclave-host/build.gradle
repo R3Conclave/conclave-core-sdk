@@ -21,9 +21,8 @@ test {
 dependencies {
     api project(":conclave-common")
 
-    // This is the "old" API which does all of the host-enclave heavy-lifting. Eventually it will be aborbed into this module.
-    implementation project(':api-core:api-core-host')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "io.github.classgraph:classgraph:$classgraph_version"
     // Logging using the SLF4J API
     implementation "org.slf4j:slf4j-api:$slf4j_version"
     // Needed to parse the JSON response from the IAS

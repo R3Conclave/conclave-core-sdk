@@ -5,8 +5,6 @@ import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.readFully
-import com.r3.conclave.core.host.debug
-import com.r3.conclave.core.host.loggerFor
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK

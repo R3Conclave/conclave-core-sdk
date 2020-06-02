@@ -29,10 +29,6 @@ include 'conclave-enclave'
 include 'conclave-host'
 include 'conclave-client'
 
-include 'api-core:api-core-enclave'
-include 'api-core:api-core-host'
-include 'api-core:api-core-common'
-
 include 'enclave-utils'
 
 include 'enclave-testing'

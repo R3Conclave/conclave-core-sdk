@@ -1,6 +1,6 @@
 package com.r3.conclave.testing
 
-import com.r3.conclave.core.common.*
+import com.r3.conclave.common.internal.handler.*
 import java.nio.ByteBuffer
 
 /**
@@ -21,8 +21,8 @@ class RootHandler : Handler<RootHandler.Connection> {
     }
 
     class Connection(
-        val errorConnection: ErrorHandler.Connection,
-        val muxConnection: SimpleMuxingHandler.Connection
+            val errorConnection: ErrorHandler.Connection,
+            val muxConnection: SimpleMuxingHandler.Connection
     ) {
         fun <CONNECTION> addDownstream(downstream: Handler<CONNECTION>): CONNECTION {
             return muxConnection.addDownstream(downstream)

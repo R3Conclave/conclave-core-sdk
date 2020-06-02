@@ -1,6 +1,6 @@
 package com.r3.conclave.testing
 
-import com.r3.conclave.core.common.BytesHandler
+import com.r3.conclave.common.internal.handler.BytesHandler
 import java.nio.ByteBuffer
 import java.util.*
 

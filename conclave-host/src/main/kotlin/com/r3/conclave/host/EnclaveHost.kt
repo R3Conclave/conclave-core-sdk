@@ -5,17 +5,13 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.core.common.ErrorHandler
-import com.r3.conclave.core.common.Handler
-import com.r3.conclave.core.common.Sender
-import com.r3.conclave.core.common.SimpleMuxingHandler
-import com.r3.conclave.core.host.*
-import com.r3.conclave.core.host.internal.NativeShared
+import com.r3.conclave.common.internal.handler.ErrorHandler
+import com.r3.conclave.common.internal.handler.Handler
+import com.r3.conclave.common.internal.handler.Sender
+import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
+import com.r3.conclave.host.internal.NativeShared
 import com.r3.conclave.host.EnclaveHost.State.*
-import com.r3.conclave.host.internal.AttestationService
-import com.r3.conclave.host.internal.IntelAttestationService
-import com.r3.conclave.host.internal.MockAttestationService
-import com.r3.conclave.host.internal.createHost
+import com.r3.conclave.host.internal.*
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -186,7 +182,10 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             // TODO We could probably simplify things if we didn't multiplex the attestation, and instead rolled it into
             //      the main host handler.
             val signedQuote = mux.addDownstream(EpidAttestationHostHandler(
-                    EpidAttestationHostConfiguration(SgxQuoteType.LINKABLE, spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid)),
+                    EpidAttestationHostConfiguration(
+                            SgxQuoteType.LINKABLE,
+                            spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid)
+                    ),
                     isMock
             )).getSignedQuote()
             val started = stateManager.checkStateIs<Started>()

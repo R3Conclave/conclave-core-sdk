@@ -6,7 +6,6 @@ dependencies {
     api project(":enclave-testing")
     api project(":conclave-host")
 
-    implementation project(":api-core:api-core-host")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
 
