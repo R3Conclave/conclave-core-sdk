@@ -64,7 +64,8 @@ class EnclaveInstanceInfoImpl(
 
         val (summary, reason) = when (enclaveMode) {
             RELEASE -> getSummaryAndReason(attestationReport)
-            DEBUG -> Pair(Summary.INSECURE, "Enclave is running in debug mode.")
+            DEBUG -> Pair(Summary.INSECURE, "Enclave is running in debug mode and is thus insecure. " +
+                    "Security status of the underlying hardware: ${getSummaryAndReason(attestationReport).second}")
             SIMULATION -> Pair(Summary.INSECURE, "Enclave is running in simulation mode.")
         }
         val cpuSVN = OpaqueBytes(reportBody[cpuSvn].readBytes())

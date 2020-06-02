@@ -189,10 +189,8 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
                     isMock
             )).getSignedQuote()
             val started = stateManager.checkStateIs<Started>()
-            val enclaveInstanceInfo = getAttestationService(attestationKey).doAttest(started.signatureKey, signedQuote, enclaveMode)
-            log.debug { "Attestation report: ${enclaveInstanceInfo.attestationReport}" }
-            log.info(enclaveInstanceInfo.toString())
-            _enclaveInstanceInfo = enclaveInstanceInfo
+            _enclaveInstanceInfo = getAttestationService(attestationKey).doAttest(started.signatureKey, signedQuote, enclaveMode)
+            log.debug { enclaveInstanceInfo.toString() }
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
         }
