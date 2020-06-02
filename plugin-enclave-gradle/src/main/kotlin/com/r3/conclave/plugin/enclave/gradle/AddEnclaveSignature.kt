@@ -7,7 +7,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
 
-open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory, private val enclaveExtension: EnclaveExtension) : ConclaveTask() {
+open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -20,6 +20,12 @@ open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory, priva
     @get:InputFile
     val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
 
+    @get:InputFile
+    val inputMrsignerPublicKey: RegularFileProperty = objects.fileProperty()
+
+    @get:InputFile
+    val inputMrsignerSignature: RegularFileProperty = objects.fileProperty()
+
     @get:OutputFile
     val outputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -29,11 +35,11 @@ open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory, priva
     override fun action() {
         project.exec { spec ->
             spec.commandLine(signTool.asFile.get(), "catsig",
-                    "-key", enclaveExtension.mrsignerPublicKey.asFile.get(),
+                    "-key", inputMrsignerPublicKey.asFile.get(),
                     "-enclave", inputEnclave.asFile.get(),
                     "-out", outputSignedEnclave.asFile.get(),
                     "-config", inputEnclaveConfig.asFile.get(),
-                    "-sig", enclaveExtension.mrsignerSignature.asFile.get(),
+                    "-sig", inputMrsignerSignature.asFile.get(),
                     "-unsigned", inputSigningMaterial.asFile.get()
             )
         }

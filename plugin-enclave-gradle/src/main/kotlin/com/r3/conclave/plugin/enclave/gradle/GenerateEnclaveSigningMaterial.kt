@@ -1,18 +1,20 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import org.gradle.api.GradleException
+import org.gradle.api.provider.Property
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.text.SimpleDateFormat
+import java.util.*
 import javax.inject.Inject
 
 open class GenerateEnclaveSigningMaterial @Inject constructor(
-        objects: ObjectFactory,
-        private val enclaveExtension: EnclaveExtension
+        objects: ObjectFactory
 ) : ConclaveTask() {
     private companion object {
        const val SIGNATURE_DATE_OFFSET = 20 //< Offset of date field in signing input structure
@@ -26,6 +28,9 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
 
     @get:InputFile
     val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
+
+    @get:Input
+    val signatureDate: Property<Date> = objects.property(Date::class.java)
 
     @get:OutputFile
     val outputSigningMaterial: RegularFileProperty = objects.fileProperty()
@@ -46,7 +51,7 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
         if (!signingMaterialFile.exists()) {
             throw GradleException("sign_tool output is missing")
         }
-        val signatureDateStr = SimpleDateFormat("yyyymmdd").format(enclaveExtension.signatureDate.get())
+        val signatureDateStr = SimpleDateFormat("yyyymmdd").format(signatureDate.get())
         logger.info("Enclave signature date: $signatureDateStr")
         val data = signingMaterialFile.readBytes()
         with(ByteBuffer.wrap(data)) {

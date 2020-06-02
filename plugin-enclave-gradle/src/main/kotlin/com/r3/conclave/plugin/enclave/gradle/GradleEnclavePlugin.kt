@@ -126,7 +126,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.stripped.set(type == BuildType.Release)
             }
 
-            val generateEnclaveConfigTask = target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type, conclaveExtension) { task ->
+            val generateEnclaveConfigTask = target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type) { task ->
+                task.productID.set(conclaveExtension.productID)
+                task.revocationLevel.set(conclaveExtension.revocationLevel)
+                task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                 task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
             }
 
@@ -145,20 +148,23 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
-            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type", enclaveExtension) { task ->
+            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type") { task ->
                 task.dependsOn(copySgxToolsTask)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
+                task.signatureDate.set(enclaveExtension.signatureDate)
                 task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
             }
 
-            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type", enclaveExtension) { task ->
+            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type") { task ->
                 task.dependsOn(copySgxToolsTask)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
                 task.inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
+                task.inputMrsignerPublicKey.set(enclaveExtension.mrsignerPublicKey)
+                task.inputMrsignerSignature.set(enclaveExtension.mrsignerSignature)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
