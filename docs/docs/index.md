@@ -57,15 +57,24 @@ This release ships with the following known issues:
 
 ### Beta 2
 
-1. We've upgraded to use the version 2.9 of the Intel SGX SDK, which brings security improvements and lays the groundwork for new 
-   features. Make sure your host system is also running version 2.9.
-
-2. The ID for the enclave plugin is now `com.r3.conclave.enclave`. You will need to change this in your enclave's
-   build.gradle file.
-
-3. You can now specify an enclave's product ID and revocation level in the enclave build file. There's a new
+1. :jigsaw: **New feature!** Build enclaves on Windows without any special emulators, virtual machines or other setup.
+1. :jigsaw: **New feature!** Specify an enclave's product ID and revocation level in the enclave build file. There's a new
    `conclave` block which lets you do this. These values are enforced in any relevant `EnclaveConstraint` object.
-
-4. Related to the above, the `enclave.xml` files are no longer needed and you can safely delete them.
-
-5. The enclave measurement is now stable when built using different versions of the JDK.
+1. :jigsaw: **New feature!** A new `EnclaveHost.checkPlatformSupportsEnclaves` API allows you to probe the host
+   operating system to check if enclaves are loadable, before you try to actually do so. Additionally, if SGX is disabled
+   in the BIOS but can be enabled by software request, Conclave can now do this for you. If the host machine needs
+   extra configuration a useful error message is now provided in the exception. 
+1. :jigsaw: **New feature!** Better support for enclave signing in the Gradle plugin. New documentation has been added showing how to
+   sign with externally managed keys. 
+1. You can now use the Conclave host API from Java 11. The version of Java inside the enclave remains at Java 8.
+1. We've upgraded to use the version 2.9.1 of the Intel SGX SDK, which brings security improvements and lays the groundwork for new 
+   features. Make sure your host system is also running version 2.9.1. We've also upgraded to the latest version of the Intel
+   Attestation Service (IAS).
+1. The ID for the enclave plugin is now `com.r3.conclave.enclave`. You will need to change this in your enclave's
+   build.gradle file.
+1. `enclave.xml` files are no longer needed. You can safely delete them, as they're now generated for you by Conclave.
+1. The enclave measurement is now stable when built using different versions of the JDK.
+1. The format of an `EnclaveInstanceInfo` has been optimised. Old `EnclaveInstanceInfo` objects won't work with the beta 2
+   client libraries and vice-versa.
+1. Java serialization is now formally blocked inside the enclave using a filter. Unfiltered deserialization has a history
+   of leading to exploits in programs written in high level managed languages. 

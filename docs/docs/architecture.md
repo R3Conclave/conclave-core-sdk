@@ -22,7 +22,7 @@ on top. In this way it's similar to interacting with a server over a network, ex
 Enclaves run on a specialised JVM suited for the small enclave environment. In current Conclave versions that JVM is
 called Avian. In future versions we plan to upgrade to SubstrateVM, which will bring various advantages.
 
-![Architecture Diagram](arch-diagram.png)
+![Architecture Diagram](images/arch-diagram.png)
 
 In the above diagram orange shaded boxes are untrusted and could attack the enclave: the host and operating system
 (which includes the BIOS, drivers and peripherals). Blue shaded boxes are part of the _trusted computing base_ -
@@ -116,7 +116,7 @@ sequenceDiagram
     Enclave->>Host: Encrypted response
     Host->>Client: Encrypted response over IP-->
 
-![sequence diagram](sequence.png)
+![sequence diagram](images/sequence.png)
 
 The first time SGX is used on a machine there are interactions with either the cloud provider or Intel to retrieve
 machine certificates proving authenticity. The host then gets a remote attestation (`EnclaveInstanceInfo`) to the

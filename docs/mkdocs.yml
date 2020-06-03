@@ -11,7 +11,9 @@ nav:
   - Enclaves: enclaves.md
   - Development:
     - Architecture: architecture.md
-    - Tutorial: tutorial.md
+    - Tutorial:
+      - Compiling and running: tutorial.md
+      - Writing hello world: writing-hello-world.md
     - Security: security.md
     - API: api/index.html
   - Operations:
@@ -20,14 +22,15 @@ nav:
       - IAS: ias.md
     - Enclave signing: signing.md
     - Renewability: renewability.md
+  - FAQ: faq.md
 
 theme:
   name: 'material'
   palette:
     primary: 'red'
     accent: 'red'
-  feature:
-    tabs: true
+  features:
+    - tabs
 
 markdown_extensions:
   - admonition
@@ -36,6 +39,10 @@ markdown_extensions:
       linenums: true
   - toc:
       permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
 
 google_analytics:
   - 'UA-87760032-7'
