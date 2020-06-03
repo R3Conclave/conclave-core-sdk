@@ -46,6 +46,11 @@ interface EnclaveInstanceInfo {
     /** Serializes this object to a custom format and returns the byte array. */
     fun serialize(): ByteArray
 
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * The public items within the object are still published in the documentation.
+     * @suppress
+     */
     companion object {
         private val magic = "EII".toByteArray()
         private val signatureScheme = SignatureSchemeEdDSA()

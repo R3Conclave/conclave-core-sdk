@@ -167,7 +167,7 @@ dokka {
         // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
         apiDirectories.collect { sourceDir ->
             sourceDir.traverse(type: FileType.DIRECTORIES) {
-                if (it.name == 'internal') {
+                if ((it.name == 'internal') || (it.name == 'kotlin')) {
                     prefixes.add sourceDir.toPath().relativize(it.toPath()).toString().replace(File.separator, '.')
                 }
             }
@@ -213,7 +213,17 @@ if (excludeDokka == null) {
     }
 }
 
-task mkdocs(type: Exec, dependsOn: ['apidocs']) {
+// Dokka does not always translate kotlin code into pure java documentation. We can use this 
+// task to perform some pre-processing between generating the HTML and making the documentation site.
+task preprocessdocs(type: Exec, dependsOn: ['apidocs']) {
+    description = "Performs processing on the documentation generated using the apidocs task prior to running mkdocs."
+    commandLine("./preprocess-docsite.sh")
+    workingDir("docs")
+    inputs.files(fileTree("docs/docs/api"))
+    outputs.dir("docs/docs/api")
+}
+
+task mkdocs(type: Exec, dependsOn: ['preprocessdocs']) {
     description = "Runs the mkdocs tool to produce the static HTML website we expose to end users."
     commandLine("./make-docsite.sh")
     workingDir("docs")

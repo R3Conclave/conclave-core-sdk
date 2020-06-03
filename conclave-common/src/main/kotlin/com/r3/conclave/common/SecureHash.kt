@@ -11,6 +11,11 @@ import java.security.MessageDigest
  * by [SHA256Hash] and [SHA512Hash] respectively.
  */
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * The public items within the object are still published in the documentation.
+     * @suppress
+     */
     companion object {
         /**
          * Parses the given hexadecimal string into either a [SHA256Hash] or a [SHA512Hash] depending on the length.
@@ -32,6 +37,11 @@ class SHA256Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
     }
 
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * The public items within the object are still published in the documentation.
+     * @suppress
+     */
     companion object {
         /**
          * Computes the SHA-256 hash value of the [ByteArray].
@@ -79,6 +89,11 @@ class SHA512Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         require(bytes.size == 64) { "Invalid hash size, must be 64 bytes" }
     }
 
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * The public items within the object are still published in the documentation.
+     * @suppress
+     */
     companion object {
         /**
          * Computes the SHA-256 hash value of the [ByteArray].

@@ -30,6 +30,10 @@ import java.util.function.Consumer
  * computation, rather than operate on secret data.
  */
 abstract class Enclave {
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * @suppress
+     */
     private companion object {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
@@ -172,16 +176,4 @@ abstract class Enclave {
             })
         }
     }
-}
-
-/**
- * Sends the given bytes to the registered [EnclaveCall] implementation provided to [EnclaveHost.callEnclave].
- * If the host responds by doing another call back in to the enclave rather than immediately returning
- * from the [EnclaveCall], that call will be routed to [callback]. In this way a form of virtual stack can
- * be built up between host and enclave as they call back and forth.
- *
- * @return The bytes returned from the host's [EnclaveCall].
- */
-fun Enclave.callUntrustedHost(bytes: ByteArray, callback: (ByteArray) -> ByteArray?): ByteArray? {
-    return callUntrustedHost(bytes, EnclaveCall { callback(it) })
 }

@@ -4,7 +4,8 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.callUntrustedHost
+import com.r3.conclave.enclave.kotlin.callUntrustedHost
+import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.testing.MockEnclaveHandle
 import com.r3.conclave.testing.RecordingEnclaveCall
 import org.assertj.core.api.Assertions.*

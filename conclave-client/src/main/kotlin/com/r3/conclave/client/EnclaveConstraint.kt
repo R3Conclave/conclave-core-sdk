@@ -153,6 +153,11 @@ class EnclaveConstraint {
         return tokens.joinToString(" ")
     }
 
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * The public items within the object are still published in the documentation.
+     * @suppress
+     */
     companion object {
         private val keys = setOf("C", "S", "PROD", "REVOKE", "SEC")
 

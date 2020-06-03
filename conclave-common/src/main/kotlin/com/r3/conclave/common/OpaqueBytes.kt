@@ -44,6 +44,11 @@ open class OpaqueBytes(private val _bytes: ByteArray) {
 
     override fun toString(): String = _bytes.toHexString()
 
+    /**
+     * Suppress kotlin specific companion objects from our API documentation.
+     * The public items within the object are still published in the documentation.
+     * @suppress
+     */
     companion object {
         /**
          * Create [OpaqueBytes] from a sequence of [Byte] values.

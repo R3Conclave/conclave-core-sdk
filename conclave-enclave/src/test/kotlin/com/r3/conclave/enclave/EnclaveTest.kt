@@ -5,7 +5,7 @@ import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.callEnclave
+import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.testing.RecordingEnclaveCall
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
