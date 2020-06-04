@@ -5,6 +5,7 @@
 # 3. Run "mkdocs serve" in this directory and browse to localhost. Edits to the files will be reflected immediately.
 
 site_name: Conclave documentation
+use_directory_urls: false
 
 nav:
   - Welcome: index.md

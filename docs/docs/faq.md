@@ -4,7 +4,7 @@
 
 We plan to offer more guidance on this in future. Until then consider:
 
-* Dataset size. Until Ice Lake it must fit in memory in a single CPU machine.
+* Dataset size. It must fit in memory in a single CPU machine.
 * Lower performance than usual. The extra security checks used by SGX reduce execution performance and the embedded 
   JVM inside the enclave isn't as sophisticated as HotSpot, so peak performance will be lower than normal for Java.
 * Client-side tooling. Enclaves are useless unless the end user of the service they provide is checking a remote
