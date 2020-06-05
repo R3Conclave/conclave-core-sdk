@@ -12,3 +12,5 @@ internal-docs/site
 docs/docs/api
 docs/virtualenv
 .DS_Store
+cpp/jvm-enclave-avian/generated_dlsym/
+cpp/jvm-enclave-common/include/enclave_jni.h
