@@ -9,7 +9,6 @@ import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
-import com.r3.conclave.host.internal.NativeShared
 import com.r3.conclave.host.EnclaveHost.State.*
 import com.r3.conclave.host.internal.*
 import java.io.DataOutputStream
@@ -36,15 +35,8 @@ import java.util.function.Consumer
  *
  * Although the enclave must currently run against Java 8, the host can use any
  * version of Java that is supported.
- *
- * @property enclaveMode The mode the enclave is running in.
  */
-class EnclaveHost @PotentialPackagePrivate private constructor(
-        val enclaveMode: EnclaveMode,
-        private val enclaveHandle: EnclaveHandle<ErrorHandler.Connection>,
-        private val isMock: Boolean,
-        private val fileToDelete: Path?
-) : AutoCloseable {
+open class EnclaveHost protected constructor() : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
      * The public items within the object are still published in the documentation.
@@ -54,14 +46,10 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
 
-        // This wouldn't be needed if the c'tor was package-private.
-        internal fun create(
-                enclaveMode: EnclaveMode,
-                handle: EnclaveHandle<ErrorHandler.Connection>,
-                fileToDelete: Path?,
-                isMock: Boolean = false
-        ): EnclaveHost {
-            return EnclaveHost(enclaveMode, handle, isMock, fileToDelete)
+        internal fun create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
+            return EnclaveHost().apply {
+                this.enclaveHandle = enclaveHandle
+            }
         }
 
         /**
@@ -75,7 +63,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class)
         fun load(enclaveClassName: String): EnclaveHost {
-            val (stream, mode) = findEnclaveFile(enclaveClassName)
+            val (stream, enclaveMode) = findEnclaveFile(enclaveClassName)
             val enclaveFile = try {
                 Files.createTempFile(enclaveClassName, "signed.so")
             } catch (e: Exception) {
@@ -83,7 +71,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             }
             try {
                 stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
-                return createHost(enclaveFile, enclaveClassName, mode, tempFile = true)
+                return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
                 if (e is EnclaveLoadException) throw e
@@ -150,9 +138,15 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         }
     }
 
+    private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
     private val stateManager = StateManager<State>(New)
     private lateinit var enclaveSender: Sender
     private var _enclaveInstanceInfo: EnclaveInstanceInfo? = null
+
+    /**
+     * The mode the enclave is running in.
+     */
+    val enclaveMode: EnclaveMode get() = enclaveHandle.enclaveMode
 
     /**
      * Causes the enclave to be loaded and the `Enclave` object constructed inside.
@@ -186,13 +180,13 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
             enclaveSender = mux.addDownstream(HostHandler(this))
             // TODO We could probably simplify things if we didn't multiplex the attestation, and instead rolled it into
             //      the main host handler.
-            val signedQuote = mux.addDownstream(EpidAttestationHostHandler(
-                    EpidAttestationHostConfiguration(
+            val signedQuote = mux.addDownstream(
+                    EpidAttestationHostHandler(
                             SgxQuoteType.LINKABLE,
-                            spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid)
-                    ),
-                    isMock
-            )).getSignedQuote()
+                            spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
+                            enclaveMode == EnclaveMode.MOCK
+                    )
+            ).getSignedQuote()
             val started = stateManager.checkStateIs<Started>()
             _enclaveInstanceInfo = getAttestationService(attestationKey).doAttest(started.signatureKey, signedQuote, enclaveMode)
             log.debug { enclaveInstanceInfo.toString() }
@@ -205,7 +199,7 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         return when (enclaveMode) {
             EnclaveMode.RELEASE -> IntelAttestationService(true, requiredAttestationKey(attestationKey))
             EnclaveMode.DEBUG -> IntelAttestationService(false, requiredAttestationKey(attestationKey))
-            EnclaveMode.SIMULATION -> MockAttestationService()
+            EnclaveMode.SIMULATION, EnclaveMode.MOCK -> MockAttestationService()
         }
     }
 
@@ -352,7 +346,6 @@ class EnclaveHost @PotentialPackagePrivate private constructor(
         // could yield a secondary error if an exception was thrown in enclave.start without this.
         if (stateManager.state == Closed || stateManager.state == New) return
 
-        fileToDelete?.deleteQuietly()
         enclaveHandle.destroy()
         stateManager.state = Closed
     }

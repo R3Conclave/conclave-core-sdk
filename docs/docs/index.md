@@ -55,6 +55,11 @@ This release ships with the following known issues:
 
 ## Release notes
 
+### Beta 3
+
+1. :jigsaw: **New feature!** New mock API for unit testing enclaves and for easy debugging between the host and enclave.
+   Add `conclave-testing` as a `testImplementation` dependency to your project.
+
 ### Beta 2
 
 1. :jigsaw: **New feature!** Build enclaves on Windows without any special emulators, virtual machines or other setup.
@@ -77,4 +82,4 @@ This release ships with the following known issues:
 1. The format of an `EnclaveInstanceInfo` has been optimised. Old `EnclaveInstanceInfo` objects won't work with the beta 2
    client libraries and vice-versa.
 1. Java serialization is now formally blocked inside the enclave using a filter. Unfiltered deserialization has a history
-   of leading to exploits in programs written in high level managed languages. 
+   of leading to exploits in programs written in high level managed languages.

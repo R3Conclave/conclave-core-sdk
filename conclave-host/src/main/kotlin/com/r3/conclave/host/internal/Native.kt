@@ -49,6 +49,7 @@ object Native {
             quoteOut: ByteArray
     )
 
+    // SgxMetadata
     external fun getMetadata(
             enclavePath: String,
             metadataOut: ByteArray

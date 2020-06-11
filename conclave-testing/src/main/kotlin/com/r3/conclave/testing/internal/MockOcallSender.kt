@@ -1,4 +1,4 @@
-package com.r3.conclave.testing
+package com.r3.conclave.testing.internal
 
 import com.r3.conclave.common.internal.handler.LeafSender
 import com.r3.conclave.common.internal.handler.HandlerConnected

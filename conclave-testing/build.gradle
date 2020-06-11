@@ -1,0 +1,18 @@
+plugins {
+    id 'java-library'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    api project(":conclave-enclave")
+    api project(":conclave-host")
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+test {
+    useJUnitPlatform()
+}

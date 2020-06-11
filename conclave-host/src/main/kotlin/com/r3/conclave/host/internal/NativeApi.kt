@@ -5,8 +5,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.lang.IllegalStateException
 
-typealias EnclaveId = Long
-
 object NativeApi {
     private val connectedOcallHandlers = ConcurrentHashMap<Long, HandlerConnected<*>>()
 

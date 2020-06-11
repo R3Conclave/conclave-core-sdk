@@ -17,7 +17,13 @@ enum class EnclaveMode {
     /**
      * The enclave does not rely on a real secure hardware but rather runs off a simulation of one in software. There is
      * absolutely NO security in this mode. This mode is ONLY provided to facilitate development on developer machines
-     * that may not have the necessary hardware.
+     * that may not have the necessary hardware (but have the correct OS).
      */
-    SIMULATION
+    SIMULATION,
+    /**
+     * The enclave is run within the same JVM as its host without any of the native infrastructure. There is
+     * absolutely NO security in this mode. This mode is ONLY provided to facilitate development on any OS and to enable
+     * fast unit testing and better debugging.
+     */
+    MOCK
 }

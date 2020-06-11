@@ -77,7 +77,7 @@ class TestEnclaves : ExternalResource() {
 
     inline fun <reified T : Enclave> hostTo(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {
         val enclaveFile = getSignedEnclaveFile(T::class.java, enclaveBuilder).toPath()
-        return createHost(enclaveFile, T::class.java.name, EnclaveMode.SIMULATION, tempFile = false)
+        return createHost(EnclaveMode.SIMULATION, enclaveFile, T::class.java.name, tempFile = false)
     }
 
     fun getEnclaveMetadata(enclaveClass: Class<out Enclave>, builder: EnclaveBuilder): Path {

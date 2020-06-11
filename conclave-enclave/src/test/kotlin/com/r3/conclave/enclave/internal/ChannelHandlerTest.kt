@@ -3,6 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.testing.*
+import com.r3.conclave.testing.internal.MockEnclaveHandle
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.*
@@ -135,6 +136,6 @@ class ChannelHandlerTest {
     }
 
     private inline fun <reified E : Enclave> createEnclave(): RootHandler.Connection {
-        return MockEnclaveHandle(RootHandler(), E::class.java.newInstance()).connection
+        return MockEnclaveHandle(E::class.java.getConstructor().newInstance(), RootHandler()).connection
     }
 }

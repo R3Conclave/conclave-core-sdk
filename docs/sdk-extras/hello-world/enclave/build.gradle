@@ -4,6 +4,16 @@ plugins {
 
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
+
+    testImplementation "com.r3.conclave:conclave-testing"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
 }
 
 conclave {

@@ -6,13 +6,9 @@ import com.r3.conclave.common.internal.handler.Sender
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
-data class EpidAttestationHostConfiguration(
-        val quoteType: SgxQuoteType,
-        val spid: ByteCursor<SgxSpid>
-)
-
 class EpidAttestationHostHandler(
-        private val configuration: EpidAttestationHostConfiguration,
+        private val quoteType: SgxQuoteType,
+        private val spid: ByteCursor<SgxSpid>,
         private val isMock: Boolean = false
 ) : Handler<EpidAttestationHostHandler.Connection> {
     companion object {
@@ -88,8 +84,8 @@ class EpidAttestationHostHandler(
             } else {
                 val getQuote = Cursor.allocate(SgxGetQuote)
                 getQuote[SgxGetQuote.report] = report.read()
-                getQuote[SgxGetQuote.quoteType] = configuration.quoteType.value
-                getQuote[SgxGetQuote.spid] = configuration.spid.read()
+                getQuote[SgxGetQuote.quoteType] = quoteType.value
+                getQuote[SgxGetQuote.spid] = spid.read()
                 Native.getQuote(
                         getQuote.getBuffer().array(),
                         signatureRevocationListIn = null,

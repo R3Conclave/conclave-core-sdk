@@ -9,6 +9,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * This tests the enclave in a simulated hardware environment, thus not needing real hardware only the correct OS.
+ * Alternatively it can run the enclave in debug mode on real hardware. See the tutorial for details.
+ */
 public class HostTest {
     // We start by loading the enclave using EnclaveHost, and passing the class name of the Enclave subclass
     // that we defined in our enclave module.

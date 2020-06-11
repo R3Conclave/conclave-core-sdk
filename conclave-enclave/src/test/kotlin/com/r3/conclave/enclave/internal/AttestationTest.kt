@@ -141,11 +141,7 @@ class AttestationTest {
 
     @Test
     fun `attestation handlers`() {
-        val configuration = EpidAttestationHostConfiguration(
-                quoteType = SgxQuoteType.LINKABLE,
-                spid = Cursor.allocate(SgxSpid)
-        )
-        val connection = createEnclave(EpidAttestationHostHandler(configuration), EpidAttestingEnclave::class.java)
+        val connection = createEnclave(EpidAttestationHostHandler(SgxQuoteType.LINKABLE, Cursor.allocate(SgxSpid)), EpidAttestingEnclave::class.java)
         val signedQuote = connection.getSignedQuote()
         val reportData = signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData]
         assertTrue(Charsets.UTF_8.decode(reportData.getBuffer()).startsWith("hello"))
@@ -156,8 +152,8 @@ class AttestationTest {
             enclaveClass: Class<out Enclave>,
             enclaveBuilder: EnclaveBuilder = EnclaveBuilder()
     ): CONNECTION {
-        val enclaveFile = testEnclaves.getSignedEnclaveFile(enclaveClass, enclaveBuilder)
-        return NativeHostApi(EnclaveMode.SIMULATION).createEnclave(handler, enclaveFile, enclaveClass.name).let {
+        val enclaveFile = testEnclaves.getSignedEnclaveFile(enclaveClass, enclaveBuilder).toPath()
+        return NativeEnclaveHandle(EnclaveMode.SIMULATION, enclaveFile, false, enclaveClass.name, handler).let {
             enclaveHandle = it
             it.connection
         }

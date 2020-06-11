@@ -1,6 +1,8 @@
 package com.r3.conclave.common.internal
 
 import com.r3.conclave.common.*
+import com.r3.conclave.common.EnclaveMode.MOCK
+import com.r3.conclave.common.EnclaveMode.SIMULATION
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.AttestationReport
@@ -69,7 +71,6 @@ class EnclaveInstanceInfoImplTest {
         assertThat(enclaveInfo.codeSigningKeyHash).isEqualTo(mrsigner)
         assertThat(enclaveInfo.productID).isEqualTo(isvProdId)
         assertThat(enclaveInfo.revocationLevel).isEqualTo(isvSvn - 1)
-        assertThat(enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.SIMULATION)
     }
 
     @Test
@@ -77,6 +78,19 @@ class EnclaveInstanceInfoImplTest {
         val securityInfo = newInstance().securityInfo as SGXEnclaveSecurityInfo
         assertThat(securityInfo.timestamp).isEqualTo(reportTimestamp)
         assertThat(securityInfo.cpuSVN).isEqualTo(cpuSvn)
+    }
+
+    @Test
+    fun `simulation and mock modes are always insecure`() {
+        reportQuoteStatus = QuoteStatus.OK
+        newInstance(enclaveMode = SIMULATION).let {
+            assertThat(it.enclaveMode).isEqualTo(SIMULATION)
+            assertThat(it.securityInfo.summary).isEqualTo(EnclaveSecurityInfo.Summary.INSECURE)
+        }
+        newInstance(enclaveMode = MOCK).let {
+            assertThat(it.enclaveMode).isEqualTo(MOCK)
+            assertThat(it.securityInfo.summary).isEqualTo(EnclaveSecurityInfo.Summary.INSECURE)
+        }
     }
 
     @Test
@@ -97,7 +111,10 @@ class EnclaveInstanceInfoImplTest {
         return copy
     }
 
-    private fun newInstance(signedQuote: ByteCursor<SgxSignedQuote> = this.signedQuote): EnclaveInstanceInfoImpl {
-        return attestationService.doAttest(signingKeyPair.public, signedQuote, EnclaveMode.SIMULATION)
+    private fun newInstance(
+            signedQuote: ByteCursor<SgxSignedQuote> = this.signedQuote,
+            enclaveMode: EnclaveMode = EnclaveMode.MOCK
+    ): EnclaveInstanceInfoImpl {
+        return attestationService.doAttest(signingKeyPair.public, signedQuote, enclaveMode)
     }
 }

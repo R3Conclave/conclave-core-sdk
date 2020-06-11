@@ -31,21 +31,21 @@ class EnclaveInstanceInfoImpl(
     init {
         val pkixParameters = when (enclaveMode) {
             RELEASE, DEBUG -> AttestationParameters.INTEL
-            SIMULATION -> AttestationParameters.MOCK
+            SIMULATION, MOCK -> AttestationParameters.MOCK
         }
         attestationReport = attestationResponse.verify(pkixParameters)
         // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct it terms of
-        // simulation vs non-simulation.
+        // release/debug vs simulation/mock.
 
         val reportBody = attestationReport.isvEnclaveQuoteBody[SgxQuote.reportBody]
 
         val flags = reportBody[attributes][flags].read()
         val isDebug = flags and SgxEnclaveFlags.DEBUG != 0L
-        // Now we check the debug flag from the attested quote matches release vs debug enclaveMode. And thus we're sure
-        // enclaveMode is correct.
+        // Now we check the debug flag from the attested quote matches release vs debug enclaveMode. The only thing left
+        // is the distinction between simulation and mock - we can't be sure which it is but it doesn't mattter.
         when (enclaveMode) {
             RELEASE -> require(!isDebug) { "Mismatch between debug flag and enclaveMode" }
-            DEBUG, SIMULATION -> require(isDebug) { "Mismatch between debug flag and enclaveMode" }
+            DEBUG, SIMULATION, MOCK -> require(isDebug) { "Mismatch between debug flag and enclaveMode" }
         }
 
         val signingKeyHash = SHA512Hash.hash(dataSigningKey.encoded)
@@ -67,6 +67,7 @@ class EnclaveInstanceInfoImpl(
             DEBUG -> Pair(Summary.INSECURE, "Enclave is running in debug mode and is thus insecure. " +
                     "Security status of the underlying hardware: ${getSummaryAndReason(attestationReport).second}")
             SIMULATION -> Pair(Summary.INSECURE, "Enclave is running in simulation mode.")
+            MOCK -> Pair(Summary.INSECURE, "Enclave is running in mock mode.")
         }
         val cpuSVN = OpaqueBytes(reportBody[cpuSvn].readBytes())
         securityInfo = SGXEnclaveSecurityInfo(summary, reason, attestationReport.timestamp, cpuSVN)

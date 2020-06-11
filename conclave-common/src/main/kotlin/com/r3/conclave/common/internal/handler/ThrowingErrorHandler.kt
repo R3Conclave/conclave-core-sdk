@@ -1,7 +1,5 @@
 package com.r3.conclave.common.internal.handler
 
-import com.r3.conclave.common.internal.handler.ErrorHandler
-
 /**
  * @see ErrorHandler
  *

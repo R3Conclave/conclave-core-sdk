@@ -513,8 +513,67 @@ EPID SPID and attestation key. See [here](ias.md#getting-access) for more inform
 
 ```gradlew -PenclaveMode=debug host:run --args="<SPID> <attestation key>"```
 
-## Unit testing
+## Testing
 
-In the unit tests you can just load and invoke the enclave as normal. Future versions of Conclave will provide mocked
-out APIs so the enclave logic can be tested without involving the real SGX build process, for cross platform portability
-and speed.
+There are two ways you can test the enclave: as a mock or natively.
+
+### Mock
+
+The `conclave-testing` library has a `MockHost` class which lets you whitebox test your enclave by running the enclave
+fully in-memory. There is no need for SGX hardware or a specific OS and thus ideal for cross-platform unit testing. The
+underlying enclave object is also exposed enabling you to make assertations on the enclave's state, something that obviously
+cannot be done on real hardware or even in simulation mode.
+
+In your enclave module add the following test dependency
+
+```groovy hl_lines="2"
+    testImplementation "com.r3.conclave:conclave-testing"
+```
+
+You create your mock enclave by calling `MockHost.loadMock`.
+
+```java
+MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
+mockHost.start(null, null);
+ReverseEnclave reverseEnclave = mockHost.getEnclave();
+```
+
+`MockHost` is a `EnclaveHost` so you call the enclave as normal with `callEnclave`. You have direct assess to the
+enclave instance with `mockHost.getEnclave()`.
+
+### Native
+
+Testing the enclave natively is relatively straightforward: the enclave needs to be loaded with `EnclaveHost.load`. By
+default this will run the tests in a simulated environment and will require the correct OS. Native tests are ideal for 
+integration testing.
+
+To test the enclave in debug mode on real secure hardware the `-PenclaveMode=debug` flag needs to be specified and the
+SPID and attestation key need to be passed into the test. This can be done with system properties.
+
+In your host module build file:
+
+```groovy hl_lines="2"
+test {
+    useJUnitPlatform()
+    // Pass through any -Pspid and -Pattestation-key parameters to the tests
+    systemProperties project.properties.subMap(["spid", "attestation-key"])
+}
+```
+
+Pass these values to `EnclaveHost.start` in your test:
+
+```java
+private static EnclaveHost enclave;
+
+@BeforeAll
+static void startup() throws EnclaveLoadException {
+    enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
+    String spid = System.getProperty("spid");
+    String attestionKey = System.getProperty("attestation-key");
+    enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey);
+}
+```
+
+```gradlew -PenclaveMode=debug -Pspid=<SPID> -Pattestation-key=<attestation key> host:test```
+
+Note that native tests are located in the host module while mock tests in the enclave module.

@@ -1,9 +1,16 @@
 package com.r3.conclave.host.internal
 
+import com.r3.conclave.common.EnclaveMode
+
 /**
  * A handle to an enclave instance.
  */
 interface EnclaveHandle<CONNECTION> {
+    /**
+     * The mode in which the enclave is running in.
+     */
+    val enclaveMode: EnclaveMode
+
     /**
      * The base connection to the enclave.
      */
