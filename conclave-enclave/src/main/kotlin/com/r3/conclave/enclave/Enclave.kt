@@ -12,6 +12,7 @@ import java.security.MessageDigest
 import java.security.PublicKey
 import java.security.Signature
 import java.util.function.Consumer
+import java.security.KeyPair
 
 /**
  * Subclass this inside your enclave to provide an entry point. The outside world
@@ -39,7 +40,7 @@ abstract class Enclave {
     }
 
     // TODO Persistence
-    private val signingKeyPair = signatureScheme.generateKeyPair()
+    private lateinit var signingKeyPair: KeyPair
     private lateinit var conclaveConnection: Connection
 
     /**
@@ -83,6 +84,7 @@ abstract class Enclave {
         return if (this is InternalEnclave) {
             this.internalInitialise(api, upstream)
         } else {
+            signingKeyPair = signatureScheme.generateKeyPair(api.defaultSealingKey())
             val exposeErrors = api.isSimulation() || api.isDebugMode()
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())

@@ -42,12 +42,12 @@ object NativeEnclaveApi : EnclaveApi {
         return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
-    override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {
-        Native.createReport(targetInfoIn, reportDataIn, reportOut)
+    override fun createReport(targetInfo: ByteArray?, reportData: ByteArray?, reportOut: ByteArray) {
+        Native.createReport(targetInfo, reportData, reportOut)
     }
 
-    override fun getRandomBytes(output: ByteArray, offset: Int, length: Int) {
-        Native.getRandomBytes(output, offset, length)
+    override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
+        Native.randomBytes(output, offset, length)
     }
 
     // Static enclave registration

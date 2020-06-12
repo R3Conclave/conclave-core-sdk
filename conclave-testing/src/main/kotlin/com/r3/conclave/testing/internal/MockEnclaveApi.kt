@@ -1,11 +1,8 @@
 package com.r3.conclave.testing.internal
 
-import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxAttributes.flags
-import com.r3.conclave.common.internal.SgxEnclaveFlags
-import com.r3.conclave.common.internal.SgxReport
 import com.r3.conclave.common.internal.SgxReport.body
-import com.r3.conclave.common.internal.SgxReportBody
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.enclave.internal.EnclaveApi
@@ -31,10 +28,14 @@ class MockEnclaveApi(
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
     }
 
-    override fun getRandomBytes(output: ByteArray, offset: Int, length: Int) {
+    override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
         val rng = Random()
         val bytes = ByteArray(length)
         rng.nextBytes(bytes)
         System.arraycopy(bytes, 0, output, offset, length)
+    }
+
+    override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean, cpuSvn: Boolean): ByteArray {
+        return ByteArray(16).also { randomBytes(it, 0, it.size) }
     }
 }
