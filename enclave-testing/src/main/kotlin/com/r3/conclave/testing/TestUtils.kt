@@ -5,7 +5,9 @@ import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
 import java.security.PublicKey
+import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
+import kotlin.concurrent.thread
 import kotlin.random.Random
 
 fun createSignedQuote(
@@ -27,6 +29,30 @@ fun createSignedQuote(
             this[SgxReportBody.reportData] = SHA512Hash.hash(dataSigningKey.encoded).buffer()
         }
     }
+}
+
+/**
+ * Executes the given block on a new thread, returning a [CompletableFuture] linked to the result. If [block] throws
+ * an exception then the future completes with that exception.
+ *
+ * For testing purposes this is better than doing
+ *
+ * ```
+ * thread { ... }.join()
+ * ```
+ *
+ * since any exception thrown by the thread is not swallowed.
+ */
+fun <T> threadWithFuture(block: () -> T): CompletableFuture<T> {
+    val future = CompletableFuture<T>()
+    thread {
+        try {
+            future.complete(block())
+        } catch (t: Throwable) {
+            future.completeExceptionally(t)
+        }
+    }
+    return future
 }
 
 fun expectWithin(seconds: Int, condition: Supplier<Boolean>): Boolean {

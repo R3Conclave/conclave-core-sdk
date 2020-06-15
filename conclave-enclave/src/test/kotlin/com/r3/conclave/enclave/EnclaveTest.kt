@@ -7,6 +7,7 @@ import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.testing.RecordingEnclaveCall
+import com.r3.conclave.testing.threadWithFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.*
@@ -55,8 +56,8 @@ class EnclaveTest {
         // Check that TCS are NOT by default bound to application threads
         val concurrentCalls = tcs + 20
         val ongoing = CountDownLatch(concurrentCalls)
-        val threads = (1..concurrentCalls).map {
-            thread {
+        val futures = (1..concurrentCalls).map {
+            threadWithFuture {
                 lock.withLock {
                     val response = host.callEnclave(it.toByteArray())!!
                     assertThat(response.toInt()).isEqualTo(it + 1)
@@ -66,22 +67,23 @@ class EnclaveTest {
             }
         }
 
-        threads.forEach(Thread::join)
+        futures.forEach { it.join() }
     }
 
+    @Disabled("https://r3-cev.atlassian.net/browse/CON-88")
     @Test
     fun `TCS reallocation`() {
         val tcs = WaitingEnclave.PAR_ECALLS + 3 // Some TCS are reserved for Avian internal threads
         start<WaitingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(tcs)))
-        for (j in 1..3) {
+        repeat (3) {
             val responses = RecordingEnclaveCall()
-            val threads = (1..WaitingEnclave.PAR_ECALLS).map {
-                thread {
+            val futures = (1..WaitingEnclave.PAR_ECALLS).map {
+                threadWithFuture {
                     host.callEnclave(it.toByteArray(), responses)
                 }
             }
-            threads.forEach(Thread::join)
-            assertThat(responses.calls).hasSameSizeAs(threads)
+            futures.forEach { it.join() }
+            assertThat(responses.calls).hasSameSizeAs(futures)
         }
     }
 
@@ -129,13 +131,13 @@ class EnclaveTest {
                 }
             }
         }
-        val ecall = thread {
+        val ecall = threadWithFuture {
             host.callEnclave(ByteArray(16), callback)
         }
         while (callback.ocalls.get() == 0) {
             Thread.sleep(100)
         }
-        val destructor = thread {
+        val destructor = threadWithFuture {
             host.close()
         }
         semaphore.complete(Unit)
@@ -270,7 +272,7 @@ class EnclaveTest {
 
     class ChildThreadSendingEnclave : EnclaveCall, Enclave() {
         override fun invoke(bytes: ByteArray): ByteArray? {
-            thread {
+            threadWithFuture {
                 callUntrustedHost("test".toByteArray())
             }.join()
             return null
