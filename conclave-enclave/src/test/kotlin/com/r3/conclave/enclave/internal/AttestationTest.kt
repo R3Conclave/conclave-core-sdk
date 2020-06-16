@@ -11,25 +11,33 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.testing.BytesRecordingHandler
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
 import java.util.function.Consumer
 
 class AttestationTest {
     companion object {
-        @JvmField
-        @ClassRule
-        val testEnclaves = TestEnclaves()
+        private val testEnclaves = TestEnclaves()
+
+        @BeforeAll
+        @JvmStatic
+        fun before() {
+            testEnclaves.before()
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun after() {
+            testEnclaves.after()
+        }
     }
 
     private lateinit var enclaveHandle: EnclaveHandle<*>
 
-    @Before
+    @BeforeEach
     fun cleanUp() {
         if (this::enclaveHandle.isInitialized) {
             enclaveHandle.destroy()
