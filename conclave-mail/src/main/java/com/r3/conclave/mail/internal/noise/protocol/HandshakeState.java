@@ -776,7 +776,7 @@ public class HandshakeState implements Destroyable {
 
 		// Format the message.
 		try {
-			// Process tokens until the direction changes or the patten ends.
+			// Process tokens until the direction changes or the pattern ends.
 			for (;;) {
 				if (patternIndex >= pattern.length) {
 					// The pattern has finished, so the next action is "split".
