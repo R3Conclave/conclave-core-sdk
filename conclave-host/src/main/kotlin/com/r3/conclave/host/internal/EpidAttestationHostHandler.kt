@@ -51,7 +51,7 @@ class EpidAttestationHostHandler(
         private fun initializeQuote(): ByteCursor<SgxTargetInfo> {
             val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
             if (isMock) {
-                log.info("Mock initializeQuote")
+                log.debug("Mock initializeQuote")
             } else {
                 Native.initQuote(quoteResponse.getBuffer().array())
             }

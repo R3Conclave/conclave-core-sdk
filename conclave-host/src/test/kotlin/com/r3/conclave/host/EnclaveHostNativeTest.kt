@@ -16,7 +16,6 @@ import com.r3.conclave.testing.RecordingEnclaveCall
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import java.nio.ByteBuffer
@@ -25,6 +24,7 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.IntStream
 import kotlin.streams.asSequence
+import kotlin.streams.toList
 
 class EnclaveHostNativeTest {
     companion object {
@@ -95,17 +95,36 @@ class EnclaveHostNativeTest {
         assertThat(ocallResponses.calls.map { it.toInt() }).isEqualTo(IntArray(100) { it }.asList())
     }
 
-    @Disabled("https://r3-cev.atlassian.net/browse/CON-88")
     @Test
-    fun `parallel ECALLs`() {
+    fun `concurrent calls into the enclave`() {
         val n = 10000
         start<AddingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(20)))
         host.callEnclave(n.toByteArray())
-        val sumResponse = RecordingEnclaveCall()
-        IntStream.rangeClosed(1, n).parallel().forEach {
-            host.callEnclave(it.toByteArray(), sumResponse)
-        }
-        assertThat(sumResponse.calls.single().toInt()).isEqualTo((n * (n + 1)) / 2)
+        val sum = IntStream.rangeClosed(1, n)
+                .parallel()
+                .mapToObj { host.callEnclave(it.toByteArray())?.toInt() }
+                .toList()
+                .mapNotNull { it }
+                .single()
+        assertThat(sum).isEqualTo((n * (n + 1)) / 2)
+    }
+
+    @Test
+    fun `concurrent calls into the enclave with call backs`() {
+        val n = 100
+        start<RepeatedOcallEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(20)))
+        val sums = IntStream.rangeClosed(1, n)
+                .parallel()
+                .map { i ->
+                    var sum = 0
+                    host.callEnclave(i.toByteArray()) {
+                        sum += it.toInt() + 1
+                        null
+                    }
+                    sum
+                }
+                .toList()
+        assertThat(sums).isEqualTo((1..n).map { (it * (it + 1)) / 2 })
     }
 
     @Test
@@ -212,7 +231,7 @@ class EnclaveHostNativeTest {
             } else {
                 val sum = sum.addAndGet(number)
                 if (callCount.incrementAndGet() == maxCallCount) {
-                    callUntrustedHost(sum.toByteArray())
+                    return sum.toByteArray()
                 }
             }
             return null

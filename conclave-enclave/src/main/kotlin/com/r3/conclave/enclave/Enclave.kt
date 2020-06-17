@@ -3,16 +3,18 @@ package com.r3.conclave.enclave
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.enclave.Enclave.EnclaveCallHandler.State.Receive
+import com.r3.conclave.enclave.Enclave.EnclaveCallHandler.State.Response
 import com.r3.conclave.enclave.internal.EnclaveApi
 import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
-import com.r3.conclave.enclave.Enclave.State.*
 import com.r3.conclave.enclave.internal.InternalEnclave
 import java.nio.ByteBuffer
+import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.PublicKey
 import java.security.Signature
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
-import java.security.KeyPair
 
 /**
  * Subclass this inside your enclave to provide an entry point. The outside world
@@ -41,7 +43,8 @@ abstract class Enclave {
 
     // TODO Persistence
     private lateinit var signingKeyPair: KeyPair
-    private lateinit var conclaveConnection: Connection
+    // This is only initialised if the enclave implements EnclaveCall
+    private var enclaveCallHandler: EnclaveCallHandler? = null
 
     /**
      * Returns a [Signature] object pre-initialised with the private key corresponding
@@ -63,7 +66,7 @@ abstract class Enclave {
      *
      * @return The bytes returned from the host's [EnclaveCall].
      */
-    fun callUntrustedHost(bytes: ByteArray): ByteArray? = conclaveConnection.callUntrustedHost(bytes, null)
+    fun callUntrustedHost(bytes: ByteArray): ByteArray? = callUntrustedHostInternal(bytes, null)
 
     /**
      * Sends the given bytes to the registered [EnclaveCall] implementation provided to [EnclaveHost.callEnclave].
@@ -73,7 +76,14 @@ abstract class Enclave {
      *
      * @return The bytes returned from the host's [EnclaveCall].
      */
-    fun callUntrustedHost(bytes: ByteArray, callback: EnclaveCall): ByteArray? = conclaveConnection.callUntrustedHost(bytes, callback)
+    fun callUntrustedHost(bytes: ByteArray, callback: EnclaveCall): ByteArray? = callUntrustedHostInternal(bytes, callback)
+
+    private fun callUntrustedHostInternal(bytes: ByteArray, callback: EnclaveCall?): ByteArray? {
+        val enclaveCallHandler = checkNotNull(enclaveCallHandler) {
+            "Enclave needs to implement EnclaveCall to receive and send to the host."
+        }
+        return enclaveCallHandler.callUntrustedHost(bytes, callback)
+    }
 
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
@@ -88,11 +98,13 @@ abstract class Enclave {
             val exposeErrors = api.isSimulation() || api.isDebugMode()
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
-            val reportData = createReportData()
-            conclaveConnection = mux.addDownstream(ConclaveHandler(this))
+            mux.addDownstream(AdminHandler(this))
             mux.addDownstream(object : EpidAttestationEnclaveHandler(api) {
-                override val reportData = reportData
+                override val reportData = createReportData()
             })
+            if (this is EnclaveCall) {
+                enclaveCallHandler = mux.addDownstream(EnclaveCallHandler(this))
+            }
             connected
         }
     }
@@ -104,78 +116,99 @@ abstract class Enclave {
         return Cursor(SgxReportData, sha512.digest())
     }
 
-    private class ConclaveHandler(private val enclave: Enclave) : Handler<Connection> {
-        val stateManager = StateManager<State>(New)
-
-        override fun connect(upstream: Sender): Connection {
-            // We can send the init confirm message in the connect method since we're not expecting a response back.
-            sendInitConfirm(upstream)
-            return Connection(this, upstream)
+    private class AdminHandler(private val enclave: Enclave) : Handler<AdminHandler> {
+        override fun connect(upstream: Sender): AdminHandler {
+            // We can send the enclave info message in the connect method since we're not expecting a response back.
+            sendEnclaveInfo(upstream)
+            return this
         }
 
-        override fun onReceive(connection: Connection, input: ByteBuffer) {
-            when (val state = stateManager.state) {
-                is ReceiveFromHost -> {
-                    val isEnclaveCallReturn = input.getBoolean()
-                    val bytes = input.getRemainingBytes()
-                    if (isEnclaveCallReturn) {
-                        stateManager.state = HostResponse(bytes)
-                    } else {
-                        requireNotNull(state.callback) {
-                            "Enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
-                        }
-                        val response = state.callback.invoke(bytes)
-                        if (response != null) {
-                            connection.sendToHost(response, isEnclaveCallReturn = true)
-                        }
-                    }
-                }
-                else -> throw IllegalStateException(state.toString())
-            }
+        override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
+            throw IllegalStateException("Not expecting a response on this channel")
         }
 
-        private fun sendInitConfirm(sender: Sender) {
+        private fun sendEnclaveInfo(sender: Sender) {
             val encodedKey = enclave.signatureKey.encoded
             sender.send(1 + encodedKey.size, Consumer { buffer ->
                 buffer.putBoolean(enclave is EnclaveCall)
                 buffer.put(encodedKey)
             })
-            stateManager.state = if (enclave is EnclaveCall) ReceiveFromHost(enclave) else HostReceiveNotSupported
         }
     }
 
-    private sealed class State {
-        object New : State()
-        object HostReceiveNotSupported : State()
-        class ReceiveFromHost(val callback: EnclaveCall?) : State()
-        class HostResponse(val bytes: ByteArray) : State()
-    }
+    private class EnclaveCallHandler(private val enclave: EnclaveCall) : Handler<EnclaveCallHandler> {
+        private val currentEnclaveCall = ThreadLocal<Long>()
+        private val enclaveCalls = ConcurrentHashMap<Long, StateManager<State>>()
+        private lateinit var sender: Sender
 
-    private class Connection(private val handler: ConclaveHandler, private val sender: Sender) {
+        override fun connect(upstream: Sender): EnclaveCallHandler {
+            sender = upstream
+            return this
+        }
+
+        // This method can be called concurrently by the host.
+        override fun onReceive(connection: EnclaveCallHandler, input: ByteBuffer) {
+            val enclaveCallId = input.getLong()
+            val isEnclaveCallReturn = input.getBoolean()
+            val bytes = input.getRemainingBytes()
+            // Assign the call ID to the current thread so that callUntrustedHost can pick up the right state for the thread.
+            currentEnclaveCall.set(enclaveCallId)
+            val stateManager = enclaveCalls.computeIfAbsent(enclaveCallId) {
+                // The initial state is to receive on the Enclave's EnclaveCall implementation.
+                StateManager(Receive(enclave))
+            }
+            val state = stateManager.checkStateIs<Receive>()
+            if (isEnclaveCallReturn) {
+                stateManager.state = Response(bytes)
+            } else {
+                requireNotNull(state.callback) {
+                    "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
+                }
+                val response = state.callback.invoke(bytes)
+                if (response != null) {
+                    sendToHost(enclaveCallId, response, isEnclaveCallReturn = true)
+                }
+            }
+        }
+
         fun callUntrustedHost(bytes: ByteArray, callback: EnclaveCall?): ByteArray? {
-            val newReceiveState = ReceiveFromHost(callback)
-            val previousReceiveState = handler.stateManager.transitionStateFrom<ReceiveFromHost>(to = newReceiveState)
-            sendToHost(bytes, isEnclaveCallReturn = false)
-            return if (handler.stateManager.state == newReceiveState) {
+            val enclaveCallId = currentEnclaveCall.get()
+            val stateManager = enclaveCalls.getValue(enclaveCallId)
+            val newReceiveState = Receive(callback)
+            // We expect the state to be ReceiveFromHost
+            val previousReceiveState = stateManager.transitionStateFrom<Receive>(to = newReceiveState)
+            sendToHost(enclaveCallId, bytes, isEnclaveCallReturn = false)
+            return if (stateManager.state === newReceiveState) {
                 // If the state hasn't changed then it means the host didn't have a response
-                handler.stateManager.state = previousReceiveState
+                stateManager.state = previousReceiveState
                 null
             } else {
-                val response = handler.stateManager.transitionStateFrom<HostResponse>(to = previousReceiveState)
+                val response = stateManager.transitionStateFrom<Response>(to = previousReceiveState)
                 response.bytes
             }
         }
 
         /**
-         * Pass the given bytes to the host, who will receive them synchronously. [isEnclaveCallReturn] tells the host whether
-         * these bytes are the return value of an [EnclaveCall.invoke] (in which case it has to return itself) or are from
-         * [callUntrustedHost] (in which case they need to be passed to the callback).
+         * Pass the given [bytes] to the host, who will receive them synchronously.
+         *
+         * @param enclaveCallId The call ID received from the host which is sent back as is so that the host can know
+         * which of the possible many concurrent calls this response is for.
+         *
+         * @param isEnclaveCallReturn Tells the host whether these bytes are the return value of an [EnclaveCall.invoke]
+         * (in which case it has to return itself) or are from [callUntrustedHost] (in which case they need to be passed
+         * to the callback).
          */
-        fun sendToHost(bytes: ByteArray, isEnclaveCallReturn: Boolean) {
-            sender.send(bytes.size + 1, Consumer { buffer ->
+        private fun sendToHost(enclaveCallId: Long, bytes: ByteArray, isEnclaveCallReturn: Boolean) {
+            sender.send(Long.SIZE_BYTES + 1 + bytes.size, Consumer { buffer ->
+                buffer.putLong(enclaveCallId)
                 buffer.putBoolean(isEnclaveCallReturn)
                 buffer.put(bytes)
             })
+        }
+
+        private sealed class State {
+            class Receive(val callback: EnclaveCall?) : State()
+            class Response(val bytes: ByteArray) : State()
         }
     }
 }

@@ -9,7 +9,8 @@ import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
-import com.r3.conclave.host.EnclaveHost.State.*
+import com.r3.conclave.host.EnclaveHost.EnclaveCallHandler.CallState.*
+import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import java.io.DataOutputStream
 import java.io.IOException
@@ -19,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 
 /**
@@ -139,8 +141,10 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     }
 
     private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
-    private val stateManager = StateManager<State>(New)
-    private lateinit var enclaveSender: Sender
+    private val hostStateManager = StateManager<HostState>(New)
+    private lateinit var adminHandler: AdminHandler
+    // This is only initialised if the enclave is able to receive calls from the host (i.e. implements EnclaveCall)
+    private lateinit var enclaveCallHandler: EnclaveCallHandler
     private var _enclaveInstanceInfo: EnclaveInstanceInfo? = null
 
     /**
@@ -172,24 +176,32 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     @Synchronized
     // TODO MailHandler parameter
     fun start(spid: OpaqueBytes?, attestationKey: String?) {
-        checkNotClosed()
+        if (hostStateManager.state is Started) return
+        hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
         require(spid == null || spid.size == 16) { "Invalid SPID length" }
-        if (stateManager.state != New) return
         try {
             val mux = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
-            enclaveSender = mux.addDownstream(HostHandler(this))
-            // TODO We could probably simplify things if we didn't multiplex the attestation, and instead rolled it into
-            //      the main host handler.
-            val signedQuote = mux.addDownstream(
+            adminHandler = mux.addDownstream(AdminHandler())
+            val attestationConnection = mux.addDownstream(
                     EpidAttestationHostHandler(
                             SgxQuoteType.LINKABLE,
                             spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
                             enclaveMode == EnclaveMode.MOCK
                     )
-            ).getSignedQuote()
-            val started = stateManager.checkStateIs<Started>()
-            _enclaveInstanceInfo = getAttestationService(attestationKey).doAttest(started.signatureKey, signedQuote, enclaveMode)
+            )
+            val signedQuote = attestationConnection.getSignedQuote()
+            // The enclave is initialised when it receives its first bytes. We use the request for the signed quote as
+            // that trigger. Therefore we know at this point adminHandler.enclaveInfo is available for us to query.
+            if (adminHandler.enclaveInfo.enclaveImplementsEnclaveCall) {
+                enclaveCallHandler = mux.addDownstream(EnclaveCallHandler())
+            }
+            _enclaveInstanceInfo = getAttestationService(attestationKey).doAttest(
+                    adminHandler.enclaveInfo.signatureKey,
+                    signedQuote,
+                    enclaveMode
+            )
             log.debug { enclaveInstanceInfo.toString() }
+            hostStateManager.state = Started
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
         }
@@ -252,7 +264,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * value of [EnclaveCall.invoke] (which can be null) is returned here.
      *
      * The enclave does not have the option of using [Enclave.callUntrustedHost] for
-     * sending bytes back to the host. Use the overlaod which takes in a [EnclaveCall]
+     * sending bytes back to the host. Use the overload which takes in a [EnclaveCall]
      * callback instead.
      *
      * @param bytes Bytes to send to the enclave.
@@ -265,70 +277,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
     private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCall?) : ByteArray? {
-        val state = stateManager.state
-        if (state is Started) {
-            require(state.enclaveIsEnclaveCall) { "Enclave does not implement EnclaveCall to receive messages from the host." }
-        } else {
-            stateManager.checkStateIsNot<New> { "The host has not been started." }
-            checkNotClosed()
-        }
-        // It's allowed for the host to recursively call back into the enclave with callEnclave via the callback. In this
-        // scenario the "state" local variable would represent the previous call into the enclave. Once this recusive step
-        // is complete we restore "state" to be the current state again so that the recursion can unwind.
-        val intoEnclave = CallIntoEnclave(callback)
-        stateManager.state = intoEnclave
-        sendToEnclave(bytes, isEnclaveCallReturn = false)
-        return if (stateManager.state == intoEnclave) {
-            stateManager.state = state
-            null
-        } else {
-            val response = stateManager.transitionStateFrom<EnclaveResponse>(to = state)
-            response.bytes
-        }
-    }
-
-    private fun onReceive(input: ByteBuffer) {
-        when (val state = stateManager.state) {
-            New -> {
-                // On start the host requests for the enclave's quote. Once it's sent that it also sends the init message.
-                val isEnclaveCall = input.getBoolean()
-                val signatureKey = signatureScheme.decodePublicKey(input.getRemainingBytes())
-                stateManager.state = Started(isEnclaveCall, signatureKey)
+        when (hostStateManager.state) {
+            New -> throw IllegalStateException("The host has not been started.")
+            Started -> check(adminHandler.enclaveInfo.enclaveImplementsEnclaveCall) {
+                "The enclave does not implement EnclaveCall to receive messages from the host."
             }
-            is CallIntoEnclave -> {
-                // This is unpacking Enclave.sendToHost. We only expect the enclave to respond back to us with this
-                // after we've first called into it using callEnclave.
-                //
-                // isEnclaveCallReturn tells us whether the enclave is sending back the result of its EnclaveCall.invoke
-                // or if it's a call back to the host from within EnclaveCall.invoke. In the former case the result is
-                // returned from callEnclave, in the later case it's instead sent to the calllback provided to callEnclave.
-                val isEnclaveCallReturn = input.getBoolean()
-                val bytes = input.getRemainingBytes()
-                if (isEnclaveCallReturn) {
-                    stateManager.state = EnclaveResponse(bytes)
-                } else {
-                    requireNotNull(state.callback) {
-                        "Enclave responded via callUntrustedHost but a callback was not provided to callEnclave."
-                    }
-                    val response = state.callback.invoke(bytes)
-                    if (response != null) {
-                        sendToEnclave(response, isEnclaveCallReturn = true)
-                    }
-                }
-            }
-            else -> throw IllegalStateException(state.toString())
+            Closed -> throw IllegalStateException("The host has been closed.")
         }
-    }
-
-    private fun checkNotClosed() {
-        stateManager.checkStateIsNot<Closed> { "The host has been closed." }
-    }
-
-    private fun sendToEnclave(bytes: ByteArray, isEnclaveCallReturn: Boolean) {
-        enclaveSender.send(1 + bytes.size, Consumer { buffer ->
-            buffer.putBoolean(isEnclaveCallReturn)
-            buffer.put(bytes)
-        })
+        return enclaveCallHandler.callEnclave(bytes, callback)
     }
 
     // TODO deliverMail
@@ -344,22 +300,96 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         // }
         //
         // could yield a secondary error if an exception was thrown in enclave.start without this.
-        if (stateManager.state == Closed || stateManager.state == New) return
+        if (hostStateManager.state !is Started) return
 
         enclaveHandle.destroy()
-        stateManager.state = Closed
+        hostStateManager.state = Closed
     }
 
-    private class HostHandler(private val host: EnclaveHost) : Handler<Sender> {
-        override fun connect(upstream: Sender): Sender = upstream
-        override fun onReceive(connection: Sender, input: ByteBuffer) = host.onReceive(input)
+    private class EnclaveInfo(val enclaveImplementsEnclaveCall: Boolean, val signatureKey: PublicKey)
+
+    private class AdminHandler : Handler<AdminHandler> {
+        private var _enclaveInfo: EnclaveInfo? = null
+        val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
+
+        override fun connect(upstream: Sender): AdminHandler = this
+
+        override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
+            check(_enclaveInfo == null) { "Already received enclave info" }
+            val enclaveImplementsEnclaveCall = input.getBoolean()
+            val signatureKey = signatureScheme.decodePublicKey(input.getRemainingBytes())
+            _enclaveInfo = EnclaveInfo(enclaveImplementsEnclaveCall, signatureKey)
+        }
     }
 
-    private sealed class State {
-        object New : State()
-        class Started(val enclaveIsEnclaveCall: Boolean, val signatureKey: PublicKey) : State()
-        class CallIntoEnclave(val callback: EnclaveCall?) : State()
-        class EnclaveResponse(val bytes: ByteArray) : State()
-        object Closed : State()
+    private class EnclaveCallHandler : Handler<EnclaveCallHandler> {
+        private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
+        private lateinit var sender: Sender
+
+        override fun connect(upstream: Sender): EnclaveCallHandler {
+            sender = upstream
+            return this
+        }
+
+        override fun onReceive(connection: EnclaveCallHandler, input: ByteBuffer) {
+            val enclaveCallId = input.getLong()
+            val isEnclaveCallReturn = input.getBoolean()
+            val bytes = input.getRemainingBytes()
+            val enclaveCallStateManager = enclaveCalls.getValue(enclaveCallId)
+            val intoEnclaveState = enclaveCallStateManager.checkStateIs<IntoEnclave>()
+            if (isEnclaveCallReturn) {
+                enclaveCallStateManager.state = Response(bytes)
+            } else {
+                requireNotNull(intoEnclaveState.callback) {
+                    "Enclave responded via callUntrustedHost but a callback was not provided to callEnclave."
+                }
+                val response = intoEnclaveState.callback.invoke(bytes)
+                if (response != null) {
+                    sendToEnclave(enclaveCallId, response, isEnclaveCallReturn = true)
+                }
+            }
+        }
+
+        fun callEnclave(bytes: ByteArray, callback: EnclaveCall?) : ByteArray? {
+            // To support concurrent calls into the enclave, the current thread's ID is used a call ID which is passed between
+            // the host and enclave. This enables each thread to have its own state for managing the calls.
+            val enclaveCallId = Thread.currentThread().id
+            val callStateManager = enclaveCalls.computeIfAbsent(enclaveCallId) { StateManager(Ready) }
+            // It's allowed for the host to recursively call back into the enclave with callEnclave via the callback. In this
+            // scenario previousCallState would represent the previous call into the enclave. Once this recusive step  is
+            // complete we restore the call state so that the recursion can unwind.
+            val intoEnclaveState = IntoEnclave(callback)
+            val previousCallState = callStateManager.transitionStateFrom<CallState>(to = intoEnclaveState)
+            // Going into a callEnclave, the call state should only be Ready or IntoEnclave
+            check(previousCallState !is Response)
+            sendToEnclave(enclaveCallId, bytes, isEnclaveCallReturn = false)
+            return if (callStateManager.state === intoEnclaveState) {
+                callStateManager.state = previousCallState
+                null
+            } else {
+                val response = callStateManager.transitionStateFrom<Response>(to = previousCallState)
+                response.bytes
+            }
+        }
+
+        private fun sendToEnclave(enclaveCallId: Long, bytes: ByteArray, isEnclaveCallReturn: Boolean) {
+            sender.send(Long.SIZE_BYTES + 1 + bytes.size, Consumer { buffer ->
+                buffer.putLong(enclaveCallId)
+                buffer.putBoolean(isEnclaveCallReturn)
+                buffer.put(bytes)
+            })
+        }
+
+        private sealed class CallState {
+            object Ready : CallState()
+            class IntoEnclave(val callback: EnclaveCall?) : CallState()
+            class Response(val bytes: ByteArray) : CallState()
+        }
+    }
+
+    private sealed class HostState {
+        object New : HostState()
+        object Started : HostState()
+        object Closed : HostState()
     }
 }

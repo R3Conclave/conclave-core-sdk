@@ -8,6 +8,13 @@ compileJava {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+test {
+    testLogging {
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
+}
+
 dependencies {
     api project(":conclave-common")
 

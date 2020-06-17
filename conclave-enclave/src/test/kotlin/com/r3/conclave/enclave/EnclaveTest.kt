@@ -63,14 +63,13 @@ class EnclaveTest {
         futures.forEach { it.join() }
     }
 
-    @Disabled("https://r3-cev.atlassian.net/browse/CON-88")
     @Test
     fun `TCS reallocation`() {
-        val tcs = WaitingEnclave.PAR_ECALLS + 3 // Some TCS are reserved for Avian internal threads
+        val tcs = WaitingEnclave.PARALLEL_ECALLS + 3 // Some TCS are reserved for Avian internal threads
         start<WaitingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(tcs)))
         repeat (3) {
             val responses = RecordingEnclaveCall()
-            val futures = (1..WaitingEnclave.PAR_ECALLS).map {
+            val futures = (1..WaitingEnclave.PARALLEL_ECALLS).map {
                 threadWithFuture {
                     host.callEnclave(it.toByteArray(), responses)
                 }
@@ -168,6 +167,7 @@ class EnclaveTest {
         assertTrue(called, "Ocall must be called")
     }
 
+    @Disabled("https://r3-cev.atlassian.net/browse/CON-100")
     @Test
     fun `child thread can do OCALLs`() {
         start<ChildThreadSendingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(10)))
@@ -206,23 +206,18 @@ class EnclaveTest {
 
     class WaitingEnclave : EnclaveCall, Enclave() {
         companion object {
-            const val PAR_ECALLS = 16
+            const val PARALLEL_ECALLS = 16
         }
 
         private val ecalls = AtomicInteger(0)
-        private val ocalls = AtomicInteger(0)
 
         override fun invoke(bytes: ByteArray): ByteArray? {
             ecalls.incrementAndGet()
-            while (ecalls.get() < PAR_ECALLS) {
+            while (ecalls.get() < PARALLEL_ECALLS) {
                 // Wait
             }
             synchronized(this) {
                 callUntrustedHost(bytes)
-            }
-            if (ocalls.incrementAndGet() == PAR_ECALLS) {
-                ecalls.set(0)
-                ocalls.set(0)
             }
             return null
         }

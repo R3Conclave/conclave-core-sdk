@@ -11,15 +11,23 @@ import org.junit.jupiter.api.Test
 
 class EnclaveHostMockTest {
     @Test
+    fun `enclaveInstanceInfo before start`() {
+        val host = MockHost.loadMock<SimpleReturnEnclave>()
+        assertThatIllegalStateException().isThrownBy {
+            host.enclaveInstanceInfo
+        }.withMessage("Enclave has not been started.")
+    }
+
+    @Test
     fun `calling into enclave which doesn't implement EnclaveCall`() {
         val host = MockHost.loadMock<EnclaveWithoutEnclaveCall>()
         host.start(null, null)
-        assertThatIllegalArgumentException().isThrownBy {
+        assertThatIllegalStateException().isThrownBy {
             host.callEnclave(byteArrayOf())
-        }.withMessage("Enclave does not implement EnclaveCall to receive messages from the host.")
-        assertThatIllegalArgumentException().isThrownBy {
+        }.withMessage("The enclave does not implement EnclaveCall to receive messages from the host.")
+        assertThatIllegalStateException().isThrownBy {
             host.callEnclave(byteArrayOf()) { it }
-        }.withMessage("Enclave does not implement EnclaveCall to receive messages from the host.")
+        }.withMessage("The enclave does not implement EnclaveCall to receive messages from the host.")
     }
 
     class EnclaveWithoutEnclaveCall : Enclave()
@@ -131,7 +139,7 @@ class EnclaveHostMockTest {
         host.start(null, null)
         assertThatIllegalArgumentException().isThrownBy {
             host.callEnclave(byteArrayOf(1)) { fromEnclave -> host.callEnclave(fromEnclave + 3) }
-        }.withMessage("Enclave has not provided a callback to callUntrustedHost to receive the host's call back in.")
+        }.withMessage("The enclave has not provided a callback to callUntrustedHost to receive the host's call back in.")
     }
 
     @Test
@@ -155,11 +163,14 @@ class EnclaveHostMockTest {
     }
 
     @Test
-    fun `enclaveInstanceInfo before start`() {
-        val host = MockHost.loadMock<SimpleReturnEnclave>()
-        assertThatIllegalStateException().isThrownBy {
-            host.enclaveInstanceInfo
-        }.withMessage("Enclave has not been started.")
+    fun `host calls back into the enclave twice from the same top-level callback`() {
+        val host = MockHost.loadMock<NestedCallbackEnclave>()
+        host.start(null, null)
+        val response = host.callEnclave(byteArrayOf(1)) { first ->
+            val second = host.callEnclave(first + 3)!!
+            host.callEnclave(second + 5)!! + 7
+        }
+        assertThat(response).isEqualTo(byteArrayOf(1, 2, 3, 4, 5, 4, 7, 6))
     }
 
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {
