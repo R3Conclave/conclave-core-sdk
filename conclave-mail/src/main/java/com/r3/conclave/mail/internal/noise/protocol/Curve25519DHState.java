@@ -78,6 +78,9 @@ class Curve25519DHState implements DHState {
 		// side channel attacks. The "clamping" procedure isn't done here but rather is integrated into the
 		// curve evaluation itself, which is why we can pretend that a secret key is any random bit string both
 		// at generation time and for storage.
+		//
+		// Note: this does imply that there are a few private keys that are equivalent to each other, but this is
+		// not a problem in practice due to the huge keyspace.
 		Curve25519.eval(publicKey, 0, privateKey, null);
 		mode = 0x03;
 	}
@@ -102,6 +105,9 @@ class Curve25519DHState implements DHState {
 		// side channel attacks. The "clamping" procedure isn't done here but rather is integrated into the
 		// curve evaluation itself, which is why we can pretend that a secret key is any random bit string both
 		// at generation time and for storage.
+		//
+		// Note: this does imply that there are a few private keys that are equivalent to each other, but this is
+		// not a problem in practice due to the huge keyspace.
 		Curve25519.eval(publicKey, 0, privateKey, null);
 		mode = 0x03;
 	}

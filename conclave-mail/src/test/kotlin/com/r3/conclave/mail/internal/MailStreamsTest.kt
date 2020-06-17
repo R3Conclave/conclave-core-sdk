@@ -24,7 +24,7 @@ class MailStreamsTest {
         assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello?"))
         val stream = decrypt(bytes)
         assertNull(stream.senderPublicKey)
-        assertNull(stream.associatedData)
+        assertEquals(0, stream.headerBytes.size)
     }
 
     @Test
@@ -35,7 +35,7 @@ class MailStreamsTest {
 
         // Feed the byte array into the stream in 8kb pieces.
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, receivingKey.publicKey, null, senderPrivateKey).use { encrypt ->
+        MailEncryptingStream.wrap(baos, receivingKey.publicKey, null, senderPrivateKey).use { encrypt ->
             ByteArrayInputStream(data).copyTo(encrypt, 8192)
         }
 
@@ -104,22 +104,20 @@ class MailStreamsTest {
     }
 
     @Test
-    fun associatedData() {
+    fun headers() {
         val baos = ByteArrayOutputStream()
-        val ad = ByteArray(4) { it.toByte() }
-        MailEncryptingStream(baos, receivingKey.publicKey, ad, null).use { it.write(msg) }
-        val stream = decrypt(baos.toByteArray())
-        assertArrayEquals(ad, stream.associatedData)
+        val headerData = "header data".toByteArray()
+        MailEncryptingStream.wrap(baos, receivingKey.publicKey, headerData, null).use { it.write(msg) }
+        val encrypted = baos.toByteArray()
+        assertNotEquals(-1, String(encrypted).indexOf("header data"),
+                "Could not locate the unencrypted header data in the output bytes.")
+        val stream = decrypt(encrypted)
+        assertArrayEquals(headerData, stream.headerBytes)
     }
 
     private fun encryptMessage(senderPrivateKey: ByteArray? = null): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream(baos, receivingKey.publicKey, null, senderPrivateKey)
-        if (senderPrivateKey != null)
-            assertEquals(protocolNameX, encrypt.protocolName)
-        else
-            assertEquals(protocolNameN, encrypt.protocolName)
-
+        val encrypt = MailEncryptingStream.wrap(baos, receivingKey.publicKey, null, senderPrivateKey)
         encrypt.write(msg)
         encrypt.close()
         return baos.toByteArray()

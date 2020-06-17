@@ -2,14 +2,13 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.internal.noise.protocol.*
 import java.io.*
+import java.lang.IllegalStateException
 import java.nio.charset.StandardCharsets
 import java.security.NoSuchAlgorithmException
 import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
 
 // Utils for encoding a 16 bit unsigned value in little endian.
-private fun ByteArray.writeShortTo(offset: Int, value: Short) = writeShortTo(offset, value.toInt() and 0xFFFF)
-
 private fun ByteArray.writeShortTo(offset: Int, value: Int) {
     this[offset] = (value shr 8).toByte()
     this[offset + 1] = value.toByte()
@@ -19,18 +18,18 @@ private fun ByteArray.writeShortTo(offset: Int, value: Int) {
  * A stream filter that encrypts the input data. Closing this stream writes a termination footer which protects the
  * result against truncation attacks, so you must remember to do so.
  *
- * Every write is encrypted as a separate length-prefixed block. This stream does not perform any rechunking. It will
- * refuse to accept single-byte writes, as that would create tons of 1-byte blocks that would be very inefficient.
- * Thus this stream should always be put behind a [java.io.BufferedOutputStream] configured with a bit less
- * than the [Noise.MAX_PACKET_LEN] as the buffer size.
- *
- * The associated data must fit in the Noise handshake packet after the keys are taken into account. With Curve25519
- * this means it must be less than ([Noise.MAX_PACKET_LEN] - (32 * 8) - (16 * 8) - 1) bytes, or 65151 bytes.
+ * To get an instance use [wrap]. This will return an instance of this object wrapped with a [BufferedOutputStream] that
+ * ensures every write to this stream is of the optimal size. This is necessary because every write is encrypted as a
+ * separate block, which is inefficient and used naively will break random access.
  *
  * You can provide your own private key as well as the recipient's public key. The recipient will receive your public
  * key and a proof that you encrypted the message. This isn't a typical digital signature but rather is based on
  * the properties of the Diffie-Hellman algorithm - see section 7.4 of
  * [the Noise specification](http://noiseprotocol.org/noise.html#handshake-pattern-basics) for information.
+ *
+ * You can provide a header which will be emitted unencrypted to the stream. If the sender is authenticated then this
+ * header is also authenticated, to the recipient only. There's no way for someone without the destination private key
+ * to check if the header has been tampered with, although it can be extracted.
  *
  * The message is encrypted with a random key each time even though both destination public key and sender private
  * keys are (expected to be) static. In other words encrypting the same message twice will yield different outputs
@@ -41,22 +40,40 @@ private fun ByteArray.writeShortTo(offset: Int, value: Int) {
  *
  * @param out                  The [OutputStream] to use.
  * @param destinationPublicKey The public key to encrypt the stream to.
- * @param associatedData       If not null, unencrypted data that will be included in the header and authenticated.
+ * @param header               If not null, unencrypted data that will be included and authenticated.
  * @param senderPrivateKey     If not null, your private key. The recipient will receive your public key and be sure
  *                             you encrypted the message. Only provide one if it's stable and the public part would
  *                             be recognised or remembered by the enclave, otherwise a dummy key meaning 'anonymous'
  *                             will be used instead.
  */
-internal class MailEncryptingStream(
+internal class MailEncryptingStream private constructor(
         out: OutputStream,
-        // TODO: Make keys type safe
         destinationPublicKey: ByteArray,
-        associatedData: ByteArray?,
+        header: ByteArray?,
         senderPrivateKey: ByteArray?
 ) : FilterOutputStream(out) {
+    companion object {
+        /**
+         * Creates a [MailEncryptingStream] wrapped with a [BufferedOutputStream]. The buffering ensures data is
+         * packetized by Noise to the maximum packet size, thus reducing the overhead of the stream to the minimum
+         * needed for the AES/GCM MAC tags, and enabling future support for seeking inside encrypted streams.
+         */
+        fun wrap(
+                out: OutputStream,
+                destinationPublicKey: ByteArray,
+                header: ByteArray?,
+                senderPrivateKey: ByteArray?
+        ): OutputStream {
+            // The buffer is the maximum Noise packet length minus the 16 byte MAC that each packet has. Thus the start of
+            // each 64kb block of mail stream after the prologue+handshake can be calculated if you know how big the
+            // handshake was.
+            return BufferedOutputStream(MailEncryptingStream(out, destinationPublicKey, header, senderPrivateKey), Noise.MAX_PACKET_LEN - 16)
+        }
+    }
+
     private var cipherState: CipherState? = null
     private val destinationPublicKey: ByteArray = destinationPublicKey.clone()
-    private val associatedData: ByteArray? = associatedData?.clone()
+    private val header: ByteArray? = header?.clone()
     private val senderPrivateKey: ByteArray? = senderPrivateKey?.clone()
 
     private val cipherName: String = "AESGCM"
@@ -64,7 +81,7 @@ internal class MailEncryptingStream(
     private val hashName: String = "SHA256"
 
     /** The standard Noise protocol name, as used in the specs. */
-    val protocolName = (if (senderPrivateKey != null) "Noise_X_" else "Noise_N_") + "${dhName}_${cipherName}_$hashName"
+    private val protocolName = (if (senderPrivateKey != null) "Noise_X_" else "Noise_N_") + "${dhName}_${cipherName}_$hashName"
 
     // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
     // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
@@ -72,9 +89,8 @@ internal class MailEncryptingStream(
     private fun maybeHandshake() {
         if (cipherState != null) return  // Already set up the stream.
 
-        // Noise can be used in various ways, identified by a string like this one. We always use the "X" handshake,
-        // which means it's one way communication (receiver is entirely silent i.e. good for files).
-        val protocolNameBytes = protocolName.toByteArray(StandardCharsets.US_ASCII)
+        // Noise can be used in various modes, the protocol name is an ASCII string that identifies the settings.
+        // We write it here. It looks like this: Noise_X_25519_AESGCM_SHA256
         val handshake = HandshakeState(protocolName, HandshakeState.INITIATOR)
         try {
             handshake.remotePublicKey.setPublicKey(destinationPublicKey, 0)
@@ -90,43 +106,26 @@ internal class MailEncryptingStream(
                 localKeyPair!!.setPrivateKey(senderPrivateKey, 0)
             }
 
-            // The prologue stops the Noise protocol name being tampered with to mismatch what we think we're using
-            // with what the receiver thinks we're using.
-            val prologue = computePrologue(protocolNameBytes)
+            // The prologue can be set to any data we like. Noise won't do anything with it except incorporating the
+            // hash into the handshake, thus authenticating it. We use it to achieve two things:
+            // 1. It stops the Noise protocol name being tampered with to mismatch what we think we're using
+            //    with what the receiver thinks we're using.
+            // 2. It authenticates the header, whilst leaving it unencrypted (vs what would happen if we put it in a
+            //    handshake payload).
+            val prologue: ByteArray = computePrologue(protocolName, header)
+            out.write(prologue)
             handshake.setPrologue(prologue, 0, prologue.size)
             handshake.start()
             check(handshake.action == HandshakeState.WRITE_MESSAGE)
 
-            // Check size of the associated data (i.e. unencrypted but authenticated mail headers).
-            val associatedDataLen = associatedData?.size ?: 0
-            val maxADLen = Noise.MAX_PACKET_LEN - (localKeyPair?.publicKeyLength ?: 0) - Noise.createCipher(cipherName).macLength - 1
-            if (associatedDataLen > maxADLen)
-                throw IOException("The associated data is too large: $associatedDataLen but must be less than $maxADLen")
-
-            // The initial bytes consist of a 8 bit name length prefix, the protocol name, then a 16 bit handshake length,
-            // then the Noise handshake with the authenticated payload. headerBytes is sized 8kb larger than needed to
-            // provide room for keys and hashes - this is more than necessary but it doesn't matter. We could precisely
-            // pre-calculate how much space is required but it's not worth it: no elliptic curve algorithm will need more
-            // than this and this way we avoid accidentally running out of space/off by one errors.
-            val headerBytes = ByteArray(1 + protocolName.length + 2 + 8192 + associatedDataLen)
-
-            // Set up length prefixed protocol name.
-            check(protocolName.length < 256) { "${protocolName.length} < 256" }
-            headerBytes[0] = protocolName.length.toByte()
-            protocolNameBytes.copyInto(headerBytes, 1)
-
-            // And now pass control to Noise to write out the Diffie-Hellman handshake that sets up the key to encrypt
-            // with, passing the associated data and its length. It'll be written past the two bytes we reserved to
-            // record the size.
-            val handshakeLength = handshake.writeMessage(headerBytes, protocolNameBytes.size + 3,
-                    associatedData, 0, associatedDataLen)
-
-            // Write two bytes of length for the handshake, now we know how big it is.
-            headerBytes.writeShortTo(1 + protocolNameBytes.size, handshakeLength)
-
-            // Write the whole header to the output stream.
-            val fullHeaderLength = 1 + protocolNameBytes.size + 2 + handshakeLength
-            out.write(headerBytes, 0, fullHeaderLength)
+            // Ask Noise to select an ephemeral key and calculate the Diffie-Hellman handshake that sets up the AES key
+            // to encrypt with. We don't provide any initial payload, although we technically could. Being able to
+            // provide bytes during the handshake is an optimisation mostly relevant for an interactive handshake where
+            // latency is a primary concern. Enclaves have bigger performance issues to worry about.
+            val handshakeBytes = ByteArray(lengthOfHandshake(protocolName))
+            val handshakeLen = handshake.writeMessage(handshakeBytes, 0, null, 0, 0)
+            check(handshakeLen == handshakeBytes.size)
+            out.write(handshakeBytes, 0, handshakeLen)
 
             // Now we can request the ciphering object from Noise.
             check(handshake.action == HandshakeState.SPLIT)
@@ -139,7 +138,26 @@ internal class MailEncryptingStream(
         }
     }
 
-    @Throws(IOException::class)
+    private fun computePrologue(protocolName: String, header: ByteArray?): ByteArray {
+        // Format:
+        // 1 byte - protocol name length
+        // N bytes - protocol name
+        // 2 bytes - caller specified header length
+        // N bytes - caller header
+        // 2 bytes - extension area used only by this class
+        // N bytes - ignored (no extensions in this version)
+        val headerLen = header?.size ?: 0
+        val protocolNameBytes = protocolName.toByteArray(StandardCharsets.US_ASCII)
+        val prologue = ByteArray(1 + protocolNameBytes.size + 2 + headerLen + 2)
+        check(protocolNameBytes.size < 256)
+        prologue[0] = protocolNameBytes.size.toByte()
+        protocolNameBytes.copyInto(prologue, 1)
+        prologue.writeShortTo(1 + protocolNameBytes.size, headerLen)
+        header?.copyInto(prologue, 1 + protocolNameBytes.size + 2)
+        // The final two bytes are implicitly zero.
+        return prologue
+    }
+
     override fun write(b: Int) {
         throw UnsupportedOperationException("Writing individual bytes at a time is extremely inefficient. Use write(byte[]) instead.")
     }
@@ -157,7 +175,6 @@ internal class MailEncryptingStream(
      * @param len the number of bytes to write.
      * @throws IOException if an I/O error occurs.
      */
-    @Throws(IOException::class)
     override fun write(b: ByteArray, off: Int, len: Int) {
         if (len == 0) return
         maybeHandshake()
@@ -171,7 +188,6 @@ internal class MailEncryptingStream(
         out.write(buffer, 0, encryptedLength + 2)
     }
 
-    @Throws(IOException::class)
     override fun close() {
         // Write the terminator packet: an encryption of the empty byte array. This lets the other side know we
         // intended to end the stream and there's no MITM maliciously truncating our packets.
@@ -192,6 +208,83 @@ internal class MailEncryptingStream(
 }
 
 /**
+ * Provides functionality for reading and parsing the prologue of a mail stream in an unauthenticated manner.
+ */
+internal open class MailPrologueInputStream(input: InputStream) : FilterInputStream(input) {
+    init {
+        require(input.markSupported())
+    }
+
+    protected fun readShort(): Int {
+        val b1 = `in`.read().also { if (it == -1) error("Truncated stream") }
+        val b2 = `in`.read().also { if (it == -1) error("Truncated stream") }
+        return (b1 shl 8) or b2
+    }
+
+    internal class Prologue(val protocolName: String, val header: ByteArray, val extensions: ByteArray, val raw: ByteArray)
+
+    // We use lazy here because it's possible for a caller to read the prologue without calling read(), using
+    // headerBytes. Because the prologue is accessed on first read(), the lazyness ensures that if the user
+    // reads some bytes from the stream and then decides they want to access the header that works properly.
+    protected val prologue: Prologue by lazy {
+        // See computePrologue for the format.
+        input.mark(63356)
+        val protocolName = readProtocolName()
+
+        fun readBuf(): ByteArray {
+            val len = readShort()   // readShort throws an exception if not enough bytes, and we allow 64kb of header.
+            val buf = ByteArray(len)
+            if (input.read(buf) < len) error("Premature end of stream whilst reading the prologue")
+            return buf
+        }
+
+        val header = readBuf()
+        val extensions = readBuf()
+        // Now re-read the prologue into a contiguous byte array so it can be fed to Noise for hashing.
+        val rawPrologueSize = 1 + protocolName.length + 2 + header.size + 2 + extensions.size
+        input.reset()
+        val rawPrologue = ByteArray(rawPrologueSize)
+        input.read(rawPrologue)
+        Prologue(protocolName, header, extensions, rawPrologue)
+    }
+
+    val headerBytes: ByteArray get() = prologue.header
+
+    private fun readProtocolName(): String {
+        // A byte followed by that many characters in ASCII.
+        val input = `in`!!
+        val protocolNameLen = input.read()
+        if (protocolNameLen <= 0) error("No Noise protocol name header found")
+        // Read it in and advance the stream.
+        val protocolNameBytes = ByteArray(protocolNameLen)
+        if (input.read(protocolNameBytes) != protocolNameBytes.size) error("Could not read protocol name")
+
+        // We limit the handshakes to just two here, with the same ciphers. Adding new ciphers won't be forwards
+        // compatible. The justification is as follows. Curve25519, AESGCM and SHA256 are by this point mature,
+        // well tested algorithms that are widely deployed to protect all internet traffic. Although new ciphers
+        // are regularly designed, in practice few are every deployed because elliptic curve crypto with AES and SHA2
+        // have no known problems, there are none on the horizon beyond quantum computers, and the places where other
+        // algorithms get deployed tend to be devices with severe power or space constraints.
+        //
+        // What of QC? Noise does support a potential post-quantum algorithm. However, no current PQ ciphersuite has
+        // been settled on by standards bodies yet, and there are multiple competing proposals, many of which have
+        // worse performance or other problems compared to the standard algorithms. Given that the QCs being built
+        // at the moment are said to be unusable for breaking encryption keys, and it's unclear when - if ever - such
+        // a machine will actually be built, it makes sense to wait for PQ standardisation and then implement the
+        // winning algorithms at that time, rather than attempt to second guess and end up with (relatively speaking)
+        // not well reviewed algorithms baked into the protocol.
+        return when (val protocolName = String(protocolNameBytes, StandardCharsets.US_ASCII)) {
+            "Noise_X_25519_AESGCM_SHA256", "Noise_N_25519_AESGCM_SHA256" -> protocolName
+            else -> error("Unsupported Noise protocol name: $protocolName")
+        }
+    }
+
+    protected fun error(s: String): Nothing {
+        throw IOException("$s. Corrupt stream or not Conclave Mail.")
+    }
+}
+
+/**
  * A stream filter that decrypts a stream produced by [MailEncryptingStream].
  *
  * This stream filter will verify that the underlying stream doesn't prematurely terminate. Attempting to read from
@@ -206,30 +299,24 @@ internal class MailEncryptingStream(
  * [read] returns -1) before acting on it.
  *
  * You can access the associated (unencrypted but authenticated) data provided by the user by calling
- * [associatedData], which will read enough of the stream to provide the answer (blocking if necessary).
+ * [header], which will read enough of the stream to provide the answer (blocking if necessary).
  *
  * Marks are not supported by this stream.
  */
 internal class MailDecryptingStream(
         input: InputStream,
         privateKey: ByteArray
-) : FilterInputStream(BufferedInputStream(input)) {
-    private val privateKey: ByteArray = privateKey.clone()
+) : MailPrologueInputStream(BufferedInputStream(input)) {
+    init {
+        // The BufferedInputStream we wrap around input will ensure this is always true.
+        check(`in`.markSupported())
+    }
+
+    private val privateKey: ByteArray = privateKey.copyOf()
     private var cipherState: CipherState? = null
 
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
     private var handshakeFailure: IOException? = null
-
-    /**
-     * Reads sufficient data to return the user-provided associated/authenticated data from the handshake, or
-     * null if none was found.
-     */
-    var associatedData: ByteArray? = null
-        private set
-        @Throws(IOException::class) get() {
-            maybeHandshake()
-            return field
-        }
 
     /**
      * Returns the authenticated public key of the sender. This may be useful to understand who sent you the
@@ -237,7 +324,7 @@ internal class MailDecryptingStream(
      */
     var senderPublicKey: ByteArray? = null
         private set
-        @Throws(IOException::class) get() {
+        get() {
             maybeHandshake()
             return field
         }
@@ -247,11 +334,11 @@ internal class MailDecryptingStream(
     private var currentReadPos = 0 // How far through the decrypted packet we got.
     private var currentBufferLen = 0 // Real length of data in currentDecryptedBuffer.
 
+    /** To get [mark] back, wrap this stream in a [BufferedInputStream]. */
     override fun markSupported(): Boolean {
         return false
     }
 
-    @Throws(IOException::class)
     override fun read(): Int {
         maybeHandshake()
         if (currentReadPos == currentBufferLen) {
@@ -264,13 +351,6 @@ internal class MailDecryptingStream(
             currentDecryptedBuffer[currentReadPos++].toInt() and 0xFF
     }
 
-    private fun readShort(): Int {
-        val b1 = `in`.read().also { if (it == -1) error("Truncated stream") }
-        val b2 = `in`.read().also { if (it == -1) error("Truncated stream") }
-        return (b1 shl 8) or b2
-    }
-
-    @Throws(IOException::class)
     private fun startNextPacket() {
         // Read the length, which includes the MAC tag.
         val cipherState = cipherState!!
@@ -303,7 +383,6 @@ internal class MailDecryptingStream(
         currentReadPos = if (currentBufferLen == 0) -1 else 0
     }
 
-    @Throws(IOException::class)
     override fun skip(n: Long): Long {
         var toSkip = n
         var c = 0
@@ -315,7 +394,6 @@ internal class MailDecryptingStream(
         return c.toLong()
     }
 
-    @Throws(IOException::class)
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         // TODO: When we fully target Java 9+ replace with default InputStream.read(byte[], int, int)
         //       and use Objects.checkFromIndexSize(off, len, b.length);
@@ -346,24 +424,15 @@ internal class MailDecryptingStream(
         return i
     }
 
-    @Throws(IOException::class)
     private fun maybeHandshake() {
         if (cipherState != null) return
         if (handshakeFailure != null) throw handshakeFailure!!
         try {
-            val input = `in`!!
-            // Read and check the header, construct the handshake based on it.
-            val protocolName = readProtocolNameHeader()
-            val handshakeLen = readShort()
-            if (handshakeLen <= 0 || handshakeLen > Noise.MAX_PACKET_LEN) error("Bad handshake length $handshakeLen")
-            val handshakeBytes = ByteArray(handshakeLen)
-            if (input.read(handshakeBytes) < handshakeLen) error("Premature end of stream whilst reading the handshake")
-            setupHandshake(protocolName).use { handshake ->
-                readHandshake(handshakeLen, handshakeBytes, handshake)
+            // We ignore prologue extensions for forwards compatibility.
+            setupHandshake(prologue).use { handshake ->
                 // The sender has the option of whether to authenticate or not. If not, it'll be a Noise_N_ handshake.
-                if (protocolName.startsWith("Noise_X_"))
+                if (prologue.protocolName.startsWith("Noise_X_"))
                     senderPublicKey = handshake.remotePublicKey.publicKey
-                check(handshake.action == HandshakeState.SPLIT)
                 // Setup done, so retrieve the per-message key.
                 val split: CipherStatePair = handshake.split()
                 split.receiverOnly()
@@ -379,72 +448,34 @@ internal class MailDecryptingStream(
         if (handshakeFailure != null) throw handshakeFailure!!
     }
 
-    @Throws(NoSuchAlgorithmException::class)
-    private fun setupHandshake(protocolName: String): HandshakeState {
-        val handshake = HandshakeState(protocolName, HandshakeState.RESPONDER)
+    private fun setupHandshake(prologue: Prologue): HandshakeState {
+        val handshake = HandshakeState(prologue.protocolName, HandshakeState.RESPONDER)
         val localKeyPair = handshake.localKeyPair
         localKeyPair.setPrivateKey(privateKey, 0)
-        // The prologue ensures the protocol name wasn't tampered with.
-        val prologue: ByteArray = computePrologue(protocolName.toByteArray(StandardCharsets.UTF_8))
-        handshake.setPrologue(prologue, 0, prologue.size)
+        // The prologue ensures the protocol name, headers and extensions weren't tampered with.
+        handshake.setPrologue(prologue.raw, 0, prologue.raw.size)
         handshake.start()
         check(handshake.action == HandshakeState.READ_MESSAGE)
+        val handshakeBuf = ByteArray(lengthOfHandshake(prologue.protocolName))
+        `in`.read(handshakeBuf)
+        val payloadBuf = ByteArray(0)
+        handshake.readMessage(handshakeBuf, 0, handshakeBuf.size, payloadBuf, 0)
+        check(handshake.action == HandshakeState.SPLIT)
         return handshake
-    }
-
-    @Throws(ShortBufferException::class, BadPaddingException::class, IOException::class)
-    private fun readHandshake(handshakeLen: Int, handshakeBytes: ByteArray, handshake: HandshakeState) {
-        val ad = ByteArray(Noise.MAX_PACKET_LEN)
-        val len = handshake.readMessage(handshakeBytes, 0, handshakeLen, ad, 0)
-        associatedData = if (len == 0) null else ad.copyOfRange(0, len)
-    }
-
-    @Throws(IOException::class)
-    private fun readProtocolNameHeader(): String {
-        // A byte followed by that many characters in ASCII.
-        val input = `in`!!
-        val protocolNameLen = input.read()
-        if (protocolNameLen == -1) error("No Noise protocol name header found, corrupted stream most likely.")
-        // Read it in and advance the stream.
-        val protocolNameBytes = ByteArray(protocolNameLen)
-        if (input.read(protocolNameBytes) != protocolNameBytes.size) error("Could not read protocol name")
-
-        // We limit the handshakes to just two here, with the same ciphers. Adding new ciphers won't be forwards
-        // compatible. The justification is as follows. Curve25519, AESGCM and SHA256 are by this point mature,
-        // well tested algorithms that are widely deployed to protect all internet traffic. Although new ciphers
-        // are regularly designed, in practice few are every deployed because elliptic curve crypto with AES and SHA2
-        // have no known problems, there are none on the horizon beyond quantum computers, and the places where other
-        // algorithms get deployed tend to be devices with severe power or space constraints.
-        //
-        // What of QC? Noise does support a potential post-quantum algorithm. However, no current PQ ciphersuite has
-        // been settled on by standards bodies yet, and there are multiple competing proposals, many of which have
-        // worse performance or other problems compared to the standard algorithms. Given that the QCs being built
-        // at the moment are said to be unusable for breaking encryption keys, and it's unclear when - if ever - such
-        // a machine will actually be built, it makes sense to wait for PQ standardisation and then implement the
-        // winning algorithms at that time, rather than attempt to second guess and end up with (relatively speaking)
-        // not well reviewed algorithms baked into the protocol.
-        return when (val protocolName = String(protocolNameBytes, StandardCharsets.US_ASCII)) {
-            "Noise_X_25519_AESGCM_SHA256", "Noise_N_25519_AESGCM_SHA256" -> protocolName
-            else -> error("Unsupported Noise protocol name: $protocolName")
-        }
-    }
-
-    @Throws(IOException::class)
-    private fun error(s: String): Nothing {
-        throw IOException("$s. Corrupt stream or not Conclave Mail.")
     }
 }
 
-private fun computePrologue(protocolNameBytes: ByteArray): ByteArray {
-    // We compute the prologue as in the Noise Socket spec (as of August 2019). The actual value doesn't really
-    // matter as long as it contains the protocol name, which we need to ensure isn't tampered with. So we
-    // use "NoiseSocketInit1" + <negotiation_len> + <negotiation data> which is currently just the protocol name.
-    // Note that Noise Socket is like the Noise Protocol itself - it's not a real protocol, it's a recipe for
-    // baking protocols. We use it here only to simplify future interop work. It's OK if the spec changes.
-    val noiseSocketPrologueHeader = "NoiseSocketInit1".toByteArray(StandardCharsets.UTF_8)
-    val prologue = ByteArray(noiseSocketPrologueHeader.size + 2 + protocolNameBytes.size)
-    noiseSocketPrologueHeader.copyInto(prologue, 0)
-    prologue.writeShortTo(noiseSocketPrologueHeader.size, protocolNameBytes.size)
-    protocolNameBytes.copyInto(prologue, noiseSocketPrologueHeader.size + 2)
-    return prologue
+/**
+ * Returns how many bytes a Noise handshake for the given protocol name requires. These numbers come from the sizes
+ * needed for the ephemeral Curve25519 public keys, AES/GCM MAC tags and encrypted static keys.
+ *
+ * For example: 48 == 32 (pubkey) + 16 (mac of an empty encrypted block)
+ *
+ * When no payload is specified Noise uses encryptions of the empty block (i.e. only the authentication hash tag is
+ * emitted) as a way to authenticate the handshake so far.
+ */
+private fun lengthOfHandshake(protocolName: String): Int = when (protocolName) {
+    "Noise_X_25519_AESGCM_SHA256" -> 96
+    "Noise_N_25519_AESGCM_SHA256" -> 48
+    else -> throw IllegalStateException("Unknown protocol name '$protocolName'")
 }
