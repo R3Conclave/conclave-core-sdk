@@ -10,8 +10,11 @@ import com.r3.conclave.testing.RecordingEnclaveCall
 import com.r3.conclave.testing.threadWithFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
@@ -23,19 +26,9 @@ import kotlin.concurrent.withLock
 
 class EnclaveTest {
     companion object {
-        private val testEnclaves = TestEnclaves()
-
-        @BeforeAll
-        @JvmStatic
-        fun before() {
-            testEnclaves.before()
-        }
-
-        @AfterAll
-        @JvmStatic
-        fun after() {
-            testEnclaves.after()
-        }
+        @JvmField
+        @RegisterExtension
+        val testEnclaves = TestEnclaves()
     }
 
     private var closeHost: Boolean = false

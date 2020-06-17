@@ -14,7 +14,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
     dependsOn ':djvm:user-code:shadowJar'
     doFirst {
         systemProperty 'user-jar.path', tasks.getByPath(':djvm:user-code:shadowJar').outputs.files.asPath

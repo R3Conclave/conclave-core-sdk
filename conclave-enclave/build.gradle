@@ -8,10 +8,6 @@ compileJava {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-test {
-    useJUnitPlatform()
-}
-
 dependencies {
     api project(":conclave-common")
 

@@ -66,6 +66,7 @@ subprojects {
     }
 
     tasks.withType(Test) {
+        useJUnitPlatform()
         systemProperty 'sgx.mode', sgxModeProperty
         systemProperty 'conclave.samples.spid', '***REMOVED***'
         systemProperty 'conclave.samples.attestation-key', '***REMOVED***'

@@ -6,14 +6,14 @@ import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.kotlin.callEnclave
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.objectweb.asm.Opcodes
 
 class AvianTestSuite {
     companion object {
         @JvmField
-        @ClassRule
+        @RegisterExtension
         val testEnclaves = TestEnclaves()
 
         val testCaseClasses = listOf(

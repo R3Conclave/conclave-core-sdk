@@ -3,16 +3,22 @@ package com.r3.conclave.host
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.internal.*
-import com.r3.conclave.host.kotlin.callEnclave
+import com.r3.conclave.common.internal.dataStream
+import com.r3.conclave.common.internal.readLengthPrefixBytes
+import com.r3.conclave.common.internal.writeData
+import com.r3.conclave.common.internal.writeLengthPrefixBytes
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.testing.RecordingEnclaveCall
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
@@ -22,19 +28,9 @@ import kotlin.streams.asSequence
 
 class EnclaveHostNativeTest {
     companion object {
-        private val testEnclaves = TestEnclaves()
-
-        @BeforeAll
-        @JvmStatic
-        fun before() {
-            testEnclaves.before()
-        }
-
-        @AfterAll
-        @JvmStatic
-        fun after() {
-            testEnclaves.after()
-        }
+        @JvmField
+        @RegisterExtension
+        val testEnclaves = TestEnclaves()
     }
 
     private lateinit var host: EnclaveHost

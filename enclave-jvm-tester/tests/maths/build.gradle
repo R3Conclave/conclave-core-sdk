@@ -13,10 +13,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
 }
 
-test {
-    useJUnitPlatform()
-}
-
 shadowJar {
     archiveBaseName = 'tests-maths-fat'
     zip64 = true

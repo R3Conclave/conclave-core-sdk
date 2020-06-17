@@ -9,13 +9,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 
-test {
-    useJUnitPlatform()
-    testLogging {
-        events "passed", "skipped", "failed"
-    }
-}
-
 conclave {
     productID = 1
     revocationLevel = 0

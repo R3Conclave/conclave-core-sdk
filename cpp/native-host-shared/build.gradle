@@ -9,7 +9,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
     dependsOn ':cpp:native-host-shared:jar'
     doFirst {
         systemProperty 'jar.path', tasks.getByPath(':cpp:native-host-shared:jar').outputs.files.asPath

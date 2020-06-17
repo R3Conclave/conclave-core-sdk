@@ -23,7 +23,6 @@ tasks.withType(Test) {
 
 test {
     maxHeapSize = "8g"
-    useJUnitPlatform()
     systemProperty 'conclave.spid', '***REMOVED***'
     systemProperty 'conclave.attestation-key', '***REMOVED***'
     dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar'

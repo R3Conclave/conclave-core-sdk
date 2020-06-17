@@ -1,35 +1,31 @@
 package com.r3.conclave.utils.classloaders
 
 import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveApi
-import com.r3.conclave.dynamictesting.TestEnclaves
-import org.junit.*
-import org.junit.Assert.*
-import org.junit.rules.ExpectedException
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.File
 import java.net.URLClassLoader
-import java.net.URL
 import java.util.Collections.singletonList
-import java.util.jar.JarFile
-import kotlin.test.fail
 
 class MemoryClassLoaderTest {
     companion object {
         const val DATA_PATH: String = "/my/enclave"
 
-        @ClassRule
         @JvmField
+        @RegisterExtension
         val testEnclaves = TestEnclaves()
     }
-
-    @get:Rule
-    val exception: ExpectedException = ExpectedException.none()
 
     private lateinit var memoryURL: MemoryURL
     private lateinit var enclaveJar: File
 
-    @Before
+    @BeforeEach
     fun setup() {
         enclaveJar = testEnclaves.getEnclaveJar(ShoutingEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
@@ -37,13 +33,13 @@ class MemoryClassLoaderTest {
         System.gc()
     }
 
-    @After
+    @AfterEach
     fun done() {
         URLSchemes.clearURLs()
     }
 
     @Test
-    fun testMemoryClass() {
+    fun `memory class`() {
         with(MemoryClassLoader(singletonList(memoryURL), null)) {
             val enclaveClass = Class.forName(ShoutingEnclave::class.java.name, false, this)
             assertEquals(ShoutingEnclave::class.java.name, enclaveClass.name)
@@ -59,7 +55,7 @@ class MemoryClassLoaderTest {
     }
 
     @Test
-    fun testMemoryClassLoader() {
+    fun `memory class loader`() {
         with(MemoryClassLoader(singletonList(memoryURL))) {
             assertEquals(1, getURLs().size)
             assertEquals("memory:$DATA_PATH", getURLs()[0].toString())

@@ -4,7 +4,9 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.createHost
-import org.junit.rules.ExternalResource
+import org.junit.jupiter.api.extension.AfterAllCallback
+import org.junit.jupiter.api.extension.BeforeAllCallback
+import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.File
 import java.nio.file.Path
 import java.time.Duration
@@ -14,15 +16,12 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
-/**
- * A JUnit rule that allows on-the-fly creation of enclaves.
- */
-class TestEnclaves : ExternalResource() {
+class TestEnclaves : BeforeAllCallback, AfterAllCallback {
     private lateinit var executorService: ExecutorService
     private var cache: Cache? = null
     private var entropy: Long? = null
 
-    public override fun before() {
+    override fun beforeAll(context: ExtensionContext) {
         executorService = Executors.newFixedThreadPool(4)
         val cacheDirectory = File("build/cache")
         cacheDirectory.deleteRecursively()
@@ -31,7 +30,7 @@ class TestEnclaves : ExternalResource() {
         entropy = random.nextLong()
     }
 
-    public override fun after() {
+    override fun afterAll(context: ExtensionContext) {
         executorService.apply {
             shutdown()
             if (!awaitTermination(30, SECONDS)) {
@@ -49,14 +48,14 @@ class TestEnclaves : ExternalResource() {
 
     fun getEnclaveJar(enclaveClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): File {
         val cache = checkNotNull(cache) {
-            "Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field"
+            "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
         }
         return cache[createEnclaveJar(enclaveClass, enclaveBuilder)]
     }
 
     fun getSignedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder = EnclaveBuilder()): File {
         val cache = checkNotNull(cache) {
-            "Add @Rule or @ClassRule to your ${TestEnclaves::class.java.simpleName} field"
+            "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
         }
         val start = Instant.now()
         val cachedSignedEnclave = signedEnclaveFile(entryClass, builder)

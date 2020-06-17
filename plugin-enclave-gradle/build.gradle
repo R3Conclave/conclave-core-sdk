@@ -51,7 +51,6 @@ jar {
 }
 
 test {
-    useJUnitPlatform()
     // Tell the tests where Gradle's current module cache is.
     // We need the tests to share this module cache to prevent the
     // Gradle Test-Kit from downloading its own copy of Kotlin etc.

@@ -1,8 +1,8 @@
 package com.r3.conclave.utils.internal
 
-import org.junit.Assert.*
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 
 class ByteBufferInputStreamTest {
@@ -12,18 +12,18 @@ class ByteBufferInputStreamTest {
 
     private lateinit var stream: ByteBufferInputStream
 
-    @Before
+    @BeforeEach
     fun setup() {
         stream = ByteBufferInputStream(ByteBuffer.wrap(data))
     }
 
     @Test
-    fun testAvailable() {
+    fun `test available`() {
         assertEquals(data.size, stream.available())
     }
 
     @Test
-    fun testSkip() {
+    fun `test skip`() {
         val skipped = stream.skip(3)
         assertEquals(3, skipped)
 
@@ -33,12 +33,12 @@ class ByteBufferInputStreamTest {
     }
 
     @Test
-    fun testMarkSupported() {
+    fun `test mark supported`() {
         assertTrue(stream.markSupported())
     }
 
     @Test
-    fun testMarkAndReset() {
+    fun `mark and reset`() {
         // Confirm stream starts containing all bytes
         assertEquals(data.size, stream.available())
 

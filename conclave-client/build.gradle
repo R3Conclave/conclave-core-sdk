@@ -5,7 +5,6 @@ plugins {
 
 test {
     failFast = false
-    useJUnitPlatform()
     testLogging {
         exceptionFormat = 'full'
         showStandardStreams = true

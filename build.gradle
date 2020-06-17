@@ -109,6 +109,7 @@ subprojects {
     }
 
     tasks.withType(Test) {
+        useJUnitPlatform()
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
         failFast = true
 

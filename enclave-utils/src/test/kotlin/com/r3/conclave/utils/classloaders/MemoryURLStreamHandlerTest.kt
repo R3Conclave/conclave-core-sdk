@@ -3,12 +3,10 @@ package com.r3.conclave.utils.classloaders
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.testing.expectWithin
-import org.junit.After
-import org.junit.Assert.*
-import org.junit.ClassRule
-import org.junit.Rule
-import org.junit.Test
-import org.junit.rules.ExpectedException
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URLClassLoader
@@ -21,21 +19,18 @@ class MemoryURLStreamHandlerTest {
         const val data: String = "Wibble!"
         const val EOF = -1
 
-        @ClassRule
         @JvmField
+        @RegisterExtension
         val testEnclaves = TestEnclaves()
     }
 
-    @get:Rule
-    val exception: ExpectedException = ExpectedException.none()
-
-    @After
+    @AfterEach
     fun done() {
         URLSchemes.clearURLs()
     }
 
     @Test
-    fun testMemoryURL() {
+    fun `memory URL`() {
         val (url, urlLock) = URLSchemes.createMemoryURL(DATA_PATH, ByteBuffer.wrap(data.toByteArray()))
         assertEquals("memory:/my/enclave", url.toString())
         assertEquals("memory:/my/enclave", urlLock)
@@ -51,18 +46,18 @@ class MemoryURLStreamHandlerTest {
     }
 
     @Test
-    fun testExistingMemoryURL() {
-        exception.expect(MalformedURLException::class.java)
-        exception.expectMessage("URL 'memory:/my/enclave' already exists")
-
+    fun `existing memory URL`() {
         URLSchemes.createMemoryURL(DATA_PATH, ByteBuffer.wrap(byteArrayOf()))
-        URLSchemes.createMemoryURL(DATA_PATH, ByteBuffer.wrap(data.toByteArray()))
+        val exception = assertThrows(MalformedURLException::class.java) {
+            URLSchemes.createMemoryURL(DATA_PATH, ByteBuffer.wrap(data.toByteArray()))
+        }
+        assertEquals("URL 'memory:/my/enclave' already exists", exception.message)
     }
 
     class NoOpEnclave : Enclave()
 
     @Test
-    fun testClassLoaderForJarInMemory() {
+    fun `class loader for jar in memory`() {
         val enclaveJar = testEnclaves.getEnclaveJar(NoOpEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
         val (memoryURL, _) = URLSchemes.createMemoryURL(DATA_PATH, enclaveData)
@@ -76,10 +71,7 @@ class MemoryURLStreamHandlerTest {
     }
 
     @Test
-    fun testUnusedJarDataIsEvictedFromMemory() {
-        exception.expect(IOException::class.java)
-        exception.expectMessage("No data for URL 'memory:/my/enclave")
-
+    fun `unused jar data is evicted from memory`() {
         val enclaveJar = testEnclaves.getEnclaveJar(NoOpEnclave::class.java)
         val enclaveData = enclaveJar.toByteBuffer()
         // Ensure that we discard the strong reference key for our
@@ -87,12 +79,14 @@ class MemoryURLStreamHandlerTest {
         val memoryURL = URLSchemes.createMemoryURL(DATA_PATH, enclaveData).value
         System.gc()
         expectWithin(seconds = 10, condition = Supplier { URLSchemes.size == 0 })
-        memoryURL.openConnection()
+        val exception = assertThrows(IOException::class.java) {
+            memoryURL.openConnection()
+        }
+        assertEquals("No data for URL 'memory:/my/enclave'", exception.message)
     }
 
-    @Suppress("UsePropertyAccessSyntax")
     @Test
-    fun testReadOnlyMemoryBufferCannotBeModifiedAccidentally() {
+    fun `read only memory buffer cannot be modified accidentally`() {
         val buffer = ByteBuffer.allocate(Int.SIZE_BYTES + Int.SIZE_BYTES).let { buf ->
             buf.putInt(1).putInt(999).flip()
             buf.asReadOnlyBuffer()
@@ -104,9 +98,8 @@ class MemoryURLStreamHandlerTest {
         assertEquals(1, (memoryURL.content as ByteBuffer).getInt())
     }
 
-    @Suppress("UsePropertyAccessSyntax")
     @Test
-    fun testWritableMemoryBufferCannotBeModifiedAccidentally() {
+    fun `writable memory buffer cannot be modified accidentally`() {
         val buffer = ByteBuffer.allocate(Int.SIZE_BYTES + Int.SIZE_BYTES)
             .putInt(1).putInt(999)
         buffer.flip()
@@ -118,7 +111,7 @@ class MemoryURLStreamHandlerTest {
     }
 
     @Test
-    fun testReadingEmptyBuffer() {
+    fun `reading empty buffer`() {
         val buffer = ByteBuffer.allocate(0)
         val (memoryURL, _) = URLSchemes.createMemoryURL(DATA_PATH, buffer)
         assertEquals(EOF, memoryURL.openStream().read())

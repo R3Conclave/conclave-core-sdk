@@ -5,11 +5,9 @@ plugins {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
-    testImplementation "junit:junit:$junit_version"
-    testImplementation "org.jetbrains.kotlin:kotlin-test"
-
-    testImplementation "org.slf4j:slf4j-api:$slf4j_version"
     testImplementation project(":enclave-dynamic-testing")
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.slf4j:slf4j-api:$slf4j_version"
 
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
