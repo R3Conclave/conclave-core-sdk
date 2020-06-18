@@ -39,11 +39,11 @@ class AttestationTest {
     }
 
     class ReportCreatingEnclave : InternalEnclave, Enclave() {
-        override fun internalInitialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
-            return HandlerConnected.connect(ReportCreatingHandler(api), upstream)
+        override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
+            return HandlerConnected.connect(ReportCreatingHandler(env), upstream)
         }
 
-        private class ReportCreatingHandler(private val api: EnclaveApi) : Handler<Sender> {
+        private class ReportCreatingHandler(private val env: EnclaveEnvironment) : Handler<Sender> {
             override fun connect(upstream: Sender): Sender = upstream
 
             override fun onReceive(connection: Sender, input: ByteBuffer) {
@@ -51,7 +51,7 @@ class AttestationTest {
                 val reportData = input.getBytes(SgxReportData.size())
 
                 val reportBytes = ByteArray(SgxReport.size())
-                api.createReport(targetInfo, reportData, reportBytes)
+                env.createReport(targetInfo, reportData, reportBytes)
 
                 connection.send(reportBytes.size, Consumer { buffer ->
                     buffer.put(reportBytes)
@@ -126,7 +126,7 @@ class AttestationTest {
         assertEquals(report[SgxReport.body], signedQuote.quote[SgxQuote.reportBody])
     }
 
-    class TestEpidAttestationEnclaveHandler(api: EnclaveApi, reportDataString: String) : EpidAttestationEnclaveHandler(api) {
+    class TestEpidAttestationEnclaveHandler(env: EnclaveEnvironment, reportDataString: String) : EpidAttestationEnclaveHandler(env) {
         override val reportData: ByteCursor<SgxReportData> by lazy {
             val reportData = Cursor.allocate(SgxReportData)
             val encoder = Charsets.UTF_8.newEncoder()
@@ -136,8 +136,8 @@ class AttestationTest {
     }
 
     class EpidAttestingEnclave : InternalEnclave, Enclave() {
-        override fun internalInitialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
-            return HandlerConnected.connect(TestEpidAttestationEnclaveHandler(api, "hello"), upstream)
+        override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
+            return HandlerConnected.connect(TestEpidAttestationEnclaveHandler(env, "hello"), upstream)
         }
     }
 

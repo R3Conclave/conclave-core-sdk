@@ -4,20 +4,20 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SignatureSchemeId
 
-interface EnclaveApi {
+interface EnclaveEnvironment {
     /**
      * Create an SGX report.
-     * @param targetInfo optional information of the target enclave if the report is to be used as part of local
+     * @param targetInfoIn optional information of the target enclave if the report is to be used as part of local
      *     attestation. An example is during quoting when the report is sent to the Quoting Enclave for signing.
      *   @see SgxTargetInfo
-     * @param reportData optional data to be included in the report. If null the data area of the report will be 0.
+     * @param reportDataIn optional data to be included in the report. If null the data area of the report will be 0.
      *   @see SgxReportData
      * @param reportOut the byte array to put the report in. The size should be the return value of [SgxReport.size].
      *   @see SgxReport
      * sgx_status_t sgx_create_report(const sgx_target_info_t *target_info, const sgx_report_data_t *report_data, sgx_report_t *report)
      * TODO change this to use ByteBuffers directly
      */
-    fun createReport(targetInfo: ByteArray?, reportData: ByteArray?, reportOut: ByteArray)
+    fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray)
 
     /**
      * Fill [output] with indices in ([offset], [offset] + [length]) with random bytes using the `RDRAND` instruction.
@@ -28,9 +28,7 @@ interface EnclaveApi {
      * Factory function giving access to cryptographic signature scheme implementations.
      */
     @JvmDefault
-    fun getSignatureScheme(spec: SignatureSchemeId): SignatureScheme {
-        return SignatureSchemeFactory.make(spec)
-    }
+    fun getSignatureScheme(spec: SignatureSchemeId): SignatureScheme = SignatureSchemeFactory.make(spec)
 
     /**
      * Fill [output] with random bytes.
@@ -51,7 +49,7 @@ interface EnclaveApi {
             createReport(null, null, report.getBuffer().array())
             val enclaveFlags = report[SgxReport.body][SgxReportBody.attributes][SgxAttributes.flags].read()
             val result = enclaveFlags and SgxEnclaveFlags.DEBUG != 0L
-            EnclaveApi.isEnclaveDebug = result
+            EnclaveEnvironment.isEnclaveDebug = result
             result
         } else {
             isEnclaveDebug
@@ -62,9 +60,7 @@ interface EnclaveApi {
      * @return true if the enclave is a simulation enclave, false otherwise.
      */
     @JvmDefault
-    fun isSimulation(): Boolean {
-        return Native.isEnclaveSimulation()
-    }
+    fun isSimulation(): Boolean = Native.isEnclaveSimulation()
 
     /** @see Native.calcSealedBlobSize */
     @JvmDefault
@@ -92,11 +88,19 @@ interface EnclaveApi {
     @JvmDefault
     fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
         require(toBeSealed.plaintext.size > 0)
-        return ByteArray(calcSealedBlobSize(toBeSealed.plaintext.size,
-                toBeSealed.authenticatedData?.size ?: 0)).also {
-            Native.sealData(it, 0, it.size, toBeSealed.plaintext.bytes, 0, toBeSealed.plaintext.size,
-                    toBeSealed.authenticatedData?.bytes ?: null, 0, toBeSealed.authenticatedData?.size ?: 0)
-        }
+        val sealedData = ByteArray(calcSealedBlobSize(toBeSealed.plaintext.size, toBeSealed.authenticatedData?.size ?: 0))
+        Native.sealData(
+                output = sealedData,
+                outputOffset = 0,
+                outputSize = sealedData.size,
+                plaintext = toBeSealed.plaintext.bytes,
+                plaintextOffset = 0,
+                plaintextSize = toBeSealed.plaintext.size,
+                authenticatedData = toBeSealed.authenticatedData?.bytes,
+                authenticatedDataOffset = 0,
+                authenticatedDataSize = toBeSealed.authenticatedData?.size ?: 0
+        )
+        return sealedData
     }
 
     /**
@@ -108,11 +112,22 @@ interface EnclaveApi {
     fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope {
         require(sealedBlob.isNotEmpty())
         val authenticatedDataSize =  authenticatedDataSize(sealedBlob)
-        return PlaintextAndEnvelope(OpaqueBytes(ByteArray(plaintextSizeFromSealedData(sealedBlob))),
-                if (authenticatedDataSize > 0) OpaqueBytes(ByteArray(authenticatedDataSize)) else null).also {
-            Native.unsealData(sealedBlob, 0, sealedBlob.size, it.plaintext.bytes, 0, it.plaintext.size,
-                    it.authenticatedData?.bytes ?: null, 0, it.authenticatedData?.size ?: 0)
-        }
+        val plaintextAndEnvelope = PlaintextAndEnvelope(
+                OpaqueBytes(ByteArray(plaintextSizeFromSealedData(sealedBlob))),
+                if (authenticatedDataSize > 0) OpaqueBytes(ByteArray(authenticatedDataSize)) else null
+        )
+        Native.unsealData(
+                sealedBlob = sealedBlob,
+                sealedBlobOffset = 0,
+                sealedBlobLength = sealedBlob.size,
+                dataOut = plaintextAndEnvelope.plaintext.bytes,
+                dataOutOffset = 0,
+                dataOutLength = plaintextAndEnvelope.plaintext.size,
+                authenticatedDataOut = plaintextAndEnvelope.authenticatedData?.bytes,
+                authenticatedDataOutOffset = 0,
+                authenticatedDataOutLength = plaintextAndEnvelope.authenticatedData?.size ?: 0
+        )
+        return plaintextAndEnvelope
     }
 
     /** @see Native.authenticatedDataSize */
@@ -140,7 +155,14 @@ interface EnclaveApi {
     @JvmDefault
     fun defaultSealingKey(keyType: KeyType = KeyType.SEAL, useSigner: Boolean = true, cpuSvn: Boolean = true): ByteArray {
         return ByteArray(16).also {
-            Native.sgxKey(keyType.value, if(useSigner) KeyPolicy.MRSIGNER.value else KeyPolicy.MRENCLAVE.value, cpuSvn, it, 0, it.size)
+            Native.sgxKey(
+                    keyType = keyType.value,
+                    keyPolicy = if (useSigner) KeyPolicy.MRSIGNER.value else KeyPolicy.MRENCLAVE.value,
+                    cpuSvn = cpuSvn,
+                    keyOut = it,
+                    keyOutOffset = 0,
+                    keyOutLength = it.size
+            )
         }
     }
 

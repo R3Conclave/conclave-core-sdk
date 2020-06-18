@@ -5,14 +5,14 @@ import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.enclave.internal.EnclaveApi
+import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import java.nio.ByteBuffer
 import java.util.*
 
-class MockEnclaveApi(
+class MockEnclaveEnvironment(
         private val isvProdId: Int = 1,
         private val isvSvn: Int = 1
-) : EnclaveApi {
+) : EnclaveEnvironment {
     override fun isSimulation(): Boolean = false
 
     override fun isDebugMode(): Boolean = true

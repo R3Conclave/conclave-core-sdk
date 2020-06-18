@@ -10,7 +10,7 @@ import java.util.function.Consumer
  * The enclave side of the EPID attestation protocol. It receives report requests from the host, containing the target
  * Quoting Enclave's information, and sends back a report.
  */
-abstract class EpidAttestationEnclaveHandler(val api: EnclaveApi) : Handler<Sender> {
+abstract class EpidAttestationEnclaveHandler(private val env: EnclaveEnvironment) : Handler<Sender> {
     abstract val reportData: ByteCursor<SgxReportData>
 
     override fun connect(upstream: Sender): Sender = upstream
@@ -18,7 +18,7 @@ abstract class EpidAttestationEnclaveHandler(val api: EnclaveApi) : Handler<Send
     override fun onReceive(connection: Sender, input: ByteBuffer) {
         val quotingEnclaveTargetInfo = input.getRemainingBytes()
         val report = ByteArray(SgxReport.size())
-        api.createReport(quotingEnclaveTargetInfo, reportData.getBuffer().array(), report)
+        env.createReport(quotingEnclaveTargetInfo, reportData.getBuffer().array(), report)
         connection.send(report.size, Consumer { buffer ->
             buffer.put(report)
         })

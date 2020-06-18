@@ -3,7 +3,7 @@ package com.r3.conclave.utils.classloaders
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.EnclaveApi
+import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -60,9 +60,9 @@ class MemoryClassLoaderTest {
             assertEquals(1, getURLs().size)
             assertEquals("memory:$DATA_PATH", getURLs()[0].toString())
 
-            val apiClassName = EnclaveApi::class.java.name.replace('.', '/') + ".class"
-            val resource = findResource(apiClassName) ?: fail("Resource '$apiClassName not found")
-            assertEquals("memory:$DATA_PATH!/$apiClassName", resource.toString())
+            val envClassName = "${EnclaveEnvironment::class.java.name.replace('.', '/')}.class"
+            val resource = findResource(envClassName) ?: fail("Resource '$envClassName not found")
+            assertEquals("memory:$DATA_PATH!/$envClassName", resource.toString())
 
             // Java 9+ does not guarantee that the application classloader is an instance of a URLClassLoader
             // so we can't just use (javaClass.classLoader as URLClassLoader).
@@ -70,7 +70,7 @@ class MemoryClassLoaderTest {
             val enclaveUrls = arrayOf(enclaveJar.toURI().toURL())
             val urlLoader = URLClassLoader(enclaveUrls)
 
-            val actualBytes = urlLoader.findResource(apiClassName).readBytes()
+            val actualBytes = urlLoader.findResource(envClassName).readBytes()
             assertArrayEquals(actualBytes, resource.readBytes())
 
             val manifests = findResources("META-INF/MANIFEST.MF")

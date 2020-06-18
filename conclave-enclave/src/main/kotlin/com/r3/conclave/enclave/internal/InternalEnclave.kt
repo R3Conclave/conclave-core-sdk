@@ -5,5 +5,5 @@ import com.r3.conclave.common.internal.handler.Sender
 
 // For testing purposes
 interface InternalEnclave {
-    fun internalInitialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*>
+    fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*>
 }

@@ -91,11 +91,11 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     }
     JniScopedRef<jbyteArray> jarrayIn {jniEnv->NewByteArray(bufferInLen), jniEnv.get()};
     jniEnv->SetByteArrayRegion(jarrayIn.value(), 0, bufferInLen, static_cast<const jbyte *>(bufferIn));
-    auto NativeApiClass = jniEnv->FindClass("com/r3/conclave/enclave/internal/NativeEnclaveApi");
+    auto NativeEnvClass = jniEnv->FindClass("com/r3/conclave/enclave/internal/NativeEnclaveEnvironment");
     abortOnJniException(jniEnv.get());
-    auto methodId = jniEnv->GetStaticMethodID(NativeApiClass, "enclaveEntry", "([B)V");
+    auto methodId = jniEnv->GetStaticMethodID(NativeEnvClass, "enclaveEntry", "([B)V");
     abortOnJniException(jniEnv.get());
-    jniEnv->CallStaticObjectMethod(NativeApiClass, methodId, jarrayIn.value());
+    jniEnv->CallStaticObjectMethod(NativeEnvClass, methodId, jarrayIn.value());
     abortOnJniException(jniEnv.get());
 }
 

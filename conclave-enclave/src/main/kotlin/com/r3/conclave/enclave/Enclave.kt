@@ -5,7 +5,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.EnclaveCallHandler.State.Receive
 import com.r3.conclave.enclave.Enclave.EnclaveCallHandler.State.Response
-import com.r3.conclave.enclave.internal.EnclaveApi
+import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.InternalEnclave
 import java.nio.ByteBuffer
@@ -87,19 +87,19 @@ abstract class Enclave {
 
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
-    private fun initialise(api: EnclaveApi, upstream: Sender): HandlerConnected<*> {
+    private fun initialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
         // If the Enclave class implements InternalEnclave then the behaviour of the enclave is entirely delegated
         // to the InternalEnclave implementation and the Conclave-specific APIs (e.g. callUntrustedHost, etc) are
         // disabled. This allows us to test the enclave environment in scenerios where we don't want the Conclave handlers.
         return if (this is InternalEnclave) {
-            this.internalInitialise(api, upstream)
+            this.internalInitialise(env, upstream)
         } else {
-            signingKeyPair = signatureScheme.generateKeyPair(api.defaultSealingKey())
-            val exposeErrors = api.isSimulation() || api.isDebugMode()
+            signingKeyPair = signatureScheme.generateKeyPair(env.defaultSealingKey())
+            val exposeErrors = env.isSimulation() || env.isDebugMode()
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             mux.addDownstream(AdminHandler(this))
-            mux.addDownstream(object : EpidAttestationEnclaveHandler(api) {
+            mux.addDownstream(object : EpidAttestationEnclaveHandler(env) {
                 override val reportData = createReportData()
             })
             if (this is EnclaveCall) {

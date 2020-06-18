@@ -7,10 +7,10 @@ import com.r3.conclave.enclave.Enclave
 import java.nio.ByteBuffer
 
 @PotentialPackagePrivate
-object NativeEnclaveApi : EnclaveApi {
+object NativeEnclaveEnvironment : EnclaveEnvironment {
     // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
     // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
-    private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveApi::class.java, Sender::class.java).apply { isAccessible = true }
+    private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java).apply { isAccessible = true }
 
     /** The singleton instance of the user supplied enclave. */
     private var singletonHandler: HandlerConnected<*>? = null
@@ -42,8 +42,8 @@ object NativeEnclaveApi : EnclaveApi {
         return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
-    override fun createReport(targetInfo: ByteArray?, reportData: ByteArray?, reportOut: ByteArray) {
-        Native.createReport(targetInfo, reportData, reportOut)
+    override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {
+        Native.createReport(targetInfoIn, reportDataIn, reportOut)
     }
 
     override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
