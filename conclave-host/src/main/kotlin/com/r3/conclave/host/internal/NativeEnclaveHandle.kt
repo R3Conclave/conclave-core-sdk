@@ -36,12 +36,12 @@ class NativeEnclaveHandle<CONNECTION>(
             synchronized(lock) {
                 enclaveClassName?.let {
                     // The first ECALL has to be the class name of the enclave to be instantiated.
-                    NativeApi.jvmEcall(enclaveId, it.toByteArray())
+                    NativeApi.hostToEnclave(enclaveId, it.toByteArray())
                 }
                 enclaveClassName = null
             }
         }
-        NativeApi.jvmEcall(enclaveId, serializedBuffer.getRemainingBytes())
+        NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes())
     }
 
     override fun destroy() {

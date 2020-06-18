@@ -20,14 +20,14 @@ object NativeApi {
     // TODO use ByteBuffers directly
     @JvmStatic
     @Suppress("UNUSED")
-    fun jvmOcall(enclaveId: Long, data: ByteArray) {
+    fun enclaveToHost(enclaveId: Long, data: ByteArray) {
         val ocallHandler = connectedOcallHandlers[enclaveId] ?:
                 throw IllegalStateException("Unknown enclave id $enclaveId")
         ocallHandler.onReceive(ByteBuffer.wrap(data).asReadOnlyBuffer())
     }
 
     @JvmStatic
-    fun jvmEcall(enclaveId: Long, data: ByteArray) {
+    fun hostToEnclave(enclaveId: Long, data: ByteArray) {
         Native.jvmEcall(enclaveId, data)
     }
 }
