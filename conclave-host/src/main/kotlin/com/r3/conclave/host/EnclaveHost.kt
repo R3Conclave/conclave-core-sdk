@@ -38,6 +38,7 @@ import java.util.function.Consumer
  * Although the enclave must currently run against Java 8, the host can use any
  * version of Java that is supported.
  */
+// The constructor is only protected to make it harder for a user to accidently create a host via "new".
 open class EnclaveHost protected constructor() : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
@@ -49,9 +50,13 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private val signatureScheme = SignatureSchemeEdDSA()
 
         internal fun create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
-            return EnclaveHost().apply {
-                this.enclaveHandle = enclaveHandle
-            }
+            val host = EnclaveHost()
+            init(host, enclaveHandle)
+            return host
+        }
+
+        internal fun init(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
+            host.enclaveHandle = enclaveHandle
         }
 
         /**
@@ -76,11 +81,18 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
-                if (e is EnclaveLoadException) throw e
-                throw EnclaveLoadException("Unable to load enclave", e)
+                throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
             }
         }
 
+        /**
+         * Searches for the single enclave file in the classpath at /package/namespace/classname-mode.signed.so. For
+         * example it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
+         * If more than one file is found (i.e. multiple modes) then an exception is thrown.
+         *
+         * The mode is derived from the filename but is not taken at face value. The construction of the EnclaveInstanceInfoImpl
+         * in start makes sure the mode is correct it terms of the remote attestation.
+         */
         private fun findEnclaveFile(className: String): Pair<InputStream, EnclaveMode> {
             val found = EnclaveMode.values().mapNotNull { mode ->
                 val resourceName = "/${className.replace('.', '/')}-${mode.name.toLowerCase()}.signed.so"
@@ -140,11 +152,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
     }
 
+    // EnclaveHandle is an internal class and thus to prevent it from leaking into the public API this is not a c'tor parameter.
     private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
     private val hostStateManager = StateManager<HostState>(New)
     private lateinit var adminHandler: AdminHandler
     // This is only initialised if the enclave is able to receive calls from the host (i.e. implements EnclaveCall)
-    private lateinit var enclaveCallHandler: EnclaveCallHandler
+    private var enclaveCallHandler: EnclaveCallHandler? = null
     private var _enclaveInstanceInfo: EnclaveInstanceInfo? = null
 
     /**
@@ -277,9 +290,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
     private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCall?) : ByteArray? {
-        when (hostStateManager.state) {
+        val enclaveCallHandler = when (hostStateManager.state) {
             New -> throw IllegalStateException("The host has not been started.")
-            Started -> check(adminHandler.enclaveInfo.enclaveImplementsEnclaveCall) {
+            Started -> checkNotNull(enclaveCallHandler) {
                 "The enclave does not implement EnclaveCall to receive messages from the host."
             }
             Closed -> throw IllegalStateException("The host has been closed.")
@@ -289,6 +302,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
     // TODO deliverMail
 
+    @Synchronized
     override fun close() {
         // Closing an unstarted or already closed EnclaveHost is allowed, because this makes it easier to use
         // Java try-with-resources and makes finally blocks more forgiving, e.g.
@@ -301,9 +315,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         //
         // could yield a secondary error if an exception was thrown in enclave.start without this.
         if (hostStateManager.state !is Started) return
-
-        enclaveHandle.destroy()
-        hostStateManager.state = Closed
+        try {
+            enclaveHandle.destroy()
+        } finally {
+            hostStateManager.state = Closed
+        }
     }
 
     private class EnclaveInfo(val enclaveImplementsEnclaveCall: Boolean, val signatureKey: PublicKey)

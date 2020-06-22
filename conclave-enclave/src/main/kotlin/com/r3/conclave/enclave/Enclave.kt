@@ -172,7 +172,9 @@ abstract class Enclave {
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: EnclaveCall?): ByteArray? {
-            val enclaveCallId = currentEnclaveCall.get()
+            val enclaveCallId = checkNotNull(currentEnclaveCall.get()) {
+                "Thread ${Thread.currentThread()} has not been given the call ID"
+            }
             val stateManager = enclaveCalls.getValue(enclaveCallId)
             val newReceiveState = Receive(callback)
             // We expect the state to be ReceiveFromHost

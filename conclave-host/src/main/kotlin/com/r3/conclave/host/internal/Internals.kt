@@ -10,3 +10,7 @@ fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: St
     val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ThrowingErrorHandler())
     return EnclaveHost.create(enclaveHandle)
 }
+
+fun initHost(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
+    EnclaveHost.init(host, enclaveHandle)
+}

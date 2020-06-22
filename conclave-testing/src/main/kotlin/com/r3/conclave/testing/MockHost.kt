@@ -3,6 +3,7 @@ package com.r3.conclave.testing
 import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.internal.initHost
 import com.r3.conclave.testing.internal.MockEnclaveHandle
 
 /**
@@ -19,8 +20,6 @@ import com.r3.conclave.testing.internal.MockEnclaveHandle
  */
 class MockHost<T : Enclave> private constructor(val enclave: T) : EnclaveHost() {
     companion object {
-        private val ENCLAVEHANDLE_FIELD = EnclaveHost::class.java.getDeclaredField("enclaveHandle").apply { isAccessible = true }
-
         /**
          * Creates a [MockHost] suitable for unit tests, that connects to the given [Enclave].
          */
@@ -29,7 +28,7 @@ class MockHost<T : Enclave> private constructor(val enclave: T) : EnclaveHost() 
             val enclave = enclaveClass.getConstructor().newInstance()
             val handle = MockEnclaveHandle(enclave, ThrowingErrorHandler())
             val mockHost = MockHost<T>(enclave)
-            ENCLAVEHANDLE_FIELD.set(mockHost, handle)
+            initHost(mockHost, handle)
             return mockHost
         }
 
