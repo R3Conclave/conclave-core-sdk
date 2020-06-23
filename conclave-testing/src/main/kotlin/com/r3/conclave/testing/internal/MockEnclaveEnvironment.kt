@@ -1,5 +1,6 @@
 package com.r3.conclave.testing.internal
 
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
@@ -13,9 +14,8 @@ class MockEnclaveEnvironment(
         private val isvProdId: Int = 1,
         private val isvSvn: Int = 1
 ) : EnclaveEnvironment {
-    override fun isSimulation(): Boolean = false
-
-    override fun isDebugMode(): Boolean = true
+    override val enclaveMode: EnclaveMode
+        get() = EnclaveMode.MOCK
 
     override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {
         val report = Cursor(SgxReport, reportOut)

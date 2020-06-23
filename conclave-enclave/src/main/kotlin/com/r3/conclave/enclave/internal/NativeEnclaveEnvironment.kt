@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.internal.PotentialPackagePrivate
+import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
@@ -8,6 +9,8 @@ import java.nio.ByteBuffer
 
 @PotentialPackagePrivate
 object NativeEnclaveEnvironment : EnclaveEnvironment {
+    private var isEnclaveDebug: Boolean? = null
+
     // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
     // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
     private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java).apply { isAccessible = true }
@@ -48,6 +51,33 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
 
     override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
         Native.randomBytes(output, offset, length)
+    }
+
+    override val enclaveMode: EnclaveMode
+        get() {
+            return when {
+                // Important that the simulation flag is checked first because simulation mode has debug=true as well.
+                Native.isEnclaveSimulation() -> EnclaveMode.SIMULATION
+                isDebugMode() -> EnclaveMode.DEBUG
+                else -> EnclaveMode.RELEASE
+            }
+        }
+
+    /**
+     * @return true if the enclave was loaded in debug mode, i.e. its report's `DEBUG` flag is set, false otherwise.
+     */
+    private fun isDebugMode(): Boolean {
+        val isEnclaveDebug = this.isEnclaveDebug
+        return if (isEnclaveDebug == null) {
+            val report = Cursor.allocate(SgxReport)
+            createReport(null, null, report.getBuffer().array())
+            val enclaveFlags = report[SgxReport.body][SgxReportBody.attributes][SgxAttributes.flags].read()
+            val result = enclaveFlags and SgxEnclaveFlags.DEBUG != 0L
+            this.isEnclaveDebug = result
+            result
+        } else {
+            isEnclaveDebug
+        }
     }
 
     // Static enclave registration

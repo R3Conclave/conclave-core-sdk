@@ -1,5 +1,6 @@
 package com.r3.conclave.enclave.internal
 
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SignatureSchemeId
@@ -38,29 +39,7 @@ interface EnclaveEnvironment {
         randomBytes(output, 0, output.size)
     }
 
-    /**
-     * @return true if the enclave was loaded in debug mode, i.e. its report's `DEBUG` flag is set, false otherwise.
-     */
-    @JvmDefault
-    fun isDebugMode(): Boolean {
-        val isEnclaveDebug = isEnclaveDebug
-        return if (isEnclaveDebug == null) {
-            val report = Cursor.allocate(SgxReport)
-            createReport(null, null, report.getBuffer().array())
-            val enclaveFlags = report[SgxReport.body][SgxReportBody.attributes][SgxAttributes.flags].read()
-            val result = enclaveFlags and SgxEnclaveFlags.DEBUG != 0L
-            EnclaveEnvironment.isEnclaveDebug = result
-            result
-        } else {
-            isEnclaveDebug
-        }
-    }
-
-    /**
-     * @return true if the enclave is a simulation enclave, false otherwise.
-     */
-    @JvmDefault
-    fun isSimulation(): Boolean = Native.isEnclaveSimulation()
+    val enclaveMode: EnclaveMode
 
     /** @see Native.calcSealedBlobSize */
     @JvmDefault
@@ -164,9 +143,5 @@ interface EnclaveEnvironment {
                     keyOutLength = it.size
             )
         }
-    }
-
-    private companion object {
-        var isEnclaveDebug: Boolean? = null
     }
 }

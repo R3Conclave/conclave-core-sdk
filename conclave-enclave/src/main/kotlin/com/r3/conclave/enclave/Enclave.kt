@@ -1,5 +1,6 @@
 package com.r3.conclave.enclave
 
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.*
@@ -79,7 +80,7 @@ abstract class Enclave {
     fun callUntrustedHost(bytes: ByteArray, callback: EnclaveCall): ByteArray? = callUntrustedHostInternal(bytes, callback)
 
     private fun callUntrustedHostInternal(bytes: ByteArray, callback: EnclaveCall?): ByteArray? {
-        val enclaveCallHandler = checkNotNull(enclaveCallHandler) {
+        val enclaveCallHandler = checkNotNull(this.enclaveCallHandler) {
             "Enclave needs to implement EnclaveCall to receive and send to the host."
         }
         return enclaveCallHandler.callUntrustedHost(bytes, callback)
@@ -95,7 +96,7 @@ abstract class Enclave {
             this.internalInitialise(env, upstream)
         } else {
             signingKeyPair = signatureScheme.generateKeyPair(env.defaultSealingKey())
-            val exposeErrors = env.isSimulation() || env.isDebugMode()
+            val exposeErrors = env.enclaveMode != EnclaveMode.RELEASE
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             mux.addDownstream(AdminHandler(this))

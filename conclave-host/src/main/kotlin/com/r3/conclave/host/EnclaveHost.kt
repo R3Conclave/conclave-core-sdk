@@ -292,7 +292,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCall?) : ByteArray? {
         val enclaveCallHandler = when (hostStateManager.state) {
             New -> throw IllegalStateException("The host has not been started.")
-            Started -> checkNotNull(enclaveCallHandler) {
+            Started -> checkNotNull(this.enclaveCallHandler) {
                 "The enclave does not implement EnclaveCall to receive messages from the host."
             }
             Closed -> throw IllegalStateException("The host has been closed.")
