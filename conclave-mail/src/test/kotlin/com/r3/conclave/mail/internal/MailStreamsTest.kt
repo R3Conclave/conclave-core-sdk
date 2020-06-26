@@ -21,7 +21,7 @@ class MailStreamsTest {
         val bytes = encryptMessage()
         assertEquals(protocolNameN, String(bytes.copyOfRange(1, 1 + protocolNameN.length), Charsets.US_ASCII))
         // Can't find, it's encrypted.
-        assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello?"))
+        assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello"))
         val stream = decrypt(bytes)
         assertNull(stream.senderPublicKey)
         assertEquals(0, stream.headerBytes.size)
