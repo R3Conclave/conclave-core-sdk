@@ -83,10 +83,10 @@ class EnclaveInstanceInfoImpl(
     override fun serialize(): ByteArray {
         return writeData {
             write(magic)
-            writeLengthPrefixBytes(dataSigningKey.encoded)
-            writeLengthPrefixBytes(attestationResponse.reportBytes)
-            writeLengthPrefixBytes(attestationResponse.signature)
-            writeLengthPrefixBytes(attestationResponse.certPath.encoded)
+            writeIntLengthPrefixBytes(dataSigningKey.encoded)
+            writeIntLengthPrefixBytes(attestationResponse.reportBytes)
+            writeIntLengthPrefixBytes(attestationResponse.signature)
+            writeIntLengthPrefixBytes(attestationResponse.certPath.encoded)
             write(enclaveMode.ordinal)
         }
     }

@@ -4,9 +4,9 @@ import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.dataStream
-import com.r3.conclave.common.internal.readLengthPrefixBytes
+import com.r3.conclave.common.internal.readIntLengthPrefixBytes
 import com.r3.conclave.common.internal.writeData
-import com.r3.conclave.common.internal.writeLengthPrefixBytes
+import com.r3.conclave.common.internal.writeIntLengthPrefixBytes
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves
@@ -78,8 +78,8 @@ class EnclaveHostNativeTest {
         start<SigningEnclave>()
         val message = "Hello World".toByteArray()
         val dis = host.callEnclave(message)!!.dataStream()
-        val signingKeyBytes = dis.readLengthPrefixBytes()
-        val signature = dis.readLengthPrefixBytes()
+        val signingKeyBytes = dis.readIntLengthPrefixBytes()
+        val signature = dis.readIntLengthPrefixBytes()
         assertThat(host.enclaveInstanceInfo.dataSigningKey.encoded).isEqualTo(signingKeyBytes)
         host.enclaveInstanceInfo.verifier().apply {
             update(message)
@@ -203,8 +203,8 @@ class EnclaveHostNativeTest {
                 sign()
             }
             return writeData {
-                writeLengthPrefixBytes(signatureKey.encoded)
-                writeLengthPrefixBytes(signature)
+                writeIntLengthPrefixBytes(signatureKey.encoded)
+                writeIntLengthPrefixBytes(signature)
             }
         }
     }

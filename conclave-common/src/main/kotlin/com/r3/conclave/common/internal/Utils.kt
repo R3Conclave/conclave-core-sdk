@@ -2,9 +2,6 @@ package com.r3.conclave.common.internal
 
 import java.io.*
 import java.nio.ByteBuffer
-import java.nio.file.DirectoryNotEmptyException
-import java.nio.file.Files
-import java.nio.file.Path
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
 
@@ -69,15 +66,16 @@ fun ByteArray.dataStream(): DataInputStream = DataInputStream(inputStream())
 
 inline fun <T> ByteArray.deserialise(block: DataInputStream.() -> T): T = block(dataStream())
 
-fun DataInputStream.readBytes(length: Int): ByteArray {
-    val bytes = ByteArray(length)
+/** Read and return exactly [n] bytes from the stream, or throw [EOFException]. */
+fun DataInputStream.readNBytes(n: Int): ByteArray {
+    val bytes = ByteArray(n)
     readFully(bytes)
     return bytes
 }
 
-fun DataInputStream.readLengthPrefixBytes(): ByteArray = readBytes(readInt())
+fun DataInputStream.readIntLengthPrefixBytes(): ByteArray = readNBytes(readInt())
 
-fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray) {
+fun DataOutputStream.writeIntLengthPrefixBytes(bytes: ByteArray) {
     writeInt(bytes.size)
     write(bytes)
 }

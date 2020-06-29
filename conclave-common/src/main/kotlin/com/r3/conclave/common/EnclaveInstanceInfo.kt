@@ -63,11 +63,11 @@ interface EnclaveInstanceInfo {
         @JvmStatic
         fun deserialize(from: ByteArray): EnclaveInstanceInfo {
             return from.deserialise {
-                require(readBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
-                val dataSigningKey = readLengthPrefixBytes().let(signatureScheme::decodePublicKey)
-                val reportBytes = readLengthPrefixBytes()
-                val signature = readLengthPrefixBytes()
-                val certPath = readLengthPrefixBytes().inputStream().let(CertificateFactory.getInstance("X.509")::generateCertPath)
+                require(readNBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
+                val dataSigningKey = readIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
+                val reportBytes = readIntLengthPrefixBytes()
+                val signature = readIntLengthPrefixBytes()
+                val certPath = readIntLengthPrefixBytes().inputStream().let(CertificateFactory.getInstance("X.509")::generateCertPath)
                 val enclaveMode = read().let { EnclaveMode.values()[it] }
                 // New fields need to be behind an availablity check before being read. Use dis.available() to check if there
                 // are more bytes available and only parse them if there are. If not then provide defaults.
