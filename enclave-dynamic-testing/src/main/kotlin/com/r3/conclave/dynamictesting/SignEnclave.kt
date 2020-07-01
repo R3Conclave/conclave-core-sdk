@@ -33,8 +33,8 @@ object SignEnclave {
         )
     }
 
-    fun createDummyKey(): Cached<File> {
-        return Cached.singleFile(DigestTools.md5String("dummy"), "dummy.key") { output ->
+    fun createDummyKey(input: String? = null): Cached<File> {
+        return Cached.singleFile(DigestTools.md5String(input ?: "dummy"), "dummy.key") { output ->
             ProcessRunner.runProcess(createDummyKeyCommandLine(output), output.parentFile)
         }
     }

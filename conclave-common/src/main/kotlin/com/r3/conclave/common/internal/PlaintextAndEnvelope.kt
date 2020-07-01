@@ -7,4 +7,4 @@ import com.r3.conclave.common.OpaqueBytes
  * @param plaintext unsealed text.
  * @param authenticatedData optional authenticated data.
  */
-data class PlaintextAndEnvelope(val plaintext: OpaqueBytes, val authenticatedData: OpaqueBytes?)
+data class PlaintextAndEnvelope(val plaintext: OpaqueBytes, val authenticatedData: OpaqueBytes? = null)

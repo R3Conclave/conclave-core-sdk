@@ -53,12 +53,12 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         return cache[createEnclaveJar(enclaveClass, enclaveBuilder)]
     }
 
-    fun getSignedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder = EnclaveBuilder()): File {
+    fun getSignedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder = EnclaveBuilder(), keyGenInput: String? = null): File {
         val cache = checkNotNull(cache) {
             "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
         }
         val start = Instant.now()
-        val cachedSignedEnclave = signedEnclaveFile(entryClass, builder)
+        val cachedSignedEnclave = signedEnclaveFile(entryClass, builder, keyGenInput)
         val enclave = cache[cachedSignedEnclave]
         val end = Instant.now()
         println(Duration.between(start, end))
@@ -66,12 +66,15 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         return enclave
     }
 
-    private fun signedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
+    private fun signedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder, keyGenInput: String? = null): Cached<File> {
         val cachedJar = createEnclaveJar(entryClass, builder)
         val cachedEnclave = BuildEnclave.buildEnclave(builder.type, cachedJar)
         val cachedKey = builder.key?.let { Cached.Pure(it) } ?: SignEnclave.createDummyKey()
         val cachedConfig = SignEnclave.createConfig(builder.config)
-        return SignEnclave.signEnclave(inputKey = cachedKey, inputEnclave = cachedEnclave, enclaveConfig = cachedConfig)
+        return SignEnclave.signEnclave(
+                inputKey = if (keyGenInput == null) cachedKey else SignEnclave.createDummyKey(keyGenInput),
+                inputEnclave = cachedEnclave,
+                enclaveConfig = cachedConfig)
     }
 
     inline fun <reified T : Enclave> hostTo(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {

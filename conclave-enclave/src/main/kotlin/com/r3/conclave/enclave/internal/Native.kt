@@ -88,10 +88,9 @@ object Native {
      * Get the requested SGX key (wrapper of sgx_get_key).
      * @param keyType (check `enum class KeyType` for possible values).
      * @param keyPolicy (one or a combination using bitwise `or` of KeyPolicies).
-     * @param cpuSvn mix the security version number of the SGX firmware into the key derivation function.
      * @param keyOut output byte array. Must be pre-allocated to store at least 128 bits (16 bytes).
      * @param keyOutOffset optional keyOut offset.
      * @param keyOutLength size of the array to store the key (keyOut.size - keyOutOffset)
      */
-    external fun sgxKey(keyType: Int, keyPolicy: Int, cpuSvn: Boolean, keyOut: ByteArray, keyOutOffset: Int, keyOutLength: Int)
+    external fun sgxKey(keyType: Int, keyPolicy: Int, keyOut: ByteArray, keyOutOffset: Int, keyOutLength: Int)
 }

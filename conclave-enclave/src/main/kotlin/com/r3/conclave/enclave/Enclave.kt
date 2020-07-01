@@ -42,7 +42,8 @@ abstract class Enclave {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
 
-    // TODO Persistence
+    // The signing key pair are assigned with the same value retrieved from getDefaultKey.
+    // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
     // This is only initialised if the enclave implements EnclaveCall
     private var enclaveCallHandler: EnclaveCallHandler? = null

@@ -243,8 +243,8 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_plaintextSiz
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sealData
         (JNIEnv* jniEnv, jobject,
          jbyteArray output, jint outputOffset, jint outputSize,
-         jbyteArray authenticatedData, jint authenticatedDataOffset, jint authenticatedDataSize,
-         jbyteArray plaintext, jint plaintextOffset, jint plaintextSize) {
+         jbyteArray plaintext, jint plaintextOffset, jint plaintextSize,
+         jbyteArray authenticatedData, jint authenticatedDataOffset, jint authenticatedDataSize) {
 
     if (!validateSealDataArgs(jniEnv, authenticatedData, authenticatedDataOffset, authenticatedDataSize,
                               plaintext, plaintextOffset, plaintextSize, output, outputOffset,
@@ -293,9 +293,9 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sealData
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
         (JNIEnv* jniEnv, jobject,
-         jbyteArray sealedBlob, jint sealedBlobOffset, jint sealedBlobSize,
-         jbyteArray dataOut, jint dataOutOffset, jint dataOutSize,
-         jbyteArray authenticatedDataOut, jint authenticatedDataOutOffset, jint authenticatedDataOutSize) {
+         jbyteArray sealedBlob, jint sealedBlobOffset, jint sealedBlobLength,
+         jbyteArray dataOut, jint dataOutOffset, jint dataOutLength,
+         jbyteArray authenticatedDataOut, jint authenticatedDataOutOffset, jint authenticatedDataOutLength) {
 
     jbyte* jbSealedBlob = sealedBlob ? jniEnv->GetByteArrayElements(sealedBlob, nullptr) : nullptr;
 
@@ -307,9 +307,9 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
         return;
     }
 
-    auto uiSealedBlobSize = static_cast<uint32_t>(sealedBlobSize);
+    auto uiSealedBlobLength = static_cast<uint32_t>(sealedBlobLength);
 
-    if ((authenticatedDataOutDataLen + decryptDataLen) > uiSealedBlobSize) {
+    if ((authenticatedDataOutDataLen + decryptDataLen) > uiSealedBlobLength) {
         raiseException(jniEnv, getErrorMessage(SGX_ERROR_INVALID_PARAMETER));
         return;
     }
@@ -319,21 +319,24 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
         std::vector <uint8_t> deData(decryptDataLen);
 
         auto res = sgx_unseal_data(reinterpret_cast<sgx_sealed_data_t*>(jbSealedBlob + sealedBlobOffset),
-                                   &deAuthenticatedData[0], &authenticatedDataOutDataLen, &deData[0], &decryptDataLen);
+                                   authenticatedDataOutDataLen ? &deAuthenticatedData[0] : nullptr, authenticatedDataOutDataLen ? &authenticatedDataOutDataLen : nullptr, &deData[0], &decryptDataLen);
         if (res != SGX_SUCCESS) {
             raiseException(jniEnv, getErrorMessage(res));
             return;
         }
 
-        JniPtr<uint8_t> jpAuthenticatedDataOut(jniEnv, authenticatedDataOut);
-        memcpy_s(jpAuthenticatedDataOut.ptr + authenticatedDataOutOffset, authenticatedDataOutSize,
-                 &deAuthenticatedData[0], deAuthenticatedData.size());
+        if (authenticatedDataOutLength) {
+            JniPtr<uint8_t> jpAuthenticatedDataOut(jniEnv, authenticatedDataOut);
+            memcpy_s(jpAuthenticatedDataOut.ptr + authenticatedDataOutOffset, authenticatedDataOutLength,
+                     &deAuthenticatedData[0], deAuthenticatedData.size());
+            // to write back to the jvm
+            jpAuthenticatedDataOut.releaseMode = 0;
+        }
 
         JniPtr<uint8_t> jpDataOut(jniEnv, dataOut);
-        memcpy_s(jpDataOut.ptr + dataOutOffset, dataOutSize, &deData[0], deData.size());
+        memcpy_s(jpDataOut.ptr + dataOutOffset, dataOutLength, &deData[0], deData.size());
 
         // to write back to the jvm
-        jpAuthenticatedDataOut.releaseMode = 0;
         jpDataOut.releaseMode              = 0;
     } catch (std::exception &e) {
         raiseException(jniEnv, e.what());
@@ -342,11 +345,11 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sgxKey
         (JNIEnv* jniEnv, jobject,
-         jint keyType, jint keyPolicy, jboolean cpuSvn, jbyteArray keyOut, jint keyOutOffset, jint keyOutSize) {
+         jint keyType, jint keyPolicy, jbyteArray keyOut, jint keyOutOffset, jint keyOutSize) {
 
     const auto ui16KeyType      = static_cast<uint16_t>(keyType);
     const auto ui16KeyPolicy    = static_cast<uint16_t>(keyPolicy);
-    const auto ui32KeyOutSize = static_cast<uint32_t>(keyOutSize);
+    const auto ui32KeyOutSize   = static_cast<uint32_t>(keyOutSize);
     const auto ui32KeyOutOffset = static_cast<uint32_t>(keyOutOffset);
 
     if (ui16KeyType > SGX_KEYSELECT_SEAL) {
@@ -369,22 +372,6 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sgxKey
     }
 
     sgx_key_request_t req{};
-
-    if (cpuSvn) {
-        sgx_report_t report;
-        auto ret = sgx_create_report(
-                nullptr,
-                nullptr,
-                &report
-        );
-
-        if (ret != SGX_SUCCESS) {
-            raiseException(jniEnv, getErrorMessage(ret));
-            return;
-        }
-
-        memcpy_s(&req.cpu_svn, sizeof(req.cpu_svn), &report.body.cpu_svn, sizeof(report.body.cpu_svn));
-    }
 
     req.key_name    = ui16KeyType;
     req.key_policy  = ui16KeyPolicy;

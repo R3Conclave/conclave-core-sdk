@@ -90,23 +90,25 @@ interface EnclaveEnvironment {
     @JvmDefault
     fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope {
         require(sealedBlob.isNotEmpty())
+        val plaintext = ByteArray(plaintextSizeFromSealedData(sealedBlob))
+
         val authenticatedDataSize =  authenticatedDataSize(sealedBlob)
-        val plaintextAndEnvelope = PlaintextAndEnvelope(
-                OpaqueBytes(ByteArray(plaintextSizeFromSealedData(sealedBlob))),
-                if (authenticatedDataSize > 0) OpaqueBytes(ByteArray(authenticatedDataSize)) else null
-        )
+        val authenticatedData: ByteArray? = if (authenticatedDataSize > 0) ByteArray(authenticatedDataSize)
+        else null
+
         Native.unsealData(
                 sealedBlob = sealedBlob,
                 sealedBlobOffset = 0,
                 sealedBlobLength = sealedBlob.size,
-                dataOut = plaintextAndEnvelope.plaintext.bytes,
+                dataOut = plaintext,
                 dataOutOffset = 0,
-                dataOutLength = plaintextAndEnvelope.plaintext.size,
-                authenticatedDataOut = plaintextAndEnvelope.authenticatedData?.bytes,
+                dataOutLength = plaintext.size,
+                authenticatedDataOut = authenticatedData,
                 authenticatedDataOutOffset = 0,
-                authenticatedDataOutLength = plaintextAndEnvelope.authenticatedData?.size ?: 0
+                authenticatedDataOutLength = authenticatedData?.size ?: 0
         )
-        return plaintextAndEnvelope
+
+        return PlaintextAndEnvelope(OpaqueBytes(plaintext), authenticatedData?.let(::OpaqueBytes))
     }
 
     /** @see Native.authenticatedDataSize */
@@ -124,20 +126,18 @@ interface EnclaveEnvironment {
     }
 
     /**
-     * Returns a 128 bit key provided by Intel's SGX hardware with default values for `keyType=SGX_KEYSELECT_SEAL`
-     *  and `keyPolicy="MRSIGNER or MRENCLAVE"` and use of CPU derivation.
+     * Returns a 128 bit key provided by Intel's SGX hardware with default values for `keyType=KeyType.SEAL`
+     *  and `useSigner=true`.
      * @param keyType type of key used for key derivation (check `enum class KeyType` for possible values).
-     * @param useSigner true = use the enclave's SIGNER for key derivation, false = use the enclave MEASUREMENT for key derivation.
-     * @param cpuSvn use of CPU for key derivation.
+     * @param useSigner true = use enclave's MRSIGNER, false = use enclave's MRENCLAVE for key derivation.
      * @return 128 bit key.
      */
     @JvmDefault
-    fun defaultSealingKey(keyType: KeyType = KeyType.SEAL, useSigner: Boolean = true, cpuSvn: Boolean = true): ByteArray {
+    fun defaultSealingKey(keyType: KeyType = KeyType.SEAL, useSigner: Boolean = true): ByteArray {
         return ByteArray(16).also {
             Native.sgxKey(
                     keyType = keyType.value,
                     keyPolicy = if (useSigner) KeyPolicy.MRSIGNER.value else KeyPolicy.MRENCLAVE.value,
-                    cpuSvn = cpuSvn,
                     keyOut = it,
                     keyOutOffset = 0,
                     keyOutLength = it.size

@@ -35,7 +35,7 @@ class MockEnclaveEnvironment(
         System.arraycopy(bytes, 0, output, offset, length)
     }
 
-    override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean, cpuSvn: Boolean): ByteArray {
+    override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean): ByteArray {
         return ByteArray(16).also { randomBytes(it, 0, it.size) }
     }
 }
