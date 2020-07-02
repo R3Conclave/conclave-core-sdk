@@ -9,6 +9,10 @@ import com.r3.conclave.enclave.Enclave.EnclaveCallHandler.State.Response
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.InternalEnclave
+import com.r3.conclave.mail.EnclaveMail
+import com.r3.conclave.utilities.internal.getBoolean
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.putBoolean
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.MessageDigest

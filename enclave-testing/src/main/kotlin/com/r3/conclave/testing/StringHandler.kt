@@ -1,6 +1,6 @@
 package com.r3.conclave.testing
 
-import com.r3.conclave.common.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import java.nio.ByteBuffer

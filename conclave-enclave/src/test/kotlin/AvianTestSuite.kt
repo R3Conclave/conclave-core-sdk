@@ -1,6 +1,6 @@
 import avian.test.avian.OcallReadResourceBytes
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.internal.readFully
+import com.r3.conclave.utilities.internal.readFully
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves

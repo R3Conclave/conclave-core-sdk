@@ -1,5 +1,7 @@
 # Architecture overview
 
+## Primary entities
+
 There are three entities in an application that uses Conclave:
 
 1. Enclaves
@@ -43,19 +45,19 @@ the data as it's loaded or saved.
 
 ## Remote attestation
 
-To use an enclave clients need to know the network address where the host process for an enclave instance is
+To use an enclave, clients need to know the network address where the host process for an enclave instance is
 running so they can send it messages, and they also need to obtain an `EnclaveInstanceInfo` object from the host.
 This could be downloaded on demand from the host, or it could be published somewhere. This object encapsulates a
-_remote attestation_ from the host. They test the `EnclaveInstanceInfo` against a set of constraints, depending on
+_remote attestation_. The client tests the `EnclaveInstanceInfo` against a set of constraints, depending on
 how flexible they want to be about software upgrades to the enclave. Constraints are represented by an
 [`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) object, which can be read from/written to
 a small domain specific language suitable for embedding in config files, command line options and so on. A
 constraint may specify that a specific set of code hashes is required i.e. every version is whitelisted and no
 upgrade is possible until the constraint is adjusted. Or, it may specify a set of allowed signing keys, enabling
-enclave authors to release new versions. In that scenario the enclave creator is trusted but the entity hosting the
-enclave instance may not be.
+enclave authors to release new versions whenever they want. In that scenario the enclave creator is trusted, 
+but the entity hosting the enclave instance may not be.
 
-When they're happy they can create encrypted messages using the key in the `EnclaveInstanceInfo`. By sending and
+When they're happy, they create encrypted messages using the key in the `EnclaveInstanceInfo`. By sending and
 receiving such messages to the host (and from there to the enclave), communication is established. See the [Mail
 ](#mail) section below for further discussion of this.
 
@@ -129,45 +131,14 @@ through the host.
 
 Communicating with an enclave requires sending and receiving encrypted and authenticated messages. One possible approach
 is to embed a TLS stack into the enclave and use something like HTTPS + REST. But this technique has some problems
-and limitations that will resolved in future releases via a new "Mail API".
+and limitations that will resolved in future releases via a new "Mail API". Mail is a high level API around standalone
+encrypted messages - or you can think of them as small encrypted files, if it helps. You can learn more about the
+reasons for this design choice in the article [TLS/SSL vs Mail](tls-vs-mail.md).
 
 !!! notice
 
     Mail is not implemented in the current release of Conclave. This section is provisional.
 
-### Messages vs streams
-
-There are three main ways for networked programs to communicate: streams, messages and RPCs.
-
-Multi-party computations all involve the transmission of relatively small messages, often without needing any
-immediate reply. For instance, over the course of a day parties may submit a small data structure when a human gets
-around to it, and get the results back hours later when a deadline or threshold is reached. In other cases
-submission of data to an enclave may be asynchronous and should not block a business process in case of outage.
-These requirements are not a good fit for stream-oriented connections that (when on top of TCP) require app
-developers to do their own framing, can break due to NAT boxes timing them out, IP address changes, passing through
-one-way firewalls, require high-availability servers with load balancing, require databases for stored state and so on.
-Many businesses have sophisticated infrastructure for message routing and persistence between firms already in place.
-
-Enclaves doing multi-party computations may often wish to process a collection of messages all at once. For instance all messages submitted to
-a shared calculation, or a run of messages sent by a client for aggregation. Buffering messages and storing them to
-disk is not security sensitive and doesn't need to be remotely attested, which implies the host should be able to
-take care of this on its own. Putting a normal serving stack inside the enclave increases its size significantly, which
-in turn increases audit costs and the risk of security vulnerabilities (see "[Small is beautiful](enclaves.md#small-is-beautiful)").
-The more the host can take care of by itself the better.
-
-With a stream or RPC oriented approach the enclave would be expected to respond to bytes from a client more or less
-immediately, meaning it has to be always running and would have to persist uploaded data. But persistence in
-enclaves is tricky due to the existence of Memento attacks (see "[Handling time and state](enclaves.md#handling-time-and-state)").
-
-Additionally, RPCs can be hard to integrate with fully reliable systems that can tolerate restarts at any moment.
-Because server restarts break connections, in a loosely coupled multi-party system connection-oriented protocols
-require expensive HA load balancing to ensure users aren't often exposed to errors caused by planned restarts. Even
-then it isn't possible to eliminate such errors entirely, just reduce their impact.
-
-All this suggests the primary paradigm exposed to enclaves should be messages. The host will take care of
-delivering messages and providing atomic, transactional semantics over them, so many kinds of enclave won't need an
-encrypted database at all. The untrusted host can also take on the significant burden of moving data around,
-storing it to disk, sorting it, applying backpressure, exposing to the admin if there are backlogs etc.
 
 ## Encrypted, authenticated and transactional messages
 

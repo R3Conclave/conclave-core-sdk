@@ -3,10 +3,10 @@ package com.r3.conclave.host
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.common.internal.dataStream
-import com.r3.conclave.common.internal.readIntLengthPrefixBytes
-import com.r3.conclave.common.internal.writeData
-import com.r3.conclave.common.internal.writeIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.dataStream
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves

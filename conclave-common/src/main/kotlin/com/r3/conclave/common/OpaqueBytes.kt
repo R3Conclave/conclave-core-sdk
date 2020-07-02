@@ -1,7 +1,7 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.parseHex
-import com.r3.conclave.common.internal.toHexString
+import com.r3.conclave.utilities.internal.parseHex
+import com.r3.conclave.utilities.internal.toHexString
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer

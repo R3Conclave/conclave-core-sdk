@@ -1,8 +1,8 @@
 package com.r3.conclave.common.internal.handler
 
 import com.r3.conclave.common.internal.SerializeException
-import com.r3.conclave.common.internal.getBytes
-import com.r3.conclave.common.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.getBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 

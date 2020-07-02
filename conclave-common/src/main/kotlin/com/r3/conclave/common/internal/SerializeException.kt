@@ -1,5 +1,6 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.utilities.internal.*
 import java.lang.reflect.Constructor
 
 object SerializeException {

@@ -1,5 +1,6 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.utilities.internal.getBytes
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

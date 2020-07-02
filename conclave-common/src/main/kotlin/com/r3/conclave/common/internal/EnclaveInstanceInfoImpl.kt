@@ -15,6 +15,8 @@ import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.QuoteStatus.*
+import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.security.PublicKey
 import java.security.Signature
 

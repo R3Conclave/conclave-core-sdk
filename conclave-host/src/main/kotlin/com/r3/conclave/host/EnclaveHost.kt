@@ -12,6 +12,9 @@ import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
 import com.r3.conclave.host.EnclaveHost.EnclaveCallHandler.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
+import com.r3.conclave.utilities.internal.getBoolean
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.putBoolean
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -124,18 +127,18 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         /**
         * Checks to see if the platform supports hardware based enclaves.
         *
-        * This method checks to see if the CPU and the BIOS are capable of supporting enclaves and 
+        * This method checks to see if the CPU and the BIOS are capable of supporting enclaves and
         * whether support has been enabled.
         *
         * If enclaves are supported but not enabled some platforms allow support to be enabled via a software
-        * call. This method can optionally be used to attempt to enable support on the platform. 
+        * call. This method can optionally be used to attempt to enable support on the platform.
         * Enabling enclave support via software may require the application calling this method to
         * be started with root privileges.
         *
-        * @param enableSupport Set to true to attempt to enable enclave support on the platform if support is 
+        * @param enableSupport Set to true to attempt to enable enclave support on the platform if support is
         * currently disabled.
         *
-        * @throws EnclaveLoadException if enclave support is not available on the platform. The exception message 
+        * @throws EnclaveLoadException if enclave support is not available on the platform. The exception message
         * gives a detailed reason why enclaves are not supported.
         */
         @JvmStatic

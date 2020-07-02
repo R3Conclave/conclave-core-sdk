@@ -2,6 +2,7 @@ package com.r3.conclave.common
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.utilities.internal.*
 import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.CertificateFactory

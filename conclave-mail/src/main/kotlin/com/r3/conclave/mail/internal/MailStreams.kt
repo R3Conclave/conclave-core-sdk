@@ -223,10 +223,15 @@ internal open class MailPrologueInputStream(input: InputStream) : FilterInputStr
 
     internal class Prologue(val protocolName: String, val header: ByteArray, val extensions: ByteArray, val raw: ByteArray)
 
-    // We use lazy here because it's possible for a caller to read the prologue without calling read(), using
-    // headerBytes. Because the prologue is accessed on first read(), the lazyness ensures that if the user
-    // reads some bytes from the stream and then decides they want to access the header that works properly.
+    /**
+     * Access to the prologue data, without performing any authentication checks. To verify the prologue wasn't
+     * tampered with you must complete the Noise handshake.
+     */
     protected val prologue: Prologue by lazy {
+        // We use lazy here because it's possible for a caller to read the prologue without calling read(), using
+        // headerBytes. Because the prologue is accessed on first read(), the lazyness ensures that if the user
+        // reads some bytes from the stream and then decides they want to access the header that works properly.
+        //
         // See computePrologue for the format.
         input.mark(63356)
         val protocolName = readProtocolName()

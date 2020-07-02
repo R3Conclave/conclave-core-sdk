@@ -1,7 +1,7 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.getBytes
-import com.r3.conclave.common.internal.parseHex
+import com.r3.conclave.utilities.internal.getBytes
+import com.r3.conclave.utilities.internal.parseHex
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.security.MessageDigest

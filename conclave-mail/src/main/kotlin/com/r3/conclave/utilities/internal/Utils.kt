@@ -1,4 +1,4 @@
-package com.r3.conclave.common.internal
+package com.r3.conclave.utilities.internal
 
 import java.io.*
 import java.nio.ByteBuffer

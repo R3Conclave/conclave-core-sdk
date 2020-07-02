@@ -13,6 +13,7 @@ import com.r3.conclave.host.internal.EpidAttestationHostHandler
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.host.internal.NativeEnclaveHandle
 import com.r3.conclave.testing.BytesRecordingHandler
+import com.r3.conclave.utilities.internal.getBytes
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach

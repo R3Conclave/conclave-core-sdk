@@ -1,5 +1,7 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.utilities.internal.nullableWrite
+import com.r3.conclave.utilities.internal.writeData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

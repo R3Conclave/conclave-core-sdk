@@ -11,11 +11,13 @@ nav:
   - Welcome: index.md
   - Enclaves: enclaves.md
   - Development:
-    - Architecture: architecture.md
+    - Conclave architecture:
+      - Architecture: architecture.md
+      - TLS vs Mail: tls-vs-mail.md
+      - Security discussion: security.md
     - Tutorial:
       - Compiling and running: tutorial.md
       - Writing hello world: writing-hello-world.md
-    - Security: security.md
     - API: api/index.html
   - Operations:
     - Server deployment:

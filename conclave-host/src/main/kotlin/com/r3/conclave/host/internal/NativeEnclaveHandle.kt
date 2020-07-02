@@ -1,7 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.LeafSender
