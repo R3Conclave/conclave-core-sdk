@@ -4,21 +4,24 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
+import com.r3.conclave.utilities.internal.getBoolean
+import com.r3.conclave.utilities.internal.getBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.putBoolean
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
 /**
  * A [Handler]/[Sender] pair that sends/receives SealUnseal.
- * [seal] true = seal, false = unseal.
  */
 abstract class SealUnsealHandler : Handler<SealUnsealSender> {
     /*
-     Should be overridden by the Enclave or Recording Handler and used within its context.
+     * Should be overridden by the Enclave or Recording Handler and used within its context.
      */
     abstract fun onReceiveUnsealedData(connection: SealUnsealSender, plaintextAndEnvelope: PlaintextAndEnvelope)
 
     /*
-     Should be overridden by the Enclave or Recording Handler and used within its context.
+     * Should be overridden by the Enclave or Recording Handler and used within its context.
      */
     abstract fun onReceiveSealedData(connection: SealUnsealSender, sealedData: ByteArray)
 

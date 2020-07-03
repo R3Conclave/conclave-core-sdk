@@ -11,6 +11,7 @@ import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeEnclaveHandle
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.BeforeEach
