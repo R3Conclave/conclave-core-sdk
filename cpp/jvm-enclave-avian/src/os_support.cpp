@@ -379,12 +379,15 @@ void tzset() {
 }
 
 long sysconf(int name) {
-    if (name == _SC_NPROCESSORS_ONLN) {
-        return 1;  // 1 active processor.
-    } else {
-        printf("STUB: sysconf(%d)\n", name);
-        return -1;
+    switch (name) {
+        case _SC_NPROCESSORS_ONLN:
+            return 1;  // 1 active processor.
+        case _SC_PAGESIZE:
+            return 4096;
+        default:
+            printf("STUB: sysconf(%d)\n", name);
     }
+    return -1;
 }
 
 char *realpath(const char *path, char *resolved_path) {

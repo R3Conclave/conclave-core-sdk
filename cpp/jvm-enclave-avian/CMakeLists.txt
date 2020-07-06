@@ -101,6 +101,7 @@ add_executable(jvm_enclave_avian_partial
         src/avian/signal.cpp
         src/singleton_jvm.cpp
         src/debug_utils.cpp
+        src/edl.cpp
         ${BOOT_JAR_O_PATH}
         ${JAVAHOME_JAR_O_PATH}
         $<TARGET_OBJECTS:avian_os_support>)

@@ -1,0 +1,64 @@
+plugins {
+    id 'java'
+}
+
+def graalMajorMinorVersion = graal_version.substring(0, graal_version.length() - 2)
+task cloneAndPatchRepository(type: Exec) {
+    inputs.file("clone.sh")
+    commandLine "./clone.sh", "$graalMajorMinorVersion"
+    outputs.dir("${project.buildDir}/graal")
+}
+
+/**
+ * From the instructions on the README.md at https://github.com/oracle/graal/tree/vm-20.1.0/vm
+ */
+task buildGraal(type: Exec) {
+    dependsOn cloneAndPatchRepository
+    environment['JAVA_HOME'] = System.getenv('JVMCI_HOME')
+
+    workingDir "${project.buildDir}/graal/vm"
+
+    commandLine "${System.getenv('MX_HOME')}/mx", '--disable-polyglot', '--disable-libpolyglot',
+            '--dynamicimports', '/substratevm,/tools', 'build'
+}
+
+def outputDir = "${project.buildDir}/distributions"
+def outputFile = "graalvm.tar"
+
+task getGraalBuildFolder(type: Exec) {
+    dependsOn buildGraal
+    def graalVMLatestDir = "${project.buildDir}/graal/vm/latest_graalvm/"
+    inputs.dir(graalVMLatestDir)
+    standardOutput = new ByteArrayOutputStream()
+    commandLine 'ls', "$graalVMLatestDir"
+    doLast {
+        ext.graalVMDir = graalVMLatestDir + standardOutput.toString().replaceAll('\\r', '').replaceAll('\\n', '')
+    }
+}
+
+/**
+ * The command line util `tar` is being used rather Gradle's Tar task due to
+ * https://github.com/gradle/gradle/issues/3982, which describes symlinks being followed
+ * rather than preserved. Graal fails to run with the resolved symlinks.
+ */
+task tarGraal(type: Exec) {
+    dependsOn getGraalBuildFolder
+
+    // Set the input to the folder in which the build is generated. We actually want to tar
+    // the only subdirectory from this.
+    def graalVMLatestDir = "${project.buildDir}/graal/vm/latest_graalvm/"
+    inputs.dir(graalVMLatestDir)
+    doFirst {
+        commandLine 'tar', 'cf', "$outputDir/$outputFile", '-C', getGraalBuildFolder.graalVMDir, '.'
+    }
+    outputs.file("$outputDir/$outputFile")
+}
+
+jar {
+    dependsOn tarGraal
+    into("com/r3/conclave/graalvm") {
+        from(outputDir) {
+            include outputFile
+        }
+    }
+}

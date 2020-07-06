@@ -19,10 +19,20 @@ export GRADLE_OPTS="-Dorg.gradle.workers.max=$(nproc) --stacktrace"
 
 mkdir -p /home/$(id -un)/.gradle
 mkdir -p /home/$(id -un)/.ccache
+mkdir -p /home/$(id -un)/.mx
 
 SGX_HARDWARE_FLAGS=""
 if [ -e /dev/isgx ] && [ -d /var/run/aesmd ]; then
     SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
+fi
+
+# Part of Graal build process involves cloning and running git commands.
+# TeamCity is configured to use mirrors (https://www.jetbrains.com/help/teamcity/git.html#Git-AgentSettings),
+# and for the git commands to work properly, the container needs access
+# the agent home directory.
+AGENT_HOME_DIR_FLAGS=""
+if [ -d ${AGENT_HOME_DIR:-} ]; then
+    AGENT_HOME_DIR_FLAGS="-v ${AGENT_HOME_DIR}:/${AGENT_HOME_DIR}"
 fi
 
 function runDocker() {
@@ -33,10 +43,12 @@ function runDocker() {
        --group-add $(cut -d: -f3 < <(getent group docker)) \
        --ulimit core=512000000 \
        -v /home/$(id -un)/.gradle:/gradle \
+       -v /home/$(id -un)/.mx:/home/.mx \
        -v /home/$(id -un)/.ccache:/home/.ccache \
        -v ${CODE_HOST_DIR}:${CODE_DOCKER_DIR} \
        -v /var/run/docker.sock:/var/run/docker.sock \
        -v ${HOST_CORE_DUMP_DIR}:${HOST_CORE_DUMP_DIR} \
+       $AGENT_HOME_DIR_FLAGS \
        ${SGX_HARDWARE_FLAGS} \
        -e PROJECT_VERSION=${PROJECT_VERSION:-} \
        -e GRADLE_USER_HOME=/gradle \

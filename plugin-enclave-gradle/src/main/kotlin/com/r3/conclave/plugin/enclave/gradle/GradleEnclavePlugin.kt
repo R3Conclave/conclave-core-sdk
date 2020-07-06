@@ -14,10 +14,11 @@ import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
-import java.text.SimpleDateFormat
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
@@ -30,6 +31,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.logger.info("Applying Conclave gradle plugin for version $sdkVersion")
 
         val baseDirectory = target.buildDir.toPath().resolve("conclave")
+        val conclaveDependenciesDirectory = "$baseDirectory/com/r3/conclave"
 
         // Allow users to specify the enclave dependency like this: implementation "com.r3.conclave:conclave-enclave"
         autoconfigureDependencyVersions(target, sdkVersion)
@@ -56,6 +58,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.archiveClassifier.set("shadow")
         }
 
+        val binutilsDirectory = "$conclaveDependenciesDirectory/binutils"
+        val signToolDirectory = "$conclaveDependenciesDirectory/sign-tool"
         val copySgxToolsTask = target.createTask<Copy>("copySgxTools") { task ->
             task.group = CONCLAVE_GROUP
             task.fromDependencies(
@@ -65,13 +69,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.into(baseDirectory)
         }
 
-        val sgxToolsDirectory = "${copySgxToolsTask.destinationDir}/com/r3/conclave"
-        val linkerToolFile = target.file("$sgxToolsDirectory/binutils/${getExecutable("ld")}")
-        val signToolFile = target.file("$sgxToolsDirectory/sign-tool/${getExecutable("sgx_sign")}")
-        val opensslToolFile = target.file("$sgxToolsDirectory/binutils/${getExecutable("opensslw")}")
+        val linkerToolFile = target.file("$binutilsDirectory/${getExecutable("ld")}")
+        val signToolFile = target.file("$signToolDirectory/${getExecutable("sgx_sign")}")
+        val opensslToolFile = target.file("$binutilsDirectory/${getExecutable("opensslw")}")
 
         val buildJarObjectTask = target.createTask<BuildJarObject>("buildJarObject") { task ->
             task.dependsOn(copySgxToolsTask)
+            task.inputs.files(binutilsDirectory, signToolDirectory)
             task.inputLd.set(linkerToolFile)
             task.inputJar.set(shadowJarTask.archiveFile)
             task.outputJarObject.set(baseDirectory.resolve("app-jar").resolve("app.jar.o").toFile())
@@ -84,8 +88,38 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         // Dummy key
         val createDummyKeyTask = target.createTask<GenerateDummyMrsignerKey>("createDummyKey") { task ->
             task.dependsOn(copySgxToolsTask)
+            task.inputs.files(binutilsDirectory, signToolDirectory)
             task.opensslTool.set(opensslToolFile)
             task.outputKey.set(baseDirectory.resolve("dummy_key.pem").toFile())
+        }
+
+        val linkerScriptFile = baseDirectory.resolve("Enclave.lds")
+
+        val generateReflectionConfigTask = target.createTask<GenerateReflectionConfig>("generateReflectionConfig") { task ->
+            task.dependsOn(enclaveClassNameTask)
+            task.enclaveClass.set(enclaveClassNameTask.outputEnclaveClassName)
+            task.reflectionConfig.set(baseDirectory.resolve("reflectconfig").toFile())
+        }
+
+        val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
+            task.group = CONCLAVE_GROUP
+            task.fromDependencies(
+                    "com.r3.conclave:graal:$sdkVersion"
+            )
+            task.into(baseDirectory)
+        }
+
+        val graalVMPath = "$baseDirectory/com/r3/conclave/graalvm"
+        val graalVMDistributionPath = "$graalVMPath/distribution"
+        val untarGraalVM = target.createTask<Exec>("untarGraalVM") { task ->
+            task.group = CONCLAVE_GROUP
+            task.dependsOn(copyGraalVM)
+            Files.createDirectories(Paths.get(graalVMDistributionPath))
+            val graalVMTarPath = "$graalVMPath/graalvm.tar"
+            task.inputs.file(graalVMTarPath)
+            task.outputs.dir(graalVMDistributionPath)
+            task.workingDir(graalVMDistributionPath)
+            task.commandLine("tar", "xf", graalVMTarPath)
         }
 
         for (type in BuildType.values()) {
@@ -117,24 +151,79 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.into(baseDirectory)
             }
 
-            val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
-                task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask)
+            val substrateDependenciesPath = "$conclaveDependenciesDirectory/substratevm/$type"
+            val sgxDirectory = "$conclaveDependenciesDirectory/sgx/$type"
+            val copySubstrateDependenciesTask = target.createTask<Copy>("copySubstrateDependencies$type") { task ->
+                task.group = CONCLAVE_GROUP
+                task.fromDependencies(
+                        "com.r3.conclave:native-substratevm-$typeLowerCase:$sdkVersion",
+                        "com.r3.conclave:linux-sgx-$typeLowerCase:$sdkVersion"
+                )
+                task.into(baseDirectory)
+            }
+
+            val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
+
+            val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile) { task ->
+                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask)
+                task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath)
+                task.nativeImage.set(target.file("$graalVMDistributionPath/bin/native-image"))
+                task.jarFile.set(shadowJarTask.archiveFile)
+                task.cLibraryPaths.from("$sgxDirectory/tlibc",
+                        "$sgxDirectory/libcxx")
+                task.libraryPath.set(target.file(sgxDirectory))
+                task.libraries.from(
+                        "$substrateDependenciesPath/libvmenclavelayer.a",
+                        "$substrateDependenciesPath/libsubstratevm.a",
+                        "$substrateDependenciesPath/libjvm_host_enclave_common_enclave.a",
+                        "$substrateDependenciesPath/libjvm_enclave_edl.a",
+                        "$substrateDependenciesPath/libz.a"
+                )
+                // Libraries in this section are linked with the --whole-archive option which means that
+                // nothing is discarded by the linker. This is required if a static library has any constructors
+                // or static variables that need to be initialised which would otherwise be discarded by 
+                // the linker.
+                task.librariesWholeArchive.from(
+                        "$substrateDependenciesPath/libjvm_enclave_common.a"
+                )
+                task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
+                task.maxStackSize.set(conclaveExtension.maxStackSize)
+                task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+                task.outputEnclave.set(unsignedEnclaveFile)
+            }
+
+            val buildUnsignedAvianEnclaveTask = target.createTask<BuildUnsignedAvianEnclave>("buildUnsignedAvianEnclave$type") { task ->
+                task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask, buildJarObjectTask)
+                val partialEnclavefile = "${copyPartialEnclaveTask.destinationDir}/com/r3/conclave/partial-enclave/$type/jvm_enclave_avian"
+                task.inputs.files(binutilsDirectory, partialEnclavefile, buildJarObjectTask.outputJarObject)
                 task.inputLd.set(linkerToolFile)
-                task.inputEnclaveObject.set(target.file("${copyPartialEnclaveTask.destinationDir}/com/r3/conclave/partial-enclave/$type/jvm_enclave_avian"))
+                task.inputEnclaveObject.set(target.file(partialEnclavefile))
                 task.inputJarObject.set(buildJarObjectTask.outputJarObject)
-                task.outputEnclave.set(enclaveDirectory.resolve("enclave.so").toFile())
+                task.outputEnclave.set(unsignedEnclaveFile)
                 task.stripped.set(type == BuildType.Release)
+            }
+
+            val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type",
+                    buildUnsignedAvianEnclaveTask,
+                    buildUnsignedGraalEnclaveTask) { task ->
+                task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask, buildJarObjectTask,
+                        untarGraalVM, copySubstrateDependenciesTask, generateReflectionConfigTask)
+                task.inputs.dir(substrateDependenciesPath)
+                task.runtime.set(conclaveExtension.runtime)
+                task.outputEnclave.set(unsignedEnclaveFile)
             }
 
             val generateEnclaveConfigTask = target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type) { task ->
                 task.productID.set(conclaveExtension.productID)
                 task.revocationLevel.set(conclaveExtension.revocationLevel)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+                task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
             }
 
             val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type) { task ->
                 task.dependsOn(copySgxToolsTask)
+                task.inputs.files(signToolDirectory, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
@@ -150,6 +239,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type") { task ->
                 task.dependsOn(copySgxToolsTask)
+                task.inputs.files(signToolDirectory, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile, enclaveExtension.signingMaterial)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
@@ -159,6 +249,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type") { task ->
                 task.dependsOn(copySgxToolsTask)
+                /**
+                 * Setting a dependency on a task (at least a `Copy` task) doesn't mean we'll be depending on the task's output.
+                 * Despite the dependency task running when out of date, the dependent task would then be considered up-to-date,
+                 * even when declaring `dependsOn`.
+                 */
+                task.inputs.files(signToolDirectory, generateEnclaveSigningMaterialTask.inputEnclave, generateEnclaveSigningMaterialTask.outputSigningMaterial,
+                        generateEnclaveConfigTask.outputConfigFile, enclaveExtension.mrsignerPublicKey, enclaveExtension.mrsignerSignature)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
                 task.inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
@@ -178,18 +275,21 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
                 task.dependsOn(signingTask)
                 task.inputSignTool.set(signToolFile)
-                task.inputSignedEnclave.set(enclaveExtension.signingType.flatMap {
+                val signedEnclaveFile = enclaveExtension.signingType.flatMap {
                     when (it) {
-                        SigningType.DummyKey    -> signEnclaveWithKeyTask.outputSignedEnclave
-                        SigningType.PrivateKey  -> signEnclaveWithKeyTask.outputSignedEnclave
-                        else                    -> addEnclaveSignatureTask.outputSignedEnclave
+                        SigningType.DummyKey -> signEnclaveWithKeyTask.outputSignedEnclave
+                        SigningType.PrivateKey -> signEnclaveWithKeyTask.outputSignedEnclave
+                        else -> addEnclaveSignatureTask.outputSignedEnclave
                     }
-                })
+                }
+                task.inputSignedEnclave.set(signedEnclaveFile)
+                task.inputs.files(signToolDirectory, signedEnclaveFile)
                 task.outputEnclaveMetadata.set(enclaveDirectory.resolve("metadata.yml").toFile())
             }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->
                 task.dependsOn(generateEnclaveMetadataTask)
+                task.inputs.files(generateEnclaveMetadataTask.inputSignedEnclave)
                 task.outputSignedEnclave.set(generateEnclaveMetadataTask.inputSignedEnclave)
             }
 
@@ -219,7 +319,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private fun getExecutable(name: String): String {
-        return if (System.getProperty("os.name").startsWith("Windows")) "$name.exe" else name
+        return if (System.getProperty("os.name").startsWith("Windows"))
+            "$name.exe"
+        else
+            name
     }
 
     private fun readVersionFromPluginManifest(): String {
@@ -228,6 +331,21 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 .asSequence()
                 .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Version") }
                 .firstOrNull() ?: throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
+    }
+
+    private fun autoconfigureDependencyVersions(target: Project, sdkVersion: String) {
+        target.configurations.all { configuration ->
+            configuration.withDependencies { dependencySet ->
+                dependencySet
+                        .filterIsInstance<ExternalDependency>()
+                        .filter { it.group == "com.r3.conclave" && it.version.isNullOrEmpty() }
+                        .forEach { dep ->
+                            dep.version {
+                                it.require(sdkVersion)
+                            }
+                        }
+            }
+        }
     }
 
     private inline fun <reified T : Task> Project.createTask(name: String, vararg constructorArgs: Any?, configure: (T) -> Unit): T {
@@ -250,20 +368,5 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         from(Callable {
             configuration.map(project::zipTree)
         })
-    }
-
-    private fun autoconfigureDependencyVersions(target: Project, sdkVersion: String) {
-        target.configurations.all { configuration ->
-            configuration.withDependencies { dependencySet ->
-                dependencySet
-                        .filterIsInstance<ExternalDependency>()
-                        .filter { it.group == "com.r3.conclave" && it.version.isNullOrEmpty() }
-                        .forEach { dep ->
-                            dep.version {
-                                it.require(sdkVersion)
-                            }
-                        }
-            }
-        }
     }
 }

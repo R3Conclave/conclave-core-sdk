@@ -22,12 +22,19 @@ task generateEnclaveJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.e
     outputHeader = file("$projectDir/jvm-enclave-common/include/enclave_jni.h")
 }
 
+/*
+ * linux-sgx, native-substratevm and most of the stubs, edl libraries etc,
+ * only need a debug and release versions, however they are being built
+ * as part of the createCmakeBuild task, which builds the 3 flavors.
+ */
 String buildDirectory(type) { return "$buildDir/$type" }
 static String createCmakeTaskName(type) { return "createCmakeBuild$type" }
 static String compileTaskNameEnclave(type) { return "compileEnclave$type" }
 static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
+static String compileTaskNameVmEnclaveLayerLib(type) { return "compileVmEnclaveLayerLib$type" }
+static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
 
 def maxWorkers = properties["org.gradle.workers.max"]
 
@@ -98,6 +105,30 @@ for (type in types) {
         commandLine("/usr/bin/env", "cmake",
                 "--build", buildDirectory(type),
                 "--target", "linux-sgx-ext"
+        )
+    }
+
+    tasks.create(compileTaskNameVmEnclaveLayerLib(type), Exec) {
+        dependsOn(createCmakeTaskName(type))
+
+        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
+        workingDir(buildDirectory(type))
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", buildDirectory(type),
+                "--target", "vmenclavelayer"
+        )
+    }
+
+    tasks.create(compileTaskNameSubstrateVMLib(type), Exec) {
+        dependsOn(createCmakeTaskName(type))
+
+        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
+        workingDir(buildDirectory(type))
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", buildDirectory(type),
+                "--target", "substratevm"
         )
     }
 }

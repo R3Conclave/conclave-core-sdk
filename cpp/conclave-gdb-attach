@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+shopt -s expand_aliases
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SGXJVM_ROOT_PATH=$(dirname $ROOT)
+
+if [ "$*" == "" ]; then
+    echo "Usage: conclave-gdb-attach Classname
+For example:
+    conclave-gdb-attach Sample.Host"
+    exit 1
+fi
+
+PID=$(jps -l | grep $1 | sed -e 's/\s.*$//')
+if [ -z "$PID" ]; then
+    echo "Could not find process for class: $1"
+    exit 1
+fi
+echo "Attaching to process: $PID"
+
+$SGXJVM_ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')" -ex "handle SIGSEGV nostop noprint pass" 

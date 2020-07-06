@@ -1,0 +1,61 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}
+
+test {
+    useJUnitPlatform()
+    dependsOn ':cpp:native-substratevm:native-substratevm-simulation:jar', ':cpp:native-substratevm:native-substratevm-debug:jar', ':cpp:native-substratevm:native-substratevm-release:jar'
+    doFirst {
+        systemProperty 'simulation-jar.path', tasks.getByPath(':cpp:native-substratevm:native-substratevm-simulation:jar').outputs.files.asPath
+        systemProperty 'debug-jar.path', tasks.getByPath(':cpp:native-substratevm:native-substratevm-debug:jar').outputs.files.asPath
+        systemProperty 'release-jar.path', tasks.getByPath(':cpp:native-substratevm:native-substratevm-release:jar').outputs.files.asPath
+    }
+}
+
+def cppBuildDir = project(":cpp").buildDir
+
+subprojects {
+    apply plugin: 'java'
+
+    def type = name.drop("native-substratevm-".size()).capitalize()
+    tasks.getByName("jar") { Jar task ->
+        task.dependsOn(":cpp:compileVmEnclaveLayerLib$type", ":cpp:compileSubstrateVMLib$type", ":cpp:compileEnclave$type")
+        def vmEnclaveLayerBuildDir = "$cppBuildDir/$type/vm-enclave-layer"
+        def substrateVmBuildDir = "$cppBuildDir/$type/substratevm"
+        def jvmEdlBuildDir = "$cppBuildDir/$type/jvm-edl"
+        def jvmCommonBuildDir = "$cppBuildDir/$type/jvm-host-enclave-common"
+        def jvmEnclaveCommonBuildDir = "$cppBuildDir/$type/jvm-enclave-common"
+        def zlibBuildDir = "$cppBuildDir/$type/zlib/zlib-ext-prefix/src/zlib-ext-build"
+
+        task.into "com/r3/conclave/substratevm/$type", {
+            from(vmEnclaveLayerBuildDir) {
+                include "libvmenclavelayer.a"
+            }
+            from(substrateVmBuildDir) {
+                include "libsubstratevm.a"
+            }
+            from(jvmEdlBuildDir) {
+                include "libjvm_enclave_edl.a"
+            }
+            from(jvmCommonBuildDir) {
+                include "libjvm_host_enclave_common_enclave.a"
+            }
+            from(jvmEnclaveCommonBuildDir) {
+                include "libjvm_enclave_common.a"
+            }
+            from (zlibBuildDir) {
+                include "libz.a"
+            }
+        }
+
+    }
+}

@@ -2,8 +2,10 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.r3.conclave.plugin.enclave.gradle.util.GradleRunnerUtils
+import com.r3.conclave.plugin.enclave.gradle.util.GradleRunnerUtils.Companion.gradleRunner
+import com.r3.conclave.plugin.enclave.gradle.util.ProjectUtils
 import org.assertj.core.api.Assertions.assertThat
-import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -11,40 +13,17 @@ import org.junit.jupiter.params.provider.EnumSource
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 class GenerateEnclaveConfigTest {
 
     companion object {
-        private val testGradleUserHome : String = System.getProperty("test.gradle.user.home")
-        private val gradleVersion : String = System.getProperty("gradle.version")
-        private val projectDirectory : Path = Paths.get(GenerateEnclaveConfigTest::class.java.classLoader.getResource("generate-enclave-configuration")!!.toURI())
-        private val xmlMapper = XmlMapper()
-
-        private fun gradleRunner(task: String): GradleRunner {
-            return GradleRunner.create()
-                    .withGradleVersion(gradleVersion)
-                    .withDebug(true)
-                    .withProjectDir(projectDirectory.toFile())
-                    .withArguments(task, "--no-build-cache", "--stacktrace", "--info", "--gradle-user-home", testGradleUserHome)
-        }
+        private val projectDirectory : Path = GradleRunnerUtils.getProjectPath("generate-enclave-configuration")
 
         private fun runAndAssertTask(buildType: BuildType) {
-            val runner = gradleRunner("generateEnclaveConfig${buildType.name}")
+            val runner = gradleRunner("generateEnclaveConfig${buildType.name}", projectDirectory)
             val buildResult = runner.build()
             val task = buildResult.task(":generateEnclaveConfig${buildType.name}")
             assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        }
-
-        private fun loadEnclaveConfigurationFromFile(buildType: BuildType): EnclaveConfiguration {
-            val enclaveConfigurationFile = projectDirectory.resolve("build/conclave/${buildType.name.toLowerCase()}/enclave.xml")
-            return xmlMapper.readValue(enclaveConfigurationFile.toFile(), EnclaveConfiguration::class.java)
-        }
-
-        private fun replaceAndRewriteBuildFile(oldValue: String, newValue: String) {
-            val projectFile = projectDirectory.resolve("build.gradle").toFile()
-            val newProjectFile = projectFile.readText().replace(oldValue, newValue)
-            Files.write(projectFile.toPath(), newProjectFile.toByteArray())
         }
     }
 
@@ -71,7 +50,7 @@ class GenerateEnclaveConfigTest {
 
     @BeforeEach
     fun setupTest() {
-        File("$projectDirectory/.gradle").deleteRecursively()
+        GradleRunnerUtils.clean(projectDirectory)
     }
 
     @EnumSource(BuildType::class)
@@ -79,14 +58,16 @@ class GenerateEnclaveConfigTest {
     fun incrementProductID(buildType: BuildType) {
         runAndAssertTask(buildType)
 
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile(buildType)
+        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
 
         val initialProductID = enclaveConfiguration.productID!!
         val expectedProductId = initialProductID + 1
 
-        replaceAndRewriteBuildFile("productID = $initialProductID", "productID = $expectedProductId")
+        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory,
+                "productID = $initialProductID",
+                "productID = $expectedProductId")
         runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile(buildType)
+        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
         assertThat(updatedEnclaveConfiguration.productID).isEqualTo(expectedProductId)
     }
 
@@ -95,16 +76,16 @@ class GenerateEnclaveConfigTest {
     fun incrementRevocationLevel(buildType: BuildType) {
         runAndAssertTask(buildType)
 
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile(buildType)
+        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
 
         // The value on the file has been incremented by the task
         val initialRevocationLevel = enclaveConfiguration.revocationLevel!! - 1
         val expectedRevocationLevel = initialRevocationLevel + 1
 
-        replaceAndRewriteBuildFile("revocationLevel = $initialRevocationLevel", "revocationLevel = $expectedRevocationLevel")
+        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "revocationLevel = $initialRevocationLevel", "revocationLevel = $expectedRevocationLevel")
 
         runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile(buildType)
+        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
         // The expected value on the file is the incremented value from the closure
         assertThat(updatedEnclaveConfiguration.revocationLevel).isEqualTo(expectedRevocationLevel + 1)
     }
@@ -114,14 +95,30 @@ class GenerateEnclaveConfigTest {
     fun incrementHeapMaxSize(buildType: BuildType) {
         runAndAssertTask(buildType)
 
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile(buildType)
+        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
         val initialMaxHeapSize = enclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)
         val expectedMaxHeapSize = initialMaxHeapSize + 1
 
-        replaceAndRewriteBuildFile("maxHeapSize = \"$initialMaxHeapSize\"", "maxHeapSize = \"$expectedMaxHeapSize\"")
+        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$initialMaxHeapSize\"", "maxHeapSize = \"$expectedMaxHeapSize\"")
 
         runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile(buildType)
+        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
         assertThat(updatedEnclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxHeapSize)
+    }
+
+    @EnumSource(BuildType::class)
+    @ParameterizedTest(name = "{index} => {0}")
+    fun incrementStackMaxSize(buildType: BuildType) {
+        runAndAssertTask(buildType)
+
+        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+        val initialMaxStackSize = enclaveConfiguration.maxStackSize!!.drop(2).toLong(16)
+        val expectedMaxStackSize = initialMaxStackSize + 1
+
+        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$initialMaxStackSize\"", "maxStackSize = \"$expectedMaxStackSize\"")
+
+        runAndAssertTask(buildType)
+        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+        assertThat(updatedEnclaveConfiguration.maxStackSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxStackSize)
     }
 }

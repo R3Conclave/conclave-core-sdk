@@ -23,3 +23,6 @@ add_subdirectory(jvm-enclave-common)
 add_subdirectory(jvm-enclave-avian)
 add_subdirectory(jvm-host)
 add_subdirectory(jvm-host-shared)
+
+add_subdirectory(vm-enclave-layer)
+add_subdirectory(substratevm)

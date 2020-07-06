@@ -51,6 +51,11 @@ jar {
 }
 
 test {
+    // These tests take a long time to run. Only run them if configured to do so
+    // via '-PrunPluginEnclaveGradleTests' being passed to Gradle
+    if (!project.hasProperty('runPluginEnclaveGradleTests')) {
+        exclude '*'
+    }
     // Tell the tests where Gradle's current module cache is.
     // We need the tests to share this module cache to prevent the
     // Gradle Test-Kit from downloading its own copy of Kotlin etc.

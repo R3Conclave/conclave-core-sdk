@@ -108,6 +108,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        ${GROUP_CARDREADER} \
        ${docker_group_add} \
        -v ${HOME}/.gradle:/gradle \
+       -v ${HOME}/.mx:/home/.mx \
        -v ${HOME}/.container:/home \
        -v $CODE_HOST_DIR:$CODE_DOCKER_DIR \
        -v /var/run/docker.sock:/var/run/docker.sock \

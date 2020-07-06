@@ -21,8 +21,16 @@ with application logic. Hosts use a standard JVM like HotSpot.
 operating system process as the host JVM. Because they don't share heaps the host may exchange only byte buffers with
 the enclave. Direct method calls also don't work out of the box: that would require you to add some sort of RPC system
 on top. In this way it's similar to interacting with a server over a network, except the enclave is fully local.
-Enclaves run on a specialised JVM suited for the small enclave environment. In current Conclave versions that JVM is
-called Avian. In future versions we plan to upgrade to SubstrateVM, which will bring various advantages.
+Enclaves code can either run on a specialised Avian JVM suited for the small enclave environment or can be compiled into
+native code using GraalVM Native Image. The difference between the two runtimes is summarised by the table below:
+
+|                          | Avian JVM                  | GraalVM Native Image |
+|--------------------------|----------------------------|----------------------|
+| Execute dynamic JVM code | :heavy_check_mark:         | :heavy_multiplication_x:<sup>*</sup> |
+| Java 8 Support           | :heavy_check_mark:         | :heavy_check_mark: |
+| Java 9+ Support          | :heavy_multiplication_x:   | :heavy_multiplication_x:<sup>*</sup> |
+<sup>* Dynamic JVM code execution and Java 9+ support using GraalVM Native Image is planned for a future release of Conclave.</sup>
+
 
 ![Architecture Diagram](images/arch-diagram.png)
 
@@ -40,8 +48,8 @@ the data as it's loaded or saved.
 
 !!! notice
 
-    Because the enclave JVM isn't the same as a normal HotSpot JVM, you will need to test your enclave code
-    carefully and avoid advanced features that the embedded JVM doesn't support, such as Java Flight Recorder.
+    Because the enclave runtime environment isn't the same as a normal HotSpot JVM, you will need to test your enclave
+    code carefully and avoid advanced features that the embedded JVM doesn't support, such as Java Flight Recorder.
 
 ## Remote attestation
 

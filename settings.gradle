@@ -21,6 +21,14 @@ if (includeNative) {
     include 'cpp:native-sign-tool'
     include 'cpp:native-gdb'
     include 'cpp:native-binutils'
+    include 'cpp:native-substratevm'
+    include 'cpp:native-substratevm:native-substratevm-simulation'
+    include 'cpp:native-substratevm:native-substratevm-debug'
+    include 'cpp:native-substratevm:native-substratevm-release'
+    include 'cpp:linux-sgx'
+    include 'cpp:linux-sgx:linux-sgx-simulation'
+    include 'cpp:linux-sgx:linux-sgx-debug'
+    include 'cpp:linux-sgx:linux-sgx-release'
 }
 
 include 'conclave-mail'
@@ -46,4 +54,4 @@ include 'load-test:load-test-runner'
 
 include 'plugin-enclave-gradle'
 
-
+include 'graal'

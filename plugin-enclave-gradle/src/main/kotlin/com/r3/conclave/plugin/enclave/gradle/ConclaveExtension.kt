@@ -9,9 +9,14 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val productID: Property<Int> = objects.property(Int::class.java)
     val revocationLevel: Property<Int> = objects.property(Int::class.java)
     val maxHeapSize: Property<String> = objects.property(String::class.java).convention("256m")
+    val maxStackSize: Property<String> = objects.property(String::class.java).convention("2m")
     val release: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val debug: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val simulation: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
+    val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.Avian)
+
+    val avian = RuntimeType.Avian
+    val graalvm_native_image = RuntimeType.GraalVMNativeImage
 
     fun release(action: Action<EnclaveExtension>) {
         action.execute(release)

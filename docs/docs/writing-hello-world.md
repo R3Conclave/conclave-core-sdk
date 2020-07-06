@@ -189,14 +189,20 @@ dependencies {
 }
 ```
 
-Specify the enclave's product ID and revocation level:
+Specify the enclave's runtime environment, product ID and revocation level:
 
 ```groovy hl_lines="2"
 conclave {
+    runtime = avian
     productID = 1
     revocationLevel = 0
 }
 ```
+
+The runtime setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
+`graalvm_native_image`. If the setting is omitted then it defaults to `avian`. See
+[Architecture overview](architecture.md) for details on the differences between the two supported runtime
+environments.
 
 The product ID is an arbitrary number that can be used to distinguish between different enclaves produced by the same
 organisation (which may for internal reasons wish to use a single signing key). This value should not typically change.

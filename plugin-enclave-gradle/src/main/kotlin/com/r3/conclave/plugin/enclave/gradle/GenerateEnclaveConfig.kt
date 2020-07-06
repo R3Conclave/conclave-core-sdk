@@ -15,10 +15,23 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
     @get:Input
     val revocationLevel: Property<Int> = objects.property(Int::class.java)
     @get:Input
+    val maxStackSize: Property<String> = objects.property(String::class.java)
+    @get:Input
     val maxHeapSize: Property<String> = objects.property(String::class.java)
 
     @get:OutputFile
     val outputConfigFile: RegularFileProperty = objects.fileProperty()
+
+    companion object {
+        fun getSizeBytes(value: String) : Long {
+            return when {
+                value.endsWith("G", ignoreCase = true) -> value.dropLast(1).toLong() shl 30
+                value.endsWith("M", ignoreCase = true) -> value.dropLast(1).toLong() shl 20
+                value.endsWith("K", ignoreCase = true) -> value.dropLast(1).toLong() shl 10
+                else -> value.toLong()
+            }
+        }
+    }
 
     override fun action() {
         val productID = productID.get()
@@ -31,14 +44,8 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
             throw InvalidUserDataException("Revocation level is invalid")
         }
 
-        val maxHeapSizeBytes = maxHeapSize.get().let {
-            when {
-                it.endsWith("G", ignoreCase = true) -> it.dropLast(1).toLong() shl 30
-                it.endsWith("M", ignoreCase = true) -> it.dropLast(1).toLong() shl 20
-                it.endsWith("K", ignoreCase = true) -> it.dropLast(1).toLong() shl 10
-                else -> it.toLong()
-            }
-        }
+        val maxStackSizeBytes = getSizeBytes(maxStackSize.get())
+        val maxHeapSizeBytes = getSizeBytes(maxHeapSize.get())
 
         val disableDebug = if (buildType == BuildType.Release) 1 else 0
 
@@ -46,7 +53,7 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
             <EnclaveConfiguration>
                 <ProdID>$productID</ProdID>
                 <ISVSVN>${revocationLevel + 1}</ISVSVN>
-                <StackMaxSize>0x280000</StackMaxSize>
+                <StackMaxSize>0x${maxStackSizeBytes.toString(16)}</StackMaxSize>
                 <HeapMaxSize>0x${maxHeapSizeBytes.toString(16)}</HeapMaxSize>
                 <TCSNum>10</TCSNum>
                 <TCSPolicy>1</TCSPolicy>

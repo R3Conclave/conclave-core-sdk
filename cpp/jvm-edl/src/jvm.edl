@@ -1,5 +1,6 @@
 enclave {
     from "start_thread.edl" import *;
+    from "sgx_pthread.edl" import *;
     trusted {
         public void jvm_ecall(
             [in, size=bufferInLen] void* bufferIn,

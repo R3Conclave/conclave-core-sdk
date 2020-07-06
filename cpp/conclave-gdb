@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+#  Copyright (c) 2011-2015, Intel Corporation.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License
+
+shopt -s expand_aliases
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LINUX_SGX_BUILD_PATH="$ROOT/build/Simulation/linux-sgx/src/linux-sgx/build/linux"
+SGXJVM_ROOT_PATH=$(dirname $ROOT)
+
+# If the GDB config is not present then create it
+if [ ! -d "$HOME/.gdbsgxjvm" ]; then
+    mkdir -p $HOME/.gdbsgxjvm
+    cp $SGXJVM_ROOT_PATH/graal/gdb/svmhelpers.py $HOME/.gdbsgxjvm
+    # Create a file that contains java source directories in the SDK
+    # Substrate VM sources
+    find $SGXJVM_ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbsgxjvm/src_dirs
+    # Java 8 sources (these were not used to build Graal so may not exactly match)
+    echo "directory $SGXJVM_ROOT_PATH/cpp/openjdk8/jdk/src/share/classes" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/cpp/openjdk8/jdk/src/solaris/classes/" >> $HOME/.gdbsgxjvm/src_dirs
+    # Conclave directories
+    echo "directory $SGXJVM_ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/conclave-common/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/conclave-enclave/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/conclave-enclave/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
+    # Graal compiler
+    echo "directory $SGXJVM_ROOT_PATH/graal/build/graal/compiler/src/org.graalvm.compiler.replacements/src" >> $HOME/.gdbsgxjvm/src_dirs
+    # Add the configuration directory because GDB will search there for python scripts
+    echo "directory $HOME/.gdbsgxjvm" >> $HOME/.gdbsgxjvm/src_dirs
+fi
+
+GDB_SGX_PLUGIN_PATH=$LINUX_SGX_BUILD_PATH/gdb-sgx-plugin
+SGX_LIBRARY_PATH=$LINUX_SGX_BUILD_PATH
+export PYTHONPATH=$GDB_SGX_PLUGIN_PATH
+LD_PRELOAD=$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/env gdb -iex "directory $GDB_SGX_PLUGIN_PATH" -iex "source $GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" -iex "add-auto-load-safe-path $HOME/.gdbsgxjvm" -iex "source $HOME/.gdbsgxjvm/src_dirs" "$@"
