@@ -19,7 +19,8 @@ done
 rm -f META-INF/*.DSA META-INF/*.RSA META-INF/*.EC META-INF/*.SF META-INF/INDEX.LIST META-INF/*.MF
 
 echo -en "Manifest-Version: 1.0\r\n" > META-INF/MANIFEST.MF
-find . -type d -exec chmod 0755 {} \;
-find . -type f -exec chmod 0644 {} \;
-find . -exec touch -cd 1970-01-01T00:00:00Z {} \;
+find . -type d -exec chmod 0755 {} + &
+find . -type f -exec chmod 0644 {} + &
+find . -exec touch -cd 1970-01-01T00:00:00Z {} + &
+wait
 find . -type f -o -type d | sort | zip -9qX@ $OUTPUT_JAR

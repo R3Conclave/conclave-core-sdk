@@ -12,10 +12,10 @@ else()
 endif()
 
 ExternalProject_Add(linux-sgx-ext
-        GIT_REPOSITORY https://github.com/intel/linux-sgx.git
-        GIT_TAG sgx_2.9.1
 
         SOURCE_DIR ${BUILD_SRC_DIR}
+
+        DOWNLOAD_COMMAND git clone -b sgx_2.9.1 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR} && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1
 
         PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff
             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/qe_logic.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source.patch
