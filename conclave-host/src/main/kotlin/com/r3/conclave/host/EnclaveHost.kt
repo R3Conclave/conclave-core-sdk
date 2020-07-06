@@ -158,8 +158,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     // EnclaveHandle is an internal class and thus to prevent it from leaking into the public API this is not a c'tor parameter.
     private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
     private val hostStateManager = StateManager<HostState>(New)
-    private lateinit var adminHandler: AdminHandler
     // This is only initialised if the enclave is able to receive calls from the host (i.e. implements EnclaveCall)
+    @PotentialPackagePrivate("Access for EnclaveHostMockTest")
     private var enclaveCallHandler: EnclaveCallHandler? = null
     private var _enclaveInstanceInfo: EnclaveInstanceInfo? = null
 
@@ -197,7 +197,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         require(spid == null || spid.size == 16) { "Invalid SPID length" }
         try {
             val mux = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
-            adminHandler = mux.addDownstream(AdminHandler())
+            val adminHandler = mux.addDownstream(AdminHandler())
             val attestationConnection = mux.addDownstream(
                     EpidAttestationHostHandler(
                             SgxQuoteType.LINKABLE,
@@ -256,16 +256,16 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * be received via the provided callback.
      *
      * With the provided callback the enclave also has the option of using
-     * [Enclave.callUntrustedHost] and sending/receiving byte arrays in the opposite
+     * `Enclave.callUntrustedHost` and sending/receiving byte arrays in the opposite
      * direction. By chaining callbacks together, a kind of virtual stack can be constructed
      * allowing complex back-and-forth conversations between enclave and untrusted host.
      *
      * @param bytes Bytes to send to the enclave.
-     * @param callback Bytes received from the enclave via [Enclave.callUntrustedHost].
+     * @param callback Bytes received from the enclave via `Enclave.callUntrustedHost`.
      *
      * @return The return value of the enclave's [EnclaveCall.invoke].
      *
-     * @throws IllegalStateException If the [Enclave] does not implement [EnclaveCall]
+     * @throws IllegalArgumentException If the enclave does not implement [EnclaveCall]
      * or if the host has not been started.
      */
     fun callEnclave(bytes: ByteArray, callback: EnclaveCall): ByteArray? = callEnclaveInternal(bytes, callback)
@@ -279,7 +279,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * For this method to work the enclave class must implement [EnclaveCall]. The return
      * value of [EnclaveCall.invoke] (which can be null) is returned here.
      *
-     * The enclave does not have the option of using [Enclave.callUntrustedHost] for
+     * The enclave does not have the option of using `Enclave.callUntrustedHost` for
      * sending bytes back to the host. Use the overload which takes in a [EnclaveCall]
      * callback instead.
      *
@@ -287,7 +287,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      *
      * @return The return value of the enclave's [EnclaveCall.invoke].
      *
-     * @throws IllegalStateException If the [Enclave] does not implement [EnclaveCall]
+     * @throws IllegalArgumentException If the enclave does not implement [EnclaveCall]
      * or if the host has not been started.
      */
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
@@ -341,7 +341,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
     }
 
+    @PotentialPackagePrivate("Access for EnclaveHostMockTest")
     private class EnclaveCallHandler : Handler<EnclaveCallHandler> {
+        @PotentialPackagePrivate("Access for EnclaveHostMockTest")
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
         private lateinit var sender: Sender
 
@@ -378,17 +380,25 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // scenario previousCallState would represent the previous call into the enclave. Once this recusive step  is
             // complete we restore the call state so that the recursion can unwind.
             val intoEnclaveState = IntoEnclave(callback)
+            // We take note of the current state so that once this callEnclave has finished we revert back to it. This
+            // allows nested callEnclave each with potentially their own callback.
             val previousCallState = callStateManager.transitionStateFrom<CallState>(to = intoEnclaveState)
             // Going into a callEnclave, the call state should only be Ready or IntoEnclave
             check(previousCallState !is Response)
-            sendToEnclave(enclaveCallId, bytes, isEnclaveCallReturn = false)
-            return if (callStateManager.state === intoEnclaveState) {
-                callStateManager.state = previousCallState
-                null
-            } else {
-                val response = callStateManager.transitionStateFrom<Response>(to = previousCallState)
-                response.bytes
+            var response: Response? = null
+            try {
+                sendToEnclave(enclaveCallId, bytes, isEnclaveCallReturn = false)
+            } finally {
+                // We revert the state even if an exception was thrown in the callback. This enables the user to have
+                // their own exception handling and reuse of the host-enclave communication channel for another call.
+                if (callStateManager.state === intoEnclaveState) {
+                    // If the state hasn't changed then it means the enclave didn't have a response
+                    callStateManager.state = previousCallState
+                } else {
+                    response = callStateManager.transitionStateFrom(to = previousCallState)
+                }
             }
+            return response?.bytes
         }
 
         private fun sendToEnclave(enclaveCallId: Long, bytes: ByteArray, isEnclaveCallReturn: Boolean) {

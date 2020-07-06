@@ -1,17 +1,45 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.kotlin.callUntrustedHost
 import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.testing.MockHost
 import com.r3.conclave.testing.RecordingEnclaveCall
+import com.r3.conclave.utilities.internal.deserialise
+import com.r3.conclave.utilities.internal.writeData
 import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 class EnclaveHostMockTest {
+    private lateinit var host: MockHost<*>
+    private var checkLeakedCallbacks = true
+    
+    @AfterEach
+    fun `make sure there the host is not leaking any callbacks`() {
+        if (checkLeakedCallbacks) {
+            val enclaveCallHandler = host.field("enclaveCallHandler", EnclaveHost::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val enclaveCalls = enclaveCallHandler.field("enclaveCalls") as Map<Long, StateManager<*>>
+            assertThat(enclaveCalls.values.map { it.state.javaClass.simpleName }).containsOnly("Ready")
+        }
+    }
+
+    @AfterEach
+    fun `make sure the enclave is not leaking any callbacks`() {
+        if (checkLeakedCallbacks) {
+            val enclaveCallHandler = host.enclave.field("enclaveCallHandler", Enclave::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val enclaveCalls = enclaveCallHandler.field("enclaveCalls") as Map<Long, StateManager<*>>
+            assertThat(enclaveCalls.values.map { it.state.field("callback") }).containsOnly(host.enclave)
+        }
+    }
+    
     @Test
     fun `enclaveInstanceInfo before start`() {
+        checkLeakedCallbacks = false
         val host = MockHost.loadMock<SimpleReturnEnclave>()
         assertThatIllegalStateException().isThrownBy {
             host.enclaveInstanceInfo
@@ -20,6 +48,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `calling into enclave which doesn't implement EnclaveCall`() {
+        checkLeakedCallbacks = false
         val host = MockHost.loadMock<EnclaveWithoutEnclaveCall>()
         host.start(null, null)
         assertThatIllegalStateException().isThrownBy {
@@ -34,7 +63,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave doesn't response to host message`() {
-        val host = MockHost.loadMock<NoOpEnclave>()
+        host = MockHost.loadMock<NoOpEnclave>()
         host.start(null, null)
         val (response, callbacks) = host.recordCallbacksFromEnclave("abcd".toByteArray())
         assertThat(response).isNull()
@@ -47,7 +76,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave response via invoke return (ie no callback)`() {
-        val host = MockHost.loadMock<SimpleReturnEnclave>()
+        host = MockHost.loadMock<SimpleReturnEnclave>()
         host.start(null, null)
         val response = host.callEnclave(byteArrayOf(1))
         assertThat(response).isEqualTo(byteArrayOf(1, 2))
@@ -59,7 +88,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave response via callUntrustedHost`() {
-        val host = MockHost.loadMock<SimpleCallbackEnclave>()
+        host = MockHost.loadMock<SimpleCallbackEnclave>()
         host.start(null, null)
         val (response, callbacks) = host.recordCallbacksFromEnclave(byteArrayOf(1))
         assertThat(response).isNull()
@@ -68,7 +97,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave response via callUntrustedHost but host has no callback`() {
-        val host = MockHost.loadMock<SimpleCallbackEnclave>()
+        host = MockHost.loadMock<SimpleCallbackEnclave>()
         host.start(null, null)
         assertThatIllegalArgumentException().isThrownBy {
             host.callEnclave("abcd".toByteArray())
@@ -84,7 +113,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave response via multiple callUntrustedHost and invoke return`() {
-        val host = MockHost.loadMock<CallbacksAndReturnEnclave>()
+        host = MockHost.loadMock<CallbacksAndReturnEnclave>()
         host.start(null, null)
         val (response, callbacks) = host.recordCallbacksFromEnclave(byteArrayOf(1))
         assertThat(response).isEqualTo(byteArrayOf(1, 4))
@@ -101,7 +130,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `back and forth between host and enclave (via the host returning from its callback)`() {
-        val host = MockHost.loadMock<SimpleBackAndForthEnclave>()
+        host = MockHost.loadMock<SimpleBackAndForthEnclave>()
         host.start(null, null)
         val response = host.callEnclave(byteArrayOf(1)) { fromEnclave -> fromEnclave + 3 }
         assertThat(response).isEqualTo(byteArrayOf(1, 2, 3, 4, 3, 5))
@@ -119,7 +148,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `host calls back into the enclave from its own callback`() {
-        val host = MockHost.loadMock<NestedCallbackEnclave>()
+        host = MockHost.loadMock<NestedCallbackEnclave>()
         host.start(null, null)
         val response = host.callEnclave(byteArrayOf(1)) { fromEnclave ->
             host.callEnclave(fromEnclave + 3)!! + 5
@@ -135,7 +164,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `host calls back into the enclave but enclave has no callback`() {
-        val host = MockHost.loadMock<SimpleCallbackEnclave>()
+        host = MockHost.loadMock<SimpleCallbackEnclave>()
         host.start(null, null)
         assertThatIllegalArgumentException().isThrownBy {
             host.callEnclave(byteArrayOf(1)) { fromEnclave -> host.callEnclave(fromEnclave + 3) }
@@ -144,7 +173,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `host calls back into the enclave with a 2nd layer callback, which gets invoked twice`() {
-        val host = MockHost.loadMock<ComplexCallbackEnclave>()
+        host = MockHost.loadMock<ComplexCallbackEnclave>()
         host.start(null, null)
         val response = host.callEnclave(byteArrayOf(1)) { first ->
             host.callEnclave(first + 3) { second -> second + 5 }!! + 8
@@ -164,7 +193,7 @@ class EnclaveHostMockTest {
 
     @Test
     fun `host calls back into the enclave twice from the same top-level callback`() {
-        val host = MockHost.loadMock<NestedCallbackEnclave>()
+        host = MockHost.loadMock<NestedCallbackEnclave>()
         host.start(null, null)
         val response = host.callEnclave(byteArrayOf(1)) { first ->
             val second = host.callEnclave(first + 3)!!
@@ -173,9 +202,159 @@ class EnclaveHostMockTest {
         assertThat(response).isEqualTo(byteArrayOf(1, 2, 3, 4, 5, 4, 7, 6))
     }
 
+    @Test
+    fun `exception thrown by enclave in invoke does not impact subsequent callEnclave`() {
+        host = MockHost.loadMock<InvokeThrowingEnclave>()
+        host.start(null, null)
+
+        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+            host.callEnclave(throwCommand(throwException = true, message = "Help!"))
+        }.withMessage("Help!")
+
+        val response = host.callEnclave(throwCommand(throwException = false, message = "OK!"))
+        assertThat(response).isEqualTo("OK!".toByteArray())
+    }
+
+    class InvokeThrowingEnclave : Enclave(), EnclaveCall {
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            val (throwException, message) = bytes.throwCommand()
+            if (throwException) {
+                throw RuntimeException(message)
+            } else {
+                return message.toByteArray()
+            }
+        }
+    }
+
+    @Test
+    fun `exception thrown by host in its callback does not impact subsequent callEnclave`() {
+        host = MockHost.loadMock<SimpleCallbackEnclave>()
+        host.start(null, null)
+
+        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+            host.callEnclave(byteArrayOf(1)) {
+                throw RuntimeException("Help!")
+            }
+        }.withMessage("Help!")
+
+        val (response, callbacks) = host.recordCallbacksFromEnclave(byteArrayOf(1))
+        assertThat(response).isNull()
+        assertThat(callbacks).containsOnly(byteArrayOf(1, 2))
+    }
+
+    @Test
+    fun `exception thrown by host in its callback does not impact subsequent callUntrustedHost`() {
+        val enclave = MockHost.loadMock<CatchExceptionOnFirstCallEnclave>().let {
+            it.start(null, null)
+            host = it
+            it.enclave
+        }
+
+        var firstCall = true
+        val response = host.callEnclave(byteArrayOf(1)) { fromEnclave ->
+            if (firstCall) {
+                firstCall = false
+                throw RuntimeException("Help!")
+            } else {
+                fromEnclave + 4
+            }
+        }
+
+        assertThat(enclave.caughtException).hasMessage("Help!")
+        assertThat(response).isEqualTo(byteArrayOf(1, 3, 4))
+    }
+
+    class CatchExceptionOnFirstCallEnclave : EnclaveCall, Enclave() {
+        var caughtException: RuntimeException? = null
+
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            try {
+                callUntrustedHost(bytes + 2)
+            } catch (e: RuntimeException) {
+                caughtException = e
+            }
+            return callUntrustedHost(bytes + 3)
+        }
+    }
+
+    @Test
+    fun `exception thrown by enclave in its callback does not impact subsequent top-level callEnclave`() {
+        host = MockHost.loadMock<CallbackThrowingEnclave>()
+        host.start(null, null)
+
+        var enclaveCallbackResponse: ByteArray? = null
+        var secondLevelCallSuccessful = false
+        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+            host.callEnclave(byteArrayOf(1)) { fromEnclave ->
+                enclaveCallbackResponse = fromEnclave
+                host.callEnclave(throwCommand(throwException = true, message = "Boom!"))
+                secondLevelCallSuccessful = true
+                null
+            }
+        }.withMessage("Boom!")
+        assertThat(enclaveCallbackResponse).isEqualTo(byteArrayOf(1, 2))
+        assertThat(secondLevelCallSuccessful).isFalse()
+
+        val response = host.callEnclave(byteArrayOf(1)) { fromEnclave ->
+            fromEnclave + host.callEnclave(throwCommand(throwException = false, message = "Yay!"))!!
+        }
+        assertThat(response).isEqualTo(byteArrayOf(1, 2) + "Yay!".toByteArray())
+    }
+
+    @Test
+    fun `exception thrown by enclave in its callback does not impact subsequent 2nd-level callEnclave`() {
+        host = MockHost.loadMock<CallbackThrowingEnclave>()
+        host.start(null, null)
+
+        var firstCallException: RuntimeException? = null
+        val response = host.callEnclave(byteArrayOf(1)) { fromEnclave ->
+            try {
+                host.callEnclave(throwCommand(throwException = true, message = "Boom!"))
+            } catch (e: RuntimeException) {
+                firstCallException = e
+            }
+            val secondCallEnclaveResult = host.callEnclave(throwCommand(throwException = false, message = "Yay!"))
+            fromEnclave + secondCallEnclaveResult!!
+        }
+        assertThat(firstCallException).hasMessage("Boom!")
+        assertThat(response).isEqualTo(byteArrayOf(1, 2) + "Yay!".toByteArray())
+    }
+
+    class CallbackThrowingEnclave : EnclaveCall, Enclave() {
+        override fun invoke(bytes: ByteArray): ByteArray? {
+            return callUntrustedHost(bytes + 2) { fromHost ->
+                val (throwException, message) = fromHost.throwCommand()
+                if (throwException) {
+                    throw RuntimeException(message)
+                } else {
+                    message.toByteArray()
+                }
+            }
+        }
+    }
+
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {
         val callback = RecordingEnclaveCall()
         val response = callEnclave(bytes, callback)
         return Pair(response, callback.calls)
+    }
+
+    private fun Any.field(name: String, clazz: Class<*> = javaClass): Any {
+        return clazz.getDeclaredField(name).apply { isAccessible = true }.get(this)
+    }
+}
+
+private fun throwCommand(throwException: Boolean, message: String): ByteArray {
+    return writeData {
+        write(if (throwException) 1 else 0)
+        writeUTF(message)
+    }
+}
+
+private fun ByteArray.throwCommand(): Pair<Boolean, String> {
+    return deserialise {
+        val throwException = read() != 0
+        val message = readUTF()
+        Pair(throwException, message)
     }
 }

@@ -1,5 +1,6 @@
 package com.r3.conclave.enclave
 
+import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
@@ -68,14 +69,14 @@ abstract class Enclave {
     protected val signatureKey: PublicKey get() = signingKeyPair.public
 
     /**
-     * Sends the given bytes to the registered [EnclaveCall] implementation provided to [EnclaveHost.callEnclave].
+     * Sends the given bytes to the registered [EnclaveCall] implementation provided to `EnclaveHost.callEnclave`.
      *
      * @return The bytes returned from the host's [EnclaveCall].
      */
     fun callUntrustedHost(bytes: ByteArray): ByteArray? = callUntrustedHostInternal(bytes, null)
 
     /**
-     * Sends the given bytes to the registered [EnclaveCall] implementation provided to [EnclaveHost.callEnclave].
+     * Sends the given bytes to the registered [EnclaveCall] implementation provided to `EnclaveHost.callEnclave`.
      * If the host responds by doing another call back in to the enclave rather than immediately returning
      * from the [EnclaveCall], that call will be routed to [callback]. In this way a form of virtual stack can
      * be built up between host and enclave as they call back and forth.
@@ -183,17 +184,26 @@ abstract class Enclave {
             }
             val stateManager = enclaveCalls.getValue(enclaveCallId)
             val newReceiveState = Receive(callback)
-            // We expect the state to be ReceiveFromHost
+            // We don't expect the enclave to be in the Response state here as that implies a bug since Response is only
+            // a temporary holder to capture the return value.
+            // We take note of the current Receive state (i.e. the current callback) so that once this callUntrustedHost
+            // has finished we revert back to it. This allows nested callUntrustedHost each with potentially their own
+            // callback.
             val previousReceiveState = stateManager.transitionStateFrom<Receive>(to = newReceiveState)
-            sendToHost(enclaveCallId, bytes, isEnclaveCallReturn = false)
-            return if (stateManager.state === newReceiveState) {
-                // If the state hasn't changed then it means the host didn't have a response
-                stateManager.state = previousReceiveState
-                null
-            } else {
-                val response = stateManager.transitionStateFrom<Response>(to = previousReceiveState)
-                response.bytes
+            var response: Response? = null
+            try {
+                sendToHost(enclaveCallId, bytes, isEnclaveCallReturn = false)
+            } finally {
+                // We revert the state even if an exception was thrown in the callback. This enables the user to have
+                // their own exception handling and reuse of the host-enclave communication channel for another call.
+                if (stateManager.state === newReceiveState) {
+                    // If the state hasn't changed then it means the host didn't have a response
+                    stateManager.state = previousReceiveState
+                } else {
+                    response = stateManager.transitionStateFrom(to = previousReceiveState)
+                }
             }
+            return response?.bytes
         }
 
         /**

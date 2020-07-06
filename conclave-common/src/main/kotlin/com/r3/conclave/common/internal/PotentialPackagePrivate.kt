@@ -9,4 +9,4 @@ import kotlin.annotation.AnnotationTarget.*
  */
 @Target(CLASS, CONSTRUCTOR, FUNCTION, PROPERTY, FIELD)
 @Retention(SOURCE)
-annotation class PotentialPackagePrivate
+annotation class PotentialPackagePrivate(@Suppress("unused") val reason: String = "")

@@ -2,6 +2,7 @@ package com.r3.conclave.host.kotlin
 
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.host.EnclaveHost
+import java.io.DataOutputStream
 
 /**
  * Passes the given byte array to the enclave. The format of the byte
@@ -12,7 +13,7 @@ import com.r3.conclave.host.EnclaveHost
  * For this method to work the enclave class must implement [EnclaveCall]. The return
  * value of [EnclaveCall.invoke] (which can be null) is returned here.
  *
- * The enclave does not have the option of using [Enclave.callUntrustedHost] for
+ * The enclave does not have the option of using `Enclave.callUntrustedHost` for
  * sending bytes back to the host. Use the overlaod which takes in a [EnclaveCall]
  * callback instead.
  *
@@ -20,9 +21,9 @@ import com.r3.conclave.host.EnclaveHost
  *
  * @return The return value of the enclave's [EnclaveCall.invoke].
  *
- * @throws IllegalStateException If the [Enclave] does not implement [EnclaveCall]
+ * @throws IllegalArgumentException If the enclave does not implement [EnclaveCall]
  * or if the host has not been started.
  */
 fun EnclaveHost.callEnclave(bytes: ByteArray, callback: (ByteArray) -> ByteArray?): ByteArray? {
-    return callEnclave(bytes, EnclaveCall { callback(it) })
+    return callEnclave(bytes, EnclaveCall(callback))
 }
