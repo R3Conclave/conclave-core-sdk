@@ -44,7 +44,7 @@ public:
     }
 
     virtual int write(int size, int count, const void* buf) const {
-        enclave_print((const char*)buf, size * count);
+        debug_print((const char*)buf, size * count);
         return count;
     }
 };
