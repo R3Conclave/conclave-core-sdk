@@ -14,7 +14,7 @@ of the computer on which they run. It is ideally suited to solving complex busin
 - A Gradle plugin, so compiling and signing your enclave is handled automatically.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
 - Many tutorials, guides and commercial support from the SGX experts at R3.
-<!--- - A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, using just JUnit. -->
+- A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, using just JUnit.
 
 ## Documentation
 

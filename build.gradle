@@ -112,6 +112,10 @@ subprojects {
         useJUnitPlatform()
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
         failFast = true
+        testLogging {
+            exceptionFormat = 'full'
+            showStandardStreams = true
+        }
 
         beforeTest { descriptor ->
             logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
@@ -192,7 +196,7 @@ dokka {
     }
 }
 
-// Allow the option to exclude dokka from the SDK build. 
+// Allow the option to exclude dokka from the SDK build.
 // Important: This should only be used when building with a Java version that does not work
 // with Dokka (currently anything greater than 8) to allow the SDK build to continue. It will
 // result in an SDK build with the API documentation missing so should never be used for
@@ -214,7 +218,7 @@ if (excludeDokka == null) {
     }
 }
 
-// Dokka does not always translate kotlin code into pure java documentation. We can use this 
+// Dokka does not always translate kotlin code into pure java documentation. We can use this
 // task to perform some pre-processing between generating the HTML and making the documentation site.
 task preprocessdocs(type: Exec, dependsOn: ['apidocs']) {
     description = "Performs processing on the documentation generated using the apidocs task prior to running mkdocs."
