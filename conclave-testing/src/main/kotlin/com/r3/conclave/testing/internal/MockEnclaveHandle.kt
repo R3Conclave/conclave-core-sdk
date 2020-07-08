@@ -25,7 +25,7 @@ class MockEnclaveHandle<CONNECTION>(
 
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
-        initialiseMethod.invoke(enclave, MockEnclaveEnvironment(), sender) as HandlerConnected<*>
+        initialiseMethod.invoke(enclave, MockEnclaveEnvironment(enclave), sender) as HandlerConnected<*>
     }
 
     override fun sendSerialized(serializedBuffer: ByteBuffer) {

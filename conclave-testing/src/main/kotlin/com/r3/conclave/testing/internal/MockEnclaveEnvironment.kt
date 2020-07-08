@@ -6,11 +6,14 @@ import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.reportData
+import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.util.*
 
 class MockEnclaveEnvironment(
+        private val enclave: Enclave,
         private val isvProdId: Int = 1,
         private val isvSvn: Int = 1
 ) : EnclaveEnvironment {
@@ -36,6 +39,9 @@ class MockEnclaveEnvironment(
     }
 
     override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean): ByteArray {
-        return ByteArray(16).also { randomBytes(it, 0, it.size) }
+        return MessageDigest.getInstance("MD5").also {
+            it.update((if (useSigner) "MRSIGNER" else enclave.javaClass.name).toByteArray())
+            it.update(keyType.ordinal.toByte())
+        }.digest()
     }
 }

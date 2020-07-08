@@ -62,6 +62,7 @@ class SealingTest {
         override fun onReceiveUnsealedData(connection: SealUnsealSender, plaintextAndEnvelope: PlaintextAndEnvelope) {
             connection.sendSealedData(env.sealData(plaintextAndEnvelope))
         }
+
         override fun onReceiveSealedData(connection: SealUnsealSender, sealedData: ByteArray) {
             connection.sendUnsealedData(env.unsealData(sealedData))
         }
@@ -142,7 +143,6 @@ class SealingTest {
         assertNotEquals(keys1.sealMRSigner, keys2.sealMRSigner) // from MRSIGNER should be distinct
     }
 
-
     @Test
     fun `seal and unseal data`() {
         val handler = SealUnsealRecordingHandler()
@@ -164,7 +164,7 @@ class SealingTest {
         // seal using the 1st enclave
         connection1.sendUnsealedData(toBeSealed)
         val unsealReq = handler1.pollLastReceivedSealedData
-        // unseal using the 2nd enclave
+        // Unseal using the 2nd enclave.
         connection2.sendSealedData(sealedData = unsealReq.getRemainingBytes())
         val unsealed = handler2.pollLastReceivedUnsealedData
         assertEquals(toBeSealed.plaintext, unsealed.plaintext)
@@ -180,7 +180,7 @@ class SealingTest {
         // seal using the 1st enclave
         connection1.sendUnsealedData(toBeSealed)
         val unsealReq = handler1.pollLastReceivedSealedData
-        // unseal using the 2nd enclave
+        // Unseal using the 2nd enclave.
         connection2.sendSealedData(unsealReq.getRemainingBytes())
         val unsealed = handler2.pollLastReceivedUnsealedData
         // both encrypted texts should be the same as the default key policy for sealing is MRSIGNER
@@ -196,10 +196,10 @@ class SealingTest {
         val connection1 = createEnclave(handler1, SealUnsealEnclave::class.java)
         val handler2 = SealUnsealRecordingHandler()
         val connection2 = createEnclave(handler2, SealUnsealEnclave::class.java)
-        // seal using the 1st enclave
+        // Seal using the 1st enclave.
         connection1.sendUnsealedData(toBeSealed)
         val unsealReq = handler1.pollLastReceivedSealedData
-        // unseal using the 2nd enclave
+        // Unseal using the 2nd enclave.
         connection2.sendSealedData(unsealReq.getRemainingBytes())
         val unsealed = handler2.pollLastReceivedUnsealedData
         assertEquals(toBeSealed.plaintext, unsealed.plaintext)
@@ -215,19 +215,18 @@ class SealingTest {
         val connection1 = createEnclave(handler1, SealUnsealEnclave::class.java)
         val handler2 = SealUnsealRecordingHandler()
         val connection2 = createEnclave(handler2, /*distinct enclave*/ SealUnsealEnclaveAux::class.java)
-        // seal using the 1st enclave
+        // Seal using the 1st enclave.
         connection1.sendUnsealedData(toBeSealed)
-        // unseal using the 2nd enclave
+        // Unseal using the 2nd enclave.
         connection2.sendSealedData(handler1.pollLastReceivedSealedData.getRemainingBytes())
         val unsealed = handler2.pollLastReceivedUnsealedData
-        // both encrypted texts should be the same as the default key policy for sealing is MRSIGNER
+        // Both encrypted texts should be the same as the default key policy for sealing is MRSIGNER.
         assertEquals(toBeSealed.plaintext, unsealed.plaintext)
         assertEquals(toBeSealed.authenticatedData, unsealed.authenticatedData)
     }
 
     /**
-     * The following test was intentionally disabled, as distinct SIGNERS would make the enclave crash
-     *
+     * The following test was intentionally disabled, as distinct SIGNERS would make the enclave crash.
      **/
     @Disabled("https://r3-cev.atlassian.net/browse/CON-106")
     @Test
@@ -237,11 +236,11 @@ class SealingTest {
         val connection1 = createEnclave(handler1, SealUnsealEnclave::class.java)
         val handler2 = SealUnsealRecordingHandler()
         val connection2 = createEnclave(handler2, SealUnsealEnclaveAux::class.java, keyGenInput = "enclave2")
-        // seal using the 1st enclave
+        // Seal using the 1st enclave.
         connection1.sendUnsealedData(toBeSealed)
-        // unseal using the 2nd enclave
+        // Unseal using the 2nd enclave.
         connection2.sendSealedData(handler1.pollLastReceivedSealedData.getRemainingBytes())
-        // both encrypted texts should be the same as the default key policy for sealing is MRSIGNER
+        // Both encrypted texts should be the same as the default key policy for sealing is MRSIGNER.
         assertEquals(toBeSealed.plaintext, handler2.pollLastReceivedUnsealedData.plaintext)
     }
 
@@ -251,7 +250,7 @@ class SealingTest {
         val requestSealMREnclaveKey = KeyRequest(keyType = KeyType.SEAL, useSigner = false)
     }
 
-    private data class Keys (
+    private data class Keys(
             val report: ByteBuffer,
             val sealMRSigner: ByteBuffer,
             val sealMREnclave: ByteBuffer
@@ -259,9 +258,9 @@ class SealingTest {
 
     /**
      * Helper function to retrieve common SGX keys and tests.
-     * @connection enclave to be used in the request.
-     * @handler enclave handler.
-     * @keyRequests requests to be performed,
+     * @param connection enclave to be used in the request.
+     * @param handler enclave handler.
+     * @param keyRequests requests to be performed,
      *  default = requestReportKey, requestSealMRSignerKey, requestSealMREnclaveKey
      * @return ArrayList<ByteBuffer> containing the requested keys.
      */
