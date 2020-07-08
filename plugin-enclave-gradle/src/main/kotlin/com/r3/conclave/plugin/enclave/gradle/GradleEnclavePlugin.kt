@@ -203,14 +203,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.stripped.set(type == BuildType.Release)
             }
 
-            val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type",
-                    buildUnsignedAvianEnclaveTask,
-                    buildUnsignedGraalEnclaveTask) { task ->
-                task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask, buildJarObjectTask,
-                        untarGraalVM, copySubstrateDependenciesTask, generateReflectionConfigTask)
-                task.inputs.dir(substrateDependenciesPath)
-                task.runtime.set(conclaveExtension.runtime)
-                task.outputEnclave.set(unsignedEnclaveFile)
+            val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
+                // This task is used as a common target that selects between Avian and GraalVM based on
+                // conclaveExtension.runtime. It sets inputEnclave to the output of the relevant task,
+                // selected at build time causing a dependency
+                task.inputEnclave.set(conclaveExtension.runtime.flatMap {
+                    when (it) {
+                        RuntimeType.Avian -> buildUnsignedAvianEnclaveTask.outputEnclave
+                        else -> buildUnsignedGraalEnclaveTask.outputEnclave
+                    }
+                })
+                task.outputEnclave.set(task.inputEnclave.get())
             }
 
             val generateEnclaveConfigTask = target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type) { task ->
