@@ -36,4 +36,9 @@ sighandler_t signal(int signum, sighandler_t handler) {
     return handler;
 }
 
+int __libc_current_sigrtmax(void) {
+    enclave_trace("__libc_current_sigrtmax\n");
+    return 0;
+}
+
 }

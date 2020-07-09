@@ -3,6 +3,7 @@
 //
 #pragma once 
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -210,6 +211,10 @@ int sigaddset(sigset_t*, int);
 int sigaction(int, const struct sigaction*, struct sigaction*);
 int sigprocmask(int, const sigset_t*, sigset_t*);
 sighandler_t signal(int signum, sighandler_t handler);
+int __libc_current_sigrtmax(void);
+
+// sigthread.h
+int pthread_kill(pthread_t thread, int sig);
 
 // sys/wait.h
 int waitpid(pid_t, int*, int);

@@ -2,6 +2,7 @@
 // OS Stubs for functions declared in stdlib.h
 //
 #include "vm_enclave_layer.h"
+#include <string>
 
 extern "C" {
 
@@ -30,14 +31,25 @@ void exit(int status) {
 }
 
 char *realpath(const char *path, char *resolved_path) {
-    if (!strcmp(path, "/."))
-        return strcpy(resolved_path, "/");
-    else if (!strncmp(path, "/[", 2) || !strcmp(path, "/avian-embedded/javahomeJar/lib/logging.properties") || !strcmp(path, "/avian-embedded/javahomeJar/lib"))
-        return strcpy(resolved_path, path + 1);
-    else {
-        enclave_trace("realpath(%s)\n", path);
-        return NULL;
+    enclave_trace("realpath(%s)\n", path);
+    std::string resolved(path);
+    if (!strcmp(path, "/.")) {
+        resolved = "/";
     }
+    else if (!strncmp(path, "/[", 2) || !strcmp(path, "/avian-embedded/javahomeJar/lib/logging.properties") || !strcmp(path, "/avian-embedded/javahomeJar/lib")) {
+        resolved = path + 1;
+    }
+    if (!resolved_path) {
+        // The caller is responsible for freeing this. See https://man7.org/linux/man-pages/man3/realpath.3.html
+        resolved_path = (char*)malloc(resolved.size() + 1);
+    }
+    if (resolved_path) {
+        // Ideally we should restrict this to PATH_MAX but we don't know what value of PATH_MAX
+        // the JDK was using. Also there is no guarantee the caller allocated the correct size
+        // of buffer
+        strcpy(resolved_path, resolved.c_str());
+    }
+    return resolved_path;
 }
 
 }

@@ -67,6 +67,8 @@ ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV MX_VERSION          5.264.4
 ENV JAVA_HOME           /usr/lib/jvm/java-8-openjdk-amd64
 ENV JVMCI_VERSION       20.1-b02
+ENV LABSJDK_CE_11_FILE  labsjdk-ce-11.0.7+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
+ENV LABSJDK_HOME        /opt/labsjdk-ce-11.0.7-jvmci-$JVMCI_VERSION
 ENV JVMCI_FILE          openjdk-8u252+09-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
 ENV JVMCI_HOME          /opt/openjdk1.8.0_252-jvmci-$JVMCI_VERSION
 ENV MX_HOME             /opt/mx-$MX_VERSION
@@ -91,10 +93,16 @@ RUN rm -v /opt/$MX_VERSION.tar.gz
 RUN chmod a+wx /opt/mx-$MX_VERSION
 
 # JVMCI-enabled JDK8
-RUN curl -sSL -o /opt/$JVMCI_FILE https://github.com/graalvm/openjdk8-jvmci-builder/releases/download/jvmci-20.1-b02/$JVMCI_FILE
+RUN curl -sSL -o /opt/$JVMCI_FILE https://github.com/graalvm/openjdk8-jvmci-builder/releases/download/jvmci-$JVMCI_VERSION/$JVMCI_FILE
 RUN echo "0491915b2183c183f23acc67a1d65236093c31a9ead9530655b0638049619164  /opt/$JVMCI_FILE" | sha256sum -c -
 RUN tar -xaf /opt/$JVMCI_FILE -C /opt
 RUN rm -v /opt/$JVMCI_FILE
+
+# labs-openjdk-11
+RUN curl -sSL -o /opt/$LABSJDK_CE_11_FILE https://github.com/graalvm/labs-openjdk-11/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_11_FILE
+RUN echo "11edb2f0403c2d8f57fd32d86306d7c5d255f781c149e891bcf9b24b7d3df76f  /opt/$LABSJDK_CE_11_FILE" | sha256sum -c -
+RUN tar -xaf /opt/$LABSJDK_CE_11_FILE -C /opt
+RUN rm -v /opt/$LABSJDK_CE_11_FILE
 
 # Some incantation that's necessary to get rid of some Python errors that appear when building docs.
 # https://stackoverflow.com/a/59596814/2248578

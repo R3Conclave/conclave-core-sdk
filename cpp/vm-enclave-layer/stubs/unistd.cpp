@@ -18,6 +18,7 @@ STUB(lseek64);
 STUB(lstat);
 STUB(pathconf);
 STUB(readlink);
+STUB(pread64);
 
 extern "C" {
 

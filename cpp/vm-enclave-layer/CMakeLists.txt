@@ -32,6 +32,8 @@ add_library(vmenclavelayer
         stubs/locale.cpp
         stubs/pwd.cpp
         stubs/signal.cpp
+        src/sigthread.cpp
+        src/statvfs.cpp
         stubs/stdio.cpp
         stubs/stdlib.cpp
         stubs/string.cpp

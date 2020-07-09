@@ -8,6 +8,7 @@
 STUB(closedir);
 STUB(opendir);
 STUB(readdir64_r);
+STUB(readdir64);
 
 extern "C" {
 
