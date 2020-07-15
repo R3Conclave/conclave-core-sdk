@@ -1,5 +1,5 @@
---- Makefile	2020-05-19 22:37:34.624358200 +0000
-+++ Makefile.new	2020-05-19 23:01:55.944358200 +0000
+--- a/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile	2020-05-19 22:37:34.624358200 +0000
++++ b/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile	2020-05-19 23:01:55.944358200 +0000
 @@ -28,6 +28,7 @@
  # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #
@@ -8,7 +8,6 @@
 
  ######## SGX SDK Settings ########
  TOP_DIR  = ../../..
-
 @@ -47,7 +47,7 @@
  Quote_C_Files := qe3_u.c se_thread.c se_trace.c
  Quote_Cpp_Files := $(wildcard ../*.cpp)

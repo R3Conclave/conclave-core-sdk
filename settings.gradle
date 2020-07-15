@@ -29,6 +29,8 @@ if (includeNative) {
     include 'cpp:linux-sgx:linux-sgx-simulation'
     include 'cpp:linux-sgx:linux-sgx-debug'
     include 'cpp:linux-sgx:linux-sgx-release'
+    include 'cpp:macos-binutils'
+    include 'cpp:macos-sign-tool'
 }
 
 include 'conclave-mail'

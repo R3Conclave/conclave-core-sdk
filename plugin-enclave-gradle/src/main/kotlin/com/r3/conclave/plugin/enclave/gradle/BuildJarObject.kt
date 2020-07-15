@@ -5,6 +5,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 
 open class BuildJarObject @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
@@ -22,10 +23,8 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : Conclave
     val outputJarObject: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val os = System.getProperty("os.name")
-        if (os != "Linux" && !os.startsWith("Windows")) {
-            throw GradleException("At this time you may only build enclaves on a Linux or Windows host. " +
-                    "We hope to remove this limitation in a future release of Conclave. Sorry!")
+        if (!OperatingSystem.current().isLinux && !OperatingSystem.current().isWindows && !OperatingSystem.current().isMacOsX) {
+            throw GradleException("At this time you may only build enclaves on a Linux, Windows or macOS host.")
         }
 
         val workingDirectory = outputJarObject.asFile.get().parent

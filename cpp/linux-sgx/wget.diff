@@ -1,0 +1,46 @@
+diff --git a/download_prebuilt.sh b/download_prebuilt.sh
+index a25bb4c..20ff5e6 100755
+--- a/download_prebuilt.sh
++++ b/download_prebuilt.sh
+@@ -44,28 +44,28 @@ server_binutils_url=$server_url_path/$binutils_file_name
+ server_checksum_url=$server_url_path/$checksum_file
+ 
+ rm -f $out_dir/$optlib_name
+-wget $server_optlib_url -P $out_dir
++curl $server_optlib_url -o $out_dir/$optlib_name
+ if [ $? -ne 0 ]; then
+     echo "Fail to download file $server_optlib_url"
+     exit -1
+ fi
+ 
+ rm -f $out_dir/$ae_file_name
+-wget $server_ae_url -P $out_dir
++curl $server_ae_url -o $out_dir/$ae_file_name
+ if [ $? -ne 0 ]; then
+     echo "Fail to download file $server_ae_url"
+     exit -1
+ fi
+ 
+ rm -f $out_dir/$binutils_file_name
+-wget $server_binutils_url -P $out_dir
++curl $server_binutils_url -o $out_dir/$binutils_file_name
+ if [ $? -ne 0 ]; then
+     echo "Fail to download file $server_binutils_url"
+     exit -1
+ fi
+ 
+ rm -f $out_dir/$checksum_file
+-wget $server_checksum_url -P $out_dir
++curl $server_checksum_url -o $out_dir/$checksum_file
+ if [ $? -ne 0 ]; then
+     echo "Fail to download file $server_checksum_url"
+     exit -1
+@@ -74,7 +74,7 @@ fi
+ 
+ pushd $out_dir
+ 
+-sha256sum -c $checksum_file
++shasum -a 256 -c $checksum_file
+ if [ $? -ne 0 ]; then
+     echo "Checksum verification failure"
+     exit -1

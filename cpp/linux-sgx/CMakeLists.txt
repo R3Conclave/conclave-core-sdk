@@ -37,6 +37,37 @@ ExternalProject_Add(linux-sgx-ext
 
         TEST_COMMAND "")
 
+ExternalProject_Add(macos-sign-tool
+    DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
+                && git clone -b sgx_2.9.1 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+                && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1
+
+    SOURCE_DIR ${BUILD_SRC_DIR}
+
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff
+        && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/qe_logic.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source.patch
+        && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
+        && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
+        && git apply ${CMAKE_CURRENT_SOURCE_DIR}/sgx_sign_macos.diff ${CMAKE_CURRENT_SOURCE_DIR}/wget.diff
+
+    UPDATE_COMMAND ""
+
+    CONFIGURE_COMMAND ""
+
+    BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/sdk/sign_tool/SignTool
+
+    INSTALL_COMMAND ""
+
+    TEST_COMMAND ""
+)
+
+ExternalProject_Add_Step(macos-sign-tool download-prebuilt
+        # Check a random downloaded file to avoid executing download_prebuilt.sh
+        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a ] || ./download_prebuilt.sh"
+        WORKING_DIRECTORY ${BUILD_SRC_DIR}
+        DEPENDERS build
+        DEPENDEES configure)
+
 ExternalProject_Add_Step(linux-sgx-ext download-prebuilt
         # Check a random downloaded file to avoid executing download_prebuilt.sh
         COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a ] || ./download_prebuilt.sh"
@@ -97,6 +128,7 @@ add_executable(sign_enclave IMPORTED GLOBAL)
 set_property(TARGET sign_enclave PROPERTY IMPORTED_LOCATION ${LINUX_SGX_LIB_PREFIX}/sgx_sign)
 add_dependencies(sign_enclave linux-sgx-ext)
 
+if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 # This is here for IDE support
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 file(GLOB_RECURSE CLION_SOURCES ${BUILD_SRC_DIR}/*.c ${BUILD_SRC_DIR}/*.cpp ${BUILD_SRC_DIR}/*.h)
@@ -123,3 +155,4 @@ target_include_directories(linux-sgx_clion PUBLIC
         ${BUILD_SRC_DIR}/external/vtune/linux/sdk/src/ittnotify
         ${BUILD_SRC_DIR}/external/epid-sdk)
 target_link_libraries(linux-sgx_clion linux-sgx_headers)
+endif()

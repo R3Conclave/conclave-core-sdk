@@ -309,6 +309,14 @@ List<PublishedProject> publishedProjects = [
                 description: 'SGX SDK release libraries and headers',
         ),
         new PublishedProject(
+                projectPath: ':cpp:macos-binutils',
+                description: 'Binutils for Mac OS',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:macos-sign-tool',
+                description: 'SGX sign tool for Mac OS',
+        ),
+        new PublishedProject(
                 projectPath: ':cpp:native-substratevm:native-substratevm-simulation',
                 description: 'SubstrateVM stubs, JNI and EDL simulation libraries',
         ),

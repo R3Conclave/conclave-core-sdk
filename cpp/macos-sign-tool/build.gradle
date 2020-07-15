@@ -1,0 +1,36 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}
+
+/**
+ * When building on macOS it will trigger the compilation of sign-tool.
+ * On Linux, it will only pickup and package the checked-in file built on macOS.
+ */
+jar {
+    if (Os.isFamily(Os.FAMILY_MAC)) {
+        dependsOn tasks.getByPath(':cpp:linux-sgx:buildSgxSign')
+    }
+    into "com/r3/conclave/sign-tool/macos", {
+        from("../linux-sgx/build/src/linux-sgx/sdk/sign_tool/SignTool") {
+            include "sgx_sign"
+        }
+    }
+}
+
+test {
+    dependsOn ':cpp:macos-sign-tool:jar'
+    doFirst {
+        systemProperty 'macos-sign-tool.path', tasks.getByPath(':cpp:macos-sign-tool:jar').outputs.files.asPath
+    }
+}

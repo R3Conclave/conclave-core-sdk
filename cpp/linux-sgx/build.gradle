@@ -12,7 +12,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
     dependsOn ':cpp:linux-sgx:linux-sgx-simulation:jar', ':cpp:linux-sgx:linux-sgx-debug:jar', ':cpp:linux-sgx:linux-sgx-release:jar'
     doFirst {
         systemProperty 'simulation-jar.path', tasks.getByPath(':cpp:linux-sgx:linux-sgx-simulation:jar').outputs.files.asPath
@@ -50,4 +49,22 @@ subprojects {
             }
         }
     }
+}
+
+task setupSignToolCMakeBuild(type: Exec) {
+    workingDir buildDir
+    inputs.file("$projectDir/CMakeLists.txt")
+    commandLine "/usr/bin/env", "cmake",
+            "-DCMAKE_BUILD_TYPE=Release", projectDir
+    outputs.file("$buildDir/Makefile")
+}
+
+def maxWorkers = properties["org.gradle.workers.max"]
+task buildSgxSign(type: Exec) {
+    dependsOn setupSignToolCMakeBuild
+    environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
+    workingDir buildDir
+    commandLine "/usr/bin/env", "cmake",
+            "--build", buildDir,
+            "--target", "macos-sign-tool"
 }

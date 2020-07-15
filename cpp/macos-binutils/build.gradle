@@ -1,0 +1,54 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+}
+
+test {
+    dependsOn ':cpp:macos-binutils:jar'
+    doFirst {
+        systemProperty 'macos-binutils.path', tasks.getByPath(':cpp:macos-binutils:jar').outputs.files.asPath
+    }
+}
+
+task setupCMakeBuild(type: Exec) {
+    workingDir project.buildDir
+    inputs.file("$projectDir/CMakeLists.txt")
+    commandLine "/usr/bin/env", "cmake", "-Dbinutils_version=${binutils_version}", projectDir
+    outputs.file("${project.buildDir}/Makefile")
+}
+
+def maxWorkers = properties["org.gradle.workers.max"]
+task buildBinutils(type: Exec) {
+    dependsOn setupCMakeBuild
+    environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
+    workingDir project.buildDir
+    commandLine "cmake", "--build", "${project.buildDir}", "--target", "macos-binutils"
+}
+
+/**
+ * When building on macOS it will trigger the compilation of binutils.
+ * On Linux, it will only pickup and package the checked-in file built on macOS.
+ */
+jar {
+    def buildBinUtilsTask = tasks.getByPath(':cpp:macos-binutils:buildBinutils')
+    if (Os.isFamily(Os.FAMILY_MAC)) {
+        dependsOn buildBinUtilsTask
+    }
+    into 'com/r3/conclave/binutils/macos', {
+        def ldBuildDir = "${project.buildDir}/binutils-$binutils_version/build/ld"
+        def ldFile = "ld-new"
+        from (ldBuildDir) {
+            include ldFile
+        }
+    }
+}

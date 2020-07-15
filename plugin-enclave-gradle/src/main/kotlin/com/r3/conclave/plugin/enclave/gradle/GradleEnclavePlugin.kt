@@ -3,6 +3,10 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
+import com.r3.conclave.plugin.enclave.gradle.os.LinuxDependentTools
+import com.r3.conclave.plugin.enclave.gradle.os.MacOSDependentTools
+import com.r3.conclave.plugin.enclave.gradle.os.OSDependentTools
+import com.r3.conclave.plugin.enclave.gradle.os.WindowsDependentTools
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -16,6 +20,7 @@ import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
+import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -29,9 +34,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     override fun apply(target: Project) {
         val sdkVersion = readVersionFromPluginManifest()
         target.logger.info("Applying Conclave gradle plugin for version $sdkVersion")
-
-        val baseDirectory = target.buildDir.toPath().resolve("conclave")
-        val conclaveDependenciesDirectory = "$baseDirectory/com/r3/conclave"
 
         // Allow users to specify the enclave dependency like this: implementation "com.r3.conclave:conclave-enclave"
         autoconfigureDependencyVersions(target, sdkVersion)
@@ -58,24 +60,25 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.archiveClassifier.set("shadow")
         }
 
-        val binutilsDirectory = "$conclaveDependenciesDirectory/binutils"
-        val signToolDirectory = "$conclaveDependenciesDirectory/sign-tool"
+        val baseDirectory = target.buildDir.toPath().resolve("conclave")
+        val conclaveDependenciesDirectory = "$baseDirectory/com/r3/conclave"
+
+        val osDependentTools = getOSDependentTools(conclaveDependenciesDirectory)
+
         val copySgxToolsTask = target.createTask<Copy>("copySgxTools") { task ->
             task.group = CONCLAVE_GROUP
-            task.fromDependencies(
-                    "com.r3.conclave:native-binutils:$sdkVersion",
-                    "com.r3.conclave:native-sign-tool:$sdkVersion"
-            )
+            val dependencies= osDependentTools.getToolsDependenciesIDs(sdkVersion)
+            task.fromDependencies(*dependencies)
             task.into(baseDirectory)
         }
 
-        val linkerToolFile = target.file("$binutilsDirectory/${getExecutable("ld")}")
-        val signToolFile = target.file("$signToolDirectory/${getExecutable("sgx_sign")}")
-        val opensslToolFile = target.file("$binutilsDirectory/${getExecutable("opensslw")}")
+        val linkerToolFile = target.file(osDependentTools.getLdFile())
+        val signToolFile = target.file(osDependentTools.getSgxSign())
+        val opensslToolFile = target.file(osDependentTools.getOpensslFile())
 
         val buildJarObjectTask = target.createTask<BuildJarObject>("buildJarObject") { task ->
             task.dependsOn(copySgxToolsTask)
-            task.inputs.files(binutilsDirectory, signToolDirectory)
+            task.inputs.files(linkerToolFile, signToolFile)
             task.inputLd.set(linkerToolFile)
             task.inputJar.set(shadowJarTask.archiveFile)
             task.outputJarObject.set(baseDirectory.resolve("app-jar").resolve("app.jar.o").toFile())
@@ -88,7 +91,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         // Dummy key
         val createDummyKeyTask = target.createTask<GenerateDummyMrsignerKey>("createDummyKey") { task ->
             task.dependsOn(copySgxToolsTask)
-            task.inputs.files(binutilsDirectory, signToolDirectory)
+            task.inputs.files(opensslToolFile.parent)
             task.opensslTool.set(opensslToolFile)
             task.outputKey.set(baseDirectory.resolve("dummy_key.pem").toFile())
         }
@@ -195,7 +198,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val buildUnsignedAvianEnclaveTask = target.createTask<BuildUnsignedAvianEnclave>("buildUnsignedAvianEnclave$type") { task ->
                 task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask, buildJarObjectTask)
                 val partialEnclavefile = "${copyPartialEnclaveTask.destinationDir}/com/r3/conclave/partial-enclave/$type/jvm_enclave_avian"
-                task.inputs.files(binutilsDirectory, partialEnclavefile, buildJarObjectTask.outputJarObject)
+                task.inputs.files(linkerToolFile.parent, partialEnclavefile, buildJarObjectTask.outputJarObject)
                 task.inputLd.set(linkerToolFile)
                 task.inputEnclaveObject.set(target.file(partialEnclavefile))
                 task.inputJarObject.set(buildJarObjectTask.outputJarObject)
@@ -226,7 +229,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type) { task ->
                 task.dependsOn(copySgxToolsTask)
-                task.inputs.files(signToolDirectory, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile)
+                task.inputs.files(signToolFile.parent, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
@@ -242,7 +245,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type") { task ->
                 task.dependsOn(copySgxToolsTask)
-                task.inputs.files(signToolDirectory, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile, enclaveExtension.signingMaterial)
+                task.inputs.files(signToolFile.parent, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile, enclaveExtension.signingMaterial)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
@@ -257,7 +260,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                  * Despite the dependency task running when out of date, the dependent task would then be considered up-to-date,
                  * even when declaring `dependsOn`.
                  */
-                task.inputs.files(signToolDirectory, generateEnclaveSigningMaterialTask.inputEnclave, generateEnclaveSigningMaterialTask.outputSigningMaterial,
+                task.inputs.files(signToolFile.parent, generateEnclaveSigningMaterialTask.inputEnclave, generateEnclaveSigningMaterialTask.outputSigningMaterial,
                         generateEnclaveConfigTask.outputConfigFile, enclaveExtension.mrsignerPublicKey, enclaveExtension.mrsignerSignature)
                 task.signTool.set(signToolFile)
                 task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
@@ -286,7 +289,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     }
                 }
                 task.inputSignedEnclave.set(signedEnclaveFile)
-                task.inputs.files(signToolDirectory, signedEnclaveFile)
+                task.inputs.files(signToolFile.parent, signedEnclaveFile)
                 task.outputEnclaveMetadata.set(enclaveDirectory.resolve("metadata.yml").toFile())
             }
 
@@ -321,11 +324,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
     }
 
-    private fun getExecutable(name: String): String {
-        return if (System.getProperty("os.name").startsWith("Windows"))
-            "$name.exe"
-        else
-            name
+    private fun getOSDependentTools(conclaveDependenciesDirectory: String) : OSDependentTools {
+        return when {
+            OperatingSystem.current().isMacOsX -> {
+                MacOSDependentTools(conclaveDependenciesDirectory)
+            }
+            OperatingSystem.current().isWindows -> {
+                WindowsDependentTools(conclaveDependenciesDirectory)
+            }
+            else -> {
+                LinuxDependentTools(conclaveDependenciesDirectory)
+            }
+        }
     }
 
     private fun readVersionFromPluginManifest(): String {

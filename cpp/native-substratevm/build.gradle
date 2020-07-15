@@ -12,7 +12,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
     dependsOn ':cpp:native-substratevm:native-substratevm-simulation:jar', ':cpp:native-substratevm:native-substratevm-debug:jar', ':cpp:native-substratevm:native-substratevm-release:jar'
     doFirst {
         systemProperty 'simulation-jar.path', tasks.getByPath(':cpp:native-substratevm:native-substratevm-simulation:jar').outputs.files.asPath
