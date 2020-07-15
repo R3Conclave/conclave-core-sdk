@@ -2,6 +2,7 @@ package com.r3.conclave.utilities.internal
 
 import java.io.*
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
 
@@ -18,9 +19,7 @@ fun parseHex(str: String): ByteArray {
     val len = str.length
 
     // "111" is not a valid hex encoding.
-    if (len % 2 != 0) {
-        throw IllegalArgumentException("hex binary needs to be even-length: $str")
-    }
+    require(len % 2 == 0) { "hex binary needs to be even-length: $str" }
 
     val out = ByteArray(len / 2)
 
@@ -36,15 +35,18 @@ fun parseHex(str: String): ByteArray {
     while (i < len) {
         val h = hexToBin(str[i])
         val l = hexToBin(str[i + 1])
-        if (h == -1 || l == -1) {
-            throw IllegalArgumentException("contains illegal character for hexBinary: $str")
-        }
-
+        require(h != -1 && l != -1) { "contains illegal character for hexBinary: $str" }
         out[i / 2] = (h * 16 + l).toByte()
         i += 2
     }
 
     return out
+}
+
+inline fun digest(algorithm: String, block: MessageDigest.() -> Unit): ByteArray {
+    val messageDigest = MessageDigest.getInstance(algorithm)
+    block(messageDigest)
+    return messageDigest.digest()
 }
 
 fun ByteBuffer.getBoolean(): Boolean = get().toInt() != 0

@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
@@ -62,6 +63,55 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
                 else -> EnclaveMode.RELEASE
             }
         }
+
+    override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
+        require(toBeSealed.plaintext.size > 0)
+        val sealedData = ByteArray(Native.calcSealedBlobSize(toBeSealed.plaintext.size, toBeSealed.authenticatedData?.size ?: 0))
+        Native.sealData(
+                output = sealedData,
+                outputOffset = 0,
+                outputSize = sealedData.size,
+                plaintext = toBeSealed.plaintext.bytes,
+                plaintextOffset = 0,
+                plaintextSize = toBeSealed.plaintext.size,
+                authenticatedData = toBeSealed.authenticatedData?.bytes,
+                authenticatedDataOffset = 0,
+                authenticatedDataSize = toBeSealed.authenticatedData?.size ?: 0
+        )
+        return sealedData
+    }
+
+    override fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope {
+        require(sealedBlob.isNotEmpty())
+        val plaintext = ByteArray(Native.plaintextSizeFromSealedData(sealedBlob))
+        val authenticatedData = Native.authenticatedDataSize(sealedBlob).let { if (it > 0) ByteArray(it) else null }
+
+        Native.unsealData(
+                sealedBlob = sealedBlob,
+                sealedBlobOffset = 0,
+                sealedBlobLength = sealedBlob.size,
+                dataOut = plaintext,
+                dataOutOffset = 0,
+                dataOutLength = plaintext.size,
+                authenticatedDataOut = authenticatedData,
+                authenticatedDataOutOffset = 0,
+                authenticatedDataOutLength = authenticatedData?.size ?: 0
+        )
+
+        return PlaintextAndEnvelope(OpaqueBytes(plaintext), authenticatedData?.let(::OpaqueBytes))
+    }
+
+    override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean): ByteArray {
+        return ByteArray(16).also {
+            Native.sgxKey(
+                    keyType = keyType.value,
+                    keyPolicy = if (useSigner) KeyPolicy.MRSIGNER.value else KeyPolicy.MRENCLAVE.value,
+                    keyOut = it,
+                    keyOutOffset = 0,
+                    keyOutLength = it.size
+            )
+        }
+    }
 
     /**
      * @return true if the enclave was loaded in debug mode, i.e. its report's `DEBUG` flag is set, false otherwise.

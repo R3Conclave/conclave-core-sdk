@@ -1,10 +1,10 @@
 package com.r3.conclave.common
 
+import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getBytes
 import com.r3.conclave.utilities.internal.parseHex
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
-import java.security.MessageDigest
 
 /**
  * Container for a cryptographically secure hash value. Currently only SHA-256 and SHA-512 are supported, represented
@@ -48,7 +48,7 @@ class SHA256Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun hash(bytes: ByteArray): SHA256Hash = SHA256Hash(MessageDigest.getInstance("SHA-256").digest(bytes))
+        fun hash(bytes: ByteArray): SHA256Hash = SHA256Hash(digest("SHA-256") { update(bytes) })
 
         /**
          * Wraps the given byte array into a [SHA256Hash] object. The number of bytes must be 32.
@@ -100,7 +100,7 @@ class SHA512Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun hash(bytes: ByteArray): SHA512Hash = SHA512Hash(MessageDigest.getInstance("SHA-512").digest(bytes))
+        fun hash(bytes: ByteArray): SHA512Hash = SHA512Hash(digest("SHA-512") { update(bytes) })
 
         /**
          * Wraps the given byte array into a [SHA512Hash] object. The number of bytes must be 64.

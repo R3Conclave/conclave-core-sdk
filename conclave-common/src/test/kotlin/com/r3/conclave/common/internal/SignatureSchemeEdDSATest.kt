@@ -5,10 +5,10 @@ import org.junit.jupiter.api.Test
 import java.security.SignatureException
 import java.util.*
 
-class SignatureSchemeTest {
+class SignatureSchemeEdDSATest {
     @Test
-    fun `eddsa scheme sign and verify`() {
-        val eddsa = SignatureSchemeFactory.make(SignatureSchemeId.EDDSA_ED25519_SHA512)
+    fun `sign and verify`() {
+        val eddsa = SignatureSchemeEdDSA()
         val keyPair = eddsa.generateKeyPair()
         val input = ByteArray(128).also { Random().nextBytes(it) }
         val signature = eddsa.sign(keyPair.private, input)

@@ -13,7 +13,7 @@ class EnclaveSecureRandomSpi : SecureRandomSpi() {
     }
 
     override fun engineNextBytes(output: ByteArray) {
-        NativeEnclaveEnvironment.randomBytes(output, 0, output.size)
+        NativeEnclaveEnvironment.randomBytes(output)
     }
 
     override fun engineSetSeed(input: ByteArray?) {}

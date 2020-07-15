@@ -42,9 +42,17 @@ object Native {
      * @param authenticatedDataOffset authenticated data (sgx's MAC) offset.
      * @param authenticatedDataSize size of the authenticated data (sgx's MAC).
      */
-    external fun sealData(output: ByteArray, outputOffset: Int, outputSize: Int,
-                          plaintext: ByteArray, plaintextOffset: Int, plaintextSize: Int,
-                          authenticatedData: ByteArray?, authenticatedDataOffset: Int, authenticatedDataSize: Int)
+    external fun sealData(
+            output: ByteArray,
+            outputOffset: Int,
+            outputSize: Int,
+            plaintext: ByteArray,
+            plaintextOffset: Int,
+            plaintextSize: Int,
+            authenticatedData: ByteArray?,
+            authenticatedDataOffset: Int,
+            authenticatedDataSize: Int
+    )
 
     /**
      * Unseal the data (wrapper around sgx_unseal_data).
@@ -58,10 +66,17 @@ object Native {
      * @param authenticatedDataOutOffset MAC offset.
      * @param authenticatedDataOutLength size of the authenticatedData ([authenticatedDataOut]).
      */
-    external fun unsealData(sealedBlob: ByteArray, sealedBlobOffset: Int, sealedBlobLength: Int,
-                            dataOut: ByteArray, dataOutOffset: Int, dataOutLength: Int,
-                            authenticatedDataOut: ByteArray?, authenticatedDataOutOffset: Int,
-                            authenticatedDataOutLength: Int)
+    external fun unsealData(
+            sealedBlob: ByteArray,
+            sealedBlobOffset: Int,
+            sealedBlobLength: Int,
+            dataOut: ByteArray,
+            dataOutOffset: Int,
+            dataOutLength: Int,
+            authenticatedDataOut: ByteArray?,
+            authenticatedDataOutOffset: Int,
+            authenticatedDataOutLength: Int
+    )
 
     /**
      * Returns the necessary sealed blob size (wrapper of `sgx_calc_sealed_data_size`).

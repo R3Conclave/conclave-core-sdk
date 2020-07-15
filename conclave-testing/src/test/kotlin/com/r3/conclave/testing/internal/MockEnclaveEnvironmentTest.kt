@@ -1,19 +1,70 @@
 package com.r3.conclave.testing.internal
 
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.KeyType
+import com.r3.conclave.common.internal.PlaintextAndEnvelope
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import org.junit.jupiter.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.ByteBuffer
+import java.security.GeneralSecurityException
 
 class MockEnclaveEnvironmentTest {
+    private companion object {
+        private val plaintext = OpaqueBytes("Super Secret!".toByteArray())
+        private val authenticatedData = OpaqueBytes("Authenticate!".toByteArray())
+    }
+
     class EnclaveA : Enclave()
 
     class EnclaveB : Enclave()
 
+    @ParameterizedTest(name = "{displayName} {argumentsWithNames}")
+    @ValueSource(booleans = [true, false])
+    fun `seal and unseal on same enclave instance`(useAuthenticatedData: Boolean) {
+        val env = createMockEnclaveEnvironment<EnclaveA>()
+        val input = PlaintextAndEnvelope(plaintext, authenticatedData.takeIf { useAuthenticatedData })
+        val sealedBlob = env.sealData(input)
+        assertThat(env.unsealData(sealedBlob)).isEqualTo(input)
+    }
+
+    @ParameterizedTest(name = "{displayName} {argumentsWithNames}")
+    @ValueSource(booleans = [true, false])
+    fun `seal and unseal on different instance of same enclave`(useAuthenticatedData: Boolean) {
+        val env1 = createMockEnclaveEnvironment<EnclaveA>()
+        val env2 = createMockEnclaveEnvironment<EnclaveA>()
+        val input = PlaintextAndEnvelope(plaintext, authenticatedData.takeIf { useAuthenticatedData })
+        val sealedBlob = env1.sealData(input)
+        assertThat(env2.unsealData(sealedBlob)).isEqualTo(input)
+    }
+
+    @ParameterizedTest(name = "{displayName} {argumentsWithNames}")
+    @ValueSource(booleans = [true, false])
+    fun `seal and unseal on different enclaves`(useAuthenticatedData: Boolean) {
+        val envA = createMockEnclaveEnvironment<EnclaveA>()
+        val envB = createMockEnclaveEnvironment<EnclaveB>()
+        val input = PlaintextAndEnvelope(plaintext, authenticatedData.takeIf { useAuthenticatedData })
+        val sealedBlob = envA.sealData(input)
+        assertThatExceptionOfType(GeneralSecurityException::class.java).isThrownBy {
+            envB.unsealData(sealedBlob)
+        }
+    }
+
     @Test
-    fun `MockEnclaveEnvironment defaultSealingKey MRENCLAVE`() {
+    fun `sealed data is different on same plaintext`() {
+        val env = createMockEnclaveEnvironment<EnclaveA>()
+        val sealedBlob1 = env.sealData(PlaintextAndEnvelope(plaintext))
+        val sealedBlob2 = env.sealData(PlaintextAndEnvelope(plaintext))
+        assertThat(sealedBlob1).isNotEqualTo(sealedBlob2)
+    }
+
+    @Test
+    fun `defaultSealingKey MRENCLAVE`() {
         val envEnclaveA1 = createMockEnclaveEnvironment<EnclaveA>()
         val envEnclaveA2 = createMockEnclaveEnvironment<EnclaveA>()
         val envEnclaveB = createMockEnclaveEnvironment<EnclaveB>()
@@ -37,7 +88,7 @@ class MockEnclaveEnvironmentTest {
     }
 
     @Test
-    fun `MockEnclaveEnvironment defaultSealingKey MRSIGNER`() {
+    fun `defaultSealingKey MRSIGNER`() {
         val envEnclaveA1 = createMockEnclaveEnvironment<EnclaveA>()
         val envEnclaveA2 = createMockEnclaveEnvironment<EnclaveA>()
         val envEnclaveB = createMockEnclaveEnvironment<EnclaveB>()
@@ -65,13 +116,13 @@ class MockEnclaveEnvironmentTest {
      *  default = requestReportKey, requestSealMRSignerKey, requestSealMREnclaveKey
      * @return List<ByteBuffer> containing the requested keys.
      */
-    private fun runMockKeyRequests(env: EnclaveEnvironment, keyTypes: Array<KeyType>, useSigner: Boolean): List<ByteBuffer> {
+    private fun runMockKeyRequests(env: MockEnclaveEnvironment, keyTypes: Array<KeyType>, useSigner: Boolean): List<ByteBuffer> {
         return keyTypes.map { keyType ->
             ByteBuffer.wrap(env.defaultSealingKey(keyType, useSigner)).also { assertEquals(it.capacity(), 16) }
         }
     }
 
-    private inline fun <reified E : Enclave> createMockEnclaveEnvironment(): EnclaveEnvironment {
+    private inline fun <reified E : Enclave> createMockEnclaveEnvironment(): MockEnclaveEnvironment {
         return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance())
     }
 }
