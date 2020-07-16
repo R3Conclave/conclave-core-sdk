@@ -64,7 +64,7 @@ namespace {
             { SGX_ERROR_MC_USED_UP, "SGX_ERROR_MC_USED_UP: Monotonic counters are used out" },
             { SGX_ERROR_MC_OVER_QUOTA, "SGX_ERROR_MC_OVER_QUOTA: Monotonic counters exceeds quota limitation" },
             { SGX_ERROR_KDF_MISMATCH, "SGX_ERROR_KDF_MISMATCH: Key derivation function doesn't match during key exchange" },
-            { SGX_ERROR_UNRECOGNIZED_PLATFORM, "SGX_ERROR_UNRECOGNIZED_PLATFORM: EPID Provisioning failed due to platform not recognized by backend serve" },
+            { SGX_ERROR_UNRECOGNIZED_PLATFORM, "SGX_ERROR_UNRECOGNIZED_PLATFORM: EPID Provisioning failed due to platform not recognized by backend server" },
             { SGX_ERROR_NO_PRIVILEGE, "SGX_ERROR_NO_PRIVILEGE: Not enough privilege to perform the operation" },
             { SGX_ERROR_PCL_ENCRYPTED, "SGX_ERROR_PCL_ENCRYPTED: trying to encrypt an already encrypted enclave" },
             { SGX_ERROR_PCL_NOT_ENCRYPTED, "SGX_ERROR_PCL_NOT_ENCRYPTED: trying to load a plain enclave using sgx_create_encrypted_enclave" },
