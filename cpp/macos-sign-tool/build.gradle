@@ -13,16 +13,22 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
 }
 
+task copyToSourceTree(type: Copy) {
+    dependsOn ":cpp:linux-sgx:buildSgxSign"
+    from "${project(":cpp:linux-sgx").buildDir}/src/linux-sgx/sdk/sign_tool/SignTool/sgx_sign"
+    into projectDir
+}
+
 /**
  * When building on macOS it will trigger the compilation of sign-tool.
  * On Linux, it will only pickup and package the checked-in file built on macOS.
  */
 jar {
     if (Os.isFamily(Os.FAMILY_MAC)) {
-        dependsOn tasks.getByPath(':cpp:linux-sgx:buildSgxSign')
+        dependsOn copyToSourceTree
     }
     into "com/r3/conclave/sign-tool/macos", {
-        from("../linux-sgx/build/src/linux-sgx/sdk/sign_tool/SignTool") {
+        from(projectDir) {
             include "sgx_sign"
         }
     }

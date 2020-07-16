@@ -35,20 +35,23 @@ task buildBinutils(type: Exec) {
     commandLine "cmake", "--build", "${project.buildDir}", "--target", "macos-binutils"
 }
 
+task copyToSourceTree(type: Copy) {
+    dependsOn buildBinutils
+    from "$buildDir/binutils-$binutils_version/build/ld/ld-new"
+    into projectDir
+}
+
 /**
  * When building on macOS it will trigger the compilation of binutils.
  * On Linux, it will only pickup and package the checked-in file built on macOS.
  */
 jar {
-    def buildBinUtilsTask = tasks.getByPath(':cpp:macos-binutils:buildBinutils')
     if (Os.isFamily(Os.FAMILY_MAC)) {
-        dependsOn buildBinUtilsTask
+        dependsOn copyToSourceTree
     }
     into 'com/r3/conclave/binutils/macos', {
-        def ldBuildDir = "${project.buildDir}/binutils-$binutils_version/build/ld"
-        def ldFile = "ld-new"
-        from (ldBuildDir) {
-            include ldFile
+        from (projectDir) {
+            include "ld-new"
         }
     }
 }
