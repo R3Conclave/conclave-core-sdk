@@ -3,6 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.handler.ExceptionSendingHandler
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
@@ -12,12 +13,12 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeEnclaveHandle
 import com.r3.conclave.utilities.internal.getRemainingBytes
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
+import java.lang.RuntimeException
 import java.nio.ByteBuffer
 import kotlin.collections.ArrayList
 
@@ -68,15 +69,33 @@ class SealingTest {
         }
     }
 
+    /**
+     * An enclave for sealing and unsealing data.
+     */
     class SealUnsealEnclave : InternalEnclave, Enclave() {
         override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
             return HandlerConnected.connect(SealUnsealEnclaveHandler(env), upstream)
         }
     }
 
+    /**
+     * Another enclave for sealing and unsealing data.
+     * With distinct measurement than [SealUnsealEnclave].
+     */
     class SealUnsealEnclaveAux : InternalEnclave, Enclave() {
         override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
             return HandlerConnected.connect(SealUnsealEnclaveHandler(env), upstream)
+        }
+    }
+
+    /**
+     * An enclave which is able to handle exceptions.
+     */
+    class SealUnsealEnclaveExceptionHandler : InternalEnclave, Enclave() {
+        override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
+            val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = true), upstream)
+            connected.connection.setDownstream(SealUnsealEnclaveHandler(env))
+            return connected
         }
     }
 
@@ -225,23 +244,28 @@ class SealingTest {
         assertEquals(toBeSealed.authenticatedData, unsealed.authenticatedData)
     }
 
-    /**
-     * The following test was intentionally disabled, as distinct SIGNERS would make the enclave crash.
-     **/
-    @Disabled("https://r3-cev.atlassian.net/browse/CON-106")
     @Test
     fun `seal in one enclave and unseal in another enclave distinct signers`() {
         val toBeSealed = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()))
+        // Setup the 1st enclave.
         val handler1 = SealUnsealRecordingHandler()
-        val connection1 = createEnclave(handler1, SealUnsealEnclave::class.java)
+        val throwHandler1 = ThrowFromHandler(handler1)
+        val rootConnection1 = createEnclave(throwHandler1, SealUnsealEnclaveExceptionHandler::class.java)
+        val connection1 = rootConnection1.downstream
+        //
+        // Setup the 2nd enclave.
         val handler2 = SealUnsealRecordingHandler()
-        val connection2 = createEnclave(handler2, SealUnsealEnclaveAux::class.java, keyGenInput = "enclave2")
+        val throwHandler2 = ThrowFromHandler(handler2)
+        val rootConnection2 = createEnclave(throwHandler2, SealUnsealEnclaveExceptionHandler::class.java, keyGenInput = "enclave2")
+        val connection2 = rootConnection2.downstream
+        //
         // Seal using the 1st enclave.
         connection1.sendUnsealedData(toBeSealed)
-        // Unseal using the 2nd enclave.
-        connection2.sendSealedData(handler1.pollLastReceivedSealedData.getRemainingBytes())
-        // Both encrypted texts should be the same as the default key policy for sealing is MRSIGNER.
-        assertEquals(toBeSealed.plaintext, handler2.pollLastReceivedUnsealedData.plaintext)
+        // Unseal using the 2nd enclave. Expect exception with message "SGX_ERROR_MAC_MISMATCH"
+        val exception = assertThrows<RuntimeException> {
+            connection2.sendSealedData(handler1.pollLastReceivedSealedData.getRemainingBytes())
+        }
+        assertTrue(exception.message!!.contains("SGX_ERROR_MAC_MISMATCH"))
     }
 
     private object KeyTypes {
