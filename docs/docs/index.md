@@ -36,29 +36,33 @@ There's a public mailing list for discussion of using Conclave and SGX. Join [co
 
 You can also [email us directly](mailto:conclave@r3.com). In future R3 will offer ticket based commercial support. 
 
-## Known issues
-
 !!! warning
-    This is a beta release of Conclave. You should not run enclaves built with it in production.
-
-This release ships with the following known issues:
-
-1. The API may change up until version 1.0. Although we have no current plans to change the API, small changes like 
-   package names may still occur and we may adapt the API based on user feedback during the beta period.
-2. There's currently no API for sending and receiving encrypted messages to/from enclaves.
-3. Conclave doesn't presently implement any side channel attack mitigations.
-4. Enclave keys aren't yet stable and change across enclave restarts, forcing re-attestation each time the host
-   process starts.
-5. Some system level exceptions like divide by zero or using null reference crash the enclave/host process.
-6. The type of attestation used currently requires you to sign up with and be whitelisted by Intel. Future versions
-   will implement "DCAP attestation" which will allow the owner of the hardware to whiteliste enclaves, not just Intel.
+    This is a beta release of Conclave. You should not run enclaves built with it in production. Please read the list
+    of [known issues](known-issues.md).
 
 ## Release notes
 
 ### Beta 3
 
+1. :jigsaw: **New feature!** The Mail API makes it easy to deliver encrypted messages to the enclave that only it can
+   read, with sequencing and separation of different mail streams by topic. Mail can also be used by an enclave to
+   persist (sealed) data. [Learn more](architecture.md#mail)
+1. :jigsaw: **New feature!** You can now compile your entire enclave ahead of time using 
+   [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/). This gives you access to a
+   much better JVM than in prior releases, with faster enclaves that use less RAM. 
 1. :jigsaw: **New feature!** New mock API for unit testing enclaves and for easy debugging between the host and enclave.
-   Add `conclave-testing` as a `testImplementation` dependency to your project.
+   [Learn more](writing-hello-world.md#mock)
+1. :jigsaw: **New feature!** You can now produce enclaves on macOS! Just follow the instructions as you would on a Linux
+   developer machine, and a JAR with an embedded Linux enclave .so file will be produced automatically. You can then take
+   that JAR and upload it to a Linux host for execution, e.g. via a Docker or webapp container (e.g. Tomcat). Combined
+   with the equivalent Windows support we added in beta 2 and the easy to use mock enclave API, this completes our 
+   developer platform support and allows mixed teams of people working on their preferred OS to build enclave-oriented
+   apps together.
+1. :jigsaw: **New feature!** You may now make concurrent calls into the enclave using multiple threads,.  
+1. Remote attestations (serialized `EnclaveInstanceInfo` objects) now remain valid across enclave restarts. They may
+   still be invalidated by changes to the SGX TCB, for example, microcode updates applied as part of an operating
+   system upgrade.
+1. Enclave/host communication now handles exceptions thrown across the boundary properly.
 
 ### Beta 2
 
