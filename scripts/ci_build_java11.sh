@@ -29,6 +29,6 @@ runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sg
 # Then build and run the tests. Note that the SDK build excludes dokka due to the dokka plugin not supporting
 # Java 11. 
 TEST_OPTS=${TEST_OPTS:-}
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 JVMCI_HOME=\$LABSJDK_HOME \$GRADLE test sdk -PexcludeDokka -i \
-    && cd $CODE_DOCKER_DIR/samples && JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \$GRADLE --refresh-dependencies test -i $TEST_OPTS \
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 JVMCI_HOME=\$LABSJDK_HOME \$GRADLE test sdk -PexcludeDokka $TEST_OPTS -i \
+    && cd $CODE_DOCKER_DIR/samples && JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \$GRADLE --refresh-dependencies test -i \
     && cd $CODE_DOCKER_DIR/build/sdk/hello-world && JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \$GRADLE test host:run -i"

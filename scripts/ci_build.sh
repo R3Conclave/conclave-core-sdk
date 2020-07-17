@@ -23,8 +23,8 @@ runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sg
 # Then run the tests. We expose the host network so that the test container can connect to the k8s cluster directly.
 # Publish artifacts so they can be used by the samples.
 TEST_OPTS=${TEST_OPTS:-}
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test publish -i \
-    && cd $CODE_DOCKER_DIR/samples && \$GRADLE --refresh-dependencies test -i $TEST_OPTS"
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test publish -i $TEST_OPTS \
+    && cd $CODE_DOCKER_DIR/samples && \$GRADLE --refresh-dependencies test -i"
 
 # Run the SDK tests.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh"
