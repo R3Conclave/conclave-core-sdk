@@ -8,7 +8,7 @@ class IntegrationTestHost : AutoCloseable {
     private val enclaveHost = EnclaveHost.load("com.r3.conclave.samples.integration.enclave.IntegrationTestEnclave")
 
     fun start(spid: OpaqueBytes?, attestationKey: String?) {
-        enclaveHost.start(spid, attestationKey)
+        enclaveHost.start(spid, attestationKey, null)
     }
 
     val enclaveInstanceInfo: EnclaveInstanceInfo get() = enclaveHost.enclaveInstanceInfo

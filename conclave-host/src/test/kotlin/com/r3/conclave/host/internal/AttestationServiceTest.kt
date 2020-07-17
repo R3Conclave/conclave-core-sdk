@@ -3,13 +3,16 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationReport
+import com.r3.conclave.mail.internal.Curve25519KeyPairGenerator
+import com.r3.conclave.mail.internal.Curve25519PublicKey
 import com.r3.conclave.testing.createSignedQuote
 import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.jupiter.api.Test
 
 class AttestationServiceTest {
     private val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
-    private val signedQuote = createSignedQuote(dataSigningKey = signingKeyPair.public)
+    private val encryptionKeyPair = Curve25519KeyPairGenerator().generateKeyPair()
+    private val signedQuote = createSignedQuote(dataSigningKey = signingKeyPair.public, encryptionKey = encryptionKeyPair.public)
 
     @Test
     fun `signed quote in the response is different`() {
@@ -24,7 +27,8 @@ class AttestationServiceTest {
         }
 
         assertThatIllegalStateException().isThrownBy {
-            attestationService.doAttest(signingKeyPair.public, signedQuote, EnclaveMode.SIMULATION)
+            attestationService.doAttest(signingKeyPair.public, encryptionKeyPair.public as Curve25519PublicKey,
+                    signedQuote, EnclaveMode.SIMULATION)
         }.withMessage("The quote in the attestation report is not the one that was provided to the attestation service.")
     }
 

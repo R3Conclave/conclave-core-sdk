@@ -10,7 +10,11 @@ import java.security.*
  * JCA type wrapper for Curve 25519 private keys. These are just random numbers, they are not stored
  * in "clamped" form.
  */
-internal class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
+class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
+    init {
+        require(encoded.size == 32) { "A Curve25519 key must be 256 bits long (32 bytes)." }
+    }
+
     override fun getAlgorithm() = "Conclave-Curve25519"
     override fun getEncoded(): ByteArray = encoded
     override fun getFormat(): String = "raw"
@@ -25,6 +29,8 @@ internal class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey
     override fun hashCode(): Int = encoded.contentHashCode()
 
     override fun toString(): String = "Curve25519PrivateKey()"
+
+    val publicKey get() = Curve25519PublicKey(Noise.createDH("25519").apply { setPrivateKey(encoded, 0) }.publicKey)
 }
 
 /**
@@ -32,7 +38,11 @@ internal class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey
  * Curve25519 in JCA, and if/when we can take a hard dependency on Java 11 these classes could
  * be deleted.
  */
-internal class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
+class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
+    init {
+        require(encoded.size == 32) { "A Curve25519 key must be 256 bits long (32 bytes)." }
+    }
+
     override fun getAlgorithm() = "Conclave-Curve25519"
     override fun getEncoded(): ByteArray = encoded
     override fun getFormat(): String = "raw"
@@ -46,7 +56,7 @@ internal class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
 
     override fun hashCode(): Int = encoded.contentHashCode()
 
-    override fun toString(): String = "Curve25519PublicKey(encoded=${encoded.contentToString()})"
+    override fun toString(): String = encoded.contentToString()
 }
 
 /**
@@ -57,15 +67,13 @@ internal class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
  *
  * Public API is all just the generic JCA types. This class is here for testing.
  */
-internal class Curve25519KeyPairGenerator : KeyPairGeneratorSpi() {
+class Curve25519KeyPairGenerator : KeyPairGeneratorSpi() {
     @Volatile
     private var rng: SecureRandom = SecureRandom.getInstanceStrong()
 
     override fun generateKeyPair(): KeyPair {
-        val p: ByteArray = rng.generateSeed(32)
-        val dh = Noise.createDH("25519")
-        dh.setPrivateKey(p, 0)
-        return KeyPair(Curve25519PublicKey(dh.publicKey), Curve25519PrivateKey(p))
+        val privateKey = Curve25519PrivateKey(rng.generateSeed(32))
+        return KeyPair(privateKey.publicKey, privateKey)
     }
 
     override fun initialize(keysize: Int, random: SecureRandom) {

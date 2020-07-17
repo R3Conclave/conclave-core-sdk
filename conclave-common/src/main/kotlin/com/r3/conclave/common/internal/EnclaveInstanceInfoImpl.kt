@@ -15,6 +15,9 @@ import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.QuoteStatus.*
+import com.r3.conclave.mail.MutableMail
+import com.r3.conclave.mail.internal.Curve25519PublicKey
+import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.security.PublicKey
@@ -23,7 +26,8 @@ import java.security.Signature
 class EnclaveInstanceInfoImpl(
         override val dataSigningKey: PublicKey,
         val attestationResponse: AttestationResponse,
-        val enclaveMode: EnclaveMode
+        val enclaveMode: EnclaveMode,
+        val encryptionKey: Curve25519PublicKey
 ) : EnclaveInstanceInfo {
     // The verification of the parameters are done at construction time. This is especially important when deserialising.
     val attestationReport: AttestationReport
@@ -35,25 +39,25 @@ class EnclaveInstanceInfoImpl(
             RELEASE, DEBUG -> AttestationParameters.INTEL
             SIMULATION, MOCK -> AttestationParameters.MOCK
         }
-        attestationReport = attestationResponse.verify(pkixParameters)
-        // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct it terms of
+        // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct in terms of
         // release/debug vs simulation/mock.
+        attestationReport = attestationResponse.verify(pkixParameters)
 
         val reportBody = attestationReport.isvEnclaveQuoteBody[SgxQuote.reportBody]
 
         val flags = reportBody[attributes][flags].read()
         val isDebug = flags and SgxEnclaveFlags.DEBUG != 0L
         // Now we check the debug flag from the attested quote matches release vs debug enclaveMode. The only thing left
-        // is the distinction between simulation and mock - we can't be sure which it is but it doesn't mattter.
+        // is the distinction between simulation and mock - we can't be sure which it is but it doesn't matter.
         when (enclaveMode) {
             RELEASE -> require(!isDebug) { "Mismatch between debug flag and enclaveMode" }
             DEBUG, SIMULATION, MOCK -> require(isDebug) { "Mismatch between debug flag and enclaveMode" }
         }
 
-        val signingKeyHash = SHA512Hash.hash(dataSigningKey.encoded)
-        val reportData = SHA512Hash.get(reportBody[reportData].read())
-        require(signingKeyHash == reportData) {
-            "The report data of the quote does not equal the SHA-512 hash of the data signing key."
+        val expectedReportDataHash = SHA512Hash.hash(dataSigningKey.encoded + encryptionKey.encoded)
+        val reportDataHash = SHA512Hash.get(reportBody[reportData].read())
+        require(expectedReportDataHash == reportDataHash) {
+            "The report data of the quote does not match the hash in the remote attestation."
         }
 
         enclaveInfo = EnclaveInfo(
@@ -86,6 +90,7 @@ class EnclaveInstanceInfoImpl(
         return writeData {
             write(magic)
             writeIntLengthPrefixBytes(dataSigningKey.encoded)
+            writeIntLengthPrefixBytes(encryptionKey.encoded)
             writeIntLengthPrefixBytes(attestationResponse.reportBytes)
             writeIntLengthPrefixBytes(attestationResponse.signature)
             writeIntLengthPrefixBytes(attestationResponse.certPath.encoded)
@@ -93,10 +98,14 @@ class EnclaveInstanceInfoImpl(
         }
     }
 
+    override fun createMail(body: ByteArray): MutableMail = MutableMail(body, encryptionKey)
+
     override fun toString() = """
         Remote attestation for enclave ${enclaveInfo.codeHash}:
           - Mode: $enclaveMode
           - Code signing key hash: ${enclaveInfo.codeSigningKeyHash}
+          - Public signing key: ${dataSigningKey.encoded.toHexString()}
+          - Public encryption key: ${encryptionKey.encoded.toHexString()}
           - Product ID: ${enclaveInfo.productID}
           - Revocation level: ${enclaveInfo.revocationLevel}
         

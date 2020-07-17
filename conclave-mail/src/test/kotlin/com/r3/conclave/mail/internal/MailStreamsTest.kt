@@ -65,32 +65,6 @@ class MailStreamsTest {
         return decrypt
     }
 
-    private val corruptionErrors = listOf(
-            "Unknown Noise DH algorithm",
-            "Unknown Noise cipher algorithm",
-            "Unknown Noise hash algorithm",
-            "Corrupt stream or not Conclave Mail",
-            "Premature end of stream",
-            "Protocol name must have 5 components",
-            "Tag mismatch!"
-    )
-
-    @Test
-    fun corrupted() {
-        val bytes = encryptMessage()
-        // Corrupt every byte in the array and check we get an exception with a reasonable
-        // error message for each.
-        for (i in bytes.indices) {
-            bytes[i] = bytes[i].inc()
-            val e = assertThrows<IOException> { decrypt(bytes) }
-            // Is the exception message in our list of acceptable/anticipated errors?
-            assertTrue(corruptionErrors.none { e.message!! in it }, "Unrecognised error: ${e.message!!}")
-            bytes[i] = bytes[i].dec()
-            // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
-            decrypt(bytes)
-        }
-    }
-
     @Test
     fun senderKey() {
         val senderPrivateKey = ByteArray(32).also { Noise.random(it) }

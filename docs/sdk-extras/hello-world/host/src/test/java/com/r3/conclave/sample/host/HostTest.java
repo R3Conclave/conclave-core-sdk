@@ -25,7 +25,7 @@ public class HostTest {
         // if running in simulation mode, but are required in debug/release mode.
         String spid = System.getProperty("spid");
         String attestionKey = System.getProperty("attestation-key");
-        enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey);
+        enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey, null);
     }
 
     @AfterAll

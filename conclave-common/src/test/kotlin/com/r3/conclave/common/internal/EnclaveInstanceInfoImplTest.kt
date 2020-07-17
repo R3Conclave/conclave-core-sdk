@@ -8,6 +8,8 @@ import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.QuoteStatus
 import com.r3.conclave.host.internal.MockAttestationService
+import com.r3.conclave.mail.internal.Curve25519KeyPairGenerator
+import com.r3.conclave.mail.internal.Curve25519PublicKey
 import com.r3.conclave.testing.createSignedQuote
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -18,6 +20,7 @@ import kotlin.random.Random
 
 class EnclaveInstanceInfoImplTest {
     private val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
+    private val encryptionKeyPair = Curve25519KeyPairGenerator().generateKeyPair()
     private val measurement = SHA256Hash.wrap(Random.nextBytes(32))
     private val cpuSvn = OpaqueBytes(Random.nextBytes(16))
     private val mrsigner = SHA256Hash.wrap(Random.nextBytes(32))
@@ -29,7 +32,8 @@ class EnclaveInstanceInfoImplTest {
             mrsigner = mrsigner,
             isvProdId = isvProdId,
             isvSvn = isvSvn,
-            dataSigningKey = signingKeyPair.public
+            dataSigningKey = signingKeyPair.public,
+            encryptionKey = encryptionKeyPair.public
     )
 
     private var reportQuoteStatus: QuoteStatus = QuoteStatus.OK
@@ -48,7 +52,7 @@ class EnclaveInstanceInfoImplTest {
         }
         assertThatIllegalArgumentException().isThrownBy {
             newInstance(signedQuote = containingInvalidReportData)
-        }.withMessage("The report data of the quote does not equal the SHA-512 hash of the data signing key.")
+        }.withMessage("The report data of the quote does not match the hash in the remote attestation.")
     }
 
     @Test
@@ -113,8 +117,8 @@ class EnclaveInstanceInfoImplTest {
 
     private fun newInstance(
             signedQuote: ByteCursor<SgxSignedQuote> = this.signedQuote,
-            enclaveMode: EnclaveMode = EnclaveMode.MOCK
+            enclaveMode: EnclaveMode = MOCK
     ): EnclaveInstanceInfoImpl {
-        return attestationService.doAttest(signingKeyPair.public, signedQuote, enclaveMode)
+        return attestationService.doAttest(signingKeyPair.public, encryptionKeyPair.public as Curve25519PublicKey, signedQuote, enclaveMode)
     }
 }

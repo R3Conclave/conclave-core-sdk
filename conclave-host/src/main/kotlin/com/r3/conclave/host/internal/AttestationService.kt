@@ -6,6 +6,7 @@ import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.quote
+import com.r3.conclave.mail.internal.Curve25519PublicKey
 import java.security.PublicKey
 
 /**
@@ -14,9 +15,10 @@ import java.security.PublicKey
 interface AttestationService {
     fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse
 
-    fun doAttest(dataSigningKey: PublicKey, signedQuote: ByteCursor<SgxSignedQuote>, enclaveMode: EnclaveMode): EnclaveInstanceInfoImpl {
+    fun doAttest(dataSigningKey: PublicKey, encryptionKey: Curve25519PublicKey,
+                 signedQuote: ByteCursor<SgxSignedQuote>, enclaveMode: EnclaveMode): EnclaveInstanceInfoImpl {
         val response = requestSignature(signedQuote)
-        val enclaveInstanceInfo = EnclaveInstanceInfoImpl(dataSigningKey, response, enclaveMode)
+        val enclaveInstanceInfo = EnclaveInstanceInfoImpl(dataSigningKey, response, enclaveMode, encryptionKey)
         check(enclaveInstanceInfo.attestationReport.isvEnclaveQuoteBody == signedQuote.quote) {
             "The quote in the attestation report is not the one that was provided to the attestation service."
         }

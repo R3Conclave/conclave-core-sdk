@@ -107,7 +107,7 @@ class AvianTestSuite {
                 config = EnclaveConfig().withTCSNum(32),
                 includeClasses = testCaseClasses + Opcodes::class.java
         ))
-        host.start(null, null)
+        host.start(null, null, null)
 
         for (testCase in testCaseClasses) {
             // TODO Make this into a parameterised test when this module moves to Junit 5

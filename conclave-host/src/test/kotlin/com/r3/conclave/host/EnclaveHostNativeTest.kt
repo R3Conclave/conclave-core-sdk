@@ -152,7 +152,7 @@ class EnclaveHostNativeTest {
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {
         host = testEnclaves.hostTo<T>(enclaveBuilder).apply {
-            start(null, null)
+            start(null, null, null)
         }
     }
 

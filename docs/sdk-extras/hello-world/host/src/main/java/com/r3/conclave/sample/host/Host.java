@@ -14,7 +14,7 @@ import java.util.Objects;
  */
 public class Host {
     public static void main(String[] args) throws EnclaveLoadException {
-        
+
         // Report whether the platform supports hardware enclaves.
         //
         // This method will always check the hardware state regardless of whether running in Simulation,
@@ -53,7 +53,7 @@ public class Host {
             OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : new OpaqueBytes(new byte[16]);
             String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : "mock-key";
             // Start it up. In future versions this API will take more parameters, which is why it's explicit.
-            enclave.start(spid, attestationKey);
+            enclave.start(spid, attestationKey, null);
 
             // The attestation data must be provided to the client of the enclave, via whatever mechanism you like.
             final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();

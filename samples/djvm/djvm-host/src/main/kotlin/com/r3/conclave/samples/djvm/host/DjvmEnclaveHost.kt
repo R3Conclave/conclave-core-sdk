@@ -13,7 +13,7 @@ class DjvmEnclaveHost : AutoCloseable {
     private val enclaveHost = EnclaveHost.load("com.r3.conclave.samples.djvm.enclave.DjvmEnclave")
 
     fun start(spid: OpaqueBytes?, attestationKey: String?) {
-        enclaveHost.start(spid, attestationKey)
+        enclaveHost.start(spid, attestationKey, null)
     }
 
     fun loadJarIntoEnclave(jarFile: Path) {

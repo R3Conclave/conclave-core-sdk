@@ -2,6 +2,8 @@ package com.r3.conclave.common
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.mail.MutableMail
+import com.r3.conclave.mail.internal.Curve25519PublicKey
 import com.r3.conclave.utilities.internal.*
 import java.security.PublicKey
 import java.security.Signature
@@ -37,8 +39,6 @@ interface EnclaveInstanceInfo {
      */
     fun verifier(): Signature
 
-    // TODO encryptionKey, to be added as part of Mail
-
     /**
      * Exposes how secure the remote enclave is currently considered to be.
      */
@@ -46,6 +46,12 @@ interface EnclaveInstanceInfo {
 
     /** Serializes this object to a custom format and returns the byte array. */
     fun serialize(): ByteArray
+
+    /**
+     * Creates a mail to this target enclave. It can be encrypted with [MutableMail.encrypt] and the results then
+     * delivered to the host for onwards delivery to the enclave.
+     */
+    fun createMail(body: ByteArray): MutableMail
 
     /**
      * Suppress kotlin specific companion objects from our API documentation.
@@ -66,16 +72,18 @@ interface EnclaveInstanceInfo {
             return from.deserialise {
                 require(readNBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
                 val dataSigningKey = readIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
+                val encryptionKey = Curve25519PublicKey(readIntLengthPrefixBytes())
                 val reportBytes = readIntLengthPrefixBytes()
                 val signature = readIntLengthPrefixBytes()
                 val certPath = readIntLengthPrefixBytes().inputStream().let(CertificateFactory.getInstance("X.509")::generateCertPath)
                 val enclaveMode = read().let { EnclaveMode.values()[it] }
-                // New fields need to be behind an availablity check before being read. Use dis.available() to check if there
+                // New fields need to be behind an availability check before being read. Use dis.available() to check if there
                 // are more bytes available and only parse them if there are. If not then provide defaults.
                 EnclaveInstanceInfoImpl(
                         dataSigningKey,
                         AttestationResponse(reportBytes, signature, certPath),
-                        enclaveMode
+                        enclaveMode,
+                        encryptionKey
                 )
             }
         }

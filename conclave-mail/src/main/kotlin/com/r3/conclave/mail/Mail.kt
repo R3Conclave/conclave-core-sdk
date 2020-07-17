@@ -1,21 +1,20 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.*
-import com.r3.conclave.mail.internal.Curve25519PrivateKey
-import com.r3.conclave.mail.internal.Curve25519PublicKey
-import com.r3.conclave.mail.internal.MailDecryptingStream
-import com.r3.conclave.mail.internal.MailEncryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.io.ByteArrayOutputStream
-import java.lang.IllegalArgumentException
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
 
+// TODO: Add sample demo code with a simple HTTP binding, document.
+// TODO: Key types probably need to be public or properly wired to JCA - cannot assume they are only retrieved from
+//       an EnclaveInstanceInfo. Could be e.g. sent by a client?
+// TODO: Rethink how re-delivery and persistence is integrated, how do enclaves send responses to the host when a mail
+//       is delivered, if re-delivery could disconnect any callbacks? Maybe just remove the ability to send responses.
 // TODO: Improve the client API design doc section to actually describe the EnclaveClient interface/class.
 //       Figure out the request-with-response, request-with-no-response API.
-// TODO: Wire up these classes to the EnclaveHost/Enclave API, add sample code, document.
 // TODO: Research how best to buffer messages to disk for unacknowledged mails (log with confirms/deletes)
 // TODO: Implement support for very large mails (seekable access).
 // TODO: Implement size padding properly.
@@ -131,20 +130,17 @@ interface EnclaveMail : EnclaveMailHeader {
  * Finally, a [from] header may be optionally provided to assist the remote
  * host in routing replies back to you.
  *
- * The [minSize] parameter can be set to be larger than any message you reasonably
- * expect to send. The encrypted bytes will be padded to be at least this size,
- * closing a message size side channel that could give away hints about the content.
- *
  * When the fields are set correctly call [encrypt] to get back an
  * [EncryptedEnclaveMail], and use [EncryptedEnclaveMail.encoded] to access
  * the raw bytes for transmission.
  */
-class MutableMail(override var bodyAsBytes: ByteArray,
-                  private val destinationKey: PublicKey,
-                  private val privateKey: PrivateKey? = null,
-                  var minSize: Int? = null) : EnclaveMail {
+class MutableMail(
+        override var bodyAsBytes: ByteArray,
+        private val destinationKey: PublicKey,
+        var privateKey: PrivateKey? = null
+) : EnclaveMail {
 
-    constructor(body: ByteArray, destinationKey: PublicKey) : this(body, destinationKey, null, null)
+    constructor(body: ByteArray, destinationKey: PublicKey) : this(body, destinationKey, null)
 
     init {
         // This is a runtime check so we can switch to JDK11+ types later without breaking our own API.
@@ -156,9 +152,18 @@ class MutableMail(override var bodyAsBytes: ByteArray,
     override var sequenceNumber: Long = 0
 
     /**
+     * The [minSize] parameter can be set to be larger than any message you reasonably
+     * expect to send. The encrypted bytes will be padded to be at least this size,
+     * closing a message size side channel that could give away hints about the content.
+     */
+    var minSize: Int = 0
+
+    /**
      * Increments the [sequenceNumber] field by one. Not thread safe.
      */
-    fun incrementSequenceNumber() { sequenceNumber++ }
+    fun incrementSequenceNumber() {
+        sequenceNumber++
+    }
 
     override var topic: String = "default"
         set(value) {
@@ -172,7 +177,7 @@ class MutableMail(override var bodyAsBytes: ByteArray,
         }
     override var from: String? = null
     override var envelope: ByteArray? = null
-    override val authenticatedSender: PublicKey? = privateKey?.let { privateToPublic(it) }
+    override val authenticatedSender: PublicKey? get() = privateKey?.let { privateToPublic(it) }
 
     // Convert to the corresponding public key.
     private fun privateToPublic(privateKey: PrivateKey): PublicKey {
@@ -211,7 +216,7 @@ object Mail {
      * Decodes and decrypts the mail with the given private key.
      *
      * @param withKey the Curve25519 private key to which the mail was encrypted.
-     * @param encoded The encoded bytes containing the body, the envelope, the
+     * @param encryptedEnclaveMail The encoded bytes containing the body, the envelope, the
      * handshake bytes that set up the shared session key and so on. A mail may not
      * be larger than the 2 gigabyte limit of a Java byte array. The format is not defined
      * here and subject to change.
@@ -265,5 +270,15 @@ object Mail {
     @JvmStatic
     @Throws(IOException::class)
     fun getUnauthenticatedHeader(encryptedEnclaveMail: EncryptedEnclaveMail): EnclaveMailHeader =
-        EnclaveMailHeaderImpl.decode(MailPrologueInputStream(encryptedEnclaveMail.inputStream().buffered()).headerBytes)// TODO: Is IOException the right type to throw in case of encoding errors?
+            EnclaveMailHeaderImpl.decode(MailPrologueInputStream(encryptedEnclaveMail.inputStream().buffered()).headerBytes)
 }
+
+// TODO: This exception doesn't propagate across enclave boundaries. Figure out exception handling in more detail.
+
+/**
+ * Thrown if mail is delivered in a different order to the sequence numbers in the header require. This exception
+ * indicates a bug in the host (or a maliciously tampered with host).
+ */
+class InvalidSequenceException(val attemptedSequenceNumber: Long, val highestSequenceNumber: Long) :
+        RuntimeException("Mail delivered out of order or replayed. Highest sequence number seen is " +
+                "$highestSequenceNumber, attempted delivery of $attemptedSequenceNumber")

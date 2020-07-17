@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.io.IOException
 import java.lang.IllegalArgumentException
 
 class MailTests {
@@ -77,10 +78,39 @@ class MailTests {
         assertThrows<IllegalArgumentException> { mutableMail.topic = "1234.5678" }
     }
 
+    private val corruptionErrors = listOf(
+            "Unknown Noise DH algorithm",
+            "Unknown Noise cipher algorithm",
+            "Unknown Noise hash algorithm",
+            "Corrupt stream or not Conclave Mail",
+            "Premature end of stream",
+            "Protocol name must have 5 components",
+            "Tag mismatch!"
+    )
+
+    @Test
+    fun corrupted() {
+        val mutableMail = MutableMail(message1, bob.public, alice.private)
+        mutableMail.topic = "valid-topic"
+        // Corrupt every byte in the array and check we get an exception with a reasonable
+        // error message for each.
+        val bytes = mutableMail.encrypt()
+        for (i in bytes.indices) {
+            bytes[i] = bytes[i].inc()
+            val e = assertThrows<IOException> { Mail.decrypt(bytes, bob.private) }
+            // Is the exception message in our list of acceptable/anticipated errors?
+            assertTrue(corruptionErrors.none { e.message!! in it }, "Unrecognised error: ${e.message!!}")
+            bytes[i] = bytes[i].dec()
+            // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
+            Mail.decrypt(bytes, bob.private)
+        }
+    }
+
     @Test
     @Disabled("not implemented yet")
     fun sizePadding() {
-        val mutableMail = MutableMail(message1, bob.public, minSize = 10 * 1024)
+        val mutableMail = MutableMail(message1, bob.public)
+        mutableMail.minSize = 10 * 1024
         val encrypted = mutableMail.encrypt()
         assertTrue(encrypted.size >= 10 * 1024)
     }

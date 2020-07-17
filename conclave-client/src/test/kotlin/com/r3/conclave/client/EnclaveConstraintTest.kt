@@ -2,6 +2,7 @@ package com.r3.conclave.client
 
 import com.r3.conclave.common.*
 import com.r3.conclave.common.EnclaveSecurityInfo.Summary.*
+import com.r3.conclave.mail.MutableMail
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.security.PublicKey
@@ -259,6 +260,7 @@ class EnclaveConstraintTest {
         )
 
         override val dataSigningKey: PublicKey get() = TODO("dataSigningKey")
+        override fun createMail(body: ByteArray): MutableMail = TODO("createMail")
         override fun verifier(): Signature = TODO("verifier")
         override fun serialize(): ByteArray = TODO("serialize")
     }

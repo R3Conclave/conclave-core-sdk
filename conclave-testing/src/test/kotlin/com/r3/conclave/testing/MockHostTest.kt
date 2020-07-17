@@ -10,7 +10,7 @@ class MockHostTest {
     @Test
     fun `simple sample test, with assesses to enclave internals`() {
         val mock = MockHost.loadMock<PreviousValueEnclave>()
-        mock.start(null, null)
+        mock.start(null, null, null)
 
         assertThat(mock.enclave.previousValue).isNull()
         val firstResponse = mock.callEnclave("Hello".toByteArray())
@@ -25,7 +25,7 @@ class MockHostTest {
     @Test
     fun `enclaveInfo values`() {
         val mock = MockHost.loadMock<PreviousValueEnclave>()
-        mock.start(null, null)
+        mock.start(null, null, null)
         assertThat(mock.enclaveInstanceInfo.enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.MOCK)
         assertThat(mock.enclaveInstanceInfo.enclaveInfo.codeHash.bytes).containsOnly(0)
         assertThat(mock.enclaveInstanceInfo.enclaveInfo.codeSigningKeyHash.bytes).containsOnly(0)

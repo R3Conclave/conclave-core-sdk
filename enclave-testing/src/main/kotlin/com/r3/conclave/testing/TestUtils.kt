@@ -16,7 +16,8 @@ fun createSignedQuote(
         mrsigner: SHA256Hash = SHA256Hash.wrap(Random.nextBytes(32)),
         isvProdId: Int = 1,
         isvSvn: Int = 1,
-        dataSigningKey: PublicKey = SignatureSchemeEdDSA().generateKeyPair().public
+        dataSigningKey: PublicKey,
+        encryptionKey: PublicKey
 ): ByteCursor<SgxSignedQuote> {
     return Cursor.allocate(SgxSignedQuote(500)).apply {
         quote[SgxQuote.reportBody].apply {
@@ -26,7 +27,7 @@ fun createSignedQuote(
             this[SgxReportBody.mrsigner] = mrsigner.buffer()
             this[SgxReportBody.isvProdId] = isvProdId
             this[SgxReportBody.isvSvn] = isvSvn
-            this[SgxReportBody.reportData] = SHA512Hash.hash(dataSigningKey.encoded).buffer()
+            this[SgxReportBody.reportData] = SHA512Hash.hash(dataSigningKey.encoded + encryptionKey.encoded).buffer()
         }
     }
 }
