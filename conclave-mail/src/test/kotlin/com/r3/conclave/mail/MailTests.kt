@@ -1,12 +1,12 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.Curve25519KeyPairGenerator
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.IOException
-import java.lang.IllegalArgumentException
 
 class MailTests {
     private companion object {
@@ -99,7 +99,7 @@ class MailTests {
             bytes[i] = bytes[i].inc()
             val e = assertThrows<IOException> { Mail.decrypt(bytes, bob.private) }
             // Is the exception message in our list of acceptable/anticipated errors?
-            assertTrue(corruptionErrors.none { e.message!! in it }, "Unrecognised error: ${e.message!!}")
+            assertThat(corruptionErrors).anyMatch { it in e.message!! }
             bytes[i] = bytes[i].dec()
             // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
             Mail.decrypt(bytes, bob.private)

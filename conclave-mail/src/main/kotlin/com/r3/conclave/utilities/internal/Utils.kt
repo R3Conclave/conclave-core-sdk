@@ -69,13 +69,13 @@ fun ByteArray.dataStream(): DataInputStream = DataInputStream(inputStream())
 inline fun <T> ByteArray.deserialise(block: DataInputStream.() -> T): T = block(dataStream())
 
 /** Read and return exactly [n] bytes from the stream, or throw [EOFException]. */
-fun DataInputStream.readNBytes(n: Int): ByteArray {
+fun DataInputStream.readExactlyNBytes(n: Int): ByteArray {
     val bytes = ByteArray(n)
     readFully(bytes)
     return bytes
 }
 
-fun DataInputStream.readIntLengthPrefixBytes(): ByteArray = readNBytes(readInt())
+fun DataInputStream.readIntLengthPrefixBytes(): ByteArray = readExactlyNBytes(readInt())
 
 fun DataOutputStream.writeIntLengthPrefixBytes(bytes: ByteArray) {
     writeInt(bytes.size)

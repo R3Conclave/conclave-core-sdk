@@ -70,7 +70,7 @@ interface EnclaveInstanceInfo {
         @JvmStatic
         fun deserialize(from: ByteArray): EnclaveInstanceInfo {
             return from.deserialise {
-                require(readNBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
+                require(readExactlyNBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
                 val dataSigningKey = readIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
                 val encryptionKey = Curve25519PublicKey(readIntLengthPrefixBytes())
                 val reportBytes = readIntLengthPrefixBytes()

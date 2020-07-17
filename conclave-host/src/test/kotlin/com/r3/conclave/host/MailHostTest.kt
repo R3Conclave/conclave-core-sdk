@@ -13,6 +13,7 @@ import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -114,7 +115,7 @@ class MailHostTest {
             encrypted[i] = encrypted[i].inc()
             var e: Throwable = assertThrows<RuntimeException>("iteration $i") { noop.deliverMail(i.toLong(), encrypted) }
             while (e.cause != null) e = e.cause!!
-            assertTrue(corruptionErrors.none { e.message!! in it }, "Unrecognised error: ${e.message!!}")
+            assertThat(corruptionErrors).anyMatch { it in e.message!! }
             encrypted[i] = encrypted[i].dec()
         }
     }
