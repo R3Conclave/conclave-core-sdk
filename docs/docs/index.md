@@ -25,7 +25,7 @@ design. This will explain the concepts referred to in the rest of the documentat
 
 [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
 
-[**Machine setup.**](/machine-setup/) Learn how to obtain SGX capable hardware, set it up, deploy to production
+[**Machine setup.**](machine-setup.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
 and then keep your machine trusted by applying updates. 
 
 [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
