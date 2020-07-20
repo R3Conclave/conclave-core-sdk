@@ -35,6 +35,18 @@ if [ -d ${AGENT_HOME_DIR:-} ]; then
     AGENT_HOME_DIR_FLAGS="-v ${AGENT_HOME_DIR}:/${AGENT_HOME_DIR}"
 fi
 
+# `PROJECT_VERSION` unset means that the composite build will be used by the samples.
+# `PROJECT_VERSION` set to empty will make samples use published artifacts with hardcoded default version,
+#  e.g. 0.3-SNAPSHOT, as used by the `master` builds and the Java 11 PR build.
+# `PROJECT_VERSION` set to non-empty will make the samples use the artifacts published with said version,
+#  as used by the PR hardware builds.
+# `PROJECT_VERSION` should only be passed to the container if set, even if empty, otherwise leave it unset.
+# This should be in tune with the CI configurations.
+PROJECT_VERSION_FLAGS=""
+if [ -n "${PROJECT_VERSION-}" ] || [ -n "${PROJECT_VERSION+empty}" = empty ]; then
+    PROJECT_VERSION_FLAGS="-e PROJECT_VERSION=${PROJECT_VERSION}"
+fi
+
 function runDocker() {
     IMAGE_NAME=$1
     docker run --rm \
@@ -50,7 +62,7 @@ function runDocker() {
        -v ${HOST_CORE_DUMP_DIR}:${HOST_CORE_DUMP_DIR} \
        $AGENT_HOME_DIR_FLAGS \
        ${SGX_HARDWARE_FLAGS} \
-       -e PROJECT_VERSION=${PROJECT_VERSION:-} \
+       ${PROJECT_VERSION_FLAGS} \
        -e GRADLE_USER_HOME=/gradle \
        $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
        ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${IMAGE_NAME} \
