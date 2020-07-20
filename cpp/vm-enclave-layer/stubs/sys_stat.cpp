@@ -58,4 +58,9 @@ int __lxstat(int, const char*, struct stat*) {
     return -1;
 }
 
+int __lxstat64(int, const char*, struct stat64*) {
+    enclave_trace("__lxstat64\n");
+    return -1;
+}
+
 }

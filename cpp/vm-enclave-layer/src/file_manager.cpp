@@ -74,8 +74,8 @@ std::string File::filename() {
 // File Manager
 FileManager::FileManager() : _next_handle(0x10) {
     // Create the standard files. These should never be closed.
-    _files[0] = new StdFile(0, FILENAME_STDOUT); 
-    _files[1] = new StdFile(1, FILENAME_STDERR);
+    _files[1] = new StdFile(1, FILENAME_STDOUT); 
+    _files[2] = new StdFile(2, FILENAME_STDERR);
 }
 
 FileManager& FileManager::instance() {
@@ -126,10 +126,10 @@ File* FileManager::fromFILE(FILE* fp) {
     // stdout and stderr are special cases. They will point to 'file_std???' defined above
     // which are actually null pointers
     if (fp == stdout) {
-        return _files[0];
+        return _files[1];
     }
     else if (fp == stderr) {
-        return _files[1];
+        return _files[2];
     }
 
     // Normal files

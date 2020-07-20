@@ -45,4 +45,10 @@ fi
 GDB_SGX_PLUGIN_PATH=$LINUX_SGX_BUILD_PATH/gdb-sgx-plugin
 SGX_LIBRARY_PATH=$LINUX_SGX_BUILD_PATH
 export PYTHONPATH=$GDB_SGX_PLUGIN_PATH
-LD_PRELOAD=$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/env gdb -iex "directory $GDB_SGX_PLUGIN_PATH" -iex "source $GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" -iex "add-auto-load-safe-path $HOME/.gdbsgxjvm" -iex "source $HOME/.gdbsgxjvm/src_dirs" "$@"
+
+# Start GDB with the parameters required to debug SGX, our source code and enclaves produced with native-image.
+# When starting a JVM application the JVM produces many SIGSEGV errors assumedly to trigger loading of modules.
+# In order to skip these the command line below includes '-iex "handle SIGSEGV nostop noprint pass"'. Once you
+# have hit your entry point/breakpoint you may wish to re-enable this exception if you are trying to track
+# down a crashing bug.
+LD_PRELOAD=$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/env gdb -iex "directory $GDB_SGX_PLUGIN_PATH" -iex "source $GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" -iex "add-auto-load-safe-path $HOME/.gdbsgxjvm" -iex "source $HOME/.gdbsgxjvm/src_dirs"  -iex "handle SIGSEGV nostop noprint pass" "$@"

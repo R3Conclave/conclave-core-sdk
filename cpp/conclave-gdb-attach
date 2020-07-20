@@ -18,4 +18,4 @@ if [ -z "$PID" ]; then
 fi
 echo "Attaching to process: $PID"
 
-$SGXJVM_ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')" -ex "handle SIGSEGV nostop noprint pass" 
+$SGXJVM_ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')"

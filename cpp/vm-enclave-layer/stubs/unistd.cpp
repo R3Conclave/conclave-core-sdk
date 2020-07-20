@@ -142,4 +142,9 @@ long syscall(long number, ...) {
     return 0;
 }
 
+int unlink(const char* pathname) {
+    enclave_trace("unlink(%s)\n", pathname);
+    return 0;
+}
+
 }

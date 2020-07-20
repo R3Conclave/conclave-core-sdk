@@ -187,6 +187,7 @@ long sysconf(int name);
 uid_t getuid();
 unsigned int sleep(unsigned int seconds);
 long syscall(long number, ...);
+int unlink(const char* pathname);
 
 // sys/stat.h
 int stat64(const char *pathname, struct stat64*);
@@ -194,6 +195,7 @@ int __fxstat64(int ver, int fildes, struct stat64 * stat_buf);
 int __xstat(int, const char*, struct stat*);
 int __fxstat(int, int , struct stat*);
 int __lxstat(int, const char*, struct stat*);
+int __lxstat64(int, const char*, struct stat64*);
 
 // fcntl.h
 int fcntl(int fd, int, ... );
