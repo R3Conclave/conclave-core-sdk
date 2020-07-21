@@ -115,7 +115,7 @@ class MailHostTest {
             encrypted[i] = encrypted[i].inc()
             var e: Throwable = assertThrows<RuntimeException>("iteration $i") { noop.deliverMail(i.toLong(), encrypted) }
             while (e.cause != null) e = e.cause!!
-            assertThat(corruptionErrors).anyMatch { it in e.message!! }
+            assertThat(corruptionErrors).describedAs(e.message!!).anyMatch { it in e.message!! }
             encrypted[i] = encrypted[i].dec()
         }
     }

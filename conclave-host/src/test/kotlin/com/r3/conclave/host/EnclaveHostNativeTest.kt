@@ -1,18 +1,19 @@
 package com.r3.conclave.host
 
+import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.enclave.EnclaveCall
-import com.r3.conclave.utilities.internal.dataStream
-import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.writeData
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.testing.RecordingEnclaveCall
+import com.r3.conclave.utilities.internal.dataStream
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.AfterEach
@@ -148,6 +149,19 @@ class EnclaveHostNativeTest {
         }
         host.callEnclave(100.toByteArray(), callback)
         assertThat(callback.called).isEqualTo(50)
+    }
+
+    @Test
+    fun `enclave can deserialise EnclaveInstanceInfo`() {
+        start<EnclaveInstanceInfoEnclave>(EnclaveBuilder(EnclaveConfig().withHeapMaxSize(0x20000000)))
+        val response = host.callEnclave(host.enclaveInstanceInfo.serialize())!!
+        val roundtrip = EnclaveInstanceInfo.deserialize(response)
+        assertThat(roundtrip.enclaveInfo).isEqualTo(host.enclaveInstanceInfo.enclaveInfo)
+        assertThat(roundtrip.dataSigningKey).isEqualTo(host.enclaveInstanceInfo.dataSigningKey)
+    }
+
+    class EnclaveInstanceInfoEnclave : Enclave(), EnclaveCall {
+        override fun invoke(bytes: ByteArray): ByteArray? = EnclaveInstanceInfo.deserialize(bytes).serialize()
     }
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {

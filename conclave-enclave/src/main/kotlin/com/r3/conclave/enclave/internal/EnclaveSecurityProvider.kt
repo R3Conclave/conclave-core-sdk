@@ -24,7 +24,7 @@ object EnclaveSecurityProvider : Provider(
      * Note: RSA signature classes involved in certificate verification
      */
     private val rsaSignRegistry = mapOf(
-        "KeyFactory.RSA" to "sun.security.rsa.RSAKeyFactory",
+        "KeyFactory.RSA" to "sun.security.rsa.RSAKeyFactory\$Legacy",
         "KeyPairGenerator.RSA" to "sun.security.rsa.RSAKeyPairGenerator",
         "Signature.MD2withRSA" to "sun.security.rsa.RSASignature\$MD2withRSA",
         "Signature.MD5withRSA" to "sun.security.rsa.RSASignature\$MD5withRSA",

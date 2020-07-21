@@ -1,6 +1,7 @@
 package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.getBytes
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -72,8 +73,8 @@ class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
      */
     operator fun <FT : Encoder<FR>, FR> get(field: Struct.Field<T, FT>): Cursor<FT, FR> {
         val buffer = getBuffer()
-        buffer.position(buffer.position() + field.offset)
-        buffer.limit(buffer.position() + field.type.size())
+        (buffer as Buffer).position(buffer.position() + field.offset)
+        (buffer as Buffer).limit(buffer.position() + field.type.size())
         return Cursor(field.type, buffer)
     }
 

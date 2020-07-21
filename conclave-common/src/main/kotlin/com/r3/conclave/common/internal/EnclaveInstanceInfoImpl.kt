@@ -11,9 +11,9 @@ import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.measurement
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.common.internal.attestation.AttestationParameters
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.PKIXParametersFactory
 import com.r3.conclave.common.internal.attestation.QuoteStatus.*
 import com.r3.conclave.mail.MutableMail
 import com.r3.conclave.mail.internal.Curve25519PublicKey
@@ -22,6 +22,7 @@ import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.security.PublicKey
 import java.security.Signature
+import java.security.cert.X509Certificate
 
 class EnclaveInstanceInfoImpl(
         override val dataSigningKey: PublicKey,
@@ -35,13 +36,21 @@ class EnclaveInstanceInfoImpl(
     override val securityInfo: EnclaveSecurityInfo
 
     init {
-        val pkixParameters = when (enclaveMode) {
-            RELEASE, DEBUG -> AttestationParameters.INTEL
-            SIMULATION, MOCK -> AttestationParameters.MOCK
+        val pkixParametersFactory = when (enclaveMode) {
+            RELEASE, DEBUG -> PKIXParametersFactory.Intel
+            SIMULATION, MOCK -> PKIXParametersFactory.Mock
         }
+        // We want to be able to deserialise EnclaveInstanceInfoImpl inside an enclave but it has no access to a trusted
+        // source of time to do the cert expiry check that comes with verifing the RA cert. We're only concerned that the
+        // public key that signed the attestion report belongs to the root, and so it's OK to turn off the expiry check.
+        val certTime = attestationResponse
+                .certPath
+                .certificates
+                .minBy { (it as X509Certificate).notAfter }
+                .let { (it as X509Certificate).notAfter.toInstant() }
         // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct in terms of
         // release/debug vs simulation/mock.
-        attestationReport = attestationResponse.verify(pkixParameters)
+        attestationReport = attestationResponse.verify(pkixParametersFactory.create(certTime))
 
         val reportBody = attestationReport.isvEnclaveQuoteBody[SgxQuote.reportBody]
 

@@ -99,7 +99,7 @@ class MailTests {
             bytes[i] = bytes[i].inc()
             val e = assertThrows<IOException> { Mail.decrypt(bytes, bob.private) }
             // Is the exception message in our list of acceptable/anticipated errors?
-            assertThat(corruptionErrors).anyMatch { it in e.message!! }
+            assertThat(corruptionErrors).describedAs(e.message!!).anyMatch { it in e.message!! }
             bytes[i] = bytes[i].dec()
             // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
             Mail.decrypt(bytes, bob.private)

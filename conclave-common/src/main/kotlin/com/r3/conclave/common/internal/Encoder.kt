@@ -1,5 +1,6 @@
 package com.r3.conclave.common.internal
 
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
 sealed class Encoder<R> {
@@ -69,12 +70,12 @@ open class FixedBytes(val size: Int) : Encoder<ByteBuffer>() {
     final override fun size() = size
     final override fun read(buffer: ByteBuffer): ByteBuffer {
         val result = buffer.slice()
-        result.limit(size())
+        (result as Buffer).limit(size())
         return result.asReadOnlyBuffer()
     }
     final override fun write(buffer: ByteBuffer, value: ByteBuffer): ByteBuffer {
-        if (value.remaining() != size) {
-            throw IllegalArgumentException("Writing ${FixedBytes::class.java.simpleName}, expected $size bytes, got ${value.remaining()}")
+        require(value.remaining() == size) {
+            "Writing ${FixedBytes::class.java.simpleName}, expected $size bytes, got ${value.remaining()}"
         }
         return buffer.put(value)
     }

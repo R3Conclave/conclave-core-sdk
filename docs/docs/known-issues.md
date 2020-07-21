@@ -12,7 +12,6 @@ This release ships with the following known issues that we plan to address in fu
    will implement "DCAP attestation" which will allow the owner of the hardware to whitelist enclaves, not just Intel.
 1. [TCB recoveries](renewability.md) invalidate remote attestations, such that enclaves cannot read mail sent to them
    from before the upgrade.
-1. You cannot currently load an `EnclaveInstanceInfo` inside an enclave, which limits enclave-to-enclave communication. 
 1. The enclave hangs if it's asked to terminate whilst threads are still active inside it.
 1. Some Java APIs won't currently work due to lack of full operating system access inside the enclave. We plan to fix
    these issues in upcoming betas, to present the enclave with e.g. an empty file system.
