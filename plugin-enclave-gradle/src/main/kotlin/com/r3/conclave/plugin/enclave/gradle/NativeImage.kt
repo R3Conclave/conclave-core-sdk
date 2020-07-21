@@ -5,6 +5,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import java.io.File
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -54,8 +55,8 @@ open class NativeImage @Inject constructor(
         private const val HEAP_SIZE_PERCENTAGE = 0.8
     }
 
-    @get:InputFile
-    val nativeImage: RegularFileProperty = objects.fileProperty()
+    @get:InputDirectory
+    val nativeImagePath: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
     val jarFile: RegularFileProperty = objects.fileProperty()
@@ -326,10 +327,14 @@ open class NativeImage @Inject constructor(
 
     override fun action() {
         GenerateLinkerScript.writeToFile(linkerScript)
+        var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
+        if (!nativeImageFile.exists()) {
+            nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/bin/native-image")
+        }
         project.exec { spec ->
             spec.commandLine(
                     listOf(
-                            nativeImage.get(),
+                            nativeImageFile,
                             "--shared",
                             "-cp",
                             jarFile.get().asFile.absolutePath,

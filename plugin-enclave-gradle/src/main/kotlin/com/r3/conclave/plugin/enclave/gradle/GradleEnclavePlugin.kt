@@ -170,7 +170,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile) { task ->
                 task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask)
                 task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath)
-                task.nativeImage.set(target.file("$graalVMDistributionPath/jre/bin/native-image"))
+                task.nativeImagePath.set(target.file(graalVMDistributionPath))
                 task.jarFile.set(shadowJarTask.archiveFile)
                 task.cLibraryPaths.from("$sgxDirectory/tlibc",
                         "$sgxDirectory/libcxx")

@@ -49,13 +49,25 @@ task tarGraal(type: Exec) {
     def graalVMLatestDir = "${project.buildDir}/graal/vm/latest_graalvm/"
     inputs.dir(graalVMLatestDir)
     doFirst {
-        commandLine 'tar', 'chf', "$outputDir/$outputFile", '-C', getGraalBuildFolder.graalVMDir, 
-        "--exclude=./bin",
-        "--exclude=./lib",
-        "--exclude=./man",
-        "--exclude=./sample",
-        "--exclude=*src.zip",
-        '.'
+        if (System.getenv('JVMCI_HOME').contains('openjdk1.8')) {
+            commandLine 'tar', 'chf', "$outputDir/$outputFile", '-C', getGraalBuildFolder.graalVMDir, 
+            "--exclude=./bin",
+            "--exclude=./lib",
+            "--exclude=./man",
+            "--exclude=./sample",
+            "--exclude=*src.zip",
+            '.'
+        }
+        else {
+            commandLine 'tar', 'chf', "$outputDir/$outputFile", '-C', getGraalBuildFolder.graalVMDir, 
+            "--exclude=./lib/tools.jar",
+            "--exclude=./lib/ct.sym",
+            "--exclude=./lib/graalvm",
+            "--exclude=./man",
+            "--exclude=./sample",
+            "--exclude=*src.zip",
+            '.'
+        }
     }
     outputs.file("$outputDir/$outputFile")
 }
