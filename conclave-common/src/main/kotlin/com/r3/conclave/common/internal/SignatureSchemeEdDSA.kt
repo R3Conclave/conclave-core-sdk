@@ -8,7 +8,6 @@ import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.security.*
 import java.security.KeyFactory
 import java.security.spec.X509EncodedKeySpec
-import com.r3.conclave.common.SHA256Hash
 
 /**
  * A wrapper of EdEDSA signature scheme library to run EdDSA in enclave
@@ -56,17 +55,19 @@ class SignatureSchemeEdDSA(
         }
     }
 
-    override fun generateKeyPair(sgxKey: ByteArray?): KeyPair {
-        val priv = EdDSAPrivateKeySpec(
-                if (sgxKey != null) {
-                    require(sgxKey.size == 16)
-                    SHA256Hash.hash(sgxKey).bytes
+    override fun generateKeyPair(seed: ByteArray?): KeyPair {
+        val seedSize = params.curve.field.getb() / 8
+        val privateKeySpec = EdDSAPrivateKeySpec(
+                if (seed != null) {
+                    require(seed.size == seedSize)
+                    seed
                 } else {
-                    ByteArray(params.curve.field.getb() / 8).also { randomnessSource.nextBytes(it) }
-                }, params)
-
-        val pub = EdDSAPublicKeySpec(priv.a, params)
-        return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+                    ByteArray(seedSize).also(randomnessSource::nextBytes)
+                },
+                params
+        )
+        val publicKeySpec = EdDSAPublicKeySpec(privateKeySpec.a, params)
+        return KeyPair(EdDSAPublicKey(publicKeySpec), EdDSAPrivateKey(privateKeySpec))
     }
 
     override fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {

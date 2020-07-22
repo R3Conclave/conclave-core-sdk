@@ -2,7 +2,6 @@ package com.r3.conclave.enclave
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationResponse
@@ -15,13 +14,9 @@ import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.Curve25519PrivateKey
 import com.r3.conclave.mail.internal.Curve25519PublicKey
-import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
-import com.r3.conclave.utilities.internal.putBoolean
-import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 import java.security.KeyPair
-import java.security.MessageDigest
 import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.CertificateFactory
@@ -124,19 +119,23 @@ abstract class Enclave {
         // We get 128 bits of stable pseudo-randomness from the CPU, based on the enclave signer, per-CPU key and other
         // pieces of data.
         val sealingEntropy: ByteArray = env.defaultSealingKey()
-        // That's enough for EdDSA.
-        signingKeyPair = signatureScheme.generateKeyPair(sealingEntropy)
-        // For Curve25519 we need 256 bit keys. We hash it to convert it to 256 bits. This is safe because the
+        // For Curve25519 and EdDSA we need 256 bit keys. We hash it to convert it to 256 bits. This is safe because the
         // underlying 128 bits of entropy remains, and that's "safe" in the sense that nobody can brute force
         // 128 bits of entropy, not enough energy exists on Earth to make that feasible. Curve25519 needs 256
         // bits for both private and public keys due to the existence of attacks on elliptic curve cryptography
         // that effectively halve the key size, so 256 bit keys -> 128 bits of work to brute force.
-        val private = Curve25519PrivateKey(MessageDigest.getInstance("SHA-256").digest(sealingEntropy))
+        val entropyHash = digest("SHA-256") { update(sealingEntropy) }
+        signingKeyPair = signatureScheme.generateKeyPair(entropyHash)
+        val private = Curve25519PrivateKey(entropyHash)
         encryptionKeyPair = KeyPair(private.publicKey, private)
     }
 
     private fun createReportData(): ByteCursor<SgxReportData> {
-        return Cursor(SgxReportData, SHA512Hash.hash(signatureKey.encoded + encryptionKeyPair.public.encoded).bytes)
+        val reportData = digest("SHA-512") {
+            update(signatureKey.encoded)
+            update(encryptionKeyPair.public.encoded)
+        }
+        return Cursor(SgxReportData, reportData)
     }
 
     /**

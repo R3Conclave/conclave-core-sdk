@@ -48,8 +48,7 @@ interface SignatureScheme {
 
     /**
      * Generate a public/private keys pair for the given signature scheme
-     * @param sgxKey optional seed array. If not set, a random array will be generated for the seed.
+     * @param seed optional seed. If null then a random seed is generated.
      */
-    fun generateKeyPair(sgxKey: ByteArray? = null): KeyPair
+    fun generateKeyPair(seed: ByteArray? = null): KeyPair
 }
-
