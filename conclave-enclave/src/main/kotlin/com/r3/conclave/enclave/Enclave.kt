@@ -1,9 +1,11 @@
 package com.r3.conclave.enclave
 
+import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.enclave.EnclaveCall
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
@@ -12,6 +14,8 @@ import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.Curve25519PrivateKey
+import com.r3.conclave.mail.internal.Curve25519PublicKey
+import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.putBoolean
 import com.r3.conclave.utilities.internal.writeData
@@ -20,6 +24,7 @@ import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.PublicKey
 import java.security.Signature
+import java.security.cert.CertificateFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 
@@ -51,6 +56,7 @@ abstract class Enclave {
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
+    private lateinit var adminHandler: AdminHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
 
     /**
@@ -67,6 +73,9 @@ abstract class Enclave {
 
     /** The public key used to sign data structures when [signer] is used. */
     protected val signatureKey: PublicKey get() = signingKeyPair.public
+
+    /** The serializable remote attestation object for this enclave instance. */
+    protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
 
     /**
      * Sends the given bytes to the registered [EnclaveCall] implementation provided to `EnclaveHost.callEnclave`.
@@ -102,7 +111,7 @@ abstract class Enclave {
             val exposeErrors = env.enclaveMode != EnclaveMode.RELEASE
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
-            mux.addDownstream(AdminHandler(this))
+            adminHandler = mux.addDownstream(AdminHandler(this, env))
             mux.addDownstream(object : EpidAttestationEnclaveHandler(env) {
                 override val reportData = createReportData()
             })
@@ -130,24 +139,73 @@ abstract class Enclave {
         return Cursor(SgxReportData, SHA512Hash.hash(signatureKey.encoded + encryptionKeyPair.public.encoded).bytes)
     }
 
-    private class AdminHandler(private val enclave: Enclave) : Handler<AdminHandler> {
+    /**
+     * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
+     * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
+     */
+    private class AdminHandler(private val enclave: Enclave, private val env: EnclaveEnvironment) : Handler<AdminHandler> {
+        private lateinit var sender: Sender
+        private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
+
         override fun connect(upstream: Sender): AdminHandler {
-            // We can send the enclave info message in the connect method since we're not expecting a response back.
-            sendEnclaveInfo(upstream)
+            sender = upstream
+            // At the time we send upstream the mux handler hasn't been configured for receiving, but that's OK.
+            // The onReceive method will run later, when the AttestationResponse has been obtained from the attestation
+            // servers.
+            sendEnclaveInfo()
             return this
         }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            throw IllegalStateException("Not expecting a response on this channel")
+            val reportBytes = input.getIntLengthPrefixBytes()
+            val signature = input.getIntLengthPrefixBytes()
+            val encodedCertPath = input.getRemainingBytes()
+            val attestationResponse = AttestationResponse(
+                    reportBytes,
+                    signature,
+                    CertificateFactory.getInstance("X.509").generateCertPath(encodedCertPath.inputStream())
+            )
+            _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
+                    enclave.signatureKey,
+                    attestationResponse,
+                    env.enclaveMode,
+                    enclave.encryptionKeyPair.public as Curve25519PublicKey
+            )
         }
 
-        private fun sendEnclaveInfo(sender: Sender) {
+        private fun sendEnclaveInfo() {
             val encodedSigningKey = enclave.signatureKey.encoded   // 44 bytes
             val encodedEncryptionKey = enclave.encryptionKeyPair.public.encoded   // 32 bytes
-            sender.send(1 + encodedSigningKey.size + encodedEncryptionKey.size, Consumer { buffer ->
+            sender.send(2 + encodedSigningKey.size + encodedEncryptionKey.size, Consumer { buffer ->
+                buffer.put(0)
                 buffer.putBoolean(enclave is EnclaveCall)
                 buffer.put(encodedSigningKey)
                 buffer.put(encodedEncryptionKey)
+            })
+        }
+
+        /**
+         * Return the [EnclaveInstanceInfoImpl] for this enclave. The first time this is called it asks the host for the
+         * [AttestationResponse] it received from the attestation service. From that the enclave is able to construct the
+         * info object. By making this lazy we avoid slowing down the enclave startup process if it's never used.
+         */
+        @get:Synchronized
+        val enclaveInstanceInfo: EnclaveInstanceInfoImpl get() {
+            if (_enclaveInstanceInfo == null) {
+                sendAttestationRequest()
+            }
+            return _enclaveInstanceInfo!!
+        }
+
+        /**
+         * Send a request to the host for the [AttestationResponse] object. The enclave has the other properties needed
+         * to construct its [EnclaveInstanceInfoImpl].
+         *
+         * This is simpler than serialising the info object itself as then the enclave has to check it's the correct one.
+         */
+        private fun sendAttestationRequest() {
+            sender.send(1, Consumer { buffer ->
+                buffer.put(1)
             })
         }
     }

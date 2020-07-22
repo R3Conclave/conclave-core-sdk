@@ -14,10 +14,7 @@ import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.mail.EnclaveMailId
 import com.r3.conclave.mail.internal.Curve25519PublicKey
-import com.r3.conclave.utilities.internal.deserialise
-import com.r3.conclave.utilities.internal.getBoolean
-import com.r3.conclave.utilities.internal.getBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.*
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -209,7 +206,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // a prefixed channel ID that lets us split them out to separate classes.
             val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
             // The admin handler deserializes keys and other info from the enclave during initialisation.
-            adminHandler = mux.addDownstream(AdminHandler())
+            adminHandler = mux.addDownstream(AdminHandler(this))
             // The EPID attestation handler manages the process of generating remote attestations that are then
             // placed into the EnclaveInstanceInfo.
             val attestationConnection = mux.addDownstream(
@@ -418,18 +415,34 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private class EnclaveInfo(val enclaveImplementsEnclaveCall: Boolean, val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
 
     /** Deserializes keys and other info from the enclave during initialisation. */
-    private class AdminHandler : Handler<AdminHandler> {
+    private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
+        private lateinit var sender: Sender
+
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
 
-        override fun connect(upstream: Sender): AdminHandler = this
+        override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            check(_enclaveInfo == null) { "Already received enclave info" }
-            val enclaveImplementsEnclaveCall = input.getBoolean()
-            val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
-            val encryptionKey = Curve25519PublicKey(input.getBytes(32))
-            _enclaveInfo = EnclaveInfo(enclaveImplementsEnclaveCall, signatureKey, encryptionKey)
+            when (val type = input.get().toInt()) {
+                0 -> {  // Enclave info
+                    check(_enclaveInfo == null) { "Already received enclave info" }
+                    val enclaveImplementsEnclaveCall = input.getBoolean()
+                    val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
+                    val encryptionKey = Curve25519PublicKey(input.getBytes(32))
+                    _enclaveInfo = EnclaveInfo(enclaveImplementsEnclaveCall, signatureKey, encryptionKey)
+                }
+                1 -> {  // AttestationResponse request
+                    val ar = host._enclaveInstanceInfo!!.attestationResponse
+                    val encodedCertPath = ar.certPath.encoded
+                    sender.send(ar.reportBytes.intLengthPrefixSize + ar.signature.intLengthPrefixSize + encodedCertPath.size, Consumer { buffer ->
+                        buffer.putIntLengthPrefixBytes(ar.reportBytes)
+                        buffer.putIntLengthPrefixBytes(ar.signature)
+                        buffer.put(encodedCertPath)
+                    })
+                }
+                else -> throw IllegalStateException("Unknown type $type")
+            }
         }
     }
 

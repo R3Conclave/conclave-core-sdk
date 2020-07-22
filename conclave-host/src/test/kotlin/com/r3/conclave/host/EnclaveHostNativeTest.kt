@@ -152,16 +152,23 @@ class EnclaveHostNativeTest {
     }
 
     @Test
-    fun `enclave can deserialise EnclaveInstanceInfo`() {
+    fun `EnclaveInstanceInfo matches across host and enclave`() {
         start<EnclaveInstanceInfoEnclave>(EnclaveBuilder(EnclaveConfig().withHeapMaxSize(0x20000000)))
-        val response = host.callEnclave(host.enclaveInstanceInfo.serialize())!!
-        val roundtrip = EnclaveInstanceInfo.deserialize(response)
-        assertThat(roundtrip.enclaveInfo).isEqualTo(host.enclaveInstanceInfo.enclaveInfo)
-        assertThat(roundtrip.dataSigningKey).isEqualTo(host.enclaveInstanceInfo.dataSigningKey)
+        val eiiFromEnclave = EnclaveInstanceInfo.deserialize(host.callEnclave(byteArrayOf())!!)
+        val eiiFromHost = host.enclaveInstanceInfo
+        with(eiiFromEnclave) {
+            assertThat(enclaveInfo).isEqualTo(eiiFromHost.enclaveInfo)
+            assertThat(dataSigningKey).isEqualTo(eiiFromHost.dataSigningKey)
+            with(securityInfo) {
+                assertThat(summary).isEqualTo(eiiFromHost.securityInfo.summary)
+                assertThat(reason).isEqualTo(eiiFromHost.securityInfo.reason)
+                assertThat(timestamp).isEqualTo(eiiFromHost.securityInfo.timestamp)
+            }
+        }
     }
 
     class EnclaveInstanceInfoEnclave : Enclave(), EnclaveCall {
-        override fun invoke(bytes: ByteArray): ByteArray? = EnclaveInstanceInfo.deserialize(bytes).serialize()
+        override fun invoke(bytes: ByteArray): ByteArray? = enclaveInstanceInfo.serialize()
     }
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {

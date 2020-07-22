@@ -68,8 +68,10 @@ class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
     /**
      * Allows field accesses like so:
      *
-     * val report = Cursor([SgxReport], reportBytes)
-     * val measurement = report[[SgxReport.body]][[SgxReportBody.measurement]]
+     * ```
+     * val report = Cursor(SgxReport, reportBytes)
+     * val measurement = report[SgxReport.body][SgxReportBody.measurement]
+     * ```
      */
     operator fun <FT : Encoder<FR>, FR> get(field: Struct.Field<T, FT>): Cursor<FT, FR> {
         val buffer = getBuffer()

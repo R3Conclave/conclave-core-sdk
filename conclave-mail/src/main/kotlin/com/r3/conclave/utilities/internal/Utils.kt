@@ -57,6 +57,16 @@ fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(i
 
 fun ByteBuffer.getRemainingBytes(): ByteArray = getBytes(remaining())
 
+fun ByteBuffer.putIntLengthPrefixBytes(bytes: ByteArray): ByteBuffer {
+    putInt(bytes.size)
+    put(bytes)
+    return this
+}
+
+fun ByteBuffer.getIntLengthPrefixBytes(): ByteArray = getBytes(getInt())
+
+val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size
+
 inline fun writeData(block: DataOutputStream.() -> Unit): ByteArray {
     val baos = ByteArrayOutputStream()
     val dos = DataOutputStream(baos)
