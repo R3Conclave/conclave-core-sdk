@@ -16,6 +16,9 @@ source ${SCRIPT_DIR}/ci_build_common.sh
 # Kill any lingering Gradle workers
 ps auxwww | grep Gradle | grep -v grep | awk '{ print $2; }' | xargs -r kill || true
 
+# Prune docker images
+docker image prune -af
+
 # Login and pull the current build image
 docker login ${OBLIVIUM_CONTAINER_REGISTRY_URL} -u ${OBLIVIUM_CONTAINER_REGISTRY_USERNAME} -p ${OBLIVIUM_CONTAINER_REGISTRY_PASSWORD}
 docker pull ${OBLIVIUM_CONTAINER_REGISTRY_URL}/com.r3.sgx/sgxjvm-build

@@ -96,14 +96,27 @@ subprojects {
     }
 }
 
-task publish {
-    def publishedImages = [
+def publishedImages = [
         "aesmd",
         "kubernetes-sgx-device-plugin",
         "sgxjvm-build",
         "sgxjvm-devenv"
-    ]
+]
 
+task publish {
+    def donefiles = []
+    for (image in publishedImages) {
+        def publishTask = project(":containers:$image").tasks.getByName("pushImagePublish")
+        dependsOn publishTask
+        donefiles.addAll(publishTask.outputs)
+    }
+    inputs.files(donefiles)
+    doLast {
+        logger.lifecycle('Published containers')
+    }
+}
+
+task publishAsLatest {
     def donefiles = []
     for (image in publishedImages) {
         def publishTask = project(":containers:$image").tasks.getByName("pushImageAsLatestPublish")

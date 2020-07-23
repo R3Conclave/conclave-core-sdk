@@ -5,6 +5,9 @@ SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 source ${SCRIPT_DIR}/ci_build_common.sh
 source ${SCRIPT_DIR}/ci_hardware_common.sh
 
+# Prune docker images
+docker image prune -af
+
 sgx_mode=$1
 
 if [ $sgx_mode != "Simulation" ]; then

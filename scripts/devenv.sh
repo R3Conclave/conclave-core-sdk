@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 CLION_VERSION=2018.1.2
 IDEA_VERSION=IC-193.6015.39
+# You can set this variable to mount the IDEs from the host
+HOST_IDE_DIR=${HOST_IDE_DIR:-"${HOME}/opt"}
 if [ -f ~/.oblivium_credentials.sh ]
 then
   source ~/.oblivium_credentials.sh
@@ -96,6 +98,25 @@ if [[ -z ${CONTAINER_ID} ]]; then
       SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
   fi
 
+
+# Mount the IDEs from the host. The IDEs should be compatible with the container's OS.
+# If the IDEs are not present, the devenv shell can still be used,
+# as well as the the host's native IDEs, but the IDE launch scripts will fail.
+# Since exiting the container doesn't stop it, you may need to stop it manually
+# in order to remount the IDEs.
+# Read our internal-docs/containers.md for more information on how to build,
+# customize and use a locally built devenv image.
+# The IDEs can be downloaded at:
+# curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2018.1.2.tar.gz
+# curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2019.3.2.tar.gz
+IDE_MOUNT_FLAGS=""
+if [ -r ${HOST_IDE_DIR}/idea-$IDEA_VERSION ]; then
+  IDE_MOUNT_FLAGS+="-v ${HOST_IDE_DIR}/idea-$IDEA_VERSION/:/opt/idea-$IDEA_VERSION/"
+fi
+if [ -r ${HOST_IDE_DIR}/clion-$CLION_VERSION ]; then
+  IDE_MOUNT_FLAGS+=" -v ${HOST_IDE_DIR}/clion-$CLION_VERSION/:/opt/clion-$CLION_VERSION/"
+fi
+
   CONTAINER_ID=$(docker run \
        --name=$CONTAINER_NAME \
        --privileged \
@@ -114,6 +135,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
        -v /var/run/docker.sock:/var/run/docker.sock \
        -v /tmp/.X11-unix:/tmp/.X11-unix \
        ${SGX_HARDWARE_FLAGS} \
+       ${IDE_MOUNT_FLAGS} \
        ${VOLUME_USB} \
        -e HOME=/home \
        ${ENV_DISPLAY} \
