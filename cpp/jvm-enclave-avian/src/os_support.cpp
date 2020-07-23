@@ -35,14 +35,13 @@ FILE *stdout = (FILE*) 0;
 FILE *stderr = (FILE*) 1;
 
 extern void throw_jvm_runtime_exception(const char *str);
-extern void debug_print(const void *msg, int n);
-
+extern void debug_print_enclave(const char* msg, int length);
 int __vfprintf_chk(FILE *stream, int, const char *s, va_list va) {
     int res = 0;
     if (stream == stdout || stream == stderr) {
         char msg[512];
         res = vsnprintf((char *) &msg, sizeof(msg), s, va);
-        debug_print(msg, res);
+        debug_print_enclave(msg, res);
     } else {
         char msg[512];
         vsnprintf(msg, sizeof(msg), s, va);
@@ -76,7 +75,7 @@ void jni_throw(const char *msg, ...) {
     va_start(va, msg);
     char buffer[512];
     int n = vsnprintf(buffer, sizeof(buffer), msg, va);
-    debug_print(buffer, n); //< still log error cause, in case JVM throwing fails
+    debug_print_enclave(buffer, n); //< still log error cause, in case JVM throwing fails
     throw_jvm_runtime_exception(buffer);
 }
 
@@ -154,7 +153,7 @@ ssize_t read(int, void*, size_t) {
 ssize_t write(int fd, const void *buf, size_t count) {
     if (fd == 0 || fd == 1 || fd == 2) {
         if (fd != 2) {
-            debug_print(buf, count);
+            debug_print_enclave((const char*)buf, count);
         }
     } else {
         printf("STUB: write(%d)\n", fd);

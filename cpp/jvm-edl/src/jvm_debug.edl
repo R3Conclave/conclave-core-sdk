@@ -1,0 +1,6 @@
+enclave {
+    from "jvm.edl" import *;
+    untrusted {
+        void debug_print([in, string] const char *string, int n);
+    };
+};

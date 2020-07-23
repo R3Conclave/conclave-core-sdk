@@ -14,6 +14,5 @@ enclave {
             [in, size=bufferInLen] void* bufferIn,
             int bufferInLen
         ) allow(jvm_ecall);
-        void debug_print([in, string] const char *string, int n);
     };
 };

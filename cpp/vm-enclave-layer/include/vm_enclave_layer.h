@@ -19,13 +19,13 @@
 
 // Define STUB macros for functions that are needed to satisfy the linker but
 // throw an exception or are just ignored if called. Each stub function is 
-// specified in a section inthe relevant implementation file
+// specified in a section in the relevant implementation file
 #ifdef __cplusplus
-#define STUB(x) extern "C" void x() { debug_print(#x, strlen(#x)); throw_jvm_runtime_exception(#x); abort(); }
-#define STUB_NO_ABORT(x) extern "C" int x() { debug_print(#x, strlen(#x)); return 0; }
+#define STUB(x) extern "C" void x() { debug_print_enclave(#x, strlen(#x)); throw_jvm_runtime_exception(#x); abort(); }
+#define STUB_NO_ABORT(x) extern "C" int x() { debug_print_enclave(#x, strlen(#x)); return 0; }
 #else
-#define STUB(x) void x() { debug_print(#x, strlen(#x)); throw_jvm_runtime_exception(#x); abort(); }
-#define STUB_NO_ABORT(x) int x() { debug_print(#x, strlen(#x)); return 0; }
+#define STUB(x) void x() { debug_print_enclave(#x, strlen(#x)); throw_jvm_runtime_exception(#x); abort(); }
+#define STUB_NO_ABORT(x) int x() { debug_print_enclave(#x, strlen(#x)); return 0; }
 #endif
 
 #ifdef __cplusplus
@@ -33,6 +33,7 @@ extern "C" {
 #endif
 
 // Debug print and trace functions for stubs and debug output
+extern void debug_print_enclave(const char* msg, int length);
 int enclave_print(const char *s, ...);
 int enclave_trace(const char *s, ...);
 

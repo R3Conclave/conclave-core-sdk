@@ -4,11 +4,11 @@
 
 extern "C" {
 
-extern void debug_print(const char *str);
+extern void debug_print_enclave(const char *message, int length);
 extern void abort();
 extern void throw_jvm_runtime_exception(const char *str);
 
-#define STUB(x) void x() { debug_print(#x); throw_jvm_runtime_exception(#x); abort(); }
+#define STUB(x) void x() { debug_print_enclave(#x, sizeof(#x) - 1); throw_jvm_runtime_exception(#x); abort(); }
 
 STUB(accept);
 STUB(chmod);

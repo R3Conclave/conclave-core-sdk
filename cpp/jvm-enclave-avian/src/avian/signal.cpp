@@ -4,10 +4,6 @@
 #include <avian/system/system.h>
 #include <avian/system/signal.h>
 
-extern "C" {
-    _status_t debug_print(const char *msg);
-}
-
 namespace avian {
     namespace system {
         SignalRegistrar::SignalRegistrar()

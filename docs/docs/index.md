@@ -63,6 +63,9 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
    still be invalidated by changes to the SGX TCB, for example, microcode updates applied as part of an operating
    system upgrade.
 1. Enclave/host communication now handles exceptions thrown across the boundary properly.
+1. In order to prevent accidental leakage of information from inside enclaves, release builds of enclaves no 
+   longer propagate console output across the enclave boundary. Calls to `System.out.println()` and related methods 
+   will now only print to the console on simulation and debug builds of enclaves.
 
 ### Beta 2
 

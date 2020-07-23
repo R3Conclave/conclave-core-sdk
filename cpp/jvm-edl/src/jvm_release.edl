@@ -1,0 +1,3 @@
+enclave {
+    from "jvm.edl" import *;
+};

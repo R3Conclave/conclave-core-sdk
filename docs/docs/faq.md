@@ -140,3 +140,9 @@ You are expected to know this already (because you set up the remote VM to begin
 
 Not at this time. ARM TrustZone doesn't have any form of remote attestation support. It's meant for hardening
 mobile phone operating systems and supported use cases don't really go beyond that.
+
+## Can I print debug output to the console from my enclave?
+Conclave enclaves built for debug and simulation support output to the console from inside the enclave 
+through the use of `System.out.println()`. Release builds of enclaves do not support printing to the console.
+Calling `System.out.println()` in release builds of enclaves is allowed but the output is discarded 
+inside the enclave. This is to prevent accidental leakage of enclave state through the use of debug logging.
