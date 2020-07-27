@@ -23,7 +23,7 @@ fun createSignedQuote(
         quote[SgxQuote.reportBody].apply {
             this[SgxReportBody.cpuSvn] = cpuSvn.buffer()
             this[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
-            this[SgxReportBody.measurement] = measurement.buffer()
+            this[SgxReportBody.mrenclave] = measurement.buffer()
             this[SgxReportBody.mrsigner] = mrsigner.buffer()
             this[SgxReportBody.isvProdId] = isvProdId
             this[SgxReportBody.isvSvn] = isvSvn

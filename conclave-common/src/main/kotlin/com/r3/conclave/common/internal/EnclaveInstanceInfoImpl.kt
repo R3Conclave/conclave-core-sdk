@@ -8,7 +8,7 @@ import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.cpuSvn
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.isvSvn
-import com.r3.conclave.common.internal.SgxReportBody.measurement
+import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.AttestationReport
@@ -70,7 +70,7 @@ class EnclaveInstanceInfoImpl(
         }
 
         enclaveInfo = EnclaveInfo(
-                codeHash = SHA256Hash.get(reportBody[measurement].read()),
+                codeHash = SHA256Hash.get(reportBody[mrenclave].read()),
                 codeSigningKeyHash = SHA256Hash.get(reportBody[mrsigner].read()),
                 productID = reportBody[isvProdId].read(),
                 revocationLevel = reportBody[isvSvn].read() - 1,

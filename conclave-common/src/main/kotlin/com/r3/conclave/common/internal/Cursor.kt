@@ -58,8 +58,10 @@ class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
     /**
      * Allows field modifications like so:
      *
-     * val report = Cursor([SgxReport], reportBytes)
-     * report[[SgxReport.body]][[SgxReportBody.measurement]] = measurement
+     * ```
+     * val report = Cursor(SgxReport, reportBytes)
+     * report[SgxReport.body][SgxReportBody.mrenclave] = measurement
+     * ```
      */
     operator fun <FR, FT : Encoder<FR>> set(field: Struct.Field<T, FT>, value: FR) {
         get(field).write(value)

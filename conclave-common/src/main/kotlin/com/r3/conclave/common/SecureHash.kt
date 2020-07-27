@@ -111,7 +111,8 @@ class SHA512Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
         fun wrap(bytes: ByteArray): SHA512Hash = SHA512Hash(bytes.clone())
 
         /**
-         * Gets the the next 64 bytes of the buffer and returns it as a [SHA512Hash]. The position of the buffer increased by 64.
+         * Gets the the next 64 bytes of the buffer and returns it as a [SHA512Hash]. The position of the buffer is
+         * increased by 64.
          *
          * @throws BufferUnderflowException If fewer than 64 bytes are remaining in the buffer.
          */

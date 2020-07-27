@@ -43,11 +43,11 @@ open class Int16 : Encoder<Short>() {
 }
 
 open class UInt16 : Encoder<Int>() {
-    final override fun size() = 2
-    final override fun read(buffer: ByteBuffer) = buffer.getShort().toInt() and 0xFFFF
+    final override fun size() = Short.SIZE_BYTES
+    final override fun read(buffer: ByteBuffer) = java.lang.Short.toUnsignedInt(buffer.getShort())
     final override fun write(buffer: ByteBuffer, value: Int): ByteBuffer {
         require(value >= 0 && value <= 65535) { "Not an unsigned short: $value" }
-        return buffer.putShort((value and 0xFFFF).toShort())
+        return buffer.putShort(value.toShort())
     }
 }
 
@@ -55,6 +55,15 @@ open class Int32 : Encoder<Int>() {
     final override fun size() = Int.SIZE_BYTES
     final override fun read(buffer: ByteBuffer) = buffer.getInt()
     final override fun write(buffer: ByteBuffer, value: Int): ByteBuffer = buffer.putInt(value)
+}
+
+open class UInt32 : Encoder<Long>() {
+    final override fun size() = Int.SIZE_BYTES
+    final override fun read(buffer: ByteBuffer) = Integer.toUnsignedLong(buffer.getInt())
+    final override fun write(buffer: ByteBuffer, value: Long): ByteBuffer {
+        require(value >= 0 && value <= 4294967295) { "Not an unsigned int: $value" }
+        return buffer.putInt(value.toInt())
+    }
 }
 
 open class Int64 : Encoder<Long>() {
@@ -81,7 +90,7 @@ open class FixedBytes(val size: Int) : Encoder<ByteBuffer>() {
     }
 }
 
-class ReservedBytes(val size: Int) : Encoder<ByteBuffer>() {
+class ReservedBytes(private val size: Int) : Encoder<ByteBuffer>() {
     override fun size() = size
     override fun read(buffer: ByteBuffer): ByteBuffer {
         val result = buffer.slice()
@@ -94,7 +103,7 @@ class ReservedBytes(val size: Int) : Encoder<ByteBuffer>() {
 }
 
 abstract class Enum32 : Int32()
-abstract class Enum16 : Int16()
+abstract class Enum16 : UInt16()
 
 abstract class Flags64 : Int64()
 
