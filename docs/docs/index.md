@@ -49,7 +49,8 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
    persist (sealed) data. [Learn more](architecture.md#mail)
 1. :jigsaw: **New feature!** You can now compile your entire enclave ahead of time using 
    [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/). This gives you access to a
-   much better JVM than in prior releases, with faster enclaves that use less RAM. 
+   much better JVM than in prior releases, with faster enclaves that use less RAM. The performance improvement can be
+   between 4x and 12x faster than in prior releases.
 1. :jigsaw: **New feature!** New mock API for unit testing enclaves and for easy debugging between the host and enclave.
    [Learn more](writing-hello-world.md#mock)
 1. :jigsaw: **New feature!** You can now produce enclaves on macOS! Just follow the instructions as you would on a Linux
