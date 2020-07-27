@@ -12,8 +12,8 @@ import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
+import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMailId
-import com.r3.conclave.mail.internal.Curve25519PublicKey
 import com.r3.conclave.utilities.internal.*
 import java.io.DataOutputStream
 import java.io.IOException

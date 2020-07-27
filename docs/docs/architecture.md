@@ -93,6 +93,7 @@ This is what a typical interaction looks like:
 <!---
 
 https://mermaid-js.github.io/mermaid-live-editor/#/edit/eyJjb2RlIjoic2VxdWVuY2VEaWFncmFtXG4gICAgXG4gICAgcGFydGljaXBhbnQgRW5jbGF2ZVxuICAgIHBhcnRpY2lwYW50IENsb3VkL0ludGVsXG4gICAgcGFydGljaXBhbnQgSG9zdFxuICAgIHBhcnRpY2lwYW50IENsaWVudFxuICAgIHBhcnRpY2lwYW50IEludGVsXG4gICAgXG4gICAgcmVjdCByZ2JhKDI1NSwgMCwgMjU1LCAwLjEpXG4gICAgICAgIE5vdGUgbGVmdCBvZiBIb3N0OiBPbiBpbml0aWFsIGRlcGxveVxuICAgICAgICBDbG91ZC9JbnRlbC0-Pkhvc3Q6IFByb3Zpc2lvbmluZyBjZXJ0c1xuICAgIGVuZFxuICAgIEhvc3QtPj5DbGllbnQ6IFNlbmQgcmVtb3RlIGF0dGVzdGF0aW9uXG4gICAgTm90ZSBvdmVyIENsaWVudDogVmVyaWZ5IG1lYXN1cmVtZW50XG4gICAgb3B0IE9jY2FzaW9uYWxseVxuICAgICAgICBDbGllbnQtLT4-SW50ZWw6IFJlcXVlc3QgYXNzZXNzbWVudFxuICAgICAgICBJbnRlbC0tPj5DbGllbnQ6IEhvc3Qgc3RpbGwgc2VjdXJlIVxuICAgIGVuZFxuICAgIENsaWVudC0-Pkhvc3Q6IEVuY3J5cHRlZCBtZXNzYWdlIG92ZXIgSVBcbiAgICBIb3N0LT4-RW5jbGF2ZTogRW5jcnlwdGVkIG1lc3NhZ2VcbiAgICBFbmNsYXZlLT4-SG9zdDogRW5jcnlwdGVkIHJlc3BvbnNlXG4gICAgSG9zdC0-PkNsaWVudDogRW5jcnlwdGVkIHJlc3BvbnNlIG92ZXIgSVAiLCJtZXJtYWlkIjp7InRoZW1lIjoiZGVmYXVsdCJ9LCJ1cGRhdGVFZGl0b3IiOmZhbHNlfQ
+
 sequenceDiagram
 
     participant Enclave
@@ -114,7 +115,9 @@ sequenceDiagram
     Client->>Host: Encrypted message over IP
  HotSpot->>Enclave: Encrypted message
     Enclave->>Host: Encrypted response
- HotSpot->>Client: Encrypted response over IP-->
+ HotSpot->>Client: Encrypted response over IP
+    
+-->
 
 ![sequence diagram](images/sequence.png)
 
@@ -129,14 +132,9 @@ through the host.
 
 Communicating with an enclave requires sending and receiving encrypted and authenticated messages. One possible approach
 is to embed a TLS stack into the enclave and use something like HTTPS + REST. But this technique has some problems
-and limitations that will resolved in future releases via a new "Mail API". Mail is a high level API around standalone
-encrypted messages - or you can think of them as small encrypted files, if it helps. You can learn more about the
-reasons for this design choice in the article [TLS/SSL vs Mail](tls-vs-mail.md).
-
-!!! notice
-
-    Mail is not implemented in the current release of Conclave. This section is provisional.
-
+and limitations that are resolved via the "Mail API". Mail is a high level API around standalone encrypted messages - 
+or you can think of them as small encrypted files, if it helps. You can learn more about the reasons for this 
+design choice in the article [TLS/SSL vs Mail](tls-vs-mail.md).
 
 ## Encrypted, authenticated and transactional messages
 
@@ -148,26 +146,33 @@ encrypted to a destination public key. Because of this it's always possible to e
 although how a public key is mapped to a physical computer is up to the app developer. This capability is useful
 for another reason: if an enclave has a notion of a user identifiable by public key, mail can be cryptographically
 authenticated as having come from that user. This avoids the need for complex user login processes: the login
-process can be handled outside of the enclave, without compromising security.
+process can be handled outside of the enclave, without compromising security. The envelope is protected this way
+along with the encrypted body.
 
 **Encryption.** The encryption key used by the enclave is private to that enclave but stable across restarts and
 enclave upgrades. This means messages encrypted and delivered by older clients can still be decrypted. The format
 uses the respected [Noise protocol framework](https://noiseprotocol.org/) (with the one-way X handshake), which is
 the same cryptography used by WhatsApp, WireGuard and I2P.
 
+<!--
+
 **Padding.** The body of a mail is automatically padded to reduce or eliminate size-based side channel attacks. The size of a message
 won't give away information about the contents. See [side channel attacks](security.md#side-channel-attacks).
 
-**Atomicity.** Mail will be delivered to an enclave on each startup, until the mail is acknowledged. Acknowledgement
+-->
+
+**Atomicity.** Mail should be delivered by the host to an enclave on each startup, until the mail is acknowledged. Acknowledgement
 is transactional and can be performed atomically with other acknowledgements and sending other replies. In this way
 enclaves can ensure that restarting an enclave doesn't produce duplicate messages, perform the same actions twice or
 cause service interruptions to users.
 
+<!-- TODO: The framework should provide persistence and redelivery support out of the box. -->
+
 **Headers.** Mail has unencrypted but authenticated (tamperproof) headers that can be used to link messages together.
 This allows clients to structure a conversation as if they were using a socket, but also hold multiple conversations
-simultaneously. Applications can put their own data in the headers, thus enabling hosts to see part of the messages.
-This can be used to e.g. implement usage tracking, prioritisation, or other tasks not directly relevant to data
-processing.
+simultaneously. Applications can put their own data in the envelope part of the headers, thus enabling hosts to see part of the messages.
+This can be used to implement usage tracking, prioritisation, or other tasks not directly relevant to data processing
+that the host can assist with (despite its untrusted nature).
 
 **Storage.** Mail is stored by the host process. By sending mail to themselves enclaves can store chunks of data that
 will be fed back to them at startup, and delete them by acknowledging the mails. This isn't a replacement for a full

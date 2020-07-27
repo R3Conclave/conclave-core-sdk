@@ -6,7 +6,7 @@ import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.quote
-import com.r3.conclave.mail.internal.Curve25519PublicKey
+import com.r3.conclave.mail.Curve25519PublicKey
 import java.security.PublicKey
 
 /**

@@ -15,11 +15,14 @@ import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.PKIXParametersFactory
 import com.r3.conclave.common.internal.attestation.QuoteStatus.*
+import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.EnclaveMail
+import com.r3.conclave.mail.Mail
 import com.r3.conclave.mail.MutableMail
-import com.r3.conclave.mail.internal.Curve25519PublicKey
 import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.X509Certificate
@@ -108,6 +111,14 @@ class EnclaveInstanceInfoImpl(
     }
 
     override fun createMail(body: ByteArray): MutableMail = MutableMail(body, encryptionKey)
+
+    override fun decryptMail(mailBytes: ByteArray, withPrivateKey: PrivateKey): EnclaveMail {
+        return Mail.decrypt(mailBytes, withPrivateKey).also {
+            check(it.authenticatedSender == encryptionKey) {
+                "Mail does not appear to be sent by the target enclave. Authenticated sender was ${it.authenticatedSender} but expected $encryptionKey"
+            }
+        }
+    }
 
     override fun toString() = """
         Remote attestation for enclave ${enclaveInfo.codeHash}:

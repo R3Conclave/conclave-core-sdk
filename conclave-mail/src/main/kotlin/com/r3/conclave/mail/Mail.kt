@@ -1,6 +1,9 @@
 package com.r3.conclave.mail
 
-import com.r3.conclave.mail.internal.*
+import com.r3.conclave.mail.internal.EnclaveMailHeaderImpl
+import com.r3.conclave.mail.internal.MailDecryptingStream
+import com.r3.conclave.mail.internal.MailEncryptingStream
+import com.r3.conclave.mail.internal.MailPrologueInputStream
 import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.io.ByteArrayOutputStream
@@ -213,7 +216,9 @@ typealias EncryptedEnclaveMail = ByteArray
  */
 object Mail {
     /**
-     * Decodes and decrypts the mail with the given private key.
+     * Decodes and decrypts the mail with the given private key. When inside an enclave, decryption is done for you.
+     * When outside an enclave, it's better to use `EnclaveInstanceInfo.decryptMail` as that will verify the sender
+     * using the enclave's key for you.
      *
      * @param withKey the Curve25519 private key to which the mail was encrypted.
      * @param encryptedEnclaveMail The encoded bytes containing the body, the envelope, the

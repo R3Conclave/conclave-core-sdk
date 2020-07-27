@@ -1,4 +1,4 @@
-package com.r3.conclave.mail.internal
+package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.security.*
@@ -7,8 +7,8 @@ import java.security.*
 // for modern EC keys anyway.
 
 /**
- * JCA type wrapper for Curve 25519 private keys. These are just random numbers, they are not stored
- * in "clamped" form.
+ * JCA type wrapper for Curve 25519 private keys. This is equivalent to XECPrivateKey in Java 11, but using byte arrays
+ * instead of BigInteger.
  */
 class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
     init {
@@ -16,7 +16,7 @@ class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
     }
 
     override fun getAlgorithm() = "Conclave-Curve25519"
-    override fun getEncoded(): ByteArray = encoded
+    override fun getEncoded(): ByteArray = encoded.copyOf()
     override fun getFormat(): String = "raw"
 
     override fun equals(other: Any?): Boolean {
@@ -34,9 +34,8 @@ class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
 }
 
 /**
- * JCA type wrapper for Curve 25519 public keys. Note that Java 11 has integrated support for
- * Curve25519 in JCA, and if/when we can take a hard dependency on Java 11 these classes could
- * be deleted.
+ * JCA type wrapper for Curve 25519 public keys. This is equivalent to XECPublicKey in Java 11, but using byte arrays
+ * instead of BigInteger.
  */
 class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
     init {
@@ -44,7 +43,7 @@ class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
     }
 
     override fun getAlgorithm() = "Conclave-Curve25519"
-    override fun getEncoded(): ByteArray = encoded
+    override fun getEncoded(): ByteArray = encoded.copyOf()
     override fun getFormat(): String = "raw"
 
     override fun equals(other: Any?): Boolean {
@@ -60,12 +59,7 @@ class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
 }
 
 /**
- * Creates Curve25519 keys. Note: not wired up via JCA registration, thus not available
- * to applications at this time. We don't want to expose any of this as public API because
- * we'd like to remove it after Java 11 and because we want users doing high level crypto
- * operations like using Mail, not trying to use Curve25519 directly.
- *
- * Public API is all just the generic JCA types. This class is here for testing.
+ * Creates Curve25519 keys. Equivalent to what you get back from KeyPairGenerator.getInstance("X25519") on Java 11+.
  */
 class Curve25519KeyPairGenerator : KeyPairGeneratorSpi() {
     @Volatile

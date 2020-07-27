@@ -1,20 +1,24 @@
 package com.r3.conclave.sample.host;
 
-import com.r3.conclave.client.EnclaveConstraint;
 import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.common.EnclaveMode;
 import com.r3.conclave.common.OpaqueBytes;
-import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.host.EnclaveHost;
+import com.r3.conclave.host.EnclaveLoadException;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class demonstrates how to load an enclave and exchange byte arrays with it.
  */
 public class Host {
-    public static void main(String[] args) throws EnclaveLoadException {
-
+    public static void main(String[] args) throws EnclaveLoadException, IOException {
         // Report whether the platform supports hardware enclaves.
         //
         // This method will always check the hardware state regardless of whether running in Simulation,
@@ -24,7 +28,7 @@ public class Host {
         //
         // If the platform supports enabling of enclave support via software then passing true as a parameter
         // to this function will attempt to enable enclave support on the platform. Normally this process
-        // will have to be run with root/admin priviliges in order for it to be enabled successfully.
+        // will have to be run with root/admin privileges in order for it to be enabled successfully.
         try {
             EnclaveHost.checkPlatformSupportsEnclaves(true);
             System.out.println("This platform supports enclaves in simulation, debug and release mode.");
@@ -50,10 +54,17 @@ public class Host {
                 throw new IllegalArgumentException("You need to provide the SPID and attestation key as arguments for " +
                         enclave.getEnclaveMode() + " mode.");
             }
-            OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : new OpaqueBytes(new byte[16]);
-            String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : "mock-key";
-            // Start it up. In future versions this API will take more parameters, which is why it's explicit.
-            enclave.start(spid, attestationKey, null);
+            OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : null;
+            String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : null;
+
+            // Start it up.
+            AtomicReference<byte[]> requestToDeliver = new AtomicReference<>();
+            enclave.start(spid, attestationKey, new EnclaveHost.MailCallbacks() {
+                @Override
+                public void postMail(byte[] encryptedBytes, String routingHint) {
+                    requestToDeliver.set(encryptedBytes);
+                }
+            });
 
             // The attestation data must be provided to the client of the enclave, via whatever mechanism you like.
             final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();
@@ -63,13 +74,43 @@ public class Host {
             // It has a useful toString method.
             System.out.println(EnclaveInstanceInfo.deserialize(attestationBytes));
 
-            // Here's how to check it matches the expected code hash but otherwise can be insecure (e.g. simulation mode).
-            //
-            // EnclaveConstraint constraint = EnclaveConstraint.parse("C:02fbdf9a91773af2eb1c20cdea3823ab62424a03f168d135e78ccc572cfe9190 SEC:INSECURE");
-            // constraint.check(attestation);
+            // Now let's send a local message from host to enclave, asking it to reverse a string.
+            System.out.println();
+            System.out.println("Reversing Hello World!: " + callEnclave(enclave, "Hello world!"));
+            System.out.println();
 
-            // !dlrow olleH      :-)
-            System.out.println(callEnclave(enclave, "Hello world!"));
+            // That's not very useful by itself. Enclaves only get interesting when remote clients can talk to them.
+            // So now let's open a TCP socket and implement a trivial protocol that lets a remote client use it.
+            int port = 9999;
+            System.out.println("Listening on port " + port + ". Use the client app to send strings for reversal.");
+            ServerSocket acceptor = new ServerSocket(port);
+            try {
+                Socket connection = acceptor.accept();
+
+                // Just send the attestation straight to whoever connects. It's signed so that's MITM-safe.
+                DataOutputStream output = new DataOutputStream(connection.getOutputStream());
+                output.writeInt(attestationBytes.length);
+                output.write(attestationBytes);
+                output.flush();
+
+                // Now read some mail from the client.
+                DataInputStream input = new DataInputStream(connection.getInputStream());
+                byte[] mailBytes = new byte[input.readInt()];
+                input.readFully(mailBytes);
+
+                // Deliver it. The enclave will give us some mail to reply with via the callback we passed in
+                // to the start() method.
+                enclave.deliverMail(1, mailBytes);
+                byte[] toSend = requestToDeliver.get();
+                output.writeInt(toSend.length);
+                output.write(toSend);
+
+                // Closing the output stream closes the connection. Different clients will block each other but this
+                // is just a hello world sample.
+                output.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -82,4 +123,5 @@ public class Host {
         final byte[] outputBytes = Objects.requireNonNull(enclave.callEnclave(inputBytes));
         return new String(outputBytes);
     }
+
 }

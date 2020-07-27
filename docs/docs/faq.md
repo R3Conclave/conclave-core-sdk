@@ -13,19 +13,20 @@ We plan to offer more guidance on this in future. Until then consider:
   a browser won't work given the enclave security model, as the JavaScript would come from the same host you're trying
   to audit). 
 
-## What cryptographic algorithm(s) will Conclave support?
+## What cryptographic algorithm(s) does Conclave support?
 
-The elliptic curve used is X25519. The symmetric cipher is AES256/GCM. The hash function is SHA256. The Noise protocol
-is used to perform Diffie-Hellman key agreement and set up the ciphering keys. No other options are provided at this
-time, but you can always use JCA and your own cryptographic code.
+The elliptic curve used is Curve25519 for encryption and Ed25519 for signing. The symmetric cipher is AES256/GCM. 
+The hash function is SHA256. The Noise protocol is used to perform Diffie-Hellman key agreement and set up the 
+ciphering keys. As these algorithms represent the state of the art and are widely deployed on the web, there are
+no plans to support other algorithms or curves at this time.
 
 ## What Kotlin/Java versions are usable?
 
-Inside the enclave you can use Java 8 and Kotlin 1.3.61.
+Inside the enclave you can use Java 8 and Kotlin 1.3.
 
 ## Which communication channels exist to/from the enclave?
  
-The host can send and receive messages with the enclave, and an X25519 key is included in the remote attestation.
+The host can send and receive messages with the enclave, and an encryption key is included in the remote attestation.
 Clients may choose to use this key with Conclave Mail (not yet available in beta 2) to communicate with the enclave in 
 an encrypted manner. It's up to the host to route messages to and from the network. 
 
@@ -118,7 +119,7 @@ you can set it to yourself, or for cloud/datacenter providers, enforce your own 
 example if you run a datacenter you can't find yourself unexpectedly serving un-analysable malware command and control 
 servers, etc. 
 
-Note that due to how Conclave is designed, enclave clients don't need to interact with Intel at any point. Instead the
+Note that due to how Conclave is designed, enclave clients don't need to interact with Intel at any point. Instead the
 host does it for them, and then sends them a serialised `EnclaveInstanceInfo` object. Because the data in this object
 is signed by Intel the clients can check it despite it being relayed through the untrusted host. 
 
@@ -133,8 +134,9 @@ Not at this time. We will re-evaluate future versions of SEV. The main problems 
    rendered useless by the discovery of numerous fatal bugs in AMD's firmware. Although patches were made available 
    there's no way to remotely detect if they are actually applied.  
 
-Additionally in SEV remote attestation is randomized, which means you can’t ask a remote host "what are you running".
-You are expected to know this already (because you set up the remote VM to begin with).
+Additionally, in SEV remote attestation is randomized, which means you can’t ask a remote host "what are you running".
+You are expected to know this already (because you set up the remote VM to begin with). This doesn't fit well with
+most obvious enclave APIs.
 
 ## Do you have plans to support ARM TrustZone?
 

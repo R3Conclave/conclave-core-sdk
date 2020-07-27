@@ -10,11 +10,10 @@ def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation
 // Create a task that can be used for generating signing materials
 tasks.register("prepareForSigning") {
     it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
-}    
+}
 
 dependencies {
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
-    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
 
     runtimeOnly project(path: ":enclave", configuration: mode)
     runtimeOnly "org.slf4j:slf4j-simple:1.7.30"

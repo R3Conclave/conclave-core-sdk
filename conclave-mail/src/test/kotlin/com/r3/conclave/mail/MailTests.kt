@@ -1,6 +1,5 @@
 package com.r3.conclave.mail
 
-import com.r3.conclave.mail.internal.Curve25519KeyPairGenerator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled

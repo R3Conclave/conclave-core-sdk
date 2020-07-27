@@ -1,0 +1,12 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+application {
+    mainClassName = "com.r3.conclave.sample.client.Client"
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
+}

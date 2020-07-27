@@ -1,10 +1,15 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
+import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MutableMail
-import com.r3.conclave.mail.internal.Curve25519PublicKey
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.utilities.internal.deserialise
+import com.r3.conclave.utilities.internal.readExactlyNBytes
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.CertificateFactory
@@ -52,6 +57,19 @@ interface EnclaveInstanceInfo {
      * delivered to the host for onwards delivery to the enclave.
      */
     fun createMail(body: ByteArray): MutableMail
+
+    /**
+     * Decrypts mail that should have been sent by this enclave, verifying that the
+     * authenticated sender matches this enclave instance. Use this in preference
+     * to [com.r3.conclave.mail.Mail.decrypt], as that call doesn't check the sender
+     * is the enclave.
+     *
+     * @param mailBytes The encrypted bytes received from a client, typically produced by
+     * calling [createMail] and then [MutableMail.encrypt].
+     * @param withPrivateKey Your private key - the key that the mail was sent to by the enclave,
+     * i.e. provided to `Enclave.createMail` in the `to` parameter.
+     */
+    fun decryptMail(mailBytes: ByteArray, withPrivateKey: PrivateKey): EnclaveMail
 
     /**
      * Suppress kotlin specific companion objects from our API documentation.

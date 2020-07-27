@@ -23,7 +23,7 @@ open class GenerateEnclaveMetadata @Inject constructor(objects: ObjectFactory) :
     val outputEnclaveMetadata: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val measurement = getEnclaveMeasurement(inputSignedEnclave.asFile.get())
+        val measurement: String = getEnclaveMeasurement(inputSignedEnclave.asFile.get())
         logger.lifecycle("Enclave measurement: $measurement")
         Files.write(
                 outputEnclaveMetadata.asFile.get().toPath(),

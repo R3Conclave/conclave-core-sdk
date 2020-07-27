@@ -2,9 +2,11 @@ package com.r3.conclave.client
 
 import com.r3.conclave.common.*
 import com.r3.conclave.common.EnclaveSecurityInfo.Summary.*
+import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MutableMail
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
 import java.time.Instant
@@ -164,7 +166,7 @@ class EnclaveConstraintTest {
             acceptableSigners.add(codeSigner)
             productID = productId
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave does not match any of the acceptable code hoshes or code signers.", enclave) {
+        assertThatCheckThrowsInvalidEnclaveException("Enclave does not match any of the acceptable code hashes or code signers.", enclave) {
             acceptableCodeHashes.add(randomSha256())
             acceptableSigners.add(randomSha256())
             productID = productId
@@ -234,7 +236,7 @@ class EnclaveConstraintTest {
         block(constraint)
         assertThatThrownBy { constraint.check(enclave) }
                 .isInstanceOf(InvalidEnclaveException::class.java)
-                .hasMessage(message)
+                .hasMessageContaining(message)
     }
 
     private class TestEnclaveInstanceInfo(
@@ -261,6 +263,7 @@ class EnclaveConstraintTest {
 
         override val dataSigningKey: PublicKey get() = TODO("dataSigningKey")
         override fun createMail(body: ByteArray): MutableMail = TODO("createMail")
+        override fun decryptMail(mailBytes: ByteArray, withPrivateKey: PrivateKey): EnclaveMail = TODO("not implemented")
         override fun verifier(): Signature = TODO("verifier")
         override fun serialize(): ByteArray = TODO("serialize")
     }

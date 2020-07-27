@@ -12,8 +12,8 @@ import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
-import com.r3.conclave.mail.internal.Curve25519PrivateKey
-import com.r3.conclave.mail.internal.Curve25519PublicKey
+import com.r3.conclave.mail.Curve25519PrivateKey
+import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 import java.security.KeyPair
@@ -261,7 +261,7 @@ abstract class Enclave {
                 var andReturn = false
                 val highestSeen = topicSequenceWatermarks.computeIfAbsent(mail.topic) {
                     andReturn = true
-                    Watermark(mail.sequenceNumber)
+                    Watermark(0)
                 }
                 if (andReturn) return
                 if (mail.sequenceNumber != highestSeen.value + 1)

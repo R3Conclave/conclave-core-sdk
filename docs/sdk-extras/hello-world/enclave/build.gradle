@@ -4,22 +4,23 @@ plugins {
 
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
-
     testImplementation "com.r3.conclave:conclave-testing"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 
 conclave {
     // runtime can be set to either avian or graalvm_native_image depending on which
-    // runtime environment you want to use inside the enclave. This is set to avian 
+    // runtime environment you want to use inside the enclave. This is set to avian
     // by default and can be omitted.
     runtime = avian
 
     productID = 1
     revocationLevel = 0
 
-    // For simulation, we want to use the default signing type of dummyKey so
-    // we do not need to specify a configuration.
+    simulation {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
 
     debug {
         signingType = privateKey
@@ -42,5 +43,4 @@ conclave {
         mrsignerSignature = file("../signing/signature.bin")
         mrsignerPublicKey = file("../signing/external_signing_public.pem")
     }
-
 }

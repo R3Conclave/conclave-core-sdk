@@ -4,26 +4,27 @@ The sample "hello world" enclave just reverses whatever string is passed into it
 our own version of the hello enclave project:
 
 1. Configure Gradle. At this time Conclave projects must use Gradle as their build system.
-2. Create a new subclass of [`Enclave`](api/com/r3/conclave/enclave/Enclave.html)
-3. Implement the `EnclaveCall` interface for local communication.
-4. Write a host program.
-5. Run the host and enclave in simulation mode.
-6. Run the host and enclave in debug mode.
+1. Implement an enclave object that accepts both local calls from the host, and encrypted messages from a client.
+1. Write the host program that loads the enclave.
+1. Run the host and enclave in simulation and debug modes.
+1. Write the client that sends the enclave encrypted messages via the host.
 
 <!---
 TODO: Complete this tutorial:
 
       Signing/running in release mode.
-      Update as API is completed.
 -->
 
-## Configure Gradle
+## Configure your modules
 
 Create a new Gradle project via whatever mechanism you prefer, e.g. IntelliJ can do this via the New Project wizard.
-Create two modules defined in the project: one for the host and one for the enclave. The host program may be an
-existing server program of some kind, e.g. a web server, but in this tutorial we'll write a command line host.   
+Create three modules defined in the project: one for the host, one for the enclave and one for the client. 
+
+The host program may be an existing server program of some kind, e.g. a web server, but in this tutorial we'll 
+write a command line host. The client may likewise be a GUI app or integrated with some other program (like a server), 
+but in this case to keep it simple the client will also be a command line app.    
     
-### `settings.gradle`
+### Root `settings.gradle` file
 
 In the unzipped SDK there is a directory called `repo` that contains a local Maven repository. This is where the libraries
 and Gradle plugin can be found. We need to tell Gradle to look there for plugins.
@@ -68,21 +69,21 @@ a couple of lines like this:
 
 ```text
 conclaveRepo=/path/to/sdk/repo
-conclaveVersion=0.2
+conclaveVersion=0.3
 ```
 
-0.2 here means use beta 2.
+0.3 here means use beta 3.
 
 Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory.
 You may wish to put the version in the project's `gradle.properties` file and the path in each developer's personal
 `gradle.properties`. Alternatively just add a `sdk` directory to the `.gitignore` and require everyone to unpack the
 SDK to the source tree. 
     
-### `build.gradle`
+### Root `build.gradle` file
     
 Add the following code to your root `build.gradle` file to import the repository:
 
-```groovy hl_lines="20 21 22 23 24 25"
+```groovy hl_lines="21 22 23 24 25 26"
 plugins {
     id 'java'
     id 'idea'
@@ -96,6 +97,7 @@ idea {
 
 subprojects {
     apply plugin: 'idea'
+
     idea {
         module {
             downloadJavadoc = true
@@ -119,18 +121,7 @@ subprojects {
     apply them. If you click "import from Gradle" in the notification popup workflow then everything will work fine 
     except JavaDoc integration.
 
-### Configure the host build
-
-In the host module add a dependency on the Conclave host library:
-
-```groovy hl_lines="2"
-dependencies {
-    implementation "com.r3.conclave:conclave-host"
-}
-```
-
-You don't need to specify the version number for Conclave libraries. The plugin will set the version to match the
-plugin version automatically.
+### Configure the host module
 
 SGX enclaves can be built in one of three modes: simulation, debug and release. Simulation mode doesn't require any
 SGX capable hardware. Debug executes the enclave as normal but allows the host process to snoop on and modify the
@@ -144,24 +135,30 @@ Add this bit of code to your Gradle file to let the mode be chosen from the comm
 def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 ```
 
-Then use `mode` in another dependency, this time, on the enclave module:
+Then add the following dependencies:
 
-```groovy hl_lines="2"
+```groovy hl_lines="2,3"
 dependencies {
-    runtimeOnly project(path: ":my-enclave", configuration: mode)
+    implementation "com.r3.conclave:conclave-host:$conclaveVersion"
+    runtimeOnly project(path: ":enclave", configuration: mode)
+
+    runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```
 
-This says that at runtime (but not compile time) the enclave must be on the classpath, and configures dependencies to
-respect the three different variants of the enclave.
+This says that at runtime (but not compile time) the `:enclave` module must be on the classpath, and configures 
+dependencies to respect the three different variants of the enclave. 
+
+For this simple tutorial we also add a runtime-only dependency on the popular [SLF4J](https://www.slf4j.org) library 
+which Conclave uses to do logging. SLF4J enables you to send Conclave's logging to any of the major logging frameworks 
+used in Java, but here, we add the "simple" backend which just causes it to log to the console. Finally we configure 
+unit testing using JUnit 5.
 
 If you intend to use an [external signing process](signing.md) to sign your enclave then add the following lines to
 the Gradle file:
 
-```groovy hl_lines="4 5 6 7"
-// Override the default (simulation) with -PenclaveMode=
-def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
-
+```groovy
 // Create a task that can be used for generating signing materials
 tasks.register("prepareForSigning") {
     it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
@@ -171,7 +168,7 @@ tasks.register("prepareForSigning") {
 This creates a new task that can be invoked using Gradle to halt the build after generating materials that need to
 be signed by an external signing process. After the material has been signed the build can be resumed.
 
-### Configure the enclave build
+### Configure the enclave module
 
 Add the Conclave Gradle plugin:
 
@@ -186,12 +183,16 @@ and a dependency on the Conclave enclave library:
 ```groovy hl_lines="2"
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
+    testImplementation "com.r3.conclave:conclave-testing"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```
 
+This time you don't have to specify the Conclave version because the plugin will set that for you automatically.
+
 Specify the enclave's runtime environment, product ID and revocation level:
 
-```groovy hl_lines="2"
+```groovy
 conclave {
     runtime = avian
     productID = 1
@@ -202,16 +203,20 @@ conclave {
 The runtime setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
 `graalvm_native_image`. If the setting is omitted then it defaults to `avian`. See
 [Architecture overview](architecture.md) for details on the differences between the two supported runtime
-environments.
+environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. We'll stick with 
+Avian for now. 
 
 The product ID is an arbitrary number that can be used to distinguish between different enclaves produced by the same
-organisation (which may for internal reasons wish to use a single signing key). This value should not typically change.
+organisation (which may for internal reasons wish to use a single signing key). This value should not change once you
+picked it.
 
 The revocation level should be incremented if a weakness in the enclave code discovered and fixed; doing this will enable
 clients to avoid connecting to old, compromised enclaves. The revocation level should not be incremented on every new
 release, but only when security improvements have been made.
 
-Specify the signing methods for each of the build types:
+Specify the signing methods for each of the build types. You could keep your private key in a file for both debug and
+release enclaves if you like, but some organisations require private keys to be held in an offline system or HSM. In
+that case, configure it like this:
 
 ```groovy hl_lines="5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27"
 conclave {
@@ -227,7 +232,7 @@ conclave {
     }
 
     release {
-        // The enclave needs to be built in stages.
+        // To protect our release private key with an HSM, the enclave needs to be built in stages.
         // Firstly, build the signing material:
         //  ./gradlew prepareForSigning -PenclaveMode="Release"
         //
@@ -241,19 +246,41 @@ conclave {
         mrsignerSignature = file("../signing/signature.bin")
         mrsignerPublicKey = file("../signing/external_signing_public.pem")
     }
+
+    runtime = avian
+}
+```
+
+### Configure the client build
+
+The client build is the simplest of all. This is literally a bog-standard hello world command line app Gradle build,
+with a single dependency on the Conclave client library:
+
+```groovy
+plugins {
+    id 'java'
+    id 'application'
+}
+
+application {
+    mainClassName = "com.r3.conclave.sample.client.Client"
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
 }
 ```
 
 And with that, we're done configuring the build.
 
-### Information on signing keys for the tutorial
+### Signing keys
 
 The example configuration above specifies different [signing configurations](signing.md#signing-configurations) for 
 each of the different build types. 
 
  * Simulation builds use the default dummy key. 
- * Debug builds use a private key. 
- * Release builds use an external signing process that requires Gradle to be invoked in two stages.
+ * Debug builds use a private key stored in a file.
+ * Release builds use a private key managed by some external signing process.
 
 The ```hello-world``` sample in the SDK contains some example keys that can be used with the ```privateKey```
 and ```externalKey``` signing types. These can be found in ```hello-world/signing/```.
@@ -306,10 +333,9 @@ we just reverse the contents.
     In a real app you would use the byte array to hold serialised data structures. You can use whatever data formats you
     like. You could use a simple string format or a binary format like protocol buffers.
 
-## Write a host program
+## Write a simple host program
 
-An enclave by itself is just a library. It can't (at this time) be invoked directly. Instead you load it from inside
-a host program.
+An enclave by itself is just a library: you must therefore load it from inside a host program.
 
 It's easy to load then pass data to and from an enclave. Let's start with the skeleton of a little command line app:
 
@@ -328,12 +354,12 @@ public class Host {
 }
 ```
 
-At first we will be building and running our enclave in 'simulation' mode. This does not require the platform 
+At first we will be building and running our enclave in simulation mode. This does not require the platform 
 hardware to support SGX. However, when we want to load either a debug or release build of the enclave we need 
 to ensure the platform supports SGX.
 
-By adding the code below to the main method we can determine whether the platform can load 'debug' and 'release' 
-enclaves. This method reports the actual hardware status even if you are currently working with 'simulation' 
+By adding the code below to the main method we can determine whether the platform can load debug and release 
+enclaves. This method reports the actual hardware status even if you are currently working with simulation 
 enclaves.
 
 If SGX is not supported the function throws an exception which describes the reason why. There are a number of 
@@ -361,7 +387,7 @@ To load the enclave we'll put this after the platform check:
 ```java
 String className = "com.r3.conclave.sample.enclave.ReverseEnclave";
 try (EnclaveHost enclave = EnclaveHost.load(className)) {
-    enclave.start();
+    enclave.start(null, null, null);
 
     System.out.println(callEnclave(enclave, "Hello world!"));
     // !dlrow olleH      :-)
@@ -372,7 +398,7 @@ try (EnclaveHost enclave = EnclaveHost.load(className)) {
 
 This code starts by creating an [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) object. This names the 
 class and then attempts to load it inside another JVM running inside an enclave. A remote attestation procedure is
-then performed involving Intel's servers. This procedure can fail if attempting to load a 'debug' or 'release' enclave 
+then performed involving Intel's servers. This procedure can fail if attempting to load a debug or release enclave 
 and the platform does not support SGX. This is why it is important to perform the platform check we made in the code 
 above. If the enclave does fail to load for any reason then an exception is thrown describing the reason why.
 
@@ -399,8 +425,7 @@ defined above:
 
 ```java
 // We'll convert strings to bytes and back.
-final byte[] inputBytes = input.getBytes();
-return new String(enclave.callEnclave(inputBytes));
+return new String(enclave.callEnclave(input.getBytes()));
 ```
 
 So we just convert the string to bytes, send it to the enclave, and convert the response from bytes back to a string.
@@ -411,6 +436,8 @@ There's no point in using an enclave to protect purely local data, as the data m
 (assumed malicious/compromised) host in that scenario. That's why you need remote attestation, which lets an enclave 
 prove its identity to the third parties who will upload secret data. If this paragraph doesn't make
 sense please review the [Architecture overview](architecture.md) and the [enclaves](enclaves.md) section.
+
+Before we can set up communication with a client, we must therefore get remote attestation working.
     
 Using remote attestation is easy! Just obtain an `EnclaveInstanceInfo` and serialize/deserialize it using the
 provided methods. There's a useful `toString` method: 
@@ -424,13 +451,15 @@ System.out.println(EnclaveInstanceInfo.deserialize(attestationBytes));
 That will print out something like this:
 
 ```text
-Remote attestation for enclave 04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6:
+Remote attestation for enclave F86798C4B12BE12073B87C3F57E66BCE7A541EE3D0DDA4FE8853471139C9393F:
   - Mode: SIMULATION
-  - Code signing key hash: 0230CFF16B15F8826AB6BBF686E190C94FDC0AD725041D3E16F5216A925D0A5C
-  - Product ID: 0
+  - Code signing key hash: 01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B
+  - Public signing key: 302A300506032B65700321000568034F335BE25386FD405A5997C25F49508AA173E0B413113F9A80C9BBF542
+  - Public encryption key: A0227D6D11078AAB73407D76DB9135C0D43A22BEACB0027D166937C18C5A7973
+  - Product ID: 1
   - Revocation level: 0
 
-Assessed security level at 2020-03-13T12:40:55.819Z is INSECURE
+Assessed security level at 2020-07-17T16:31:51.894697Z is INSECURE
   - Enclave is running in simulation mode.
 ```
 
@@ -445,57 +474,47 @@ clients can audit the enclave by repeating the Gradle build and comparing the va
     1. All this data is available via individual getters on the `EnclaveInstanceInfo` so you should never feel a need to
        parse the output of `toString`.
     2. `EnclaveInstanceInfo` is an interface so you can easily build mock attestations in your tests.
-    3. The timestamp is signed by Intel and comes from their servers. 
-        
+    3. When not in simulation mode the timestamp is signed by Intel and comes from their servers. 
+
 An instance has a security assessment, which can change in response to discovery of vulnerabilities in the
 infrastructure (i.e. without anything changing about the host or enclave itself). As we can see this enclave isn't
 actually considered secure yet because we're running in simulation mode still. An enclave can be `SECURE`, `STALE`, 
 or `INSECURE`. A assessment of `STALE` means there is a software/firmware/microcode update available for the platform
 that improves security in some way. The client may wish to observe when this starts being reported and define a 
-time span in which the remote enclave operator must upgrade.                                             
+time span in which the remote enclave operator must upgrade.
 
 Now get the serialized bytes to a client via whatever network mechanism you want. The bytes are essentially a large,
 complex digital signature, so it's safe to publish them publicly. An attestation doesn't inherently expire but because 
 the SGX ecosystem is always moving, client code will typically have some frequency with which it expects the host code
 to refresh the `EnclaveInstanceInfo`. At present this is done by stopping/closing and then restarting the enclave.
 
-## Constraints
+### Get a SPID
 
-How do you know the `EnclaveInstanceInfo` you've got is for the enclave you really intend to interact with? In normal
-client/server programming you connect to a host using some sort of identity, like a domain name or IP address. In
-enclave programming the location of the enclave might not matter much because the host is untrusted. Instead you have
-to verify *what* is running, not *where* it's running.
+To use SGX remote attestation for real we need to do some additional work. Remember how we wrote 
+`enclave.start(null, null, null);` above? The first two parameters are API keys required to use the Intel attestation
+servers. The first is called a "Service Provider ID" or SPID, and the second is called the "attestation key".
+You can sign-up easily and for free. [Learn more about IAS](ias.md).
 
-One way to do it is by inspecting the properties on the `EnclaveInstanceInfo` object and hard-coding some logic. That
-works fine, but is a common pattern in enclave-oriented design so we provide an API to do it for you.
+Once you have a SPID and attestation key you can either hard code them, or load them from a config file, or as in
+our sample code just pass them via the command line. Replace the call to `EnclaveHost.start` above with this snippet:
 
-The [`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) class takes an `EnclaveInstanceInfo` and
-performs some matching against it. A constraint object can be built in code, or it can be loaded from a small domain
-specific language encoded as a one-line string. The string form is helpful if you anticipate frequent upgrades that
-should be whitelisted, or other frequent changes to the acceptable enclave, as it can be easily put into a
-configuration file, JSON, XML or command line flags.
+```java
+if (enclave.getEnclaveMode() != EnclaveMode.SIMULATION && args.length != 2)
+    throw new IllegalArgumentException("You need to provide the SPID and attestation key as arguments");
+OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : null;
+String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : null;
+enclave.start(spid, attestationKey, null);
+```
 
-The constraint lets you specify:
+!!! info
+    Why does Conclave need to contact Intel's servers? It's because those servers contain the most up to date information
+    about what CPUs and system enclave versions are considered secure. Over time these servers will change their 
+    assessment of the host system and this will be visible in the responses, as security improvements are made.  
 
-1. Acceptable code hashes (measurements)
-2. Acceptable signing public keys
-3. The minimum revocation level 
-4. The product ID
-5. The security level of the instance: `SECURE`, `STALE`, `INSECURE`
+    Future versions of Conclave will allow you to use Intel DCAP, which is an alternative way to do attestation which
+    will let you run your own attestation servers, and thus skip getting these keys from Intel.                                           
 
-If you specify a signing public key then you must also specify the product ID, otherwise if the organisation that
-created the enclave makes a second different kind of enclave in future, a malicious host might connect you with the
-wrong one. If the input/output commands are similar then a confusion attack could be opened up. That's why you must
-always specify the product ID even if it's zero.
-
-The simplest possible string-form constraint looks like this:
-
-`C:04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6`
-
-It says "accept exactly one program, with that measurement hash". In this case the value came from the output of the
-build process as shown above.
-
-## Run the host and enclave
+## Run what we've got so far
 
 We can apply the Gradle `application` plugin and set the `mainClassName` property
 [in the usual manner](https://docs.gradle.org/current/userguide/application_plugin.html#application_plugin) to let us run
@@ -513,11 +532,340 @@ Enclave measurement: 04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D6
 
 The measurement should correspond to the value found in the `EnclaveInstanceInfo.getCodeHash()` property.
 
-You can switch to debug mode, whereby the enclave is run in a real SGX environment albeit with a backdoor for debugging,
-by specifying the `enclaveMode` property. You will need to run this on a machine with SGX enabled and also provide your
-EPID SPID and attestation key. See [here](ias.md#getting-access) for more information.
+You can switch to debug mode by specifying the `enclaveMode` property. In debug mode the real hardware is used and 
+virtually everything is identical to how it will be in production, but there's a small back door that can be used 
+by debuggers to read/write the enclave's memory. You will need to run this on a machine with SGX enabled and also 
+provide your EPID SPID and attestation key. See [here](ias.md#getting-access) for more information.
 
 ```gradlew -PenclaveMode=debug host:run --args="<SPID> <attestation key>"```
+
+## Encrypted messaging
+
+The enclave isn't of much use to the host, because the host already trusts itself. It's only useful to remote clients
+that want to use the enclave for computation without having to trust the host machine or software.
+
+We're now going to wire up encrypted messaging. Conclave provides an API for this called "Mail". Mail handles all the
+encryption for you, but leaves it up to you how the bytes themselves are moved around. You could use a REST API, a gRPC
+API, JMS message queues, a simple TCP socket as in this tutorial, or even files.
+
+!!! info
+    [Learn more about the design of Conclave Mail](architecture.md#mail), and [compare it to TLS](tls-vs-mail.md).
+
+### Receiving and posting mail in the enclave
+
+Firstly we need to upgrade our little enclave to be able to receive mails from clients. This is easy! Just override
+the `receiveMail` method:
+
+```java hl_lines="14 15 16 17 18 19"
+/**
+ * Simply reverses the bytes that are passed in.
+ */
+public class ReverseEnclave extends Enclave implements EnclaveCall {
+    @Override
+    public byte[] invoke(byte[] bytes) {
+        byte[] result = new byte[bytes.length];
+        for (int i = 0; i < bytes.length; i++) {
+            result[i] = bytes[bytes.length - 1 - i];
+        }
+        return result;
+    }
+
+    @Override
+    protected void receiveMail(long id, EnclaveMail mail) {
+        byte[] reversed = invoke(mail.getBodyAsBytes());
+        MutableMail reply = createMail(mail.getAuthenticatedSender(), reversed);
+        postMail(reply, null);
+    }
+}
+```
+
+The `invoke` method here isn't really needed, it's just because we're already using this to demonstrate local calls.
+The new part is `receiveMail`. This method takes two parameters: an identifier that the host gets to pick, which doesn't
+mean anything but we can use to acknowledge the mail if we want to using `Enclave.acknowledgeMail`. Acknowledgement can be used
+to tell the host the enclave is done processing the mail if it doesn't want to reply immediately. It will be discussed
+more in future tutorials. In this simple tutorial we reply immediately so don't need to use this feature, and thus we
+ignore the ID.
+
+The second parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
+also exposes some other header fields:
+
+1. The _authenticated sender public key_. This is the public key of the client that sent the mail. It's called 
+   "authenticated" because the encryption used by Conclave means you can trust that the mail was encrypted by an entity
+   holding the private key matching this public key. If your enclave recognises the public key this feature can be used
+   as a form of user authentication.
+1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
+   can be thought of as equivalent to a URL path or port number.
+1. The _from field_. This is a string that the sender can pick to identify itself. Unlike the authenticated sender key
+   this is entirely arbitrary, and nothing stops a sender picking any value it likes. Often this field won't be used.
+   It's intended to hold some sort of routing address where the sender would like to receive replies - sometimes this
+   is implied, but an explicit routing address can be useful when implementing more complex hosts and enclave that may
+   not reply straight away.
+1. The _envelope_. This is a slot that can hold any arbitrary byte array the sender likes. It's a holding zone for 
+   app specific data that should be authenticated but unencrypted.
+1. The _sequence number_. This must increment by one for every mail delivered on a topic. Conclave will automatically 
+   reject messages for which this doesn't hold true, within the scope of messages seen whilst the enclave is loaded.
+
+**These header fields are available to the host and therefore should not contain secrets**. It may seem odd to have
+data that's unencrypted, but it's often useful for the client, host and enclave to collaborate in various ways related
+to storage and routing of data. Even when the host is untrusted it may still be useful for the client to send data
+that is readable by the host and enclave simultaneously, but which the host cannot tamper with. Inside the enclave
+you can be assured that the header fields contain the values set by the client, because they're checked before 
+`receiveMail` is invoked.
+
+In this simple tutorial we only care about the body and sender public key. We reverse the bytes in the mail body
+and then create a response mail that will be encrypted to the sender. It contains the reversed bytes. We use the
+`createMail` method to do this. It gives us back a `MutableMail` object, which is a builder with setters we can use 
+to control the sequence number, topic and so on. Once we've done configuring it to our liking we pass it to
+`postMail` which performs the encryption and delivers the newly encrypted mail to the host. It will emerge in a callback
+we're about to configure.
+
+!!! tip
+    You can post mail anytime and to anyone you like. It doesn't have to be a response to the sender, you can post
+    multiple mails at once and you can post mails inside `invoke` (i.e. during a local call).
+
+### Receiving and posting mail in the host
+
+Mail posted by an enclave appears in a callback we pass to `EnclaveHost.start`. Let's use a really simple 
+implementation: we'll just store the encrypted bytes in a variable, so we can pick it up later:
+
+```java
+// Start it up.
+AtomicReference<byte[]> mailToSend = new AtomicReference<>();
+enclave.start(spid, attestationKey, new EnclaveHost.MailCallbacks() {
+    @Override
+    public void postMail(byte[] encryptedBytes, String routingHint) {
+        mailToSend.set(encryptedBytes);
+    }
+});
+``` 
+
+Java doesn't let us directly change variables from a callback, so we use an `AtomicReference` here as a box.
+
+!!! tip
+    Kotlin lets you alter mutable variables from callbacks directly, without needing this sort of trick.
+    
+The enclave can provide a _routing hint_ to tell the host where it'd like the message delivered. For example, this
+could be set to the value of the _from_ header. It's called a "hint" because the enclave must always remember that
+the host is untrusted. It can be arbitrarily malicious and could, for example, not deliver the mail at all, or
+it could deliver it to the wrong place. However if it does deliver it wrongly, the encryption will ensure the
+bogus recipient can't do anything with the mail. In this simple hello world tutorial we can only handle one client
+at once so we're going to ignore the routing hint here. In a more sophisticated server you could provide an 
+implementation of `EnclaveHost.MailCallbacks` that has access to your connected clients, a database, a durable queue,
+a `ThreadLocal` containing a servlet connection and so on. 
+
+At the bottom of our main method let's add some code to accept TCP connections and send the `EnclaveInstanceInfo` to 
+whomever connects. Then we'll accept a mail uploaded by the client, send it to the enclave, and deliver the response 
+back. We'll write the client code in a moment.
+
+```java
+int port = 9999;
+System.out.println("Listening on port " + port + ". Use the client app to send strings for reversal.");
+ServerSocket acceptor = new ServerSocket(port);
+int mailID = 1;
+while (true) {
+    try {
+        Socket connection = acceptor.accept();
+
+        // Just send the attestation straight to whoever connects. It's signed so that's MITM-safe.
+        DataOutputStream output = new DataOutputStream(connection.getOutputStream());
+        output.writeInt(attestationBytes.length);
+        output.write(attestationBytes);
+
+        // Now read some mail from the client.
+        DataInputStream input = new DataInputStream(connection.getInputStream());
+        byte[] mailBytes = new byte[input.readInt()];
+        input.readFully(mailBytes);
+
+        // Deliver it. The enclave will give us some mail to reply with via the callback we passed in
+        // to the start() method.
+        enclave.deliverMail(mailID++, mailBytes);
+        byte[] toSend = mailToSend.getAndSet(null);
+        output.writeInt(toSend.length);
+        output.write(toSend);
+
+        // Closing the output stream closes the connection. Different clients will block each other but this
+        // is just a hello world sample.
+        output.close();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+This code is straightforward. In order, it:
+
+1. Opens a socket using the Java sockets API and enters a loop listening for connections.
+1. Accepts a connection and then sends the serialized `EnclaveInstanceInfo` to the client. We first send the length
+   so the client knows how many bytes to read.
+1. The client will send us a byte array back, which contains an encrypted string. This code can't read the body, it's 
+   just encrypted bytes except for a few fields in the headers, which *are* available to the host.
+1. We keep an incrementing counter because the enclave wants a unique value which it can use to signal acknowledgement.
+   We aren't using acknowledgement here though, because this app is too simple to need it.
+1. We deliver the encrypted mail bytes to the enclave.
+1. We pick up the response from the `AtomicReference` box that was set by the callback.
+
+!!! todo
+    In future we will provide APIs to bind enclaves to common transports, to avoid this sort of boilerplate.
+
+## Writing the client
+
+The client app will do three things:
+
+1. Connect to the host server and download the `EnclaveInstanceInfo` from it.
+1. Verify the enclave is acceptable: i.e. that it will do what's expected.
+1. Send it the command line arguments as a string to reverse and get back the answer, using encrypted mail.
+
+Here's the initial boilerplate to grab the user input, connect, download and deserialize the `EnclaveInstanceInfo`.
+
+```java
+public class Client {
+    public static void main(String[] args) throws IOException, InvalidEnclaveException {
+        if (args.length == 0) {
+            System.err.println("Please pass the string to reverse on the command line");
+            return;
+        }
+        String toReverse = String.join(" ", args);
+
+        // Connect to the host, it will send us a remote attestation (EnclaveInstanceInfo).
+        Socket socket = new Socket("localhost", 9999);
+        DataInputStream fromHost = new DataInputStream(socket.getInputStream());
+        byte[] attestationBytes = new byte[fromHost.readInt()];
+        fromHost.readFully(attestationBytes);
+        EnclaveInstanceInfo attestation = EnclaveInstanceInfo.deserialize(attestationBytes);
+    }
+}
+```
+
+### Constraints
+
+How do you know the `EnclaveInstanceInfo` you've got is for the enclave you really intend to interact with? In normal
+client/server programming you connect to a host using some sort of identity, like a domain name or IP address. TLS 
+is used to ensure the server that picks up is the rightful owner of the domain name you intended to connect to. In
+enclave programming the location of the enclave might not matter much because the host is untrusted. Instead you have
+to verify *what* is running, rather than *where* it's running.
+
+!!! note
+    The domain name of the server can still be important in some applications, in which case you should use TLS instead
+    of raw sockets as is the case here.
+
+One way to do this is by inspecting the properties on the `EnclaveInstanceInfo` object and hard-coding some logic. That
+works fine, but testing an `EnclaveInstanceInfo` is a common pattern in enclave programming, so we provide an API to 
+do it for you.
+
+The [`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) class takes an `EnclaveInstanceInfo` and
+performs some matching against it. A constraint object can be built in code, or it can be loaded from a small domain
+specific language encoded as a one-line string. The string form is helpful if you anticipate frequent upgrades that
+should be whitelisted or other frequent changes to the acceptable enclave, as it can be easily put into a
+configuration file, JSON, XML or command line flags.
+
+The constraint lets you specify:
+
+1. Acceptable code hashes (measurements)
+2. Acceptable signing public keys
+3. The minimum revocation level 
+4. The product ID
+5. The security level of the instance: `SECURE`, `STALE`, `INSECURE`
+
+If you specify a signing public key then you must also specify the product ID, otherwise if the organisation that
+created the enclave makes a second different kind of enclave in future, a malicious host might connect you with the
+wrong one. If the input/output commands are similar then a confusion attack could be opened up. That's why you must
+always specify the product ID even if it's zero.
+
+The simplest possible string-form constraint looks like this:
+
+`C:F86798C4B12BE12073B87C3F57E66BCE7A541EE3D0DDA4FE8853471139C9393F`
+
+It says "accept exactly one program, with that measurement hash". In this case the value came from the output of the
+build process as shown above. This is useful when you don't trust the author nor host of the enclave, and want to
+audit the source code and then reproduce the build.
+
+Often that's too rigid. We trust the *developer* of the enclave, just not the host. In that case we'll accept any enclave
+signed by the developer's public key. We can express that by listing code signing key hashes, like this:
+
+`S:01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B PROD:1`
+
+When constraining to a signing key we must also specify the product ID, because a key can be used to sign more than
+one product. 
+
+```java
+// Check it's the enclave we expect. This will throw InvalidEnclaveException if not valid.
+// The hash here comes from observing what the build printed.
+EnclaveConstraint.parse("S:01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B PROD:1 SEC:INSECURE").check(attestation);
+```
+
+This line of code parses a simple constraint that says any enclave (even if run in simulation mode) signed by this
+hash of a code signing key with product ID of 1 is acceptable. Obviously in a real app, you would remove the part
+that says `SEC:INSECURE`, but it's convenient to have this whilst developing. You'd probably also retrieve the
+constraint from a configuration file, system property or command line flag. Finally it uses the `check` method with
+the attestation object. If anything is amiss an exception is thrown, so past this point we know we're talking to the
+real `ReverseEnclave` we wrote earlier.  
+
+### Keys and mail
+
+We want to receive a response from the enclave, and we want that to be encrypted/tamperproofed too. That means we
+need a key pair of our own. Conclave uses Curve25519, a state of the art elliptic curve algorithm. For reasons of
+implementation robustness and avoidance of side channel attacks, this is the only algorithm supported by Conclave Mail.
+If you want to use other algorithms for some reason you would need to implement your own messaging system on top of
+host-local calls. Alternatively, use that other algorithm to encrypt/decrypt a Curve25519 private key. Generating such
+a key is straightforward: 
+
+```java
+KeyPair myKey = new Curve25519KeyPairGenerator().generateKeyPair();
+```
+
+Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. At the
+moment in Conclave therefore, you must utilize our `Curve25519KeyPairGenerator`, `Curve25519PublicKey` and `Curve25519PrivateKey`
+classes. In future we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply
+32 random bytes, which you can access using the `getEncoded()` method on `PrivateKey`. 
+
+Now we have a key with which to receive the response, we create a mail to the enclave. This is done using the
+`EnclaveInstanceInfo.createMail` method, which returns a `MutableMail` object. We must set our private key on the mail
+so it's mixed in to the calculations when the mail is encrypted and thus becomes available in `getAuthenticatedSender()`
+inside the enclave: without the call to `setPrivateKey` the authenticated sender will be null. This can sometimes be
+appropriate, if for example, the enclave already knows the sender's private key via some other mechanism.
+
+The sequence number for this newly created mail is zero. That means if we re-run the program twice we'll try to send
+the enclave two mails with the same topic, sender and sequence number. This is invalid: the enclave will reject it as
+an apparent replay attack until it's restarted and forgets what mail it received. We could keep a counter on disk and 
+increment it, but it's easier to simply set the topic to a random UUID. After that, we can encrypt the mail. 
+
+```java
+MutableMail mail = attestation.createMail(toReverse.getBytes(StandardCharsets.UTF_8));
+mail.setPrivateKey(myKey.getPrivate());
+// Set a random topic, so we can re-run this program against the same server.
+mail.setTopic(UUID.randomUUID().toString());
+byte[] encryptedMail = mail.encrypt();
+```
+
+In more complex apps it might be smart to use the topic in more complex ways, like how a web app can use the URL to
+separate different functions of the app.
+
+Now we have an encrypted message we can write it to the socket and receive the enclave's response.
+
+```java
+System.out.println("Sending the encrypted mail to the host.");
+DataOutputStream toHost = new DataOutputStream(socket.getOutputStream());
+toHost.writeInt(encryptedMail.length);
+toHost.write(encryptedMail);
+
+// Enclave will mail us back.
+byte[] encryptedReply = new byte[fromHost.readInt()];
+System.out.println("Reading reply mail of length " + encryptedReply.length + " bytes.");
+fromHost.readFully(encryptedReply);
+
+// Decrypt the reply
+EnclaveMail reply = attestation.decryptMail(encryptedReply, myKey.getPrivate());
+System.out.println("Enclave reversed '" + toReverse + "' and gave us the answer '" + new String(reply.getBodyAsBytes()) + "'");
+socket.close();
+```
+
+We write out the length of the mail, then the mail bytes, then read the length of the response and read the response 
+bytes. Finally we use `EnclaveInstanceInfo.decryptMail`, passing in the encrypted reply we got and our own private key.
+This method checks the bytes really did come from that enclave (by checking the authenticated sender key against the
+enclave's public key in the attestation), decodes the bytes and yields the reply. We can then access the body of the
+message using `EnclaveMail.getBodyAsBytes()`.
+
+Finally we close the socket, and we're done. Phew! 😅
 
 ## Testing
 
@@ -527,7 +875,7 @@ There are two ways you can test the enclave: as a mock or natively.
 
 The `conclave-testing` library has a `MockHost` class which lets you whitebox test your enclave by running the enclave
 fully in-memory. There is no need for SGX hardware or a specific OS and thus ideal for cross-platform unit testing. The
-underlying enclave object is also exposed enabling you to make assertations on the enclave's state, something that obviously
+underlying enclave object is also exposed enabling you to make assertions on the enclave's state, something that
 cannot be done on real hardware or even in simulation mode.
 
 In your enclave module add the following test dependency
@@ -540,12 +888,12 @@ You create your mock enclave by calling `MockHost.loadMock`.
 
 ```java
 MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
-mockHost.start(null, null);
+mockHost.start(null, null, null);
 ReverseEnclave reverseEnclave = mockHost.getEnclave();
 ```
 
 `MockHost` is a `EnclaveHost` so you call the enclave as normal with `callEnclave`. You have direct assess to the
-enclave instance with `mockHost.getEnclave()`.
+enclave object instance with `mockHost.getEnclave()`.
 
 ### Native
 
@@ -576,7 +924,7 @@ static void startup() throws EnclaveLoadException {
     enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
     String spid = System.getProperty("spid");
     String attestionKey = System.getProperty("attestation-key");
-    enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey);
+    enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey, null);
 }
 ```
 

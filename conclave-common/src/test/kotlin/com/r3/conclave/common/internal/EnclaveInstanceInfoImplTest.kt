@@ -8,8 +8,8 @@ import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.QuoteStatus
 import com.r3.conclave.host.internal.MockAttestationService
-import com.r3.conclave.mail.internal.Curve25519KeyPairGenerator
-import com.r3.conclave.mail.internal.Curve25519PublicKey
+import com.r3.conclave.mail.Curve25519KeyPairGenerator
+import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.testing.createSignedQuote
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException

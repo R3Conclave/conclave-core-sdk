@@ -2,12 +2,7 @@ package com.r3.conclave.host
 
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.kotlin.deliverMail
-import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.EnclaveMailId
-import com.r3.conclave.mail.Mail
-import com.r3.conclave.mail.MutableMail
-import com.r3.conclave.mail.internal.Curve25519KeyPairGenerator
-import com.r3.conclave.mail.internal.Curve25519PublicKey
+import com.r3.conclave.mail.*
 import com.r3.conclave.testing.MockHost
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
@@ -73,22 +68,24 @@ class MailHostTest {
     fun `sequence numbers`() {
         // Verify that the enclave rejects a replay of the same message, or out of order delivery.
         noop.start(null, null, null)
-        val encrypted1 = buildMail(noop).encrypt()
+        val encrypted0 = buildMail(noop, "message 0".toByteArray()).encrypt()
+        val encrypted1 = buildMail(noop, "message 1".toByteArray()).also { it.sequenceNumber = 1 }.encrypt()
         val encrypted2 = buildMail(noop, "message 2".toByteArray()).also { it.sequenceNumber = 2 }.encrypt()
-        val encrypted3 = buildMail(noop, "message 3".toByteArray()).also { it.sequenceNumber = 3 }.encrypt()
-        val encrypted50 = buildMail(noop, "message 3".toByteArray()).also { it.sequenceNumber = 50 }.encrypt()
+        val encrypted50 = buildMail(noop, "message 50".toByteArray()).also { it.sequenceNumber = 50 }.encrypt()
+        // Deliver message 1.
+        noop.deliverMail(100, encrypted0)
         // Cannot deliver message 2 twice even with different IDs.
-        noop.deliverMail(100, encrypted2)
-        var msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted2) }.message!!
-        assertTrue("Highest sequence number seen is 2, attempted delivery of 2" in msg) { msg }
-        // Cannot now deliver message 1 because the sequence number would be going backwards.
-        msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted1) }.message!!
-        assertTrue("Highest sequence number seen is 2, attempted delivery of 1" in msg) { msg }
+        noop.deliverMail(100, encrypted1)
+        var msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted1) }.message!!
+        assertTrue("Highest sequence number seen is 1, attempted delivery of 1" in msg) { msg }
+        // Cannot now re-deliver message 1 because the sequence number would be going backwards.
+        msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted0) }.message!!
+        assertTrue("Highest sequence number seen is 1, attempted delivery of 0" in msg) { msg }
         // Can deliver message 3
-        noop.deliverMail(101, encrypted3)
+        noop.deliverMail(101, encrypted2)
         // Seq nums may not have gaps.
         msg = assertThrows<RuntimeException> { noop.deliverMail(102, encrypted50) }.message!!
-        assertTrue("Highest sequence number seen is 3, attempted delivery of 50" in msg) { msg }
+        assertTrue("Highest sequence number seen is 2, attempted delivery of 50" in msg) { msg }
 
         // Seq nums of different topics are independent
         val secondTopic = buildMail(noop).also { it.topic = "another-topic" }.encrypt()
@@ -147,7 +144,7 @@ class MailHostTest {
     private fun buildMail(host: MockHost<*>, body: ByteArray = messageBytes): MutableMail {
         val mail = host.enclaveInstanceInfo.createMail(body)
         mail.topic = "topic-123"
-        mail.sequenceNumber = 1
+        mail.sequenceNumber = 0
         mail.privateKey = keyPair.private
         return mail
     }

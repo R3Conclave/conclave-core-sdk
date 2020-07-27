@@ -2,6 +2,8 @@ package com.r3.conclave.sample.enclave;
 
 import com.r3.conclave.common.enclave.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;
+import com.r3.conclave.mail.EnclaveMail;
+import com.r3.conclave.mail.MutableMail;
 
 /**
  * Simply reverses the bytes that are passed in.
@@ -18,5 +20,12 @@ public class ReverseEnclave extends Enclave implements EnclaveCall {
         }
         previousResult = result;
         return result;
+    }
+
+    @Override
+    protected void receiveMail(long id, EnclaveMail mail) {
+        byte[] reversed = invoke(mail.getBodyAsBytes());
+        MutableMail reply = createMail(mail.getAuthenticatedSender(), reversed);
+        postMail(reply, null);
     }
 }

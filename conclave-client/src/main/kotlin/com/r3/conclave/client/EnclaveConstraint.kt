@@ -1,6 +1,9 @@
 package com.r3.conclave.client
 
-import com.r3.conclave.common.*
+import com.r3.conclave.common.EnclaveInfo
+import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveSecurityInfo
+import com.r3.conclave.common.SecureHash
 
 /**
  * This utility class provides a template against which remote attestations may be matched. It defines a little domain
@@ -87,16 +90,16 @@ class EnclaveConstraint {
 
         if (acceptableCodeHashes.isNotEmpty() && acceptableSigners.isEmpty()) {
             checkEnclave(enclave.enclaveInfo.codeHash in acceptableCodeHashes) {
-                "Enclave code hash does not match any of the acceptable code hashes."
+                "Enclave code hash does not match any of the acceptable code hashes. (measurement hash ${enclave.enclaveInfo.codeHash} vs acceptable ${acceptableCodeHashes.joinToString()}"
             }
         } else if (acceptableCodeHashes.isEmpty() && acceptableSigners.isNotEmpty()) {
             checkEnclave(enclave.enclaveInfo.codeSigningKeyHash in acceptableSigners) {
-                "Enclave code signer does not match any of the acceptable code signers."
+                "Enclave code signer does not match any of the acceptable code signers. (key hash ${enclave.enclaveInfo.codeSigningKeyHash} vs acceptable ${acceptableSigners.joinToString()})"
             }
         } else {
             // Both are non-empty
             checkEnclave(enclave.enclaveInfo.codeHash in acceptableCodeHashes || enclave.enclaveInfo.codeSigningKeyHash in acceptableSigners) {
-                "Enclave does not match any of the acceptable code hoshes or code signers."
+                "Enclave does not match any of the acceptable code hashes or code signers."
             }
         }
 
