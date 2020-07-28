@@ -1,20 +1,23 @@
 # Conclave
 
 Conclave is a toolkit for building _enclaves_, small pieces of software that are protected from attack by the owner
-of the computer on which they run. It is ideally suited to solving complex business collaboration and privacy problems.
+of the computer on which they run. It is ideally suited to solving multi-party collaboration and privacy problems.
 
 ## Why Conclave?
 
-- An embedded Java Virtual Machine, capable of running the full Java 8 platform inside an enclave with encrypted RAM.
-  You can eliminate all memory management errors that would undermine the security of your enclave, thanks to the built-in generational garbage collector.
-- Write enclaves in Java, Kotlin, Scala, Haskell (via Eta) or any other language that can target bytecode.
+- Write your host app in any language that can run on a Java Virtual Machine. Write your enclave using the GraalVM
+  native image technology for incredibly tight memory usage, support for any GraalVM language and instant startup time.
+  Eliminate all memory management errors that would undermine the security of your enclave, thanks to the built-in 
+  generational garbage collector.
+- High level, simple API that is much easier to use than other enclave APIs.
 - Full support for auditing enclaves over the internet, including remote attestation and fully deterministic,
   reproducible builds. A user can verify what the source code of the remotely running enclave is, to ensure it will
   behave as they expect.
-- A Gradle plugin, so compiling and signing your enclave is handled automatically.
+- A Gradle plugin to automate compiling, signing and calculating the code hash of your enclave. No need to use the Intel
+  SDK - everything needed is included.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
-- Many tutorials, guides and commercial support from the SGX experts at R3.
 - A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, using just JUnit.
+- Tutorials, guides and commercial support from the SGX experts at R3.
 
 ## Documentation
 
@@ -37,8 +40,8 @@ There's a public mailing list for discussion of using Conclave and SGX. Join [co
 You can also [email us directly](mailto:conclave@r3.com). In future R3 will offer ticket based commercial support. 
 
 !!! warning
-    This is a beta release of Conclave. You should not run enclaves built with it in production. Please read the list
-    of [known issues](known-issues.md).
+    This is a **developer preview** release of Conclave. You **may not** run enclaves built with it in production. 
+    Please read the list of [known issues](known-issues.md).
 
 ## Release notes
 
@@ -50,15 +53,15 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
 1. :jigsaw: **New feature!** You can now compile your entire enclave ahead of time using 
    [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/). This gives you access to a
    much better JVM than in prior releases, with faster enclaves that use less RAM. The performance improvement can be
-   between 4x and 12x faster than in prior releases.
-1. :jigsaw: **New feature!** New mock API for unit testing enclaves and for easy debugging between the host and enclave.
-   [Learn more](writing-hello-world.md#mock)
+   between 4x and 12x faster than in prior releases and memory usage can be up to 5x lower.
+1. :jigsaw: **New feature!** New mock API for easy debugging between the host and enclave, fast unit testing and easy
+   development of enclaves on machines that don't support the technology. [Learn more](writing-hello-world.md#mock). 
 1. :jigsaw: **New feature!** You can now produce enclaves on macOS! Just follow the instructions as you would on a Linux
    developer machine, and a JAR with an embedded Linux enclave .so file will be produced automatically. You can then take
    that JAR and upload it to a Linux host for execution, e.g. via a Docker or webapp container (e.g. Tomcat). Combined
    with the equivalent Windows support we added in beta 2 and the easy to use mock enclave API, this completes our 
    developer platform support and allows mixed teams of people working on their preferred OS to build enclave-oriented
-   apps together.
+   apps together. Please note: at this time only the Avian runtime can be cross-compiled from Windows and macOS.
 1. :jigsaw: **New feature!** You may now make concurrent calls into the enclave using multiple threads,.  
 1. Remote attestations (serialized `EnclaveInstanceInfo` objects) now remain valid across enclave restarts. They may
    still be invalidated by changes to the SGX TCB, for example, microcode updates applied as part of an operating
