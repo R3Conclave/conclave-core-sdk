@@ -23,8 +23,12 @@ and run the tests.
 
 The build takes a long time because there are a lot of native components.
 
-On Linux you can run IntelliJ and CLion (expense a license) from inside the devenv
-container using `./scripts/idea.sh` and `./scripts/clion.sh`
+### IntelliJ and CLion (Linux only)
+On Linux you can run IntelliJ and CLion (expense a license) from inside the devenv.
+Setting the environment variable `CONCLAVE_DOCKER_IDE=1` will enable their automatic download/installation.
+Just add `export CONCLAVE_DOCKER_IDE_TEST=1` to the last row of shell initialization scripts (e.g. in `.bashrc`).
+
+Restart the terminal and use `./scripts/idea.sh` and `./scripts/clion.sh` to start the respective IDEs.
 
 ## Joining the project
 

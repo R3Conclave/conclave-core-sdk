@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
-CLION_VERSION=2018.1.2
-IDEA_VERSION=IC-193.6015.39
 # You can set this variable to mount the IDEs from the host
-HOST_IDE_DIR=${HOST_IDE_DIR:-"${HOME}/opt"}
+HOST_IDE_DIR=${HOST_IDE_DIR:-"${HOME}/.opt"}
+IDEA_VERSION=${IDEA_VERSION:-"IC-201.8743.12"}
+IDEA_DOWNLOAD_FILE=ideaIC-2020.1.4.tar.gz
+IDEA_DOWNLOAD_ADDRESS=https://download-cf.jetbrains.com/idea/$IDEA_DOWNLOAD_FILE
+CLION_VERSION=${CLION_VERSION:-"2020.1.3"}
+CLION_DOWNLOAD_FILE=CLion-2020.1.3.tar.gz
+CLION_DOWNLOAD_ADDRESS=https://download-cf.jetbrains.com/cpp/$CLION_DOWNLOAD_FILE
+
 if [ -f ~/.oblivium_credentials.sh ]
 then
   source ~/.oblivium_credentials.sh
@@ -98,7 +102,24 @@ if [[ -z ${CONTAINER_ID} ]]; then
       SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
   fi
 
-
+  if [ ${CONCLAVE_DOCKER_IDE:-""} = "1" ]; then
+    if [ ! -d ${HOST_IDE_DIR}/idea-$IDEA_VERSION ]; then
+      echo "Downloading IntelliJ IDEA from ${IDEA_DOWNLOAD_ADDRESS}..."
+      mkdir -p $HOST_IDE_DIR
+      curl -SL -o ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE $IDEA_DOWNLOAD_ADDRESS
+      tar -C $HOST_IDE_DIR -zxvf ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE
+      rm ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE
+    fi
+    if [ ! -d ${HOST_IDE_DIR}/clion-$CLION_VERSION ]; then
+      echo "Downloading CLion from ${CLION_DOWNLOAD_ADDRESS}..."
+      mkdir -p $HOST_IDE_DIR
+      curl -SL -o ${HOST_IDE_DIR}/$CLION_DOWNLOAD_FILE $CLION_DOWNLOAD_ADDRESS
+      tar -C $HOST_IDE_DIR -zxvf ${HOST_IDE_DIR}/$CLION_DOWNLOAD_FILE
+      rm ${HOST_IDE_DIR}/$CLION_DOWNLOAD_FILE
+    fi
+  else
+    echo "Set the environment variable 'CONCLAVE_DOCKER_IDE=1' to automatically download IntelliJ IDEA and CLion."
+  fi
 # Mount the IDEs from the host. The IDEs should be compatible with the container's OS.
 # If the IDEs are not present, the devenv shell can still be used,
 # as well as the the host's native IDEs, but the IDE launch scripts will fail.
