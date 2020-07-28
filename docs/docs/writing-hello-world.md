@@ -306,7 +306,7 @@ Create your enclave class:
 ```java
 package com.superfirm.enclave;   // CHANGE THIS
 
-import com.r3.conclave.common.enclave.EnclaveCall;
+import com.r3.conclave.common.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;
 
 /**

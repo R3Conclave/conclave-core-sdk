@@ -2,7 +2,7 @@ package com.r3.conclave.jvmtester.enclave
 
 import com.google.protobuf.ByteString
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.jvmtester.api.EnclaveJvmTest
 import com.r3.conclave.jvmtester.api.TestSerializable

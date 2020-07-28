@@ -1,6 +1,6 @@
 package com.r3.conclave.graalvm;
 
-import com.r3.conclave.common.enclave.EnclaveCall;
+import com.r3.conclave.common.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;
 import com.r3.conclave.benchmarks.Benchmarks;
 import java.nio.charset.StandardCharsets;

@@ -3,7 +3,7 @@ package com.r3.conclave.host
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves

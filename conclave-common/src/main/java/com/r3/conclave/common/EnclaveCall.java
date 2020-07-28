@@ -1,4 +1,4 @@
-package com.r3.conclave.common.enclave;
+package com.r3.conclave.common;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

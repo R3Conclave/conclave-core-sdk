@@ -1,6 +1,6 @@
 package com.r3.conclave.sample.enclave;
 
-import com.r3.conclave.common.enclave.EnclaveCall;
+import com.r3.conclave.common.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;
 import com.r3.conclave.mail.EnclaveMail;
 import com.r3.conclave.mail.MutableMail;

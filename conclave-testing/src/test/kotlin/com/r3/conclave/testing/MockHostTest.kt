@@ -1,7 +1,7 @@
 package com.r3.conclave.testing
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

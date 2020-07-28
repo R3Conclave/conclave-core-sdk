@@ -1,7 +1,7 @@
 package com.r3.conclave.samples.djvm.enclave
 
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.samples.djvm.common.proto.ExecuteTask
 import com.r3.conclave.samples.djvm.common.proto.Request

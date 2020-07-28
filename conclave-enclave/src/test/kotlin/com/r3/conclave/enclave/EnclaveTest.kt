@@ -1,6 +1,6 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.EnclaveConfig
 import com.r3.conclave.dynamictesting.TestEnclaves

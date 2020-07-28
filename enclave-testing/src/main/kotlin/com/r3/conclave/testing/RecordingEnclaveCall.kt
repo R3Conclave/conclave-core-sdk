@@ -1,6 +1,6 @@
 package com.r3.conclave.testing
 
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 
 class RecordingEnclaveCall : EnclaveCall {
     val calls = ArrayList<ByteArray>()

@@ -1,7 +1,7 @@
 package com.r3.conclave.enclave.kotlin
 
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 
 /**
  * Sends the given bytes to the registered [EnclaveCall] implementation provided to `EnclaveHost.callEnclave`.

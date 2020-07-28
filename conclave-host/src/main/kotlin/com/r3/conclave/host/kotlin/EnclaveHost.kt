@@ -1,6 +1,6 @@
 package com.r3.conclave.host.kotlin
 
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.EnclaveHost.MailCallbacks
 import com.r3.conclave.mail.EnclaveMailId

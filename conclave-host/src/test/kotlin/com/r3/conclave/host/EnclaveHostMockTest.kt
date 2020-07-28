@@ -1,6 +1,6 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.enclave.EnclaveCall
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.kotlin.callUntrustedHost
