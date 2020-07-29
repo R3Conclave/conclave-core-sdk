@@ -5,13 +5,16 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
 
 object ExtractResource {
+    private val keyCache = HashMap<String, String>()
+
     fun extractResource(clazz: Class<*>, resourcePath: String, permissions: String): Cached<File> {
         return Cached.SingleCached(
                 name = resourcePath,
-                providedKey = DigestTools.md5String(
-                        DigestTools.md5InputStream(clazz.getResourceAsStream(resourcePath)) +
-                                permissions
-                ),
+                providedKey = keyCache.getOrPut(resourcePath + permissions, {
+                    DigestTools.md5String(
+                            DigestTools.md5InputStream(clazz.getResourceAsStream(resourcePath)) +
+                                    permissions)
+                }),
                 produce = { outputDirectory ->
                     val output = File(outputDirectory.asFile, File(resourcePath).name)
                     javaClass.getResourceAsStream(resourcePath).use { input ->
