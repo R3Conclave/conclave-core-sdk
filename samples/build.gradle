@@ -78,7 +78,7 @@ subprojects {
         def version = System.getenv('PROJECT_VERSION')
         if (version != null) {
             if (version.empty) {
-                version = "0.3-SNAPSHOT"
+                version = "0.4-SNAPSHOT"
             }
             all {
                 for (submodule in modulesToSubstitute) {

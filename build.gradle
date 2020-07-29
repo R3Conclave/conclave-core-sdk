@@ -22,7 +22,7 @@ static Map<String, String> createEnvironment(String... names) {
 // 0.3-SNAPSHOT = "the release preparing for beta 3"
 def projectVersion = System.getenv('PROJECT_VERSION')
 version = projectVersion != null && !projectVersion.empty
-        ? projectVersion : '0.3-SNAPSHOT'
+        ? projectVersion : '0.4-SNAPSHOT'
 
 ext {
     environment = createEnvironment(
