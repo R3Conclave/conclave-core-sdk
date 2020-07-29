@@ -14,3 +14,4 @@ docs/virtualenv
 .DS_Store
 cpp/jvm-enclave-avian/generated_dlsym/
 cpp/jvm-enclave-common/include/enclave_jni.h
+samples/jvm-perf/jvm-perf/src/main/generated/
