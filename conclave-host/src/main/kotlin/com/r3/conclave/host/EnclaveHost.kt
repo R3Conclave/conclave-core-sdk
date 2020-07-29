@@ -212,7 +212,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             val attestationConnection = mux.addDownstream(
                     EpidAttestationHostHandler(
                             SgxQuoteType.LINKABLE,
-                            spid?.let { Cursor(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
+                            spid?.let { Cursor.read(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
                             enclaveMode == EnclaveMode.MOCK
                     )
             )

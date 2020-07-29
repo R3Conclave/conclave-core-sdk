@@ -87,7 +87,7 @@ class EnclaveInstanceInfoImpl(
             SIMULATION -> Pair(Summary.INSECURE, "Enclave is running in simulation mode.")
             MOCK -> Pair(Summary.INSECURE, "Enclave is running in mock mode.")
         }
-        val cpuSVN = OpaqueBytes(reportBody[cpuSvn].readBytes())
+        val cpuSVN = OpaqueBytes(reportBody[cpuSvn].bytes)
         securityInfo = SGXEnclaveSecurityInfo(summary, reason, attestationReport.timestamp, cpuSVN)
     }
 

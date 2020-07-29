@@ -1,6 +1,7 @@
 package com.r3.conclave.utilities.internal
 
 import java.io.*
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
@@ -66,6 +67,12 @@ fun ByteBuffer.putIntLengthPrefixBytes(bytes: ByteArray): ByteBuffer {
 fun ByteBuffer.getIntLengthPrefixBytes(): ByteArray = getBytes(getInt())
 
 val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size
+
+fun ByteBuffer.addPosition(delta: Int): ByteBuffer {
+    // The nasty cast is to make this work under Java 11.
+    (this as Buffer).position(position() + delta)
+    return this
+}
 
 inline fun writeData(block: DataOutputStream.() -> Unit): ByteArray {
     val baos = ByteArrayOutputStream()

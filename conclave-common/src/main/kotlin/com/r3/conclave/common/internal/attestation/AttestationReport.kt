@@ -123,13 +123,13 @@ data class AttestationReport(
 
     private class SgxQuoteSerializer : JsonSerializer<ByteCursor<SgxQuote>>() {
         override fun serialize(value: ByteCursor<SgxQuote>, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeBinary(value.readBytes())
+            gen.writeBinary(value.bytes)
         }
     }
 
     private class SgxQuoteDeserializer : JsonDeserializer<ByteCursor<SgxQuote>>() {
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteCursor<SgxQuote> {
-            return Cursor(SgxQuote, p.binaryValue)
+            return Cursor.wrap(SgxQuote, p.binaryValue)
         }
     }
 

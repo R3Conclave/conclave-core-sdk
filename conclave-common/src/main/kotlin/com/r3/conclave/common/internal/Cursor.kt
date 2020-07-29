@@ -1,6 +1,7 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.utilities.internal.getBytes
+import com.r3.conclave.utilities.internal.addPosition
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -14,52 +15,76 @@ typealias ByteCursor<T> = Cursor<T, ByteBuffer>
  * @param T the [Encoder] describing how to read/write the pointed-to data.
  * @param R the pointed-to data's Kotlin representation type.
  */
-class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
-    constructor(encoder: T, bytes: ByteArray) : this(encoder, ByteBuffer.wrap(bytes))
-
+class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private val underlyingBuffer: ByteBuffer) {
     companion object {
-        @JvmStatic
+        /**
+         * Allocates a new cursor for an empty [T].
+         *
+         * The new [Cursor] will be backed by a byte array which can be accessed by calling `buffer.array()`.
+         */
         fun <T : Encoder<R>, R> allocate(type: T): Cursor<T, R> {
-            return Cursor(type, ByteBuffer.allocate(type.size()).order(ByteOrder.LITTLE_ENDIAN))
+            return Cursor(type, ByteBuffer.allocate(type.size))
+        }
+
+        /**
+         * Wraps a byte array into a cursor for [T]. [length] must be exactly the size of [type].
+         *
+         * The new [Cursor] will be backed by the given byte array; that is, modifications made via the cursor will cause
+         * the array to be modified and vice versa. Access to the array is possible by calling `buffer.array()`.
+         *
+         * @throws IllegalArgumentException If [length] is not the size of [type].
+         */
+        fun <T : Encoder<R>, R> wrap(type: T, bytes: ByteArray, offset: Int = 0, length: Int = bytes.size): Cursor<T, R> {
+            return Cursor(type, ByteBuffer.wrap(bytes, offset, length))
+        }
+
+        /**
+         * Returns a cursor over the remaining bytes of [buffer] to capture [type]. The position of the buffer is
+         * advanced by the size of [type].
+         *
+         * @throws IllegalArgumentException If the remaining bytes of [buffer] is less than the size of [type].
+         */
+        fun <T : Encoder<R>, R> read(type: T, buffer: ByteBuffer): Cursor<T, R> {
+            require(buffer.remaining() >= type.size) {
+                "There are insufficient remaining bytes for ${type.javaClass.simpleName}. " +
+                        "Remaining=${buffer.remaining()}, required=${type.size}"
+            }
+            val result = buffer.slice()
+            (result as Buffer).limit(type.size)
+            buffer.addPosition(type.size)
+            return Cursor(type, result)
         }
     }
 
     init {
-        require(buffer.remaining() == encoder.size()) {
-            "Passed in buffer's remaining() = ${buffer.remaining()} whereas ${encoder.javaClass.simpleName} requires ${encoder.size()}"
+        require(underlyingBuffer.remaining() == encoder.size) {
+            "Passed in buffer's remaining() = ${buffer.remaining()} whereas ${encoder.javaClass.simpleName} requires ${encoder.size}"
         }
     }
 
-    private val originalBuffer = buffer.duplicate()
-
     /** Get the [ByteBuffer] of the pointed-to data. */
-    fun getBuffer(): ByteBuffer = originalBuffer.duplicate().order(ByteOrder.LITTLE_ENDIAN)
+    val buffer: ByteBuffer get() = underlyingBuffer.duplicate().order(ByteOrder.LITTLE_ENDIAN)
 
-    /** Read the pointed-to data into [R] */
-    fun read(): R = encoder.read(getBuffer())
+    /** Get the encoded bytes of [R]. */
+    val bytes: ByteArray get() = buffer.getRemainingBytes()
 
-    /** Write the pointed-to data from [R] */
-    fun write(value: R) = encoder.write(getBuffer(), value)
+    /** Read the pointed-to data into [R]. */
+    fun read(): R = encoder.read(buffer)
 
-    fun readBytes(): ByteArray = getBuffer().getBytes(encoder.size())
+    /** Write the pointed-to data from [R]. */
+    fun write(value: R): ByteBuffer = encoder.write(buffer, value)
 
     override fun toString(): String = CursorPrettyPrint.print(this)
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is Cursor<*, *>) return false
-        if (encoder != other.encoder) return false
-        return read() == other.read()
-    }
+    override fun equals(other: Any?): Boolean = this === other || other is Cursor<*, *> && other.read() == this.read()
 
-    override fun hashCode(): Int {
-        return originalBuffer.hashCode()
-    }
+    override fun hashCode(): Int = read().hashCode()
 
     /**
      * Allows field modifications like so:
      *
      * ```
-     * val report = Cursor(SgxReport, reportBytes)
+     * val report = Cursor.wrap(SgxReport, reportBytes)
      * report[SgxReport.body][SgxReportBody.mrenclave] = measurement
      * ```
      */
@@ -71,24 +96,24 @@ class Cursor<out T : Encoder<R>, R>(val encoder: T, buffer: ByteBuffer) {
      * Allows field accesses like so:
      *
      * ```
-     * val report = Cursor(SgxReport, reportBytes)
-     * val measurement = report[SgxReport.body][SgxReportBody.measurement]
+     * val report = Cursor.wrap(SgxReport, reportBytes)
+     * val measurement = report[SgxReport.body][SgxReportBody.mrenclave]
      * ```
      */
     operator fun <FT : Encoder<FR>, FR> get(field: Struct.Field<T, FT>): Cursor<FT, FR> {
-        val buffer = getBuffer()
-        (buffer as Buffer).position(buffer.position() + field.offset)
-        (buffer as Buffer).limit(buffer.position() + field.type.size())
+        val buffer = this.buffer
+        buffer.addPosition(field.offset)
+        (buffer as Buffer).limit(buffer.position() + field.type.size)
         return Cursor(field.type, buffer)
     }
 
 }
 
 operator fun <ET : Encoder<ER>, ER> Cursor<CArray<ER, ET>, List<ER>>.get(index: Int): Cursor<ET, ER> {
-    val buffer = getBuffer()
-    buffer.position(buffer.position() + index * encoder.elementType.size())
-    buffer.limit(buffer.position() + encoder.elementType.size())
-    return Cursor(encoder.elementType, buffer)
+    val buffer = this.buffer
+    buffer.addPosition(index * encoder.elementType.size)
+    (buffer as Buffer).limit(buffer.position() + encoder.elementType.size)
+    return Cursor.read(encoder.elementType, buffer)
 }
 
 operator fun <ET : Encoder<ER>, ER> Cursor<CArray<ER, ET>, List<ER>>.set(index: Int, value: ER) {

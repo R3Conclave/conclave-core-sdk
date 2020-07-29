@@ -110,7 +110,7 @@ class EnclaveInstanceInfoImplTest {
     }
 
     private fun ByteCursor<SgxSignedQuote>.copy(modify: ByteCursor<SgxSignedQuote>.() -> Unit): ByteCursor<SgxSignedQuote> {
-        val copy = Cursor(SgxSignedQuote(encoder.size()), readBytes())
+        val copy = Cursor.wrap(SgxSignedQuote(encoder.size), bytes)
         modify(copy)
         return copy
     }

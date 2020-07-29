@@ -120,7 +120,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         val isEnclaveDebug = this.isEnclaveDebug
         return if (isEnclaveDebug == null) {
             val report = Cursor.allocate(SgxReport)
-            createReport(null, null, report.getBuffer().array())
+            createReport(null, null, report.buffer.array())
             val enclaveFlags = report[SgxReport.body][SgxReportBody.attributes][SgxAttributes.flags].read()
             val result = enclaveFlags and SgxEnclaveFlags.DEBUG != 0L
             this.isEnclaveDebug = result

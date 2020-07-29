@@ -39,7 +39,7 @@ class MockEnclaveEnvironment(
         get() = EnclaveMode.MOCK
 
     override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {
-        val report = Cursor(SgxReport, reportOut)
+        val report = Cursor.wrap(SgxReport, reportOut)
         val body = report[body]
         if (reportDataIn != null) {
             body[reportData] = ByteBuffer.wrap(reportDataIn)

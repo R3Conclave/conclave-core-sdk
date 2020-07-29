@@ -196,7 +196,7 @@ class SgxSignedQuote(quoteSize: Int) : Struct() {
     @Suppress("unused")
     @JvmField val signatureSize = field(UInt32())
     /** The place holder of the variable length signature. */
-    @JvmField val signature = field(FixedBytes(quoteSize - size()))
+    @JvmField val signature = field(FixedBytes(quoteSize - size))
 }
 
 val ByteCursor<SgxSignedQuote>.quote: ByteCursor<SgxQuote> get() = this[encoder.quote]

@@ -48,10 +48,10 @@ class AttestationTest {
             override fun connect(upstream: Sender): Sender = upstream
 
             override fun onReceive(connection: Sender, input: ByteBuffer) {
-                val targetInfo = input.getBytes(SgxTargetInfo.size())
-                val reportData = input.getBytes(SgxReportData.size())
+                val targetInfo = input.getBytes(SgxTargetInfo.size)
+                val reportData = input.getBytes(SgxReportData.size)
 
-                val reportBytes = ByteArray(SgxReport.size())
+                val reportBytes = ByteArray(SgxReport.size)
                 env.createReport(targetInfo, reportData, reportBytes)
 
                 connection.send(reportBytes.size, Consumer { buffer ->
@@ -65,19 +65,16 @@ class AttestationTest {
     fun `create report`() {
         val handler = BytesRecordingHandler()
         val connection = createEnclave(handler, ReportCreatingEnclave::class.java)
-        val inputBuffer = ByteBuffer.allocate(SgxTargetInfo.size() + SgxReportData.size())
-        inputBuffer.position(SgxTargetInfo.size())
+        val inputBuffer = ByteBuffer.allocate(SgxTargetInfo.size + SgxReportData.size)
+        inputBuffer.position(SgxTargetInfo.size)
         inputBuffer.put("hello".toByteArray())
         inputBuffer.position(0)
 
         connection.send(inputBuffer)
 
-        val report = Cursor(SgxReport, handler.nextCall)
+        val report = Cursor.read(SgxReport, handler.nextCall)
         val resultData = report[SgxReport.body][SgxReportBody.reportData]
-        inputBuffer.position(SgxTargetInfo.size())
-        println(Cursor(SgxReportData, inputBuffer))
-        println(resultData)
-        println(report)
+        inputBuffer.position(SgxTargetInfo.size)
         assertEquals(inputBuffer, resultData.read())
     }
 
@@ -88,21 +85,21 @@ class AttestationTest {
 
         // 1. get the quoting enclave's measurement and the EPID group id
         val initQuoteResponse = Cursor.allocate(SgxInitQuoteResponse)
-        Native.initQuote(initQuoteResponse.getBuffer().array())
+        Native.initQuote(initQuoteResponse.buffer.array())
         println("initQuote: $initQuoteResponse")
 
         // 2. get our enclave's report
         val inputData = Cursor.allocate(SgxReportData)
-        inputData.getBuffer().put("hello".toByteArray())
-        val inputBuffer = ByteBuffer.allocate(SgxTargetInfo.size() + SgxReportData.size())
+        inputData.buffer.put("hello".toByteArray())
+        val inputBuffer = ByteBuffer.allocate(SgxTargetInfo.size + SgxReportData.size)
         inputBuffer.put(initQuoteResponse[SgxInitQuoteResponse.quotingEnclaveTargetInfo].read())
         inputBuffer.put("hello".toByteArray())
         inputBuffer.position(0)
         connection.send(inputBuffer)
 
-        val report = Cursor(SgxReport, handler.nextCall)
+        val report = Cursor.read(SgxReport, handler.nextCall)
         val resultData = report[SgxReport.body][SgxReportBody.reportData]
-        inputBuffer.position(SgxTargetInfo.size())
+        inputBuffer.position(SgxTargetInfo.size)
         println("report: $report")
         assertEquals(inputBuffer, resultData.read())
 
@@ -117,11 +114,11 @@ class AttestationTest {
 
         val signedQuote = Cursor.allocate(SgxSignedQuote(quoteSize))
         Native.getQuote(
-                getQuoteRequestIn = quoteRequest.getBuffer().array(),
+                getQuoteRequestIn = quoteRequest.buffer.array(),
                 signatureRevocationListIn = null,
                 quotingEnclaveReportNonceIn = null,
                 quotingEnclaveReportOut = null,
-                quoteOut = signedQuote.getBuffer().array()
+                quoteOut = signedQuote.buffer.array()
         )
         println("quote: $signedQuote")
         assertEquals(report[SgxReport.body], signedQuote.quote[SgxQuote.reportBody])
@@ -131,7 +128,7 @@ class AttestationTest {
         override val reportData: ByteCursor<SgxReportData> by lazy {
             val reportData = Cursor.allocate(SgxReportData)
             val encoder = Charsets.UTF_8.newEncoder()
-            encoder.encode(CharBuffer.wrap(reportDataString), reportData.getBuffer(), true)
+            encoder.encode(CharBuffer.wrap(reportDataString), reportData.buffer, true)
             reportData
         }
     }
@@ -147,7 +144,7 @@ class AttestationTest {
         val connection = createEnclave(EpidAttestationHostHandler(SgxQuoteType.LINKABLE, Cursor.allocate(SgxSpid)), EpidAttestingEnclave::class.java)
         val signedQuote = connection.getSignedQuote()
         val reportData = signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData]
-        assertTrue(Charsets.UTF_8.decode(reportData.getBuffer()).startsWith("hello"))
+        assertTrue(Charsets.UTF_8.decode(reportData.buffer).startsWith("hello"))
     }
 
     private fun <CONNECTION> createEnclave(

@@ -21,7 +21,7 @@ object CursorPrettyPrint {
     }
 
     private fun <S : Struct> printStructCursor(builder: StringBuilder, cursor: ByteCursor<S>, indent: Int): StringBuilder {
-        builder.append(cursor.encoder.javaClass.simpleName).append('(').append(cursor.encoder.size()).append(") {\n")
+        builder.append(cursor.encoder.javaClass.simpleName).append('(').append(cursor.encoder.size).append(") {\n")
         val fields = cursor.encoder.javaClass.fields
         for (field in fields) {
             if (Struct.Field::class.java.isAssignableFrom(field.type)) {
@@ -50,7 +50,7 @@ object CursorPrettyPrint {
                 builder
             }
             is ReservedBytes -> {
-                builder.append('<').append(cursor.encoder.size()).append(" reserved bytes>")
+                builder.append('<').append(cursor.encoder.size).append(" reserved bytes>")
             }
             is Enum16, is Enum32 -> {
                 val fields = cursor.encoder.javaClass.fields

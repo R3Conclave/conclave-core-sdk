@@ -135,7 +135,7 @@ abstract class Enclave {
             update(signatureKey.encoded)
             update(encryptionKeyPair.public.encoded)
         }
-        return Cursor(SgxReportData, reportData)
+        return Cursor.wrap(SgxReportData, reportData)
     }
 
     /**

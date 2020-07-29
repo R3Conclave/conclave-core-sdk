@@ -15,7 +15,7 @@ class MockAttestationServiceTest {
 
     @Test
     fun `basic test`() {
-        val signedQuote = Cursor(SgxSignedQuote(500), Random.nextBytes(500))
+        val signedQuote = Cursor.wrap(SgxSignedQuote(500), Random.nextBytes(500))
         val report = attestationService.requestSignature(signedQuote).verify(PKIXParametersFactory.Mock.create(Instant.now()))
         assertThat(report.isvEnclaveQuoteBody).isEqualTo(signedQuote.quote)
         assertThat(report.isvEnclaveQuoteStatus).isEqualTo(QuoteStatus.OK)

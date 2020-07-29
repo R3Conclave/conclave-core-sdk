@@ -26,7 +26,7 @@ class EpidAttestationHostHandler(
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
         stateManager.checkStateIs<State.QuoteInitialized>()
-        stateManager.state = State.ReportRetrieved(Cursor(SgxReport, input))
+        stateManager.state = State.ReportRetrieved(Cursor.read(SgxReport, input))
     }
 
     override fun connect(upstream: Sender): Connection = Connection(upstream)
@@ -53,7 +53,7 @@ class EpidAttestationHostHandler(
             if (isMock) {
                 log.debug("Mock initializeQuote")
             } else {
-                Native.initQuote(quoteResponse.getBuffer().array())
+                Native.initQuote(quoteResponse.buffer.array())
             }
             stateManager.state = State.QuoteInitialized(quoteResponse)
             return quoteResponse[SgxInitQuoteResponse.quotingEnclaveTargetInfo]
@@ -73,7 +73,7 @@ class EpidAttestationHostHandler(
             val quoteSize = if (isMock) {
                 // SgxSignedQuote
                 // The 256 is an arbitrary signature size
-                SgxQuote.size() + Int32().size() + 256
+                SgxQuote.size + Int32().size + 256
             } else {
                 Native.calcQuoteSize(null)
             }
@@ -87,12 +87,12 @@ class EpidAttestationHostHandler(
                 getQuote[SgxGetQuote.quoteType] = quoteType.value
                 getQuote[SgxGetQuote.spid] = spid.read()
                 Native.getQuote(
-                        getQuote.getBuffer().array(),
+                        getQuote.buffer.array(),
                         signatureRevocationListIn = null,
                         // TODO Do we need to use the nonce?
                         quotingEnclaveReportNonceIn = null,
                         quotingEnclaveReportOut = null,
-                        quoteOut = signedQuote.getBuffer().array()
+                        quoteOut = signedQuote.buffer.array()
                 )
             }
             stateManager.state = State.QuoteRetrieved(signedQuote)

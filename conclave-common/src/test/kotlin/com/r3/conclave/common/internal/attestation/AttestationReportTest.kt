@@ -18,7 +18,7 @@ class AttestationReportTest {
 
     @Test
     fun `serialise minimum fields`() {
-        val isvEnclaveQuoteBody = Cursor(SgxQuote, Random.nextBytes(432))
+        val isvEnclaveQuoteBody = Cursor.wrap(SgxQuote, Random.nextBytes(432))
 
         val report = AttestationReport(
                 id = "165171271757108173876306223827987629752",
@@ -33,7 +33,7 @@ class AttestationReportTest {
         assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
         assertThat(jsonTree["version"].intValue()).isEqualTo(3)
         assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes()))
+        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes))
         assertThat(jsonTree["platformInfoBlob"]).isNull()
         assertThat(jsonTree["revocationReason"]).isNull()
         assertThat(jsonTree["pseManifestStatus"]).isNull()
@@ -44,7 +44,7 @@ class AttestationReportTest {
 
     @Test
     fun `deserialise minimum fields`() {
-        val isvEnclaveQuoteBody = Cursor(SgxQuote, Random.nextBytes(432))
+        val isvEnclaveQuoteBody = Cursor.wrap(SgxQuote, Random.nextBytes(432))
 
         val json = """
             {
@@ -52,7 +52,7 @@ class AttestationReportTest {
               "timestamp":"2015-09-29T10:07:26.711023",
               "version":3,
               "isvEnclaveQuoteStatus":"OK",
-              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes())}"
+              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes)}"
             }
             """.trimIndent()
 
@@ -67,7 +67,7 @@ class AttestationReportTest {
 
     @Test
     fun `serialise all fields`() {
-        val isvEnclaveQuoteBody = Cursor(SgxQuote, Random.nextBytes(432))
+        val isvEnclaveQuoteBody = Cursor.wrap(SgxQuote, Random.nextBytes(432))
         val platformInfoBlob = OpaqueBytes(Random.nextBytes(50))
         val pseManifestHash = SHA256Hash.wrap(Random.nextBytes(32))
         val epidPseudonym = OpaqueBytes(Random.nextBytes(100))
@@ -91,7 +91,7 @@ class AttestationReportTest {
         assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
         assertThat(jsonTree["version"].intValue()).isEqualTo(3)
         assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes()))
+        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes))
         assertThat(jsonTree["platformInfoBlob"].textValue()).isEqualToIgnoringCase(platformInfoBlob.toString())
         assertThat(jsonTree["revocationReason"].intValue()).isEqualTo(1)
         assertThat(jsonTree["pseManifestStatus"].textValue()).isEqualTo("INVALID")
@@ -102,7 +102,7 @@ class AttestationReportTest {
 
     @Test
     fun `deserialise all fields`() {
-        val isvEnclaveQuoteBody = Cursor(SgxQuote, Random.nextBytes(432))
+        val isvEnclaveQuoteBody = Cursor.wrap(SgxQuote, Random.nextBytes(432))
         val platformInfoBlob = OpaqueBytes(Random.nextBytes(50))
         val pseManifestHash = SHA256Hash.wrap(Random.nextBytes(32))
         val epidPseudonym = OpaqueBytes(Random.nextBytes(100))
@@ -113,7 +113,7 @@ class AttestationReportTest {
               "timestamp":"2015-09-29T10:07:26.711023",
               "version":3,
               "isvEnclaveQuoteStatus":"OK",
-              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.readBytes())}",
+              "isvEnclaveQuoteBody":"${Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes)}",
               "platformInfoBlob":"$platformInfoBlob",
               "revocationReason":1,
               "pseManifestStatus":"INVALID",

@@ -40,7 +40,7 @@ class IntelAttestationService(private val isProd: Boolean, private val subscript
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Ocp-Apim-Subscription-Key", subscriptionKey)
             connection.outputStream.use {
-                objectMapper.writeValue(it, ReportRequest(isvEnclaveQuote = signedQuote.getBuffer().array()))
+                objectMapper.writeValue(it, ReportRequest(isvEnclaveQuote = signedQuote.buffer.array()))
             }
             if (connection.responseCode != HTTP_OK) {
                 throw IOException("Error response from Intel Attestation Service (${connection.responseCode}): " +
