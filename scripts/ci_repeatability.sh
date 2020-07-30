@@ -18,7 +18,7 @@ docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/$DOCKER_IMAGE
 runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
 runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"
 
-mkdir FIRST && for SO in samples/*/build/enclave/Release/*.so; do
+mkdir FIRST && for SO in samples/*/build/conclave/release/*.so; do
     mv $SO FIRST
 done
 cd FIRST && sha256sum !(*.signed).so > SHA256SUM && cd -
@@ -36,7 +36,7 @@ export CODE_DOCKER_DIR="/code"
 runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
 runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"
 
-mkdir SECOND && for SO in samples/*/build/enclave/Release/*.so; do
+mkdir SECOND && for SO in samples/*/build/conclave/release/*.so; do
     mv $SO SECOND
 done
 cd SECOND && sha256sum !(*.signed).so > SHA256SUM && cd -
