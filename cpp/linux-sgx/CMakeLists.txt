@@ -48,7 +48,7 @@ ExternalProject_Add(macos-sign-tool
         && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/qe_logic.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source.patch
         && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
         && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
-        && git apply ${CMAKE_CURRENT_SOURCE_DIR}/sgx_sign_macos.diff ${CMAKE_CURRENT_SOURCE_DIR}/wget.diff
+        && git apply --ignore-whitespace --whitespace=fix ${CMAKE_CURRENT_SOURCE_DIR}/sgx_sign_macos.diff ${CMAKE_CURRENT_SOURCE_DIR}/wget.diff
 
     UPDATE_COMMAND ""
 

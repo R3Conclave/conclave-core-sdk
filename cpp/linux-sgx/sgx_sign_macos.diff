@@ -2,9 +2,9 @@ diff --git a/buildenv.mk b/buildenv.mk
 index f848c53..f8cd30d 100644
 --- a/buildenv.mk
 +++ b/buildenv.mk
-@@ -115,7 +115,11 @@ COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
- 		-Wcast-align -Wconversion -Wredundant-decls
- 
+@@ -110,7 +115,17 @@ COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
+                -Wcast-align -Wconversion -Wredundant-decls
+
  # additional warnings flags for C
 -CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
 +CFLAGS += -Wstrict-prototypes
@@ -12,13 +12,19 @@ index f848c53..f8cd30d 100644
 +        CFLAGS += -Wjump-misses-init -Wunsuffixed-float-constants
 +endif
 +
- 
++# On macOS  (for sgx_sign) search in the Homebrew location for OpenSSL headers, as Apple
++# have deprecated OpenSSL and no longer ship its header files.
++ifeq ($(shell uname -s),Darwin)
++        COMMON_FLAGS += -I/usr/local/opt/openssl/include
++endif
++
+
  # additional warnings flags for C++
  CXXFLAGS += -Wnon-virtual-dtor
 @@ -168,8 +172,15 @@ endif
  CFLAGS   += $(COMMON_FLAGS)
  CXXFLAGS += $(COMMON_FLAGS)
- 
+
 -# Enable the security flags
 -COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
 +### Enable the security flags
@@ -30,7 +36,7 @@ index f848c53..f8cd30d 100644
 +ifneq ($(shell uname -s),Darwin)
 +    COMMON_LDFLAGS := -Wl,-z,relro,-z,now,-z,noexecstack
 +endif
- 
+
  # mitigation options
  MITIGATION_INDIRECT ?= 0
 diff --git a/common/inc/internal/se_stdio.h b/common/inc/internal/se_stdio.h
@@ -38,7 +44,7 @@ index 433386e..0057647 100644
 --- a/common/inc/internal/se_stdio.h
 +++ b/common/inc/internal/se_stdio.h
 @@ -112,7 +112,7 @@ static inline int se_copy_file(const char *dst_name, const char *src_name)
- 
+
      while ((nr_read = read(source, buf, BUF_SIZE)) > 0)
      {
 -        if (write(dest, buf, nr_read) != nr_read)
@@ -63,7 +69,7 @@ index 5e3274f..925a3af 100644
 -        return strncmp( p, q, nChar ) == 0;
 +        return strncmp( p, q, (size_t) nChar ) == 0;
      }
- 
+
      inline static bool IsUTF8Continuation( char p ) {
 diff --git a/psw/urts/linux/isgx_user.h b/psw/urts/linux/isgx_user.h
 index 007dfd8..62ff1ab 100644
@@ -72,7 +78,7 @@ index 007dfd8..62ff1ab 100644
 @@ -60,9 +60,14 @@
  #ifndef _UAPI_ASM_X86_SGX_H
  #define _UAPI_ASM_X86_SGX_H
- 
+
 -
 -#include <linux/types.h>
 -#include <linux/ioctl.h>
@@ -84,53 +90,53 @@ index 007dfd8..62ff1ab 100644
 +	typedef __uint64_t __u64;
 +	typedef __uint16_t __u16;
 +#endif
- 
+
  #define SGX_MAGIC 0xA4
- 
+
 diff --git a/psw/urts/parser/Makefile b/psw/urts/parser/Makefile
 index 88efdd2..53b2b78 100644
 --- a/psw/urts/parser/Makefile
 +++ b/psw/urts/parser/Makefile
 @@ -45,7 +45,8 @@ TARGET := libenclaveparser.a
- 
+
  CXXFLAGS += -fPIC
- 
+
 -ifneq ($(HOST_OS), darwin)
 +UNAME := $(shell uname -s)
 +ifneq ($(UNAME), Darwin)
    CXXFLAGS += -Werror
  endif
- 
+
 diff --git a/psw/urts/parser/elfparser.cpp b/psw/urts/parser/elfparser.cpp
 index e603060..097b210 100644
 --- a/psw/urts/parser/elfparser.cpp
 +++ b/psw/urts/parser/elfparser.cpp
 @@ -438,7 +438,7 @@ bool validate_segment(const ElfW(Ehdr) *elf_hdr, uint64_t len)
      assert(sizeof(ElfW(Phdr)) == elf_hdr->e_phentsize);
- 
+
      std::vector< std::pair<ElfW(Addr), ElfW(Addr)> > load_seg(elf_hdr->e_phnum, std::make_pair(0, 0));
 -    int k = 0;
 +    std::vector< std::pair<ElfW(Addr), ElfW(Addr)> >::size_type k = 0;
- 
+
      for (int idx = 0; idx < elf_hdr->e_phnum; idx++, prg_hdr++)
      {
 @@ -461,7 +461,7 @@ bool validate_segment(const ElfW(Ehdr) *elf_hdr, uint64_t len)
              load_seg[k].first = prg_hdr->p_vaddr;
              load_seg[k].second = ROUND_TO(prg_hdr->p_vaddr + prg_hdr->p_memsz, prg_hdr->p_align) - 1;
- 
+
 -            for (int j = 0; j < k; j++)
 +            for (std::vector< std::pair<ElfW(Addr), ElfW(Addr)> >::size_type j = 0; j < k; j++)
              {
                  if (is_overlap(load_seg[k], load_seg[j]))
                  {
 diff --git a/sdk/sign_tool/SignTool/Makefile b/sdk/sign_tool/SignTool/Makefile
-index 981b799..5303c12 100644
+index 981b799..c0769cb 100644
 --- a/sdk/sign_tool/SignTool/Makefile
 +++ b/sdk/sign_tool/SignTool/Makefile
 @@ -31,12 +31,18 @@
- 
+
  include ../../../buildenv.mk
- 
+
 -CXXFLAGS += -Werror
 +UNAME := $(shell uname -s)
 +ifeq ($(UNAME),Darwin)
@@ -140,14 +146,31 @@ index 981b799..5303c12 100644
 +        LDFLAGS := -pie
 +endif
  CFLAGS   += -Werror
- 
+
  CFLAGS += -fpie
  CXXFLAGS += -fpie
 -LDFLAGS := -pie $(COMMON_LDFLAGS)
 +LDFLAGS := $(COMMON_LDFLAGS)
- 
+
  INC += $(ADDED_INC)
  INC +=  -I$(COMMON_DIR)/inc                         \
+@@ -80,9 +86,15 @@ all: sgx_sign | $(BUILD_DIR)
+ $(BUILD_DIR):
+        @$(MKDIR) $@
+
+-sgx_sign: PRIVATE_LDLIBS  := -lpthread -lenclaveparser -lcrypto
++sgx_sign: PRIVATE_LDLIBS  := -lpthread -lenclaveparser
+ sgx_sign: PRIVATE_LDFLAGS := -L$(LINUX_PSW_DIR)/urts/parser $(LDFLAGS)
+
++ifeq ($(UNAME),Darwin)
++    sgx_sign: PRIVATE_LDLIBS += /usr/local/opt/openssl/lib/libcrypto.a
++else
++    sgx_sign: PRIVATE_LDLIBS += -lcrypto
++endif
++
+ sgx_sign: $(OBJS) enclaveparser
+        $(CXX) $(CXXFLAGS) $(OBJS) $(PRIVATE_LDFLAGS) $(PRIVATE_LDLIBS) -o $@
+
 diff --git a/sdk/sign_tool/SignTool/manage_metadata.cpp b/sdk/sign_tool/SignTool/manage_metadata.cpp
 index 2b18b12..f228b3e 100644
 --- a/sdk/sign_tool/SignTool/manage_metadata.cpp
@@ -162,14 +185,14 @@ index 2b18b12..f228b3e 100644
      ss<<"0x"<<tmp_date;
      ss>>std::hex>>tmp_date;
 @@ -256,7 +256,7 @@ bool CMetadata::fill_enclave_css(const xml_parameter_t *para)
- 
-     // For 'type', signing tool clears the bit 31 for product enclaves 
+
+     // For 'type', signing tool clears the bit 31 for product enclaves
      // and set the bit 31 for debug enclaves
 -    m_metadata->enclave_css.header.type = (para[RELEASETYPE].value & 0x01) ? (1<<31) : 0;
 +    m_metadata->enclave_css.header.type = (unsigned int)((para[RELEASETYPE].value & 0x01) ? (1<<31) : 0);
      m_metadata->enclave_css.header.module_vendor = (para[INTELSIGNED].value&0x01) ? 0x8086 : 0;
      m_metadata->enclave_css.header.date = date;
- 
+
 @@ -740,7 +740,7 @@ bool CMetadata::build_layout_table()
      const Section *section = m_parser->get_tls_section();
      if(section)
