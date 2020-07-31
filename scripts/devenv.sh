@@ -3,8 +3,8 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 # You can set this variable to mount the IDEs from the host
 HOST_IDE_DIR=${HOST_IDE_DIR:-"${HOME}/.opt"}
-IDEA_VERSION=${IDEA_VERSION:-"IC-201.8743.12"}
-IDEA_DOWNLOAD_FILE=ideaIC-2020.1.4.tar.gz
+IDEA_VERSION=${IDEA_VERSION:-"IC-202.6397.94"}
+IDEA_DOWNLOAD_FILE=ideaIC-2020.2.tar.gz
 IDEA_DOWNLOAD_ADDRESS=https://download-cf.jetbrains.com/idea/$IDEA_DOWNLOAD_FILE
 CLION_VERSION=${CLION_VERSION:-"2020.1.3"}
 CLION_DOWNLOAD_FILE=CLion-2020.1.3.tar.gz
@@ -104,6 +104,8 @@ if [[ -z ${CONTAINER_ID} ]]; then
 
   if [ ${CONCLAVE_DOCKER_IDE:-""} = "1" ]; then
     if [ ! -d ${HOST_IDE_DIR}/idea-$IDEA_VERSION ]; then
+      # remove any previous version of IntelliJ IDEA that might be dangling around
+      rm -fr ${HOST_IDE_DIR}/idea-*
       echo "Downloading IntelliJ IDEA from ${IDEA_DOWNLOAD_ADDRESS}..."
       mkdir -p $HOST_IDE_DIR
       curl -SL -o ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE $IDEA_DOWNLOAD_ADDRESS
@@ -111,6 +113,8 @@ if [[ -z ${CONTAINER_ID} ]]; then
       rm ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE
     fi
     if [ ! -d ${HOST_IDE_DIR}/clion-$CLION_VERSION ]; then
+      # remove any previous version of clion that might be dangling around
+      rm -fr ${HOST_IDE_DIR}/clion-*
       echo "Downloading CLion from ${CLION_DOWNLOAD_ADDRESS}..."
       mkdir -p $HOST_IDE_DIR
       curl -SL -o ${HOST_IDE_DIR}/$CLION_DOWNLOAD_FILE $CLION_DOWNLOAD_ADDRESS
