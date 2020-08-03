@@ -1,4 +1,4 @@
-package com.r3.conclave.avian;
+package com.r3.conclave.graalvm.debug;
 
 import com.r3.conclave.common.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;

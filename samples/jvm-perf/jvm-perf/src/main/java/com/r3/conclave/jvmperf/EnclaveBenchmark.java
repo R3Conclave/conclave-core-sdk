@@ -29,10 +29,14 @@ public class EnclaveBenchmark {
      */
     @Setup(Level.Trial)
     public void prepare(ExecutionPlatforms platform) throws EnclaveLoadException {
-        if (platform.runtime.equals("avian"))
-            enclave = EnclaveHost.load("com.r3.conclave.avian.BenchmarkEnclave");
-        else if (platform.runtime.equals("graalvm"))
-            enclave = EnclaveHost.load("com.r3.conclave.graalvm.BenchmarkEnclave");
+        if (platform.runtime.equals("avian-simulation"))
+            enclave = EnclaveHost.load("com.r3.conclave.avian.simulation.BenchmarkEnclave");
+        else if (platform.runtime.equals("avian-debug"))
+            enclave = EnclaveHost.load("com.r3.conclave.avian.debug.BenchmarkEnclave");
+        else if (platform.runtime.equals("graalvm-simulation"))
+            enclave = EnclaveHost.load("com.r3.conclave.graalvm.simulation.BenchmarkEnclave");
+        else if (platform.runtime.equals("graalvm-debug"))
+            enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
         if (enclave != null) {
             OpaqueBytes spid = (platform.spid.length() == 0) ? new OpaqueBytes(new byte[16]) : OpaqueBytes.parse(platform.spid);
             enclave.start(spid, platform.attestationKey, null);
@@ -58,9 +62,10 @@ public class EnclaveBenchmark {
      * @throws NoSuchMethodException
      */
     private void runBenchmark(ExecutionPlatforms platform, String cmdline) throws NoSuchMethodException {
-        if (platform.runtime.equals("avian"))
-            enclave.callEnclave(cmdline.getBytes());
-        else if (platform.runtime.equals("graalvm")) {
+        if (platform.runtime.equals("avian-simulation") ||
+            platform.runtime.equals("avian-debug") ||
+            platform.runtime.equals("graalvm-simulation") ||
+            platform.runtime.equals("graalvm-debug")) {
             enclave.callEnclave(cmdline.getBytes());
         }
         else if (platform.runtime.equals("host")) {

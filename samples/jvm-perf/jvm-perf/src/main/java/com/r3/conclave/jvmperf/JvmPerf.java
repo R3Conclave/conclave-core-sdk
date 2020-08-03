@@ -12,16 +12,14 @@ public class JvmPerf {
 
     public static void main(String[] args) throws org.openjdk.jmh.runner.RunnerException, java.io.IOException, EnclaveLoadException {
 
-        // Check that if we are not in simulation mode then the platform actually supports hardware enclaves.
-        EnclaveHost enclave = EnclaveHost.load("com.r3.conclave.avian.BenchmarkEnclave");
-        if (enclave.getEnclaveMode() != EnclaveMode.SIMULATION) {
-            try {
-                EnclaveHost.checkPlatformSupportsEnclaves(true);
-            } catch (EnclaveLoadException e) {
-                throw new RuntimeException("This platform currently only supports enclaves in simulation mode.", e);
-            }
+        // See if we can support the hardware based tests
+        try {
+            EnclaveHost.checkPlatformSupportsEnclaves(true);
+        } catch (EnclaveLoadException e) {
+            System.out.println("This platform currently only supports enclaves in simulation mode.");
+            System.out.println("Please ensure you run only simulation benchmarks through the use of the 'runtime' parameter:");
+            System.out.println("-p runtime=\"avian-simulation,graalvm-simulation,host\"");
         }
-        enclave.close();
 
         // Run the benchmarks.
         org.openjdk.jmh.Main.main(args);

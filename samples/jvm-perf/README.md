@@ -1,10 +1,12 @@
 ## Conclave JVM Performance Test
 
-This app provides benchmarks for various different computation loads and allows them to be run on 3 different targets:
+This app provides benchmarks for various different computation loads and allows them to be run on 5 different targets:
 
-1. JVM on the host platform
-2. Conclave using an Avian JVM runtime
-3. Conclave using a GraalVM native-image runtime (SubstrateVM)
+1. JVM on the host platform.
+2. Conclave using an Avian JVM runtime running inside a debug enclave.
+3. Conclave using an Avian JVM runtime running inside a simulation enclave.
+4. Conclave using a GraalVM native-image runtime (SubstrateVM) running inside a debug enclave.
+5. Conclave using a GraalVM native-image runtime (SubstrateVM) running inside a simulation enclave.
 
 ## Building the benchmarks
 The benchmark app is built as one of the sample projects in the source tree.
@@ -27,7 +29,7 @@ enclaves necessary to run the benchmarks.
 
 To run the full set of benchmarks, execute:
 
-`java -jar jvm-perf-simulation.jar`
+`java -jar jvm-perf-all.jar`
 
 This will execute all benchmarks on all platforms; Avian-based enclaves, GraalVM native-image
 based enclaves and on the host JVM.
@@ -35,30 +37,33 @@ based enclaves and on the host JVM.
 It is possible to execute a subset of benchmarks by passing parameters to the app. You can get
 a list of the supported benchmarks with the following command:
 
-`java -jar jvm-perf-simulation.jar -l`
+`java -jar jvm-perf-all.jar -l`
 
 To execute a single set of tests you can just provide the last part of the name reported by the command above. E.g. to execute `com.r3.conclave.jvmperf.EnclaveBenchmark.binary_trees`:
 
-`java -jar jvm-perf-simulation.jar binary_trees`
+`java -jar jvm-perf-all.jar binary_trees`
 
 By default the benchmark will run all all supported runtimes. To run on a single runtime, 
-e.g. Avian:
+e.g. Avian debug:
 
-`java -jar jvm-perf-simulation.jar -p runtime=avian binary_trees`
+`java -jar jvm-perf-all.jar -p runtime=avian-debug binary_trees`
 
-### Running in a real SGX environment
-The benchmarks can run in hardware SGX as well as simulation. 
-To build the debug version, edit `samples/gradle.properties` and change
-`sgx_mode=simulation` to `sgx_mode=debug`. You can also build a release version but you will
-need to configure signing in this case.
+Valid runtimes are `avian-debug`, `avian-simulation`, `graalvm-debug`, `graalvm-simulation` and `host`.
 
-To run the benchmarks you need to specify an SPID and attestation key. This can be done via
-parameters to the benchmark app:
+### Running in SGX simulation mode
+On SGX hardware the full set of benchmarks can be executed. Whereas when running on non-SGX
+hardware, only the host and simulation runtimes can be used. For example to run all benchmarks
+available on non-sgx hardware:
 
-`java -jar jvm-perf-simulation.jar -p spid=[hex bytes] attestationKey=[hex bytes]`. An attestation
-is performed at the start of every benchmark and applies to each test on each runtime. So for
-'mandelbrot' on Avian, the attestation will be performed on the Avian enclave before the warmup
-and the enclave is destroyed at the end of the 'mandelbrot' iterations.
+`java -jar jvm-perf-all.jar -p runtime="avian-simulation,graalvm-simulation,host"`
+
+To run the benchmarks on SGX hardware you need to specify an SPID and attestation key. This can be done via parameters to the benchmark app:
+
+`java -jar jvm-perf-all.jar -p spid=[hex bytes] -p attestationKey=[hex bytes]`. 
+
+An attestation is performed at the start of every benchmark and applies to each test on each runtime. So for 'mandelbrot' on Avian, the attestation will be performed on the Avian enclave
+before the warmup and the enclave is destroyed at the end of the 'mandelbrot' iterations. The
+time taken for attestation does not affect the results of the benchmarks.
 
 
 ## Interpreting the results
@@ -71,7 +76,7 @@ be enough for a JVM such as Hotspot to become stable but Conclave enclaves do no
 perform runtime optimisation so more warmup iterations are unnecessary. In order for the host
 benchmark measurements to be stable you may want to increase this number using the `wi` parameter. E.g.:
 
-`java -jar jvm-perf-simulation.jar -wi 10 mandelbrot`
+`java -jar jvm-perf-all.jar -wi 10 mandelbrot`
 
 The actual benchmark measurements are taken following the warmups. You can see the data
 for the measurements for both the warmups and the iterations in the output of the tool:
@@ -91,10 +96,12 @@ When the tests are complete you get a summary of all tests:
 ```
 # Run complete. Total time: 00:00:17
 
-Benchmark                    (runtime)   Mode  Cnt  Score   Error  Units
-EnclaveBenchmark.mandelbrot      avian  thrpt       2.099          ops/s
-EnclaveBenchmark.mandelbrot    graalvm  thrpt       5.629          ops/s
-EnclaveBenchmark.mandelbrot       host  thrpt       6.380          ops/s
+Benchmark                    (runtime)          Mode   Cnt  Score   Error  Units
+EnclaveBenchmark.mandelbrot  avian-debug        thrpt    5  1.815 ± 1.111  ops/s
+EnclaveBenchmark.mandelbrot  avian-simulation   thrpt    5  1.802 ± 0.796  ops/s
+EnclaveBenchmark.mandelbrot  graalvm-debug      thrpt    5  5.252 ± 0.365  ops/s
+EnclaveBenchmark.mandelbrot  graalvm-simulation thrpt    5  5.514 ± 0.326  ops/s
+EnclaveBenchmark.mandelbrot  host               thrpt    5  6.265 ± 0.287  ops/s
 ```
 
 This gives the names of the benchmarks and the runtime platform along with the mode in
@@ -117,44 +124,44 @@ They have only been modified slightly in order to work in our benchmark harness 
 * Removal of any threading code to run all benchmarks singled-threaded
 
 ### Empty
-`java -jar jvm-perf-simulation.jar empty`
+`java -jar jvm-perf-all.jar empty`
 
 This is a benchmark of an empty function. This does not make much sense for a host measurement
 but is useful to compare the entry/exit speed of Avian vs GraalVM native-image enclave calls.
 
 ### Fannkuch
-`java -jar jvm-perf-simulation.jar fannkuch`
+`java -jar jvm-perf-all.jar fannkuch`
 
 [Fannkuch-redux Description](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/fannkuchredux.html#fannkuchredux)
 
 
 ### Mandelbrot
-`java -jar jvm-perf-simulation.jar mandelbrot`
+`java -jar jvm-perf-all.jar mandelbrot`
 
 [Mandelbrot Description](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/mandelbrot.html#mandelbrot)
 
 ### N-Body
-`java -jar jvm-perf-simulation.jar nbody`
+`java -jar jvm-perf-all.jar nbody`
 
 [N-Body Description](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/nbody.html#nbody)
 
 ### Spectral-Norm
-`java -jar jvm-perf-simulation.jar spectralnorm`
+`java -jar jvm-perf-all.jar spectralnorm`
 
 [Spectral-Norm Description](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/spectralnorm.html#spectralnorm)
 
 ### Fasta
-`java -jar jvm-perf-simulation.jar fasta`
+`java -jar jvm-perf-all.jar fasta`
 
 [Fasta](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/fasta.html#fasta)
 
 ### Pi Digits
-`java -jar jvm-perf-simulation.jar pidigits`
+`java -jar jvm-perf-all.jar pidigits`
 
 [Pi Digits Description](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/pidigits.html#pidigits)
 
 ### Himeno
-`java -jar jvm-perf-simulation.jar himeno`
+`java -jar jvm-perf-all.jar himeno`
 
 This benchmark test program is measuring a cpu performance of floating point operation by a Poisson equation solver.
 

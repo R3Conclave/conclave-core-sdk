@@ -1,0 +1,22 @@
+plugins {
+    id 'com.r3.conclave.enclave'
+}
+
+dependencies {
+    compile project(':jvm-perf:benchmarks')
+    implementation "com.r3.conclave:conclave-enclave"
+}
+
+conclave {
+    runtime = graalvm_native_image
+
+    productID = 1
+    revocationLevel = 0
+
+    release {
+        // By default release enclaves will use a 2 step external signing process.
+        // Set the sample to use a dummy key.
+        signingType = dummyKey
+    }
+
+}

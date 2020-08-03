@@ -14,8 +14,10 @@ dependencies {
     compile "org.openjdk.jmh:jmh-core:1.19"
     annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:1.19"
 
-    runtimeOnly project(path: ":jvm-perf:avian-enclave", configuration: mode)
-    runtimeOnly project(path: ":jvm-perf:graalvm-enclave", configuration: mode)
+    runtimeOnly project(path: ":jvm-perf:avian-enclave-simulation", configuration: "simulation")
+    runtimeOnly project(path: ":jvm-perf:graalvm-enclave-simulation", configuration: "simulation")
+    runtimeOnly project(path: ":jvm-perf:avian-enclave-debug", configuration: "debug")
+    runtimeOnly project(path: ":jvm-perf:graalvm-enclave-debug", configuration: "debug")
     runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
 }
 
@@ -25,5 +27,5 @@ test {
 }
 
 shadowJar {
-    archiveFileName = "jvm-perf-${mode}.jar"
+    archiveFileName = "jvm-perf-all.jar"
 }
