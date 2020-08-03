@@ -13,7 +13,7 @@ nav:
   - Development:
     - Conclave architecture:
       - Architecture: architecture.md
-      - TLS vs Mail: tls-vs-mail.md
+      - Mail: mail.md
       - Security discussion: security.md
     - Tutorial:
       - Compiling and running: tutorial.md

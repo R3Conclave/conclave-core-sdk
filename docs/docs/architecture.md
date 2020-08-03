@@ -131,58 +131,9 @@ through the host.
 ## Mail
 
 Communicating with an enclave requires sending and receiving encrypted and authenticated messages. One possible approach
-is to embed a TLS stack into the enclave and use something like HTTPS + REST. But this technique has some problems
-and limitations that are resolved via the "Mail API". Mail is a high level API around standalone encrypted messages - 
-or you can think of them as small encrypted files, if it helps. You can learn more about the reasons for this 
-design choice in the article [TLS/SSL vs Mail](tls-vs-mail.md).
-
-## Encrypted, authenticated and transactional messages
-
-A mail is an authenticated message with an encrypted body and a cleartext envelope. The mail can be up to two
-gigabytes in size.
-
-**Authentication.** Mail allows a message to prove it came from the owner of a particular key, as well as being
-encrypted to a destination public key. Because of this it's always possible to encrypt a reply to the sender,
-although how a public key is mapped to a physical computer is up to the app developer. This capability is useful
-for another reason: if an enclave has a notion of a user identifiable by public key, mail can be cryptographically
-authenticated as having come from that user. This avoids the need for complex user login processes: the login
-process can be handled outside of the enclave, without compromising security. The envelope is protected this way
-along with the encrypted body.
-
-**Encryption.** The encryption key used by the enclave is private to that enclave but stable across restarts and
-enclave upgrades. This means messages encrypted and delivered by older clients can still be decrypted. The format
-uses the respected [Noise protocol framework](https://noiseprotocol.org/) (with the one-way X handshake), which is
-the same cryptography used by WhatsApp, WireGuard and I2P.
-
-<!--
-
-**Padding.** The body of a mail is automatically padded to reduce or eliminate size-based side channel attacks. The size of a message
-won't give away information about the contents. See [side channel attacks](security.md#side-channel-attacks).
-
--->
-
-**Atomicity.** Mail should be delivered by the host to an enclave on each startup, until the mail is acknowledged. Acknowledgement
-is transactional and can be performed atomically with other acknowledgements and sending other replies. In this way
-enclaves can ensure that restarting an enclave doesn't produce duplicate messages, perform the same actions twice or
-cause service interruptions to users.
-
-<!-- TODO: The framework should provide persistence and redelivery support out of the box. -->
-
-**Headers.** Mail has unencrypted but authenticated (tamperproof) headers that can be used to link messages together.
-This allows clients to structure a conversation as if they were using a socket, but also hold multiple conversations
-simultaneously. Applications can put their own data in the envelope part of the headers, thus enabling hosts to see part of the messages.
-This can be used to implement usage tracking, prioritisation, or other tasks not directly relevant to data processing
-that the host can assist with (despite its untrusted nature).
-
-**Storage.** Mail is stored by the host process. By sending mail to themselves enclaves can store chunks of data that
-will be fed back to them at startup, and delete them by acknowledging the mails. This isn't a replacement for a full
-database, but accessing a database from an enclave can leak a lot of data via access patterns, and of course the
-database itself may need access to the unencrypted data to index or search it. The mail-to-self pattern avoids this
-by storing the dataset in memory and always reading all stored data at startup.
-
-!!! notice
-
-    More sophisticated database solutions may be added in future releases.
+is to embed a TLS stack into the enclave and use something like HTTPS, but this technique has some problems
+and limitations that are resolved via [the Conclave Mail API](mail.md). Mail makes communication between enclaves and
+clients easy, as well as solving common problems faced with doing application development. 
 
 ## Testing and debugging
 

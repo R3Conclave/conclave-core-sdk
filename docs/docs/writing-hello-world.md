@@ -9,12 +9,6 @@ our own version of the hello enclave project:
 1. Run the host and enclave in simulation and debug modes.
 1. Write the client that sends the enclave encrypted messages via the host.
 
-<!---
-TODO: Complete this tutorial:
-
-      Signing/running in release mode.
--->
-
 ## Configure your modules
 
 Create a new Gradle project via whatever mechanism you prefer, e.g. IntelliJ can do this via the New Project wizard.
@@ -123,19 +117,25 @@ subprojects {
 
 ### Configure the host module
 
-SGX enclaves can be built in one of three modes: simulation, debug and release. Simulation mode doesn't require any
-SGX capable hardware. Debug executes the enclave as normal but allows the host process to snoop on and modify the
-protected address space, so provides no protection. Release locks out the host and provides the standard SGX
-security model, but (at this time) requires the enclave to be [signed](signing.md) with a key whitelisted by Intel. 
+SGX enclaves can be used in one of four modes, in order of increasing realism: 
 
-Add this bit of code to your Gradle file to let the mode be chosen from the command line:
+1. Mock: your enclave class is created in the host JVM and no native or SGX specific code is used.
+1. Simulation: an enclave is compiled to native and loaded, but SGX hardware doesn't need to be present.
+1. Debug: the enclave is loaded using SGX hardware and drivers, but with a back door that allows debugger access to the memory.
+1. Release: the enclave is loaded using SGX hardware and drivers, and there's no back door. This is the real deal.
+
+Only release mode locks out the host and provides the standard SGX security model. At this time it requires the 
+enclave to be [signed](signing.md) with a key whitelisted by Intel. Future versions of Conclave will remove this
+restriction for modern hardware that supports *flexible launch control*. 
+
+Add this bit of code to your host `build.gradle` file to let the mode be chosen from the command line:
 
 ```groovy
 // Override the default (simulation) with -PenclaveMode=
 def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 ```
 
-Then add the following dependencies:
+Then add the following dependencies, also to the host's `build.gradle`:
 
 ```groovy hl_lines="2,3"
 dependencies {
@@ -148,7 +148,9 @@ dependencies {
 ```
 
 This says that at runtime (but not compile time) the `:enclave` module must be on the classpath, and configures 
-dependencies to respect the three different variants of the enclave. 
+dependencies to respect the three different variants of the enclave. That is, the enclave module will expose tasks
+to compile and use either simulation, debug or release mode (in mock mode you're just using regular Java, so no
+special compilation is necessary). Which task to use is actually selected by the host build. 
 
 For this simple tutorial we also add a runtime-only dependency on the popular [SLF4J](https://www.slf4j.org) library 
 which Conclave uses to do logging. SLF4J enables you to send Conclave's logging to any of the major logging frameworks 
@@ -544,7 +546,7 @@ provide your EPID SPID and attestation key. See [here](ias.md#getting-access) fo
 The enclave isn't of much use to the host, because the host already trusts itself. It's only useful to remote clients
 that want to use the enclave for computation without having to trust the host machine or software.
 
-We're now going to wire up encrypted messaging. Conclave provides an API for this called "Mail". Mail handles all the
+We're now going to wire up encrypted messaging. Conclave provides an API for this called Mail. Conclave Mail handles all the
 encryption for you, but leaves it up to you how the bytes themselves are moved around. You could use a REST API, a gRPC
 API, JMS message queues, a simple TCP socket as in this tutorial, or even files.
 
