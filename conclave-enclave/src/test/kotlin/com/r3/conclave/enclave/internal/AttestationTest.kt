@@ -1,19 +1,17 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
-import com.r3.conclave.dynamictesting.EnclaveBuilder
 import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.EpidAttestationHostHandler
 import com.r3.conclave.host.internal.Native
-import com.r3.conclave.host.internal.NativeEnclaveHandle
 import com.r3.conclave.testing.BytesRecordingHandler
 import com.r3.conclave.utilities.internal.getBytes
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -28,6 +26,14 @@ class AttestationTest {
         @JvmField
         @RegisterExtension
         val testEnclaves = TestEnclaves()
+
+        val bytesRecordingHandler = BytesRecordingHandler()
+
+        @AfterAll
+        @JvmStatic
+        internal fun afterAll() {
+            EnclaveRecycler.clear()
+        }
     }
 
     private lateinit var enclaveHandle: EnclaveHandle<*>
@@ -63,8 +69,10 @@ class AttestationTest {
 
     @Test
     fun `create report`() {
-        val handler = BytesRecordingHandler()
-        val connection = createEnclave(handler, ReportCreatingEnclave::class.java)
+        val connection = testEnclaves.createOrGetEnclave(
+                handler = bytesRecordingHandler,
+                enclaveClass = ReportCreatingEnclave::class.java
+        )
         val inputBuffer = ByteBuffer.allocate(SgxTargetInfo.size + SgxReportData.size)
         inputBuffer.position(SgxTargetInfo.size)
         inputBuffer.put("hello".toByteArray())
@@ -72,7 +80,7 @@ class AttestationTest {
 
         connection.send(inputBuffer)
 
-        val report = Cursor.read(SgxReport, handler.nextCall)
+        val report = Cursor.read(SgxReport, bytesRecordingHandler.nextCall)
         val resultData = report[SgxReport.body][SgxReportBody.reportData]
         inputBuffer.position(SgxTargetInfo.size)
         assertEquals(inputBuffer, resultData.read())
@@ -80,8 +88,10 @@ class AttestationTest {
 
     @Test
     fun `get quote`() {
-        val handler = BytesRecordingHandler()
-        val connection = createEnclave(handler, ReportCreatingEnclave::class.java)
+        val connection = testEnclaves.createOrGetEnclave(
+                handler = bytesRecordingHandler,
+                enclaveClass = ReportCreatingEnclave::class.java
+        )
 
         // 1. get the quoting enclave's measurement and the EPID group id
         val initQuoteResponse = Cursor.allocate(SgxInitQuoteResponse)
@@ -97,7 +107,7 @@ class AttestationTest {
         inputBuffer.position(0)
         connection.send(inputBuffer)
 
-        val report = Cursor.read(SgxReport, handler.nextCall)
+        val report = Cursor.read(SgxReport, bytesRecordingHandler.nextCall)
         val resultData = report[SgxReport.body][SgxReportBody.reportData]
         inputBuffer.position(SgxTargetInfo.size)
         println("report: $report")
@@ -141,21 +151,13 @@ class AttestationTest {
 
     @Test
     fun `attestation handlers`() {
-        val connection = createEnclave(EpidAttestationHostHandler(SgxQuoteType.LINKABLE, Cursor.allocate(SgxSpid)), EpidAttestingEnclave::class.java)
+        val connection = testEnclaves.createOrGetEnclave(
+                handler = EpidAttestationHostHandler(SgxQuoteType.LINKABLE, Cursor.allocate(SgxSpid)),
+                enclaveClass = EpidAttestingEnclave::class.java
+        )
         val signedQuote = connection.getSignedQuote()
         val reportData = signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData]
         assertTrue(Charsets.UTF_8.decode(reportData.buffer).startsWith("hello"))
     }
 
-    private fun <CONNECTION> createEnclave(
-            handler: Handler<CONNECTION>,
-            enclaveClass: Class<out Enclave>,
-            enclaveBuilder: EnclaveBuilder = EnclaveBuilder()
-    ): CONNECTION {
-        val enclaveFile = testEnclaves.getSignedEnclaveFile(enclaveClass, enclaveBuilder).toPath()
-        return NativeEnclaveHandle(EnclaveMode.SIMULATION, enclaveFile, false, enclaveClass.name, handler).let {
-            enclaveHandle = it
-            it.connection
-        }
-    }
 }
