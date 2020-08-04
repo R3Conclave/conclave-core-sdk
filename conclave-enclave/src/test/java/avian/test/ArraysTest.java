@@ -73,6 +73,54 @@ public class ArraysTest {
     expect(exception != null);
   }
 
+  public static void testSrcIntegerOverflow() {
+    // Specific test case to check for discovered Avian overflow bug.
+    // See https://r3-cev.atlassian.net/browse/CON-152
+    byte[] src = "This is src".getBytes();
+    byte[] dst = "This is dst".getBytes();
+
+    // If bug is present then this triggers out-of-bounds write via integer overflow on System.arraycopy
+    Exception exception = null;
+    try {
+      System.arraycopy(src, 0x7fffffff, dst, 0, 1);
+    } catch (IndexOutOfBoundsException e) {
+      exception = e;
+    }
+    expect(exception != null);
+  }
+
+  public static void testDstIntegerOverflow() {
+    // Specific test case to check for discovered Avian overflow bug.
+    // See https://r3-cev.atlassian.net/browse/CON-152
+    byte[] src = "This is src".getBytes();
+    byte[] dst = "This is dst".getBytes();
+
+    // If bug is present then this triggers out-of-bounds write via integer overflow on System.arraycopy
+    Exception exception = null;
+    try {
+      System.arraycopy(src, 0, dst, 0x7fffffff, 1);
+    } catch (IndexOutOfBoundsException e) {
+      exception = e;
+    }
+    expect(exception != null);
+  }
+
+  public static void testNegativeLength() {
+    // Specific test case to check for discovered Avian bug
+    // See https://r3-cev.atlassian.net/browse/CON-153
+    byte[] src = "This is src".getBytes();
+    byte[] dst = "This is dst".getBytes();
+
+    // This should throw an exception, but if the bug is present it doesn't and it silently returns instead.
+    Exception exception = null;
+    try {
+      System.arraycopy(src, 0, dst, 0, -1);
+    } catch (NegativeArraySizeException e) {
+      exception = e;
+    }
+    expect(exception != null);
+  }
+
   public static void main(String[] args) {
     { int[] array = new int[0];
       Exception exception = null;
@@ -81,7 +129,7 @@ public class ArraysTest {
       } catch (ArrayIndexOutOfBoundsException e) {
         exception = e;
       }
-
+      
       expect(exception != null);
     }
 
@@ -204,5 +252,9 @@ public class ArraysTest {
 
     testSort();
     testBinarySearch();
+
+    testSrcIntegerOverflow();
+    testDstIntegerOverflow();
+    testNegativeLength();
   }
 }
