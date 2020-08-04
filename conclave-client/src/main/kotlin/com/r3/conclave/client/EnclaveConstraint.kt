@@ -25,9 +25,9 @@ import com.r3.conclave.common.SecureHash
  * @property acceptableCodeHashes The set of measurement hashes that will be accepted. A match against any hash satisfies
  * this criteria and [acceptableSigners].
  *
- * At least one code hosh or signer must be provided.
+ * At least one code hash or signer must be provided.
  *
- * @property acceptableSigners The set of code signers that will be accepted. A match against any signer satisifies this
+ * @property acceptableSigners The set of code signers that will be accepted. A match against any signer satisfies this
  * criteria and [acceptableCodeHashes]. A [productID] must also be specified since a single signing key can sign multiple unrelated enclaves.
  *
  * At least one code hash or signer must be provided.
