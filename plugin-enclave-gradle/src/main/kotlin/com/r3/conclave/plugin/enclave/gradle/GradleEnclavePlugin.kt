@@ -169,7 +169,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile) { task ->
                 task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask)
-                task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath)
+                task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath, linkerToolFile)
                 task.nativeImagePath.set(target.file(graalVMDistributionPath))
                 task.jarFile.set(shadowJarTask.archiveFile)
                 task.cLibraryPaths.from("$sgxDirectory/tlibc",
@@ -182,9 +182,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "$substrateDependenciesPath/libjvm_enclave_edl.a",
                         "$substrateDependenciesPath/libz.a"
                 )
+                task.ldPath.set(linkerToolFile)
                 // Libraries in this section are linked with the --whole-archive option which means that
                 // nothing is discarded by the linker. This is required if a static library has any constructors
-                // or static variables that need to be initialised which would otherwise be discarded by 
+                // or static variables that need to be initialised which would otherwise be discarded by
                 // the linker.
                 task.librariesWholeArchive.from(
                         "$substrateDependenciesPath/libjvm_enclave_common.a"

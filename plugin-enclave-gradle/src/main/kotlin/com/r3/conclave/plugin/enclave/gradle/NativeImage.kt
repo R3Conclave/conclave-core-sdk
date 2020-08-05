@@ -85,6 +85,9 @@ open class NativeImage @Inject constructor(
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
+    @get:InputFile
+    val ldPath: RegularFileProperty = objects.fileProperty()
+
     private fun defaultOptions() = listOf(
         "--no-fallback",
         "--no-server",
@@ -97,7 +100,8 @@ open class NativeImage @Inject constructor(
         "-R:StackSize=" + GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
     )
 
-    private val compilerOptions = listOf(
+    private val compilerOptions get() = listOf(
+            "-H:CCompilerOption=-B${ldPath.get().asFile.parentFile.absolutePath}",
             "-H:CCompilerOption=-fvisibility=hidden",
             "-H:CCompilerOption=-fpie",
             "-H:CCompilerOption=-ffunction-sections",
@@ -311,7 +315,7 @@ open class NativeImage @Inject constructor(
                 "-H:NativeLinkerOption=-Wl,--no-undefined",
                 "-H:NativeLinkerOption=-Wl,-pie,-eenclave_entry",
                 "-H:NativeLinkerOption=-Wl,--export-dynamic",
-                "-H:NativeLinkerOption=-Wl,--defsym,__ImageBase=0,--defsym,__HeapSize=" + 
+                "-H:NativeLinkerOption=-Wl,--defsym,__ImageBase=0,--defsym,__HeapSize=" +
                             GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get()) / 4096,
                 "-H:NativeLinkerOption=-Wl,--gc-sections"
         )
