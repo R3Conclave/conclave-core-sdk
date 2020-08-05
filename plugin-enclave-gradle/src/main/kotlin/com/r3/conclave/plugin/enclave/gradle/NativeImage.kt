@@ -239,13 +239,6 @@ open class NativeImage @Inject constructor(
      * Doing so means that a shared library is being created but that all of the library’s external references
      * must be resolved by pulling in entries from static libraries.
      *
-     * -Bsymbolic
-     * When creating a shared library, bind references to global symbols to the definition within the shared library, if any.
-     * Normally, it is possible for a program linked against a shared library to override the definition within the shared library.
-     * This option can also be used with the --export-dynamic option, when creating a position independent executable,
-     * to bind references to global symbols to the definition within the executable.
-     * This option is only meaningful on ELF platforms which support shared libraries and position independent executables.
-     *
      * -e entry
      * Use entry as the explicit symbol for beginning execution of your program, rather than the default entry point.
      * If there is no symbol named entry, the linker will try to parse entry as a number,
@@ -311,7 +304,11 @@ open class NativeImage @Inject constructor(
                 "-H:NativeLinkerOption=-Wl,--whole-archive,-l$trtsLib,--no-whole-archive",
                 "-H:NativeLinkerOption=-Wl,--start-group,-lsgx_tstdc,-lsgx_tcxx,-lsgx_tcrypto,-l$serviceLib,--end-group",
                 "-H:NativeLinkerOption=-Wl,-Bstatic",
-                "-H:NativeLinkerOption=-Wl,-Bsymbolic",
+                // We don't specify -Bsymbolic here, because the behaviour of this flag in combination with the others
+                // appears to vary in subtle ways between ld versions causing reproducibility failures, and because it
+                // doesn't do anything for enclaves (even though Intel set this option in their samples). All the flag
+                // does is make a DT_SYMBOLIC tag appear in the .dynamic section but the Intel urts ELF interpreter
+                // doesn't do anything with it - indeed the tag has little meaning in an enclave environment.
                 "-H:NativeLinkerOption=-Wl,--no-undefined",
                 "-H:NativeLinkerOption=-Wl,-pie,-eenclave_entry",
                 "-H:NativeLinkerOption=-Wl,--export-dynamic",

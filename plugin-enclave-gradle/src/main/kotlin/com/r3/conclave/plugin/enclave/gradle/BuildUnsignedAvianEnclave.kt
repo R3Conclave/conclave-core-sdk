@@ -38,7 +38,12 @@ open class BuildUnsignedAvianEnclave @Inject constructor(objects: ObjectFactory)
                 inputLd.get(),
                 "-pie", "--entry=enclave_entry",
                 "-m", "elf_x86_64",
-                "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic",
+                // We don't specify -Bsymbolic here, because the behaviour of this flag in combination with the others
+                // appears to vary in subtle ways between ld versions causing reproducibility failures, and because it
+                // doesn't do anything for enclaves (even though Intel set this option in their samples). All the flag
+                // does is make a DT_SYMBOLIC tag appear in the .dynamic section but the Intel urts ELF interpreter
+                // doesn't do anything with it - indeed the tag has little meaning in an enclave environment.
+                "-Bstatic", "--no-undefined", "--export-dynamic",
                 "-o", outputs.files.first())
                 + optionsForStripped
                 + listOf(inputEnclaveObject.asFile.get(), inputJarObject.asFile.get())
