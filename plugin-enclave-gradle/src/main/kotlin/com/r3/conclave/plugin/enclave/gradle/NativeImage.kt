@@ -97,7 +97,8 @@ open class NativeImage @Inject constructor(
         "-H:ExcludeLibraries=pthread,dl,rt,z",
         "-H:-SpawnIsolates",
         "-R:MaxHeapSize=" + calculateMaxHeapSize(GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())),
-        "-R:StackSize=" + GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
+        "-R:StackSize=" + GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()),
+        "--enable-all-security-services"
     )
 
     private val compilerOptions get() = listOf(
@@ -136,6 +137,14 @@ open class NativeImage @Inject constructor(
 
     private fun librariesWholeArchiveOptions(): List<String> {
         return librariesWholeArchive.files.map { "-H:NativeLinkerOption=$it" }.toList()
+    }
+
+    private fun placeholderLibPathOption(): String {
+        // The placeholder libraries are just empty library archives to prevent any libraries that native-image
+        // decides to link against from clashing with the trusted SGX runtime. We just need to ensure the linker
+        // adds the path to the directory containing the placeholders to prevent it from pulling in the OS native
+        // versions of the libraries.
+        return "-H:NativeLinkerOption=-L" + nativeImagePath.get().asFile.absolutePath + "/placeholderlibs"
     }
 
     /**
@@ -345,6 +354,7 @@ open class NativeImage @Inject constructor(
                             + (if (buildType != BuildType.Release) debugOptions else emptyList<String>())
                             + defaultOptions()
                             + compilerOptions
+                            + placeholderLibPathOption()
                             + cLibraryPathsOption()
                             + libraryPathOption()
                             + "-H:NativeLinkerOption=-Wl,--whole-archive"

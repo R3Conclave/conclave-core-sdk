@@ -37,12 +37,30 @@ task getGraalBuildFolder(type: Exec) {
 }
 
 /**
+ * SubstrateVM can add required native libraries during compilation based on parameters to 
+ * native-image. For example, the inclusion of --enable-all-security-services results in native-image
+ * automatically including libstdc++.a during linking. We link against the SGX trusted runtime to
+ * satisfy the linker so to prevent multiply derived symbols we need to provide placeholder, empty
+ * implementations of any automatically linked library. This function populates the placeholderlibs/
+ * directory with these files and NativeImage.kt adds this directory to the link path
+ */
+task generatePlaceholderLibraries(type: Exec) {
+    dependsOn getGraalBuildFolder
+    doFirst {
+        def placeholderDir = getGraalBuildFolder.graalVMDir + "/placeholderlibs/"
+        mkdir placeholderDir
+        // Just create an empty archive
+        commandLine 'ar', "cr", placeholderDir + "libstdc++.a"
+    }
+}
+
+/**
  * The command line util `tar` is being used rather Gradle's Tar task due to
  * https://github.com/gradle/gradle/issues/3982, which describes symlinks being followed
  * rather than preserved. Graal fails to run with the resolved symlinks.
  */
 task tarGraal(type: Exec) {
-    dependsOn getGraalBuildFolder
+    dependsOn getGraalBuildFolder, generatePlaceholderLibraries
 
     // Set the input to the folder in which the build is generated. We actually want to tar
     // the only subdirectory from this.
