@@ -16,7 +16,7 @@ import java.io.DataOutputStream
  * value of [EnclaveCall.invoke] (which can be null) is returned here.
  *
  * The enclave does not have the option of using `Enclave.callUntrustedHost` for
- * sending bytes back to the host. Use the overlaod which takes in a [EnclaveCall]
+ * sending bytes back to the host. Use the overload which takes in a [EnclaveCall]
  * callback instead.
  *
  * @param bytes Bytes to send to the enclave.
