@@ -15,13 +15,22 @@ tasks.register("prepareForSigning") {
 dependencies {
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
 
+    // We need the enclave at runtime but not when compiling the host, because they don't share types.
     runtimeOnly project(path: ":enclave", configuration: mode)
     runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
 
+    // For tests only we depend on the enclave module so we can also use a mock enclave where the enclave object exists
+    // in the host JVM instead of a sub-JVM.
+    testImplementation project(":enclave")
+    testImplementation "com.r3.conclave:conclave-testing:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 
 test {
     // Pass through any -Pspid and -Pattestation-key parameters to the tests
     systemProperties project.properties.subMap(["spid", "attestation-key"])
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
 }

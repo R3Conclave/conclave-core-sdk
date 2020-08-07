@@ -9,11 +9,6 @@ dependencies {
 }
 
 conclave {
-    // runtime can be set to either avian or graalvm_native_image depending on which
-    // runtime environment you want to use inside the enclave. This is set to avian
-    // by default and can be omitted.
-    runtime = avian
-
     productID = 1
     revocationLevel = 0
 
