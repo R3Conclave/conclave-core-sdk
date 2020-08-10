@@ -3,6 +3,11 @@ package com.r3.conclave.testing.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.KeyName.REPORT
+import com.r3.conclave.common.internal.KeyName.SEAL
+import com.r3.conclave.common.internal.KeyPolicy.MRENCLAVE
+import com.r3.conclave.common.internal.KeyPolicy.MRSIGNER
+import com.r3.conclave.common.internal.KeyPolicy.NOISVPRODID
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
@@ -28,8 +33,12 @@ class MockEnclaveEnvironment(
         private const val TAG_SIZE = 16
 
         private val secureRandom = SecureRandom()
+
+        // All enclaves share the same CPUSVN.
+        private val cpuSvn = ByteArray(SgxCpuSvn.size).also(secureRandom::nextBytes)
     }
 
+    private val mrenclave = digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
     private val cipher by lazy(NONE) { Cipher.getInstance("AES/GCM/NoPadding") }
     private val keySpec by lazy(NONE) {
         SecretKeySpec(digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }, "AES")
@@ -44,6 +53,8 @@ class MockEnclaveEnvironment(
         if (reportDataIn != null) {
             body[reportData] = ByteBuffer.wrap(reportDataIn)
         }
+        body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(cpuSvn)
+        body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
         body[SgxReportBody.isvProdId] = isvProdId
         body[SgxReportBody.isvSvn] = isvSvn
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
@@ -55,7 +66,7 @@ class MockEnclaveEnvironment(
         } else {
             val bytes = ByteArray(length)
             secureRandom.nextBytes(bytes)
-            bytes.copyInto(output, destinationOffset = offset)
+            System.arraycopy(bytes, 0, output, offset, length)
         }
     }
 
@@ -92,10 +103,40 @@ class MockEnclaveEnvironment(
         return PlaintextAndEnvelope(OpaqueBytes(plaintext.array()), authenticatedData?.let(::OpaqueBytes))
     }
 
-    override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean): ByteArray {
-        return digest("MD5") {
-            update((if (useSigner) "MRSIGNER" else enclave.javaClass.name).toByteArray())
-            update(keyType.ordinal.toByte())
+    // Replicates sgx_get_key behaviour in hardware as determined by MockSecretKeyHardwareCompatibilityTest.
+    override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {
+        val keyPolicy = keyRequest[SgxKeyRequest.keyPolicy]
+        // TODO This is temporary: https://github.com/intel/linux-sgx/issues/578
+        require(!keyPolicy.isSet(NOISVPRODID)) {
+            "SGX_ERROR_INVALID_PARAMETER: The parameter is incorrect"
         }
+
+        val keyName = keyRequest[SgxKeyRequest.keyName].read()
+        if (keyName == REPORT) {
+            // REPORT keys for a MRENCLAVE are all the same.
+            return digest("SHA-256") { update(mrenclave) }.copyOf(16)
+        }
+
+        require(keyName == SEAL) { "Unsupported KeyName $keyName" }
+
+        require(keyRequest[SgxKeyRequest.isvSvn].read() <= isvSvn) {
+            "SGX_ERROR_INVALID_ISVSVN: The isv svn is greater than the enclave's isv svn"
+        }
+
+        val cpuSvn = keyRequest[SgxKeyRequest.cpuSvn].bytes
+        require(cpuSvn.all { it.toInt() == 0 } || cpuSvn.contentEquals(Companion.cpuSvn)) {
+            "SGX_ERROR_INVALID_CPUSVN: The cpu svn is beyond platform's cpu svn value"
+        }
+
+        return digest("SHA-256") {
+            if (keyPolicy.isSet(MRENCLAVE)) {
+                update(mrenclave)
+            }
+            if (keyPolicy.isSet(MRSIGNER)) {
+                update(0)  // Mock enclaves don't have a code signer so this is sufficient for deriving a MRSIGNER key.
+            }
+            update(keyRequest[SgxKeyRequest.isvSvn].buffer)
+            update(cpuSvn)
+        }.copyOf(16)
     }
 }

@@ -57,8 +57,7 @@ class EnclaveInstanceInfoImpl(
 
         val reportBody = attestationReport.isvEnclaveQuoteBody[SgxQuote.reportBody]
 
-        val flags = reportBody[attributes][flags].read()
-        val isDebug = flags and SgxEnclaveFlags.DEBUG != 0L
+        val isDebug = reportBody[attributes][flags].isSet(SgxEnclaveFlags.DEBUG)
         // Now we check the debug flag from the attested quote matches release vs debug enclaveMode. The only thing left
         // is the distinction between simulation and mock - we can't be sure which it is but it doesn't matter.
         when (enclaveMode) {

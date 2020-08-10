@@ -316,50 +316,23 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
     }
 }
 
-JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sgxKey
-        (JNIEnv* jniEnv, jobject,
-         jint keyType, jint keyPolicy, jbyteArray keyOut, jint keyOutOffset, jint keyOutSize) {
+JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_getKey
+        (JNIEnv* jniEnv, jobject, jbyteArray keyRequestIn, jbyteArray keyOut) {
+    auto *key_request = jniEnv->GetByteArrayElements(keyRequestIn, nullptr);
+    auto *key = jniEnv->GetByteArrayElements(keyOut, nullptr);
 
-    const auto ui16KeyType      = static_cast<uint16_t>(keyType);
-    const auto ui16KeyPolicy    = static_cast<uint16_t>(keyPolicy);
-    const auto ui32KeyOutSize   = static_cast<uint32_t>(keyOutSize);
-    const auto ui32KeyOutOffset = static_cast<uint32_t>(keyOutOffset);
+    auto return_code = sgx_get_key(
+            reinterpret_cast<const sgx_key_request_t *>(key_request),
+            reinterpret_cast<sgx_key_128bit_t *>(key)
+    );
 
-    if (ui16KeyType > SGX_KEYSELECT_SEAL) {
-        raiseException(jniEnv, "invalid keyType");
-        return;
+    jniEnv->ReleaseByteArrayElements(keyRequestIn, key_request, JNI_ABORT);
+    if (return_code != SGX_SUCCESS) {
+        jniEnv->ReleaseByteArrayElements(keyOut, key, JNI_ABORT);
+        raiseException(jniEnv, getErrorMessage(return_code));
+    } else {
+        jniEnv->ReleaseByteArrayElements(keyOut, key, 0);
     }
-
-    if (ui16KeyPolicy & ~(SGX_KEYPOLICY_MRENCLAVE | SGX_KEYPOLICY_MRSIGNER | SGX_KEYPOLICY_NOISVPRODID |
-                         SGX_KEYPOLICY_CONFIGID | SGX_KEYPOLICY_ISVFAMILYID | SGX_KEYPOLICY_ISVEXTPRODID)) {
-        raiseException(jniEnv, "use of reserved keyPolicy bits");
-        return;
-    }
-
-    sgx_key_128bit_t key{};
-
-    if ((ui32KeyOutSize + ui32KeyOutOffset) > sizeof(key) ||
-            (static_cast<uint32_t>(jniEnv->GetArrayLength(keyOut)) + ui32KeyOutOffset) > sizeof(key)) {
-        raiseException(jniEnv, "keyOut not big enough");
-        return;
-    }
-
-    sgx_key_request_t req{};
-
-    req.key_name    = ui16KeyType;
-    req.key_policy  = ui16KeyPolicy;
-
-    auto res = sgx_get_key(&req, &key);
-
-    if (res != SGX_SUCCESS) {
-        raiseException(jniEnv, getErrorMessage(res));
-        return;
-    }
-
-    JniPtr<uint8_t> jpKeyOut(jniEnv, keyOut);
-    memcpy_s(jpKeyOut.ptr + keyOutOffset, keyOutSize, key, sizeof(key));
-
-    jpKeyOut.releaseMode = 0; // to write back to the jvm
 }
 
 DLSYM_STATIC {
@@ -373,6 +346,6 @@ DLSYM_STATIC {
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_calcSealedBlobSize);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_authenticatedDataSize);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_plaintextSizeFromSealedData);
-    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_sgxKey);
+    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_getKey);
 };
 }

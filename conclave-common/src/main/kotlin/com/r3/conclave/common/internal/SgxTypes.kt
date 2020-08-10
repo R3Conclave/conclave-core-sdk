@@ -123,6 +123,13 @@ object SgxIsvExtProdId : FixedBytes(16)
  */
 object SgxIsvFamilyId : FixedBytes(16)
 
+/**
+ * A 128-bit value that is the used to store a derived key from for example the `sgx_get_key` function.
+ *
+ * @see `sgx_key_128bit_t`
+ */
+object SgxKey128Bit : FixedBytes(16)
+
 // The sdk has two versions
 object SgxQuoteType32 : Enum32() {
     @JvmField val UNLINKABLE: Int = SgxQuoteType.UNLINKABLE.value
@@ -261,12 +268,27 @@ object SgxReportBody : Struct() {
     @JvmField val isvExtProdId = field(SgxIsvExtProdId)
     /** Attributes for the enclave. */
     @JvmField val attributes = field(SgxAttributes)
-    /** Measurement value of the enclave. */
+    /**
+     * Measurement value of the enclave.
+     *
+     * MRENCLAVE is a unique 256 bit value that identifies the code and data that was loaded into the enclave during the
+     * initial launch.
+     */
     @JvmField val mrenclave = field(SgxMeasurement)
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
     @JvmField val reserved2 = field(ReservedBytes(32))
-    /** Measurement value of the public key that verified the enclave. */
+    /**
+     * SHA-256 hash value of the public key that signed the enclave.
+     *
+     * MRSIGNER can be used to allow software to approve of an enclave based on the author rather than maintaining a
+     * list of MRENCLAVEs. It is used in key derivation to allow software to create a lineage of an application. By
+     * signing multiple enclaves with the same key, the enclaves will share the same keys and data. Combined with
+     * security version numbering ([isvSvn]), the author can release multiple versions of an application which can access
+     * keys for previous versions, but not future versions of that application.
+     *
+     * @see [KeyPolicy.MRSIGNER]
+     */
     @JvmField val mrsigner = field(SgxMeasurement)
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
@@ -329,4 +351,41 @@ object SgxXfrmFlags : Flags64() {
     const val LEGACY = 0x0000000000000003L
     /** Intel® Advanced Vector Extensions state is saved. */
     const val AVX    = 0x0000000000000006L
+}
+
+/**
+ * Data structure of a key request used for selecting the appropriate key and any additional parameters required in the
+ * derivation of the key. This is an input parameter for the `sgx_get_key` function.
+ *
+ * @see `sgx_key_request_t`
+ */
+object SgxKeyRequest : Struct() {
+    /** The key name requested. */
+    @JvmField val keyName = field(KeyName)
+    /** Identify which inputs are required for the key derivation. */
+    @JvmField val keyPolicy = field(KeyPolicy)
+    /** The ISV security version number that should be used in the key derivation. */
+    @JvmField val isvSvn = field(SgxIsvSvn)
+    /** Reserved for future use. Must be set to zero. */
+    @Suppress("unused")
+    @JvmField val reserved1 = field(ReservedBytes(2))
+    /** The TCB security version number that should be used in the key derivation. */
+    @JvmField val cpuSvn = field(SgxCpuSvn)
+    /**
+     * Attributes mask used to determine which enclave attributes must be included in the key. It only impacts the
+     * derivation of a seal key, a provisioning key, and a provisioning seal key.
+     */
+    @JvmField val attributeMask = field(SgxAttributes)
+    /** Value for key wear-out protection. Generally initialized with a random number. */
+    @JvmField val keyId = field(SgxKeyId)
+    /**
+     * The misc mask used to determine which enclave misc select must be included in the key. Reserved for future
+     * function extension.
+     */
+    @JvmField val miscMask = field(SgxMiscSelect)
+    /** The enclave CONFIGSVN field. */
+    @JvmField val configSvn = field(SgxConfigSvn)
+    /** Reserved for future use. Must be set to zero. */
+    @Suppress("unused")
+    @JvmField val reserved2 = field(ReservedBytes(434))
 }

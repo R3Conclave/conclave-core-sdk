@@ -1,7 +1,6 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 
 interface EnclaveEnvironment {
@@ -46,10 +45,10 @@ interface EnclaveEnvironment {
     fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope
 
     /**
-     * Returns a 128 bit stable pseudo-random key based on the per-CPU key and other pieces of data.
-     * @param keyType type of key used for key derivation, defaults to [KeyType.SEAL].
-     * @param useSigner true = use enclave's MRSIGNER, false = use enclave's MRENCLAVE for key derivation, defaults to `true`.
-     * @return 128 bit key.
+     * Returns a 128-bit stable pseudo-random secret key based on the given [SgxKeyRequest] object.
+     * @param keyRequest Object for selecting the appropriate key and any additional parameters required in the
+     * derivation of that key.
+     * @return 128-bit secret key.
      */
-    fun defaultSealingKey(keyType: KeyType = KeyType.SEAL, useSigner: Boolean = true): ByteArray
+    fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray
 }

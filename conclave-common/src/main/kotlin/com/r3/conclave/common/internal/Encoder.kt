@@ -1,8 +1,12 @@
 package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.addPosition
+import java.lang.reflect.Modifier
 import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.LinkedHashMap
 
 sealed class Encoder<R> {
     /**
@@ -112,12 +116,36 @@ class ReservedBytes(override val size: Int) : Encoder<ByteBuffer>() {
     }
 }
 
-abstract class Enum32 : Int32()
-abstract class Enum16 : UInt16()
+interface EnumEncoder<R> {
+    val values: Map<String, R>
+}
 
-abstract class Flags64 : Int64()
+abstract class Enum32 : Int32(), EnumEncoder<Int> {
+    final override val values: Map<String, Int> by lazy { values(this) }
+}
+abstract class Enum16 : UInt16(), EnumEncoder<Int> {
+    final override val values: Map<String, Int> by lazy { values(this) }
+}
 
-class CArray<R, T : Encoder<R>>(val elementType: T, val length: Int): Encoder<List<R>>() {
+abstract class Flags64 : Int64() {
+    val values: Map<String, Long> by lazy { values(this) }
+}
+
+abstract class Flags16 : UInt16() {
+    val values: Map<String, Int> by lazy { values(this) }
+}
+
+private inline fun <reified R> values(encoder: Encoder<R>): Map<String, R> {
+    val values = LinkedHashMap<String, R>()
+    for (field in encoder.javaClass.fields) {
+        if (!Modifier.isStatic(field.modifiers)) continue
+        val value = field.get(null) as? R ?: continue
+        values[field.name] = value
+    }
+    return Collections.unmodifiableMap(values)
+}
+
+class CArray<R, T : Encoder<R>>(val elementType: T, val length: Int) : Encoder<List<R>>() {
     override val size get() = elementType.size * length
 
     override fun read(buffer: ByteBuffer): List<R> {
@@ -135,3 +163,6 @@ class CArray<R, T : Encoder<R>>(val elementType: T, val length: Int): Encoder<Li
         return buffer
     }
 }
+
+fun Cursor<Flags64, Long>.isSet(flag: Long): Boolean = read() and flag != 0L
+fun Cursor<Flags16, Int>.isSet(flag: Int): Boolean = read() and flag != 0

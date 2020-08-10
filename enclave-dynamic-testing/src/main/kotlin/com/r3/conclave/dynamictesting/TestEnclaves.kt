@@ -9,8 +9,6 @@ import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.File
 import java.nio.file.Path
-import java.time.Duration
-import java.time.Instant
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -18,14 +16,14 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 class TestEnclaves : BeforeAllCallback, AfterAllCallback {
     private lateinit var executorService: ExecutorService
-    private var cache: Cache? = null
+    private var _cache: Cache? = null
     private var entropy: Long? = null
 
     override fun beforeAll(context: ExtensionContext) {
         executorService = Executors.newFixedThreadPool(4)
         val cacheDirectory = File("build/cache")
         cacheDirectory.deleteRecursively()
-        cache = Cache(cacheDirectory, executorService)
+        _cache = Cache(cacheDirectory, executorService)
         val random = Random()
         entropy = random.nextLong()
     }
@@ -37,7 +35,13 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
                 shutdownNow()
             }
         }
-        cache = null
+        _cache = null
+    }
+
+    private val cache: Cache get() {
+        return checkNotNull(_cache) {
+            "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
+        }
     }
 
     private fun createEnclaveJar(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
@@ -47,23 +51,12 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
     }
 
     fun getEnclaveJar(enclaveClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): File {
-        val cache = checkNotNull(cache) {
-            "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
-        }
         return cache[createEnclaveJar(enclaveClass, enclaveBuilder)]
     }
 
     fun getSignedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder = EnclaveBuilder(), keyGenInput: String? = null): File {
-        val cache = checkNotNull(cache) {
-            "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
-        }
-        val start = Instant.now()
         val cachedSignedEnclave = signedEnclaveFile(entryClass, builder, keyGenInput)
-        val enclave = cache[cachedSignedEnclave]
-        val end = Instant.now()
-        println(Duration.between(start, end))
-
-        return enclave
+        return cache[cachedSignedEnclave]
     }
 
     private fun signedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder, keyGenInput: String? = null): Cached<File> {
@@ -74,18 +67,28 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         return SignEnclave.signEnclave(
                 inputKey = if (keyGenInput == null) cachedKey else SignEnclave.createDummyKey(keyGenInput),
                 inputEnclave = cachedEnclave,
-                enclaveConfig = cachedConfig)
+                enclaveConfig = cachedConfig
+        )
     }
 
     inline fun <reified T : Enclave> hostTo(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {
-        val enclaveFile = getSignedEnclaveFile(T::class.java, enclaveBuilder).toPath()
-        return createHost(EnclaveMode.SIMULATION, enclaveFile, T::class.java.name, tempFile = false)
+        return hostTo(T::class.java, enclaveBuilder)
+    }
+
+    fun hostTo(entryClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {
+        val mode = when (enclaveBuilder.type) {
+            EnclaveType.Simulation -> EnclaveMode.SIMULATION
+            EnclaveType.Debug -> EnclaveMode.DEBUG
+            EnclaveType.Release -> EnclaveMode.RELEASE
+        }
+        val enclaveFile = getSignedEnclaveFile(entryClass, enclaveBuilder).toPath()
+        return createHost(mode, enclaveFile, entryClass.name, tempFile = false)
     }
 
     fun getEnclaveMetadata(enclaveClass: Class<out Enclave>, builder: EnclaveBuilder): Path {
         val cachedSignedEnclave = signedEnclaveFile(enclaveClass, builder)
         val metadataFile = SignEnclave.enclaveMetadata(cachedSignedEnclave)
-        return cache!![metadataFile].toPath()
+        return cache[metadataFile].toPath()
     }
 }
 

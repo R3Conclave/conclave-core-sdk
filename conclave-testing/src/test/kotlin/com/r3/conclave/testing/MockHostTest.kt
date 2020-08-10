@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 
 class MockHostTest {
     @Test
-    fun `simple sample test, with assesses to enclave internals`() {
+    fun `simple sample test, testing ability to access enclave internals`() {
         val mock = MockHost.loadMock<PreviousValueEnclave>()
         mock.start(null, null, null)
 
@@ -27,7 +27,6 @@ class MockHostTest {
         val mock = MockHost.loadMock<PreviousValueEnclave>()
         mock.start(null, null, null)
         assertThat(mock.enclaveInstanceInfo.enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.MOCK)
-        assertThat(mock.enclaveInstanceInfo.enclaveInfo.codeHash.bytes).containsOnly(0)
         assertThat(mock.enclaveInstanceInfo.enclaveInfo.codeSigningKeyHash.bytes).containsOnly(0)
     }
 

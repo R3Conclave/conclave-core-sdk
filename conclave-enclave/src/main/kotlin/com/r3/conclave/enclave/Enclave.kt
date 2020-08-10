@@ -1,8 +1,8 @@
 package com.r3.conclave.enclave
 
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.handler.*
@@ -12,8 +12,6 @@ import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
-import com.r3.conclave.mail.Curve25519PrivateKey
-import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 import java.security.KeyPair
@@ -48,6 +46,7 @@ abstract class Enclave {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
 
+    private lateinit var env: EnclaveEnvironment
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
@@ -96,13 +95,14 @@ abstract class Enclave {
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
     private fun initialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
+        this.env = env
         // If the Enclave class implements InternalEnclave then the behaviour of the enclave is entirely delegated
         // to the InternalEnclave implementation and the Conclave-specific APIs (e.g. callUntrustedHost, etc) are
         // disabled. This allows us to test the enclave environment in scenarios where we don't want the Conclave handlers.
         return if (this is InternalEnclave) {
             this.internalInitialise(env, upstream)
         } else {
-            initCryptography(env)
+            initCryptography()
             val exposeErrors = env.enclaveMode != EnclaveMode.RELEASE
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
@@ -115,10 +115,17 @@ abstract class Enclave {
         }
     }
 
-    private fun initCryptography(env: EnclaveEnvironment) {
+    private fun getSecretKey(): ByteArray {
+        val keyRequest = Cursor.allocate(SgxKeyRequest)
+        keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
+        keyRequest[SgxKeyRequest.keyPolicy] = KeyPolicy.MRSIGNER
+        return env.getSecretKey(keyRequest)
+    }
+
+    private fun initCryptography() {
         // We get 128 bits of stable pseudo-randomness from the CPU, based on the enclave signer, per-CPU key and other
         // pieces of data.
-        val sealingEntropy: ByteArray = env.defaultSealingKey()
+        val sealingEntropy: ByteArray = getSecretKey()
         // For Curve25519 and EdDSA we need 256 bit keys. We hash it to convert it to 256 bits. This is safe because the
         // underlying 128 bits of entropy remains, and that's "safe" in the sense that nobody can brute force
         // 128 bits of entropy, not enough energy exists on Earth to make that feasible. Curve25519 needs 256

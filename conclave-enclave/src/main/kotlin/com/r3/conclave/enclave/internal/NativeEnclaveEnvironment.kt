@@ -3,9 +3,13 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxAttributes.flags
+import com.r3.conclave.common.internal.SgxReport.body
+import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 
 @PotentialPackagePrivate
@@ -101,16 +105,10 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         return PlaintextAndEnvelope(OpaqueBytes(plaintext), authenticatedData?.let(::OpaqueBytes))
     }
 
-    override fun defaultSealingKey(keyType: KeyType, useSigner: Boolean): ByteArray {
-        return ByteArray(16).also {
-            Native.sgxKey(
-                    keyType = keyType.value,
-                    keyPolicy = if (useSigner) KeyPolicy.MRSIGNER.value else KeyPolicy.MRENCLAVE.value,
-                    keyOut = it,
-                    keyOutOffset = 0,
-                    keyOutLength = it.size
-            )
-        }
+    override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {
+        val keyOut = ByteArray(SgxKey128Bit.size)
+        Native.getKey(keyRequest.buffer.getRemainingBytes(avoidCopying = true), keyOut)
+        return keyOut
     }
 
     /**
@@ -121,8 +119,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         return if (isEnclaveDebug == null) {
             val report = Cursor.allocate(SgxReport)
             createReport(null, null, report.buffer.array())
-            val enclaveFlags = report[SgxReport.body][SgxReportBody.attributes][SgxAttributes.flags].read()
-            val result = enclaveFlags and SgxEnclaveFlags.DEBUG != 0L
+            val result = report[body][attributes][flags].isSet(SgxEnclaveFlags.DEBUG)
             this.isEnclaveDebug = result
             result
         } else {

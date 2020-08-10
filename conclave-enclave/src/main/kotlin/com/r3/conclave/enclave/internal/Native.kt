@@ -1,5 +1,8 @@
 package com.r3.conclave.enclave.internal
 
+import com.r3.conclave.common.internal.SgxKey128Bit
+import com.r3.conclave.common.internal.SgxKeyRequest
+
 /**
  * The Enclave JNI. We don't use System.loadLibrary, but instead rely on our custom dlsym to find the relevant symbols.
  */
@@ -100,12 +103,10 @@ object Native {
     external fun plaintextSizeFromSealedData(sealedBlob: ByteArray): Int
 
     /**
-     * Get the requested SGX key (wrapper of sgx_get_key).
-     * @param keyType (check `enum class KeyType` for possible values).
-     * @param keyPolicy (one or a combination using bitwise `or` of KeyPolicies).
-     * @param keyOut output byte array. Must be pre-allocated to store at least 128 bits (16 bytes).
-     * @param keyOutOffset optional keyOut offset.
-     * @param keyOutLength size of the array to store the key (keyOut.size - keyOutOffset)
+     * Thin JNI wrapper around `sgx_get_key`.
+     * @param keyRequestIn The bytes of a [SgxKeyRequest] object used for selecting the appropriate key and any
+     * additional parameters required in the derivation of that key.
+     * @param keyOut Output buffer of at least size [SgxKey128Bit] for receiving the cryptographic key output.
      */
-    external fun sgxKey(keyType: Int, keyPolicy: Int, keyOut: ByteArray, keyOutOffset: Int, keyOutLength: Int)
+    external fun getKey(keyRequestIn: ByteArray, keyOut: ByteArray)
 }

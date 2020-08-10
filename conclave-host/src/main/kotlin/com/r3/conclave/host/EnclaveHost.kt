@@ -95,7 +95,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * If more than one file is found (i.e. multiple modes) then an exception is thrown.
          *
          * The mode is derived from the filename but is not taken at face value. The construction of the EnclaveInstanceInfoImpl
-         * in start makes sure the mode is correct it terms of the remote attestation.
+         * in `start` makes sure the mode is correct it terms of the remote attestation.
          */
         private fun findEnclaveFile(className: String): Pair<InputStream, EnclaveMode> {
             val found = EnclaveMode.values().mapNotNull { mode ->

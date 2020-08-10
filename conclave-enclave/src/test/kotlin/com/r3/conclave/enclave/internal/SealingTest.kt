@@ -1,7 +1,6 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.internal.KeyType
 import com.r3.conclave.common.internal.PlaintextAndEnvelope
 import com.r3.conclave.common.internal.handler.ExceptionSendingHandler
 import com.r3.conclave.common.internal.handler.HandlerConnected
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.nio.ByteBuffer
 
 class SealingTest {
     companion object {
@@ -22,9 +20,6 @@ class SealingTest {
         @RegisterExtension
         val testEnclaves = TestEnclaves()
 
-        // Reusable handlers for sealing key tests.
-        val getSealingKeyRecordingHandler1 = GetSealingKeyRecordingHandler()
-        val getSealingKeyRecordingHandler2 = GetSealingKeyRecordingHandler()
         // Reusable handlers for seal / unseal tests.
         val sealUnsealRecordingHandler1 = SealUnsealRecordingHandler()
         val sealUnsealRecordingHandler2 = SealUnsealRecordingHandler()
@@ -35,83 +30,6 @@ class SealingTest {
         @JvmStatic
         internal fun afterAll() {
             EnclaveRecycler.clear()
-        }
-    }
-
-    private object KeyTypes {
-        val requestReportKey = KeyRequest(keyType = KeyType.REPORT, useSigner = false)
-        val requestSealMRSignerKey = KeyRequest(keyType = KeyType.SEAL, useSigner = true)
-        val requestSealMREnclaveKey = KeyRequest(keyType = KeyType.SEAL, useSigner = false)
-    }
-
-    private data class Keys(
-            val report: ByteBuffer,
-            val sealMRSigner: ByteBuffer,
-            val sealMREnclave: ByteBuffer
-    )
-
-    /**
-     * Helper function to retrieve common SGX keys and tests.
-     * @param handler enclave handler.
-     * @param keyRequests requests to be performed,
-     *  default = requestReportKey, requestSealMRSignerKey, requestSealMREnclaveKey
-     * @return ArrayList<ByteBuffer> containing the requested keys.
-     */
-    private fun GetSealingKeySender.runKeyRequests(
-            handler: GetSealingKeyRecordingHandler,
-            keyRequests: ArrayList<KeyRequest> = ArrayList(
-                    listOf(
-                            KeyTypes.requestReportKey,
-                            KeyTypes.requestSealMRSignerKey,
-                            KeyTypes.requestSealMREnclaveKey)
-            )
-    ): Keys {
-        // populate array with generated keys
-        val keyList = ArrayList<ByteBuffer>()
-        var reportKey = ByteBuffer.wrap(ByteArray(0))
-        var sealMRSignerKey = ByteBuffer.wrap(ByteArray(0))
-        var sealMREnclaveKey = ByteBuffer.wrap(ByteArray(0))
-        for (request in keyRequests) {
-            this.sendRequest(request)
-            keyList.add(handler.nextCall.duplicate())
-            when (request) {
-                KeyTypes.requestReportKey -> reportKey = keyList.last()
-                KeyTypes.requestSealMRSignerKey -> sealMRSignerKey = keyList.last()
-                KeyTypes.requestSealMREnclaveKey -> sealMREnclaveKey = keyList.last()
-            }
-        }
-        assertEquals(keyList.size, keyRequests.size)
-        val emptyKey = ByteBuffer.wrap(ByteArray(16))
-        // check if the keys are not empty and with the expected size
-        for (key in keyList) {
-            assertEquals(key.capacity(), 16)
-            assertNotEquals(key, emptyKey)
-        }
-        // check if all keys generated are distinct from each other
-        val keyListUnique = keyList.distinct()
-        assertEquals(keyList.size, keyListUnique.size)
-        //
-        return Keys(reportKey, sealMRSignerKey, sealMREnclaveKey)
-    }
-
-    class GetSealingKeyEnclaveHandler(private val env: EnclaveEnvironment) : GetSealingKeyHandler() {
-        override fun onReceive(connection: GetSealingKeySender, keyRequest: KeyRequest) {
-            connection.sendResponse(env.defaultSealingKey(
-                    keyType = keyRequest.keyType,
-                    useSigner = keyRequest.useSigner)
-            )
-        }
-    }
-
-    class GetSealingKeyEnclave : InternalEnclave, Enclave() {
-        override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
-            return HandlerConnected.connect(GetSealingKeyEnclaveHandler(env), upstream)
-        }
-    }
-
-    class GetSealingKeyEnclaveAux : InternalEnclave, Enclave() {
-        override fun internalInitialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
-            return HandlerConnected.connect(GetSealingKeyEnclaveHandler(env), upstream)
         }
     }
 
@@ -153,100 +71,6 @@ class SealingTest {
             connected.connection.setDownstream(SealUnsealEnclaveHandler(env))
             return connected
         }
-    }
-
-    @Test
-    fun `get default sealing key`() {
-        val connection = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler1,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerA"
-        )
-        val keys1 = connection.runKeyRequests(getSealingKeyRecordingHandler1)
-        val keys2 = connection.runKeyRequests(getSealingKeyRecordingHandler1)
-        // Check key stability.
-        assertEquals(keys1, keys2)
-        //
-    }
-
-    @Test
-    fun `get default sealing key with 2 instances of the same enclave and signer`() {
-        val connection1 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler1,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerA"
-        )
-        val connection2 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler2,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerA"
-        )
-        assertNotEquals(connection1, connection2)
-        val keys1 = connection1.runKeyRequests(getSealingKeyRecordingHandler1)
-        val keys2 = connection2.runKeyRequests(getSealingKeyRecordingHandler2)
-        // Check key stability.
-        assertEquals(keys1, keys2)
-        //
-    }
-
-    @Test
-    fun `get default sealing key with 2 instances of distinct enclaves but same signer`() {
-        val connection1 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler1,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerA"
-        )
-        val connection2 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler2,
-                enclaveClass = GetSealingKeyEnclaveAux::class.java,
-                keyGenInput = "signerA"
-        )
-        assertNotEquals(connection1, connection2)
-        val keys1 = connection1.runKeyRequests(getSealingKeyRecordingHandler1)
-        val keys2 = connection2.runKeyRequests(getSealingKeyRecordingHandler2)
-        assertNotEquals(keys1.report, keys2.report) // From MRENCLAVE should be distinct.
-        assertNotEquals(keys1.sealMREnclave, keys2.sealMREnclave) // From MRENCLAVE should be distinct.
-        assertEquals(keys1.sealMRSigner, keys2.sealMRSigner) // From MRSIGNER should be equal.
-    }
-
-    @Test
-    fun `get default sealing key with 2 instances of the same enclave but distinct signers`() {
-        val connection1 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler1,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerA"
-        )
-        val connection2 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler2,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerB"
-        )
-        assertNotEquals(connection1, connection2)
-        val keys1 = connection1.runKeyRequests(getSealingKeyRecordingHandler1)
-        val keys2 = connection2.runKeyRequests(getSealingKeyRecordingHandler2)
-        assertEquals(keys1.report, keys2.report) // From MRENCLAVE should be equal.
-        assertEquals(keys1.sealMREnclave, keys2.sealMREnclave) // From MRENCLAVE should be equal.
-        assertNotEquals(keys1.sealMRSigner, keys2.sealMRSigner) // From MRSIGNER should be distinct.
-    }
-
-    @Test
-    fun `get default sealing key with 2 instances of distinct enclaves and distinct signers`() {
-        val connection1 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler1,
-                enclaveClass = GetSealingKeyEnclave::class.java,
-                keyGenInput = "signerA"
-        )
-        val connection2 = testEnclaves.createOrGetEnclave(
-                handler = getSealingKeyRecordingHandler2,
-                enclaveClass = GetSealingKeyEnclaveAux::class.java,
-                keyGenInput = "signerB"
-        )
-        assertNotEquals(connection1, connection2)
-        val keys1 = connection1.runKeyRequests(getSealingKeyRecordingHandler1)
-        val keys2 = connection2.runKeyRequests(getSealingKeyRecordingHandler2)
-        assertNotEquals(keys1.report, keys2.report) // From MRENCLAVE should be distinct.
-        assertNotEquals(keys1.sealMREnclave, keys2.sealMREnclave) // From MRENCLAVE should be distinct.
-        assertNotEquals(keys1.sealMRSigner, keys2.sealMRSigner) // From MRSIGNER should be distinct.
     }
 
     @Test

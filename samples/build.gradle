@@ -25,7 +25,8 @@ def modulesToSubstitute = [
         'com.r3.conclave:conclave-client',
         'com.r3.conclave:conclave-testing',
         'com.r3.conclave:enclave-utils',
-        'com.r3.conclave:enclave-testing'
+        'com.r3.conclave:enclave-testing',
+        'com.r3.conclave:enclave-dynamic-testing'
 ]
 
 def sgxModeProperty = project.property('sgx_mode')
@@ -67,6 +68,16 @@ subprojects {
 
     tasks.withType(Test) {
         useJUnitPlatform()
+        testLogging {
+            exceptionFormat = 'full'
+            showStandardStreams = true
+        }
+        beforeTest { descriptor ->
+            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
+        }
+        afterTest { descriptor ->
+            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
+        }
         systemProperty 'sgx.mode', sgxModeProperty
         systemProperty 'conclave.samples.spid', '***REMOVED***'
         systemProperty 'conclave.samples.attestation-key', '***REMOVED***'

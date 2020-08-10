@@ -56,7 +56,24 @@ fun ByteBuffer.putBoolean(value: Boolean): ByteBuffer = put((if (value) 1 else 0
 
 fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(it) }
 
-fun ByteBuffer.getRemainingBytes(): ByteArray = getBytes(remaining())
+/**
+ * Read the remaining bytes of the buffer. The buffer is exhausted after this operation, the position equal to the
+ * limit and [ByteBuffer.hasRemaining] `false`.
+ *
+ * @param avoidCopying If `true` then an attempt is made to avoid copying from the buffer and the underlying byte array
+ * is used directly if it's available. Because of this only specify `true` if the byte array will not be written to.
+ * The default is `false`, i.e. the returned array is a copy and it's safe to modify it.
+ */
+fun ByteBuffer.getRemainingBytes(avoidCopying: Boolean = false): ByteArray {
+    if (avoidCopying && hasArray()) {
+        val byteArray = array()
+        if (byteArray.size == remaining()) {
+            addPosition(remaining())
+            return byteArray
+        }
+    }
+    return getBytes(remaining())
+}
 
 fun ByteBuffer.putIntLengthPrefixBytes(bytes: ByteArray): ByteBuffer {
     putInt(bytes.size)
@@ -66,13 +83,13 @@ fun ByteBuffer.putIntLengthPrefixBytes(bytes: ByteArray): ByteBuffer {
 
 fun ByteBuffer.getIntLengthPrefixBytes(): ByteArray = getBytes(getInt())
 
-val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size
-
 fun ByteBuffer.addPosition(delta: Int): ByteBuffer {
     // The nasty cast is to make this work under Java 11.
     (this as Buffer).position(position() + delta)
     return this
 }
+
+val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size
 
 inline fun writeData(block: DataOutputStream.() -> Unit): ByteArray {
     val baos = ByteArrayOutputStream()

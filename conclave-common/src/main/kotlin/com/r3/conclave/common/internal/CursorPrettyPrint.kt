@@ -1,5 +1,7 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.toHexString
 import java.nio.ByteBuffer
 import java.util.*
 
@@ -43,36 +45,41 @@ object CursorPrettyPrint {
             }
             is FixedBytes -> {
                 val buffer = cursor.read() as ByteBuffer
-                while (buffer.remaining() > 0) {
-                    val byte = buffer.get()
-                    builder.append(String.format("%02X", byte))
-                }
-                builder
+                builder.append(buffer.getRemainingBytes(avoidCopying = true).toHexString())
             }
             is ReservedBytes -> {
                 builder.append('<').append(cursor.encoder.size).append(" reserved bytes>")
             }
-            is Enum16, is Enum32 -> {
-                val fields = cursor.encoder.javaClass.fields
+            is EnumEncoder<*> -> {
                 val value = cursor.read()
                 builder.append(value)
-                for (field in fields) {
-                    if (field.get(cursor.encoder) == value) {
-                        return builder.append(" (").append(field.name).append(')')
-                    }
-                }
-                builder.append(" (unknown)")
+                val valueName = cursor.encoder.values.entries.find { it.value == value }?.key ?: "unknown"
+                builder.append(" (").append(valueName).append(')')
             }
             is Flags64 -> {
                 val flags = cursor.read() as Long
                 builder.append(String.format("%08X", flags))
                 val flagNames = ArrayList<String>()
-                val fields = cursor.encoder.javaClass.fields
                 var reverseFlags = 0L
-                for (field in fields) {
-                    val fieldFlag = field.get(cursor.encoder) as? Long ?: continue
+                for ((name, fieldFlag) in cursor.encoder.values) {
                     if (flags and fieldFlag != 0L) {
-                        flagNames.add(field.name)
+                        flagNames.add(name)
+                        reverseFlags = reverseFlags or fieldFlag
+                    }
+                }
+                if (flags != reverseFlags) {
+                    flagNames.add("unknown")
+                }
+                builder.append(" (").append(flagNames.joinToString(" | ")).append(')')
+            }
+            is Flags16 -> {
+                val flags = cursor.read() as Int
+                builder.append(String.format("%04X", flags))
+                val flagNames = ArrayList<String>()
+                var reverseFlags = 0
+                for ((name, fieldFlag) in cursor.encoder.values) {
+                    if (flags and fieldFlag != 0) {
+                        flagNames.add(name)
                         reverseFlags = reverseFlags or fieldFlag
                     }
                 }

@@ -374,6 +374,10 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':graal',
                 description: 'Graal distribution including SubstrateVM and tools'
+        ),
+        new PublishedProject(
+                projectPath: ':enclave-dynamic-testing',
+                description: 'Internal testing framework which makes creating enclaves easier for testing Conclave'
         )
 ]
 

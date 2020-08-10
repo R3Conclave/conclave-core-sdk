@@ -1,18 +1,15 @@
 package com.r3.conclave.testing.internal
 
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.internal.KeyType
-import com.r3.conclave.common.internal.PlaintextAndEnvelope
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.nio.ByteBuffer
 import java.security.GeneralSecurityException
+import kotlin.random.Random
 
 class MockEnclaveEnvironmentTest {
     private companion object {
@@ -23,6 +20,26 @@ class MockEnclaveEnvironmentTest {
     class EnclaveA : Enclave()
 
     class EnclaveB : Enclave()
+
+    @Test
+    fun createReport() {
+        val env1 = createMockEnclaveEnvironment<EnclaveA>(isvProdId = 4, isvSvn = 3)
+        val reportData = Random.nextBytes(SgxReportData.size)
+        val report1 = Cursor.allocate(SgxReport)
+        env1.createReport(null, reportData, report1.buffer.array())
+        with(report1[SgxReport.body]) {
+            assertThat(this[SgxReportBody.attributes][SgxAttributes.flags].isSet(SgxEnclaveFlags.DEBUG)).isTrue()
+            assertThat(this[SgxReportBody.isvProdId].read()).isEqualTo(4)
+            assertThat(this[SgxReportBody.isvSvn].read()).isEqualTo(3)
+            assertThat(this[SgxReportBody.reportData].bytes).isEqualTo(reportData)
+        }
+
+        val env2 = createMockEnclaveEnvironment<EnclaveB>(isvProdId = 5, isvSvn = 6)
+        val report2 = Cursor.allocate(SgxReport)
+        env2.createReport(null, reportData, report2.buffer.array())
+        assertThat(report2[SgxReport.body][SgxReportBody.cpuSvn]).isEqualTo(report1[SgxReport.body][SgxReportBody.cpuSvn])
+        assertThat(report2[SgxReport.body][SgxReportBody.mrenclave]).isNotEqualTo(report1[SgxReport.body][SgxReportBody.mrenclave])
+    }
 
     @ParameterizedTest(name = "{displayName} {argumentsWithNames}")
     @ValueSource(booleans = [true, false])
@@ -63,66 +80,10 @@ class MockEnclaveEnvironmentTest {
         assertThat(sealedBlob1).isNotEqualTo(sealedBlob2)
     }
 
-    @Test
-    fun `defaultSealingKey MRENCLAVE`() {
-        val envEnclaveA1 = createMockEnclaveEnvironment<EnclaveA>()
-        val envEnclaveA2 = createMockEnclaveEnvironment<EnclaveA>()
-        val envEnclaveB = createMockEnclaveEnvironment<EnclaveB>()
-        val keyTypes = enumValues<KeyType>()
-        val enclaveA1MRENCLAVEKeys = runMockKeyRequests(envEnclaveA1, keyTypes, false)
-        val enclaveA2MRENCLAVEKeys = runMockKeyRequests(envEnclaveA2, keyTypes, false)
-        val enclaveBMRENCLAVEKeys = runMockKeyRequests(envEnclaveB, keyTypes, false)
-        // Check if all keys generated are distinct from each other.
-        val keysUniqueAMRENCLAVE = enclaveA1MRENCLAVEKeys.distinct()
-        assertEquals(keysUniqueAMRENCLAVE.size, enclaveA1MRENCLAVEKeys.size)
-        val keysUniqueBMRENCLAVE = enclaveBMRENCLAVEKeys.distinct()
-        assertEquals(keysUniqueBMRENCLAVE.size, enclaveBMRENCLAVEKeys.size)
-        //
-        assertEquals(enclaveA1MRENCLAVEKeys, enclaveA2MRENCLAVEKeys) // Keys of the same enclave should match.
-        // Keys of type MRENCLAVE and MRSIGNER shouldn't match.
-        enclaveA1MRENCLAVEKeys.forEach { key1 ->
-            enclaveBMRENCLAVEKeys.forEach { key2 ->
-                assertNotEquals(key1, key2)
-            }
-        }
-    }
-
-    @Test
-    fun `defaultSealingKey MRSIGNER`() {
-        val envEnclaveA1 = createMockEnclaveEnvironment<EnclaveA>()
-        val envEnclaveA2 = createMockEnclaveEnvironment<EnclaveA>()
-        val envEnclaveB = createMockEnclaveEnvironment<EnclaveB>()
-        val keyTypes = enumValues<KeyType>()
-        val enclaveA1MRSIGNERKeys = runMockKeyRequests(envEnclaveA1, keyTypes, true)
-        val enclaveA2MRSIGNERKeys = runMockKeyRequests(envEnclaveA2, keyTypes, true)
-        val enclaveBMRSIGNERKeys = runMockKeyRequests(envEnclaveB, keyTypes, true)
-        // Check if all keys generated are distinct from each other.
-        val keysUniqueAMRSIGNER = enclaveA1MRSIGNERKeys.distinct()
-        assertEquals(keysUniqueAMRSIGNER.size, enclaveA1MRSIGNERKeys.size)
-        val keysUniqueBMRSIGNER = enclaveBMRSIGNERKeys.distinct()
-        assertEquals(keysUniqueBMRSIGNER.size, enclaveBMRSIGNERKeys.size)
-        //
-        // All MRSIGNER keys should match.
-        assertEquals(enclaveA1MRSIGNERKeys, enclaveA2MRSIGNERKeys)
-        assertEquals(enclaveA1MRSIGNERKeys, enclaveBMRSIGNERKeys)
-        //
-    }
-
-    /**
-     * Helper function to retrieve defaultSealingKeys.
-     * @param env instance of the enclave environment to execute the request.
-     * @param keyTypes keys to be requested.
-     * @param useSigner true = MRSIGNER, false = MRENCLAVE.
-     *  default = requestReportKey, requestSealMRSignerKey, requestSealMREnclaveKey
-     * @return List<ByteBuffer> containing the requested keys.
-     */
-    private fun runMockKeyRequests(env: MockEnclaveEnvironment, keyTypes: Array<KeyType>, useSigner: Boolean): List<ByteBuffer> {
-        return keyTypes.map { keyType ->
-            ByteBuffer.wrap(env.defaultSealingKey(keyType, useSigner)).also { assertEquals(it.capacity(), 16) }
-        }
-    }
-
-    private inline fun <reified E : Enclave> createMockEnclaveEnvironment(): MockEnclaveEnvironment {
-        return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance())
+    private inline fun <reified E : Enclave> createMockEnclaveEnvironment(
+            isvProdId: Int = 1,
+            isvSvn: Int = 1
+    ): MockEnclaveEnvironment {
+        return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance(), isvProdId, isvSvn)
     }
 }
