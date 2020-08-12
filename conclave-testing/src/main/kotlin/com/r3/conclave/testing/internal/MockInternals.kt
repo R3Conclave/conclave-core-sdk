@@ -6,9 +6,9 @@ import com.r3.conclave.host.internal.initHost
 import com.r3.conclave.testing.MockHost
 
 object MockInternals {
-    fun <T : Enclave> createMock(enclaveClass: Class<T>, isvSvn: Int): MockHost<T> {
+    fun <T : Enclave> createMock(enclaveClass: Class<T>, isvProdId: Int, isvSvn: Int): MockHost<T> {
         val enclave = enclaveClass.getConstructor().newInstance()
-        val handle = MockEnclaveHandle(enclave, isvSvn, ThrowingErrorHandler())
+        val handle = MockEnclaveHandle(enclave, isvProdId, isvSvn, ThrowingErrorHandler())
         val mockHost = MockHost.create(enclave)
         initHost(mockHost, handle)
         return mockHost

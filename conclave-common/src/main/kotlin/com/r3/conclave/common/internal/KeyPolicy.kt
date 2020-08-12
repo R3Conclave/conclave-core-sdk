@@ -13,7 +13,7 @@ object KeyPolicy : Flags16() {
     /**
      * MRSIGNER-based keys are bound to the 3 tuple (MRSIGNER, ISVPRODID, ISVSVN). These keys are available to any
      * enclave with the same MRSIGNER ([SgxReportBody.mrsigner]) and ISVPRODID ([SgxReportBody.isvProdId]) and an ISVSVN
-     * ([SgxReportBody.isvSvn]) equal to or greater than the key in questions. This is valuable for allowing new versions
+     * ([SgxReportBody.isvSvn]) equal to or greater than the key in question. This is valuable for allowing new versions
      * of the same software to retrieve keys created before an upgrade.
      *
      * ISVPRODID can be removed from the key derivation using [NOISVPRODID] to create a shared key between different

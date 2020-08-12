@@ -25,7 +25,9 @@ class MockHost<T : Enclave> private constructor(val enclave: T) : EnclaveHost() 
          * Creates a [MockHost] suitable for unit tests, that connects to the given [Enclave].
          */
         @JvmStatic
-        fun <T : Enclave> loadMock(enclaveClass: Class<T>): MockHost<T> = MockInternals.createMock(enclaveClass, isvSvn = 1)
+        fun <T : Enclave> loadMock(enclaveClass: Class<T>): MockHost<T> {
+            return MockInternals.createMock(enclaveClass, isvProdId = 1, isvSvn = 1)
+        }
 
         /** A simple Kotlin helper for [loadMock]. */
         inline fun <reified T : Enclave> loadMock(): MockHost<T> = loadMock(T::class.java)

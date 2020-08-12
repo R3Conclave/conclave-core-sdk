@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 
 class MockEnclaveHandle<CONNECTION>(
         private val enclave: Enclave,
+        private val isvProdId: Int,
         private val isvSvn: Int,
         hostHandler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
@@ -26,7 +27,7 @@ class MockEnclaveHandle<CONNECTION>(
 
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
-        initialiseMethod.invoke(enclave, MockEnclaveEnvironment(enclave, isvSvn = isvSvn), sender) as HandlerConnected<*>
+        initialiseMethod.invoke(enclave, MockEnclaveEnvironment(enclave, isvProdId, isvSvn), sender) as HandlerConnected<*>
     }
 
     override fun sendSerialized(serializedBuffer: ByteBuffer) {

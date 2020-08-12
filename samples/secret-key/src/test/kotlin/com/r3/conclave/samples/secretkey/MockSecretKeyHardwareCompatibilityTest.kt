@@ -47,8 +47,12 @@ class MockSecretKeyHardwareCompatibilityTest {
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
         // key request parameters we're interested in.
         private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
-                // Create keys across two different enclaves.
+                // Create keys across two different enclaves, ...
                 setOf(EnclaveClass(SecretKeyEnclave1::class.java), EnclaveClass(SecretKeyEnclave2::class.java)),
+                // ... which have one of two IsvProdId values
+                setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
+                // ... and one of two IsvSvn values.
+                setOf(EnclaveIsvSvn(2), EnclaveIsvSvn(3)),
                 // Create either REPORT or SEAL keys. The other key types are not relevant.
                 setOf(KeyNameField(KeyName.REPORT), KeyNameField(KeyName.SEAL)),
                 // Create keys with all 8 possible policy combinations by using MRENCLAVE, MRSIGNER and NOISVPRODID.
@@ -57,12 +61,14 @@ class MockSecretKeyHardwareCompatibilityTest {
                 // Create keys with no ISVSVN, ISVSVN set to the enclave's and with values on either side.
                 setOf(BlankField(SgxKeyRequest::isvSvn), IsvSvnFieldDelta(-1), IsvSvnFieldDelta(0), IsvSvnFieldDelta(1)),
                 // Create keys with no CPUSVN, CPUSVN set to the current value and a random one.
-                setOf(BlankField(SgxKeyRequest::cpuSvn), CpuSvnField(null), CpuSvnField(OpaqueBytes(Random.nextBytes(SgxCpuSvn.size))))
+                setOf(BlankField(SgxKeyRequest::cpuSvn), CpuSvnField(null), CpuSvnField(OpaqueBytes(Random.nextBytes(SgxCpuSvn.size)))),
+                // Create keys with no key ID and with a random one.
+                setOf(BlankField(SgxKeyRequest::keyId), KeyIdField(OpaqueBytes(Random.nextBytes(SgxKeyId.size))))
         ).map(::SecretKeySpec)
     }
 
-    private val nativeEnclaves = HashMap<Class<out Enclave>, EnclaveHost>()
-    private val mockEnclaves = HashMap<Class<out Enclave>, MockHost<*>>()
+    private val nativeEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
+    private val mockEnclaves = HashMap<EnclaveSpec, MockHost<*>>()
 
     @AfterEach
     fun cleanUp() {
@@ -108,29 +114,30 @@ class MockSecretKeyHardwareCompatibilityTest {
         // native and mock.
         for ((keyRequestSpec, mockGroup) in mockUniqueness.keyRequestToSameKeyGroup) {
             val nativeGroup = nativeUniqueness.keyRequestToSameKeyGroup.getValue(keyRequestSpec)
-            assertEquals(nativeGroup, mockGroup, keyRequestSpec::toString)
+            assertThat(mockGroup).describedAs(keyRequestSpec.toString()).isEqualTo(nativeGroup)
         }
     }
 
-    private fun getNativeHost(enclaveClass: Class<out Enclave>): EnclaveHost {
-        return nativeEnclaves.computeIfAbsent(enclaveClass) {
-            val host = testEnclaves.hostTo(enclaveClass, EnclaveBuilder(type = EnclaveType.Debug, config = EnclaveConfig().withISVSVN(3)))
+    private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
+        return nativeEnclaves.computeIfAbsent(enclaveSpec) {
+            val config = EnclaveConfig().withProdID(enclaveSpec.isvProdId).withISVSVN(enclaveSpec.isvSvn)
+            val host = testEnclaves.hostTo(enclaveSpec.enclaveClass, EnclaveBuilder(type = EnclaveType.Debug, config = config))
             host.start(spid, attestationKey, null)
             check(host.enclaveMode == EnclaveMode.DEBUG)
             host
         }
     }
 
-    private fun getMockHost(enclaveClass: Class<out Enclave>): MockHost<*> {
-        return mockEnclaves.computeIfAbsent(enclaveClass) {
-            val host = MockInternals.createMock(enclaveClass, isvSvn = 3)
+    private fun getMockHost(enclaveSpec: EnclaveSpec): MockHost<*> {
+        return mockEnclaves.computeIfAbsent(enclaveSpec) {
+            val host = MockInternals.createMock(enclaveSpec.enclaveClass, enclaveSpec.isvProdId, enclaveSpec.isvSvn)
             host.start(null, null, null)
             host
         }
     }
 
-    class KeyUniquenessContainer(private val hostLookup: (Class<out Enclave>) -> EnclaveHost) {
-        val keyToSameKeyGroup = HashMap<OpaqueBytes, MutableList<SecretKeySpec>>()
+    class KeyUniquenessContainer(private val hostLookup: (EnclaveSpec) -> EnclaveHost) {
+        val keyToSameKeyGroup = LinkedHashMap<OpaqueBytes, MutableList<SecretKeySpec>>()
         val keyRequestToSameKeyGroup = HashMap<SecretKeySpec, List<SecretKeySpec>>()
         val errorKeyRequests = HashMap<SecretKeySpec, String>()
 
@@ -155,7 +162,9 @@ class MockSecretKeyHardwareCompatibilityTest {
     class SecretKeyEnclave2 : AbstractSecretKeyEnclave()
 
     abstract class AbstractSecretKeyEnclave : Enclave(), EnclaveCall {
-        private val env by lazy { Enclave::class.java.getDeclaredField("env").get(this) as EnclaveEnvironment }
+        private val env by lazy {
+            Enclave::class.java.getDeclaredField("env").apply { isAccessible = true }.get(this) as EnclaveEnvironment
+        }
 
         override fun invoke(bytes: ByteArray): ByteArray {
             return env.getSecretKey(Cursor.wrap(SgxKeyRequest, bytes))

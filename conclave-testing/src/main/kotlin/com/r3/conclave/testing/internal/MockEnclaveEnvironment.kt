@@ -113,8 +113,10 @@ class MockEnclaveEnvironment(
 
         val keyName = keyRequest[SgxKeyRequest.keyName].read()
         if (keyName == REPORT) {
-            // REPORT keys for a MRENCLAVE are all the same.
-            return digest("SHA-256") { update(mrenclave) }.copyOf(16)
+            return digest("SHA-256") {
+                update(mrenclave)
+                update(keyRequest[SgxKeyRequest.keyId].buffer)
+            }.copyOf(16)
         }
 
         require(keyName == SEAL) { "Unsupported KeyName $keyName" }
@@ -135,8 +137,10 @@ class MockEnclaveEnvironment(
             if (keyPolicy.isSet(MRSIGNER)) {
                 update(0)  // Mock enclaves don't have a code signer so this is sufficient for deriving a MRSIGNER key.
             }
+            update(ByteBuffer.allocate(2).putShort(isvProdId.toShort()).array())  // Product Id is an unsigned short.
             update(keyRequest[SgxKeyRequest.isvSvn].buffer)
             update(cpuSvn)
+            update(keyRequest[SgxKeyRequest.keyId].buffer)
         }.copyOf(16)
     }
 }
