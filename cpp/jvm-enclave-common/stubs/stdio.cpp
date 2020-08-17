@@ -24,6 +24,14 @@ int vfprintf(FILE *stream, const char *s, va_list va) {
     return __vfprintf_chk(stream, 0, s, va);
 }
 
+int __printf_chk(int, const char *s, ...) {
+    va_list va;
+    va_start(va, s);
+    int res = vfprintf(stdout, s, va);
+    va_end(va);
+    return res;
+}
+
 int fprintf(FILE *f, const char *s, ...) {
     va_list va;
     va_start(va, s);

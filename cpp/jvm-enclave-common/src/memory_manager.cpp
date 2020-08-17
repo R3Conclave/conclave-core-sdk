@@ -39,13 +39,15 @@ public:
     // be reduced to exclude the freed region however we leave it allocated until the entire
     // region is freed.
     // The length is in 4K pages.
-    void* uncommit(void*p , size_t length) {
+    bool uncommit(size_t length) {
         if (_committed >= length) {
             _committed -= length;
 #ifdef LOG_MEMORY
             enclave_trace("Uncommitting %lX pages\n", length);
-#endif            
+#endif  
+            return true;          
         }
+        return false;
     }
 
     bool is_empty() {
@@ -93,7 +95,7 @@ void MemoryManager::free(void* p, unsigned long size) {
         cur_region = it;
     }
     if (cur_region != _regions.end()) {
-        if (cur_region->second->uncommit(p, pages)) {
+        if (cur_region->second->uncommit(pages)) {
             if (cur_region->second->is_empty()) {
                 delete cur_region->second;
                 _regions.erase(cur_region);

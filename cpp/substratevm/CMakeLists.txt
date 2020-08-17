@@ -20,7 +20,7 @@ target_include_directories(substratevm PUBLIC
         include
         ../jvm-edl/build/edl/enclave
         ../jvm-host-enclave-common/include
-        ../vm-enclave-layer/include
+        ../jvm-enclave-common/include
         $ENV{JAVA_HOME}/include
         $ENV{JAVA_HOME}/include/linux)
 target_compile_options(substratevm PUBLIC -nostdinc -nostdinc++ -fPIC)

@@ -30,7 +30,6 @@ class CopySubstrateDependenciesTest {
         private fun dependenciesFiles(buildType: BuildType): Array<File> {
             val simPrefix = if (buildType == BuildType.Simulation) "_sim" else ""
             val filesList = mutableListOf(
-                    File("$substrateDependenciesPath/$buildType/libvmenclavelayer.a"),
                     File("$substrateDependenciesPath/$buildType/libsubstratevm.a"),
                     File("$substrateDependenciesPath/$buildType/libjvm_enclave_edl.a"),
                     File("$substrateDependenciesPath/$buildType/libjvm_enclave_common.a"),

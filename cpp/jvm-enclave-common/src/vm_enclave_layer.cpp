@@ -20,7 +20,7 @@ void jni_throw(const char *msg, ...) {
   va_list va;
   va_start(va, msg);
   char buffer[512];
-  int n = vsnprintf(buffer, sizeof(buffer), msg, va);
+  vsnprintf(buffer, sizeof(buffer), msg, va);
   // Print the cause of the error in case JVM throwing fails
   enclave_trace(buffer);
 
@@ -39,6 +39,7 @@ int enclave_print(const char *s, ...) {
   va_end(va);
   return res;
 #else
+  (void)(s);
   return 0;
 #endif
 }
@@ -54,6 +55,7 @@ int enclave_trace(const char *s, ...) {
   va_end(va);
   return res;
 #else
+(void)(s);
   return 0;
 #endif
 }

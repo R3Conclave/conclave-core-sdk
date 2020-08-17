@@ -103,8 +103,7 @@ add_executable(jvm_enclave_avian_partial
         src/debug_utils.cpp
         src/edl.cpp
         ${BOOT_JAR_O_PATH}
-        ${JAVAHOME_JAR_O_PATH}
-        $<TARGET_OBJECTS:avian_os_support>)
+        ${JAVAHOME_JAR_O_PATH})
 set_target_properties(jvm_enclave_avian_partial PROPERTIES LINKER_LANGUAGE C)
 target_compile_options(jvm_enclave_avian_partial PUBLIC -nostdinc -fPIC)
 if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
@@ -142,11 +141,12 @@ target_link_libraries(jvm_enclave_avian_partial
         "-Wl,-Bsymbolic"
         "-Wl,--export-dynamic"
         "-Wl,--relocatable"
-        "-Wl,--defsym,__ImageBase=0")
+        "-Wl,--defsym,__ImageBase=0"
+        "-Wl,--defsym,__HeapSize=0")
 add_dependencies(jvm_enclave_avian_partial linux-sgx-ext avian-boot-jar-o avian-javahome-jar-o dlsym)
 
 add_executable(jvm_enclave_avian
-        ${GENERATED_STUBS_DIR}/stubs.cpp)
+        src/jvm_enclave_avian.cpp)
 target_compile_options(jvm_enclave_avian PUBLIC -nostdinc -fPIC)
 target_link_libraries(jvm_enclave_avian
         $<TARGET_FILE:jvm_enclave_avian_partial>
@@ -174,15 +174,6 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     )
 endif()
 
-# avian_os_support
-# We compile these separately to the rest of jvm-enclave-avian so that they can access system header files. Note that this is
-# safe, we don't actually link against system libraries
-add_library(avian_os_support OBJECT
-        src/os_support.cpp)
-add_dependencies(avian_os_support avian_headers)
-target_compile_options(avian_os_support PUBLIC -fPIC)
-
-get_property(AVIAN_OS_SOURCES TARGET avian_os_support PROPERTY SOURCES)
 get_property(ENCLAVE_SOURCES TARGET jvm_enclave_avian PROPERTY SOURCES)
 get_property(ENCLAVE_PARTIAL_SOURCES TARGET jvm_enclave_avian_partial PROPERTY SOURCES)
 determinise_compile(${AVIAN_OS_SOURCES} ${ENCLAVE_SOURCES} ${ENCLAVE_PARTIAL_SOURCES})

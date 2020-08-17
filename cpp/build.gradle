@@ -33,7 +33,6 @@ static String compileTaskNameEnclave(type) { return "compileEnclave$type" }
 static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
-static String compileTaskNameVmEnclaveLayerLib(type) { return "compileVmEnclaveLayerLib$type" }
 static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
 
 def maxWorkers = properties["org.gradle.workers.max"]
@@ -105,18 +104,6 @@ for (type in types) {
         commandLine("/usr/bin/env", "cmake",
                 "--build", buildDirectory(type),
                 "--target", "linux-sgx-ext"
-        )
-    }
-
-    tasks.create(compileTaskNameVmEnclaveLayerLib(type), Exec) {
-        dependsOn(createCmakeTaskName(type))
-
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
-        workingDir(buildDirectory(type))
-
-        commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
-                "--target", "vmenclavelayer"
         )
     }
 

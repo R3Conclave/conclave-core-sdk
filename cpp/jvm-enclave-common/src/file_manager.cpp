@@ -62,6 +62,9 @@ FILE* stderr = (FILE*)&file_stderr;
 File::File(FileHandle h, std::string filename) : _handle(h), _filename(filename) {
 }
 
+File::~File() {
+}
+
 int File::handle() const {
     return _handle;
 }

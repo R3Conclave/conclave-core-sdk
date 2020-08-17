@@ -6,7 +6,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
-STUB_NO_ABORT(fsync);
 STUB(ftruncate);
 STUB(ftruncate64);
 STUB(getegid);
@@ -144,6 +143,10 @@ long syscall(long number, ...) {
 
 int unlink(const char* pathname) {
     enclave_trace("unlink(%s)\n", pathname);
+    return 0;
+}
+
+int fsync(int fd) {
     return 0;
 }
 

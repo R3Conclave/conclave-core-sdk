@@ -27,7 +27,8 @@ add_library(jvm_host SHARED
         src/host_jni.cpp
         src/host_start_thread.cpp
         src/enclave_metadata.cpp
-        src/ecall_context.cpp)
+        src/ecall_context.cpp
+        src/enclave_console.cpp)
 target_include_directories(jvm_host PUBLIC
         include
         ../jvm-host-shared/include

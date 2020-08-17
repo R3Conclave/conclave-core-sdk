@@ -176,7 +176,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "$sgxDirectory/libcxx")
                 task.libraryPath.set(target.file(sgxDirectory))
                 task.libraries.from(
-                        "$substrateDependenciesPath/libvmenclavelayer.a",
                         "$substrateDependenciesPath/libsubstratevm.a",
                         "$substrateDependenciesPath/libjvm_host_enclave_common_enclave.a",
                         "$substrateDependenciesPath/libjvm_enclave_edl.a",

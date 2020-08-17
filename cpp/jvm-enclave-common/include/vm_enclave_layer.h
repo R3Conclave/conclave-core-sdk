@@ -21,11 +21,9 @@
 // throw an exception or are just ignored if called. Each stub function is 
 // specified in a section in the relevant implementation file
 #ifdef __cplusplus
-#define STUB(x) extern "C" void x() { debug_print_enclave(#x, strlen(#x)); throw_jvm_runtime_exception(#x); abort(); }
-#define STUB_NO_ABORT(x) extern "C" int x() { debug_print_enclave(#x, strlen(#x)); return 0; }
+#define STUB(x) extern "C" void x() { enclave_trace(#x); throw_jvm_runtime_exception(#x); abort(); }
 #else
-#define STUB(x) void x() { debug_print_enclave(#x, strlen(#x)); throw_jvm_runtime_exception(#x); abort(); }
-#define STUB_NO_ABORT(x) int x() { debug_print_enclave(#x, strlen(#x)); return 0; }
+#define STUB(x) void x() { enclave_trace(#x); throw_jvm_runtime_exception(#x); abort(); }
 #endif
 
 #ifdef __cplusplus

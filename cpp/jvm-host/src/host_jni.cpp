@@ -2,7 +2,6 @@
 #include <sgx_urts.h>
 #include <enclave_metadata.h>
 #include <jvm_u.h>
-#include <iostream>
 #include <ecall_context.h>
 #include <sgx_errors.h>
 #include <sgx_device_status.h>
@@ -14,7 +13,7 @@
 #include <fclose_guard.h>
 #include <munmap_guard.h>
 #include <enclave_platform.h>
-//#include <urts_com.h>
+#include "enclave_console.h"
 
 // TODO pool buffers in ecalls/ocalls
 
@@ -22,12 +21,8 @@ static void raiseEnclaveLoadException(JNIEnv *jniEnv, const char *message) {
     raiseException(jniEnv, message, "com/r3/conclave/host/EnclaveLoadException");
 }
 
-void debug_print(const char *string, int n) {
-    if (n > 0) {
-        std::cout << "!";
-        std::cout.write(string, n);
-        std::cout.flush();
-    }
+void debug_print(const char *str, int n) {
+    enclave_console(str, n);
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getDeviceStatus

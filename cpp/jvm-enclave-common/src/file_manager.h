@@ -26,6 +26,8 @@ protected:
     File(FileHandle h, std::string filename);
 
 public:
+
+    virtual ~File();
     
     //
     // Get a handle for the file. Can be returned as a handle from
