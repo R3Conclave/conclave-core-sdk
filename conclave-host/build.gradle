@@ -1,6 +1,23 @@
 plugins {
     id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.johnrengelman.shadow'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            // Manually remove any Jackson dependencies from the POM as they're shaded into the jar.
+            pom.withXml {
+                Node pomNode = asNode()
+                pomNode.dependencies.'*'.findAll() {
+                    it.groupId.text().startsWith('com.fasterxml.jackson.')
+                }.each() {
+                    it.parent().remove(it)
+                }
+            }
+        }
+    }
 }
 
 // TODO Use Zulu build with EC bug fix, or wait until they release their next JDK 11 version
@@ -40,4 +57,11 @@ dependencies {
     // Log4J for the runtime logging engine. We don't specify this as a production dependency to allow the client code
     // to specify their own binding.
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+}
+
+// We don't need to bundle anything here, just rewrite our Jackson imports to use the shaded version provided by conclave-common.
+shadowJar {
+    archiveClassifier = ''
+    configurations = []
+    relocate 'com.fasterxml.jackson', 'com.r3.conclave.jackson'
 }

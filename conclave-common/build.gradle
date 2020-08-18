@@ -1,10 +1,28 @@
 plugins {
     id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.johnrengelman.shadow'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            // Manually remove any Jackson dependencies from the POM as they're shaded into the jar.
+            pom.withXml {
+                Node pomNode = asNode()
+                pomNode.dependencies.'*'.findAll() {
+                    it.groupId.text().startsWith('com.fasterxml.jackson.')
+                }.each() {
+                    it.parent().remove(it)
+                }
+            }
+        }
+    }
 }
 
 dependencies {
     api project(":conclave-mail")
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     // Needed to parse the JSON response from the IAS
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
@@ -16,4 +34,13 @@ dependencies {
     testImplementation project(":enclave-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+}
+
+// We shade our use of Jackson to avoid any versioning conflicts with Conclave apps that might use a different version.
+shadowJar {
+    archiveClassifier = ''
+    dependencies {
+        it.include(dependency("com.fasterxml.jackson.*:"))
+    }
+    relocate 'com.fasterxml.jackson', 'com.r3.conclave.jackson'
 }
