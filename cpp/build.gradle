@@ -1,4 +1,6 @@
 import javax.inject.Inject
+import java.nio.file.Paths
+import java.nio.file.Files
 
 apply plugin: "base"
 
@@ -37,10 +39,26 @@ static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLi
 
 def maxWorkers = properties["org.gradle.workers.max"]
 
+tasks.create("symlinkDebugToSimulation") {
+    dependsOn(createCmakeTaskName("Debug"))
+    doFirst {
+        mkdir buildDirectory("Simulation")
+        try {
+            Files.createSymbolicLink(Paths.get("${buildDirectory("Simulation")}/linux-sgx"), Paths.get("${buildDirectory("Debug")}/linux-sgx"))
+        } catch (FileAlreadyExistsException) {
+        }
+    }
+    outputs.dir(buildDirectory("Simulation"))
+}
+
 for (type in types) {
     // Use Cmake to create build
     tasks.create(createCmakeTaskName(type), Exec) {
         environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
+
+        if (type == "Simulation") {
+            dependsOn("symlinkDebugToSimulation")
+        }
         workingDir(buildDirectory(type))
 
         commandLine("/usr/bin/env", "cmake", "-DCMAKE_BUILD_TYPE=$type", projectDir)
@@ -97,14 +115,17 @@ for (type in types) {
 
     tasks.create(compileTaskNameLinuxSgx(type), Exec) {
         dependsOn(createCmakeTaskName(type))
-
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
-        workingDir(buildDirectory(type))
-
-        commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
-                "--target", "linux-sgx-ext"
-        )
+        if(type == "Simulation") {
+            dependsOn(compileTaskNameLinuxSgx("Debug"))
+            commandLine("echo", "Linux SGX Simulation is a symlink from DEBUG.")
+        } else {
+            environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
+            commandLine("/usr/bin/env", "cmake",
+                    "--build", buildDirectory(type),
+                    "--target", "linux-sgx-ext"
+            )
+            workingDir(buildDirectory(type))
+        }
     }
 
     tasks.create(compileTaskNameSubstrateVMLib(type), Exec) {
