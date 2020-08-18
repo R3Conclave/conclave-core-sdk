@@ -27,7 +27,7 @@ Inside the enclave you can use Java 8 and Kotlin 1.3.
 ## Which communication channels exist to/from the enclave?
  
 The host can send and receive messages with the enclave, and an encryption key is included in the remote attestation.
-Clients may choose to use this key with Conclave Mail (not yet available in beta 2) to communicate with the enclave in 
+Clients may choose to use this key with Conclave Mail to communicate with the enclave in 
 an encrypted manner. It's up to the host to route messages to and from the network. 
 
 ## Why are you using Intel SGX versus mathematical techniques?
