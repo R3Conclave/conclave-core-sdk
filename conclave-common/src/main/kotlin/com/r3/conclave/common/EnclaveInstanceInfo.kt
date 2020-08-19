@@ -93,6 +93,7 @@ interface EnclaveInstanceInfo {
                 val encryptionKey = Curve25519PublicKey(readIntLengthPrefixBytes())
                 val reportBytes = readIntLengthPrefixBytes()
                 val signature = readIntLengthPrefixBytes()
+                //TODO We can save on some copying by wrapping the CertPath section with a size bounded stream.
                 val certPath = readIntLengthPrefixBytes().inputStream().let(CertificateFactory.getInstance("X.509")::generateCertPath)
                 val enclaveMode = read().let { EnclaveMode.values()[it] }
                 // New fields need to be behind an availability check before being read. Use dis.available() to check if there

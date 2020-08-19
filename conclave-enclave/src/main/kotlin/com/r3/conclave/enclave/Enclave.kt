@@ -169,6 +169,7 @@ abstract class Enclave {
             val attestationResponse = AttestationResponse(
                     reportBytes,
                     signature,
+                    // TODO We can save on some copying by using ByteBufferInputStream over the CertPath section.
                     CertificateFactory.getInstance("X.509").generateCertPath(encodedCertPath.inputStream())
             )
             _enclaveInstanceInfo = EnclaveInstanceInfoImpl(

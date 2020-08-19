@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.readFully
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -40,7 +41,7 @@ class IntelAttestationService(private val isProd: Boolean, private val subscript
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Ocp-Apim-Subscription-Key", subscriptionKey)
             connection.outputStream.use {
-                objectMapper.writeValue(it, ReportRequest(isvEnclaveQuote = signedQuote.buffer.array()))
+                objectMapper.writeValue(it, ReportRequest(isvEnclaveQuote = signedQuote.buffer.getRemainingBytes(avoidCopying = true)))
             }
             if (connection.responseCode != HTTP_OK) {
                 throw IOException("Error response from Intel Attestation Service (${connection.responseCode}): " +

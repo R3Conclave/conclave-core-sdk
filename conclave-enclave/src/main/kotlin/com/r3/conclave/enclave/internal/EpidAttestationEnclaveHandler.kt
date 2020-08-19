@@ -1,9 +1,11 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxReportData
+import com.r3.conclave.common.internal.SgxTargetInfo
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
-import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
@@ -17,11 +19,10 @@ abstract class EpidAttestationEnclaveHandler(private val env: EnclaveEnvironment
     override fun connect(upstream: Sender): Sender = upstream
 
     override fun onReceive(connection: Sender, input: ByteBuffer) {
-        val quotingEnclaveTargetInfo = input.getRemainingBytes()
-        val report = ByteArray(SgxReport.size)
-        env.createReport(quotingEnclaveTargetInfo, reportData.buffer.array(), report)
-        connection.send(report.size, Consumer { buffer ->
-            buffer.put(report)
+        val quotingEnclaveTargetInfo = Cursor.read(SgxTargetInfo, input)
+        val report = env.createReport(quotingEnclaveTargetInfo, reportData)
+        connection.send(report.encoder.size, Consumer { buffer ->
+            buffer.put(report.buffer)
         })
     }
 }

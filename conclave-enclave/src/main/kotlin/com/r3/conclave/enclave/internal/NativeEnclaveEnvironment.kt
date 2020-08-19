@@ -50,8 +50,14 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
-    override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {
-        Native.createReport(targetInfoIn, reportDataIn, reportOut)
+    override fun createReport(targetInfo: ByteCursor<SgxTargetInfo>?, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport> {
+        val report = Cursor.allocate(SgxReport)
+        Native.createReport(
+                targetInfo?.buffer?.getRemainingBytes(avoidCopying = true),
+                reportData?.buffer?.getRemainingBytes(avoidCopying = true),
+                report.buffer.array()
+        )
+        return report
     }
 
     override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
@@ -117,8 +123,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
     private fun isDebugMode(): Boolean {
         val isEnclaveDebug = this.isEnclaveDebug
         return if (isEnclaveDebug == null) {
-            val report = Cursor.allocate(SgxReport)
-            createReport(null, null, report.buffer.array())
+            val report = createReport(null, null)
             val result = report[body][attributes][flags].isSet(SgxEnclaveFlags.DEBUG)
             this.isEnclaveDebug = result
             result

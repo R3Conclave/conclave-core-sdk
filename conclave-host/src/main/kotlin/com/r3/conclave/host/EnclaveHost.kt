@@ -183,7 +183,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
      * can be provided.
      *
-     * Note: This parameter is temporary and will be removed in future version.
+     * Note: This parameter is temporary and will be removed in a future version.
      *
      * @param attestationKey The private attestation key needed to access the attestation service. Please see
      * https://api.portal.trustedservices.intel.com/EPID-attestation for further details on how obtain one.

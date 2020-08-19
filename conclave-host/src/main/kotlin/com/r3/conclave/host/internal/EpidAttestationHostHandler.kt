@@ -60,11 +60,9 @@ class EpidAttestationHostHandler(
         }
 
         private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>): ByteCursor<SgxReport> {
-            quotingEnclaveTargetInfo.read().let {
-                upstream.send(it.remaining(), Consumer { buffer ->
-                    buffer.put(it)
-                })
-            }
+            upstream.send(quotingEnclaveTargetInfo.encoder.size, Consumer { buffer ->
+                buffer.put(quotingEnclaveTargetInfo.buffer)
+            })
             val reportRetrieved = stateManager.checkStateIs<State.ReportRetrieved>()
             return reportRetrieved.report
         }

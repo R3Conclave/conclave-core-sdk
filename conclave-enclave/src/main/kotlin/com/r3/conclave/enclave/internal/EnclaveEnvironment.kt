@@ -7,15 +7,12 @@ interface EnclaveEnvironment {
     val enclaveMode: EnclaveMode
 
     /**
-     * Create an SGX report.
-     * @param targetInfoIn optional information of the target enclave ([SgxTargetInfo]) if the report is to be used as part of local
-     *     attestation. An example is during quoting when the report is sent to the Quoting Enclave for signing.
-     * @param reportDataIn optional data to be included in the report ([SgxReportData]). If null the data area of the report will be 0.
-     * @param reportOut the byte array to put the report in ([SgxReport]). The size should be the return value of [SgxReport.size].
-     * sgx_status_t sgx_create_report(const sgx_target_info_t *target_info, const sgx_report_data_t *report_data, sgx_report_t *report)
-     * TODO change this to use ByteBuffers directly
+     * Create an [SgxReport] of the enclave.
+     * @param targetInfo Optional information of the target enclave if the report is to be used as part of local
+     * attestation. An example is during quoting when the report is sent to the Quoting Enclave for signing.
+     * @param reportData Optional data to be included in the report. If null the data area of the report will be 0.
      */
-    fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray)
+    fun createReport(targetInfo: ByteCursor<SgxTargetInfo>?, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport>
 
     /**
      * Fill [output] with indices in ([offset], [offset] + [length]) with random bytes.

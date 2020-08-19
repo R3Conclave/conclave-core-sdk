@@ -46,7 +46,7 @@ public interface Destroyable extends AutoCloseable {
 	void destroy();
 
 	@Override
-	default void close() throws Exception {
+	default void close() {
 		destroy();
 	}
 }

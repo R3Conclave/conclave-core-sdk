@@ -25,20 +25,16 @@ class MockEnclaveEnvironmentTest {
     fun createReport() {
         val env1 = createMockEnclaveEnvironment<EnclaveA>(isvProdId = 4, isvSvn = 3)
         val reportData = Random.nextBytes(SgxReportData.size)
-        val report1 = Cursor.allocate(SgxReport)
-        env1.createReport(null, reportData, report1.buffer.array())
-        with(report1[SgxReport.body]) {
-            assertThat(this[SgxReportBody.attributes][SgxAttributes.flags].isSet(SgxEnclaveFlags.DEBUG)).isTrue()
-            assertThat(this[SgxReportBody.isvProdId].read()).isEqualTo(4)
-            assertThat(this[SgxReportBody.isvSvn].read()).isEqualTo(3)
-            assertThat(this[SgxReportBody.reportData].bytes).isEqualTo(reportData)
-        }
+        val reportBody1 = env1.createReport(null, Cursor.wrap(SgxReportData, reportData))[SgxReport.body]
+        assertThat(reportBody1[SgxReportBody.attributes][SgxAttributes.flags].isSet(SgxEnclaveFlags.DEBUG)).isTrue()
+        assertThat(reportBody1[SgxReportBody.isvProdId].read()).isEqualTo(4)
+        assertThat(reportBody1[SgxReportBody.isvSvn].read()).isEqualTo(3)
+        assertThat(reportBody1[SgxReportBody.reportData].bytes).isEqualTo(reportData)
 
         val env2 = createMockEnclaveEnvironment<EnclaveB>(isvProdId = 5, isvSvn = 6)
-        val report2 = Cursor.allocate(SgxReport)
-        env2.createReport(null, reportData, report2.buffer.array())
-        assertThat(report2[SgxReport.body][SgxReportBody.cpuSvn]).isEqualTo(report1[SgxReport.body][SgxReportBody.cpuSvn])
-        assertThat(report2[SgxReport.body][SgxReportBody.mrenclave]).isNotEqualTo(report1[SgxReport.body][SgxReportBody.mrenclave])
+        val reportBody2 = env2.createReport(null, null)[SgxReport.body]
+        assertThat(reportBody2[SgxReportBody.cpuSvn]).isEqualTo(reportBody1[SgxReportBody.cpuSvn])
+        assertThat(reportBody2[SgxReportBody.mrenclave]).isNotEqualTo(reportBody1[SgxReportBody.mrenclave])
     }
 
     @ParameterizedTest(name = "{displayName} {argumentsWithNames}")

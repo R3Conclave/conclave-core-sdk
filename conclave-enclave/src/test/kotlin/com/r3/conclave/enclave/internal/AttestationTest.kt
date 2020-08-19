@@ -10,7 +10,6 @@ import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.EpidAttestationHostHandler
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.testing.BytesRecordingHandler
-import com.r3.conclave.utilities.internal.getBytes
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -54,14 +53,11 @@ class AttestationTest {
             override fun connect(upstream: Sender): Sender = upstream
 
             override fun onReceive(connection: Sender, input: ByteBuffer) {
-                val targetInfo = input.getBytes(SgxTargetInfo.size)
-                val reportData = input.getBytes(SgxReportData.size)
-
-                val reportBytes = ByteArray(SgxReport.size)
-                env.createReport(targetInfo, reportData, reportBytes)
-
-                connection.send(reportBytes.size, Consumer { buffer ->
-                    buffer.put(reportBytes)
+                val targetInfo = Cursor.read(SgxTargetInfo, input)
+                val reportData = Cursor.read(SgxReportData, input)
+                val report = env.createReport(targetInfo, reportData)
+                connection.send(report.encoder.size, Consumer { buffer ->
+                    buffer.put(report.buffer)
                 })
             }
         }

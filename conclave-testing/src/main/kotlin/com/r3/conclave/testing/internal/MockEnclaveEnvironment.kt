@@ -11,7 +11,6 @@ import com.r3.conclave.common.internal.KeyPolicy.NOISVPRODID
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
-import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.utilities.internal.digest
@@ -47,17 +46,18 @@ class MockEnclaveEnvironment(
     override val enclaveMode: EnclaveMode
         get() = EnclaveMode.MOCK
 
-    override fun createReport(targetInfoIn: ByteArray?, reportDataIn: ByteArray?, reportOut: ByteArray) {
-        val report = Cursor.wrap(SgxReport, reportOut)
+    override fun createReport(targetInfo: ByteCursor<SgxTargetInfo>?, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport> {
+        val report = Cursor.allocate(SgxReport)
         val body = report[body]
-        if (reportDataIn != null) {
-            body[reportData] = ByteBuffer.wrap(reportDataIn)
+        if (reportData != null) {
+            body[SgxReportBody.reportData] = reportData.buffer
         }
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(cpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
         body[SgxReportBody.isvProdId] = isvProdId
         body[SgxReportBody.isvSvn] = isvSvn
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
+        return report
     }
 
     override fun randomBytes(output: ByteArray, offset: Int, length: Int) {

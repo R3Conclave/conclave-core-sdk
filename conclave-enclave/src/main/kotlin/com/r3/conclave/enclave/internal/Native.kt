@@ -1,7 +1,6 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.internal.SgxKey128Bit
-import com.r3.conclave.common.internal.SgxKeyRequest
+import com.r3.conclave.common.internal.*
 
 /**
  * The Enclave JNI. We don't use System.loadLibrary, but instead rely on our custom dlsym to find the relevant symbols.
@@ -18,8 +17,10 @@ object Native {
     external fun jvmOcall(data: ByteArray)
 
     /**
-     * A wrapper of sgx_create_report.
-     * sgx_status_t sgx_create_report(const sgx_target_info_t *target_info, const sgx_report_data_t *report_data, sgx_report_t *report)
+     * Thin JNI wrapper around `sgx_create_report`.
+     * @param targetInfo The bytes of an optional [SgxTargetInfo] object.
+     * @param reportData The bytes of an optional [SgxReportData] object.
+     * @param reportOut Output buffer of at least size [SgxReport] for receiving the cryptographic report of the enclve.
      */
     external fun createReport(targetInfo: ByteArray?, reportData: ByteArray?, reportOut: ByteArray)
 
