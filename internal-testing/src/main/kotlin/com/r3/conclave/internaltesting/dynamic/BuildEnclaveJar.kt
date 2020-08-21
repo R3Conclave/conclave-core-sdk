@@ -1,4 +1,4 @@
-package com.r3.conclave.dynamictesting
+package com.r3.conclave.internaltesting.dynamic
 
 import com.r3.conclave.enclave.Enclave
 import java.io.File.pathSeparator

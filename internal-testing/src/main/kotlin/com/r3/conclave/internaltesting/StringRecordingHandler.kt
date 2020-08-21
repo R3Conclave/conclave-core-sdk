@@ -1,4 +1,4 @@
-package com.r3.conclave.testing
+package com.r3.conclave.internaltesting
 
 /**
  * A utility String-based enclave host that records all calls into a list.

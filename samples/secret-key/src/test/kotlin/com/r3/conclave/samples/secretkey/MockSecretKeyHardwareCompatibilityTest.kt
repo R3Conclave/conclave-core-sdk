@@ -5,10 +5,10 @@ import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.dynamictesting.EnclaveBuilder
-import com.r3.conclave.dynamictesting.EnclaveConfig
-import com.r3.conclave.dynamictesting.EnclaveType
-import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
+import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
+import com.r3.conclave.internaltesting.dynamic.EnclaveType
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost

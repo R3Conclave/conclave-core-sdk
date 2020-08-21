@@ -30,8 +30,7 @@ dependencies {
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
 
-    testImplementation project(":conclave-host")
-    testImplementation project(":enclave-testing")
+    testImplementation project(":internal-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
 }

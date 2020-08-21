@@ -5,7 +5,7 @@ import com.r3.conclave.common.internal.PlaintextAndEnvelope
 import com.r3.conclave.common.internal.handler.ExceptionSendingHandler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
-import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import org.junit.jupiter.api.AfterAll

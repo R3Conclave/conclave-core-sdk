@@ -41,9 +41,7 @@ include 'conclave-client'
 include 'conclave-testing'
 
 include 'enclave-utils'
-
-include 'enclave-testing'
-include 'enclave-dynamic-testing'
+include 'internal-testing'
 
 include 'containers:aesmd'
 include 'containers:sgxjvm-build'

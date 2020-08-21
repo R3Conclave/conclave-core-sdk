@@ -1,13 +1,13 @@
 package com.r3.conclave.enclave
 
 import com.r3.conclave.common.EnclaveCall
-import com.r3.conclave.dynamictesting.EnclaveBuilder
-import com.r3.conclave.dynamictesting.EnclaveConfig
-import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.kotlin.callEnclave
-import com.r3.conclave.testing.RecordingEnclaveCall
-import com.r3.conclave.testing.threadWithFuture
+import com.r3.conclave.internaltesting.RecordingEnclaveCall
+import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
+import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
+import com.r3.conclave.internaltesting.threadWithFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach

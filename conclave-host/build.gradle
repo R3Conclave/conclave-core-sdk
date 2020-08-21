@@ -49,8 +49,7 @@ dependencies {
     runtimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-host-shared:${rootProject.version}"
 
-    testImplementation project(":conclave-testing")
-    testImplementation project(":enclave-dynamic-testing")
+    testImplementation project(":internal-testing")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 

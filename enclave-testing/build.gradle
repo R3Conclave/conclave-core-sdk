@@ -1,8 +1,0 @@
-apply plugin: 'kotlin'
-
-dependencies {
-    api project(":conclave-enclave")
-
-    implementation project(":conclave-host")
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-}

@@ -1,4 +1,4 @@
-package com.r3.conclave.dynamictesting
+package com.r3.conclave.internaltesting.dynamic
 
 import java.io.ByteArrayOutputStream
 import java.io.File

@@ -3,9 +3,9 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationReport
+import com.r3.conclave.internaltesting.createSignedQuote
 import com.r3.conclave.mail.Curve25519KeyPairGenerator
 import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.testing.createSignedQuote
 import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.jupiter.api.Test
 

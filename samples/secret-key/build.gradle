@@ -4,8 +4,7 @@ plugins {
 
 dependencies {
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testImplementation "com.r3.conclave:conclave-testing"
-    testImplementation "com.r3.conclave:enclave-dynamic-testing"
+    testImplementation "com.r3.conclave:internal-testing"
     testImplementation "com.google.guava:guava:$guava_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"

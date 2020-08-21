@@ -1,8 +1,8 @@
 package com.r3.conclave.utils.classloaders
 
-import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.testing.expectWithin
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
+import com.r3.conclave.internaltesting.expectWithin
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test

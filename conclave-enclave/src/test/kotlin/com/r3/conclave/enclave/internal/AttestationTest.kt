@@ -4,12 +4,12 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
-import com.r3.conclave.dynamictesting.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.EpidAttestationHostHandler
 import com.r3.conclave.host.internal.Native
-import com.r3.conclave.testing.BytesRecordingHandler
+import com.r3.conclave.internaltesting.BytesRecordingHandler
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

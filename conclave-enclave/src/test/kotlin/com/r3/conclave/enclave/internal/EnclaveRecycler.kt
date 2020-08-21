@@ -2,8 +2,8 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.handler.Handler
-import com.r3.conclave.dynamictesting.EnclaveBuilder
-import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.NativeEnclaveHandle
 import java.io.Closeable

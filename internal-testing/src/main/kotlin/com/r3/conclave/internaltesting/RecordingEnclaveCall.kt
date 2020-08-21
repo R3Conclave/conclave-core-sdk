@@ -1,4 +1,4 @@
-package com.r3.conclave.testing
+package com.r3.conclave.internaltesting
 
 import com.r3.conclave.common.EnclaveCall
 

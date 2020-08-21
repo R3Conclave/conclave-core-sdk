@@ -1,9 +1,9 @@
 import avian.test.avian.OcallReadResourceBytes
 import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.utilities.internal.readFully
-import com.r3.conclave.dynamictesting.EnclaveBuilder
-import com.r3.conclave.dynamictesting.EnclaveConfig
-import com.r3.conclave.dynamictesting.TestEnclaves
+import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
+import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
+import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.kotlin.callEnclave
 import org.junit.jupiter.api.Test

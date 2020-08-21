@@ -3,8 +3,7 @@ plugins {
 }
 
 dependencies {
-    api project(":enclave-testing")
-    api project(":conclave-host")
+    api project(":conclave-testing")
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
@@ -22,7 +21,6 @@ task generateEnclaveDeps {
     outputs.file(outputFile)
     doLast {
         outputFile.withWriter { out ->
-            out.writeLine project(":enclave-testing").jar.archiveFileName.get()
             out.writeLine project(":conclave-enclave").jar.archiveFileName.get()
             project(":conclave-enclave").configurations.runtimeClasspath.each {
                 out.writeLine it.name

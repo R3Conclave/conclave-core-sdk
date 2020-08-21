@@ -2,10 +2,13 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.testing.*
+import com.r3.conclave.internaltesting.RootHandler
+import com.r3.conclave.internaltesting.StringHandler
+import com.r3.conclave.internaltesting.StringRecordingHandler
+import com.r3.conclave.internaltesting.StringSender
 import com.r3.conclave.testing.internal.MockEnclaveHandle
-import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
