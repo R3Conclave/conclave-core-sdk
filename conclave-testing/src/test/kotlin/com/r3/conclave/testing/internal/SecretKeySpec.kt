@@ -1,4 +1,4 @@
-package com.r3.conclave.samples.secretkey
+package com.r3.conclave.testing.internal
 
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SGXEnclaveSecurityInfo

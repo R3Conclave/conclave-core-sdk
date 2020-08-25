@@ -38,8 +38,7 @@ ext {
 import groovy.io.FileType
 
 import static org.gradle.api.JavaVersion.*
-// NB: For some reason IntelliJ thinks this import line is in error, but Gradle accepts it.
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.*
 
 // This code allows the user to run gradle like this: ./gradlew -PexcludeNative
 // and the native components will be downloaded instead of built locally. This
@@ -109,7 +108,16 @@ subprojects {
     }
 
     tasks.withType(Test) {
-        useJUnitPlatform()
+        useJUnitPlatform {
+            if (findProperty("hardwareTests") == null) {
+                excludeTags("hardware")
+            } else {
+                includeTags("hardware")
+                systemProperty 'conclave.test.spid', '***REMOVED***'
+                systemProperty 'conclave.test.attestation-key', '***REMOVED***'
+            }
+        }
+
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
         failFast = true
         testLogging {
@@ -370,12 +378,6 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':graal',
                 description: 'Graal distribution including SubstrateVM and tools'
-        ),
-        // TODO This should not be published. Anything needing internal-testing is not a proper sample (which should only
-        //      use the public Conclave API).
-        new PublishedProject(
-                projectPath: ':internal-testing',
-                description: 'Internal testing framework'
         )
 ]
 

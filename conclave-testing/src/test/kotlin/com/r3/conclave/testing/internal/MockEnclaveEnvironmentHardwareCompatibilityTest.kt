@@ -1,26 +1,23 @@
-package com.r3.conclave.samples.secretkey
+package com.r3.conclave.testing.internal
 
 import com.google.common.collect.Sets
 import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.enclave.internal.EnclaveEnvironment
+import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.internaltesting.HardwareTest
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.EnclaveType
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
-import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.testing.MockHost
-import com.r3.conclave.testing.internal.MockEnclaveEnvironment
-import com.r3.conclave.testing.internal.MockInternals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import kotlin.random.Random
@@ -29,17 +26,8 @@ import kotlin.random.Random
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
-class MockSecretKeyHardwareCompatibilityTest {
+class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest() {
     companion object {
-        private val spid = OpaqueBytes.parse(System.getProperty("conclave.samples.spid"))
-        private val attestationKey = checkNotNull(System.getProperty("conclave.samples.attestation-key"))
-
-        @BeforeAll
-        @JvmStatic
-        fun debugOnly() {
-            assumeTrue(System.getProperty("sgx.mode").toLowerCase() == "debug")
-        }
-
         @JvmField
         @RegisterExtension
         val testEnclaves = TestEnclaves()

@@ -6,7 +6,7 @@ plugins {
 }
 
 import static org.gradle.api.JavaVersion.*
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.*
 
 def modulesToSubstitute = [
         'com.r3.conclave:native-enclave-simulation',

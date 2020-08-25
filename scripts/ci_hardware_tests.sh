@@ -15,6 +15,9 @@ teardownAESM
 buildAESMImage $SCRIPT_DIR/../containers/aesmd/src/docker
 startAESMContainer
 
+# Run the hardware unit tests.
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE -PhardwareTests test -i ${TEST_OPTS:-}"
+
 # Run the samples tests.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples \
     && \$GRADLE -Psgx_mode=Debug test -i ${TEST_OPTS:-}"
