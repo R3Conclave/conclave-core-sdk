@@ -32,6 +32,7 @@ else
 fi
 
 mkdir -p ${HOME}/.gradle
+mkdir -p ${HOME}/.mx
 mkdir -p ${HOME}/.container
 
 CODE_HOST_DIR=$PWD
