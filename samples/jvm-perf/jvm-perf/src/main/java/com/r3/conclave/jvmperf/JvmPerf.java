@@ -16,7 +16,7 @@ public class JvmPerf {
         try {
             EnclaveHost.checkPlatformSupportsEnclaves(true);
         } catch (EnclaveLoadException e) {
-            System.out.println("This platform currently only supports enclaves in simulation mode.");
+            System.out.println("This platform does not support hardware enclaves.");
             System.out.println("Please ensure you run only simulation benchmarks through the use of the 'runtime' parameter:");
             System.out.println("-p runtime=\"avian-simulation,graalvm-simulation,host\"");
         }

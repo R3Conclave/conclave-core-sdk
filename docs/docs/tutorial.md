@@ -65,7 +65,7 @@ tar xvf host.tar
 If your Linux machine doesn't have SGX, you should see something like this:
 
 ```text
-This platform currently only supports enclaves in simulation mode: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the CPU in this system
+This platform does not support hardware enclaves: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the CPU in this system
 This attestation requires 2163 bytes.
 Remote attestation for enclave F86798C4B12BE12073B87C3F57E66BCE7A541EE3D0DDA4FE8853471139C9393F:
   - Mode: SIMULATION

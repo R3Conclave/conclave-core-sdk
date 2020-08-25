@@ -33,7 +33,7 @@ public class Host {
             EnclaveHost.checkPlatformSupportsEnclaves(true);
             System.out.println("This platform supports enclaves in simulation, debug and release mode.");
         } catch (EnclaveLoadException e) {
-            System.out.println("This platform currently only supports enclaves in simulation mode: " + e.getMessage());
+            System.out.println("This platform does not support hardware enclaves: " + e.getMessage());
         }
 
         // Enclaves get interesting when remote clients can talk to them.

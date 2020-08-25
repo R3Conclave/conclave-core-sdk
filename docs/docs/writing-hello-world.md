@@ -357,8 +357,10 @@ public class Host {
 ```
 
 At first we will be building and running our enclave in simulation mode. This does not require the platform 
-hardware to support SGX. However, when we want to load either a debug or release build of the enclave we need 
-to ensure the platform supports SGX.
+hardware to support SGX. However simulation mode does require us to be using Linux. If we are not using 
+Linux as our host OS then we can use a Linux container or virtual machine. Alternatively we could
+use [mock mode](writing-hello-world.md#mock) instead of simulation mode. When we want to switch to loading
+either a debug or release build of the enclave we need to ensure the platform supports SGX.
 
 By adding the code below to the main method we can determine whether the platform can load debug and release 
 enclaves. This method reports the actual hardware status even if you are currently working with simulation 
@@ -368,8 +370,10 @@ If SGX is not supported the function throws an exception which describes the rea
 common reasons why SGX may not be supported including:
 
 1. The CPU or the system BIOS does not support SGX.
-2. SGX is disabled in the BIOS and must be manually enabled by the user.
-3. SGX is disabled but can be enabled in software.
+2. The host operating system is Windows or Mac OS. Conclave currently only supports loading
+   enclaves in simulation, debug or release modes on Linux.
+3. SGX is disabled in the BIOS and must be manually enabled by the user.
+4. SGX is disabled but can be enabled in software.
 
 If SGX is disabled but can be enabled in software the code below attempts to automatically enable SGX support 
 by specifying the 'true' parameter. It might be necessary to run this application with root access and/or reboot 
@@ -380,7 +384,7 @@ the system in order to successfully enable SGX. The exception message will descr
             EnclaveHost.checkPlatformSupportsEnclaves(true);
             System.out.println("This platform supports enclaves in simulation, debug and release mode.");
         } catch (EnclaveLoadException e) {
-            System.out.println("This platform currently only supports enclaves in simulation mode: " + e.getMessage());
+            System.out.println("This platform does not support hardware enclaves: " + e.getMessage());
         }
 ```
 

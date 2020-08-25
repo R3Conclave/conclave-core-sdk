@@ -83,6 +83,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             try {
                 stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
                 return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
+            } catch (e: UnsatisfiedLinkError) {
+                // We get an unsatisifed link error if the native library could not be loaded on
+                // the current platform - this will happen if the user tries to load an enclave
+                // on a platform other than Linux.
+                enclaveFile.deleteQuietly()
+                throw EnclaveLoadException("Enclaves may only be loaded on Linux hosts.")
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
                 throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
@@ -150,6 +156,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 NativeShared.checkPlatformSupportsEnclaves(enableSupport);
             } catch (e: EnclaveLoadException) {
                 throw e
+            } catch (e: UnsatisfiedLinkError) {
+                // We get an unsatisifed link error if the native library could not be loaded on
+                // the current platform - this will happen if the user tries to load an enclave
+                // on a platform other than Linux.
+                throw EnclaveLoadException("Enclaves may only be loaded on Linux hosts.")
             } catch (e: Exception) {
                 throw EnclaveLoadException("Unable to check platform support", e)
             }
