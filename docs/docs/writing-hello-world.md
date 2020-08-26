@@ -205,7 +205,8 @@ conclave {
 The runtime setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
 `graalvm_native_image`. If the setting is omitted then it defaults to `avian`. See
 [Architecture overview](architecture.md) for details on the differences between the two supported runtime
-environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. We'll stick with 
+environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. At the moment
+Conclave only supports building enclaves with the `graalvm_native_image` value on Linux. We'll stick with 
 Avian for now. 
 
 The product ID is an arbitrary number that can be used to distinguish between different enclaves produced by the same

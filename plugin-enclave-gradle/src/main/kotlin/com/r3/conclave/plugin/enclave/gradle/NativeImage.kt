@@ -5,6 +5,8 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import org.gradle.api.GradleException
+import org.gradle.internal.os.OperatingSystem
 import java.io.File
 import java.nio.file.Path
 import javax.inject.Inject
@@ -336,6 +338,11 @@ open class NativeImage @Inject constructor(
     }
 
     override fun action() {
+        // Currently we only support native-image on Linux.
+        if (!OperatingSystem.current().isLinux) {
+            throw GradleException("Sorry but Conclave currently only supports building GraalVM native-image based enclaves on Linux. Try using 'runtime = avian' in your enclave build.gradle file instead. See https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module")
+        }
+
         GenerateLinkerScript.writeToFile(linkerScript)
         var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
         if (!nativeImageFile.exists()) {
