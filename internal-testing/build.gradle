@@ -14,6 +14,7 @@ dependencies {
     runtimeOnly "com.r3.conclave:native-enclave-debug:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-enclave-release:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-sign-tool:${rootProject.version}"
+    runtimeOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 }
 
 task generateEnclaveDeps {
@@ -23,6 +24,9 @@ task generateEnclaveDeps {
         outputFile.withWriter { out ->
             out.writeLine project(":conclave-enclave").jar.archiveFileName.get()
             project(":conclave-enclave").configurations.runtimeClasspath.each {
+                out.writeLine it.name
+            }
+            project(":conclave-common").configurations.compileOnly.each {
                 out.writeLine it.name
             }
         }

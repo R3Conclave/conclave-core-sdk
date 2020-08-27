@@ -6,6 +6,10 @@ import com.r3.conclave.host.EnclaveHost.MailCallbacks
 import com.r3.conclave.mail.EnclaveMailId
 import java.io.DataOutputStream
 
+// TODO These extension methods are no longer needed as the shading of Kotlin in the Conclave SDK somehow makes it redundant.
+//      (as demonstrated by the kotlin-enclave integration test). The only code affected by removing these are the internal
+//      tests. Kotlin 1.4 provides better SAM support so remove this when we upgrade to 1.4 to reduce code churn.
+
 /**
  * Passes the given byte array to the enclave. The format of the byte
  * arrays are up to you but will typically use some sort of serialization

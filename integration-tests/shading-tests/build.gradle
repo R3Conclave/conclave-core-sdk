@@ -1,0 +1,11 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    // This project must NOT have Kotlin and Jackson as dependencies.
+    testImplementation "com.r3.conclave:conclave-client:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}

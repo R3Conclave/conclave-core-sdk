@@ -1,0 +1,23 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.conclave.enclave'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.r3.conclave:conclave-enclave"
+
+    // The test will act as the host and client.
+
+    testImplementation "com.r3.conclave:conclave-host"
+    testImplementation "com.r3.conclave:conclave-client"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    testRuntimeOnly project(path: ":kotlin-enclave", configuration: "simulation")
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+}

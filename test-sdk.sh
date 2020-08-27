@@ -12,9 +12,15 @@ if [ "${1:-}" == "hardware" ]; then
 fi
 
 echo
+echo Running the integration tests
+echo
+cd integration-tests
+./gradlew --stacktrace $GRADLE_ARGS test
+
+echo
 echo Now trying to build and test the hello-world sample
 echo
-cd build/sdk/hello-world
+cd ../build/sdk/hello-world
 ./gradlew --stacktrace $GRADLE_ARGS host:test
 ./gradlew -q $GRADLE_ARGS host:installDist
 ./host/build/install/host/bin/host $SPID $AK &

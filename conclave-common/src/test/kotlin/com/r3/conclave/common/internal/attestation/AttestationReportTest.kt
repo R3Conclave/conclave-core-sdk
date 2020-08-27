@@ -1,7 +1,6 @@
 package com.r3.conclave.common.internal.attestation
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.Cursor
@@ -57,7 +56,7 @@ class AttestationReportTest {
             """.trimIndent()
 
 
-        val report = mapper.readValue<AttestationReport>(json)
+        val report = mapper.readValue(json, AttestationReport::class.java)
         assertThat(report.id).isEqualTo("165171271757108173876306223827987629752")
         assertThat(report.timestamp).isEqualTo(ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant())
         assertThat(report.version).isEqualTo(3)
@@ -123,7 +122,7 @@ class AttestationReportTest {
             }
             """.trimIndent()
 
-        val report = mapper.readValue<AttestationReport>(json)
+        val report = mapper.readValue(json, AttestationReport::class.java)
         assertThat(report.id).isEqualTo("165171271757108173876306223827987629752")
         assertThat(report.timestamp).isEqualTo(ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant())
         assertThat(report.version).isEqualTo(3)

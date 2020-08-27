@@ -1,0 +1,20 @@
+pluginManagement {
+    gradle.ext.conclave_version = System.getenv('PROJECT_VERSION') ?: '0.4-SNAPSHOT'
+
+    repositories {
+        maven {
+            url = "../build/sdk/repo"
+        }
+        // Add standard repositories back.
+        gradlePluginPortal()
+        jcenter()
+        mavenCentral()
+    }
+
+    plugins {
+        id 'com.r3.conclave.enclave' version gradle.conclave_version apply false
+    }
+}
+
+include 'shading-tests'
+include 'kotlin-enclave'

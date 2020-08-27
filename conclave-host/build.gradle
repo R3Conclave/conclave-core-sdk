@@ -1,23 +1,6 @@
 plugins {
     id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.github.johnrengelman.shadow'
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            // Manually remove any Jackson dependencies from the POM as they're shaded into the jar.
-            pom.withXml {
-                Node pomNode = asNode()
-                pomNode.dependencies.'*'.findAll() {
-                    it.groupId.text().startsWith('com.fasterxml.jackson.')
-                }.each() {
-                    it.parent().remove(it)
-                }
-            }
-        }
-    }
 }
 
 // TODO Use Zulu build with EC bug fix, or wait until they release their next JDK 11 version
@@ -33,12 +16,13 @@ test {
 dependencies {
     api project(":conclave-common")
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    // Needed to parse the JSON response from the IAS
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+
     implementation "io.github.classgraph:classgraph:$classgraph_version"
     // Logging using the SLF4J API
     implementation "org.slf4j:slf4j-api:$slf4j_version"
-    // Needed to parse the JSON response from the IAS
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // Native libraries for creating and communicating with an enclave.
     // TODO There's really no need to include all three dependencies. The host can only use the one that matches with
@@ -56,11 +40,4 @@ dependencies {
     // Log4J for the runtime logging engine. We don't specify this as a production dependency to allow the client code
     // to specify their own binding.
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-}
-
-// We don't need to bundle anything here, just rewrite our Jackson imports to use the shaded version provided by conclave-common.
-shadowJar {
-    archiveClassifier = ''
-    configurations = []
-    relocate 'com.fasterxml.jackson', 'com.r3.conclave.jackson'
 }

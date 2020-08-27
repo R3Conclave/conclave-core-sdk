@@ -11,6 +11,9 @@ import com.r3.conclave.common.EnclaveCall
  *
  * @return The bytes returned from the host's [EnclaveCall].
  */
+// TODO This extension method is no longer needed as the shading of Kotlin in the Conclave SDK somehow makes it redundant.
+//      (as demonstrated by the kotlin-enclave integration test). The only code affected by removing this are the internal
+//      tests. Kotlin 1.4 provides better SAM support so remove this when we upgrade to 1.4 to reduce code churn.
 fun Enclave.callUntrustedHost(bytes: ByteArray, callback: (ByteArray) -> ByteArray?): ByteArray? {
     return callUntrustedHost(bytes, EnclaveCall(callback))
 }

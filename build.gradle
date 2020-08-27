@@ -16,10 +16,13 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
-// docs/sdk-extras/hello-world/gradle.properties must also be updated
-// samples/build.gradle, samples/settings.gradle must also be updated
-// enclave-jvm-tester/build.gradle and settings.gradle must also be updated
-// 0.3-SNAPSHOT = "the release preparing for beta 3"
+// Make sure to also update the following:
+// * docs/sdk-extras/hello-world/gradle.properties
+// * integration-tests/settings.gradle
+// * samples/build.gradle
+// * samples/settings.gradle
+// * enclave-jvm-tester/build.gradle
+// * enclave-jvm-tester/settings.gradle
 def projectVersion = System.getenv('PROJECT_VERSION')
 version = projectVersion != null && !projectVersion.empty
         ? projectVersion : '0.4-SNAPSHOT'
@@ -397,6 +400,51 @@ if (includeNative) {
         def description = published.description
         project.pluginManager.apply('java')
         project.pluginManager.apply('maven-publish')
+        // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
+        // which might use different versions of these libraries.
+        if (published.projectPath.startsWith(":conclave-")) {
+            project.pluginManager.apply('com.github.johnrengelman.shadow')
+            // Shaded dependencies should not be added to the runtime classpath so they are declared as compileOnly.
+            // However compileOnly does not extend to the test configuration so we add that.
+            project.configurations {
+                testImplementation.extendsFrom(compileOnly)
+            }
+            project.shadowJar {
+                if (project.name == "conclave-mail" || project.name == "conclave-common") {
+                    // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
+                    // dependencies are in the compileOnly configuration.
+                    configurations = [ project.configurations.compileOnly ]
+                    exclude '**/pom.xml'
+                    exclude '**/pom.properties'
+                    exclude 'module-info.class'
+                    mergeServiceFiles()
+                    if (project.name == "conclave-mail") {
+                        // Only conclave-mail, as the root in the dependency tree, will contain the shaded kotlin. Everything
+                        // else depends on conclave-mail (transitively) and so will inherit the shaded version.
+                        dependencies {
+                            it.include(dependency("org.jetbrains.kotlin:"))
+                        }
+                        exclude 'META-INF/kotlin-*.kotlin_module'
+                        exclude '**/*.kotlin_metadata'
+                        exclude '**/*.kotlin_builtins'
+                    } else {
+                        // Only conclave-common needs to contain the shaded Jackson library. Anything else that needs Jackson,
+                        // e.g. conclave-host, can inherit this shaded version.
+                        dependencies {
+                            it.include(dependency("com.fasterxml.jackson.*:"))
+                        }
+                    }
+                } else {
+                    // The remaining modules are not shading anything so we turn it off.
+                    configurations = []
+                }
+                // Everyone needs to have their import lines modified to the new shaded ones.
+                relocate 'com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson'
+                relocate 'kotlin', 'com.r3.conclave.shaded.kotlin'
+                // Replace the output of the "jar" task with this one.
+                archiveClassifier = ''
+            }
+        }
         project.publishing {
             publications {
                 maven(MavenPublication) {

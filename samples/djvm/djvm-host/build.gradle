@@ -11,6 +11,11 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    // As Jackson is shaded in as part of the Conclave SDK it's not a transitive dependency and so must be added in here
+    // to enable the test to work when the samples are run as a composite build.
+    testRuntimeOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    testRuntimeOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 }
 
 test {

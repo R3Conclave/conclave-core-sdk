@@ -1,8 +1,10 @@
 package com.r3.conclave.common.internal.attestation
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.*
@@ -12,10 +14,12 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuote
+import com.r3.conclave.common.internal.SgxSignedQuote
 import java.time.Instant
 
 /**
@@ -70,46 +74,60 @@ import java.time.Instant
  * This is only populated if [isvEnclaveQuoteStatus] is either [QuoteStatus.GROUP_OUT_OF_DATE], [QuoteStatus.CONFIGURATION_NEEDED],
  * [QuoteStatus.SW_HARDENING_NEEDED] or [QuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED].
  */
+// We could avoid the redundant usage of @JsonProperty if we used the Kotlin Jackson module. However that makes shading
+// Kotlin more difficult and so we just put up with this minor boilerplate.
 @JsonInclude(NON_NULL)
-data class AttestationReport(
+data class AttestationReport @JsonCreator constructor(
+        @JsonProperty("id")
         val id: String,
 
+        @JsonProperty("isvEnclaveQuoteStatus")
         val isvEnclaveQuoteStatus: QuoteStatus,
 
+        @JsonProperty("isvEnclaveQuoteBody")
         @JsonSerialize(using = SgxQuoteSerializer::class)
         @JsonDeserialize(using = SgxQuoteDeserializer::class)
         val isvEnclaveQuoteBody: ByteCursor<SgxQuote>,
 
+        @JsonProperty("platformInfoBlob")
         @JsonSerialize(using = ToStringSerializer::class)
         @JsonDeserialize(using = Base16Deserializer::class)
         val platformInfoBlob: OpaqueBytes? = null,
 
+        @JsonProperty("revocationReason")
         val revocationReason: Int? = null,
 
+        @JsonProperty("pseManifestStatus")
         val pseManifestStatus: ManifestStatus? = null,
 
+        @JsonProperty("pseManifestHash")
         @JsonSerialize(using = ToStringSerializer::class)
         @JsonDeserialize(using = Sha256Deserializer::class)
         val pseManifestHash: SHA256Hash? = null,
 
+        @JsonProperty("nonce")
         val nonce: String? = null,
 
+        @JsonProperty("epidPseudonym")
         @JsonSerialize(using = OpaqueBytesSerializer::class)
         @JsonDeserialize(using = OpaqueBytesDeserializer::class)
         val epidPseudonym: OpaqueBytes? = null,
 
+        @JsonProperty("advisoryURL")
         val advisoryURL: String? = null,
 
+        @JsonProperty("advisoryIDs")
         val advisoryIDs: List<String>? = null,
 
+        @JsonProperty("timestamp")
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS", timezone = "UTC")
         val timestamp: Instant,
 
+        @JsonProperty("version")
         val version: Int
 ) {
     companion object {
         fun register(objectMapper: ObjectMapper): ObjectMapper {
-            objectMapper.registerModule(KotlinModule())
             objectMapper.registerModule(JavaTimeModule())
             return objectMapper
         }

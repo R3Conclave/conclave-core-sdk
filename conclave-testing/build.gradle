@@ -7,7 +7,7 @@ dependencies {
     api project(":conclave-enclave")
     api project(":conclave-host")
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     testImplementation project(":internal-testing")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
