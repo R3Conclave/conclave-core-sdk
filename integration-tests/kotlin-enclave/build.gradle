@@ -18,6 +18,6 @@ dependencies {
 }
 
 conclave {
-    productID = 1
-    revocationLevel = 0
+    productID = 100
+    revocationLevel = 2
 }
