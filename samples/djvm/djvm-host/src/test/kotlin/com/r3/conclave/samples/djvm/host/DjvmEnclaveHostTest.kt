@@ -14,8 +14,8 @@ class DjvmEnclaveHostTest {
         @BeforeAll
         @JvmStatic
         fun start() {
-            val spid = OpaqueBytes.parse(System.getProperty("conclave.samples.spid"))
-            val attestationKey = checkNotNull(System.getProperty("conclave.samples.attestation-key"))
+            val spid = OpaqueBytes.parse(System.getProperty("conclave.spid"))
+            val attestationKey = checkNotNull(System.getProperty("conclave.attestation-key"))
             enclaveHost.start(spid, attestationKey)
             enclaveHost.loadJarIntoEnclave(Paths.get(System.getProperty("user-jar.path")))
         }

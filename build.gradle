@@ -1,12 +1,13 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.61' apply false
     id 'com.github.johnrengelman.shadow' version '6.0.0' apply false
-    id 'org.akhikhl.gretty' version '2.0.0' apply false
     id "com.github.ben-manes.versions" version "0.27.0"
     id 'base'
     id 'idea'
     id 'org.jetbrains.dokka' version '0.10.1'
 }
+
+apply from: 'versions.gradle'
+apply from: 'common.gradle'
 
 repositories {
     jcenter()
@@ -16,17 +17,6 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
-// Make sure to also update the following:
-// * docs/sdk-extras/hello-world/gradle.properties
-// * integration-tests/settings.gradle
-// * samples/build.gradle
-// * samples/settings.gradle
-// * enclave-jvm-tester/build.gradle
-// * enclave-jvm-tester/settings.gradle
-def projectVersion = System.getenv('PROJECT_VERSION')
-version = projectVersion != null && !projectVersion.empty
-        ? projectVersion : '0.4-SNAPSHOT'
-
 ext {
     environment = createEnvironment(
             'OBLIVIUM_MAVEN_URL',
@@ -35,13 +25,9 @@ ext {
             'OBLIVIUM_MAVEN_PASSWORD',
             'OBLIVIUM_CONTAINER_REGISTRY_URL'
     )
-    oblivium_dependency_version = project.version.toString()
 }
 
 import groovy.io.FileType
-
-import static org.gradle.api.JavaVersion.*
-import org.jetbrains.kotlin.gradle.tasks.*
 
 // This code allows the user to run gradle like this: ./gradlew -PexcludeNative
 // and the native components will be downloaded instead of built locally. This
@@ -74,9 +60,6 @@ if (buildDirLocationOverride != null) {
 }
 
 subprojects {
-    group = "com.r3.conclave"
-    version = rootProject.version
-
     repositories {
         mavenCentral()
         jcenter()
@@ -96,43 +79,13 @@ subprojects {
         reproducibleFileOrder = true
     }
 
-    tasks.withType(JavaCompile) {
-        sourceCompatibility = VERSION_1_8
-        targetCompatibility = VERSION_1_8
-    }
-
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = VERSION_1_8
-            apiVersion = '1.3'
-            languageVersion = '1.3'
-            freeCompilerArgs = [ '-Xjvm-default=enable', '-java-parameters' ]
-        }
-    }
-
     tasks.withType(Test) {
         useJUnitPlatform {
             if (findProperty("hardwareTests") == null) {
                 excludeTags("hardware")
             } else {
                 includeTags("hardware")
-                systemProperty 'conclave.test.spid', '***REMOVED***'
-                systemProperty 'conclave.test.attestation-key', '***REMOVED***'
             }
-        }
-
-        systemProperty 'java.io.tmpdir', buildDir.absolutePath
-        failFast = true
-        testLogging {
-            exceptionFormat = 'full'
-            showStandardStreams = true
-        }
-
-        beforeTest { descriptor ->
-            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
-        afterTest { descriptor ->
-            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
         }
     }
 
@@ -483,10 +436,6 @@ idea {
                 file("$projectDir/scripts/build")
         ]
     }
-}
-
-wrapper {
-    distributionType = Wrapper.DistributionType.ALL
 }
 //endregion
 

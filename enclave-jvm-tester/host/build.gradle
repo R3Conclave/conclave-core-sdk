@@ -23,8 +23,6 @@ tasks.withType(Test) {
 
 test {
     maxHeapSize = "8g"
-    systemProperty 'conclave.spid', '***REMOVED***'
-    systemProperty 'conclave.attestation-key', '***REMOVED***'
     dependsOn ':tests:maths:shadowJar', ':djvm:djvm-tests:shadowJar'
     doFirst {
         systemProperty 'maths-tests-jar.path', tasks.getByPath(':tests:maths:shadowJar').outputs.files.asPath

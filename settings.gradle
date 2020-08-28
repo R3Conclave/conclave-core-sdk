@@ -1,3 +1,11 @@
+pluginManagement {
+    apply from: 'versions.gradle'
+    
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false
+    }
+}
+
 rootProject.name = "sgxjvm"
 
 def includeNative = true

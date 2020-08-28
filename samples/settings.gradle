@@ -1,4 +1,6 @@
 pluginManagement {
+    apply from: '../versions.gradle'
+
     repositories {
         maven {
             gradlePluginPortal()
@@ -15,7 +17,7 @@ pluginManagement {
         def version = System.getenv('PROJECT_VERSION')
         if (version != null) {
             if (version.empty) {
-                version = "0.4-SNAPSHOT"
+                version = default_conclave_version
             }
             eachPlugin {
                 if (requested.id.id == 'com.r3.conclave.enclave') {
@@ -23,6 +25,11 @@ pluginManagement {
                 }
             }
         }
+    }
+
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false
+        id 'com.google.protobuf' version protobuf_plugin_version apply false
     }
 }
 

@@ -1,12 +1,9 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.61' apply false
     id 'base'
 }
 
-import static org.gradle.api.JavaVersion.*
-import org.jetbrains.kotlin.gradle.tasks.*
-
-ext.conclave_version = gradle.conclave_version
+apply from: '../versions.gradle'
+apply from: '../common.gradle'
 
 subprojects {
     repositories {
@@ -14,31 +11,5 @@ subprojects {
             url = "../../build/sdk/repo"
         }
         mavenCentral()
-    }
-
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = VERSION_1_8
-            apiVersion = '1.3'
-            languageVersion = '1.3'
-            freeCompilerArgs = [ '-Xjvm-default=enable', '-java-parameters' ]
-        }
-    }
-
-    tasks.withType(Test) {
-        useJUnitPlatform()
-
-        systemProperty 'java.io.tmpdir', buildDir.absolutePath
-        testLogging {
-            exceptionFormat = 'full'
-            showStandardStreams = true
-        }
-
-        beforeTest { descriptor ->
-            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
-        afterTest { descriptor ->
-            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
     }
 }

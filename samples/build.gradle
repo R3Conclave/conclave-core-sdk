@@ -1,12 +1,10 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.61' apply false
-    id 'com.google.protobuf' version '0.8.9' apply false
     id 'com.r3.conclave.enclave' apply false
     id "com.github.ben-manes.versions" version "0.27.0"
 }
 
-import static org.gradle.api.JavaVersion.*
-import org.jetbrains.kotlin.gradle.tasks.*
+apply from: '../versions.gradle'
+apply from: '../common.gradle'
 
 def modulesToSubstitute = [
         'com.r3.conclave:native-enclave-simulation',
@@ -30,8 +28,6 @@ def modulesToSubstitute = [
 
 def sgxModeProperty = project.property('sgx_mode')
 subprojects {
-    group = "com.r3.conclave"
-
     ext {
         sgxMode = sgxModeProperty
     }
@@ -48,38 +44,8 @@ subprojects {
         }
     }
 
-    tasks.withType(JavaCompile) {
-        sourceCompatibility = VERSION_1_8
-        targetCompatibility = VERSION_1_8
-    }
-
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = VERSION_1_8
-            apiVersion = '1.3'
-            languageVersion = '1.3'
-            freeCompilerArgs += [
-                '-Xjvm-default=enable',
-                '-XXLanguage:+NewInference'
-            ]
-        }
-    }
-
     tasks.withType(Test) {
-        useJUnitPlatform()
-        testLogging {
-            exceptionFormat = 'full'
-            showStandardStreams = true
-        }
-        beforeTest { descriptor ->
-            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
-        afterTest { descriptor ->
-            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
         systemProperty 'sgx.mode', sgxModeProperty
-        systemProperty 'conclave.samples.spid', '***REMOVED***'
-        systemProperty 'conclave.samples.attestation-key', '***REMOVED***'
         reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
     }
@@ -88,7 +54,7 @@ subprojects {
         def version = System.getenv('PROJECT_VERSION')
         if (version != null) {
             if (version.empty) {
-                version = "0.4-SNAPSHOT"
+                version = default_conclave_version
             }
             all {
                 for (submodule in modulesToSubstitute) {
@@ -99,8 +65,4 @@ subprojects {
             }
         }
     }
-}
-
-wrapper {
-    distributionType = Wrapper.DistributionType.ALL
 }

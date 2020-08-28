@@ -1,12 +1,9 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-import static org.gradle.api.JavaVersion.VERSION_1_8
-
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.30' apply false
-    id 'com.google.protobuf' version '0.8.12' apply false
     id 'com.r3.conclave.enclave' apply false
 }
+
+apply from: '../versions.gradle'
+apply from: '../common.gradle'
 
 def modulesToSubstitute = [
         'com.r3.conclave:native-enclave-simulation',
@@ -47,40 +44,17 @@ subprojects {
         }
     }
 
-    tasks.withType(JavaCompile) {
-        sourceCompatibility = VERSION_1_8
-        targetCompatibility = VERSION_1_8
-    }
-
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = VERSION_1_8
-            apiVersion = '1.3'
-            languageVersion = '1.3'
-            freeCompilerArgs = [ '-Xjvm-default=enable' ]
-        }
-    }
-
     tasks.withType(Test) {
-        useJUnitPlatform()
-
         systemProperty 'sgx.mode', sgxModeProperty
         reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
         reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
-
-        beforeTest { descriptor ->
-            logger.lifecycle("Starting> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
-        afterTest { descriptor ->
-            logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
-        }
     }
 
     configurations {
         def version = System.getenv('PROJECT_VERSION')
         if (version != null) {
             if (version.empty) {
-                version = "0.4-SNAPSHOT"
+                version = default_conclave_version
             }
             all {
                 for (submodule in modulesToSubstitute) {
@@ -91,8 +65,4 @@ subprojects {
             }
         }
     }
-}
-
-wrapper {
-    distributionType = Wrapper.DistributionType.ALL
 }

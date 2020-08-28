@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Tag
 @Tag("hardware")
 abstract class HardwareTest {
     companion object {
-        val spid = OpaqueBytes.parse(System.getProperty("conclave.test.spid"))
-        val attestationKey = checkNotNull(System.getProperty("conclave.test.attestation-key"))
+        val spid = OpaqueBytes.parse(System.getProperty("conclave.spid"))
+        val attestationKey = checkNotNull(System.getProperty("conclave.attestation-key"))
     }
 }
