@@ -5,7 +5,6 @@ import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.host.kotlin.callEnclave
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.objectweb.asm.Opcodes

@@ -60,11 +60,11 @@ open class MemoryClassLoader(private val urls: List<MemoryURL>, parent: ClassLoa
     }
 
     /**
-     * Create a [URL] representing [resourceName] within our memory artifacts.
+     * Create a [URL] representing [name] within our memory artifacts.
      */
-    public final override fun findResource(resourceName: String): URL? {
+    public final override fun findResource(name: String): URL? {
         return try {
-            resourcesFor(resourceName) { url, entry ->
+            resourcesFor(name) { url, entry ->
                 createURL(url.value, entry.name)
             }
         } catch (e: IOException) {
@@ -73,13 +73,13 @@ open class MemoryClassLoader(private val urls: List<MemoryURL>, parent: ClassLoa
     }
 
     /**
-     * Generate an [Enumeration] representing every resource matching [resourceName]
+     * Generate an [Enumeration] representing every resource matching [name]
      * within our memory artifacts.
      */
     @Throws(IOException::class)
-    public final override fun findResources(resourceName: String): Enumeration<URL> {
+    public final override fun findResources(name: String): Enumeration<URL> {
         val resources = mutableListOf<URL>()
-        resourcesFor(resourceName) { url, entry ->
+        resourcesFor(name) { url, entry ->
             resources.add(createURL(url.value, entry.name))
             null
         }

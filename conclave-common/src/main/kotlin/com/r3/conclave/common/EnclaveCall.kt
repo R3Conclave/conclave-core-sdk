@@ -1,7 +1,4 @@
-package com.r3.conclave.common;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+package com.r3.conclave.common
 
 /**
  * A transformation of byte array to optional result byte array. EnclaveCall
@@ -11,7 +8,6 @@ import org.jetbrains.annotations.Nullable;
  * the untrusted host and the enclave.
  */
 @FunctionalInterface
-public interface EnclaveCall {
-    @Nullable
-    byte[] invoke(@NotNull byte[] bytes);
+fun interface EnclaveCall {
+    operator fun invoke(bytes: ByteArray): ByteArray?
 }

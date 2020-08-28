@@ -1,7 +1,6 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.host.kotlin.deliverMail
 import com.r3.conclave.mail.*
 import com.r3.conclave.testing.MockHost
 import com.r3.conclave.utilities.internal.deserialise

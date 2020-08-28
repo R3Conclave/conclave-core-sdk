@@ -5,7 +5,6 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.internaltesting.RecordingEnclaveCall
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig

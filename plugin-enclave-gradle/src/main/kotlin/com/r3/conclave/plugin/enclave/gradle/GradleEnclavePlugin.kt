@@ -235,9 +235,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.inputKey.set(enclaveExtension.signingType.flatMap {
                     when (it) {
-                        SigningType.DummyKey    -> createDummyKeyTask.outputKey
-                        SigningType.PrivateKey  -> enclaveExtension.signingKey
-                        else                    -> null
+                        SigningType.DummyKey -> createDummyKeyTask.outputKey
+                        SigningType.PrivateKey -> enclaveExtension.signingKey
+                        else -> target.provider { null }
                     }
                 })
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())

@@ -55,7 +55,6 @@ interface Sender {
      * @param needBytes indicates that the passed in serializer will use this many bytes.
      * @param serializer the serializer of the top-level message.
      */
-    @JvmDefault
     fun send(needBytes: Int, serializer: Consumer<ByteBuffer>) {
         val serializers = ArrayList<Consumer<ByteBuffer>>()
         serializers.add(serializer)

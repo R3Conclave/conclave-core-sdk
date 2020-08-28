@@ -2,7 +2,6 @@ package com.r3.conclave.enclave
 
 import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.kotlin.callEnclave
 import com.r3.conclave.internaltesting.RecordingEnclaveCall
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig

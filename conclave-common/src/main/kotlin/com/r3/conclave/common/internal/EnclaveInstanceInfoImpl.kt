@@ -49,7 +49,7 @@ class EnclaveInstanceInfoImpl(
         val certTime = attestationResponse
                 .certPath
                 .certificates
-                .minBy { (it as X509Certificate).notAfter }
+                .minByOrNull { (it as X509Certificate).notAfter }
                 .let { (it as X509Certificate).notAfter.toInstant() }
         // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct in terms of
         // release/debug vs simulation/mock.

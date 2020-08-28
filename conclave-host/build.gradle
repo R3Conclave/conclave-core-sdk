@@ -9,10 +9,6 @@ plugins {
 //    targetCompatibility = JavaVersion.VERSION_11
 //}
 
-test {
-    failFast = false
-}
-
 dependencies {
     api project(":conclave-common")
 
