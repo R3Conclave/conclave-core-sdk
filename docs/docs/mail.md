@@ -97,17 +97,75 @@ the right order and without being dropped. The Conclave runtime checks the seque
 increment before passing the mail to your code.
 
 !!! note
-  The host may arbitrarily delay or even refuse to deliver mail, but it can only end the stream of mails early, it can't
-  re-order messages relative to each other. This is a feature not a bug, as if the enclave could force the host to
-  deliver mail that would imply it had actually taken over the computer somehow and was forcing it to provide services
-  to the enclave. SGX isn't a form of remote control and nobody can force a host to run enclaves against its will.
+    The host may arbitrarily delay or even refuse to deliver mail, but it can only end the stream of mails early, it can't
+    re-order messages relative to each other. This is a feature not a bug, as if the enclave could force the host to
+    deliver mail that would imply it had actually taken over the computer somehow and was forcing it to provide services
+    to the enclave. SGX isn't a form of remote control and nobody can force a host to run enclaves against its will.
 
 **Side channel inspection.** Future versions of mail will provide automatic and manual ways to pad messages, so their
 size can't give away any clues as to their contents. This is in fact one of the benefits of mail: if Conclave couldn't
 understand the message structure of your app (e.g. because it provided only a stream interface) then it wouldn't be
 able to do this type of padding.
 
-## Comparison to a classical architecture using HTTP/REST and SSL
+## How does Mail work
+
+When viewed as a structured array of bytes, a mail consists of five parts:
+
+1. The protocol ID.
+1. The unencrypted headers, which have fields simply laid out in order.
+1. The unencrypted envelope, which is empty by default and exists for you to add whatever data you like (i.e. additional
+   headers).
+1. The handshake.
+1. The encrypted body.
+
+Let's call the protocol ID, unencrypted headers and envelope the *prologue*. 
+
+At the core of Mail's security is the handshake. It consists of the data needed to do an elliptic curve Diffie-Hellman
+calculation and derive a unique (per mail) AES/GCM key, using the 
+[Noise protocol specification](https://noiseprotocol.org/noise.org). 
+
+AES/GCM is an *authenticated* encryption mechanism. That means the key is used not only to encrypt data, but also 
+calculate a special hash called a "tag" that allows detection of modifications to the encrypted data. This matters 
+because 'raw' encryption merely stops someone reading a message: if they already know what some parts of the message
+say (e.g. because it's a well known data structure) then by flipping bits in the encrypted data, corruption can be
+created in the decrypted message. In some situations these corruptions could change the way the message is parsed leading
+to an exploit, for example, [by changing a zero to a one and gaining administrator access](https://paragonie.com/blog/2015/05/using-encryption-and-authentication-correctly).
+
+Like all symmetric ciphers, for AES/GCM to work both sides must know the same key. But we want to be able to send
+messages to a target for which we only know a public key, and have never had a chance to securely generate a joint AES
+key with. This is the problem solved by the [Elliptic Curve Diffie-Hellman algorithm](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman).
+To use it we first select a large random number (256 bits) and then convert that to a coordinate on an elliptic
+curve - in our case, we use Curve25519, which is a modern and highly robust elliptic curve. The point is our public
+key and can be encoded in another 256 bits (32 bytes). We write this public key after the unencrypted envelope. This
+key is an *ephemeral* key - we picked it just for the purposes of creating this mail. 
+
+We know the target's public key either because the enclave puts it public key into the remote attestation, represented 
+by an `EnclaveInstanceInfo` object, or because the enclave is replying and obtained the key to reply to from an earlier
+mail. Two public keys is all that's needed for both parties to compute the same AES key, without any man-in-the-middle
+being able to calculate the same value.
+
+The sender may also have a long term "static" public key that the target will recognise. However, at this point we may
+choose to finish the handshake, either because we are sending a mail anonymously or because the target will recognise 
+us in some other manner than our static key. Alternatively, we may now append an encryption of our long term static
+public key and repeat the calculation between the enclave's public key and our static key, generating a new AES/GCM
+key as a result.
+
+As each step in the handshake progresses, a running hash is maintained that mixes in the hash of the prologue and the
+various intermediate stages. This allows the unencrypted headers to be tamper-proofed against the host as well, because
+the host will not be able to recalculate the authentication tag emitted to the end of the handshake.
+
+Thus, in the case where the sender has a long term keypair, the handshake consists of a random public key, an 
+authenticated encryption of the sender's public key, and an authentication hash. Once this is done the mail's AES
+key has been computed. The initialization vector for each AES encryption is a counter (an exception will be thrown
+if the mail is so large the counter would wrap around, as that would potentially reveal information for cryptanalysis,
+however this cannot happen given the maximum mail size).
+
+The encrypted body consists of a set of 64kb packets. Each packet has its own authentication tag, thus data is read
+from a mail in 64kb chunks. Packets may also contain a true length as distinct from the length of the plaintext. This
+allows the sender to artificially inflate the size of the encrypted message by simply padding it with zeros, which
+enables hiding of the true message size. Message sizes can be a giveaway to what exact content it contains. 
+
+## Comparison to a classical architecture using REST and SSL
 
 Let's look at why Conclave provides Mail, instead of having clients connect into an enclave using HTTPS.
 
@@ -283,61 +341,3 @@ All this suggests the primary paradigm exposed to enclaves should be messages. T
 delivering messages and providing atomic, transactional semantics over them so many kinds of enclaves won't need an
 encrypted database at all. The untrusted host can also take on the significant burden of moving data around,
 storing it to disk, sorting it, applying backpressure, exposing to the admin if there are backlogs etc.
-
-## How does Mail work
-
-When viewed as a structured array of bytes, a mail consists of five parts:
-
-1. The protocol ID.
-1. The unencrypted headers, which have fields simply laid out in order.
-1. The unencrypted envelope, which is empty by default and exists for you to add whatever data you like (i.e. additional
-   headers).
-1. The handshake.
-1. The encrypted body.
-
-Let's call the protocol ID, unencrypted headers and envelope the *prologue*. 
-
-At the core of Mail's security is the handshake. It consists of the data needed to do an elliptic curve Diffie-Hellman
-calculation and derive a unique (per mail) AES/GCM key, using the 
-[Noise protocol specification](https://noiseprotocol.org/noise.org). 
-
-AES/GCM is an *authenticated* encryption mechanism. That means the key is used not only to encrypt data, but also 
-calculate a special hash called a "tag" that allows detection of modifications to the encrypted data. This matters 
-because 'raw' encryption merely stops someone reading a message: if they already know what some parts of the message
-say (e.g. because it's a well known data structure) then by flipping bits in the encrypted data, corruption can be
-created in the decrypted message. In some situations these corruptions could change the way the message is parsed leading
-to an exploit, for example, [by changing a zero to a one and gaining administrator access](https://paragonie.com/blog/2015/05/using-encryption-and-authentication-correctly).
-
-Like all symmetric ciphers, for AES/GCM to work both sides must know the same key. But we want to be able to send
-messages to a target for which we only know a public key, and have never had a chance to securely generate a joint AES
-key with. This is the problem solved by the [Elliptic Curve Diffie-Hellman algorithm](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman).
-To use it we first select a large random number (256 bits) and then convert that to a coordinate on an elliptic
-curve - in our case, we use Curve25519, which is a modern and highly robust elliptic curve. The point is our public
-key and can be encoded in another 256 bits (32 bytes). We write this public key after the unencrypted envelope. This
-key is an *ephemeral* key - we picked it just for the purposes of creating this mail. 
-
-We know the target's public key either because the enclave puts it public key into the remote attestation, represented 
-by an `EnclaveInstanceInfo` object, or because the enclave is replying and obtained the key to reply to from an earlier
-mail. Two public keys is all that's needed for both parties to compute the same AES key, without any man-in-the-middle
-being able to calculate the same value.
-
-The sender may also have a long term "static" public key that the target will recognise. However, at this point we may
-choose to finish the handshake, either because we are sending a mail anonymously or because the target will recognise 
-us in some other manner than our static key. Alternatively, we may now append an encryption of our long term static
-public key and repeat the calculation between the enclave's public key and our static key, generating a new AES/GCM
-key as a result.
-
-As each step in the handshake progresses, a running hash is maintained that mixes in the hash of the prologue and the
-various intermediate stages. This allows the unencrypted headers to be tamper-proofed against the host as well, because
-the host will not be able to recalculate the authentication tag emitted to the end of the handshake.
-
-Thus, in the case where the sender has a long term keypair, the handshake consists of a random public key, an 
-authenticated encryption of the sender's public key, and an authentication hash. Once this is done the mail's AES
-key has been computed. The initialization vector for each AES encryption is a counter (an exception will be thrown
-if the mail is so large the counter would wrap around, as that would potentially reveal information for cryptanalysis,
-however this cannot happen given the maximum mail size).
-
-The encrypted body consists of a set of 64kb packets. Each packet has its own authentication tag, thus data is read
-from a mail in 64kb chunks. Packets may also contain a true length as distinct from the length of the plaintext. This
-allows the sender to artificially inflate the size of the encrypted message by simply padding it with zeros, which
-enables hiding of the true message size. Message sizes can be a giveaway to what exact content it contains. 

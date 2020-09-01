@@ -556,7 +556,7 @@ encryption for you, but leaves it up to you how the bytes themselves are moved a
 API, JMS message queues, a simple TCP socket as in this tutorial, or even files.
 
 !!! info
-    [Learn more about the design of Conclave Mail](architecture.md#mail), and [compare it to TLS](tls-vs-mail.md).
+    [Learn more about the design of Conclave Mail](architecture.md#mail), and [compare it to TLS](mail.md).
 
 ### Receiving and posting mail in the enclave
 
