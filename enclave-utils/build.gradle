@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation project(":conclave-common")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.graalvm.sdk:graal-sdk:$graal_version"
 

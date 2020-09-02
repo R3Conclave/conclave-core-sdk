@@ -2,6 +2,7 @@ package com.r3.conclave.utilities.internal
 
 import java.io.*
 import java.nio.Buffer
+import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
@@ -87,6 +88,17 @@ fun ByteBuffer.addPosition(delta: Int): ByteBuffer {
     // The nasty cast is to make this work under Java 11.
     (this as Buffer).position(position() + delta)
     return this
+}
+
+/**
+ * Creates a slice of the next [size] bytes. The position is advanced by [size].
+ */
+fun ByteBuffer.getSlice(size: Int): ByteBuffer {
+    if (size > remaining()) throw BufferUnderflowException()
+    val slice = slice()
+    (slice as Buffer).limit(size)
+    addPosition(size)
+    return slice
 }
 
 val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size

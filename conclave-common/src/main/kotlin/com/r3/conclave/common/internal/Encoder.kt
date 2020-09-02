@@ -1,8 +1,7 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.utilities.internal.addPosition
+import com.r3.conclave.utilities.internal.getSlice
 import java.lang.reflect.Modifier
-import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.ArrayList
@@ -30,12 +29,7 @@ sealed class Encoder<R> {
 }
 
 abstract class ByteBufferEncoder : Encoder<ByteBuffer>() {
-    final override fun read(buffer: ByteBuffer): ByteBuffer {
-        val result = buffer.slice()
-        (result as Buffer).limit(size)
-        buffer.addPosition(size)
-        return result.asReadOnlyBuffer()
-    }
+    final override fun read(buffer: ByteBuffer): ByteBuffer = buffer.getSlice(size).asReadOnlyBuffer()
     final override fun write(buffer: ByteBuffer, value: ByteBuffer): ByteBuffer {
         require(value.remaining() == size) {
             "Writing ${javaClass.simpleName}, expected $size bytes, got ${value.remaining()}"
@@ -105,12 +99,7 @@ class ReservedBytes(override val size: Int) : Encoder<ByteBuffer>() {
     init {
         require(size >= 0) { size }
     }
-    override fun read(buffer: ByteBuffer): ByteBuffer {
-        val result = buffer.slice()
-        (result as Buffer).limit(size)
-        buffer.addPosition(size)
-        return result.asReadOnlyBuffer()
-    }
+    override fun read(buffer: ByteBuffer): ByteBuffer = buffer.getSlice(size).asReadOnlyBuffer()
     override fun write(buffer: ByteBuffer, value: ByteBuffer): ByteBuffer {
         throw UnsupportedOperationException("Cannot write to reserved area")
     }

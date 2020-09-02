@@ -19,7 +19,6 @@ import java.security.PublicKey
 import java.security.Signature
 import java.security.cert.CertificateFactory
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Consumer
 
 /**
  * Subclass this inside your enclave to provide an entry point. The outside world
@@ -165,13 +164,9 @@ abstract class Enclave {
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             val reportBytes = input.getIntLengthPrefixBytes()
             val signature = input.getIntLengthPrefixBytes()
-            val encodedCertPath = input.getRemainingBytes()
-            val attestationResponse = AttestationResponse(
-                    reportBytes,
-                    signature,
-                    // TODO We can save on some copying by using ByteBufferInputStream over the CertPath section.
-                    CertificateFactory.getInstance("X.509").generateCertPath(encodedCertPath.inputStream())
-            )
+            // Wrap an InputStream over the remaining bytes to avoid unnecessary copying.
+            val certPath = CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(input))
+            val attestationResponse = AttestationResponse(reportBytes, signature, certPath)
             _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
                     enclave.signatureKey,
                     attestationResponse,
@@ -183,12 +178,12 @@ abstract class Enclave {
         private fun sendEnclaveInfo() {
             val encodedSigningKey = enclave.signatureKey.encoded   // 44 bytes
             val encodedEncryptionKey = enclave.encryptionKeyPair.public.encoded   // 32 bytes
-            sender.send(2 + encodedSigningKey.size + encodedEncryptionKey.size, Consumer { buffer ->
+            sender.send(2 + encodedSigningKey.size + encodedEncryptionKey.size) { buffer ->
                 buffer.put(0)
                 buffer.putBoolean(enclave is EnclaveCall)
                 buffer.put(encodedSigningKey)
                 buffer.put(encodedEncryptionKey)
-            })
+            }
         }
 
         /**
@@ -211,9 +206,9 @@ abstract class Enclave {
          * This is simpler than serialising the info object itself as then the enclave has to check it's the correct one.
          */
         private fun sendAttestationRequest() {
-            sender.send(1, Consumer { buffer ->
+            sender.send(1) { buffer ->
                 buffer.put(1)
-            })
+            }
         }
     }
 
@@ -316,11 +311,11 @@ abstract class Enclave {
          * to the callback).
          */
         private fun sendCallToHost(enclaveCallId: Long, bytes: ByteArray, type: InternalCallType) {
-            sender.send(Long.SIZE_BYTES + 1 + bytes.size, Consumer { buffer ->
+            sender.send(Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
                 buffer.putLong(enclaveCallId)
                 buffer.put(type.ordinal.toByte())
                 buffer.put(bytes)
-            })
+            }
         }
 
         fun sendMailCommandToHost(cmd: MailCommand) {
@@ -329,11 +324,11 @@ abstract class Enclave {
             }
 
             val bytes = writeData { cmd.writeTo(this) }
-            sender.send(Long.SIZE_BYTES + 1 + bytes.size, Consumer { buffer ->
+            sender.send(Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
                 buffer.putLong(enclaveCallId)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
                 buffer.put(bytes)
-            })
+            }
         }
     }
 

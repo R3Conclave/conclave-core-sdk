@@ -11,8 +11,7 @@ import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.conclave.internaltesting.createSignedQuote
 import com.r3.conclave.mail.Curve25519KeyPairGenerator
 import com.r3.conclave.mail.Curve25519PublicKey
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.time.Instant
@@ -107,6 +106,17 @@ class EnclaveInstanceInfoImplTest {
         assertThat(deserialised.attestationResponse.signature).isEqualTo(original.attestationResponse.signature)
         assertThat(deserialised.attestationResponse.certPath).isEqualTo(original.attestationResponse.certPath)
         assertThat(deserialised.enclaveMode).isEqualTo(original.enclaveMode)
+    }
+
+    @Test
+    fun `EnclaveInstanceInfo deserialize throws IllegalArgumeentException on truncated bytes`() {
+        val serialised = newInstance().serialize()
+        for (truncatedSize in serialised.indices) {
+            val truncated = serialised.copyOf(truncatedSize)
+            assertThatIllegalArgumentException().describedAs("Truncated size $truncatedSize").isThrownBy {
+                EnclaveInstanceInfo.deserialize(truncated)
+            }
+        }
     }
 
     private fun ByteCursor<SgxSignedQuote>.copy(modify: ByteCursor<SgxSignedQuote>.() -> Unit): ByteCursor<SgxSignedQuote> {

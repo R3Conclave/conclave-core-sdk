@@ -2,6 +2,7 @@ package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.addPosition
 import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.getSlice
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -49,10 +50,7 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
                 "There are insufficient remaining bytes for ${type.javaClass.simpleName}. " +
                         "Remaining=${buffer.remaining()}, required=${type.size}"
             }
-            val result = buffer.slice()
-            (result as Buffer).limit(type.size)
-            buffer.addPosition(type.size)
-            return Cursor(type, result)
+            return Cursor(type, buffer.getSlice(type.size))
         }
     }
 

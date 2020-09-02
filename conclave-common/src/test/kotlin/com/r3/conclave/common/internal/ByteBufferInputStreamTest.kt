@@ -1,5 +1,6 @@
-package com.r3.conclave.utils.internal
+package com.r3.conclave.common.internal
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -7,7 +8,7 @@ import java.nio.ByteBuffer
 
 class ByteBufferInputStreamTest {
     companion object {
-        val data = byteArrayOf(0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07)
+        val data = byteArrayOf(0x80.toByte(), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07)
     }
 
     private lateinit var stream: ByteBufferInputStream
@@ -15,6 +16,11 @@ class ByteBufferInputStreamTest {
     @BeforeEach
     fun setup() {
         stream = ByteBufferInputStream(ByteBuffer.wrap(data))
+    }
+
+    @Test
+    fun `read unsigned byte`() {
+        assertThat(stream.read()).isEqualTo(0x80)
     }
 
     @Test
@@ -43,7 +49,7 @@ class ByteBufferInputStreamTest {
         assertEquals(data.size, stream.available())
 
         // Advance the position by two bytes
-        assertEquals(0x00, stream.read())
+        assertEquals(0x80, stream.read())
         assertEquals(0x01, stream.read())
 
         val buffer = ByteArray(data.size - 5)

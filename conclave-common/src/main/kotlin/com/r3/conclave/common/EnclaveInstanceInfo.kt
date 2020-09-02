@@ -1,14 +1,15 @@
 package com.r3.conclave.common
 
+import com.r3.conclave.common.internal.ByteBufferInputStream
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MutableMail
-import com.r3.conclave.utilities.internal.deserialise
-import com.r3.conclave.utilities.internal.readExactlyNBytes
-import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.*
+import java.nio.BufferUnderflowException
+import java.nio.ByteBuffer
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
@@ -77,8 +78,9 @@ interface EnclaveInstanceInfo {
      * @suppress
      */
     companion object {
-        private val magic = "EII".toByteArray()
+        private val magic = ByteBuffer.wrap("EII".toByteArray())
         private val signatureScheme = SignatureSchemeEdDSA()
+        private val enclaveModes = EnclaveMode.values()
 
         /**
          * Deserializes this object from its custom format.
@@ -87,23 +89,32 @@ interface EnclaveInstanceInfo {
          */
         @JvmStatic
         fun deserialize(from: ByteArray): EnclaveInstanceInfo {
-            return from.deserialise {
-                require(readExactlyNBytes(magic.size).contentEquals(magic)) { "Not EnclaveInstanceInfo bytes" }
-                val dataSigningKey = readIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
-                val encryptionKey = Curve25519PublicKey(readIntLengthPrefixBytes())
-                val reportBytes = readIntLengthPrefixBytes()
-                val signature = readIntLengthPrefixBytes()
-                //TODO We can save on some copying by wrapping the CertPath section with a size bounded stream.
-                val certPath = readIntLengthPrefixBytes().inputStream().let(CertificateFactory.getInstance("X.509")::generateCertPath)
-                val enclaveMode = read().let { EnclaveMode.values()[it] }
+            val buffer = ByteBuffer.wrap(from)
+            require(buffer.remaining() > magic.capacity() && buffer.getSlice(magic.capacity()) == magic) {
+                "Not EnclaveInstanceInfo bytes"
+            }
+            try {
+                val dataSigningKey = buffer.getIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
+                val encryptionKey = Curve25519PublicKey(buffer.getIntLengthPrefixBytes())
+                val reportBytes = buffer.getIntLengthPrefixBytes()
+                val signature = buffer.getIntLengthPrefixBytes()
+                val certPath = run {
+                    val certPathSize = buffer.getInt()
+                    CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(buffer.getSlice(certPathSize)))
+                }
+                val enclaveMode = enclaveModes[buffer.get().toInt()]
                 // New fields need to be behind an availability check before being read. Use dis.available() to check if there
                 // are more bytes available and only parse them if there are. If not then provide defaults.
-                EnclaveInstanceInfoImpl(
+                return EnclaveInstanceInfoImpl(
                         dataSigningKey,
                         AttestationResponse(reportBytes, signature, certPath),
                         enclaveMode,
                         encryptionKey
                 )
+            } catch (e: BufferUnderflowException) {
+                throw IllegalArgumentException("Truncated EnclaveInstanceInfo bytes", e)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Corrupted EnclaveInstanceInfo bytes", e)
             }
         }
     }

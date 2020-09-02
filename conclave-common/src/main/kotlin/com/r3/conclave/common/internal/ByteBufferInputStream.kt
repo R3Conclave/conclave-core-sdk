@@ -1,23 +1,21 @@
-package com.r3.conclave.utils.internal
+package com.r3.conclave.common.internal
 
+import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
+import java.nio.InvalidMarkException
 import kotlin.math.min
 
 /**
- * An implementation of [InputStream] that wraps a [ByteBuffer].
- * This is analogous to [java.io.ByteArrayInputStream] wrapping a [ByteArray].
- *
- * NOTE: Reading the [InputStream] will also modify the [ByteBuffer] position.
+ * [InputStream] which wraps over the remaining bytes of a [ByteBuffer]. Reading from the stream will advance
+ * the buffer's position accordingly.
  */
 class ByteBufferInputStream(private val bytes: ByteBuffer) : InputStream() {
     private companion object {
         private const val EOF = -1
     }
 
-    override fun read(): Int {
-        return if (bytes.hasRemaining()) bytes.get().toInt() else EOF
-    }
+    override fun read(): Int = if (bytes.hasRemaining()) bytes.get().toInt() and 0xFF else EOF
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         return if ((offset < 0) || (length < 0) || offset + length > buffer.size) {
@@ -46,6 +44,10 @@ class ByteBufferInputStream(private val bytes: ByteBuffer) : InputStream() {
     }
 
     override fun reset() {
-        bytes.reset()
+        try {
+            bytes.reset()
+        } catch (e: InvalidMarkException) {
+            throw IOException("mark has not been called")
+        }
     }
 }

@@ -1,6 +1,6 @@
 package com.r3.conclave.utils.classloaders
 
-import com.r3.conclave.utils.internal.ByteBufferInputStream
+import com.r3.conclave.common.internal.ByteBufferInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
