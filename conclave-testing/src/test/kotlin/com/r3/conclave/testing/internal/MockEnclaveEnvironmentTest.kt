@@ -5,6 +5,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -20,6 +21,11 @@ class MockEnclaveEnvironmentTest {
     class EnclaveA : Enclave()
 
     class EnclaveB : Enclave()
+
+    @AfterEach
+    fun reset() {
+        MockEnclaveEnvironment.platformReset()
+    }
 
     @Test
     fun createReport() {
@@ -75,6 +81,36 @@ class MockEnclaveEnvironmentTest {
         val sealedBlob2 = env.sealData(PlaintextAndEnvelope(plaintext))
         assertThat(sealedBlob1).isNotEqualTo(sealedBlob2)
     }
+
+    @Test
+    fun `mock platform update and downgrade reflected in createReport`() {
+        val env = createMockEnclaveEnvironment<EnclaveA>()
+        val cpuSvnBeforeUpdate = env.createReport(null, null).cpuSvn
+        MockEnclaveEnvironment.platformUpdate()
+        val cpuSvnAfterUpdate = env.createReport(null, null).cpuSvn
+        assertThat(cpuSvnBeforeUpdate).isNotEqualTo(cpuSvnAfterUpdate)
+        MockEnclaveEnvironment.platformDowngrade()
+        val cpuSvnAfterDowngrade = env.createReport(null, null).cpuSvn
+        assertThat(cpuSvnBeforeUpdate).isEqualTo(cpuSvnAfterDowngrade)
+    }
+
+    @Test
+    fun `getSecretKey able to generate key for previous CPUSVN`() {
+        val env = createMockEnclaveEnvironment<EnclaveA>()
+        val cpuSvnBeforeUpdate = env.createReport(null, null).cpuSvn
+        val secretKeyBeforeUpdate = env.getSecretKey { keyRequest ->
+            keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
+            keyRequest[SgxKeyRequest.cpuSvn] = cpuSvnBeforeUpdate.buffer
+        }
+        MockEnclaveEnvironment.platformUpdate()
+        val secretKeyDerivedFromPreviousCpuSvn = env.getSecretKey { keyRequest ->
+            keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
+            keyRequest[SgxKeyRequest.cpuSvn] = cpuSvnBeforeUpdate.buffer
+        }
+        assertThat(secretKeyDerivedFromPreviousCpuSvn).isEqualTo(secretKeyBeforeUpdate)
+    }
+
+    private val ByteCursor<SgxReport>.cpuSvn: ByteCursor<SgxCpuSvn> get() = this[SgxReport.body][SgxReportBody.cpuSvn]
 
     private inline fun <reified E : Enclave> createMockEnclaveEnvironment(
             isvProdId: Int = 1,

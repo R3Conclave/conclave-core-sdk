@@ -4,6 +4,7 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
+import org.assertj.core.api.Condition
 import java.security.PublicKey
 import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
@@ -64,4 +65,30 @@ fun expectWithin(seconds: Int, condition: Supplier<Boolean>): Boolean {
         Thread.sleep(1000)
     }
     return false
+}
+
+private val mailCorruptionErrors = listOf(
+        "Unknown Noise DH algorithm",
+        "Unknown Noise cipher algorithm",
+        "Unknown Noise hash algorithm",
+        "Corrupt stream or not Conclave Mail",
+        "Premature end of stream",
+        "Protocol name must have 5 components",
+        "Tag mismatch!",
+        "Truncated Conclave Mail header",
+        "SGX_ERROR_INVALID_CPUSVN",
+        "Null remote public key"
+)
+
+val throwableWithMailCorruptionErrorMessage = object : Condition<Throwable>("a throwable containing a corruption error message") {
+    override fun matches(value: Throwable?): Boolean {
+        val match = generateSequence(value, Throwable::cause).any {
+            val message = it.message
+            message != null && mailCorruptionErrors.any { it in message }
+        }
+        if (!match) {
+            value?.printStackTrace()
+        }
+        return match
+    }
 }

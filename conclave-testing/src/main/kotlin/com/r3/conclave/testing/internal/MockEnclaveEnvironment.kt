@@ -17,6 +17,7 @@ import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getBytes
 import java.nio.ByteBuffer
 import java.security.SecureRandom
+import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -27,14 +28,56 @@ class MockEnclaveEnvironment(
         private val isvProdId: Int = 1,
         private val isvSvn: Int = 1
 ) : EnclaveEnvironment {
-    private companion object {
+    companion object {
         private const val IV_SIZE = 12
         private const val TAG_SIZE = 16
 
         private val secureRandom = SecureRandom()
 
+        private val platformCpuSvnHistory = LinkedList<ByteArray>()
+
+        init {
+            platformUpdate()
+        }
+
+        /**
+         * Simulate a platform update which changes the CPUSVN.
+         */
+        fun platformUpdate() {
+            synchronized(platformCpuSvnHistory) {
+                platformCpuSvnHistory += ByteArray(SgxCpuSvn.size).also(secureRandom::nextBytes)
+            }
+        }
+
+        /**
+         * Simulate a platform downgrade to the previous version.
+         */
+        fun platformDowngrade() {
+            synchronized(platformCpuSvnHistory) {
+                check(platformCpuSvnHistory.size >= 2) { "There isn't a previous platform version to downgrade to." }
+                platformCpuSvnHistory.removeLast()
+            }
+        }
+
+        fun platformReset() {
+            synchronized(platformCpuSvnHistory) {
+                platformCpuSvnHistory.clear()
+                platformUpdate()
+            }
+        }
+
+        fun isValidCpuSvn(cpuSvn: ByteArray): Boolean {
+            return synchronized(platformCpuSvnHistory) {
+                platformCpuSvnHistory.any { it.contentEquals(cpuSvn) }
+            }
+        }
+
         // All enclaves share the same CPUSVN.
-        private val cpuSvn = ByteArray(SgxCpuSvn.size).also(secureRandom::nextBytes)
+        private val currentCpuSvn: ByteArray get() {
+            return synchronized(platformCpuSvnHistory) {
+                platformCpuSvnHistory.last
+            }
+        }
     }
 
     private val mrenclave = digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
@@ -52,7 +95,7 @@ class MockEnclaveEnvironment(
         if (reportData != null) {
             body[SgxReportBody.reportData] = reportData.buffer
         }
-        body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(cpuSvn)
+        body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
         body[SgxReportBody.isvProdId] = isvProdId
         body[SgxReportBody.isvSvn] = isvSvn
@@ -103,7 +146,7 @@ class MockEnclaveEnvironment(
         return PlaintextAndEnvelope(OpaqueBytes(plaintext.array()), authenticatedData?.let(::OpaqueBytes))
     }
 
-    // Replicates sgx_get_key behaviour in hardware as determined by MockSecretKeyHardwareCompatibilityTest.
+    // Replicates sgx_get_key behaviour in hardware as determined by MockEnclaveEnvironmentHardwareCompatibilityTest.
     override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {
         val keyPolicy = keyRequest[SgxKeyRequest.keyPolicy]
         // TODO This is temporary: https://github.com/intel/linux-sgx/issues/578
@@ -126,7 +169,7 @@ class MockEnclaveEnvironment(
         }
 
         val cpuSvn = keyRequest[SgxKeyRequest.cpuSvn].bytes
-        require(cpuSvn.all { it.toInt() == 0 } || cpuSvn.contentEquals(Companion.cpuSvn)) {
+        require(cpuSvn.all { it.toInt() == 0 } || isValidCpuSvn(cpuSvn)) {
             "SGX_ERROR_INVALID_CPUSVN: The cpu svn is beyond platform's cpu svn value"
         }
 

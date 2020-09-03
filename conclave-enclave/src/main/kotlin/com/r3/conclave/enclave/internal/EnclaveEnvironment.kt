@@ -48,4 +48,10 @@ interface EnclaveEnvironment {
      * @return 128-bit secret key.
      */
     fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray
+
+    fun getSecretKey(block: (ByteCursor<SgxKeyRequest>) -> Unit): ByteArray {
+        val keyRequest = ByteCursor.allocate(SgxKeyRequest)
+        block(keyRequest)
+        return getSecretKey(keyRequest)
+    }
 }

@@ -3,7 +3,6 @@ package com.r3.conclave.mail
 import com.r3.conclave.mail.internal.EnclaveMailHeaderImpl
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.MailEncryptingStream
-import com.r3.conclave.mail.internal.MailPrologueInputStream
 import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.io.ByteArrayOutputStream
@@ -119,7 +118,7 @@ interface EnclaveMail : EnclaveMailHeader {
 /**
  * Mail that's in the process of being built. All mail must have a body and
  * a destination public key so the body can be encrypted. You may also specify
- * your own private key, the public part of which will be received by the recipient
+ * your own [privateKey], the public part of which will be received by the recipient
  * in an encrypted and authenticated manner i.e. others cannot impersonate your key,
  * nor can the enclave host learn what your public key is, only the enclave can.
  *
@@ -133,9 +132,10 @@ interface EnclaveMail : EnclaveMailHeader {
  * Finally, a [from] header may be optionally provided to assist the remote
  * host in routing replies back to you.
  *
- * When the fields are set correctly call [encrypt] to get back an
- * [EncryptedEnclaveMail], and use [EncryptedEnclaveMail.encoded] to access
- * the raw bytes for transmission.
+ * When the fields are set correctly call [encrypt] to get back the encrypted byte array.
+ *
+ * NOTE: When creating mail destined for an enclave, `EnclaveInstanceInfo.createMail` must be used and not the
+ * constructors.
  */
 class MutableMail(
         override var bodyAsBytes: ByteArray,
@@ -151,6 +151,9 @@ class MutableMail(
             "At this time only Conclave originated Curve25519 public keys may be used."
         }
     }
+
+    // Internal header field for storing any key derivation data. Currently this is only used by the enclave.
+    internal var keyDerivation: ByteArray? = null
 
     override var sequenceNumber: Long = 0
 
@@ -194,10 +197,10 @@ class MutableMail(
      * [sequenceNumber], [topic], [from] and [envelope] in the clear but authenticated (for the recipient only)
      * as coming from the holder of the [privateKey] (if one was specified).
      *
-     * @return a ciphertext that can be fed to [decrypt] to obtain the original mail.
+     * @return a ciphertext that can be fed to [Mail.decrypt] to obtain the original mail.
      */
-    fun encrypt(): EncryptedEnclaveMail {
-        val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, from, envelope).encoded
+    fun encrypt(): ByteArray {
+        val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, from, envelope, keyDerivation).encoded
         val output = ByteArrayOutputStream()
         val stream = MailEncryptingStream.wrap(output, destinationKey.encoded, header, privateKey?.encoded)
         stream.write(bodyAsBytes)
@@ -205,11 +208,6 @@ class MutableMail(
         return output.toByteArray()
     }
 }
-
-/**
- * A simple typealias for a byte array that contains an encrypted enclave mail.
- */
-typealias EncryptedEnclaveMail = ByteArray
 
 /**
  * Access to mail decryption and parsing. To create and encrypt mail, use [MutableMail] instead.
@@ -231,36 +229,12 @@ object Mail {
      */
     @JvmStatic
     @Throws(IOException::class)
-    fun decrypt(encryptedEnclaveMail: EncryptedEnclaveMail, withKey: PrivateKey): EnclaveMail {
+    fun decrypt(encryptedEnclaveMail: ByteArray, withKey: PrivateKey): EnclaveMail {
         // This is a runtime check so we can switch to JDK11+ types later without breaking our own API.
         require(withKey is Curve25519PrivateKey) {
             "At this time only Conclave originated Curve25519 private keys may be used."
         }
-        // TODO: Optimise out copies here.
-        //
-        // We end up copying the mail every time it's read, the copy being defensive and thus useful only to protect
-        // against malicious or buggy code inside the enclave. But as enclaves cannot load sandboxed code today,
-        // it ends up being useless. We do it here ONLY to avoid it accidentally being overlooked later, when
-        // we do indeed plan to introduce code sandboxing. Then it'd be unintuitive if you could pass an EnclaveMail
-        // object into malicious code and the body or envelope comes back changed.
-        //
-        // What we should actually do is expose the MailDecryptingStream to the user (as an InputStream). Then they
-        // can either pull from it directly e.g. via a serialisation lib, or copy to a byte array if they want to.
-        // This would also let us avoid the memcopy into the enclave and consumption of EPC because the mail is
-        // encrypted and authenticated in 64kb Noise packet blocks, so it's safe to hold it in unprotected memory
-        // and store just the current decrypted block in EPC, which MailDecryptingStream already does. This would
-        // also make it feasible to access huge mails without the 2GB size limit JVM arrays pose.
-        val stream = MailDecryptingStream(encryptedEnclaveMail.inputStream(), withKey.encoded)
-        val body = stream.readBytes()
-        val header = EnclaveMailHeaderImpl.decode(stream.headerBytes)
-        return object : EnclaveMail {
-            override val bodyAsBytes: ByteArray get() = body.copyOf()
-            override val authenticatedSender: PublicKey? = stream.senderPublicKey?.let { Curve25519PublicKey(it) }
-            override val sequenceNumber: Long = header.sequenceNumber
-            override val topic: String = header.topic
-            override val from: String? = header.from
-            override val envelope: ByteArray? get() = header.envelope?.copyOf()
-        }
+        return MailDecryptingStream(encryptedEnclaveMail.inputStream()).decryptMail { withKey }
     }
 
     /**
@@ -274,8 +248,9 @@ object Mail {
      */
     @JvmStatic
     @Throws(IOException::class)
-    fun getUnauthenticatedHeader(encryptedEnclaveMail: EncryptedEnclaveMail): EnclaveMailHeader =
-            EnclaveMailHeaderImpl.decode(MailPrologueInputStream(encryptedEnclaveMail.inputStream().buffered()).headerBytes)
+    fun getUnauthenticatedHeader(encryptedEnclaveMail: ByteArray): EnclaveMailHeader {
+        return MailDecryptingStream(encryptedEnclaveMail.inputStream()).header
+    }
 }
 
 // TODO: This exception doesn't propagate across enclave boundaries. Figure out exception handling in more detail.

@@ -119,7 +119,7 @@ data class CpuSvnField(val cpuSvn: OpaqueBytes?) : SetKeyRequestField {
     }
 
     override fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl) {
-        val currentCpuSvn = (enclaveInstanceInfo.securityInfo as SGXEnclaveSecurityInfo).cpuSVN
+        val currentCpuSvn = enclaveInstanceInfo.securityInfo.cpuSVN
         keyRequest[SgxKeyRequest.cpuSvn] = (cpuSvn ?: currentCpuSvn).buffer()
     }
 

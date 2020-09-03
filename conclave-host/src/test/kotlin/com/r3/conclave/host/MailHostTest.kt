@@ -1,16 +1,22 @@
 package com.r3.conclave.host
 
+import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.*
 import com.r3.conclave.testing.MockHost
+import com.r3.conclave.testing.internal.MockEnclaveEnvironment
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+
 
 class MailHostTest {
     companion object {
@@ -20,6 +26,11 @@ class MailHostTest {
     private val keyPair = Curve25519KeyPairGenerator().generateKeyPair()
     private val echo by lazy { MockHost.loadMock<MailEchoEnclave>() }
     private val noop by lazy { MockHost.loadMock<NoopEnclave>() }
+
+    @AfterEach
+    fun reset() {
+        MockEnclaveEnvironment.platformReset()
+    }
 
     @Test
     fun `encrypt and deliver mail`() {
@@ -91,16 +102,6 @@ class MailHostTest {
         noop.deliverMail(100, secondTopic)
     }
 
-    private val corruptionErrors = listOf(
-            "Unknown Noise DH algorithm",
-            "Unknown Noise cipher algorithm",
-            "Unknown Noise hash algorithm",
-            "Corrupt stream or not Conclave Mail",
-            "Premature end of stream",
-            "Protocol name must have 5 components",
-            "Tag mismatch!"
-    )
-
     @Test
     fun corruption() {
         // Check the enclave correctly rejects messages with corrupted headers or bodies.
@@ -108,11 +109,11 @@ class MailHostTest {
         val mail = buildMail(noop)
         val encrypted = mail.encrypt()
         for (i in encrypted.indices) {
-            encrypted[i] = encrypted[i].inc()
-            var e: Throwable = assertThrows<RuntimeException>("iteration $i") { noop.deliverMail(i.toLong(), encrypted) }
-            while (e.cause != null) e = e.cause!!
-            assertThat(corruptionErrors).describedAs(e.message!!).anyMatch { it in e.message!! }
-            encrypted[i] = encrypted[i].dec()
+            encrypted[i]++
+            assertThatThrownBy {
+                noop.deliverMail(i.toLong(), encrypted)
+            }.`is`(throwableWithMailCorruptionErrorMessage)
+            encrypted[i]--
         }
     }
 
@@ -138,6 +139,85 @@ class MailHostTest {
         val messageFromBob = buildMail(host)
         messageFromBob.from = "bob"
         host.deliverMail(1, messageFromBob.encrypt())
+    }
+
+    @Test
+    fun `enclave receiving client mail for old platform version`() {
+        echo.start(null, null, null)
+        val encryptedMailFromClient = buildMail(echo).encrypt()
+        echo.close()
+
+        // Shutdown the enclave and "update" the platform so that we have a new CPUSVN. The new enclave's (default)
+        // encryption key will be different from its old one, but we still expect the enclave to be able to decrypt it.
+        MockEnclaveEnvironment.platformUpdate()
+
+        val echo2 = MockHost.loadMock<MailEchoEnclave>()
+        echo2.start(null, null, null)
+        var decryptedByEnclave: ByteArray? = null
+        echo2.deliverMail(1, encryptedMailFromClient) { bytes ->
+            decryptedByEnclave = bytes
+            null
+        }
+
+        decryptedByEnclave!!.deserialise {
+            assertArrayEquals(messageBytes, readIntLengthPrefixBytes())
+            assertEquals(1, readInt())
+        }
+    }
+
+    @Test
+    fun `enclave receiving it's own mail across platform update`() {
+        class MailToSelfEnclave : Enclave(), EnclaveCall {
+            override fun invoke(bytes: ByteArray): ByteArray? {
+                val mail = enclaveInstanceInfo.createMail(bytes.reversedArray())
+                postMail(mail, null)
+                return null
+            }
+            override fun receiveMail(id: EnclaveMailId, mail: EnclaveMail) {
+                callUntrustedHost(mail.bodyAsBytes)
+            }
+        }
+
+        var mailToSelf: ByteArray? = null
+
+        val enclave1 = MockHost.loadMock<MailToSelfEnclave>()
+        enclave1.start(null, null, object : EnclaveHost.MailCallbacks {
+            override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
+                mailToSelf = encryptedBytes
+            }
+        })
+        enclave1.callEnclave("secret".toByteArray())
+        enclave1.close()
+
+        MockEnclaveEnvironment.platformUpdate()
+
+        val enclave2 = MockHost.loadMock<MailToSelfEnclave>()
+        enclave2.start(null, null, null)
+        var decrypted: ByteArray? = null
+        enclave2.deliverMail(1, mailToSelf!!) { bytes ->
+            decrypted = bytes
+            null
+        }
+
+        assertThat(decrypted).isEqualTo("terces".toByteArray())
+    }
+
+    @Test
+    fun `platform downgrade attack not possible`() {
+        // Imagine the current platform version has a bug in it and so we update and the client creates mail from that.
+        MockEnclaveEnvironment.platformUpdate()
+        echo.start(null, null, null)
+        val encryptedMailFromClient = buildMail(echo).encrypt()
+        echo.close()
+
+        // Let's revert the update and return the platform to it's insecure version.
+        MockEnclaveEnvironment.platformDowngrade()
+
+        val echo2 = MockHost.loadMock<MailEchoEnclave>()
+        echo2.start(null, null, null)
+        assertThatThrownBy {
+            echo2.deliverMail(1, encryptedMailFromClient)
+        }.hasMessageContaining("SGX_ERROR_INVALID_CPUSVN")
     }
 
     private fun buildMail(host: MockHost<*>, body: ByteArray = messageBytes): MutableMail {

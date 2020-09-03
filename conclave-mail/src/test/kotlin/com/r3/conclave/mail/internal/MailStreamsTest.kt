@@ -1,6 +1,10 @@
 package com.r3.conclave.mail.internal
 
+import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
+import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.internal.noise.protocol.Noise
+import org.assertj.core.api.Assertions.assertThatIOException
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -9,12 +13,14 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 class MailStreamsTest {
-    private val protocolNameX = "Noise_X_25519_AESGCM_SHA256"
-    private val protocolNameN = "Noise_N_25519_AESGCM_SHA256"
-    private val receivingPrivateKey = ByteArray(32).also { Noise.random(it) }
-    private val receivingKey = Noise.createDH("25519").also { it.setPrivateKey(receivingPrivateKey, 0) }
+    companion object {
+        private const val protocolNameX = "Noise_X_25519_AESGCM_SHA256"
+        private const val protocolNameN = "Noise_N_25519_AESGCM_SHA256"
+        private val receivingPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
+        private val receivingKey = Noise.createDH("25519").also { it.setPrivateKey(receivingPrivateKey.encoded, 0) }
 
-    private val msg = "Hello, can you hear me?".toByteArray()
+        private val msg = "Hello, can you hear me?".toByteArray()
+    }
 
     @Test
     fun happyPath() {
@@ -57,8 +63,7 @@ class MailStreamsTest {
     }
 
     private fun decrypt(src: ByteArray): MailDecryptingStream {
-        val bais = ByteArrayInputStream(src)
-        val decrypt = MailDecryptingStream(bais, receivingPrivateKey)
+        val decrypt = MailDecryptingStream(src.inputStream(), receivingPrivateKey)
         val all = decrypt.readBytes()
         assertArrayEquals(msg, all)
         assertEquals(-1, decrypt.read())
@@ -87,6 +92,54 @@ class MailStreamsTest {
                 "Could not locate the unencrypted header data in the output bytes.")
         val stream = decrypt(encrypted)
         assertArrayEquals(headerData, stream.headerBytes)
+    }
+
+    @Test
+    fun `not able to read stream if private key not provided`() {
+        val baos = ByteArrayOutputStream()
+        val headerData = "header data".toByteArray()
+        MailEncryptingStream.wrap(baos, receivingKey.publicKey, headerData, null).use { it.write(msg) }
+        val encrypted = baos.toByteArray()
+
+        val decryptingStream = MailDecryptingStream(encrypted.inputStream())
+        assertThatIOException().isThrownBy {
+            decryptingStream.read()
+        }.withMessage("Private key has not been provided to decrypt the stream.")
+    }
+
+    @Test
+    fun `provide private key after reading header`() {
+        val baos = ByteArrayOutputStream()
+        val headerData = "header data".toByteArray()
+        MailEncryptingStream.wrap(baos, receivingKey.publicKey, headerData, null).use { it.write(msg) }
+        val encrypted = baos.toByteArray()
+        val decryptingStream = MailDecryptingStream(encrypted.inputStream(), privateKey = null)
+        assertArrayEquals(headerData, decryptingStream.headerBytes)
+
+        decryptingStream.setPrivateKey(receivingPrivateKey)
+        val all = decryptingStream.readBytes()
+        assertArrayEquals(msg, all)
+        assertEquals(-1, decryptingStream.read())
+    }
+
+    @Test
+    fun `setPrivateKey can detect corruption in header`() {
+        val baos = ByteArrayOutputStream()
+        val headerData = "header data".toByteArray()
+        MailEncryptingStream.wrap(baos, receivingKey.publicKey, headerData, null).use { it.write(msg) }
+        val encrypted = baos.toByteArray()
+
+        val headerDataIndex = String(encrypted).indexOf("header data")
+        encrypted[headerDataIndex] = 'H'.toByte()
+
+        val decryptingStream = MailDecryptingStream(encrypted.inputStream())
+        // The change goes unnoticed.
+        assertArrayEquals("Header data".toByteArray(), decryptingStream.headerBytes)
+
+        // But it should be detected as soon as the private key is supplied.
+        assertThatThrownBy {
+            decryptingStream.setPrivateKey(receivingPrivateKey)
+        }.`is`(throwableWithMailCorruptionErrorMessage)
     }
 
     private fun encryptMessage(senderPrivateKey: ByteArray? = null): ByteArray {

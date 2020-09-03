@@ -78,7 +78,7 @@ class EnclaveInstanceInfoImplTest {
 
     @Test
     fun securityInfo() {
-        val securityInfo = newInstance().securityInfo as SGXEnclaveSecurityInfo
+        val securityInfo = newInstance().securityInfo
         assertThat(securityInfo.timestamp).isEqualTo(reportTimestamp)
         assertThat(securityInfo.cpuSVN).isEqualTo(cpuSvn)
     }

@@ -1,10 +1,13 @@
 package com.r3.conclave.mail.internal
 
+import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.EnclaveMail
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.wrap
 import com.r3.conclave.mail.internal.noise.protocol.*
 import java.io.*
-import java.lang.IllegalStateException
 import java.nio.charset.StandardCharsets
-import java.security.NoSuchAlgorithmException
+import java.security.PrivateKey
+import java.security.PublicKey
 import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
 
@@ -53,6 +56,10 @@ internal class MailEncryptingStream private constructor(
         senderPrivateKey: ByteArray?
 ) : FilterOutputStream(out) {
     companion object {
+        private const val cipherName: String = "AESGCM"
+        private const val dhName: String = "25519"
+        private const val hashName: String = "SHA256"
+
         /**
          * Creates a [MailEncryptingStream] wrapped with a [BufferedOutputStream]. The buffering ensures data is
          * packetized by Noise to the maximum packet size, thus reducing the overhead of the stream to the minimum
@@ -76,10 +83,6 @@ internal class MailEncryptingStream private constructor(
     private val header: ByteArray? = header?.clone()
     private val senderPrivateKey: ByteArray? = senderPrivateKey?.clone()
 
-    private val cipherName: String = "AESGCM"
-    private val dhName: String = "25519"
-    private val hashName: String = "SHA256"
-
     /** The standard Noise protocol name, as used in the specs. */
     private val protocolName = (if (senderPrivateKey != null) "Noise_X_" else "Noise_N_") + "${dhName}_${cipherName}_$hashName"
 
@@ -91,8 +94,7 @@ internal class MailEncryptingStream private constructor(
 
         // Noise can be used in various modes, the protocol name is an ASCII string that identifies the settings.
         // We write it here. It looks like this: Noise_X_25519_AESGCM_SHA256
-        val handshake = HandshakeState(protocolName, HandshakeState.INITIATOR)
-        try {
+        HandshakeState(protocolName, HandshakeState.INITIATOR).use { handshake ->
             handshake.remotePublicKey.setPublicKey(destinationPublicKey, 0)
 
             // If one was provided, the recipient will get our public key in an authenticated manner i.e. we cannot
@@ -133,8 +135,6 @@ internal class MailEncryptingStream private constructor(
             split.senderOnly()   // One way not two way communication.
             cipherState = split.sender
             check(handshake.action == HandshakeState.COMPLETE)
-        } finally {
-            handshake.destroy()
         }
     }
 
@@ -208,14 +208,70 @@ internal class MailEncryptingStream private constructor(
 }
 
 /**
- * Provides functionality for reading and parsing the prologue of a mail stream in an unauthenticated manner.
+ * A stream filter that decrypts a stream produced by [MailEncryptingStream].
+ *
+ * This stream filter will verify that the underlying stream doesn't prematurely terminate. Attempting to read from
+ * it when the underlying stream has reached end-of-stream before the sender had finished writing will cause an
+ * exception to be thrown, as otherwise a man in the middle could maliciously truncate the stream, possibly changing
+ * its meaning.
+ *
+ * Mail streams protect you from a classic error in cryptography: checking the validity of a message only once it's
+ * been entirely read but acting on it earlier. Mail streams won't yield any data until a full packet and its
+ * authentication tag have been read and verified, so the stream cannot yield data produced by an adversary.
+ * However when later bytes may change the meaning of earlier bytes may be affected and so you should fully consume the
+ * stream (until [read] returns -1) before acting on it.
+ *
+ * Perhaps surprisingly, the private key to decrypt the stream is optional. By not providing one you are only able to
+ * read the user provided associated data ([headerBytes]), but it will not have been authenticated. This is useful if you
+ * don't have the private key but want to read the (unauthenticated) header, and secondly it allows embedding
+ * material needed for deriving the key in the header. Once the key is known, calling [setPrivateKey] authenticates the
+ * header (if it has been read) and enables decryption of the stream.
+ *
+ * Marks are not supported by this stream.
  */
-internal open class MailPrologueInputStream(input: InputStream) : FilterInputStream(input) {
+class MailDecryptingStream(
+        input: InputStream,
+        private var privateKey: PrivateKey? = null
+) : FilterInputStream(input) {
     init {
         require(input.markSupported())
     }
 
-    protected fun readShort(): Int {
+    private var cipherState: CipherState? = null
+
+    // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
+    private var handshakeFailure: Throwable? = null
+
+    /**
+     * Returns the authenticated public key of the sender. This may be useful to understand who sent you the
+     * data, if you know the sender's possible public keys in advance.
+     */
+    var senderPublicKey: ByteArray? = null
+        private set
+        get() {
+            maybeHandshake()
+            return field
+        }
+
+    // We have a separate flag to track whether the private key has been provided or not because we want to be able to
+    // clear the key as soon as it's not needed.
+    private var privateKeyProvided = privateKey != null
+
+    /**
+     * Provide the private key needed to decrypt the stream. If the header has alraedy been read this method will immediately
+     * authenticate it.
+     */
+    fun setPrivateKey(privateKey: PrivateKey) {
+        check(!privateKeyProvided) { "Private key has already been provoded." }
+        this.privateKey = privateKey
+        privateKeyProvided = true
+        if (_prologue != null) {
+            // If the header has already been read then make sure it's OK.
+            maybeHandshake()
+        }
+    }
+
+    private fun readUnsignedShort(): Int {
         val b1 = `in`.read().also { if (it == -1) error("Truncated stream") }
         val b2 = `in`.read().also { if (it == -1) error("Truncated stream") }
         return (b1 shl 8) or b2
@@ -223,21 +279,23 @@ internal open class MailPrologueInputStream(input: InputStream) : FilterInputStr
 
     internal class Prologue(val protocolName: String, val header: ByteArray, val extensions: ByteArray, val raw: ByteArray)
 
+    private var _prologue: Prologue? = null
     /**
      * Access to the prologue data, without performing any authentication checks. To verify the prologue wasn't
      * tampered with you must complete the Noise handshake.
      */
-    protected val prologue: Prologue by lazy {
-        // We use lazy here because it's possible for a caller to read the prologue without calling read(), using
-        // headerBytes. Because the prologue is accessed on first read(), the lazyness ensures that if the user
-        // reads some bytes from the stream and then decides they want to access the header that works properly.
+    private val prologue: Prologue get() {
+        _prologue?.let { return it }
+        // The prologue is accessed on first read() (if not before) and so this will always be reading from the beginning
+        // of the stream.
         //
         // See computePrologue for the format.
+        val input = `in`
         input.mark(63356)
         val protocolName = readProtocolName()
 
         fun readBuf(): ByteArray {
-            val len = readShort()   // readShort throws an exception if not enough bytes, and we allow 64kb of header.
+            val len = readUnsignedShort()   // readUnsignedShort throws an exception if not enough bytes, and we allow 64kb of header.
             val buf = ByteArray(len)
             if (input.read(buf) < len) error("Premature end of stream whilst reading the prologue")
             return buf
@@ -250,10 +308,15 @@ internal open class MailPrologueInputStream(input: InputStream) : FilterInputStr
         input.reset()
         val rawPrologue = ByteArray(rawPrologueSize)
         input.read(rawPrologue)
-        Prologue(protocolName, header, extensions, rawPrologue)
+
+        val prologue = Prologue(protocolName, header, extensions, rawPrologue)
+        _prologue = prologue
+        return prologue
     }
 
     val headerBytes: ByteArray get() = prologue.header
+
+    val header: EnclaveMailHeaderImpl by lazy { EnclaveMailHeaderImpl.decode(headerBytes) }
 
     private fun readProtocolName(): String {
         // A byte followed by that many characters in ASCII.
@@ -284,55 +347,9 @@ internal open class MailPrologueInputStream(input: InputStream) : FilterInputStr
         }
     }
 
-    protected fun error(s: String): Nothing {
+    private fun error(s: String): Nothing {
         throw IOException("$s. Corrupt stream or not Conclave Mail.")
     }
-}
-
-/**
- * A stream filter that decrypts a stream produced by [MailEncryptingStream].
- *
- * This stream filter will verify that the underlying stream doesn't prematurely terminate. Attempting to read from
- * it when the underlying stream has reached end-of-stream before the sender had finished writing will cause an
- * exception to be thrown, as otherwise a man in the middle could maliciously truncate the stream, possibly changing
- * its meaning.
- *
- * Mail streams protect you from a classic error in cryptography: checking the validity of a message only once it's
- * been entirely read but acting on it earlier. Mail streams won't yield any data until a full packet and its
- * authentication tag have been read and verified, so the stream cannot yield data produced by an adversary.
- * However when later bytes may change the meaning of earlier bytes you should fully consume the stream (until
- * [read] returns -1) before acting on it.
- *
- * You can access the associated (unencrypted but authenticated) data provided by the user by calling
- * [header], which will read enough of the stream to provide the answer (blocking if necessary).
- *
- * Marks are not supported by this stream.
- */
-internal class MailDecryptingStream(
-        input: InputStream,
-        privateKey: ByteArray
-) : MailPrologueInputStream(BufferedInputStream(input)) {
-    init {
-        // The BufferedInputStream we wrap around input will ensure this is always true.
-        check(`in`.markSupported())
-    }
-
-    private val privateKey: ByteArray = privateKey.copyOf()
-    private var cipherState: CipherState? = null
-
-    // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
-    private var handshakeFailure: IOException? = null
-
-    /**
-     * Returns the authenticated public key of the sender. This may be useful to understand who sent you the
-     * data, if you know the sender's possible public keys in advance.
-     */
-    var senderPublicKey: ByteArray? = null
-        private set
-        get() {
-            maybeHandshake()
-            return field
-        }
 
     private val buffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
     private val currentDecryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Current decrypted packet.
@@ -360,7 +377,7 @@ internal class MailDecryptingStream(
         // Read the length, which includes the MAC tag.
         val cipherState = cipherState!!
         val input = `in`
-        val packetLen: Int = readShort()
+        val packetLen: Int = readUnsignedShort()
         if (packetLen < cipherState.macLength)
             error("Packet length $packetLen is less than MAC length ${cipherState.macLength}")
 
@@ -431,7 +448,7 @@ internal class MailDecryptingStream(
 
     private fun maybeHandshake() {
         if (cipherState != null) return
-        if (handshakeFailure != null) throw handshakeFailure!!
+        handshakeFailure?.let { throw it }
         try {
             // We ignore prologue extensions for forwards compatibility.
             setupHandshake(prologue).use { handshake ->
@@ -445,18 +462,19 @@ internal class MailDecryptingStream(
                 check(handshake.action == HandshakeState.COMPLETE)
             }
         } catch (e: Exception) {
-            handshakeFailure = IOException(e)
+            handshakeFailure = if (e is IOException) e else IOException(e)
         } finally {
             // No longer need the private key now we've established the session key.
-            Noise.destroy(privateKey)
+            privateKey = null
         }
-        if (handshakeFailure != null) throw handshakeFailure!!
+        handshakeFailure?.let { throw it }
     }
 
     private fun setupHandshake(prologue: Prologue): HandshakeState {
+        val privateKey = this.privateKey ?: throw IOException("Private key has not been provided to decrypt the stream.")
         val handshake = HandshakeState(prologue.protocolName, HandshakeState.RESPONDER)
         val localKeyPair = handshake.localKeyPair
-        localKeyPair.setPrivateKey(privateKey, 0)
+        localKeyPair.setPrivateKey(privateKey.encoded, 0)
         // The prologue ensures the protocol name, headers and extensions weren't tampered with.
         handshake.setPrologue(prologue.raw, 0, prologue.raw.size)
         handshake.start()
@@ -467,6 +485,40 @@ internal class MailDecryptingStream(
         handshake.readMessage(handshakeBuf, 0, handshakeBuf.size, payloadBuf, 0)
         check(handshake.action == HandshakeState.SPLIT)
         return handshake
+    }
+
+    /**
+     * Use the given lambda to derive the encryption key for this stream from the header and fully decrypt it into an
+     * authenticated [EnclaveMail] object.
+     *
+     * It is the caller's responsibility to close this stream.
+     */
+    fun decryptMail(deriveKey: (ByteArray?) -> PrivateKey): EnclaveMail {
+        // TODO: Optimise out copies here.
+        //
+        // We end up copying the mail every time it's read, the copy being defensive and thus useful only to protect
+        // against malicious or buggy code inside the enclave. But as enclaves cannot load sandboxed code today,
+        // it ends up being useless. We do it here ONLY to avoid it accidentally being overlooked later, when
+        // we do indeed plan to introduce code sandboxing. Then it'd be unintuitive if you could pass an EnclaveMail
+        // object into malicious code and the body or envelope comes back changed.
+        //
+        // What we should actually do is expose the MailDecryptingStream to the user (as an InputStream). Then they
+        // can either pull from it directly e.g. via a serialisation lib, or copy to a byte array if they want to.
+        // This would also let us avoid the memcopy into the enclave and consumption of EPC because the mail is
+        // encrypted and authenticated in 64kb Noise packet blocks, so it's safe to hold it in unprotected memory
+        // and store just the current decrypted block in EPC, which MailDecryptingStream already does. This would
+        // also make it feasible to access huge mails without the 2GB size limit JVM arrays pose.
+        val privateKey = deriveKey(header.keyDerivation)
+        setPrivateKey(privateKey)
+        val mailBody = readBytes()
+        return object : EnclaveMail {
+            override val bodyAsBytes: ByteArray get() = mailBody.copyOf()
+            override val authenticatedSender: PublicKey? = senderPublicKey?.let(::Curve25519PublicKey)
+            override val sequenceNumber: Long = header.sequenceNumber
+            override val topic: String = header.topic
+            override val from: String? = header.from
+            override val envelope: ByteArray? get() = header.envelope?.copyOf()
+        }
     }
 }
 

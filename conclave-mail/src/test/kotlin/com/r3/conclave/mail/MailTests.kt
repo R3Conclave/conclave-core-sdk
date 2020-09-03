@@ -1,11 +1,11 @@
 package com.r3.conclave.mail
 
-import org.assertj.core.api.Assertions.assertThat
+import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.io.IOException
 
 class MailTests {
     private companion object {
@@ -48,7 +48,7 @@ class MailTests {
         }
 
         // Now check we can read the headers in the encrypted mail without needing the private key.
-        val encrypted: EncryptedEnclaveMail = mutableMail.encrypt()
+        val encrypted: ByteArray = mutableMail.encrypt()
         // Two encryptions of the same message encrypt to different byte arrays, even if the sequence number is the
         // same. It just means that you can't tell if the same content is being sent twice in a row.
         assertFalse(encrypted.contentEquals(mutableMail.encrypt()))
@@ -77,16 +77,6 @@ class MailTests {
         assertThrows<IllegalArgumentException> { mutableMail.topic = "1234.5678" }
     }
 
-    private val corruptionErrors = listOf(
-            "Unknown Noise DH algorithm",
-            "Unknown Noise cipher algorithm",
-            "Unknown Noise hash algorithm",
-            "Corrupt stream or not Conclave Mail",
-            "Premature end of stream",
-            "Protocol name must have 5 components",
-            "Tag mismatch!"
-    )
-
     @Test
     fun corrupted() {
         val mutableMail = MutableMail(message1, bob.public, alice.private)
@@ -95,11 +85,11 @@ class MailTests {
         // error message for each.
         val bytes = mutableMail.encrypt()
         for (i in bytes.indices) {
-            bytes[i] = bytes[i].inc()
-            val e = assertThrows<IOException> { Mail.decrypt(bytes, bob.private) }
-            // Is the exception message in our list of acceptable/anticipated errors?
-            assertThat(corruptionErrors).describedAs(e.message!!).anyMatch { it in e.message!! }
-            bytes[i] = bytes[i].dec()
+            bytes[i]++
+            assertThatThrownBy {
+                Mail.decrypt(bytes, bob.private)
+            }.`is`(throwableWithMailCorruptionErrorMessage)
+            bytes[i]--
             // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
             Mail.decrypt(bytes, bob.private)
         }
