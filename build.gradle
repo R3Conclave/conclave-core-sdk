@@ -448,7 +448,10 @@ idea {
 //
 // The publishAllPublicationsToSdkRepoRepository target is synthesised automatically by the maven-publish Gradle
 // plugin, based on the repositories block inside the if(includeNative) block above.
-def libArtifacts = publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }
+task sdkRepo {
+    dependsOn = publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }
+}
+
 task zipGPL2Sources(type: Zip) {
     group = "SDK Build"
     description = "Zip up codebases we statically link with OpenJDK, to comply with our GPL2 obligations"
@@ -492,7 +495,7 @@ task sdkCopyExtras(type: Copy) {
     }
 }
 
-task sdkFiles(type: Copy, dependsOn: libArtifacts + ["buildDocs", "zipGPL2Sources", "sdkCopyExtras"]) {
+task sdkFiles(type: Copy, dependsOn: ["sdkRepo", "buildDocs", "zipGPL2Sources", "sdkCopyExtras"]) {
     group = "SDK Build"
     description = "Build the SDK directory tree that we ship to end users."
     from("docs/build")
