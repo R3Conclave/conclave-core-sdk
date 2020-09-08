@@ -1,12 +1,16 @@
 import avian.test.avian.OcallReadResourceBytes
 import com.r3.conclave.common.EnclaveCall
-import com.r3.conclave.utilities.internal.readFully
+import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
-import com.r3.conclave.enclave.Enclave
-import org.junit.jupiter.api.Test
+import com.r3.conclave.utilities.internal.readFully
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import org.objectweb.asm.Opcodes
 
 class AvianTestSuite {
@@ -15,6 +19,27 @@ class AvianTestSuite {
         @RegisterExtension
         val testEnclaves = TestEnclaves()
 
+        private lateinit var host: EnclaveHost
+
+        @BeforeAll
+        @JvmStatic
+        fun start() {
+            host = testEnclaves.hostTo<TestRunnerEnclave>(EnclaveBuilder(
+                    config = EnclaveConfig().withTCSNum(32),
+                    includeClasses = testCaseClasses + Opcodes::class.java
+            ))
+            host.start(null, null, null)
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun shutdown() {
+            if (::host.isInitialized) {
+                host.close()
+            }
+        }
+
+        @JvmStatic
         val testCaseClasses = listOf(
                 avian.test.FileSystemEmulation::class.java,
                 avian.test.MessageFormatTest::class.java,
@@ -100,26 +125,15 @@ class AvianTestSuite {
         }
     }
 
-    @Test
-    fun `avian tests in enclave`() {
-        val host = testEnclaves.hostTo<TestRunnerEnclave>(EnclaveBuilder(
-                config = EnclaveConfig().withTCSNum(32),
-                includeClasses = testCaseClasses + Opcodes::class.java
-        ))
-        host.start(null, null, null)
-
-        for (testCase in testCaseClasses) {
-            // TODO Make this into a parameterised test when this module moves to Junit 5
-            println("Testing ${testCase.name}")
-            host.callEnclave(testCase.name.toByteArray()) {
-                // Resource requests
-                val path = String(it)
-                requireNotNull(this::class.java.getResourceAsStream(path)?.readFully()) {
-                    "Cannot find resource $path"
-                }
+    @ParameterizedTest
+    @MethodSource("getTestCaseClasses")
+    fun `avian tests in enclave`(testCase: Class<*>) {
+        host.callEnclave(testCase.name.toByteArray()) {
+            // Resource requests
+            val path = String(it)
+            requireNotNull(this::class.java.getResourceAsStream(path)?.readFully()) {
+                "Cannot find resource $path"
             }
         }
-
-        host.close()
     }
 }
