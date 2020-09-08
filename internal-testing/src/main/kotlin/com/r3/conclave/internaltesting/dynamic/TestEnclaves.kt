@@ -4,11 +4,14 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.createHost
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.toHexString
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.File
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -45,7 +48,7 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
     }
 
     private fun createEnclaveJar(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
-        return Cached.singleFile("${entryClass.name}-$entropy-${builder.type.name}", "${entryClass.simpleName}.jar") { output ->
+        return Cached.singleFile("${entryClass.name}-$entropy", "${entryClass.simpleName}.jar") { output ->
             BuildEnclaveJar.build(entryClass, builder.includeClasses, output.toPath())
         }
     }

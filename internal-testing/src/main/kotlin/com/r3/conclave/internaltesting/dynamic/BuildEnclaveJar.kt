@@ -1,60 +1,59 @@
 package com.r3.conclave.internaltesting.dynamic
 
 import com.r3.conclave.enclave.Enclave
-import java.io.File.pathSeparator
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.jar.JarOutputStream
+import java.net.URI
+import java.nio.file.*
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 object BuildEnclaveJar {
-    private val enclaveDependencies: Set<Path>
-
-    init {
-        val enclaveDependencyNames = BuildEnclaveJar::class.java.getResourceAsStream("/enclave-deps.txt").reader().useLines { it.toSet() }
-        enclaveDependencies = System.getProperty("java.class.path")
-                .splitToSequence(pathSeparator)
-                .map { Paths.get(it) }
-                .filter { it.fileName.toString() in enclaveDependencyNames }
-                .toSet()
-    }
-
     fun build(entryClass: Class<out Enclave>, includeClasses: List<Class<*>>, outputJarFile: Path) {
+        // Copy the conclave-enclave fat jar, which will act as a basis for the test enclave jar.
+        BuildEnclaveJar::class.java.getResourceAsStream("conclave-enclave-fat.jar").use {
+            Files.copy(it, outputJarFile)
+        }
+
         val classLocations = (includeClasses + entryClass)
                 .mapNotNull { it.protectionDomain.codeSource?.location?.let { Paths.get(it.toURI()) } }
                 .toSet()
-        val allLocations = enclaveDependencies + classLocations
 
-        JarOutputStream(Files.newOutputStream(outputJarFile)).use { outputJar ->
-            val pathCache = HashSet<Path>()
-            for (location in allLocations) {
-                println("Including $location")
-                if (location.toString().endsWith(".jar")) {
-                    ZipInputStream(Files.newInputStream(location)).use { depJar ->
-                        depJar.entries
-                                .filter { pathCache.add(Paths.get(it.name)) }
-                                .forEach {
-                                    outputJar.putNextEntry(ZipEntry(it.name))
-                                    depJar.copyTo(outputJar)
-                                }
-                    }
-                } else if (Files.isDirectory(location)) {
-                    Files.walk(location).use { paths ->
-                        paths.filter { Files.isRegularFile(it) }.forEach { file ->
-                            val entryPath = location.relativize(file)
-                            if (pathCache.add(entryPath)) {
-                                outputJar.putNextEntry(ZipEntry(entryPath.toString()))
-                                Files.copy(file, outputJar)
+        // Add the additional classes without extracting the contents by opening it as a zip "file system".
+        val jarUri = URI.create("jar:${outputJarFile.toUri()}")
+        FileSystems.newFileSystem(jarUri, emptyMap<String, Any>()).use { zipFs ->
+            for (location in classLocations) {
+                when {
+                    location.toString().endsWith(".jar") -> {
+                        ZipInputStream(Files.newInputStream(location)).use { depJar ->
+                            for (depEntry in depJar.entries) {
+                                if (depEntry.isDirectory) continue
+                                val path = zipFs.createPath(depEntry.name)
+                                Files.copy(depJar, path, REPLACE_EXISTING)
                             }
                         }
                     }
-                } else {
-                    throw IllegalStateException("Can't identify location $location")
+                    Files.isDirectory(location) -> {
+                        Files.walk(location).use { paths ->
+                            paths.filter { Files.isRegularFile(it) }.forEach { file ->
+                                val path = zipFs.createPath(location.relativize(file).toString())
+                                Files.copy(file, path, REPLACE_EXISTING)
+                            }
+                        }
+                    }
+                    else -> throw IllegalStateException("Can't identify location $location")
                 }
             }
+            // The problem of including the entire location of the classes is that two enclave classes from the same
+            // location will produce the same jar file and thus the same MRENCLAVE. So we add this file to deduplicate
+            // the jars.
+            Files.createFile(zipFs.createPath("dynamic-enclave-$entryClass"))
         }
+    }
+
+    private fun FileSystem.createPath(name: String): Path {
+        val path = getPath(name)
+        path.parent?.let(Files::createDirectories)
+        return path
     }
 
     private val ZipInputStream.entries get(): Sequence<ZipEntry> = generateSequence(nextEntry) { nextEntry }

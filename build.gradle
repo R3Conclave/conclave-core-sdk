@@ -96,6 +96,12 @@ subprojects {
             exclude group: 'commons-logging', module: 'commons-logging'
         }
 
+        if (project.name.startsWith("conclave-")) {
+            // Shaded dependencies should not be added to the runtime classpath so they are declared as compileOnly.
+            // However compileOnly does not extend to the test configuration so we add that.
+            testImplementation.extendsFrom(compileOnly)
+        }
+
         // Allow -PexcludeNative to do builds with downloaded artifacts instead of locally built artifacts.
         if (includeNative) {
             all {
@@ -357,11 +363,6 @@ if (includeNative) {
         // which might use different versions of these libraries.
         if (published.projectPath.startsWith(":conclave-")) {
             project.pluginManager.apply('com.github.johnrengelman.shadow')
-            // Shaded dependencies should not be added to the runtime classpath so they are declared as compileOnly.
-            // However compileOnly does not extend to the test configuration so we add that.
-            project.configurations {
-                testImplementation.extendsFrom(compileOnly)
-            }
             project.shadowJar {
                 if (project.name == "conclave-mail" || project.name == "conclave-common") {
                     // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These

@@ -16,28 +16,15 @@ dependencies {
     runtimeOnly "com.r3.conclave:native-enclave-release:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-sign-tool:${rootProject.version}"
     runtimeOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
 }
 
-task generateEnclaveDeps {
-    def outputFile = file("$buildDir/enclave-deps.txt")
-    outputs.file(outputFile)
-    doLast {
-        outputFile.withWriter { out ->
-            out.writeLine project(":conclave-enclave").jar.archiveFileName.get()
-            project(":conclave-enclave").configurations.runtimeClasspath.each {
-                out.writeLine it.name
-            }
-            project(":conclave-common").configurations.compileOnly.each {
-                out.writeLine it.name
-            }
-        }
-    }
-}
-
-// Generate a resource file that contains the file names of all the dependencies for :conclave-enclave (including itself),
-// so that BuildEnclaveJar can use the correct jars from the class path to dynamically build an enclave jar.
+// Include the conclave-enclave fat jar to speed up the generation of the dynamic test enclaves.
 processResources {
     with copySpec {
-        from generateEnclaveDeps
+        from project(":conclave-enclave").fatJar
+        into "com/r3/conclave/internaltesting/dynamic"
+        rename { "conclave-enclave-fat.jar" }
     }
 }
