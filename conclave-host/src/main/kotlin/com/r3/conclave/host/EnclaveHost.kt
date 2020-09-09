@@ -473,13 +473,13 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
             val enclaveCallId = input.getLong()
             val type = callTypeValues[input.get().toInt()]
-            val bytes = input.getRemainingBytes()
             val transaction = threadIDToTransaction.getValue(enclaveCallId)
             val enclaveCallStateManager = transaction.stateManager
             val intoEnclaveState = enclaveCallStateManager.checkStateIs<IntoEnclave>()
             when (type) {
-                InternalCallType.CALL_RETURN -> enclaveCallStateManager.state = Response(bytes)
+                InternalCallType.CALL_RETURN -> enclaveCallStateManager.state = Response(input.getRemainingBytes())
                 InternalCallType.CALL -> {
+                    val bytes = input.getRemainingBytes()
                     requireNotNull(intoEnclaveState.callback) {
                         "Enclave responded via callUntrustedHost but a callback was not provided to callEnclave."
                     }
@@ -489,7 +489,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     }
                 }
                 InternalCallType.MAIL_DELIVERY -> {
-                    val cmd = bytes.deserialise { MailCommand.deserialise(this) }
+                    val cmd = MailCommand.deserialise(input)
                     transaction.mailCommands.add(cmd)
                 }
             }

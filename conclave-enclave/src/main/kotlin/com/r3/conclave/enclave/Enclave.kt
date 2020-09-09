@@ -14,7 +14,10 @@ import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.setKeyDerivation
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.putBoolean
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PublicKey
@@ -340,11 +343,10 @@ abstract class Enclave {
                 "Thread ${Thread.currentThread()} may not attempt to send or acknowledge mail outside the context of a call or delivery."
             }
 
-            val bytes = writeData { cmd.writeTo(this) }
-            sender.send(Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
+            sender.send(Long.SIZE_BYTES + 1 + cmd.serialisedSize) { buffer ->
                 buffer.putLong(enclaveCallId)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
-                buffer.put(bytes)
+                cmd.putTo(buffer)
             }
         }
     }
