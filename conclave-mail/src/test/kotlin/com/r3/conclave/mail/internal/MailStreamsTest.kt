@@ -27,7 +27,7 @@ class MailStreamsTest {
     @Test
     fun happyPath() {
         val bytes = encryptMessage()
-        assertThat(MailProtocol.values()[bytes[0].toInt()].noiseProtocolName).isEqualTo(protocolNameN)
+        assertThat(MailProtocol.values()[bytes[2].toInt()].noiseProtocolName).isEqualTo(protocolNameN)
         // Can't find, it's encrypted.
         assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello"))
         val stream = decrypt(bytes)
@@ -79,7 +79,7 @@ class MailStreamsTest {
         val bytes = encryptMessage(Curve25519PrivateKey(senderPrivateKey))
         // When we authenticate ourselves, we use the X handshake pattern instead of the N pattern. X transmits the
         // public key corresponding to senderPrivateKey to the other side so they can use it as part of EC-DH.
-        assertThat(MailProtocol.values()[bytes[0].toInt()].noiseProtocolName).isEqualTo(protocolNameX)
+        assertThat(MailProtocol.values()[bytes[2].toInt()].noiseProtocolName).isEqualTo(protocolNameX)
         val stream = decrypt(bytes)
         assertArrayEquals(senderDHState.publicKey, stream.senderPublicKey)
     }

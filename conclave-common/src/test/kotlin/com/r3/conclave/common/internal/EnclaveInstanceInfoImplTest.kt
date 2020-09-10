@@ -109,7 +109,7 @@ class EnclaveInstanceInfoImplTest {
     }
 
     @Test
-    fun `EnclaveInstanceInfo deserialize throws IllegalArgumeentException on truncated bytes`() {
+    fun `EnclaveInstanceInfo deserialize throws IllegalArgumentException on truncated bytes`() {
         val serialised = newInstance().serialize()
         for (truncatedSize in serialised.indices) {
             val truncated = serialised.copyOf(truncatedSize)

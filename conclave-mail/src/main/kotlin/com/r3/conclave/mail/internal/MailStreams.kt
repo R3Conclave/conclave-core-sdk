@@ -11,10 +11,21 @@ import java.security.PublicKey
 import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
 
-// Utils for encoding a 16 bit unsigned value in little endian.
+// Utils for encoding a 16 bit unsigned value in big endian.
 private fun ByteArray.writeShort(offset: Int, value: Int) {
     this[offset] = (value shr 8).toByte()
     this[offset + 1] = value.toByte()
+}
+
+private fun ByteArray.readShort(offset: Int): Int {
+    val b1 = this[offset].toInt() and 0xFF
+    val b2 = this[offset + 1].toInt() and 0xFF
+    return (b1 shl 8) or b2
+}
+
+private fun OutputStream.writeShort(value: Int) {
+    write((value ushr 8) and 0xFF)
+    write(value and 0xFF)
 }
 
 /**
@@ -107,6 +118,7 @@ internal class MailEncryptingStream private constructor(
             // 2. It authenticates the header, whilst leaving it unencrypted (vs what would happen if we put it in a
             //    handshake payload).
             val prologue: ByteArray = computePrologue(protocol, header)
+            out.writeShort(prologue.size)
             out.write(prologue)
             handshake.setPrologue(prologue, 0, prologue.size)
             handshake.start()
@@ -135,14 +147,12 @@ internal class MailEncryptingStream private constructor(
         // 1 byte - mail protocol id
         // 2 bytes - caller specified header length
         // N bytes - caller header
-        // 2 bytes - extension area used only by this class
-        // N bytes - ignored (no extensions in this version)
+        // remaining bytes - future extensions
         val headerLen = header?.size ?: 0
-        val prologue = ByteArray(1 + 2 + headerLen + 2)
+        val prologue = ByteArray(1 + 2 + headerLen)
         prologue[0] = protocol.ordinal.toByte()
         prologue.writeShort(1, headerLen)
         header?.copyInto(prologue, 1 + 2)
-        // The final two bytes are implicitly zero.
         return prologue
     }
 
@@ -221,10 +231,6 @@ class MailDecryptingStream(
         input: InputStream,
         private var privateKey: PrivateKey? = null
 ) : FilterInputStream(input) {
-    init {
-        require(input.markSupported())
-    }
-
     private var cipherState: CipherState? = null
 
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
@@ -272,7 +278,7 @@ class MailDecryptingStream(
         return `in`.readExactlyNBytes(length)
     }
 
-    private class Prologue(val protocol: MailProtocol, val header: ByteArray, val extensions: ByteArray, val raw: ByteArray)
+    private class Prologue(val protocol: MailProtocol, val header: ByteArray, val raw: ByteArray)
 
     private var _prologue: Prologue? = null
     /**
@@ -285,22 +291,21 @@ class MailDecryptingStream(
         // of the stream.
         //
         // See computePrologue for the format.
-        val input = `in`
-        input.mark(63356)
-        val protocol: MailProtocol = protocolValues[readUnsignedByte()]
-
-        val prologue = try {
-            val header = readLengthPrefixBytes()
-            val extensions = readLengthPrefixBytes()
-            // Now re-read the prologue into a contiguous byte array so it can be fed to Noise for hashing.
-            input.reset()
-            val rawPrologueSize = 1 + 2 + header.size + 2 + extensions.size
-            val rawPrologue = input.readExactlyNBytes(rawPrologueSize)
-            Prologue(protocol, header, extensions, rawPrologue)
+        val prologueBytes = try {
+            readLengthPrefixBytes()
         } catch (e: EOFException) {
             error("Premature end of stream whilst reading the prologue", e)
         }
-
+        if (prologueBytes.size < 3) {
+            error("Invalid prologue length")
+        }
+        val protocol: MailProtocol = protocolValues[prologueBytes[0].toInt()]
+        val headerSize = prologueBytes.readShort(1)
+        if (prologueBytes.size < 3 + headerSize) {
+            error("Invalid prologue length")
+        }
+        val header = prologueBytes.copyOfRange(3, 3 + headerSize)
+        val prologue = Prologue(protocol, header, prologueBytes)
         _prologue = prologue
         return prologue
     }
