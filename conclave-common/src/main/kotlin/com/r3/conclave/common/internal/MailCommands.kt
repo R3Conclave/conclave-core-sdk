@@ -3,7 +3,6 @@ package com.r3.conclave.common.internal
 import com.r3.conclave.mail.EnclaveMailId
 import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
-import com.r3.conclave.utilities.internal.intLengthPrefixSize
 import com.r3.conclave.utilities.internal.putIntLengthPrefixBytes
 import java.nio.ByteBuffer
 import kotlin.LazyThreadSafetyMode.NONE

@@ -4,15 +4,15 @@ import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.wrap
 import com.r3.conclave.mail.internal.noise.protocol.*
+import com.r3.conclave.utilities.internal.readExactlyNBytes
 import java.io.*
-import java.nio.charset.StandardCharsets
 import java.security.PrivateKey
 import java.security.PublicKey
 import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
 
 // Utils for encoding a 16 bit unsigned value in little endian.
-private fun ByteArray.writeShortTo(offset: Int, value: Int) {
+private fun ByteArray.writeShort(offset: Int, value: Int) {
     this[offset] = (value shr 8).toByte()
     this[offset + 1] = value.toByte()
 }
@@ -51,15 +51,11 @@ private fun ByteArray.writeShortTo(offset: Int, value: Int) {
  */
 internal class MailEncryptingStream private constructor(
         out: OutputStream,
-        destinationPublicKey: ByteArray,
+        private val destinationPublicKey: PublicKey,
         header: ByteArray?,
-        senderPrivateKey: ByteArray?
+        private val senderPrivateKey: PrivateKey?
 ) : FilterOutputStream(out) {
     companion object {
-        private const val cipherName: String = "AESGCM"
-        private const val dhName: String = "25519"
-        private const val hashName: String = "SHA256"
-
         /**
          * Creates a [MailEncryptingStream] wrapped with a [BufferedOutputStream]. The buffering ensures data is
          * packetized by Noise to the maximum packet size, thus reducing the overhead of the stream to the minimum
@@ -67,9 +63,9 @@ internal class MailEncryptingStream private constructor(
          */
         fun wrap(
                 out: OutputStream,
-                destinationPublicKey: ByteArray,
+                destinationPublicKey: PublicKey,
                 header: ByteArray?,
-                senderPrivateKey: ByteArray?
+                senderPrivateKey: PrivateKey?
         ): OutputStream {
             // The buffer is the maximum Noise packet length minus the 16 byte MAC that each packet has. Thus the start of
             // each 64kb block of mail stream after the prologue+handshake can be calculated if you know how big the
@@ -79,12 +75,7 @@ internal class MailEncryptingStream private constructor(
     }
 
     private var cipherState: CipherState? = null
-    private val destinationPublicKey: ByteArray = destinationPublicKey.clone()
     private val header: ByteArray? = header?.clone()
-    private val senderPrivateKey: ByteArray? = senderPrivateKey?.clone()
-
-    /** The standard Noise protocol name, as used in the specs. */
-    private val protocolName = (if (senderPrivateKey != null) "Noise_X_" else "Noise_N_") + "${dhName}_${cipherName}_$hashName"
 
     // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
     // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
@@ -92,10 +83,11 @@ internal class MailEncryptingStream private constructor(
     private fun maybeHandshake() {
         if (cipherState != null) return  // Already set up the stream.
 
+        val protocol = if (senderPrivateKey != null) MailProtocol.SENDER_KEY_TRANSMITTED else MailProtocol.NO_SENDER_KEY
         // Noise can be used in various modes, the protocol name is an ASCII string that identifies the settings.
         // We write it here. It looks like this: Noise_X_25519_AESGCM_SHA256
-        HandshakeState(protocolName, HandshakeState.INITIATOR).use { handshake ->
-            handshake.remotePublicKey.setPublicKey(destinationPublicKey, 0)
+        HandshakeState(protocol.noiseProtocolName, HandshakeState.INITIATOR).use { handshake ->
+            handshake.remotePublicKey.setPublicKey(destinationPublicKey.encoded, 0)
 
             // If one was provided, the recipient will get our public key in an authenticated manner i.e. we cannot
             // fake it because we need to use the corresponding private key when sending the message.
@@ -105,7 +97,7 @@ internal class MailEncryptingStream private constructor(
             val localKeyPair: DHState? = handshake.localKeyPair
             if (senderPrivateKey != null) {
                 // localKeyPair will be non-null due to the selection of the protocol name above.
-                localKeyPair!!.setPrivateKey(senderPrivateKey, 0)
+                localKeyPair!!.setPrivateKey(senderPrivateKey.encoded, 0)
             }
 
             // The prologue can be set to any data we like. Noise won't do anything with it except incorporating the
@@ -114,7 +106,7 @@ internal class MailEncryptingStream private constructor(
             //    with what the receiver thinks we're using.
             // 2. It authenticates the header, whilst leaving it unencrypted (vs what would happen if we put it in a
             //    handshake payload).
-            val prologue: ByteArray = computePrologue(protocolName, header)
+            val prologue: ByteArray = computePrologue(protocol, header)
             out.write(prologue)
             handshake.setPrologue(prologue, 0, prologue.size)
             handshake.start()
@@ -124,7 +116,7 @@ internal class MailEncryptingStream private constructor(
             // to encrypt with. We don't provide any initial payload, although we technically could. Being able to
             // provide bytes during the handshake is an optimisation mostly relevant for an interactive handshake where
             // latency is a primary concern. Enclaves have bigger performance issues to worry about.
-            val handshakeBytes = ByteArray(lengthOfHandshake(protocolName))
+            val handshakeBytes = ByteArray(protocol.handshakeLength)
             val handshakeLen = handshake.writeMessage(handshakeBytes, 0, null, 0, 0)
             check(handshakeLen == handshakeBytes.size)
             out.write(handshakeBytes, 0, handshakeLen)
@@ -138,22 +130,18 @@ internal class MailEncryptingStream private constructor(
         }
     }
 
-    private fun computePrologue(protocolName: String, header: ByteArray?): ByteArray {
+    private fun computePrologue(protocol: MailProtocol, header: ByteArray?): ByteArray {
         // Format:
-        // 1 byte - protocol name length
-        // N bytes - protocol name
+        // 1 byte - mail protocol id
         // 2 bytes - caller specified header length
         // N bytes - caller header
         // 2 bytes - extension area used only by this class
         // N bytes - ignored (no extensions in this version)
         val headerLen = header?.size ?: 0
-        val protocolNameBytes = protocolName.toByteArray(StandardCharsets.US_ASCII)
-        val prologue = ByteArray(1 + protocolNameBytes.size + 2 + headerLen + 2)
-        check(protocolNameBytes.size < 256)
-        prologue[0] = protocolNameBytes.size.toByte()
-        protocolNameBytes.copyInto(prologue, 1)
-        prologue.writeShortTo(1 + protocolNameBytes.size, headerLen)
-        header?.copyInto(prologue, 1 + protocolNameBytes.size + 2)
+        val prologue = ByteArray(1 + 2 + headerLen + 2)
+        prologue[0] = protocol.ordinal.toByte()
+        prologue.writeShort(1, headerLen)
+        header?.copyInto(prologue, 1 + 2)
         // The final two bytes are implicitly zero.
         return prologue
     }
@@ -184,7 +172,7 @@ internal class MailEncryptingStream private constructor(
         if (len > Noise.MAX_PACKET_LEN - cipherState.macLength - 2)
             throw IOException(ShortBufferException())
         val encryptedLength = cipherState.encryptWithAd(null, b, off, buffer, 2, len)
-        buffer.writeShortTo(0, encryptedLength)
+        buffer.writeShort(0, encryptedLength)
         out.write(buffer, 0, encryptedLength + 2)
     }
 
@@ -196,7 +184,7 @@ internal class MailEncryptingStream private constructor(
             val cipherState = cipherState!!
             val macLength = cipherState.encryptWithAd(null, ByteArray(0), 0, buffer, 2, 0)
             check(macLength == cipherState.macLength)
-            buffer.writeShortTo(0, macLength)
+            buffer.writeShort(0, macLength)
             out.write(buffer, 0, macLength + 2)
             out.flush()
         } catch (e: ShortBufferException) {
@@ -240,7 +228,7 @@ class MailDecryptingStream(
     private var cipherState: CipherState? = null
 
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
-    private var handshakeFailure: Throwable? = null
+    private var handshakeFailure: IOException? = null
 
     /**
      * Returns the authenticated public key of the sender. This may be useful to understand who sent you the
@@ -271,13 +259,20 @@ class MailDecryptingStream(
         }
     }
 
+    private fun readUnsignedByte(): Int = `in`.read().also { if (it == -1) error("Truncated stream") }
+
     private fun readUnsignedShort(): Int {
-        val b1 = `in`.read().also { if (it == -1) error("Truncated stream") }
-        val b2 = `in`.read().also { if (it == -1) error("Truncated stream") }
+        val b1 = readUnsignedByte()
+        val b2 = readUnsignedByte()
         return (b1 shl 8) or b2
     }
 
-    internal class Prologue(val protocolName: String, val header: ByteArray, val extensions: ByteArray, val raw: ByteArray)
+    private fun readLengthPrefixBytes(): ByteArray {
+        val length = readUnsignedShort()
+        return `in`.readExactlyNBytes(length)
+    }
+
+    private class Prologue(val protocol: MailProtocol, val header: ByteArray, val extensions: ByteArray, val raw: ByteArray)
 
     private var _prologue: Prologue? = null
     /**
@@ -292,24 +287,20 @@ class MailDecryptingStream(
         // See computePrologue for the format.
         val input = `in`
         input.mark(63356)
-        val protocolName = readProtocolName()
+        val protocol: MailProtocol = protocolValues[readUnsignedByte()]
 
-        fun readBuf(): ByteArray {
-            val len = readUnsignedShort()   // readUnsignedShort throws an exception if not enough bytes, and we allow 64kb of header.
-            val buf = ByteArray(len)
-            if (input.read(buf) < len) error("Premature end of stream whilst reading the prologue")
-            return buf
+        val prologue = try {
+            val header = readLengthPrefixBytes()
+            val extensions = readLengthPrefixBytes()
+            // Now re-read the prologue into a contiguous byte array so it can be fed to Noise for hashing.
+            input.reset()
+            val rawPrologueSize = 1 + 2 + header.size + 2 + extensions.size
+            val rawPrologue = input.readExactlyNBytes(rawPrologueSize)
+            Prologue(protocol, header, extensions, rawPrologue)
+        } catch (e: EOFException) {
+            error("Premature end of stream whilst reading the prologue", e)
         }
 
-        val header = readBuf()
-        val extensions = readBuf()
-        // Now re-read the prologue into a contiguous byte array so it can be fed to Noise for hashing.
-        val rawPrologueSize = 1 + protocolName.length + 2 + header.size + 2 + extensions.size
-        input.reset()
-        val rawPrologue = ByteArray(rawPrologueSize)
-        input.read(rawPrologue)
-
-        val prologue = Prologue(protocolName, header, extensions, rawPrologue)
         _prologue = prologue
         return prologue
     }
@@ -318,43 +309,14 @@ class MailDecryptingStream(
 
     val header: EnclaveMailHeaderImpl by lazy { EnclaveMailHeaderImpl.decode(headerBytes) }
 
-    private fun readProtocolName(): String {
-        // A byte followed by that many characters in ASCII.
-        val input = `in`!!
-        val protocolNameLen = input.read()
-        if (protocolNameLen <= 0) error("No Noise protocol name header found")
-        // Read it in and advance the stream.
-        val protocolNameBytes = ByteArray(protocolNameLen)
-        if (input.read(protocolNameBytes) != protocolNameBytes.size) error("Could not read protocol name")
-
-        // We limit the handshakes to just two here, with the same ciphers. Adding new ciphers won't be forwards
-        // compatible. The justification is as follows. Curve25519, AESGCM and SHA256 are by this point mature,
-        // well tested algorithms that are widely deployed to protect all internet traffic. Although new ciphers
-        // are regularly designed, in practice few are every deployed because elliptic curve crypto with AES and SHA2
-        // have no known problems, there are none on the horizon beyond quantum computers, and the places where other
-        // algorithms get deployed tend to be devices with severe power or space constraints.
-        //
-        // What of QC? Noise does support a potential post-quantum algorithm. However, no current PQ ciphersuite has
-        // been settled on by standards bodies yet, and there are multiple competing proposals, many of which have
-        // worse performance or other problems compared to the standard algorithms. Given that the QCs being built
-        // at the moment are said to be unusable for breaking encryption keys, and it's unclear when - if ever - such
-        // a machine will actually be built, it makes sense to wait for PQ standardisation and then implement the
-        // winning algorithms at that time, rather than attempt to second guess and end up with (relatively speaking)
-        // not well reviewed algorithms baked into the protocol.
-        return when (val protocolName = String(protocolNameBytes, StandardCharsets.US_ASCII)) {
-            "Noise_X_25519_AESGCM_SHA256", "Noise_N_25519_AESGCM_SHA256" -> protocolName
-            else -> error("Unsupported Noise protocol name: $protocolName")
-        }
+    private fun error(s: String, cause: Exception? = null): Nothing {
+        throw IOException("$s. Corrupt stream or not Conclave Mail.", cause)
     }
 
-    private fun error(s: String): Nothing {
-        throw IOException("$s. Corrupt stream or not Conclave Mail.")
-    }
-
-    private val buffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
+    private val encryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
     private val currentDecryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Current decrypted packet.
-    private var currentReadPos = 0 // How far through the decrypted packet we got.
-    private var currentBufferLen = 0 // Real length of data in currentDecryptedBuffer.
+    private var currentReadPosition = 0 // How far through the decrypted packet we got.
+    private var currentPacketLength = 0 // Real length of data in currentDecryptedBuffer.
 
     /** To get [mark] back, wrap this stream in a [BufferedInputStream]. */
     override fun markSupported(): Boolean {
@@ -363,17 +325,17 @@ class MailDecryptingStream(
 
     override fun read(): Int {
         maybeHandshake()
-        if (currentReadPos == currentBufferLen) {
+        if (currentReadPosition == currentPacketLength) {
             // We reached the end of the current in memory decrypted packet so read another from the stream.
-            startNextPacket()
+            readNextPacket()
         }
-        return if (currentReadPos == -1)
+        return if (currentReadPosition == -1)
             -1             // We reached the terminator packet and shouldn't read further.
         else
-            currentDecryptedBuffer[currentReadPos++].toInt() and 0xFF
+            currentDecryptedBuffer[currentReadPosition++].toInt() and 0xFF
     }
 
-    private fun startNextPacket() {
+    private fun readNextPacket() {
         // Read the length, which includes the MAC tag.
         val cipherState = cipherState!!
         val input = `in`
@@ -382,19 +344,16 @@ class MailDecryptingStream(
             error("Packet length $packetLen is less than MAC length ${cipherState.macLength}")
 
         // Swallow the next packet, blocking until we got it.
-        var cursor = 0
-        while (cursor < packetLen) {
-            val c = input.read(buffer, cursor, packetLen - cursor)
-            if (c == -1) {
-                // We shouldn't run out of data before reaching the terminator packet, that could be a MITM attack.
-                error("Stream ended without a terminator marker. Truncation can imply a MITM attack.")
-            }
-            cursor += c
+        try {
+            input.readExactlyNBytes(encryptedBuffer, packetLen)
+        } catch (e: EOFException) {
+            // We shouldn't run out of data before reaching the terminator packet, that could be a MITM attack.
+            error("Stream ended without a terminator marker. Truncation can imply a MITM attack.")
         }
 
         // Now we can decrypt it.
-        currentBufferLen = try {
-            cipherState.decryptWithAd(null, buffer, 0, currentDecryptedBuffer, 0, packetLen)
+        currentPacketLength = try {
+            cipherState.decryptWithAd(null, encryptedBuffer, 0, currentDecryptedBuffer, 0, packetLen)
         } catch (e: ShortBufferException) {
             // Data was possibly corrupted.
             throw IOException(e)
@@ -402,7 +361,7 @@ class MailDecryptingStream(
             throw IOException(e)
         }
         // Have we reached the terminator packet?
-        currentReadPos = if (currentBufferLen == 0) -1 else 0
+        currentReadPosition = if (currentPacketLength == 0) -1 else 0
     }
 
     override fun skip(n: Long): Long {
@@ -453,13 +412,14 @@ class MailDecryptingStream(
             // We ignore prologue extensions for forwards compatibility.
             setupHandshake(prologue).use { handshake ->
                 // The sender has the option of whether to authenticate or not. If not, it'll be a Noise_N_ handshake.
-                if (prologue.protocolName.startsWith("Noise_X_"))
+                if (prologue.protocol == MailProtocol.SENDER_KEY_TRANSMITTED) {
                     senderPublicKey = handshake.remotePublicKey.publicKey
+                }
                 // Setup done, so retrieve the per-message key.
                 val split: CipherStatePair = handshake.split()
                 split.receiverOnly()
-                cipherState = split.receiver
                 check(handshake.action == HandshakeState.COMPLETE)
+                cipherState = split.receiver
             }
         } catch (e: Exception) {
             handshakeFailure = if (e is IOException) e else IOException(e)
@@ -472,15 +432,18 @@ class MailDecryptingStream(
 
     private fun setupHandshake(prologue: Prologue): HandshakeState {
         val privateKey = this.privateKey ?: throw IOException("Private key has not been provided to decrypt the stream.")
-        val handshake = HandshakeState(prologue.protocolName, HandshakeState.RESPONDER)
+        val handshake = HandshakeState(prologue.protocol.noiseProtocolName, HandshakeState.RESPONDER)
         val localKeyPair = handshake.localKeyPair
         localKeyPair.setPrivateKey(privateKey.encoded, 0)
         // The prologue ensures the protocol name, headers and extensions weren't tampered with.
         handshake.setPrologue(prologue.raw, 0, prologue.raw.size)
         handshake.start()
         check(handshake.action == HandshakeState.READ_MESSAGE)
-        val handshakeBuf = ByteArray(lengthOfHandshake(prologue.protocolName))
-        `in`.read(handshakeBuf)
+        val handshakeBuf = try {
+            `in`.readExactlyNBytes(prologue.protocol.handshakeLength)
+        } catch (e: EOFException) {
+            error("Premature end of stream during handshake")
+        }
         val payloadBuf = ByteArray(0)
         handshake.readMessage(handshakeBuf, 0, handshakeBuf.size, payloadBuf, 0)
         check(handshake.action == HandshakeState.SPLIT)
@@ -511,28 +474,60 @@ class MailDecryptingStream(
         val privateKey = deriveKey(header.keyDerivation)
         setPrivateKey(privateKey)
         val mailBody = readBytes()
-        return object : EnclaveMail {
-            override val bodyAsBytes: ByteArray get() = mailBody.copyOf()
-            override val authenticatedSender: PublicKey? = senderPublicKey?.let(::Curve25519PublicKey)
-            override val sequenceNumber: Long = header.sequenceNumber
-            override val topic: String = header.topic
-            override val from: String? = header.from
-            override val envelope: ByteArray? get() = header.envelope?.copyOf()
-        }
+        return DecryptedEnclaveMail(
+                header.sequenceNumber,
+                header.topic,
+                header.from,
+                senderPublicKey?.let(::Curve25519PublicKey),
+                header.envelope,
+                mailBody
+        )
+    }
+
+    private class DecryptedEnclaveMail(
+            override val sequenceNumber: Long,
+            override val topic: String,
+            override val from: String?,
+            override val authenticatedSender: PublicKey?,
+            private val _envelope: ByteArray?,
+            private val _bodyAsBytes: ByteArray
+    ) : EnclaveMail {
+        override val envelope: ByteArray? get() = _envelope?.clone()
+        override val bodyAsBytes: ByteArray get() = _bodyAsBytes.clone()
+    }
+
+    companion object {
+        private val protocolValues = MailProtocol.values()
     }
 }
 
-/**
- * Returns how many bytes a Noise handshake for the given protocol name requires. These numbers come from the sizes
- * needed for the ephemeral Curve25519 public keys, AES/GCM MAC tags and encrypted static keys.
- *
- * For example: 48 == 32 (pubkey) + 16 (mac of an empty encrypted block)
- *
- * When no payload is specified Noise uses encryptions of the empty block (i.e. only the authentication hash tag is
- * emitted) as a way to authenticate the handshake so far.
- */
-private fun lengthOfHandshake(protocolName: String): Int = when (protocolName) {
-    "Noise_X_25519_AESGCM_SHA256" -> 96
-    "Noise_N_25519_AESGCM_SHA256" -> 48
-    else -> throw IllegalStateException("Unknown protocol name '$protocolName'")
+// We limit the handshakes to just two here, with the same ciphers. Adding new ciphers won't be forwards
+// compatible. The justification is as follows. Curve25519, AESGCM and SHA256 are by this point mature,
+// well tested algorithms that are widely deployed to protect all internet traffic. Although new ciphers
+// are regularly designed, in practice few are every deployed because elliptic curve crypto with AES and SHA2
+// have no known problems, there are none on the horizon beyond quantum computers, and the places where other
+// algorithms get deployed tend to be devices with severe power or space constraints.
+//
+// What of QC? Noise does support a potential post-quantum algorithm. However, no current PQ ciphersuite has
+// been settled on by standards bodies yet, and there are multiple competing proposals, many of which have
+// worse performance or other problems compared to the standard algorithms. Given that the QCs being built
+// at the moment are said to be unusable for breaking encryption keys, and it's unclear when - if ever - such
+// a machine will actually be built, it makes sense to wait for PQ standardisation and then implement the
+// winning algorithms at that time, rather than attempt to second guess and end up with (relatively speaking)
+// not well reviewed algorithms baked into the protocol.
+enum class MailProtocol(
+        val noiseProtocolName: String,
+        /**
+         * Returns how many bytes a Noise handshake for the given protocol name requires. These numbers come from the sizes
+         * needed for the ephemeral Curve25519 public keys, AES/GCM MAC tags and encrypted static keys.
+         *
+         * For example: 48 == 32 (pubkey) + 16 (mac of an empty encrypted block)
+         *
+         * When no payload is specified Noise uses encryptions of the empty block (i.e. only the authentication hash tag is
+         * emitted) as a way to authenticate the handshake so far.
+         */
+        val handshakeLength: Int
+) {
+    SENDER_KEY_TRANSMITTED("Noise_X_25519_AESGCM_SHA256", 96),
+    NO_SENDER_KEY("Noise_N_25519_AESGCM_SHA256", 48)
 }

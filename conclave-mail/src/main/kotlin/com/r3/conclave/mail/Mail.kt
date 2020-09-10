@@ -202,7 +202,7 @@ class MutableMail(
     fun encrypt(): ByteArray {
         val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, from, envelope, keyDerivation).encoded
         val output = ByteArrayOutputStream()
-        val stream = MailEncryptingStream.wrap(output, destinationKey.encoded, header, privateKey?.encoded)
+        val stream = MailEncryptingStream.wrap(output, destinationKey, header, privateKey)
         stream.write(bodyAsBytes)
         stream.close()
         return output.toByteArray()

@@ -115,10 +115,16 @@ fun ByteArray.dataStream(): DataInputStream = DataInputStream(inputStream())
 inline fun <T> ByteArray.deserialise(block: DataInputStream.() -> T): T = block(dataStream())
 
 /** Read and return exactly [n] bytes from the stream, or throw [EOFException]. */
-fun DataInputStream.readExactlyNBytes(n: Int): ByteArray {
-    val bytes = ByteArray(n)
-    readFully(bytes)
-    return bytes
+fun InputStream.readExactlyNBytes(n: Int): ByteArray = ByteArray(n).also { readExactlyNBytes(it, n) }
+
+fun InputStream.readExactlyNBytes(buffer: ByteArray, n: Int) {
+    require(n >= 0)
+    var cursor = 0
+    while (cursor < n) {
+        val count = read(buffer, cursor, n - cursor)
+        if (count < 0) throw EOFException()
+        cursor += count
+    }
 }
 
 fun DataInputStream.readIntLengthPrefixBytes(): ByteArray = readExactlyNBytes(readInt())
