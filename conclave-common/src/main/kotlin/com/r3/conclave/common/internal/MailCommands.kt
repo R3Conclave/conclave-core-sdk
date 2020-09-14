@@ -1,6 +1,5 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.mail.EnclaveMailId
 import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.putIntLengthPrefixBytes
@@ -19,7 +18,7 @@ sealed class MailCommand {
      */
     abstract fun putTo(buffer: ByteBuffer)
 
-    data class Acknowledge(val id: EnclaveMailId) : MailCommand() {
+    data class Acknowledge(val id: Long) : MailCommand() {
         override val serialisedSize: Int get() = 1 + Long.SIZE_BYTES
 
         override fun putTo(buffer: ByteBuffer) {

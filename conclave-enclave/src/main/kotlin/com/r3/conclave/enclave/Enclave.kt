@@ -378,7 +378,7 @@ abstract class Enclave {
      * @param id An opaque identifier of the mail: usually a hash of the contents.
      * @param mail Access to the decrypted/authenticated mail body+envelope.
      */
-    protected open fun receiveMail(id: EnclaveMailId, mail: EnclaveMail) {
+    protected open fun receiveMail(id: Long, mail: EnclaveMail) {
         throw UnsupportedOperationException("This enclave does not support receiving mail.")
     }
 
@@ -389,17 +389,20 @@ abstract class Enclave {
      * this method multiple times on multiple different mails is safe even if the
      * enclave is interrupted part way through.
      */
-    protected fun acknowledgeMail(id: EnclaveMailId) {
+    protected fun acknowledgeMail(id: Long) {
         enclaveMessageHandler.sendMailCommandToHost(MailCommand.Acknowledge(id))
     }
 
     /**
-     * Returns a new [MutableMail] object initialized with the enclave's private
-     * encryption key.
+     * Returns a new [MutableMail] object for the given recipient. It is initialized with the enclave's
+     * private encryption key which means this enclave will be authenticated to them.
      *
      * You should set the [MutableMail.minSize] appropriately based on your knowledge
      * of the application's communication patterns. The outbound mail will not be
      * padded for you.
+     *
+     * The recipient should use [EnclaveInstanceInfo.decryptMail] to make sure it verifies this enclave as the sender
+     * of the mail.
      */
     protected fun createMail(to: PublicKey, body: ByteArray): MutableMail {
         return MutableMail(body, to, encryptionKeyPair.private).apply {

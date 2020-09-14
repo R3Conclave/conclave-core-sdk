@@ -22,12 +22,6 @@ import java.security.PublicKey
 // TODO: Implement size padding properly.
 
 /**
- * A 64 bit identifier for a delivered message (is unsigned, i.e. may be negative). Mail IDs should be treated as
- * opaques, they are possibly random.
- */
-typealias EnclaveMailId = Long
-
-/**
  * Access to the headers on a mail.
  *
  * The data isn't signed, it's authenticated data provided to the AES/GCM algorithm. This means
@@ -102,7 +96,7 @@ interface EnclaveMailHeader {
  */
 interface EnclaveMail : EnclaveMailHeader {
     /**
-     * The public key of the sender or null if none provided. This field is authenticated,
+     * The encrypted public key of the sender or null if none provided. This field is authenticated,
      * so only the holder of the corresponding private key can get that public key into
      * this field. Can be used to encrypt a reply back to them, used for user authentication and
      * so on.
@@ -117,9 +111,9 @@ interface EnclaveMail : EnclaveMailHeader {
 
 /**
  * Mail that's in the process of being built. All mail must have a body and
- * a destination public key so the body can be encrypted. You may also specify
+ * a destination public key which is used to encrypt the body. You may also specify
  * your own [privateKey], the public part of which will be received by the recipient
- * in an encrypted and authenticated manner i.e. others cannot impersonate your key,
+ * in an encrypted and authenticated manner ([EnclaveMail.authenticatedSender]) i.e. others cannot impersonate your key,
  * nor can the enclave host learn what your public key is, only the enclave can.
  *
  * Mail may additionally be given a [topic] and a [sequenceNumber], which aids in

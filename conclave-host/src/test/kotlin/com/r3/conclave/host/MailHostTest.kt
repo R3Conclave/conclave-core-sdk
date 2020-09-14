@@ -58,9 +58,9 @@ class MailHostTest {
 
     @Test
     fun `mail acknowledgement`() {
-        var acknowledgementID: EnclaveMailId? = null
+        var acknowledgementID: Long? = null
         echo.start(null, null, object : EnclaveHost.MailCallbacks {
-            override fun acknowledgeMail(mailID: EnclaveMailId) {
+            override fun acknowledgeMail(mailID: Long) {
                 acknowledgementID = mailID
             }
         })
@@ -122,7 +122,7 @@ class MailHostTest {
         // Make a call into enclave1, which then requests sending a mail to a client with its routing hint set. Tests
         // posting mail from inside a local call using an EnclaveInstanceInfo.
         class Enclave1 : Enclave() {
-            override fun receiveMail(id: EnclaveMailId, mail: EnclaveMail) {
+            override fun receiveMail(id: Long, mail: EnclaveMail) {
                 val outbound = createMail(mail.authenticatedSender!!, "hello".toByteArray())
                 postMail(outbound, mail.from!!)
                 acknowledgeMail(id)
@@ -173,7 +173,7 @@ class MailHostTest {
                 postMail(mail, null)
                 return null
             }
-            override fun receiveMail(id: EnclaveMailId, mail: EnclaveMail) {
+            override fun receiveMail(id: Long, mail: EnclaveMail) {
                 callUntrustedHost(mail.bodyAsBytes)
             }
         }
@@ -229,13 +229,13 @@ class MailHostTest {
     }
 
     class NoopEnclave : Enclave() {
-        override fun receiveMail(id: EnclaveMailId, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, mail: EnclaveMail) {
         }
     }
 
     // Receives mail, decrypts it and gives the body back to the host.
     class MailEchoEnclave : Enclave() {
-        override fun receiveMail(id: EnclaveMailId, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, mail: EnclaveMail) {
             val answer: ByteArray? = callUntrustedHost(writeData {
                 writeIntLengthPrefixBytes(mail.bodyAsBytes)
                 writeInt(id.toInt())

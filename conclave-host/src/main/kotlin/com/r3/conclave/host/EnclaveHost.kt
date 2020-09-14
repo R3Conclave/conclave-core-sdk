@@ -13,7 +13,6 @@ import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMailId
 import com.r3.conclave.utilities.internal.*
 import java.io.DataOutputStream
 import java.io.IOException
@@ -358,7 +357,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * @throws IllegalStateException if the enclave has not been started.
      */
     @JvmOverloads
-    fun deliverMail(id: EnclaveMailId, mail: ByteArray, callback: EnclaveCall? = null) {
+    fun deliverMail(id: Long, mail: ByteArray, callback: EnclaveCall? = null) {
         enclaveMessageHandler.deliverMail(id, mail, callback)
     }
 
@@ -397,7 +396,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * You should perform the acknowledgement synchronously and atomically with any posts,
          * as this is required for clients to observe transactional behaviour.
          */
-        fun acknowledgeMail(mailID: EnclaveMailId) {
+        fun acknowledgeMail(mailID: Long) {
         }
     }
 
@@ -503,7 +502,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        fun deliverMail(mailID: EnclaveMailId, mailBytes: ByteArray, callback: EnclaveCall?) {
+        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: EnclaveCall?) {
             callEnclaveInternal(callback) { threadID ->
                 sendMailToEnclave(threadID, mailID, mailBytes)
             }
