@@ -5,6 +5,7 @@
 
 #include "vm_enclave_layer.h"
 #include <map>
+#include <mutex>
 
 namespace conclave {
 
@@ -27,7 +28,13 @@ class MemoryRegion;
 class MemoryManager {
 private:
     std::map<unsigned long long, MemoryRegion*> _regions;
-    static MemoryManager*   _instance;
+    std::mutex                                  _mem_mutex;
+
+private:
+    MemoryManager() = default;
+    ~MemoryManager() = default;
+    MemoryManager(const MemoryManager&) = delete;
+    MemoryManager& operator=(const MemoryManager&) = delete;
 
 public:
     static MemoryManager& instance();

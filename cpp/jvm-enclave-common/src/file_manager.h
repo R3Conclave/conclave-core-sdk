@@ -6,6 +6,7 @@
 #include "vm_enclave_layer.h"
 #include <map>
 #include <string>
+#include <mutex>
 
 namespace conclave {
 
@@ -58,10 +59,13 @@ class FileManager {
 private:
     std::map<FileHandle, File*> _files;
     long                        _next_handle;
-    static FileManager*         _instance;
+    std::mutex                  _file_mutex;
 
 private:
     FileManager();
+    ~FileManager() = default;
+    FileManager(const FileManager &) = delete;
+    FileManager &operator=(const FileManager &) = delete;
 
 public:
     static FileManager& instance();

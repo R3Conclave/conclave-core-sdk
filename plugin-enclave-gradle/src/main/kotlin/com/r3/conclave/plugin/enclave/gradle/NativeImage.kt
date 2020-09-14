@@ -42,8 +42,11 @@ import kotlin.math.roundToInt
 reflection. Default: None
  * -R:MaxHeapSize=0                     The maximum heap size at run-time, in bytes.
  * -R:StackSize=0                       The size of each thread stack at run-time, in bytes.
+ * -H:AlignedHeapChunkSize=4096         Having a heap chunk with 4KB size could significantly affect the JVM heap performance although the
+ *                                      benchmark sample does not seem to show this.
  * ```
- */
+*/
+
 open class NativeImage @Inject constructor(
         objects: ObjectFactory,
         private val buildType: BuildType,
@@ -98,6 +101,8 @@ open class NativeImage @Inject constructor(
         "-H:+ExcludeLoadingNetwork",
         "-H:ExcludeLibraries=pthread,dl,rt,z",
         "-H:-SpawnIsolates",
+        "-H:+ForceNoROSectionRelocations",
+        "-H:AlignedHeapChunkSize=4096",
         "-R:MaxHeapSize=" + calculateMaxHeapSize(GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())),
         "-R:StackSize=" + GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()),
         "--enable-all-security-services"

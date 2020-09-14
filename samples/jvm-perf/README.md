@@ -22,14 +22,16 @@ The benchmarks use [JMH - Java Microbenchmark Harness](http://tutorials.jenkov.c
 host to run and measure the benchmarks. When running the benchmarks you can use any of the command-line parameters
 supported by JMH.
 
-The output of the JVM performance test build is `jvm-perf/build/libs/jvm-perf-[mode].jar`,
-where `[mode]` is either `simulation` or `debug`. Release builds are supported so long as 
-the enclaves are signed for release. The JAR is a fat JAR that contains all the classes and
+The output of the JVM performance test build is `jvm-perf/jvm-perf/build/libs/jvm-perf-all.jar`,
+Release builds are supported so long as the enclaves are signed for release. The JAR is a fat JAR that contains all the classes and
 enclaves necessary to run the benchmarks.
 
 To run the full set of benchmarks, execute:
 
-`java -jar jvm-perf-all.jar`
+```
+cd jvm-perf/jvm-perf/build/libs
+java -jar jvm-perf-all.jar
+```
 
 This will execute all benchmarks on all platforms; Avian-based enclaves, GraalVM native-image
 based enclaves and on the host JVM.

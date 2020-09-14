@@ -2,15 +2,10 @@
 // Memory managements for emulating mmap and munmap
 //
 #include "memory_manager.h"
-#include <mutex>
 
 using namespace conclave;
 
 //#define LOG_MEMORY
-
-// Memory manager singleton
-MemoryManager* MemoryManager::_instance;
-std::mutex mem_mutex;
 
 class conclave::MemoryRegion {
 private:
@@ -56,11 +51,8 @@ public:
 };
 
 MemoryManager& MemoryManager::instance() {
-    std::lock_guard<std::mutex> lock(mem_mutex);
-    if (!_instance) {
-        _instance = new MemoryManager;
-    }
-    return *_instance;
+    static MemoryManager instance;
+    return instance;
 }
 
 void* MemoryManager::alloc(unsigned long size) {
@@ -70,7 +62,7 @@ void* MemoryManager::alloc(unsigned long size) {
         // for example that if they commit 100 bytes they can free it by uncommitting 4k bytes.
         unsigned long pages = (size + 4095) / 4096;
 
-        std::lock_guard<std::mutex> lock(mem_mutex);
+        std::lock_guard<std::mutex> lock(_mem_mutex);
         _regions[(unsigned long long)p] = new MemoryRegion(p, pages);
     }
     return p;
@@ -86,7 +78,7 @@ void MemoryManager::free(void* p, unsigned long size) {
     unsigned long pages = (size + 4095) / 4096;
 
     // Find the nearest region to the freed address.
-    std::lock_guard<std::mutex> lock(mem_mutex);
+    std::lock_guard<std::mutex> lock(_mem_mutex);
     auto cur_region = _regions.end();
     for (auto it = _regions.begin(); it != _regions.end(); ++it) {
         if (it->first > (unsigned long long)p) {

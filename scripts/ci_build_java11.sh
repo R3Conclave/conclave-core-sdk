@@ -16,19 +16,6 @@ source ${SCRIPT_DIR}/ci_build_common.sh
 # Kill any lingering Gradle workers
 ps auxwww | grep Gradle | grep -v grep | awk '{ print $2; }' | xargs -r kill || true
 
-# Prune docker images
-docker image prune -af
-
-# Login and pull the current build image
-docker login ${OBLIVIUM_CONTAINER_REGISTRY_URL} -u ${OBLIVIUM_CONTAINER_REGISTRY_USERNAME} -p ${OBLIVIUM_CONTAINER_REGISTRY_PASSWORD}
-docker pull ${OBLIVIUM_CONTAINER_REGISTRY_URL}/com.r3.sgx/sgxjvm-build
-
-# Refresh dependencies
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE --refresh-dependencies -i"
-
-# First we build the build-image itself in case this build changes it
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
-
 # Then build and run the tests. Note that the SDK build excludes dokka due to the dokka plugin not supporting
 # Java 11.
 TEST_OPTS=${TEST_OPTS:-}

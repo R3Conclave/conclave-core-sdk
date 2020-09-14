@@ -1,11 +1,6 @@
 #include "file_manager.h"
-#include <mutex>
 
 namespace conclave {
-
-FileManager* FileManager::_instance;
-static std::mutex file_mutex;
-
 
 // Filenames for our special case files
 #define FILENAME_RANDOM     "/dev/random"
@@ -82,18 +77,15 @@ FileManager::FileManager() : _next_handle(0x10) {
 }
 
 FileManager& FileManager::instance() {
-    std::lock_guard<std::mutex> lock(file_mutex);
-    if (!_instance) {
-        _instance = new FileManager;
-    }
-    return *_instance;
+    static FileManager instance;
+    return instance;
 }
 
 File* FileManager::open(std::string filename) {
     File* file = nullptr;
     if ((filename == FILENAME_RANDOM) ||
         (filename == FILENAME_URANDOM)) {
-        std::lock_guard<std::mutex> lock(file_mutex);
+        std::lock_guard<std::mutex> lock(_file_mutex);
         FileHandle handle = allocateHandle();
         file = new RandomFile(handle, filename);
         _files[handle] = file;
@@ -108,7 +100,7 @@ void FileManager::close(const File* file) {
 }
 
 void FileManager::close(int handle) {
-    std::lock_guard<std::mutex> lock(file_mutex);
+    std::lock_guard<std::mutex> lock(_file_mutex);
     auto file = _files.find(handle);
     if (file != _files.end()) {
         delete file->second;
@@ -117,7 +109,7 @@ void FileManager::close(int handle) {
 }
 
 File* FileManager::fromHandle(int handle) {
-    std::lock_guard<std::mutex> lock(file_mutex);
+    std::lock_guard<std::mutex> lock(_file_mutex);
     auto file = _files.find(handle);
     if (file != _files.end()) {
         return file->second;
@@ -136,7 +128,7 @@ File* FileManager::fromFILE(FILE* fp) {
     }
 
     // Normal files
-    std::lock_guard<std::mutex> lock(file_mutex);
+    std::lock_guard<std::mutex> lock(_file_mutex);
     auto file = std::find_if(_files.begin(), _files.end(), [fp](std::pair<FileHandle, File*> file_entry) {
         return (void*)file_entry.second == (void*)fp;
     });

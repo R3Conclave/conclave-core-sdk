@@ -2,6 +2,9 @@ project(jvm-enclave-common)
 
 include(../Determinise.cmake)
 
+# Enable the row below to get debug trace output from c++ modules.
+# add_definitions(-DDEBUG_TRACE_OUTPUT)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror -Wno-unused-parameter")
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")

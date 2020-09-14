@@ -1,0 +1,95 @@
+diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
+index a4ff9da..2d039e7 100644
+--- a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
++++ b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
+@@ -457,6 +457,18 @@ public class SubstrateOptions {
+     @Option(help = "Provide java.lang.Terminator exit handlers for executable images", type = User)//
+     public static final HostedOptionKey<Boolean> InstallExitHandlers = new HostedOptionKey<>(false);
+ 
++    @Option(help = "Use static linking", type = OptionType.Expert)
++    public static final HostedOptionKey<Boolean> UseStaticLinking = new HostedOptionKey<>(false);
++
++    @Option(help = "Export symbols in linked static libraries", type = OptionType.Expert)
++    public static final HostedOptionKey<Boolean> ExportStaticSymbols = new HostedOptionKey<>(false);
++
++    @Option(help = "Default libraries to be excluded by the linker (list of comma-separated library names, i.e., dl,pthreads)", type = OptionType.Expert)
++    public static final HostedOptionKey<String[]> ExcludeLibraries = new HostedOptionKey<>(new String[]{});
++
++    @Option(help = "Exclude loading net library", type = OptionType.Expert)
++    public static final HostedOptionKey<Boolean> ExcludeLoadingNetwork = new HostedOptionKey<>(false);
++        
+     @Option(help = "When set to true, the image generator verifies that the image heap does not contain a home directory as a substring", type = User)//
+     public static final HostedOptionKey<Boolean> DetectUserDirectoriesInImageHeap = new HostedOptionKey<>(false);
+ 
+diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
+index 1e837ee..d5abc3e 100644
+--- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
++++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
+@@ -581,10 +581,12 @@ public final class NativeLibraries {
+             return false;
+         }
+         for (CLibrary lib : annotated) {
+-            if (lib.requireStatic()) {
+-                addStaticNonJniLibrary(lib.value(), lib.dependsOn());
+-            } else {
+-                addDynamicNonJniLibrary(lib.value());
++            if (!OptionUtils.flatten(",", SubstrateOptions.ExcludeLibraries.getValue()).contains(lib.value())) {
++                if (lib.requireStatic()) {
++                    addStaticNonJniLibrary(lib.value(), lib.dependsOn());
++                } else {
++                    addDynamicNonJniLibrary(lib.value());
++                }
+             }
+         }
+         annotated.clear();
+diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java
+index 9686dba..96ae861 100644
+--- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java
++++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java
+@@ -121,8 +121,10 @@ public abstract class NativeBootImageViaCC extends NativeBootImage {
+                     additionalPreOptions.add("-Wl,--dynamic-list");
+                     additionalPreOptions.add("-Wl," + exportedSymbolsPath.toAbsolutePath());
+ 
+-                    // Drop global symbols in linked static libraries: not covered by --dynamic-list
+-                    additionalPreOptions.add("-Wl,--exclude-libs,ALL");
++                    if (!SubstrateOptions.ExportStaticSymbols.getValue()) {
++                        // Drop global symbols in linked static libraries: not covered by --dynamic-list
++                        additionalPreOptions.add("-Wl,--exclude-libs,ALL");
++                    }
+                 } catch (IOException e) {
+                     VMError.shouldNotReachHere();
+                 }
+@@ -151,7 +153,9 @@ public abstract class NativeBootImageViaCC extends NativeBootImage {
+                     }
+                     break;
+                 case SHARED_LIBRARY:
+-                    cmd.add("-shared");
++                    if (!SubstrateOptions.UseStaticLinking.getValue()) {
++                        cmd.add("-shared");
++                    }
+                     break;
+                 default:
+                     VMError.shouldNotReachHere();
+diff --git a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
+index e73dec7..bc43761 100644
+--- a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
++++ b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
+@@ -30,6 +30,7 @@ import com.oracle.svm.core.jdk.NativeLibrarySupport;
+ import com.oracle.svm.core.jdk.PlatformNativeLibrarySupport;
+ import com.oracle.svm.jni.functions.JNIFunctionTables;
+ import com.oracle.svm.jni.nativeapi.JNIJavaVM;
++import com.oracle.svm.core.SubstrateOptions;
+ import org.graalvm.collections.EconomicMap;
+ import org.graalvm.collections.Equivalence;
+ import org.graalvm.nativeimage.c.function.CFunctionPointer;
+@@ -109,6 +110,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
+ 
+     @Override
+     public void initialize(PlatformNativeLibrarySupport.NativeLibrary lib) {
++        if (SubstrateOptions.ExcludeLoadingNetwork.hasBeenSet() && SubstrateOptions.ExcludeLoadingNetwork.getValue()) {
++            return;
++        }
++        
+         String libName = lib.getCanonicalIdentifier();
+         PointerBase onLoadFunction;
+         if (lib.isBuiltin()) {

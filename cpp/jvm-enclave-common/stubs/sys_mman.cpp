@@ -9,22 +9,32 @@
 STUB(madvise);
 STUB(mincore);
 
-extern "C" {
+namespace {
+void mmap_trace(void *addr, size_t length, int prot, int flags, int fd, off_t offset, void *p) {
+    const char *prefix = addr ? "WARNING, addr is not nullptr!" : "";
+    enclave_trace("%smmap(addr=0x%016llX, length=%d(0x%08X), prot=0x%08X, flags=0x%08X, fd=0x%08X, offset=%d(0x%08X))=0x%016llX\n",
+                    prefix, reinterpret_cast<unsigned long long>(addr), length, length, static_cast<unsigned>(prot),    
+                    static_cast<unsigned>(flags), fd, offset, offset, reinterpret_cast<unsigned long long>(p));
+}
+}
 
-void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-    if (addr != nullptr) {
-        enclave_trace("mmap: addr not null\n");
-        return nullptr;
+extern "C"
+{
+    void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+        if (addr) {
+            mmap_trace(addr, length, prot, flags, fd, offset, nullptr);
+            return nullptr;
+        }
+
+        void *p = conclave::MemoryManager::instance().alloc(length);
+        mmap_trace(addr, length, prot, flags, fd, offset, p);
+        return p;
     }
-    void* p = conclave::MemoryManager::instance().alloc(length);
-    enclave_trace("mmap(0x%llX, 0x%lX, 0x%X, 0x%X, 0x%X, 0x%lX)=%llX\n", (unsigned long long)addr, length, (unsigned)prot, (unsigned)flags, fd, offset, (unsigned long long)p);
-    return p;
-}
 
-int munmap(void *addr, size_t length) {
-    enclave_trace("munmap(0x%llX, 0x%lX)\n", (unsigned long long)addr, length);
-    conclave::MemoryManager::instance().free(addr, length);
-    return 0;
-}
-
+    int munmap(void *addr, size_t length)
+    {
+        enclave_trace("munmap(addr=0x%016llX, length=%d(0x%08X))\n", reinterpret_cast<unsigned long long>(addr), length, length);
+        conclave::MemoryManager::instance().free(addr, length);
+        return 0;
+    }
 }

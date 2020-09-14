@@ -6,7 +6,7 @@ source ${SCRIPT_DIR}/ci_build_common.sh
 
 function teardownAESM() {
     docker stop aesmd || true
-    docker rm aesmd || true
+    docker rm $(docker ps -a -f name=aesmd -f status=exited -q) || true
 }
 
 function buildAESMImage() {
@@ -18,6 +18,6 @@ function startAESMContainer() {
 }
 
 function stopAndRemoveAESMImage() {
-    docker stop aesmd
-    docker rmi localhost:5000/com.r3.sgx/aesmd
+    docker stop aesmd || true
+    docker rmi localhost:5000/com.r3.sgx/aesmd || true
 }
