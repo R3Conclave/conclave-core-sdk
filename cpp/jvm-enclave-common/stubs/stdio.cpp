@@ -87,7 +87,7 @@ int fflush(FILE*) {
 size_t fread(void* buf, size_t size, size_t count, FILE* fp) {
     conclave::File* file = conclave::FileManager::instance().fromFILE(fp);
     if (file) {
-        return file->read(size, count, buf);
+        return file->read((unsigned char*)buf, size * count) / size;
     }
     errno = -EPERM;
     return (size_t)0;
@@ -96,7 +96,7 @@ size_t fread(void* buf, size_t size, size_t count, FILE* fp) {
 size_t fwrite(const void* buf, size_t size, size_t count, FILE* fp) {
     conclave::File* file = conclave::FileManager::instance().fromFILE(fp);
     if (file) {
-        return file->write(size, count, buf);
+        return file->write((const unsigned char*)buf, size * count) / size;
     }
     errno = -EPERM;
     return (size_t)0;

@@ -31,6 +31,7 @@ add_library(jvm_enclave_common
 
         stubs/ctype.cpp
         stubs/fcntl.cpp
+        stubs/grp.cpp
         stubs/langinfo.cpp
         stubs/libc.cpp
         stubs/locale.cpp

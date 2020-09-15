@@ -12,7 +12,7 @@ int __vfprintf_chk(FILE *stream, int n, const char *s, va_list va) {
     if (file) {
         char msg[512];
         res = vsnprintf((char*)msg, sizeof(msg), s, va);
-        res = file->write(1, res, msg);
+        res = file->write((const unsigned char*)msg, res);
     } 
     else {
         char msg[512];

@@ -7,8 +7,8 @@
 extern "C" {
 
 // Just some dummy environment variables.
-const char *_environ[] = { "HOME=/", "HOSTNAME=enclave", NULL };
-char **environ = (char**) environ;
+static const char *_environ[] = { "HOME=/", "HOSTNAME=enclave", NULL };
+char **environ = (char**)_environ;
 
 char *getenv(const char *varname) {
     // Could do a proper search here, but this isn't the right way to pass data into an enclave anyway.

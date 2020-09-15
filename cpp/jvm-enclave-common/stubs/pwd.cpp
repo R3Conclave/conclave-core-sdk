@@ -29,4 +29,10 @@ struct passwd *getpwuid(uid_t uid) {
     return &passwd_info;
 }
 
+int getpwuid_r(uid_t uid, struct passwd* pwd, char* buffer, size_t bufsize, struct passwd** result) {
+    enclave_trace("getpwuid_r(%d)\n", uid);
+    *result = nullptr;
+    return 0;
+}
+
 }

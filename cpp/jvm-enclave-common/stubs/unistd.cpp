@@ -17,7 +17,7 @@ STUB(lseek64);
 STUB(lstat);
 STUB(pathconf);
 STUB(readlink);
-STUB(pread64);
+STUB(_exit);
 
 extern "C" {
 
@@ -42,31 +42,58 @@ int access(const char *pathname, int) {
     }
 }
 
-ssize_t read(int fh, void* p, size_t len) {
-    conclave::File* file = conclave::FileManager::instance().fromHandle(fh);
+ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+    conclave::File* file = conclave::FileManager::instance().fromHandle(fd);
     if (file) {
         enclave_trace("read(%s)\n", file->filename().c_str());
-        return file->read(1, len, p);
+        return file->read((unsigned char*)buf, count, offset);
     }
     errno = -EPERM;
     enclave_trace("read()\n");
     return (ssize_t)-1;
 }
 
-ssize_t write(int fd, const void *buf, size_t count) {
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
     conclave::File* file = conclave::FileManager::instance().fromHandle(fd);
     if (file) {
         enclave_trace("write(%s)\n", file->filename().c_str());
-        return file->write(1, count, buf);
+        return file->write((const unsigned char*)buf, count, offset);
     } 
     enclave_trace("write(%d)\n", fd);
     return (ssize_t)-1;
 }
 
+ssize_t pread64(int fd, void *buf, size_t count, off_t offset) {
+    return pread(fd, buf, count, offset);
+}
+
+ssize_t pwrite64(int fd, const void *buf, size_t count, off_t offset) {
+    return pwrite(fd, buf, count, offset);
+}
+
+ssize_t read(int fd, void* buf, size_t count) {
+    return pread(fd, buf, count, 0);
+}
+
+ssize_t write(int fd, const void *buf, size_t count) {
+    return pwrite(fd, buf, count, 0);
+}
+
 int close(int handle) {
-    enclave_trace("close()\n");
+    enclave_trace("close\n");
     conclave::FileManager::instance().close(handle);
     return 0;
+}
+
+int rmdir(const char* path) {
+    enclave_trace("rmdir\n");
+    return 0;
+}
+
+int chdir(const char* path) {
+    enclave_trace("chdir\n");
+    errno = ENOENT;
+    return -1;
 }
 
 int dup(int oldfd) {
@@ -147,7 +174,29 @@ int unlink(const char* pathname) {
 }
 
 int fsync(int fd) {
+    enclave_trace("fsync\n");
     return 0;
+}
+
+pid_t getpid(void) {
+    enclave_trace("getpid\n");
+    return 2;
+}
+
+pid_t getppid(void) {
+    enclave_trace("getppid\n");
+    return 1;
+}
+
+pid_t vfork() {
+    enclave_trace("vfork\n");
+    errno = ENOSYS;
+    return -1;
+}
+
+int execve(const char* pathname, char* const argv[], char* const envp[]) {
+    errno = EACCES;
+    return -1;
 }
 
 }

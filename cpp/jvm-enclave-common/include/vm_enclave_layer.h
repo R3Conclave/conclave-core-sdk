@@ -240,6 +240,17 @@ int getaddrinfo(const char *node, const char *service,
 void freeaddrinfo(struct addrinfo *res);
 const char *gai_strerror(int errcode);
 
+// sys/mman.h
+typedef unsigned long long off64_t;
+
+// dlfcn.h
+typedef struct {
+	const char *dli_fname;  /* Pathname of shared object that contains address */
+	void       *dli_fbase;  /* Base address at which shared object is loaded */
+	const char *dli_sname;  /* Name of symbol whose definition overlaps addr */
+	void       *dli_saddr;  /* Exact address of symbol named in dli_sname */
+} Dl_info;
+
 #ifdef __cplusplus
 }
 #endif

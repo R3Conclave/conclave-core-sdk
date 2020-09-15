@@ -14,3 +14,11 @@ using namespace std;
 // Stub functions to satisfy the linker
 STUB(dlopen);
 
+extern "C" {
+
+int dladdr(void* addr, Dl_info* info) {
+    enclave_trace("dladdr\n");
+    return 0;
+}
+
+}

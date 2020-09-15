@@ -15,14 +15,14 @@ public:
     RandomFile(FileHandle h, std::string filename) : File(h, filename) {
     }
 
-    virtual int read(int size, int count, void* buf) const {
-        if (sgx_read_rand((unsigned char*)buf, size * count) != SGX_SUCCESS) {
+    virtual size_t read(unsigned char* buf, size_t size, size_t offset = 0) const override {
+        if (sgx_read_rand(buf, size) != SGX_SUCCESS) {
             return 0;
         }
-        return count;
+        return size;
     }
 
-    virtual int write(int size, int count, const void* buf) const {
+    virtual size_t write(const unsigned char* buf, size_t size, size_t offset = 0) override {
         return 0;
     }
 };
@@ -34,13 +34,13 @@ public:
     StdFile(FileHandle h, std::string filename) : File(h, filename) {
     }
 
-    virtual int read(int size, int count, void* buf) const {
+    virtual size_t read(unsigned char* buf, size_t size, size_t offset = 0) const override {
         return 0;
     }
 
-    virtual int write(int size, int count, const void* buf) const {
-        debug_print_enclave((const char*)buf, size * count);
-        return count;
+    virtual size_t write(const unsigned char* buf, size_t size, size_t offset = 0) override {
+        debug_print_enclave((const char*)buf, size);
+        return size;
     }
 };
 
