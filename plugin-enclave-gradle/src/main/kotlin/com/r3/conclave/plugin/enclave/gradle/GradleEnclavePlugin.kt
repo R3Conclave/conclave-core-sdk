@@ -7,10 +7,7 @@ import com.r3.conclave.plugin.enclave.gradle.os.LinuxDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.MacOSDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.OSDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.WindowsDependentTools
-import org.gradle.api.JavaVersion
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.Task
+import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -73,6 +70,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val linkerToolFile = target.file(osDependentTools.getLdFile())
+        val nativeImageLinkerToolFile = target.file(osDependentTools.getNativeImageLdFile())
         val signToolFile = target.file(osDependentTools.getSgxSign())
         val opensslToolFile = target.file(osDependentTools.getOpensslFile())
 
@@ -107,9 +105,21 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
             task.group = CONCLAVE_GROUP
             task.fromDependencies(
-                    "com.r3.conclave:graal:$sdkVersion"
+                    "com.r3.conclave:graal:$sdkVersion",
+                    "com.r3.conclave:conclave-build:$sdkVersion"
             )
             task.into(baseDirectory)
+        }
+
+        val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
+            task.dependsOn(copyGraalVM)
+            task.inputs.file("$conclaveDependenciesDirectory/docker/Dockerfile")
+            task.dockerFile.set(target.file("$conclaveDependenciesDirectory/docker/Dockerfile"))
+            task.baseDirectory.set(target.buildDir.toPath().toString())
+            task.tag.set("conclave-build:$sdkVersion")
+            // Create a 'latest' tag too so users can follow our tutorial documentation using the
+            // tag 'conclave-build:latest' rather than looking up the conclave version.
+            task.tagLatest.set("conclave-build:latest")
         }
 
         val graalVMPath = "$baseDirectory/com/r3/conclave/graalvm"
@@ -167,9 +177,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
 
-            val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile) { task ->
-                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask)
-                task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath, linkerToolFile)
+            val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile, linuxExec) { task ->
+                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask, linuxExec)
+                task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath, nativeImageLinkerToolFile)
                 task.nativeImagePath.set(target.file(graalVMDistributionPath))
                 task.jarFile.set(shadowJarTask.archiveFile)
                 task.cLibraryPaths.from("$sgxDirectory/tlibc",
@@ -181,7 +191,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "$substrateDependenciesPath/libjvm_enclave_edl.a",
                         "$substrateDependenciesPath/libz.a"
                 )
-                task.ldPath.set(linkerToolFile)
+                task.ldPath.set(nativeImageLinkerToolFile)
                 // Libraries in this section are linked with the --whole-archive option which means that
                 // nothing is discarded by the linker. This is required if a static library has any constructors
                 // or static variables that need to be initialised which would otherwise be discarded by

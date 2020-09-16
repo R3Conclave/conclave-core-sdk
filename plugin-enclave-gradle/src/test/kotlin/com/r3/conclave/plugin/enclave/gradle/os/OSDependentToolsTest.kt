@@ -24,7 +24,7 @@ class OSDependentToolsTest {
     fun getToolsArtifactsMacOS() {
         val toolsDependenciesIDs = macOS.getToolsDependenciesIDs(sdkVersion)
         assertThat(toolsDependenciesIDs).containsExactlyInAnyOrder(
-                "com.r3.conclave:macos-binutils:$sdkVersion", "com.r3.conclave:macos-sign-tool:$sdkVersion"
+                "com.r3.conclave:macos-binutils:$sdkVersion", "com.r3.conclave:native-binutils:$sdkVersion", "com.r3.conclave:macos-sign-tool:$sdkVersion"
         )
     }
 

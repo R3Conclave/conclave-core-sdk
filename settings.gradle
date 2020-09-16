@@ -55,6 +55,7 @@ include 'containers:aesmd'
 include 'containers:sgxjvm-build'
 include 'containers:sgxjvm-devenv'
 include 'containers:kubernetes-sgx-device-plugin'
+include 'containers:conclave-build'
 
 include 'hsm-tool'
 

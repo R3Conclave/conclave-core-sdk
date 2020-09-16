@@ -45,6 +45,14 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
 
 ## Release notes
 
+### Beta 4
+
+1. :jigsaw: **New feature!** Conclave now supports building [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/)
+   enclaves on macOS and Windows! [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/)
+   support was added in Beta 3 but required a Linux build system. Now, by installing Docker on Windows or macOS you
+   can configure your enclaves to use the `graalvm_native_image` runtime and let Conclave simply manage the build process
+   for you.
+
 ### Beta 3
 
 1. :jigsaw: **New feature!** The Mail API makes it easy to deliver encrypted messages to the enclave that only it can

@@ -17,11 +17,21 @@ for your own if you want a quick start. We will cover:
 You need Java 8 or 11 (your choice) and Gradle, so make sure you've installed those first. Alternatively use an IDE
 like IntelliJ IDEA, which can download and set up both Gradle and the Java Development Kit (JDK) for you.
 
-Currently, we support developing enclaves on Windows, macOS and Linux. However, executing enclaves without using the 
-"mock mode" requires Linux or a Linux container (e.g. via Docker or Windows Subsystem for Linux) and there are no 
-plans to change this.  Apple doesn't support SGX and the Windows API support is too limited for use at this time.
-Fortunately for day to day development, the mock API is plenty sufficient and allows you to debug into enclave calls
-as well. Compiling a real enclave is only needed for integration testing or real deployment.
+Currently, we support developing enclaves on Windows, macOS and Linux. However, there are a few platform specific
+differences to be aware of.
+
+Firstly, if you plan on building enclaves using the [`graalvm_native_image` runtime](writing-hello-world.md#donfigure-the-enclave-module)
+(which is the default) on Windows and macOS you will need to install Docker. The `graalvm_native_image` build
+process requires access to a Linux build environment which Conclave can automatically configure during the build
+for you if Docker is installed. If you do not have Docker installed then you can still build enclaves targeting
+the `avian` runtime on Windows and macOS.
+
+Secondly, executing enclaves without using the "mock mode" requires Linux or a Linux container (e.g. via Docker 
+or Windows Subsystem for Linux) and there are no plans to change this.  Apple doesn't support SGX and the Windows 
+API support is too limited for use at this time. [Instructions are provided below](#testing-on-windows-and-macos) 
+to show you how to use Docker on Windows and macOS to run your enclaves in "simulation mode". Alternatively, for 
+day to day development the mock API is plenty sufficient and allows you to debug into enclave calls as well. 
+Compiling a real enclave is only needed for integration testing or real deployment.
 
 Enclaves can run in simulation mode without requiring any special setup of Linux or SGX capable hardware. However you 
 of course get no hardware protections. To run against real SGX hardware you must perform some [additional machine setup](machine-setup.md).
@@ -113,38 +123,52 @@ Try this:
 !!! tip
     Aibohphobia is the fear of palindromes.
 
-## Testing on Windows
+## Testing on Windows and macOS
 
-If you're on Windows, you could test locally in simulation mode using a Docker container. Follow these instructions: 
+If you're on Windows or macOS you can test locally in simulation mode using a Docker container. Follow these instructions:
 
-**Step 1:** Create a container and install Java 8
+**Step 1:** Ensure you have a Linux docker container
 
-Replace `c:/ws/sdk` with the path to the Conclave SDK:
+If you have Docker installed and have built your enclave using the `graalvm_native_image` runtime then Conclave
+will have already created a docker image for you. If you used the `avian` runtime then you may need to install Docker 
+and then run this command in the root of your Gradle project to create the image:
 
+___Windows PowerShell___
 ```
-docker run --name hello-world -it -d -v c:/ws/sdk:/sdk -w /sdk ubuntu bash
-docker exec -ti hello-world apt update
-docker exec -ti hello-world apt install -y openjdk-8-jdk
+gradlew setupLinuxExecEnvironment
 ```
+
+___macOS Terminal___
+```
+./gradlew setupLinuxExecEnvironment
+```
+
+This gradle task is normally used as part of the `graalvm_native_image` build process but can be invoked to create
+the Linux docker image that we need.
 
 **Step 2:** Unpack the artifacts and run the `host` binaries
 
+The following command creates a temporary Docker container that mounts the current directory, creates a subdirectory
+named `run`, unpacks the host artifacts into `run` then runs the host within the container. The container is 
+automatically stopped and removed after the host exits.
+
+Note that this command should be run from the root of your Gradle project.
+
+___Windows PowerShell___
 ```
-docker exec -ti hello-world tar xf /sdk/hello-world/host/build/distributions/host.tar -C /tmp/  
-docker exec -ti hello-world /tmp/host/bin/host  
+docker run -t --rm -v ${PWD}:/project -w /project conclave-build /bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"
+```
+
+___macOS Terminal___
+```
+docker run -t --rm -v $PWD:/project -w /project --user $(id -u):$(id -g) conclave-build /bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"
 ```
 
 **Step 3:** You may want to create an IntelliJ launch configuration to incorporate the `build` and `deploy` stages.
-Put the commands above in a .cmd batch file and then use the "Shell script" launch configuration type, and add
-a Gradle task in the "Before launch" section. You will then be able to click the run icon in your IDE to
-build and start up the Java host app inside the Docker container.   
+Put the command above in a .cmd batch file (Windows) or a .sh file (macOS) and then use the "Shell script" launch 
+configuration type, and add a Gradle task in the "Before launch" section. You will then be able to click the run 
+icon in your IDE to build and start up the Java host app inside the Docker container.
 
 ![import project](./images/test-deploy.png)
-
-**Step 4:** When done with testing remove the container, to stop it using up resources.  
-
-```
-docker rm hello-world -f
-```  
 
 If you get stuck please contact [conclave-discuss@groups.io](mailto:conclave-discuss@groups.io) and ask for help!  

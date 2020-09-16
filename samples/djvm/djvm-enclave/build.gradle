@@ -33,6 +33,7 @@ processResources {
 conclave {
     productID = 1
     revocationLevel = 0
+    runtime = avian
 
     release {
         // By default release enclaves will use a 2 step external signing process.

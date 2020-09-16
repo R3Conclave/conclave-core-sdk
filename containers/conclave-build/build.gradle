@@ -1,0 +1,11 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+jar {
+    into 'com/r3/conclave/docker', {
+        from (projectDir) {
+            include "Dockerfile"
+        }
+    }
+}

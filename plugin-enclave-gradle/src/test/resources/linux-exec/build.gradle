@@ -1,0 +1,13 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.conclave.enclave'
+}
+
+apply from: '../common.gradle'
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+    maxHeapSize = "268435456"
+    maxStackSize = "2097152"
+}

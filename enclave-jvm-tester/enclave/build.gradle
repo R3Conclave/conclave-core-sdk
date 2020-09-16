@@ -29,4 +29,5 @@ conclave {
     productID = 1
     revocationLevel = 0
     maxHeapSize = "2g"
+    runtime = avian
 }

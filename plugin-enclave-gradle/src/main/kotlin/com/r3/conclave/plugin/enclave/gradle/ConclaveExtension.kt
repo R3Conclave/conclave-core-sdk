@@ -13,7 +13,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val release: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val debug: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val simulation: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
-    val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.Avian)
+    val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.GraalVMNativeImage)
 
     val avian = RuntimeType.Avian
     val graalvm_native_image = RuntimeType.GraalVMNativeImage

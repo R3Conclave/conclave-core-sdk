@@ -340,6 +340,10 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':graal',
                 description: 'Graal distribution including SubstrateVM and tools'
+        ),
+        new PublishedProject(
+                projectPath: ':containers:conclave-build',
+                description: 'Conclave docker container for native-image builds'
         )
 ]
 

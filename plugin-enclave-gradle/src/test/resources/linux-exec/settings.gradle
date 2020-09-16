@@ -1,0 +1,15 @@
+pluginManagement {
+    apply from: '../../../../../versions.gradle'
+
+    repositories {
+        maven {
+            url = '../../../../../build/sdk/repo'
+        }
+        gradlePluginPortal()
+    }
+
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false
+        id 'com.r3.conclave.enclave' version conclave_version apply false
+    }
+}
