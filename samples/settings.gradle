@@ -40,10 +40,6 @@ if (projectVersion == null) {
     }
 }
 
-include ':djvm:djvm-enclave'
-include ':djvm:djvm-host'
-include ':djvm:djvm-common'
-include ':djvm:user-code'
 include ':jvm-perf:benchmarks'
 include ':jvm-perf:avian-enclave-simulation'
 include ':jvm-perf:graalvm-enclave-simulation'
