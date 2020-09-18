@@ -382,9 +382,6 @@ if (includeNative) {
                         dependencies {
                             it.include(dependency("org.jetbrains.kotlin:"))
                         }
-                        exclude 'META-INF/kotlin-*.kotlin_module'
-                        exclude '**/*.kotlin_metadata'
-                        exclude '**/*.kotlin_builtins'
                     } else {
                         // Only conclave-common needs to contain the shaded Jackson library. Anything else that needs Jackson,
                         // e.g. conclave-host, can inherit this shaded version.
@@ -396,6 +393,9 @@ if (includeNative) {
                     // The remaining modules are not shading anything so we turn it off.
                     configurations = []
                 }
+                exclude 'META-INF/*.kotlin_module'
+                exclude '**/*.kotlin_metadata'
+                exclude '**/*.kotlin_builtins'
                 // Everyone needs to have their import lines modified to the new shaded ones.
                 relocate 'com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson'
                 relocate 'kotlin', 'com.r3.conclave.shaded.kotlin'
