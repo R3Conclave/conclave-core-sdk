@@ -14,8 +14,14 @@ pluginManagement {
     plugins {
         id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false
         id 'com.r3.conclave.enclave' version conclave_version apply false
+        id 'com.google.protobuf' version protobuf_plugin_version apply false
     }
 }
 
 include 'shading-tests'
 include 'kotlin-enclave'
+include ':djvm:djvm-enclave'
+include ':djvm:djvm-host'
+include ':djvm:djvm-base'
+include ':djvm:djvm-sandbox-test-bundle'
+include ':djvm:djvm-simple-test-bundle'

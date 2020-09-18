@@ -48,7 +48,6 @@ include 'conclave-host'
 include 'conclave-client'
 include 'conclave-testing'
 
-include 'enclave-utils'
 include 'internal-testing'
 
 include 'containers:aesmd'

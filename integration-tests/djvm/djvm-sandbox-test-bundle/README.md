@@ -1,0 +1,1 @@
+Contains tests from the DJVM project. All these tests require a sandbox environment to run in.

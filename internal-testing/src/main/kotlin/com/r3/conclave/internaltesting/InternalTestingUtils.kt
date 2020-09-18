@@ -7,7 +7,6 @@ import com.r3.conclave.common.internal.*
 import org.assertj.core.api.Condition
 import java.security.PublicKey
 import java.util.concurrent.CompletableFuture
-import java.util.function.Supplier
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
@@ -55,16 +54,6 @@ fun <T> threadWithFuture(block: () -> T): CompletableFuture<T> {
         }
     }
     return future
-}
-
-fun expectWithin(seconds: Int, condition: Supplier<Boolean>): Boolean {
-    for (i in 0 until seconds) {
-        if (condition.get()) {
-            return true
-        }
-        Thread.sleep(1000)
-    }
-    return false
 }
 
 private val mailCorruptionErrors = listOf(

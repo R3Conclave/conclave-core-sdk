@@ -1,15 +1,33 @@
 plugins {
-    id 'base'
+    id 'com.github.johnrengelman.shadow' version '6.0.0' apply false
 }
 
 apply from: '../versions.gradle'
 apply from: '../common.gradle'
 
+ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+
+task sdkRepo(type: GradleBuild) {
+    dir = ".."
+    tasks = ["sdkRepo"]
+}
+
 subprojects {
     repositories {
         maven {
-            url = "../../build/sdk/repo"
+            url = "${rootProject.projectDir}/../build/sdk/repo"
         }
         mavenCentral()
+    }
+
+    tasks.withType(Test) {
+        dependsOn(":sdkRepo")
+        useJUnitPlatform {
+            if (findProperty("slowTests") == null) {
+                excludeTags("slow")
+            } else {
+                includeTags("slow")
+            }
+        }
     }
 }

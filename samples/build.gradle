@@ -22,7 +22,6 @@ def modulesToSubstitute = [
         'com.r3.conclave:conclave-host',
         'com.r3.conclave:conclave-client',
         'com.r3.conclave:conclave-testing',
-        'com.r3.conclave:enclave-utils',
         'com.r3.conclave:internal-testing'
 ]
 
