@@ -20,9 +20,11 @@ import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.Mail
 import com.r3.conclave.mail.MutableMail
 import com.r3.conclave.mail.internal.setKeyDerivation
+import com.r3.conclave.utilities.internal.putUnsignedShort
 import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import java.nio.ByteBuffer
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
@@ -110,9 +112,16 @@ class EnclaveInstanceInfoImpl(
         }
     }
 
+    private val keyDerivation: ByteArray by lazy {
+        val buffer = ByteBuffer.allocate(SgxCpuSvn.size + SgxIsvSvn.size)
+        securityInfo.cpuSVN.putTo(buffer)
+        buffer.putUnsignedShort(enclaveInfo.revocationLevel + 1)
+        buffer.array()
+    }
+
     override fun createMail(body: ByteArray): MutableMail {
         return MutableMail(body, encryptionKey).apply {
-            setKeyDerivation(securityInfo.cpuSVN.bytes)
+            setKeyDerivation(keyDerivation)
         }
     }
 

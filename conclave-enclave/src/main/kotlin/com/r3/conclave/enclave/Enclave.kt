@@ -14,10 +14,8 @@ import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.setKeyDerivation
-import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
-import com.r3.conclave.utilities.internal.putBoolean
+import com.r3.conclave.utilities.internal.*
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PublicKey
@@ -120,16 +118,17 @@ abstract class Enclave {
     }
 
     /**
-     * Return 256 bits of stable entropy for the given CPUSVN. Even across enclave and host restarts the same bytes will
-     * be returned for the same CPUSVN. The bytes are secret to the enclave and must not be leaked out.
+     * Return 256 bits of stable entropy for the given CPUSVN + ISVNSVN. Even across enclave and host restarts the same
+     * bytes will be returned for the same SVN values. The bytes are secret to the enclave and must not be leaked out.
      */
-    private fun getSecretEntropy(cpuSvn: ByteArray): ByteArray {
+    private fun getSecretEntropy(cpuSvn: ByteBuffer, isvSvn: Int): ByteArray {
         // We get 128 bits of stable pseudo-randomness from the CPU, based on the enclave signer, per-CPU key and other
         // pieces of data.
         val secretKey = env.getSecretKey { keyRequest ->
             keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
             keyRequest[SgxKeyRequest.keyPolicy] = KeyPolicy.MRSIGNER
-            keyRequest[SgxKeyRequest.cpuSvn] = ByteBuffer.wrap(cpuSvn)
+            keyRequest[SgxKeyRequest.cpuSvn] = cpuSvn
+            keyRequest[SgxKeyRequest.isvSvn] = isvSvn
         }
         // For Curve25519 and EdDSA we need 256 bit keys. We hash it to convert it to 256 bits. This is safe because
         // the underlying 128 bits of entropy remains, and that's "safe" in the sense that nobody can brute force
@@ -141,8 +140,15 @@ abstract class Enclave {
 
     private fun initCryptography() {
         val reportBody = env.createReport(null, null)[SgxReport.body]
-        cpuSvn = reportBody[SgxReportBody.cpuSvn].bytes
-        val entropy = getSecretEntropy(cpuSvn)
+        val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
+        val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
+        keyDerivation = ByteBuffer.allocate(SgxCpuSvn.size + SgxIsvSvn.size).let {
+            it.put(cpuSvn)
+            it.putUnsignedShort(isvSvn)
+            it.array()
+        }
+        (cpuSvn as Buffer).rewind()  // Prepare to read again.
+        val entropy = getSecretEntropy(cpuSvn, isvSvn)
         signingKeyPair = signatureScheme.generateKeyPair(entropy)
         val private = Curve25519PrivateKey(entropy)
         encryptionKeyPair = KeyPair(private.publicKey, private)
@@ -260,8 +266,12 @@ abstract class Enclave {
                 val decryptingStream = MailDecryptingStream(ByteBufferInputStream(input))
                 val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
                     requireNotNull(keyDerivation) { "Key derivation header required for decrypting enclave mail" }
-                    require(keyDerivation.size == SgxCpuSvn.size) { "Invalid key derivation header size" }
-                    val entropy = getSecretEntropy(keyDerivation)
+                    // Ignore any extra bytes in the keyDerivation.
+                    require(keyDerivation.size >= SgxCpuSvn.size + SgxIsvSvn.size) { "Invalid key derivation header size" }
+                    val keyDerivationBuffer = ByteBuffer.wrap(keyDerivation)
+                    val cpuSvn = keyDerivationBuffer.getSlice(SgxCpuSvn.size)
+                    val isvSvn = keyDerivationBuffer.getUnsignedShort()
+                    val entropy = getSecretEntropy(cpuSvn, isvSvn)
                     // We now have the private key to decrypt the mail body and authenticate the header.
                     Curve25519PrivateKey(entropy)
                 }
@@ -358,7 +368,7 @@ abstract class Enclave {
 
     //region Mail
     private lateinit var encryptionKeyPair: KeyPair
-    private lateinit var cpuSvn: ByteArray
+    private lateinit var keyDerivation: ByteArray
 
     /**
      * Invoked when a mail has been delivered by the host, successfully decrypted
@@ -406,7 +416,7 @@ abstract class Enclave {
      */
     protected fun createMail(to: PublicKey, body: ByteArray): MutableMail {
         return MutableMail(body, to, encryptionKeyPair.private).apply {
-            setKeyDerivation(cpuSvn)
+            setKeyDerivation(keyDerivation)
         }
     }
 

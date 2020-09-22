@@ -55,6 +55,13 @@ fun ByteBuffer.getBoolean(): Boolean = get().toInt() != 0
 
 fun ByteBuffer.putBoolean(value: Boolean): ByteBuffer = put((if (value) 1 else 0).toByte())
 
+fun ByteBuffer.getUnsignedShort(): Int = java.lang.Short.toUnsignedInt(getShort())
+
+fun ByteBuffer.putUnsignedShort(value: Int): ByteBuffer {
+    require(value >= 0 && value <= 65535) { "Not an unsigned short: $value" }
+    return putShort(value.toShort())
+}
+
 fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(it) }
 
 /**

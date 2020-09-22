@@ -1,11 +1,14 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveCall
+import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.*
 import com.r3.conclave.testing.MockHost
 import com.r3.conclave.testing.internal.MockEnclaveEnvironment
+import com.r3.conclave.testing.internal.MockInternals
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -16,7 +19,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 
 class MailHostTest {
     companion object {
@@ -141,83 +145,81 @@ class MailHostTest {
         host.deliverMail(1, messageFromBob.encrypt())
     }
 
-    @Test
-    fun `enclave receiving client mail for old platform version`() {
-        echo.start(null, null, null)
-        val encryptedMailFromClient = buildMail(echo).encrypt()
-        echo.close()
+    @ParameterizedTest
+    @EnumSource
+    fun `enclave can read mail targeted for older platform version`(api: CreateMailApi) {
+        val enclave1 = MockHost.loadMock<CreateMailEnclave>()
+        enclave1.start(null, null, null)
+        val oldEncryptedMail = api.createMail("secret".toByteArray(), enclave1)
+        enclave1.close()
 
         // Shutdown the enclave and "update" the platform so that we have a new CPUSVN. The new enclave's (default)
         // encryption key will be different from its old one, but we still expect the enclave to be able to decrypt it.
         MockEnclaveEnvironment.platformUpdate()
 
-        val echo2 = MockHost.loadMock<MailEchoEnclave>()
-        echo2.start(null, null, null)
-        var decryptedByEnclave: ByteArray? = null
-        echo2.deliverMail(1, encryptedMailFromClient) { bytes ->
-            decryptedByEnclave = bytes
-            null
-        }
-
-        decryptedByEnclave!!.deserialise {
-            assertArrayEquals(messageBytes, readIntLengthPrefixBytes())
-            assertEquals(1, readInt())
-        }
-    }
-
-    @Test
-    fun `enclave receiving it's own mail across platform update`() {
-        class MailToSelfEnclave : Enclave(), EnclaveCall {
-            override fun invoke(bytes: ByteArray): ByteArray? {
-                val mail = enclaveInstanceInfo.createMail(bytes.reversedArray())
-                postMail(mail, null)
-                return null
-            }
-            override fun receiveMail(id: Long, mail: EnclaveMail) {
-                callUntrustedHost(mail.bodyAsBytes)
-            }
-        }
-
-        var mailToSelf: ByteArray? = null
-
-        val enclave1 = MockHost.loadMock<MailToSelfEnclave>()
-        enclave1.start(null, null, object : EnclaveHost.MailCallbacks {
-            override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
-                mailToSelf = encryptedBytes
-            }
-        })
-        enclave1.callEnclave("secret".toByteArray())
-        enclave1.close()
-
-        MockEnclaveEnvironment.platformUpdate()
-
-        val enclave2 = MockHost.loadMock<MailToSelfEnclave>()
+        val enclave2 = MockHost.loadMock<CreateMailEnclave>()
         enclave2.start(null, null, null)
-        var decrypted: ByteArray? = null
-        enclave2.deliverMail(1, mailToSelf!!) { bytes ->
-            decrypted = bytes
+        var decryptedByEnclave: String? = null
+        enclave2.deliverMail(1, oldEncryptedMail) { bytes ->
+            decryptedByEnclave = String(bytes)
             null
         }
 
-        assertThat(decrypted).isEqualTo("terces".toByteArray())
+        assertThat(decryptedByEnclave).isEqualTo("terces")
     }
 
-    @Test
-    fun `platform downgrade attack not possible`() {
+    @ParameterizedTest
+    @EnumSource
+    fun `enclave cannot read mail targeted for newer platform version`(api: CreateMailApi) {
         // Imagine the current platform version has a bug in it and so we update and the client creates mail from that.
         MockEnclaveEnvironment.platformUpdate()
-        echo.start(null, null, null)
-        val encryptedMailFromClient = buildMail(echo).encrypt()
-        echo.close()
+        val enclave1 = MockHost.loadMock<CreateMailEnclave>()
+        enclave1.start(null, null, null)
+        val newEncryptedMail = api.createMail("secret".toByteArray(), enclave1)
+        enclave1.close()
 
-        // Let's revert the update and return the platform to it's insecure version.
+        // Let's revert the update and return the platform to its insecure version.
         MockEnclaveEnvironment.platformDowngrade()
 
-        val echo2 = MockHost.loadMock<MailEchoEnclave>()
-        echo2.start(null, null, null)
+        val enclave2 = MockHost.loadMock<CreateMailEnclave>()
+        enclave2.start(null, null, null)
         assertThatThrownBy {
-            echo2.deliverMail(1, encryptedMailFromClient)
+            enclave2.deliverMail(1, newEncryptedMail) { null }
         }.hasMessageContaining("SGX_ERROR_INVALID_CPUSVN")
+    }
+
+    @ParameterizedTest
+    @EnumSource
+    fun `enclave with higher revocation level can read older mail`(api: CreateMailApi) {
+        val oldEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
+        oldEnclave.start(null, null, null)
+        val oldEncryptedMail = api.createMail("secret!".toByteArray(), oldEnclave)
+        oldEnclave.close()
+
+        val newEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
+        newEnclave.start(null, null, null)
+        var decryptedByEnclave: String? = null
+        newEnclave.deliverMail(1, oldEncryptedMail) { bytes ->
+            decryptedByEnclave = String(bytes)
+            null
+        }
+
+        assertThat(decryptedByEnclave).isEqualTo("!terces")
+    }
+
+    @ParameterizedTest
+    @EnumSource
+    fun `enclave with lower revocation level cannot read newer mail`(api: CreateMailApi) {
+        val newEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
+        newEnclave.start(null, null, null)
+        val newEncryptedMail = api.createMail("secret!".toByteArray(), newEnclave)
+        newEnclave.close()
+
+        val oldEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
+        oldEnclave.start(null, null, null)
+        assertThatThrownBy {
+            oldEnclave.deliverMail(1, newEncryptedMail) { null }
+        }.hasMessageContaining("SGX_ERROR_INVALID_ISVSVN")
     }
 
     private fun buildMail(host: MockHost<*>, body: ByteArray = messageBytes): MutableMail {
@@ -248,5 +250,41 @@ class MailHostTest {
                 else -> throw IllegalStateException(str)
             }
         }
+    }
+
+    /**
+     * This enclave intentionally uses [Enclave.createMail] (as apposed to `enclaveInstanceInfo.createMail`) to create
+     * a mail to itself.
+     */
+    class CreateMailEnclave : Enclave(), EnclaveCall {
+        // Encrypt
+        override fun invoke(bytes: ByteArray): ByteArray {
+            return createMail(
+                    to = (enclaveInstanceInfo as EnclaveInstanceInfoImpl).encryptionKey,
+                    body = bytes.reversedArray()
+            ).encrypt()
+        }
+        // Decrypt
+        override fun receiveMail(id: Long, mail: EnclaveMail) {
+            callUntrustedHost(mail.bodyAsBytes)
+        }
+    }
+
+    enum class CreateMailApi {
+        /** @see Enclave.createMail */
+        ENCLAVE {
+            override fun createMail(body: ByteArray, host: EnclaveHost): ByteArray {
+                // Assumes the enclave is CreateMailEnclave
+                return host.callEnclave(body)!!
+            }
+        },
+        /** @see EnclaveInstanceInfo.createMail */
+        ENCLAVE_INSTANCE_INFO {
+            override fun createMail(body: ByteArray, host: EnclaveHost): ByteArray {
+                return host.enclaveInstanceInfo.createMail(body.reversedArray()).encrypt()
+            }
+        };
+
+        abstract fun createMail(body: ByteArray, host: EnclaveHost): ByteArray
     }
 }

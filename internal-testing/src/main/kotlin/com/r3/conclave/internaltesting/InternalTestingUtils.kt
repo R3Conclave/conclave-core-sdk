@@ -65,7 +65,8 @@ private val mailCorruptionErrors = listOf(
         "Protocol name must have 5 components",
         "Tag mismatch!",
         "Truncated Conclave Mail header",
-        "SGX_ERROR_INVALID_CPUSVN"
+        "SGX_ERROR_INVALID_CPUSVN",
+        "SGX_ERROR_INVALID_ISVSVN",
 )
 
 val throwableWithMailCorruptionErrorMessage = object : Condition<Throwable>("a throwable containing a corruption error message") {

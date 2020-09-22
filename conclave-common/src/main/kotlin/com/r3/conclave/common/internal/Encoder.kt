@@ -1,6 +1,8 @@
 package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.getSlice
+import com.r3.conclave.utilities.internal.getUnsignedShort
+import com.r3.conclave.utilities.internal.putUnsignedShort
 import java.lang.reflect.Modifier
 import java.nio.ByteBuffer
 import java.util.*
@@ -61,11 +63,8 @@ open class Int16 : Encoder<Short>() {
 
 open class UInt16 : Encoder<Int>() {
     final override val size get() = Short.SIZE_BYTES
-    final override fun read(buffer: ByteBuffer) = java.lang.Short.toUnsignedInt(buffer.getShort())
-    final override fun write(buffer: ByteBuffer, value: Int): ByteBuffer {
-        require(value >= 0 && value <= 65535) { "Not an unsigned short: $value" }
-        return buffer.putShort(value.toShort())
-    }
+    final override fun read(buffer: ByteBuffer): Int = buffer.getUnsignedShort()
+    final override fun write(buffer: ByteBuffer, value: Int): ByteBuffer = buffer.putUnsignedShort(value)
 }
 
 open class Int32 : Encoder<Int>() {
