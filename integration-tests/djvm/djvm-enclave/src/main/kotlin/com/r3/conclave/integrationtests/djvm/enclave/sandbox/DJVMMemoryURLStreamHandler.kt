@@ -13,7 +13,7 @@ object DJVMMemoryURLStreamHandler {
 
     private val memoryURLStreamHandler = MemoryURLStreamHandler(URL_SCHEME)
     private val handlers = listOf(memoryURLStreamHandler)
-            .associateBy(MemoryURLStreamHandler::getScheme)
+            .associateBy(MemoryURLStreamHandler::scheme)
 
     init {
         URL.setURLStreamHandlerFactory { protocol -> handlers[protocol] }

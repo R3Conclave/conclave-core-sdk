@@ -394,7 +394,10 @@ if (includeNative) {
                 exclude '**/*.kotlin_builtins'
                 // Everyone needs to have their import lines modified to the new shaded ones.
                 relocate 'com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson'
-                relocate 'kotlin', 'com.r3.conclave.shaded.kotlin'
+                relocate('kotlin', 'com.r3.conclave.shaded.kotlin') {
+                    // Allow the Kotlin compiler on client apps to recognise any internal members and thus prevent access to them
+                    exclude 'kotlin.Metadata'
+                }
                 // Replace the output of the "jar" task with this one.
                 archiveClassifier = ''
             }

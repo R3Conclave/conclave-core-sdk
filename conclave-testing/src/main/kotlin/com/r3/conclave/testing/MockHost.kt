@@ -19,7 +19,8 @@ import com.r3.conclave.testing.internal.MockInternals
  */
 class MockHost<T : Enclave> private constructor(val enclave: T) : EnclaveHost() {
     companion object {
-        internal fun <T : Enclave> create(enclave: T): MockHost<T> = MockHost(enclave)
+        // The weird name is to make it harder to use this in Java apps.
+        internal fun <T : Enclave> `internal create`(enclave: T): MockHost<T> = MockHost(enclave)
 
         /**
          * Creates a [MockHost] suitable for unit tests, that connects to the given [Enclave].
