@@ -3,11 +3,11 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 # You can set this variable to mount the IDEs from the host
 HOST_IDE_DIR=${HOST_IDE_DIR:-"${HOME}/.opt"}
-IDEA_VERSION=${IDEA_VERSION:-"IC-202.6397.94"}
-IDEA_DOWNLOAD_FILE=ideaIC-2020.2.tar.gz
+IDEA_VERSION=${IDEA_VERSION:-"IC-202.7319.50"}
+IDEA_DOWNLOAD_FILE=ideaIC-2020.2.2.tar.gz
 IDEA_DOWNLOAD_ADDRESS=https://download-cf.jetbrains.com/idea/$IDEA_DOWNLOAD_FILE
-CLION_VERSION=${CLION_VERSION:-"2020.1.3"}
-CLION_DOWNLOAD_FILE=CLion-2020.1.3.tar.gz
+CLION_VERSION=${CLION_VERSION:-"2020.2.3"}
+CLION_DOWNLOAD_FILE=CLion-2020.2.3.tar.gz
 CLION_DOWNLOAD_ADDRESS=https://download-cf.jetbrains.com/cpp/$CLION_DOWNLOAD_FILE
 
 if [ -f ~/.oblivium_credentials.sh ]
