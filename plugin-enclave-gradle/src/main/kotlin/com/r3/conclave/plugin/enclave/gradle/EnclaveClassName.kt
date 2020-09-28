@@ -31,8 +31,6 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
                         else -> throw GradleException("Found multiple enclave classes: ${enclaveClasses.joinToString { it.name }}")
                     }
                 }
-
-        logger.lifecycle("Enclave class: $enclaveClassName")
         _outputEnclaveClassName.set(enclaveClassName)
     }
 }

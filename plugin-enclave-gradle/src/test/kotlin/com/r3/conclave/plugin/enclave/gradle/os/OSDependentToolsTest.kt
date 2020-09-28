@@ -71,22 +71,4 @@ class OSDependentToolsTest {
         val sgxSign = windows.getSgxSign()
         assertThat(sgxSign).isEqualTo("$conclaveDependenciesDirectory/sign-tool/sgx_sign.exe")
     }
-
-    @Test
-    fun getOpensslFileLinux() {
-        val opensslFile = linux.getOpensslFile()
-        assertThat(opensslFile).isEqualTo("$conclaveDependenciesDirectory/binutils/opensslw")
-    }
-
-    @Test
-    fun getOpensslFileMacOS() {
-        val opensslFile = macOS.getOpensslFile()
-        assertThat(opensslFile).isEqualTo("/usr/local/bin/openssl")
-    }
-
-    @Test
-    fun getOpensslFileWindows() {
-        val opensslFile = windows.getOpensslFile()
-        assertThat(opensslFile).isEqualTo("$conclaveDependenciesDirectory/binutils/opensslw.exe")
-    }
 }

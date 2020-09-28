@@ -7,7 +7,10 @@ import com.r3.conclave.plugin.enclave.gradle.os.LinuxDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.MacOSDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.OSDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.WindowsDependentTools
-import org.gradle.api.*
+import org.gradle.api.JavaVersion
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -64,15 +67,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val copySgxToolsTask = target.createTask<Copy>("copySgxTools") { task ->
             task.group = CONCLAVE_GROUP
-            val dependencies= osDependentTools.getToolsDependenciesIDs(sdkVersion)
-            task.fromDependencies(*dependencies)
+            task.fromDependencies(*osDependentTools.getToolsDependenciesIDs(sdkVersion).toTypedArray())
             task.into(baseDirectory)
         }
 
         val linkerToolFile = target.file(osDependentTools.getLdFile())
         val nativeImageLinkerToolFile = target.file(osDependentTools.getNativeImageLdFile())
         val signToolFile = target.file(osDependentTools.getSgxSign())
-        val opensslToolFile = target.file(osDependentTools.getOpensslFile())
 
         val buildJarObjectTask = target.createTask<BuildJarObject>("buildJarObject") { task ->
             task.dependsOn(copySgxToolsTask)
@@ -88,9 +89,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         // Dummy key
         val createDummyKeyTask = target.createTask<GenerateDummyMrsignerKey>("createDummyKey") { task ->
-            task.dependsOn(copySgxToolsTask)
-            task.inputs.files(opensslToolFile.parent)
-            task.opensslTool.set(opensslToolFile)
             task.outputKey.set(baseDirectory.resolve("dummy_key.pem").toFile())
         }
 

@@ -1,13 +1,14 @@
 package com.r3.conclave.internaltesting.dynamic
 
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileWriter
+import java.math.BigInteger
+import java.security.KeyPairGenerator
+import java.security.spec.RSAKeyGenParameterSpec
 
 object SignEnclave {
-    fun extractSignTool(): Cached<File> {
-        return ExtractResource.extractResource(javaClass, "/com/r3/conclave/sign-tool/sgx_sign", "r-xr-xr-x")
-    }
-
     fun createConfig(enclaveConfig: EnclaveConfig): Cached<File> {
         val byteStream = ByteArrayOutputStream()
         enclaveConfig.marshal(byteStream)
@@ -19,28 +20,28 @@ object SignEnclave {
 
     fun signEnclave(inputKey: Cached<File>, inputEnclave: Cached<File>, enclaveConfig: Cached<File>): Cached<File> {
         return Cached.combineFile(listOf(extractSignTool(), inputKey, inputEnclave, enclaveConfig), "enclave.signed.so") { output, (signTool, key, enclave, config) ->
-            ProcessRunner.runProcess(signEnclaveCommandLine(signTool, key, enclave, config, output), output.parentFile)
+            ProcessRunner.runProcess(
+                    commandLine = listOf(
+                            signTool.absolutePath, "sign",
+                            "-key", key.absolutePath,
+                            "-enclave", enclave.absolutePath,
+                            "-out", output.absolutePath,
+                            "-config", config.absolutePath
+                    ),
+                    directory = output.parentFile
+            )
         }
-    }
-
-    private fun signEnclaveCommandLine(signTool: File, inputKey: File, inputEnclave: File, inputEnclaveConfig: File, outputSignedEnclave: File): List<String> {
-        return listOf(
-                signTool.absolutePath, "sign",
-                "-key", inputKey.absolutePath,
-                "-enclave", inputEnclave.absolutePath,
-                "-out", outputSignedEnclave.absolutePath,
-                "-config", inputEnclaveConfig.absolutePath
-        )
     }
 
     fun createDummyKey(input: String? = null): Cached<File> {
         return Cached.singleFile(DigestTools.md5String(input ?: "dummy"), "dummy.key") { output ->
-            ProcessRunner.runProcess(createDummyKeyCommandLine(output), output.parentFile)
+            val rsaKeyGen = KeyPairGenerator.getInstance("RSA")
+            rsaKeyGen.initialize(RSAKeyGenParameterSpec(3072, BigInteger.valueOf(3)))
+            val privateKey = rsaKeyGen.generateKeyPair().private
+            JcaPEMWriter(FileWriter(output)).use {
+                it.writeObject(privateKey)
+            }
         }
-    }
-
-    private fun createDummyKeyCommandLine(outputKey: File): List<String> {
-        return listOf("/usr/bin/env", "openssl", "genrsa", "-out", outputKey.absolutePath, "-3", "3072")
     }
 
     fun enclaveMetadata(inputEnclave: Cached<File>): Cached<File> {
@@ -50,5 +51,9 @@ object SignEnclave {
                     output.parentFile
             )
         }
+    }
+
+    private fun extractSignTool(): Cached<File> {
+        return ExtractResource.extractResource(javaClass, "/com/r3/conclave/sign-tool/sgx_sign", "r-xr-xr-x")
     }
 }

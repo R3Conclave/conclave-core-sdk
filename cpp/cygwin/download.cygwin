@@ -35,7 +35,6 @@ cp usr/bin/cygwin1.dll $dist/
 cp usr/bin/cygz.dll $dist/
 cp usr/bin/ld.exe $dist/
 cp -r usr/x86_64-pc-cygwin/lib/ldscripts/elf_x86_64.x* $dist/ldscripts/
-cp usr/bin/openssl.exe $dist/opensslw.exe
 
 popd
 rm -rf $tmp

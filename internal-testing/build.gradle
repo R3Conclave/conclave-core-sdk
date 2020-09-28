@@ -6,6 +6,7 @@ dependencies {
     api project(":conclave-testing")
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     implementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
     implementation "org.assertj:assertj-core:$assertj_version"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
