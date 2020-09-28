@@ -2,58 +2,99 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
-import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PAYLOAD_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.Noise
+import com.r3.conclave.utilities.internal.readFully
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.io.ByteArrayInputStream
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.EOFException
 import java.io.IOException
 import java.security.PrivateKey
+import kotlin.math.ceil
 
 class MailStreamsTest {
     companion object {
         private const val protocolNameX = "Noise_X_25519_AESGCM_SHA256"
         private const val protocolNameN = "Noise_N_25519_AESGCM_SHA256"
         private val receivingPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
-        private val receivingKeyState = Noise.createDH("25519").also { it.setPrivateKey(receivingPrivateKey.encoded, 0) }
-        private val publicKey = Curve25519PublicKey(receivingKeyState.publicKey)
+        private val publicKey = receivingPrivateKey.publicKey
 
         private val msg = "Hello, can you hear me?".toByteArray()
+
+        @JvmStatic
+        val dataSizes = intArrayOf(
+                0,
+                1,
+                MAX_PAYLOAD_LENGTH - 1,
+                MAX_PAYLOAD_LENGTH + 0,
+                MAX_PAYLOAD_LENGTH + 1,
+                Noise.MAX_PACKET_LEN - 1,
+                Noise.MAX_PACKET_LEN + 0,
+                Noise.MAX_PACKET_LEN + 1,
+                2 * MAX_PAYLOAD_LENGTH,
+                50 * 1024 * 1024,
+        )
     }
 
     @Test
-    fun happyPath() {
+    fun `happy path`() {
         val bytes = encryptMessage()
         assertThat(MailProtocol.values()[bytes[2].toInt()].noiseProtocolName).isEqualTo(protocolNameN)
         // Can't find, it's encrypted.
         assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello"))
+        assertEquals(2, getPacketCount(bytes))
         val stream = decrypt(bytes)
         assertNull(stream.senderPublicKey)
         assertEquals(0, stream.headerBytes.size)
     }
 
-    @Test
-    fun largeStream() {
-        // Test a "large" (50mb) encrypt/decrypt cycle. The data we'll encrypt is all zeros: that's fine.
-        val data = ByteArray(1024 * 1024 * 50)
-        val senderPrivateKey = ByteArray(32).also { Noise.random(it) }
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `single byte writes`(dataSize: Int) {
+        testWrite(dataSize) { encryptingStream, data ->
+            for (b in data) {
+                encryptingStream.write(b.toInt())
+            }
+        }
+    }
 
-        // Feed the byte array into the stream in 8kb pieces.
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `write entire data at once`(dataSize: Int) {
+        testWrite(dataSize) { encryptingStream, data ->
+            encryptingStream.write(data)
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `write in chunks`(dataSize: Int) {
+        testWrite(dataSize) { encryptingStream, data ->
+            data.inputStream().copyTo(encryptingStream, 8192)
+        }
+    }
+
+    private fun testWrite(dataSize: Int, block: (MailEncryptingStream, ByteArray) -> Unit) {
+        val senderPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
+        val data = ByteArray(dataSize).also(Noise::random)
+
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream.wrap(baos, publicKey, null, Curve25519PrivateKey(senderPrivateKey)).use { encrypt ->
-            ByteArrayInputStream(data).copyTo(encrypt, 8192)
+        MailEncryptingStream(baos, publicKey, null, senderPrivateKey).use { encrypt ->
+            block(encrypt, data)
         }
+        val encrypted = baos.toByteArray()
 
-        // Now read the decrypting stream also in chunks.
-        val decrypted = ByteArrayOutputStream()
-        MailDecryptingStream(ByteArrayInputStream(baos.toByteArray()), receivingPrivateKey).use { decrypt ->
-            decrypt.copyTo(decrypted, 8192)
-        }
+        // Each packet should be max noise packet size, minus the remainder bytes and the terminator packet.
+        assertThat(getPacketCount(encrypted)).isEqualTo(ceil(data.size.toDouble() / MAX_PAYLOAD_LENGTH).toInt() + 1)
 
-        assertArrayEquals(data, decrypted.toByteArray())
+        val decrypted = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey).readFully()
+        assertArrayEquals(data, decrypted)
     }
 
     @Test
@@ -73,7 +114,7 @@ class MailStreamsTest {
     }
 
     @Test
-    fun senderKey() {
+    fun `sender key`() {
         val senderPrivateKey = ByteArray(32).also { Noise.random(it) }
         val senderDHState = Noise.createDH("25519").also { it.setPrivateKey(senderPrivateKey, 0) }
         val bytes = encryptMessage(Curve25519PrivateKey(senderPrivateKey))
@@ -88,7 +129,7 @@ class MailStreamsTest {
     fun headers() {
         val baos = ByteArrayOutputStream()
         val headerData = "header data".toByteArray()
-        MailEncryptingStream.wrap(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
         assertNotEquals(-1, String(encrypted).indexOf("header data"),
                 "Could not locate the unencrypted header data in the output bytes.")
@@ -100,7 +141,7 @@ class MailStreamsTest {
     fun `not able to read stream if private key not provided`() {
         val baos = ByteArrayOutputStream()
         val headerData = "header data".toByteArray()
-        MailEncryptingStream.wrap(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream())
@@ -113,7 +154,7 @@ class MailStreamsTest {
     fun `provide private key after reading header`() {
         val baos = ByteArrayOutputStream()
         val headerData = "header data".toByteArray()
-        MailEncryptingStream.wrap(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
         val decryptingStream = MailDecryptingStream(encrypted.inputStream(), privateKey = null)
         assertArrayEquals(headerData, decryptingStream.headerBytes)
@@ -128,7 +169,7 @@ class MailStreamsTest {
     fun `setPrivateKey can detect corruption in header`() {
         val baos = ByteArrayOutputStream()
         val headerData = "header data".toByteArray()
-        MailEncryptingStream.wrap(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
 
         val headerDataIndex = String(encrypted).indexOf("header data")
@@ -146,9 +187,30 @@ class MailStreamsTest {
 
     private fun encryptMessage(senderPrivateKey: PrivateKey? = null): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream.wrap(baos, publicKey, null, senderPrivateKey)
+        val encrypt = MailEncryptingStream(baos, publicKey, null, senderPrivateKey)
         encrypt.write(msg)
         encrypt.close()
         return baos.toByteArray()
+    }
+
+    private fun getPacketCount(bytes: ByteArray): Int {
+        val dis = DataInputStream(bytes.inputStream())
+        val prologueSize = dis.readUnsignedShort()
+        val protocol = MailProtocol.values()[dis.read()]
+        dis.skipExactly(prologueSize - 1)
+        dis.skipExactly(protocol.handshakeLength)
+        var count = 0
+        while (dis.available() > 0) {
+            val packetSize = dis.readUnsignedShort()
+            dis.skipExactly(packetSize)
+            count++
+        }
+        return count
+    }
+
+    private fun DataInputStream.skipExactly(n: Int) {
+        if (skipBytes(n) != n) {
+            throw EOFException()
+        }
     }
 }

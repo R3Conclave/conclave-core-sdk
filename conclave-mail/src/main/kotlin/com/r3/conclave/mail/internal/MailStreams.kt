@@ -2,7 +2,6 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.wrap
 import com.r3.conclave.mail.internal.noise.protocol.*
 import com.r3.conclave.utilities.internal.readExactlyNBytes
 import java.io.*
@@ -32,10 +31,6 @@ private fun OutputStream.writeShort(value: Int) {
  * A stream filter that encrypts the input data. Closing this stream writes a termination footer which protects the
  * result against truncation attacks, so you must remember to do so.
  *
- * To get an instance use [wrap]. This will return an instance of this object wrapped with a [BufferedOutputStream] that
- * ensures every write to this stream is of the optimal size. This is necessary because every write is encrypted as a
- * separate block, which is inefficient and used naively will break random access.
- *
  * You can provide your own private key as well as the recipient's public key. The recipient will receive your public
  * key and a proof that you encrypted the message. This isn't a typical digital signature but rather is based on
  * the properties of the Diffie-Hellman algorithm - see section 7.4 of
@@ -60,44 +55,31 @@ private fun OutputStream.writeShort(value: Int) {
  *                             be recognised or remembered by the enclave, otherwise a dummy key meaning 'anonymous'
  *                             will be used instead.
  */
-internal class MailEncryptingStream private constructor(
+class MailEncryptingStream(
         out: OutputStream,
         private val destinationPublicKey: PublicKey,
         header: ByteArray?,
         private val senderPrivateKey: PrivateKey?
 ) : FilterOutputStream(out) {
     companion object {
-        /**
-         * Creates a [MailEncryptingStream] wrapped with a [BufferedOutputStream]. The buffering ensures data is
-         * packetized by Noise to the maximum packet size, thus reducing the overhead of the stream to the minimum
-         * needed for the AES/GCM MAC tags, and enabling future support for seeking inside encrypted streams.
-         */
-        fun wrap(
-                out: OutputStream,
-                destinationPublicKey: PublicKey,
-                header: ByteArray?,
-                senderPrivateKey: PrivateKey?
-        ): OutputStream {
-            // The buffer is the maximum Noise packet length minus the 16 byte MAC that each packet has. Thus the start of
-            // each 64kb block of mail stream after the prologue+handshake can be calculated if you know how big the
-            // handshake was.
-            return BufferedOutputStream(MailEncryptingStream(out, destinationPublicKey, header, senderPrivateKey), Noise.MAX_PACKET_LEN - 16)
-        }
+        internal const val MAX_PAYLOAD_LENGTH = Noise.MAX_PACKET_LEN - 16
     }
 
     private var cipherState: CipherState? = null
     private val header: ByteArray? = header?.clone()
+    private val buffer = ByteArray(Noise.MAX_PACKET_LEN)
+    private var bufferPosition = 0
 
     // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
     // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
     // they will complete it when reading the stream.
-    private fun maybeHandshake() {
-        if (cipherState != null) return  // Already set up the stream.
+    private fun maybeHandshake(): CipherState {
+        cipherState?.let { return it }  // Already set up the stream.
 
         val protocol = if (senderPrivateKey != null) MailProtocol.SENDER_KEY_TRANSMITTED else MailProtocol.NO_SENDER_KEY
         // Noise can be used in various modes, the protocol name is an ASCII string that identifies the settings.
         // We write it here. It looks like this: Noise_X_25519_AESGCM_SHA256
-        HandshakeState(protocol.noiseProtocolName, HandshakeState.INITIATOR).use { handshake ->
+        return HandshakeState(protocol.noiseProtocolName, HandshakeState.INITIATOR).use { handshake ->
             handshake.remotePublicKey.setPublicKey(destinationPublicKey.encoded, 0)
 
             // If one was provided, the recipient will get our public key in an authenticated manner i.e. we cannot
@@ -137,8 +119,10 @@ internal class MailEncryptingStream private constructor(
             check(handshake.action == HandshakeState.SPLIT)
             val split = handshake.split()
             split.senderOnly()   // One way not two way communication.
-            cipherState = split.sender
+            val cipherState = split.sender
             check(handshake.action == HandshakeState.COMPLETE)
+            this.cipherState = cipherState
+            cipherState
         }
     }
 
@@ -157,51 +141,77 @@ internal class MailEncryptingStream private constructor(
     }
 
     override fun write(b: Int) {
-        throw UnsupportedOperationException("Writing individual bytes at a time is extremely inefficient. Use write(byte[]) instead.")
+        buffer[bufferPosition++] = b.toByte()
+        writePacketFromBufferIfFull()
     }
 
-    private val buffer = ByteArray(Noise.MAX_PACKET_LEN)
-
     /**
-     * Writes [len] bytes from the specified [b] array starting at [off] to this output stream.
-     * **The length may not be larger than [Noise.MAX_PACKET_LEN]**. Attempts to
-     * write larger arrays will throw a [ShortBufferException] wrapped in an [IOException].
-     * Zero length writes are ignored.
+     * Encrypts [len] bytes from the specified [b] array starting at [off]. The encrypted bytes are only written to the
+     * underlying stream until a certain packet chuck size is reached. This means a call to write may not involve I/O.
+     * It's essential that [close] be called when no more bytes need to be encrypted.
      *
-     * @param b   the data.
+     * @param b   the plaintext data.
      * @param off the start offset in the data.
      * @param len the number of bytes to write.
      * @throws IOException if an I/O error occurs.
      */
     override fun write(b: ByteArray, off: Int, len: Int) {
-        if (len == 0) return
-        maybeHandshake()
-        val cipherState = cipherState!!
-        // This method should really be able to process any arbitrary length, but when wrapped in a
-        // BufferedOutputStream with an appropriately sized buffer it's not really necessary.
-        if (len > Noise.MAX_PACKET_LEN - cipherState.macLength - 2)
-            throw IOException(ShortBufferException())
-        val encryptedLength = cipherState.encryptWithAd(null, b, off, buffer, 2, len)
-        buffer.writeShort(0, encryptedLength)
-        out.write(buffer, 0, encryptedLength + 2)
+        val endOffset = off + len
+        var currentOffset = off
+        while (true) {
+            val remainingLength = endOffset - currentOffset
+            if (remainingLength == 0) break
+            val length = remainingLength.coerceAtMost(MAX_PAYLOAD_LENGTH - bufferPosition)
+            if (length == MAX_PAYLOAD_LENGTH) {
+                // If the current chunk can fit entirely into a packet, avoid the unnecessary copy into the internal buffer
+                // and encrypt it directly from the source.
+                writePacket(b, currentOffset, length)
+            } else {
+                System.arraycopy(b, currentOffset, buffer, bufferPosition, length)
+                bufferPosition += length
+                writePacketFromBufferIfFull()
+            }
+            currentOffset += length
+        }
+    }
+
+    private fun writePacketFromBufferIfFull() {
+        if (bufferPosition == MAX_PAYLOAD_LENGTH) {
+            writePacketFromBuffer()
+        }
     }
 
     override fun close() {
+        // First write out any remaining bytes into the penultimate packet.
+        if (bufferPosition > 0) {
+            writePacketFromBuffer()
+        }
         // Write the terminator packet: an encryption of the empty byte array. This lets the other side know we
         // intended to end the stream and there's no MITM maliciously truncating our packets.
-        maybeHandshake()
-        try {
-            val cipherState = cipherState!!
-            val macLength = cipherState.encryptWithAd(null, ByteArray(0), 0, buffer, 2, 0)
-            check(macLength == cipherState.macLength)
-            buffer.writeShort(0, macLength)
-            out.write(buffer, 0, macLength + 2)
-            out.flush()
-        } catch (e: ShortBufferException) {
-            throw IOException(e)
-        }
+        writePacketFromBuffer()
         // And propagate the close.
         super.close()
+    }
+
+    /**
+     * Write out an encrypted packet for the given plaintext to the underlying stream. The packet is prefixed by the
+     * ciphertext length.
+     */
+    private fun writePacket(plaintext: ByteArray, offset: Int, length: Int) {
+        val cipherState = maybeHandshake()
+        val encryptedLength = cipherState.encryptWithAd(null, plaintext, offset, buffer, 0, length)
+        check(encryptedLength == length + cipherState.macLength)
+        out.writeShort(encryptedLength)
+        out.write(buffer, 0, encryptedLength)
+        out.flush()
+    }
+
+    /**
+     * Write out an encrypted packet for the internal buffer to the underlying stream.
+     */
+    private fun writePacketFromBuffer() {
+        writePacket(plaintext = buffer, offset = 0, length = bufferPosition)
+        bufferPosition = 0  // Reset the buffer for the next packet.
     }
 }
 
