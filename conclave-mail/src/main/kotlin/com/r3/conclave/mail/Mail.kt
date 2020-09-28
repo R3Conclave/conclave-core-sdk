@@ -147,8 +147,10 @@ class MutableMail(
     }
 
     // Internal header field for storing any key derivation data. Currently this is only used by the enclave.
-    // The weird name is to make it harder to use this in Java apps.
-    internal var `internal keyDerivation`: ByteArray? = null
+    // The getter and setter are synthentic to hide them from Java apps.
+    @set:JvmSynthetic
+    @get:JvmSynthetic
+    internal var keyDerivation: ByteArray? = null
 
     override var sequenceNumber: Long = 0
 
@@ -195,7 +197,7 @@ class MutableMail(
      * @return a ciphertext that can be fed to [Mail.decrypt] to obtain the original mail.
      */
     fun encrypt(): ByteArray {
-        val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, from, envelope, `internal keyDerivation`).encoded
+        val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, from, envelope, keyDerivation).encoded
         val output = ByteArrayOutputStream()
         val stream = MailEncryptingStream(output, destinationKey, header, privateKey)
         stream.write(bodyAsBytes)

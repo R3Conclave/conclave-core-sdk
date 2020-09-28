@@ -52,15 +52,17 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
 
-        // The weird name is to make it harder to use this in Java apps.
-        internal fun `internal create`(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
+        // This is synthetic to hide it from Java apps.
+        @JvmSynthetic
+        internal fun create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
             val host = EnclaveHost()
-            `internal init`(host, enclaveHandle)
+            init(host, enclaveHandle)
             return host
         }
 
-        // The weird name is to make it harder to use this in Java apps.
-        internal fun `internal init`(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
+        // This is synthetic to hide it from Java apps.
+        @JvmSynthetic
+        internal fun init(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
             host.enclaveHandle = enclaveHandle
         }
 
