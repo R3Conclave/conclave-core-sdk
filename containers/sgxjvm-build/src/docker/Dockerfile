@@ -11,7 +11,16 @@ RUN apt-get update -y && apt-get install -y \
     curl \
     apt-transport-https \
     ca-certificates \
-    software-properties-common
+    software-properties-common \
+    gnupg \
+    wget
+
+# CMake - instructions from https://apt.kitware.com/.
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+RUN apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
+RUN apt-get install kitware-archive-keyring -y
+RUN rm /etc/apt/trusted.gpg.d/kitware.gpg
+#
 
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -52,7 +61,6 @@ RUN apt-get update -y && apt-get install -y \
     python3-venv \
     python3-wheel \
     unzip \
-    wget \
     zip \
     zlib1g-dev \
     kubectl \

@@ -1,7 +1,7 @@
 project(jvm-host-enclave-common)
 
 include(FindJNI)
-include(../Determinise.cmake)
+include(Determinise)
 
 if (NOT JNI_FOUND)
     message(FATAL_ERROR "JNI headers not found")

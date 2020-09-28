@@ -1,6 +1,6 @@
 project(jvm-enclave-avian)
 
-include(../Determinise.cmake)
+include(Determinise)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror -Wno-error=nonnull")
 

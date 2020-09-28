@@ -56,10 +56,8 @@ task setupSignToolCMakeBuild(type: Exec) {
     outputs.file("$buildDir/Makefile")
 }
 
-def maxWorkers = properties["org.gradle.workers.max"]
 task buildSgxSign(type: Exec) {
     dependsOn setupSignToolCMakeBuild
-    environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
     workingDir buildDir
     commandLine "/usr/bin/env", "cmake",
             "--build", buildDir,

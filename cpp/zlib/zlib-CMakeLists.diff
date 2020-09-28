@@ -4,7 +4,7 @@
  
  project(zlib C)
  
-+include(${ZLIB_SOURCE_DIR}/../Determinise.cmake)
++include(${ZLIB_SOURCE_DIR}/../cmake/Determinise.cmake)
 +
  set(VERSION "1.2.11")
  

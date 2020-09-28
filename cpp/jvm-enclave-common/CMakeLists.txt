@@ -1,9 +1,9 @@
 project(jvm-enclave-common)
 
-include(../Determinise.cmake)
+include(Determinise)
 
 # Enable the row below to get debug trace output from c++ modules.
-# add_definitions(-DDEBUG_TRACE_OUTPUT)
+# add_definitions(-DDEBUG_TRACE_OUTPUT -DLOG_MEMORY)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror -Wno-unused-parameter")
 
@@ -59,6 +59,7 @@ add_library(jvm_enclave_common
         stubs/ioctl.cpp
         stubs/utime.cpp
 )
+add_dependencies(jvm_enclave_common linux-sgx-ext)
 
 target_include_directories(jvm_enclave_common PUBLIC include PRIVATE src)
 target_compile_options(jvm_enclave_common PUBLIC -nostdinc -fPIC)
@@ -68,11 +69,16 @@ target_link_libraries(jvm_enclave_common
         linux-sgx_headers
         linux-sgx_tstdc_headers
         linux-sgx_pthread)
-add_dependencies(jvm_enclave_common linux-sgx-ext)
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
     target_compile_definitions(jvm_enclave_common PRIVATE -DSGX_SIM)
 endif()
 
-get_property(ENCLAVE_SOURCES TARGET jvm_enclave_common PROPERTY SOURCES)
-determinise_compile(${ENCLAVE_SOURCES})
+# Include google tests found under./test
+target_test(PROJ                  ${PROJECT_NAME}
+            TARGET                jvm_enclave_common
+            TEST_SRC_PATH         "${CMAKE_CURRENT_SOURCE_DIR}/test"
+            TEST_OUT_PATH         "${CMAKE_CURRENT_BINARY_DIR}/test_bin"
+            CMAKE_BINARY_DIR      "${CMAKE_BINARY_DIR}"
+            PUBLIC_INCLUDE        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            PRIVATE_INCLUDE       "${CMAKE_CURRENT_SOURCE_DIR}/src" )

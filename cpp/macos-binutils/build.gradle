@@ -24,10 +24,8 @@ task setupCMakeBuild(type: Exec) {
     outputs.file("${project.buildDir}/Makefile")
 }
 
-def maxWorkers = properties["org.gradle.workers.max"]
 task buildBinutils(type: Exec) {
     dependsOn setupCMakeBuild
-    environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
     workingDir project.buildDir
     commandLine "cmake", "--build", "${project.buildDir}", "--target", "macos-binutils"
 }

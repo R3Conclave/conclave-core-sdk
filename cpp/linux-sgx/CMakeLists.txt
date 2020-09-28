@@ -28,9 +28,9 @@ ExternalProject_Add(linux-sgx-ext
 
         CONFIGURE_COMMAND ""
 
-        BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
+        BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
             && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.9.101.2.bin
-            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw
+            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw
 
 
         INSTALL_COMMAND ""
@@ -54,7 +54,7 @@ ExternalProject_Add(macos-sign-tool
 
     CONFIGURE_COMMAND ""
 
-    BUILD_COMMAND make -j${CMAKE_BUILD_PARALLEL_LEVEL} ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/sdk/sign_tool/SignTool
+    BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/sdk/sign_tool/SignTool
 
     INSTALL_COMMAND ""
 
@@ -128,12 +128,19 @@ add_executable(sign_enclave IMPORTED GLOBAL)
 set_property(TARGET sign_enclave PROPERTY IMPORTED_LOCATION ${LINUX_SGX_LIB_PREFIX}/sgx_sign)
 add_dependencies(sign_enclave linux-sgx-ext)
 
+# The below hasn't been working for a while, it makes CMake v3.18 crash. may be worth revisiting in the future.
+# Disabling it for now.
+message("linux-sgx_clion currently disabled!")
+set(ENABLE_CLION OFF)
+if (ENABLE_CLION)
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 # This is here for IDE support
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 file(GLOB_RECURSE CLION_SOURCES ${BUILD_SRC_DIR}/*.c ${BUILD_SRC_DIR}/*.cpp ${BUILD_SRC_DIR}/*.h)
+message("MGS {BUILD_SRC_DIR} ${BUILD_SRC_DIR}")
+message("MGS {CLION_SOURCES} ${CLION_SOURCES}")
 add_library(linux-sgx_clion ${CLION_SOURCES})
-add_dependencies(linux-sgx_clion linux-sgx_headers)
+add_dependencies(linux-sgx_clion linux-sgx_headers linux-sgx-ext)
 set_target_properties(linux-sgx_clion PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(linux-sgx_clion PUBLIC
         ${BUILD_SRC_DIR}/common/inc
@@ -155,4 +162,5 @@ target_include_directories(linux-sgx_clion PUBLIC
         ${BUILD_SRC_DIR}/external/vtune/linux/sdk/src/ittnotify
         ${BUILD_SRC_DIR}/external/epid-sdk)
 target_link_libraries(linux-sgx_clion linux-sgx_headers)
+endif()
 endif()

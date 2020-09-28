@@ -37,7 +37,6 @@ static String compileTaskNameHostShared(type) { return "compileHostShared$type" 
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
 static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
 
-def maxWorkers = properties["org.gradle.workers.max"]
 
 tasks.create("symlinkDebugToSimulation") {
     dependsOn(createCmakeTaskName("Debug"))
@@ -54,8 +53,6 @@ tasks.create("symlinkDebugToSimulation") {
 for (type in types) {
     // Use Cmake to create build
     tasks.create(createCmakeTaskName(type), Exec) {
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
-
         if (type == "Simulation") {
             dependsOn("symlinkDebugToSimulation")
         }
@@ -77,8 +74,6 @@ for (type in types) {
     tasks.create(compileTaskNameEnclave(type), Exec) {
         dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateEnclaveJniHeaders)
 
-
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
         workingDir(buildDirectory(type))
 
         commandLine("/usr/bin/env", "cmake",
@@ -91,7 +86,6 @@ for (type in types) {
     tasks.create(compileTaskNameHost(type), Exec) {
         dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateHostJniHeaders, compileTaskNameHostShared(type))
 
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
         workingDir(buildDirectory(type))
 
         commandLine("/usr/bin/env", "cmake",
@@ -104,7 +98,6 @@ for (type in types) {
     tasks.create(compileTaskNameHostShared(type), Exec) {
         dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateHostSharedJniHeaders)
 
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
         workingDir(buildDirectory(type))
 
         commandLine("/usr/bin/env", "cmake",
@@ -119,7 +112,6 @@ for (type in types) {
             dependsOn(compileTaskNameLinuxSgx("Debug"))
             commandLine("echo", "Linux SGX Simulation is a symlink from DEBUG.")
         } else {
-            environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
             commandLine("/usr/bin/env", "cmake",
                     "--build", buildDirectory(type),
                     "--target", "linux-sgx-ext"
@@ -131,7 +123,6 @@ for (type in types) {
     tasks.create(compileTaskNameSubstrateVMLib(type), Exec) {
         dependsOn(createCmakeTaskName(type))
 
-        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = "$maxWorkers"
         workingDir(buildDirectory(type))
 
         commandLine("/usr/bin/env", "cmake",
