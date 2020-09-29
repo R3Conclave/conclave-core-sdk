@@ -7,10 +7,7 @@ import com.r3.conclave.plugin.enclave.gradle.os.LinuxDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.MacOSDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.OSDependentTools
 import com.r3.conclave.plugin.enclave.gradle.os.WindowsDependentTools
-import org.gradle.api.JavaVersion
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.Task
+import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -22,6 +19,7 @@ import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
+import org.gradle.util.VersionNumber
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.Callable
@@ -32,6 +30,8 @@ import javax.inject.Inject
 @Suppress("UnstableApiUsage")
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     override fun apply(target: Project) {
+        checkGradleVersionCompatibility(target)
+
         val sdkVersion = readVersionFromPluginManifest()
         target.logger.info("Applying Conclave gradle plugin for version $sdkVersion")
 
@@ -315,10 +315,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                 // to use to sign the enclave and invokes the correct task accordingly.
                 task.from(buildSignedEnclaveTask.outputSignedEnclave)
-                val packagePath = enclaveClassNameTask.outputEnclaveClassName.map { it.substringBeforeLast('.').replace('.', '/') }
-                task.into(packagePath)
-                task.rename {
-                    "${enclaveClassNameTask.outputEnclaveClassName.get().substringAfterLast('.')}-$typeLowerCase.signed.so"
+                task.doFirst {
+                    val enclaveClassName = enclaveClassNameTask.outputEnclaveClassName.get()
+                    task.into(enclaveClassName.substringBeforeLast('.').replace('.', '/'))  // Package location
+                    task.rename {
+                        "${enclaveClassName.substringAfterLast('.')}-$typeLowerCase.signed.so"
+                    }
                 }
             }
 
@@ -329,6 +331,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             target.artifacts.add(typeLowerCase, signedEnclaveJarTask)
+        }
+    }
+
+    private fun checkGradleVersionCompatibility(target: Project) {
+        val gradleVersion = target.gradle.gradleVersion
+        if (VersionNumber.parse(gradleVersion).baseVersion < VersionNumber(5, 6, 4, null)) {
+            throw GradleException("Project ${target.name} is using Gradle version $gradleVersion but the Conclave " +
+                    "plugin requires at least version 5.6.4.")
         }
     }
 
