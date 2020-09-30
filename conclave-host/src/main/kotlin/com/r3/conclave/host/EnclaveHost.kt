@@ -390,6 +390,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * for your app. However, the mail must be recorded for delivery synchronously, so
          * no messages can be lost in case of crash failure.
          */
+        @JvmDefault
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
         }
 
@@ -400,6 +401,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * You should perform the acknowledgement synchronously and atomically with any posts,
          * as this is required for clients to observe transactional behaviour.
          */
+        @JvmDefault
         fun acknowledgeMail(mailID: Long) {
         }
     }

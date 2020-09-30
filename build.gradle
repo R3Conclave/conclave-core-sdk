@@ -72,6 +72,14 @@ subprojects {
         }
     }
 
+    tasks.withType(AbstractCompile) {
+        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
+            kotlinOptions {
+                freeCompilerArgs = [ '-Xjvm-default=enable', '-java-parameters' ]
+            }
+        }
+    }
+
     // To create deterministic builds we want to ensure all archive tasks
     // use a reproducible file order and use consistent file timestamps
     tasks.withType(AbstractArchiveTask) {
