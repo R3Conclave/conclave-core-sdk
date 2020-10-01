@@ -381,6 +381,7 @@ if (includeNative) {
                     exclude 'module-info.class'
                     mergeServiceFiles()
                     if (project.name == "conclave-mail") {
+                        exclude 'kotlin/Metadata.class'
                         // Only conclave-mail, as the root in the dependency tree, will contain the shaded kotlin. Everything
                         // else depends on conclave-mail (transitively) and so will inherit the shaded version.
                         dependencies {
