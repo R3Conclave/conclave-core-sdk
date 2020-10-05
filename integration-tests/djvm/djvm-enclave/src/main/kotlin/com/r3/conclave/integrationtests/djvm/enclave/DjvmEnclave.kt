@@ -1,7 +1,6 @@
 package com.r3.conclave.integrationtests.djvm.enclave
 
 import com.google.protobuf.ByteString
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.memory.MemoryClassLoader
@@ -15,7 +14,7 @@ import com.r3.conclave.integrationtests.djvm.enclave.sandbox.AbstractSandboxEnvi
 import com.r3.conclave.integrationtests.djvm.enclave.sandbox.DJVMMemoryURLStreamHandler
 import java.nio.ByteBuffer
 
-class DjvmEnclave : EnclaveCall, Enclave() {
+class DjvmEnclave : Enclave() {
     private val userJars = ArrayList<MemoryURL>()
 
     private val standardEnv = object : TestEnvironment {
@@ -30,7 +29,7 @@ class DjvmEnclave : EnclaveCall, Enclave() {
         override fun runTest(test: EnclaveJvmTest, input: Any?): Any? = test.apply(input)
     }
 
-    override fun invoke(bytes: ByteArray): ByteArray? {
+    override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
         val request = Request.parseFrom(bytes)
         val response = when (request.requestsCase!!) {
             Request.RequestsCase.SEND_JAR -> {

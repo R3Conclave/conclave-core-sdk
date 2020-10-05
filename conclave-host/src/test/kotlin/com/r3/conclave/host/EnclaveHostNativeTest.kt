@@ -1,11 +1,10 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.internaltesting.RecordingEnclaveCall
+import com.r3.conclave.internaltesting.RecordingCallback
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
@@ -22,6 +21,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Function
 import java.util.stream.IntStream
 import kotlin.streams.asSequence
 import kotlin.streams.toList
@@ -90,7 +90,7 @@ class EnclaveHostNativeTest {
     @Test
     fun `several OCALLs`() {
         start<RepeatedOcallEnclave>()
-        val ocallResponses = RecordingEnclaveCall()
+        val ocallResponses = RecordingCallback()
         host.callEnclave(100.toByteArray(), ocallResponses)
         assertThat(ocallResponses.calls.map { it.toInt() }).isEqualTo(IntArray(100) { it }.asList())
     }
@@ -138,9 +138,9 @@ class EnclaveHostNativeTest {
     @Test
     fun `ECALL-OCALL recursion`() {
         start<RecursingEnclave>()
-        val callback = object : EnclaveCall {
+        val callback = object : Function<ByteArray, ByteArray?> {
             var called = 0
-            override fun invoke(bytes: ByteArray): ByteArray? {
+            override fun apply(bytes: ByteArray): ByteArray? {
                 called++
                 val response = bytes.toInt() - 1
                 return response.toByteArray()
@@ -166,8 +166,8 @@ class EnclaveHostNativeTest {
         }
     }
 
-    class EnclaveInstanceInfoEnclave : Enclave(), EnclaveCall {
-        override fun invoke(bytes: ByteArray): ByteArray? = enclaveInstanceInfo.serialize()
+    class EnclaveInstanceInfoEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = enclaveInstanceInfo.serialize()
     }
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {
@@ -201,10 +201,10 @@ class EnclaveHostNativeTest {
         return getSha256Value(metadataFile, "mrsigner->value:")
     }
 
-    class StatefulEnclave : EnclaveCall, Enclave() {
+    class StatefulEnclave : Enclave() {
         private var previousResult = ""
 
-        override fun invoke(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val builder = StringBuilder(previousResult)
             for (byte in bytes) {
                 val lookupValue = callUntrustedHost(byteArrayOf(byte))!!
@@ -216,8 +216,8 @@ class EnclaveHostNativeTest {
         }
     }
 
-    class SigningEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray {
+    class SigningEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             val signature = signer().run {
                 update(bytes)
                 sign()
@@ -229,8 +229,8 @@ class EnclaveHostNativeTest {
         }
     }
 
-    class RepeatedOcallEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class RepeatedOcallEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val count = bytes.toInt()
             repeat(count) { index ->
                 callUntrustedHost(index.toByteArray())
@@ -239,12 +239,12 @@ class EnclaveHostNativeTest {
         }
     }
 
-    class AddingEnclave : EnclaveCall, Enclave() {
+    class AddingEnclave : Enclave() {
         private var maxCallCount: Int? = null
         private val sum = AtomicInteger(0)
         private val callCount = AtomicInteger(0)
 
-        override fun invoke(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val number = bytes.toInt()
             if (maxCallCount == null) {
                 maxCallCount = number
@@ -258,18 +258,18 @@ class EnclaveHostNativeTest {
         }
     }
 
-    class ThrowingEnclave : EnclaveCall, Enclave() {
+    class ThrowingEnclave : Enclave() {
         companion object {
             const val CHEERS = "You are all wrong"
         }
 
-        override fun invoke(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             throw RuntimeException(CHEERS)
         }
     }
 
-    class RecursingEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class RecursingEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             var remaining = bytes.toInt()
             while (remaining > 0) {
                 remaining = callUntrustedHost((remaining - 1).toByteArray())!!.toInt()

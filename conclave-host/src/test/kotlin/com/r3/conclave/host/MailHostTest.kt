@@ -1,6 +1,5 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.enclave.Enclave
@@ -256,9 +255,9 @@ class MailHostTest {
      * This enclave intentionally uses [Enclave.createMail] (as apposed to `enclaveInstanceInfo.createMail`) to create
      * a mail to itself.
      */
-    class CreateMailEnclave : Enclave(), EnclaveCall {
+    class CreateMailEnclave : Enclave() {
         // Encrypt
-        override fun invoke(bytes: ByteArray): ByteArray {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             return createMail(
                     to = (enclaveInstanceInfo as EnclaveInstanceInfoImpl).encryptionKey,
                     body = bytes.reversedArray()

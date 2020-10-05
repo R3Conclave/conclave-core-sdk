@@ -1,7 +1,6 @@
 package com.r3.conclave.testing.internal
 
 import com.google.common.collect.Sets
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
@@ -149,12 +148,12 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest() {
     class SecretKeyEnclave1 : AbstractSecretKeyEnclave()
     class SecretKeyEnclave2 : AbstractSecretKeyEnclave()
 
-    abstract class AbstractSecretKeyEnclave : Enclave(), EnclaveCall {
+    abstract class AbstractSecretKeyEnclave : Enclave() {
         private val env by lazy {
             Enclave::class.java.getDeclaredField("env").apply { isAccessible = true }.get(this) as EnclaveEnvironment
         }
 
-        override fun invoke(bytes: ByteArray): ByteArray {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             return env.getSecretKey(Cursor.wrap(SgxKeyRequest, bytes))
         }
     }

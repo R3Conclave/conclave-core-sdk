@@ -3,7 +3,6 @@ package com.r3.conclave.host
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
@@ -13,7 +12,10 @@ import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.utilities.internal.getBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.intLengthPrefixSize
+import com.r3.conclave.utilities.internal.putIntLengthPrefixBytes
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -24,7 +26,7 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Consumer
+import java.util.function.Function
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -156,7 +158,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         fun checkPlatformSupportsEnclaves(enableSupport: Boolean) {
             try {
                 // Note the EnclaveLoadMode does not matter in this case as we are always checking the hardware
-                NativeShared.checkPlatformSupportsEnclaves(enableSupport);
+                NativeShared.checkPlatformSupportsEnclaves(enableSupport)
             } catch (e: EnclaveLoadException) {
                 throw e
             } catch (e: UnsatisfiedLinkError) {
@@ -275,7 +277,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * @throws IllegalStateException if the enclave has not been started.
      */
     val enclaveInstanceInfo: EnclaveInstanceInfo
-        get() = checkNotNull(_enclaveInstanceInfo) { "Enclave has not been started." }
+        get() = checkNotNull(_enclaveInstanceInfo) { "The enclave host has not been started." }
 
     /**
      * Passes the given byte array to the enclave. The format of the byte
@@ -283,9 +285,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * mechanism, alternatively, [DataOutputStream] is a convenient way to lay out
      * pieces of data in a fixed order.
      *
-     * For this method to work the enclave class must implement [EnclaveCall]. The return
-     * value of [EnclaveCall.invoke] (which can be null) is returned here. It will not
-     * be received via the provided callback.
+     * For this method to work the enclave class must override and implement `receiveFromUntrustedHost` The return
+     * value from that method (which can be null) is returned here. It will not be received via the provided callback.
      *
      * With the provided callback the enclave also has the option of using
      * `Enclave.callUntrustedHost` and sending/receiving byte arrays in the opposite
@@ -295,12 +296,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * @param bytes Bytes to send to the enclave.
      * @param callback Bytes received from the enclave via `Enclave.callUntrustedHost`.
      *
-     * @return The return value of the enclave's [EnclaveCall.invoke].
+     * @return The return value of the enclave's `receiveFromUntrustedHost`.
      *
-     * @throws IllegalArgumentException If the enclave does not implement [EnclaveCall]
-     * or if the host has not been started.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws IllegalStateException If the host has not been started.
      */
-    fun callEnclave(bytes: ByteArray, callback: EnclaveCall): ByteArray? = callEnclaveInternal(bytes, callback)
+    fun callEnclave(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>): ByteArray? {
+        return callEnclaveInternal(bytes, callback)
+    }
 
     /**
      * Passes the given byte array to the enclave. The format of the byte
@@ -308,31 +311,27 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * mechanism, alternatively, [DataOutputStream] is a convenient way to lay out
      * pieces of data in a fixed order.
      *
-     * For this method to work the enclave class must implement [EnclaveCall]. The return
-     * value of [EnclaveCall.invoke] (which can be null) is returned here.
+     * For this method to work the enclave class must override and implement `receiveFromUntrustedHost` The return
+     * value from that method (which can be null) is returned here. It will not be received via the provided callback.
      *
      * The enclave does not have the option of using `Enclave.callUntrustedHost` for
-     * sending bytes back to the host. Use the overload which takes in a [EnclaveCall]
-     * callback instead.
+     * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
      * @param bytes Bytes to send to the enclave.
      *
-     * @return The return value of the enclave's [EnclaveCall.invoke].
+     * @return The return value of the enclave's `receiveFromUntrustedHost`.
      *
-     * @throws IllegalArgumentException If the enclave does not implement [EnclaveCall]
-     * or if the host has not been started.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws IllegalStateException If the host has not been started.
      */
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
-    private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCall?): ByteArray? {
-        when (hostStateManager.state) {
-            New -> throw IllegalStateException("The host has not been started.")
-            Started -> check(adminHandler.enclaveInfo.enclaveImplementsEnclaveCall) {
-                "The enclave does not implement EnclaveCall to receive messages from the host."
-            }
-            Closed -> throw IllegalStateException("The host has been closed.")
+    private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCallback?): ByteArray? {
+        return when (hostStateManager.state) {
+            New -> throw IllegalStateException("The enclave host has not been started.")
+            Closed -> throw IllegalStateException("The enclave host has been closed.")
+            Started -> enclaveMessageHandler.callEnclave(bytes, callback)
         }
-        return enclaveMessageHandler.callEnclave(bytes, callback)
     }
 
     /**
@@ -358,11 +357,51 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * @param callback If the enclave calls `Enclave.callUntrustedHost` then the
      * bytes will be passed to this object for consumption and generation of the
      * response.
-     * @throws IllegalStateException if the enclave has not been started.
+     *
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws IllegalStateException If the host has not been started.
      */
-    @JvmOverloads
-    fun deliverMail(id: Long, mail: ByteArray, callback: EnclaveCall? = null) {
-        enclaveMessageHandler.deliverMail(id, mail, callback)
+    fun deliverMail(id: Long, mail: ByteArray, callback: Function<ByteArray, ByteArray?>) {
+        deliverMailInternal(id, mail, callback)
+    }
+
+    /**
+     * Delivers the given encrypted mail bytes to the enclave. If the enclave throws
+     * an exception it will be rethrown.
+     * It's up to the caller to decide what to do with mails that don't seem to be
+     * handled properly: discarding it and logging an error is a simple option, or
+     * alternatively queuing it to disk in anticipation of a bug fix or upgrade
+     * is also workable.
+     *
+     * There is likely to be a callback on the same thread to the
+     * [MailCallbacks.postMail] function, requesting mail to be sent back in response
+     * and/or acknowledgement. However, it's also possible the enclave will hold
+     * the mail without requesting any action.
+     *
+     * When an enclave is started, you must redeliver, in order, any unacknowledged
+     * mail so the enclave can rebuild its internal state.
+     *
+     * Note: The enclave does not have the option of using `Enclave.callUntrustedHost` for
+     * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
+     *
+     * @param id an identifier that may be passed to [MailCallbacks.acknowledgeMail]. The scope of this ID is up until
+     * the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor does it need to be derived
+     * from anything in particular. A good choice is a row ID in a database or a queue message ID, for example.
+     * @param mail the encrypted mail received from a remote client.
+     *
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws IllegalStateException If the host has not been started.
+     */
+    fun deliverMail(id: Long, mail: ByteArray) {
+        deliverMailInternal(id, mail, null)
+    }
+
+    private fun deliverMailInternal(id: Long, mail: ByteArray, callback: EnclaveCallback?) {
+        when (hostStateManager.state) {
+            New -> throw IllegalStateException("The enclave host has not been started.")
+            Closed -> throw IllegalStateException("The enclave host has been closed.")
+            Started -> enclaveMessageHandler.deliverMail(id, mail, callback)
+        }
     }
 
     // TODO: Rewrite MailCallbacks to expose MailCommands directly as a group, so the host can more easily process them atomically.
@@ -426,7 +465,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
     }
 
-    private class EnclaveInfo(val enclaveImplementsEnclaveCall: Boolean, val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
+    private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
 
     /** Deserializes keys and other info from the enclave during initialisation. */
     private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
@@ -441,19 +480,18 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             when (val type = input.get().toInt()) {
                 0 -> {  // Enclave info
                     check(_enclaveInfo == null) { "Already received enclave info" }
-                    val enclaveImplementsEnclaveCall = input.getBoolean()
                     val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
                     val encryptionKey = Curve25519PublicKey(input.getBytes(32))
-                    _enclaveInfo = EnclaveInfo(enclaveImplementsEnclaveCall, signatureKey, encryptionKey)
+                    _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
                 }
                 1 -> {  // AttestationResponse request
                     val ar = host._enclaveInstanceInfo!!.attestationResponse
                     val encodedCertPath = ar.certPath.encoded
-                    sender.send(ar.reportBytes.intLengthPrefixSize + ar.signature.intLengthPrefixSize + encodedCertPath.size, Consumer { buffer ->
+                    sender.send(ar.reportBytes.intLengthPrefixSize + ar.signature.intLengthPrefixSize + encodedCertPath.size) { buffer ->
                         buffer.putIntLengthPrefixBytes(ar.reportBytes)
                         buffer.putIntLengthPrefixBytes(ar.signature)
                         buffer.put(encodedCertPath)
-                    })
+                    }
                 }
                 else -> throw IllegalStateException("Unknown type $type")
             }
@@ -488,7 +526,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     requireNotNull(intoEnclaveState.callback) {
                         "Enclave responded via callUntrustedHost but a callback was not provided to callEnclave."
                     }
-                    val response = intoEnclaveState.callback.invoke(bytes)
+                    val response = intoEnclaveState.callback.apply(bytes)
                     if (response != null) {
                         sendCallToEnclave(enclaveCallId, InternalCallType.CALL_RETURN, response)
                     }
@@ -500,7 +538,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        fun callEnclave(bytes: ByteArray, callback: EnclaveCall?): ByteArray? {
+        fun callEnclave(bytes: ByteArray, callback: EnclaveCallback?): ByteArray? {
             // To support concurrent calls into the enclave, the current thread's ID is used a call ID which is passed between
             // the host and enclave. This enables each thread to have its own state for managing the calls.
             return callEnclaveInternal(callback) { threadID ->
@@ -508,14 +546,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: EnclaveCall?) {
+        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: EnclaveCallback?) {
             callEnclaveInternal(callback) { threadID ->
                 sendMailToEnclave(threadID, mailID, mailBytes)
             }
         }
 
         // Sets up the state tracking and handle re-entrancy. "id" is either a call ID or a mail ID.
-        private fun callEnclaveInternal(callback: EnclaveCall?, body: (id: Long) -> Unit): ByteArray? {
+        private fun callEnclaveInternal(callback: EnclaveCallback?, body: (id: Long) -> Unit): ByteArray? {
             val threadID = Thread.currentThread().id
             val transaction = threadIDToTransaction.computeIfAbsent(threadID) { Transaction() }
             val callStateManager = transaction.stateManager
@@ -526,7 +564,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // We take note of the current state so that once this callEnclave has finished we revert back to it. This
             // allows nested callEnclave each with potentially their own callback.
             val previousCallState = callStateManager.transitionStateFrom<CallState>(to = intoEnclaveState)
-            // Going into a callEnclave, the call state should only be Ready or IntoEnclave
+            // Going into a callEnclave, the call state should only be Ready or IntoEnclave.
             check(previousCallState !is Response)
             var response: Response? = null
             try {
@@ -535,7 +573,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have
                 // their own exception handling and reuse of the host-enclave communication channel for another call.
                 if (callStateManager.state === intoEnclaveState) {
-                    // If the state hasn't changed then it means the enclave didn't have a response
+                    // If the state hasn't changed then it means the enclave didn't have a response.
                     callStateManager.state = previousCallState
                 } else {
                     response = callStateManager.transitionStateFrom(to = previousCallState)
@@ -565,26 +603,26 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
 
         private fun sendCallToEnclave(threadID: Long, type: InternalCallType, bytes: ByteArray) {
-            sender.send(Long.SIZE_BYTES + 1 + bytes.size, Consumer { buffer ->
+            sender.send(Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
                 buffer.putLong(threadID)
                 buffer.put(type.ordinal.toByte())
                 buffer.put(bytes)
-            })
+            }
         }
 
         private fun sendMailToEnclave(threadID: Long, mailID: Long, bytes: ByteArray) {
-            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + bytes.size, Consumer { buffer ->
+            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
                 buffer.putLong(threadID)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
                 buffer.putLong(mailID)
                 buffer.put(bytes)
-            })
+            }
         }
     }
 
     private sealed class CallState {
         object Ready : CallState()
-        class IntoEnclave(val callback: EnclaveCall?) : CallState()
+        class IntoEnclave(val callback: EnclaveCallback?) : CallState()
         class Response(val bytes: ByteArray) : CallState()
     }
 
@@ -594,3 +632,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         object Closed : HostState()
     }
 }
+
+// Typealias to make this code easier to read.
+private typealias EnclaveCallback = Function<ByteArray, ByteArray?>

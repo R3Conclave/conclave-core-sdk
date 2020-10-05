@@ -1,16 +1,16 @@
 package com.r3.conclave.graalvm.debug;
 
-import com.r3.conclave.common.EnclaveCall;
-import com.r3.conclave.enclave.Enclave;
 import com.r3.conclave.benchmarks.Benchmarks;
+import com.r3.conclave.enclave.Enclave;
+
 import java.nio.charset.StandardCharsets;
 
 /**
  * Enclave implementation for benchmarks.
  */
-public class BenchmarkEnclave extends Enclave implements EnclaveCall {
+public class BenchmarkEnclave extends Enclave {
     @Override
-    public byte[] invoke(byte[] bytes) {
+    protected byte[] receiveFromUntrustedHost(byte[] bytes) {
         // Get the space delimited set of arguments passed to this function
         String args_all = new String(bytes, StandardCharsets.UTF_8);
 

@@ -1,5 +1,4 @@
 import avian.test.avian.OcallReadResourceBytes
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
@@ -110,14 +109,14 @@ class AvianTestSuite {
         )
     }
 
-    class TestRunnerEnclave : EnclaveCall, Enclave() {
+    class TestRunnerEnclave : Enclave() {
         init {
             OcallReadResourceBytes.initialize(object : OcallReadResourceBytes() {
                 override fun readBytes_(path: String): ByteArray = callUntrustedHost(path.toByteArray())!!
             })
         }
 
-        override fun invoke(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val testClass = Class.forName(String(bytes))
             val mainMethod = testClass.getMethod("main", Array<String>::class.java)
             mainMethod.invoke(null, emptyArray<String>())

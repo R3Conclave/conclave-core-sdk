@@ -1,6 +1,5 @@
 package com.r3.conclave.sample.enclave;
 
-import com.r3.conclave.common.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;
 import com.r3.conclave.mail.EnclaveMail;
 import com.r3.conclave.mail.MutableMail;
@@ -10,12 +9,12 @@ import java.security.PublicKey;
 /**
  * Simply reverses the bytes that are passed in.
  */
-public class ReverseEnclave extends Enclave implements EnclaveCall {
+public class ReverseEnclave extends Enclave {
     // We store the previous result to showcase that the enclave internals can be examined in a mock test.
     byte[] previousResult;
 
     @Override
-    public byte[] invoke(byte[] bytes) {
+    protected byte[] receiveFromUntrustedHost(byte[] bytes) {
         // This is used for host->enclave calls so we don't have to think about authentication.
         final String input = new String(bytes);
         byte[] result = reverse(input).getBytes();

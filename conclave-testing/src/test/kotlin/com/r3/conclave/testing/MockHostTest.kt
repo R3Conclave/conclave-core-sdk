@@ -1,7 +1,6 @@
 package com.r3.conclave.testing
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.enclave.Enclave
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -30,10 +29,10 @@ class MockHostTest {
         assertThat(mock.enclaveInstanceInfo.enclaveInfo.codeSigningKeyHash.bytes).containsOnly(0)
     }
 
-    class PreviousValueEnclave : EnclaveCall, Enclave() {
+    class PreviousValueEnclave : Enclave() {
         var previousValue: ByteArray? = null
 
-        override fun invoke(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val previousValue = this.previousValue
             this.previousValue = bytes
             return previousValue

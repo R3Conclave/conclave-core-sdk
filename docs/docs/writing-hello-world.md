@@ -313,15 +313,14 @@ Create your enclave class:
 ```java
 package com.superfirm.enclave;   // CHANGE THIS
 
-import com.r3.conclave.common.EnclaveCall;
 import com.r3.conclave.enclave.Enclave;
 
 /**
  * Simply reverses the bytes that are passed in.
  */
-public class ReverseEnclave extends Enclave implements EnclaveCall {
+public class ReverseEnclave extends Enclave {
     @Override
-    public byte[] invoke(byte[] bytes) {
+    public byte[] receiveFromUntrustedHost(byte[] bytes) {
         byte[] result = new byte[bytes.length];
         for (int i = 0; i < bytes.length; i++)
             result[i] = bytes[bytes.length - 1 - i];
@@ -332,9 +331,8 @@ public class ReverseEnclave extends Enclave implements EnclaveCall {
 
 The `Enclave` class by itself doesn't require you to support direct communication with the host. This is because
 sometimes you don't need that and shouldn't have to implement message handlers. In this case we'll use that
-functionality because it's a good place to start learning, so we also implement the `EnclaveCall` interface.
-There's one method we must supply: `invoke` which takes a byte array and optionally returns a byte array back. Here
-we just reverse the contents.
+functionality because it's a good place to start learning, so we also override and implement the `receiveFromUntrustedHost`
+method which takes a byte array and optionally returns a byte array back. Here we just reverse the contents.
 
 !!! tip
     In a real app you would use the byte array to hold serialised data structures. You can use whatever data formats you
@@ -571,9 +569,9 @@ the `receiveMail` method:
 /**
  * Simply reverses the bytes that are passed in.
  */
-public class ReverseEnclave extends Enclave implements EnclaveCall {
+public class ReverseEnclave extends Enclave {
     @Override
-    public byte[] invoke(byte[] bytes) {
+    public byte[] receiveFromUntrustedHost(byte[] bytes) {
         byte[] result = new byte[bytes.length];
         for (int i = 0; i < bytes.length; i++) {
             result[i] = bytes[bytes.length - 1 - i];
@@ -583,14 +581,14 @@ public class ReverseEnclave extends Enclave implements EnclaveCall {
 
     @Override
     protected void receiveMail(long id, EnclaveMail mail) {
-        byte[] reversed = invoke(mail.getBodyAsBytes());
+        byte[] reversed = receiveFromUntrustedHost(mail.getBodyAsBytes());
         MutableMail reply = createMail(mail.getAuthenticatedSender(), reversed);
         postMail(reply, null);
     }
 }
 ```
 
-The `invoke` method here isn't really needed, it's just because we're already using this to demonstrate local calls.
+The `receiveFromUntrustedHost` method here isn't really needed, it's just because we're already using this to demonstrate local calls.
 The new part is `receiveMail`. This method takes two parameters: an identifier that the host gets to pick, which doesn't
 mean anything but we can use to acknowledge the mail if we want to using `Enclave.acknowledgeMail`. Acknowledgement can be used
 to tell the host the enclave is done processing the mail if it doesn't want to reply immediately. It will be discussed
@@ -632,7 +630,7 @@ we're about to configure.
 
 !!! tip
     You can post mail anytime and to anyone you like. It doesn't have to be a response to the sender, you can post
-    multiple mails at once and you can post mails inside `invoke` (i.e. during a local call).
+    multiple mails at once and you can post mails inside `receiveFromUntrustedHost` (i.e. during a local call).
 
 ### Receiving and posting mail in the host
 

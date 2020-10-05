@@ -1,8 +1,7 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.common.EnclaveCall
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.internaltesting.RecordingEnclaveCall
+import com.r3.conclave.internaltesting.RecordingCallback
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
@@ -20,6 +19,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
+import java.util.function.Function
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
@@ -67,7 +67,7 @@ class EnclaveTest {
         val tcs = WaitingEnclave.PARALLEL_ECALLS + 3 // Some TCS are reserved for Avian internal threads
         start<WaitingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(tcs)))
         repeat (3) {
-            val responses = RecordingEnclaveCall()
+            val responses = RecordingCallback()
             val futures = (1..WaitingEnclave.PARALLEL_ECALLS).map {
                 threadWithFuture {
                     host.callEnclave(it.toByteArray(), responses)
@@ -111,9 +111,9 @@ class EnclaveTest {
     fun `destroy while OCALL in progress`() {
         start<EchoCallbackEnclave>()
         val semaphore = CompletableFuture<Unit>()
-        val callback = object : EnclaveCall {
+        val callback = object : Function<ByteArray, ByteArray?> {
             val ocalls = AtomicInteger(0)
-            override fun invoke(bytes: ByteArray): ByteArray? {
+            override fun apply(bytes: ByteArray): ByteArray? {
                 return if (ocalls.getAndIncrement() == 0) {
                     semaphore.get()
                     bytes
@@ -141,7 +141,7 @@ class EnclaveTest {
     @Test
     fun `destroy while ECALL in progress`() {
         start<SpinningEnclave>()
-        val recorder = RecordingEnclaveCall()
+        val recorder = RecordingCallback()
         thread(isDaemon = true) {
             host.callEnclave(byteArrayOf(), recorder)
         }
@@ -170,7 +170,7 @@ class EnclaveTest {
     @Test
     fun `child thread can do OCALLs`() {
         start<ChildThreadSendingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(10)))
-        val recorder = RecordingEnclaveCall()
+        val recorder = RecordingCallback()
         host.callEnclave(byteArrayOf(), recorder)
         assertThat(recorder.calls.single()).isEqualTo("test".toByteArray())
     }
@@ -182,12 +182,12 @@ class EnclaveTest {
         closeHost = true
     }
 
-    class EchoEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? = bytes
+    class EchoEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = bytes
     }
 
-    class EchoCallbackEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class EchoCallbackEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             var echoBack = bytes
             while (true) {
                 val response = callUntrustedHost(echoBack) ?: return null
@@ -196,21 +196,21 @@ class EnclaveTest {
         }
     }
 
-    class IncrementingEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class IncrementingEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val n = bytes.toInt()
             return (n + 1).toByteArray()
         }
     }
 
-    class WaitingEnclave : EnclaveCall, Enclave() {
+    class WaitingEnclave : Enclave() {
         companion object {
             const val PARALLEL_ECALLS = 16
         }
 
         private val ecalls = AtomicInteger(0)
 
-        override fun invoke(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             ecalls.incrementAndGet()
             while (ecalls.get() < PARALLEL_ECALLS) {
                 // Wait
@@ -222,8 +222,8 @@ class EnclaveTest {
         }
     }
 
-    class ThreadingEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class ThreadingEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val n = bytes.toInt()
             val latchBefore = CountDownLatch(n)
             val latchAfter = CountDownLatch(n)
@@ -248,8 +248,8 @@ class EnclaveTest {
         }
     }
 
-    class SpinningEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class SpinningEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             callUntrustedHost(bytes)
             while (true) {
                 // Spin
@@ -257,8 +257,8 @@ class EnclaveTest {
         }
     }
 
-    class ChildThreadSendingEnclave : EnclaveCall, Enclave() {
-        override fun invoke(bytes: ByteArray): ByteArray? {
+    class ChildThreadSendingEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             threadWithFuture {
                 callUntrustedHost("test".toByteArray())
             }.join()
