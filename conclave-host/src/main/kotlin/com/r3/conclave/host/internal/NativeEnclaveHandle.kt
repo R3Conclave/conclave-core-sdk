@@ -1,10 +1,10 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.LeafSender
+import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -14,14 +14,10 @@ class NativeEnclaveHandle<CONNECTION>(
         override val enclaveMode: EnclaveMode,
         private val enclaveFile: Path,
         private val tempFile: Boolean,
-        enclaveClassName: String,
+        override val enclaveClassName: String,
         handler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
     private val enclaveId: Long
-    @Volatile
-    private var enclaveClassName: String? = enclaveClassName
-    private val lock = Any()
-
     override val connection: CONNECTION = handler.connect(this)
 
     init {
@@ -31,16 +27,19 @@ class NativeEnclaveHandle<CONNECTION>(
         NativeApi.registerOcallHandler(enclaveId, HandlerConnected(handler, connection))
     }
 
-    override fun sendSerialized(serializedBuffer: ByteBuffer) {
-        if (enclaveClassName != null) {
-            synchronized(lock) {
-                enclaveClassName?.let {
-                    // The first ECALL has to be the class name of the enclave to be instantiated.
-                    NativeApi.hostToEnclave(enclaveId, it.toByteArray())
-                }
-                enclaveClassName = null
+    private var initialized = false
+    private fun maybeInit() {
+        synchronized(this) {
+            if (!initialized) {
+                // The first ECALL has to be the class name of the enclave to be instantiated.
+                NativeApi.hostToEnclave(enclaveId, enclaveClassName.toByteArray())
+                initialized = true
             }
         }
+    }
+
+    override fun sendSerialized(serializedBuffer: ByteBuffer) {
+        maybeInit()
         NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes())
     }
 

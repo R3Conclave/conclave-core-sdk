@@ -386,7 +386,7 @@ To load the enclave we'll put this after the platform check:
 ```java
 String className = "com.r3.conclave.sample.enclave.ReverseEnclave"); // CHANGE THIS
 try (EnclaveHost enclave = EnclaveHost.load(className)) {
-    enclave.start(null, null, null);
+    enclave.start(null, null);
 
     System.out.println(callEnclave(enclave, "Hello world!"));
     // !dlrow olleH      :-)
@@ -490,43 +490,31 @@ An attestation doesn't inherently expire but because the SGX ecosystem is always
 some frequency with which it expects the host code to refresh the `EnclaveInstanceInfo`. At present this is done by
 stopping/closing and then restarting the enclave.
 
-### EPID or DCAP ?
-The remote attestation is using either EPID or DCAP. The former requires SPID and AttestationKey from Intel.
-The later does not require any subscription.
-
-### EPID: Get a SPID
+## Configurating attestation
 
 To use SGX remote attestation for real we need to do some additional work. Remember how we wrote 
-`enclave.start(null, null, null, null);` above? The first two parameters are API keys required to use the Intel attestation
-servers. The first is called a "Service Provider ID" or SPID, and the second is called the "attestation key".
-You can sign-up easily and for free. [Learn more about IAS](ias.md).
+`enclave.start(null, null);` above? The first parameter contains configuration data required to use an attestation
+service. There are three kinds of attestation service:
 
-Once you have a SPID and attestation key you can either hard code them, or load them from a config file, or as in
-our sample code just pass them via the command line. Replace the call to `EnclaveHost.start` above with this snippet:
+1. EPID. This older protocol is supported by some desktop/laptop class Intel CPUs. The EPID protocol includes some
+   consumer privacy cryptography, and involves talking directly to Intel's IAS service to generate an attestation.
+   For that you need to obtain an API key and service provider ID from Intel. You can sign-up easily and for free. 
+   [Learn more about IAS](ias.md).
+2. Azure DCAP. The _datacenter attestation primitives_ protocol is newer and designed for servers. When running on a
+   Microsoft Azure Confidential Compute VM or Kubernetes pod, you don't need any parameters. It's all configured out of 
+   the box.
+3. Generic DCAP. When not running on Azure, you need to obtain API keys for Intel's PCCS service. 
+
+We'll target Azure for now to keep things simple. Replace the call to `EnclaveHost.start` above with this snippet:
 
 ```java
-if (enclave.getEnclaveMode() != EnclaveMode.SIMULATION && args.length != 2)
-    throw new IllegalArgumentException("You need to provide the SPID and attestation key as arguments");
-OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : null;
-String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : null;
-enclave.start(spid, attestationKey, null, AttestationMode.EPID);
+enclave.start(new AttestationParameters.DCAP(), null);
 ```
 
 !!! info
     Why does Conclave need to contact Intel's servers? It's because those servers contain the most up to date information
     about what CPUs and system enclave versions are considered secure. Over time these servers will change their 
     assessment of the host system and this will be visible in the responses, as security improvements are made.  
-
-    Future versions of Conclave will allow you to use Intel DCAP, which is an alternative way to do attestation which
-    will let you run your own attestation servers, and thus skip getting these keys from Intel.                                           
-
-### DCAP
-The code quoted above now looks like this:
-```java
-enclave.start(null, null, null, AttestationMode.DCAP);
-```
-Note missing spid and attestationkey checks, and AttestationMode set to DCAP.
-
 
 ## Run what we've got so far
 
@@ -552,12 +540,11 @@ The measurement should correspond to the value found in the `EnclaveInstanceInfo
 
 You can switch to debug mode by specifying the `enclaveMode` property. In debug mode the real hardware is used and 
 virtually everything is identical to how it will be in production, but there's a small back door that can be used 
-by debuggers to read/write the enclave's memory. You will need to run this on a machine with SGX enabled and also 
-provide your EPID SPID and attestation key. See [here](ias.md#getting-access) for more information.
+by debuggers to read/write the enclave's memory. 
 
-EPID: ```gradlew -PenclaveMode=debug host:run --args="<SPID> <attestation key>"```
+You will need to run this on an [Azure Confidential VM](https://docs.microsoft.com/en-us/azure/confidential-computing/).
 
-DCAP: ```gradlew -PenclaveMode=debug host:run --args="DCAP"```
+`gradlew -PenclaveMode=debug host:run`
 
 ## Encrypted messaging
 
@@ -652,7 +639,7 @@ implementation: we'll just store the encrypted bytes in a variable, so we can pi
 ```java
 // Start it up.
 AtomicReference<byte[]> mailToSend = new AtomicReference<>();
-enclave.start(spid, attestationKey, new EnclaveHost.MailCallbacks() {
+enclave.start(attestationParameters, new EnclaveHost.MailCallbacks() {
     @Override
     public void postMail(byte[] encryptedBytes, String routingHint) {
         mailToSend.set(encryptedBytes);
@@ -682,48 +669,44 @@ mail uploaded by the client, send it to the enclave, and deliver the response ba
 int port = 9999;
 System.out.println("Listening on port " + port + ". Use the client app to send strings for reversal.");
 ServerSocket acceptor = new ServerSocket(port);
-int mailID = 1;
-while (true) {
-    try {
-        Socket connection = acceptor.accept();
+Socket connection = acceptor.accept();
 
-        // Just send the attestation straight to whoever connects. It's signed so that's MITM-safe.
-        DataOutputStream output = new DataOutputStream(connection.getOutputStream());
-        output.writeInt(attestationBytes.length);
-        output.write(attestationBytes);
+// Just send the attestation straight to whoever connects. It's signed so that's MITM-safe.
+DataOutputStream output = new DataOutputStream(connection.getOutputStream());
+output.writeInt(attestationBytes.length);
+output.write(attestationBytes);
 
-        // Now read some mail from the client.
-        DataInputStream input = new DataInputStream(connection.getInputStream());
-        byte[] mailBytes = new byte[input.readInt()];
-        input.readFully(mailBytes);
+// Now read some mail from the client.
+DataInputStream input = new DataInputStream(connection.getInputStream());
+byte[] mailBytes = new byte[input.readInt()];
+input.readFully(mailBytes);
 
-        // Deliver it. The enclave will give us some mail to reply with via the callback we passed in
-        // to the start() method.
-        enclave.deliverMail(mailID++, mailBytes);
-        byte[] toSend = mailToSend.getAndSet(null);
-        output.writeInt(toSend.length);
-        output.write(toSend);
-
-        // Closing the output stream closes the connection. Different clients will block each other but this
-        // is just a hello world sample.
-        output.close();
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
-}
+// Deliver it. The enclave will give us some mail to reply with via the callback we passed in
+// to the start() method.
+enclave.deliverMail(1, mailBytes, "routingHint");
+byte[] toSend = mailToSend.getAndSet(null);
+output.writeInt(toSend.length);
+output.write(toSend);
 ```
 
 This code is straightforward. In order, it:
 
-1. Opens a socket using the Java sockets API and enters a loop listening for connections.
+1. Opens a socket using the Java sockets API and listens for a connection.
 1. Accepts a connection and then sends the serialized `EnclaveInstanceInfo` to the client. We first send the length
    so the client knows how many bytes to read.
 1. The client will send us a byte array back, which contains an encrypted string. This code can't read the body, it's 
    just encrypted bytes except for a few fields in the headers, which *are* available to the host.
-1. We keep an incrementing counter because the enclave wants a unique value which it can use to signal acknowledgement.
-   We aren't using acknowledgement here though, because this app is too simple to need it.
 1. We deliver the encrypted mail bytes to the enclave.
 1. We pick up the response from the `AtomicReference` box that was set by the callback.
+
+The first parameter to `deliverMail` is a "mail ID" that the enclave can use to
+identify this mail to the host. This feature is intended for use with acknowledgement, which allows the enclave to
+signal that it's done with that message and the work it represents can be atomically/transactionally completed.
+The *routing hint* is an arbitrary string that can be used to identify the sender of the mail from the host's
+perspective, e.g. a connection ID, username, identity - it's up to you. The enclave can use this string to 
+signal to the host that a mail should go to that location. It's called a "hint" to remind you that the host code may
+be modified or writter by an attacker, so the enclave can't trust it. However, the encryption on the mail makes it 
+useless for the host to mis-direct mail.
 
 !!! todo
     In future we will provide APIs to bind enclaves to common transports, to avoid this sort of boilerplate.
@@ -943,12 +926,10 @@ private static EnclaveHost enclave;
 @BeforeAll
 static void startup() throws EnclaveLoadException {
     enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave"); // CHANGE THIS
-    String spid = System.getProperty("spid");
-    String attestionKey = System.getProperty("attestation-key");
-    enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey, null);
+    enclave.start(new AttestationParameters.DCAP(), null);
 }
 ```
 
-```gradlew -PenclaveMode=debug -Pspid=<SPID> -Pattestation-key=<attestation key> host:test```
+```gradlew -PenclaveMode=debug host:test```
 
 Note that native tests are located in the host module while mock tests in the enclave module.

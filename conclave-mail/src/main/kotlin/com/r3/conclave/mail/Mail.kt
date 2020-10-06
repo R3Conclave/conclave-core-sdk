@@ -130,10 +130,15 @@ interface EnclaveMail : EnclaveMailHeader {
  *
  * NOTE: When creating mail destined for an enclave, `EnclaveInstanceInfo.createMail` must be used and not the
  * constructors.
+ *
+ * @property bodyAsBytes The next content of the mail to encrypt. You can re-assign this and then call [incrementSequenceNumber]
+ * and [encrypt] again to generate a new encrypted mail that shares the same properties as the previous.
+ * @property destinationKey The public key of the recipient of the encrypted message.
+ * @property privateKey The private key of the sender, used for message authentication.
  */
 class MutableMail(
         override var bodyAsBytes: ByteArray,
-        private val destinationKey: PublicKey,
+        val destinationKey: PublicKey,
         var privateKey: PrivateKey? = null
 ) : EnclaveMail {
 

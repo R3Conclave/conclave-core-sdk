@@ -2,7 +2,6 @@ package com.r3.conclave.integrationtests.djvm.sandboxtests;
 
 import com.r3.conclave.integrationtests.djvm.base.EnclaveJvmTest;
 import com.r3.conclave.integrationtests.djvm.sandboxtests.util.SerializationUtils;
-import com.r3.conclave.integrationtests.djvm.sandboxtests.util.SerializationUtils;
 import com.r3.conclave.integrationtests.djvm.base.DJVMBase;
 import net.corda.djvm.TypedTaskFactory;
 import org.jetbrains.annotations.NotNull;

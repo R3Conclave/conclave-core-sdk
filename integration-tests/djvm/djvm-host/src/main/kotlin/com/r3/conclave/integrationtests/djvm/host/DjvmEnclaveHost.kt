@@ -2,6 +2,7 @@ package com.r3.conclave.integrationtests.djvm.host
 
 import com.google.protobuf.ByteString
 import com.r3.conclave.common.OpaqueBytes
+import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.integrationtests.djvm.base.enclave.proto.*
 import com.r3.conclave.integrationtests.djvm.base.EnclaveJvmTest
@@ -14,7 +15,7 @@ class DjvmEnclaveHost : AutoCloseable {
     private val enclaveHost = EnclaveHost.load("com.r3.conclave.integrationtests.djvm.enclave.DjvmEnclave")
 
     fun start(spid: OpaqueBytes?, attestationKey: String?) {
-        enclaveHost.start(spid, attestationKey, null, null)
+        enclaveHost.start(AttestationParameters.EPID(spid!!, attestationKey!!), null)
     }
 
     fun loadJar(jarFile: Path) {

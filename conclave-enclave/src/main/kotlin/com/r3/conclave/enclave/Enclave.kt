@@ -305,6 +305,7 @@ Received: $attestationReportBody"""
                 stateManager.state = Response(input.getRemainingBytes())
             } else if (type == InternalCallType.MAIL_DELIVERY) {
                 val id = input.getLong()
+                val routingHint = String(input.getIntLengthPrefixBytes()).takeIf { it.isNotEmpty() }
                 // Wrap the remaining bytes in a InputStream to avoid copying.
                 val decryptingStream = MailDecryptingStream(ByteBufferInputStream(input))
                 val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
@@ -319,7 +320,7 @@ Received: $attestationReportBody"""
                     Curve25519PrivateKey(entropy)
                 }
                 checkMailOrdering(mail)
-                this@Enclave.receiveMail(id, mail)
+                this@Enclave.receiveMail(id, routingHint, mail)
             } else {
                 val state = stateManager.checkStateIs<Receive>()
                 checkNotNull(state.callback) {
@@ -428,10 +429,14 @@ Received: $attestationReportBody"""
      * is finished, you can ensure that the conversation survives restarts and
      * upgrades.
      *
-     * @param id An opaque identifier of the mail: usually a hash of the contents.
+     * @param id An opaque identifier for the mail.
+     * @param routingHint An optional string provided by the host that can be passed to [postMail] to tell the
+     * host that you wish to reply to whoever provided it with this mail (e.g. connection ID). Note that this may
+     * not be the same as the logical sender of the mail if advanced anonymity techniques are being used, like
+     * users passing mail around between themselves before it's delivered.
      * @param mail Access to the decrypted/authenticated mail body+envelope.
      */
-    protected open fun receiveMail(id: Long, mail: EnclaveMail) {
+    protected open fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
         throw UnsupportedOperationException("This enclave does not support receiving mail.")
     }
 

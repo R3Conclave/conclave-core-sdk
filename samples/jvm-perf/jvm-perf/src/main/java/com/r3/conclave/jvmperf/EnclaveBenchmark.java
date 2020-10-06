@@ -1,9 +1,10 @@
 package com.r3.conclave.jvmperf;
 
+import com.r3.conclave.benchmarks.Benchmarks;
 import com.r3.conclave.common.OpaqueBytes;
+import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
-import com.r3.conclave.benchmarks.Benchmarks;
 import org.openjdk.jmh.annotations.*;
 
 import java.util.concurrent.TimeUnit;
@@ -37,9 +38,14 @@ public class EnclaveBenchmark {
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.simulation.BenchmarkEnclave");
         else if (platform.runtime.equals("graalvm-debug"))
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
+
         if (enclave != null) {
-            OpaqueBytes spid = (platform.spid.length() == 0) ? new OpaqueBytes(new byte[16]) : OpaqueBytes.parse(platform.spid);
-            enclave.start(spid, platform.attestationKey, null, null);
+            OpaqueBytes spid;
+            if (platform.spid.length() != 0)
+                spid = OpaqueBytes.parse(platform.spid);
+            else
+                spid = new OpaqueBytes(new byte[16]);
+            enclave.start(new AttestationParameters.EPID(spid, null), null);
         }
     }
 
