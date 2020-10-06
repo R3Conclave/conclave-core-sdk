@@ -1,9 +1,11 @@
 package com.r3.conclave.enclave
 
+import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
@@ -13,6 +15,11 @@ import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.setKeyDerivation
+import java.io.ByteArrayInputStream
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.putBoolean
 import com.r3.conclave.utilities.internal.*
 import java.nio.Buffer
 import java.nio.ByteBuffer
@@ -49,6 +56,7 @@ abstract class Enclave {
     }
 
     private lateinit var env: EnclaveEnvironment
+
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
@@ -201,9 +209,20 @@ abstract class Enclave {
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             val reportBytes = input.getIntLengthPrefixBytes()
             val signature = input.getIntLengthPrefixBytes()
+            val attestationMode = AttestationMode.values()[input.getInt()]
+            val collateral = QuoteCollateral(
+                    version = String(input.getIntLengthPrefixBytes()),
+                    pckCrlIssuerChain = String(input.getIntLengthPrefixBytes()),
+                    rootCaCrl = String(input.getIntLengthPrefixBytes()),
+                    pckCrl = String(input.getIntLengthPrefixBytes()),
+                    tcbInfoIssuerChain = String(input.getIntLengthPrefixBytes()),
+                    tcbInfo = String(input.getIntLengthPrefixBytes()),
+                    qeIdentityIssuerChain = String(input.getIntLengthPrefixBytes()),
+                    qeIdentity = String(input.getIntLengthPrefixBytes())
+            )
             // Wrap an InputStream over the remaining bytes to avoid unnecessary copying.
             val certPath = CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(input))
-            val attestationResponse = AttestationResponse(reportBytes, signature, certPath)
+            val attestationResponse = AttestationResponse(reportBytes, signature, certPath, collateral, attestationMode)
             _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
                     enclave.signatureKey,
                     attestationResponse,

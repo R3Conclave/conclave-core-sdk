@@ -33,7 +33,7 @@ class ApiKotlinConsumerTest {
             override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
                 postedMail += encryptedBytes
             }
-        })
+        }, null)
 
         val responseForHost: ByteArray? = host.callEnclave(byteArrayOf(9)) { fromEnclave ->
             host.callEnclave(fromEnclave + 8)

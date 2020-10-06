@@ -43,9 +43,13 @@ class EnclaveInstanceInfoImpl(
 
     init {
         val pkixParametersFactory = when (enclaveMode) {
-            RELEASE, DEBUG -> PKIXParametersFactory.Intel
+            RELEASE, DEBUG -> when (attestationResponse.attestationMode) {
+                AttestationMode.DCAP -> PKIXParametersFactory.DCAP
+                else -> PKIXParametersFactory.Intel
+            }
             SIMULATION, MOCK -> PKIXParametersFactory.Mock
         }
+
         // We want to be able to deserialise EnclaveInstanceInfoImpl inside an enclave but it has no access to a trusted
         // source of time to do the cert expiry check that comes with verifing the RA cert. We're only concerned that the
         // public key that signed the attestion report belongs to the root, and so it's OK to turn off the expiry check.
@@ -109,6 +113,15 @@ class EnclaveInstanceInfoImpl(
             writeIntLengthPrefixBytes(attestationResponse.signature)
             writeIntLengthPrefixBytes(attestationResponse.certPath.encoded)
             write(enclaveMode.ordinal)
+            write(attestationResponse.attestationMode.ordinal)
+            writeIntLengthPrefixBytes(attestationResponse.collateral.version.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.pckCrlIssuerChain.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rootCaCrl.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.pckCrl.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.tcbInfoIssuerChain.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.tcbInfo.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.qeIdentityIssuerChain.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.qeIdentity.toByteArray())
         }
     }
 
@@ -151,9 +164,9 @@ class EnclaveInstanceInfoImpl(
 
         private fun getSummaryAndReason(report: AttestationReport): Pair<Summary, String> {
             return when (report.isvEnclaveQuoteStatus) {
-                OK ->  Pair(Summary.SECURE, "EPID signature of the ISV enclave QUOTE was verified correctly and the TCB " +
+                OK -> Pair(Summary.SECURE, "A signature of the ISV enclave QUOTE was verified correctly and the TCB " +
                         "level of the SGX platform is up-to-date.")
-                SIGNATURE_INVALID -> Pair(Summary.INSECURE, "EPID signature of the ISV enclave QUOTE was invalid. The " +
+                SIGNATURE_INVALID -> Pair(Summary.INSECURE, "The signature of the ISV enclave QUOTE was invalid. The " +
                         "content of the QUOTE is not trustworthy.")
                 GROUP_REVOKED -> Pair(Summary.INSECURE, "The EPID group has been revoked (reason=${report.revocationReason}). " +
                         "The content of the QUOTE is not trustworthy.")
@@ -167,13 +180,13 @@ class EnclaveInstanceInfoImpl(
                 GROUP_OUT_OF_DATE -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
                         "as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
-                CONFIGURATION_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified" +
+                CONFIGURATION_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified" +
                         "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
                         "identified as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
-                SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
+                SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly but due to certain issues affecting the platform, additional software hardening in the " +
                         "attesting SGX enclaves may be needed.${advistoryIdsSentence(report)}")
-                CONFIGURATION_AND_SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE " +
+                CONFIGURATION_AND_SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE " +
                         "has been verified correctly but additional configuration for the platform and software hardening in " +
                         "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
                         "thus it is not revoked.${advistoryIdsSentence(report)}")

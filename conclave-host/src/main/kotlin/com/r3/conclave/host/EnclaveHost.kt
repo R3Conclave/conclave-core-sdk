@@ -1,8 +1,6 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.OpaqueBytes
+import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
@@ -209,13 +207,20 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      *
      * @param mailCallbacks A callback that will be invoked when the enclave requests delivery or acknowledgement of mail.
      * If null then the enclave cannot send or acknowledge mail, although you can still deliver it.
+     *
+     * @param attestationMode Specifies attestation mode - either EPID or DCAP.
+     * If null then the attestation mode will be EPID.
      */
     @Throws(EnclaveLoadException::class)
     @Synchronized
-    fun start(spid: OpaqueBytes?, attestationKey: String?, mailCallbacks: MailCallbacks?) {
+    // TODO At this stage we need to have a better way to handle the start parameters.
+    fun start(spid: OpaqueBytes?, attestationKey: String?, mailCallbacks: MailCallbacks?, attestationMode: AttestationMode?) {
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
-        require(spid == null || spid.size == 16) { "Invalid SPID length" }
+
+        if (attestationMode == AttestationMode.EPID)
+            require(spid == null || spid.size == 16) { "Invalid SPID length" }
+
         try {
             this.mailCallbacks = mailCallbacks
             // Set up a set of channels in and out of the enclave. Each byte array sent/received comes with
@@ -226,12 +231,18 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // The EPID attestation handler manages the process of generating remote attestations that are then
             // placed into the EnclaveInstanceInfo.
             val attestationConnection = mux.addDownstream(
-                    EpidAttestationHostHandler(
-                            SgxQuoteType.LINKABLE,
-                            spid?.let { Cursor.read(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
-                            enclaveMode == EnclaveMode.MOCK
-                    )
+                    when (attestationMode) {
+                        AttestationMode.DCAP -> DCAPAttestationHostHandler(
+                                enclaveMode == EnclaveMode.MOCK || enclaveMode == EnclaveMode.SIMULATION
+                        )
+                        else -> EpidAttestationHostHandler(
+                                SgxQuoteType.LINKABLE,
+                                spid?.let { Cursor.read(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
+                                enclaveMode == EnclaveMode.MOCK
+                        )
+                    }
             )
+
             // We request an attestation at every startup. This is because in early releases the keys were ephemeral
             // and changed on restart, but this is no longer true.
             //
@@ -241,13 +252,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             //
             // TODO: Change this to fetch quotes on demand.
             val signedQuote = attestationConnection.getSignedQuote()
-            _enclaveInstanceInfo = getAttestationService(attestationKey)
-                    .doAttest(
-                            adminHandler.enclaveInfo.signatureKey,
-                            adminHandler.enclaveInfo.encryptionKey,
-                            signedQuote,
-                            enclaveMode
-                    )
+            _enclaveInstanceInfo = getAttestationService(attestationKey, attestationMode).doAttest(
+                    adminHandler.enclaveInfo.signatureKey,
+                    adminHandler.enclaveInfo.encryptionKey,
+                    signedQuote,
+                    enclaveMode
+            )
             // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
@@ -257,7 +267,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
     }
 
-    private fun getAttestationService(attestationKey: String?): AttestationService {
+    private fun getAttestationService(attestationKey: String?, attestationMode: AttestationMode?): AttestationService {
+        if (attestationMode == AttestationMode.DCAP) {
+            return when (enclaveMode) {
+                EnclaveMode.DEBUG, EnclaveMode.RELEASE -> DCAPAttestationService
+                EnclaveMode.SIMULATION, EnclaveMode.MOCK -> MockAttestationService()
+            }
+        }
+
         return when (enclaveMode) {
             EnclaveMode.RELEASE -> IntelAttestationService(true, requiredAttestationKey(attestationKey))
             EnclaveMode.DEBUG -> IntelAttestationService(false, requiredAttestationKey(attestationKey))
@@ -487,9 +504,37 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 1 -> {  // AttestationResponse request
                     val ar = host._enclaveInstanceInfo!!.attestationResponse
                     val encodedCertPath = ar.certPath.encoded
-                    sender.send(ar.reportBytes.intLengthPrefixSize + ar.signature.intLengthPrefixSize + encodedCertPath.size) { buffer ->
+                    // TODO The collateral shouldn't be serialised if it's not used.
+                    val colVersion = ar.collateral.version.toByteArray()
+                    val colPckcrlissuerchain = ar.collateral.pckCrlIssuerChain.toByteArray()
+                    val colRootcacrl = ar.collateral.rootCaCrl.toByteArray()
+                    val colPckcrl = ar.collateral.pckCrl.toByteArray()
+                    val colTcbinfoissuerchain = ar.collateral.tcbInfoIssuerChain.toByteArray()
+                    val colTcbinfo = ar.collateral.tcbInfo.toByteArray()
+                    val colQeidentityissuerchain = ar.collateral.qeIdentityIssuerChain.toByteArray()
+                    val colQeidentity = ar.collateral.qeIdentity.toByteArray()
+                    val collateralSize = colVersion.intLengthPrefixSize +
+                            colPckcrlissuerchain.intLengthPrefixSize +
+                            colRootcacrl.intLengthPrefixSize +
+                            colPckcrl.intLengthPrefixSize +
+                            colTcbinfoissuerchain.intLengthPrefixSize +
+                            colTcbinfo.intLengthPrefixSize +
+                            colQeidentityissuerchain.intLengthPrefixSize +
+                            colQeidentity.intLengthPrefixSize
+
+                    sender.send(Int.SIZE_BYTES + collateralSize + ar.reportBytes.intLengthPrefixSize
+                            + ar.signature.intLengthPrefixSize + encodedCertPath.size) { buffer ->
                         buffer.putIntLengthPrefixBytes(ar.reportBytes)
                         buffer.putIntLengthPrefixBytes(ar.signature)
+                        buffer.putInt(ar.attestationMode.ordinal)
+                        buffer.putIntLengthPrefixBytes(colVersion)
+                        buffer.putIntLengthPrefixBytes(colPckcrlissuerchain)
+                        buffer.putIntLengthPrefixBytes(colRootcacrl)
+                        buffer.putIntLengthPrefixBytes(colPckcrl)
+                        buffer.putIntLengthPrefixBytes(colTcbinfoissuerchain)
+                        buffer.putIntLengthPrefixBytes(colTcbinfo)
+                        buffer.putIntLengthPrefixBytes(colQeidentityissuerchain)
+                        buffer.putIntLengthPrefixBytes(colQeidentity)
                         buffer.put(encodedCertPath)
                     }
                 }

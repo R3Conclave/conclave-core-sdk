@@ -2,6 +2,8 @@
 #include <sgx_urts.h>
 #include <enclave_metadata.h>
 #include <jvm_u.h>
+#include <iostream>
+#include <string>
 #include <ecall_context.h>
 #include <sgx_errors.h>
 #include <sgx_device_status.h>
@@ -13,6 +15,7 @@
 #include <fclose_guard.h>
 #include <munmap_guard.h>
 #include <enclave_platform.h>
+#include <dcap.h>
 #include "enclave_console.h"
 
 // TODO pool buffers in ecalls/ocalls
@@ -223,3 +226,128 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
       // No-op: delegate handling to the host JVM
     }
 }
+
+
+static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
+static r3::conclave::dcap::QuoteProviderAPI* quote_provider_lib = nullptr;
+
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
+        (JNIEnv *jniEnv, jobject, jbyteArray targetInfoOut) {
+
+    JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
+
+    if (quoting_lib != nullptr) {
+        raiseException(jniEnv, "initQuoteDCAP: already initialized");
+        return -1;
+    }
+
+    quoting_lib = new r3::conclave::dcap::QuotingAPI();
+    quote_provider_lib = new r3::conclave::dcap::QuoteProviderAPI();
+
+    if ( ! (quoting_lib->is_ready() && quote_provider_lib->is_ready())){
+        delete quoting_lib;
+        delete quote_provider_lib;
+
+        quoting_lib = nullptr;
+        quote_provider_lib = nullptr;
+
+        raiseException(jniEnv, "not ready QuotingAPI/QuoteProviderAPI");
+        return -1;
+    }
+
+    quote3_error_t eval_result;
+    if (quoting_lib->get_target_info((sgx_target_info_t*)request.ptr, eval_result)) {
+        request.releaseMode = 0;
+        return 0;
+    } else {
+        raiseException(jniEnv, getQuotingErrorMessage(eval_result));
+        return (int)eval_result;
+    }
+}
+
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
+        (JNIEnv *jniEnv, jobject) {
+
+    if (quoting_lib == nullptr) {
+        raiseException(jniEnv, "calcQuoteSizeDCAP: not initialized");
+        return -1;
+    }
+
+    uint32_t quote_size;
+    quote3_error_t eval_result;
+    if (quoting_lib->get_quote_size(&quote_size, eval_result)) {
+        return (jint)quote_size;
+    } else {
+        raiseException(jniEnv, getQuotingErrorMessage(eval_result));
+        return (int)eval_result;
+    }
+}
+
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
+        (JNIEnv *jniEnv, jobject, jbyteArray getQuoteRequestIn, jbyteArray quoteOut) {
+
+    JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
+    JniPtr<sgx_quote_t> quote(jniEnv, quoteOut);
+
+    if (quoting_lib == nullptr) {
+        raiseException(jniEnv, "getQuoteDCAP: not initialized");
+        return -1;
+    }
+
+    quote3_error_t eval_result;
+    if (quoting_lib->get_quote(const_cast<sgx_report_t*>(&request.ptr->p_report),
+            static_cast<uint32_t>(quote.size()), (uint8_t*)quote.ptr, eval_result)) {
+        quote.releaseMode = 0;
+    } else {
+        raiseException(jniEnv, getQuotingErrorMessage(eval_result));
+    }
+
+    return (int)eval_result;
+}
+
+JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral
+  (JNIEnv *jniEnv, jobject, jbyteArray fmspc, jint pck_ca_type) {
+
+    JniPtr<uint8_t> p_fmspc(jniEnv, fmspc);
+
+    quote3_error_t eval_result;
+    auto collateral = quote_provider_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result);
+    if (collateral == nullptr){
+        raiseException(jniEnv, getQuotingErrorMessage(eval_result));
+        return nullptr;
+    }
+    else {
+        jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/String"),nullptr);
+
+    /**
+        enum class PckCaType {
+            Processor,
+            Platform
+        }
+        enum class CollateralType {
+            Version,
+            PckCrlIssuerChain,
+            RootCaCrl,
+            PckCrl,
+            TcbInfoIssuerChain,
+            TcbInfo,
+            QeIdentityIssuerChain,
+            QeIdentity
+        }
+    */
+        char version[2] = { '0', 0};
+        version[0] += collateral->version;
+
+        jniEnv->SetObjectArrayElement(arr,0,jniEnv->NewStringUTF(version));
+        jniEnv->SetObjectArrayElement(arr,1,jniEnv->NewStringUTF(collateral->pck_crl_issuer_chain));
+        jniEnv->SetObjectArrayElement(arr,2,jniEnv->NewStringUTF(collateral->root_ca_crl));
+        jniEnv->SetObjectArrayElement(arr,3,jniEnv->NewStringUTF(collateral->pck_crl));
+        jniEnv->SetObjectArrayElement(arr,4,jniEnv->NewStringUTF(collateral->tcb_info_issuer_chain));
+        jniEnv->SetObjectArrayElement(arr,5,jniEnv->NewStringUTF(collateral->tcb_info));
+        jniEnv->SetObjectArrayElement(arr,6,jniEnv->NewStringUTF(collateral->qe_identity_issuer_chain));
+        jniEnv->SetObjectArrayElement(arr,7,jniEnv->NewStringUTF(collateral->qe_identity));
+
+        return arr;
+    }
+}
+

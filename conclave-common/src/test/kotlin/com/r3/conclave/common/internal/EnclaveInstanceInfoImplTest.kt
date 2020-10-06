@@ -106,6 +106,7 @@ class EnclaveInstanceInfoImplTest {
         assertThat(deserialised.attestationResponse.signature).isEqualTo(original.attestationResponse.signature)
         assertThat(deserialised.attestationResponse.certPath).isEqualTo(original.attestationResponse.certPath)
         assertThat(deserialised.enclaveMode).isEqualTo(original.enclaveMode)
+        assertThat(deserialised.attestationResponse.attestationMode).isEqualTo(original.attestationResponse.attestationMode)
     }
 
     @Test

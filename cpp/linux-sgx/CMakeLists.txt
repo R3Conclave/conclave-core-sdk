@@ -31,6 +31,7 @@ ExternalProject_Add(linux-sgx-ext
         BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
             && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.9.101.2.bin
             && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw
+            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} dcap_source
 
 
         INSTALL_COMMAND ""
@@ -78,7 +79,12 @@ ExternalProject_Add_Step(linux-sgx-ext download-prebuilt
 add_library(linux-sgx_headers INTERFACE)
 target_include_directories(linux-sgx_headers INTERFACE
         ${BUILD_SRC_DIR}/common/inc
-        ${BUILD_SRC_DIR}/common/inc/internal)
+        ${BUILD_SRC_DIR}/common/inc/internal
+	${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/common/inc
+        ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/inc
+        ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/pce_wrapper/inc
+        ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc
+        ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/QvE/Include)
 
 add_library(linux-sgx_tstdc_headers INTERFACE)
 target_include_directories(linux-sgx_tstdc_headers INTERFACE

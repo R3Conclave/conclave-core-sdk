@@ -207,6 +207,7 @@ class SgxSignedQuote(quoteSize: Int) : Struct() {
 }
 
 val ByteCursor<SgxSignedQuote>.quote: ByteCursor<SgxQuote> get() = this[encoder.quote]
+val ByteCursor<SgxSignedQuote>.signature: ByteCursor<FixedBytes> get() = this[encoder.signature]
 
 /**
  * Enclave attributes definition structure.

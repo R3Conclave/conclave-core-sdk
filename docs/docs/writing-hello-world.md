@@ -497,10 +497,14 @@ complex digital signature, so it's safe to publish them publicly. An attestation
 the SGX ecosystem is always moving, client code will typically have some frequency with which it expects the host code
 to refresh the `EnclaveInstanceInfo`. At present this is done by stopping/closing and then restarting the enclave.
 
-### Get a SPID
+### EPID or DCAP ?
+The remote attestation is using either EPID or DCAP. The former requires SPID and AttestationKey from Intel.
+The later does not require any subscription.
+
+### EPID: Get a SPID
 
 To use SGX remote attestation for real we need to do some additional work. Remember how we wrote 
-`enclave.start(null, null, null);` above? The first two parameters are API keys required to use the Intel attestation
+`enclave.start(null, null, null, null);` above? The first two parameters are API keys required to use the Intel attestation
 servers. The first is called a "Service Provider ID" or SPID, and the second is called the "attestation key".
 You can sign-up easily and for free. [Learn more about IAS](ias.md).
 
@@ -512,7 +516,7 @@ if (enclave.getEnclaveMode() != EnclaveMode.SIMULATION && args.length != 2)
     throw new IllegalArgumentException("You need to provide the SPID and attestation key as arguments");
 OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : null;
 String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : null;
-enclave.start(spid, attestationKey, null);
+enclave.start(spid, attestationKey, null, AttestationMode.EPID);
 ```
 
 !!! info
@@ -522,6 +526,14 @@ enclave.start(spid, attestationKey, null);
 
     Future versions of Conclave will allow you to use Intel DCAP, which is an alternative way to do attestation which
     will let you run your own attestation servers, and thus skip getting these keys from Intel.                                           
+
+### DCAP
+The code quoted above now looks like this:
+```java
+enclave.start(null, null, null, AttestationMode.DCAP);
+```
+Note missing spid and attestationkey checks, and AttestationMode set to DCAP.
+
 
 ## Run what we've got so far
 
@@ -546,7 +558,9 @@ virtually everything is identical to how it will be in production, but there's a
 by debuggers to read/write the enclave's memory. You will need to run this on a machine with SGX enabled and also 
 provide your EPID SPID and attestation key. See [here](ias.md#getting-access) for more information.
 
-```gradlew -PenclaveMode=debug host:run --args="<SPID> <attestation key>"```
+EPID: ```gradlew -PenclaveMode=debug host:run --args="<SPID> <attestation key>"```
+
+DCAP: ```gradlew -PenclaveMode=debug host:run --args="DCAP"```
 
 ## Encrypted messaging
 

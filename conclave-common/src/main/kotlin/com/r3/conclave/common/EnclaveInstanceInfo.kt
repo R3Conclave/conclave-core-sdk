@@ -4,6 +4,7 @@ import com.r3.conclave.common.internal.ByteBufferInputStream
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MutableMail
@@ -103,11 +104,25 @@ interface EnclaveInstanceInfo {
                     CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(buffer.getSlice(certPathSize)))
                 }
                 val enclaveMode = enclaveModes[buffer.get().toInt()]
+                val attestationMode = AttestationMode.values()[buffer.get().toInt()]
+
+                // collateral is always present - will use empty strings for EPID
+                val collateral = QuoteCollateral(
+                    version = String(buffer.getIntLengthPrefixBytes()),
+                    pckCrlIssuerChain = String(buffer.getIntLengthPrefixBytes()),
+                    rootCaCrl = String(buffer.getIntLengthPrefixBytes()),
+                    pckCrl = String(buffer.getIntLengthPrefixBytes()),
+                    tcbInfoIssuerChain = String(buffer.getIntLengthPrefixBytes()),
+                    tcbInfo = String(buffer.getIntLengthPrefixBytes()),
+                    qeIdentityIssuerChain = String(buffer.getIntLengthPrefixBytes()),
+                    qeIdentity = String(buffer.getIntLengthPrefixBytes())
+                )
+
                 // New fields need to be behind an availability check before being read. Use dis.available() to check if there
                 // are more bytes available and only parse them if there are. If not then provide defaults.
                 return EnclaveInstanceInfoImpl(
                         dataSigningKey,
-                        AttestationResponse(reportBytes, signature, certPath),
+                        AttestationResponse(reportBytes, signature, certPath, collateral, attestationMode),
                         enclaveMode,
                         encryptionKey
                 )

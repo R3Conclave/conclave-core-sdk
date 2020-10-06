@@ -1,11 +1,11 @@
 package com.r3.conclave.sample.host;
 
+import com.r3.conclave.common.AttestationMode;
 import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.common.EnclaveMode;
 import com.r3.conclave.common.OpaqueBytes;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -57,16 +57,21 @@ public class Host {
         // because the CPU must hash the contents of the enclave binary.
         EnclaveHost enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
 
-        // We need the EPID Service Provider ID (SPID) and attestation key to able to perform remote attestation
-        // You can sign-up from Intel's EPID page: https://api.portal.trustedservices.intel.com/EPID-attestation
-        // These are not needed if the enclave is in simulation mode (as no actual attestation is done)
-        if (enclave.getEnclaveMode() != EnclaveMode.SIMULATION && args.length != 2) {
-            throw new IllegalArgumentException("You need to provide the SPID and attestation key as arguments for " +
-                    enclave.getEnclaveMode() + " mode.");
-        }
-        OpaqueBytes spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : null;
-        String attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : null;
+        OpaqueBytes spid = null;
+        String attestationKey = null;
+        AttestationMode attestationMode = (args.length == 1 && "DCAP".equals(args[0])) ? AttestationMode.DCAP : AttestationMode.EPID;
 
+        if (attestationMode == AttestationMode.EPID) {
+            // We need the EPID Service Provider ID (SPID) and attestation key to able to perform remote attestation
+            // You can sign-up from Intel's EPID page: https://api.portal.trustedservices.intel.com/EPID-attestation
+            // These are not needed if the enclave is in simulation mode (as no actual attestation is done)
+            if (enclave.getEnclaveMode() != EnclaveMode.SIMULATION && args.length != 2) {
+                throw new IllegalArgumentException("You need to provide the SPID and attestation key as arguments for " +
+                        enclave.getEnclaveMode() + " mode.");
+            }
+            spid = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? OpaqueBytes.parse(args[0]) : null;
+            attestationKey = enclave.getEnclaveMode() != EnclaveMode.SIMULATION ? args[1] : null;
+        }
         // Start it up with a callback that will deliver the response. But remember: in a real app that can handle
         // multiple clients, you shouldn't start one enclave per client. That'd be wasteful and won't fit in available
         // encrypted memory. A real app should use the routingHint parameter to select the right connection back
@@ -81,7 +86,7 @@ public class Host {
                     e.printStackTrace();
                 }
             }
-        });
+        }, attestationMode);
 
         // The attestation data must be provided to the client of the enclave, via whatever mechanism you like.
         final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();

@@ -1,9 +1,11 @@
 package com.r3.conclave.host.internal
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.readFully
 import java.io.IOException
@@ -50,7 +52,9 @@ class IntelAttestationService(private val isProd: Boolean, private val subscript
             return AttestationResponse(
                     reportBytes = connection.inputStream.readFully(),
                     signature = Base64.getDecoder().decode(connection.getHeaderField("X-IASReport-Signature")),
-                    certPath = connection.parseResponseCertPath()
+                    certPath = connection.parseResponseCertPath(),
+                    collateral = QuoteCollateral.mock(),
+                    attestationMode = AttestationMode.EPID
             )
         } finally {
             connection.disconnect()

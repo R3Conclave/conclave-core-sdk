@@ -101,6 +101,9 @@ if [[ -z ${CONTAINER_ID} ]]; then
   SGX_HARDWARE_FLAGS=""
   if [ -e /dev/isgx ] && [ -d /var/run/aesmd ]; then
       SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
+  elif [ -e /dev/sgx/enclave ] && [ -d /var/run/aesmd ]; then
+      # dcap driver
+      SGX_HARDWARE_FLAGS="--device=/dev/sgx/enclave --device=/dev/sgx/provision -v /var/run/aesmd:/var/run/aesmd"
   fi
 
   if [ ${CONCLAVE_DOCKER_IDE:-""} = "1" ]; then

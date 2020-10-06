@@ -109,7 +109,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest() {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val config = EnclaveConfig().withProdID(enclaveSpec.isvProdId).withISVSVN(enclaveSpec.isvSvn)
             val host = testEnclaves.hostTo(enclaveSpec.enclaveClass, EnclaveBuilder(type = EnclaveType.Debug, config = config))
-            host.start(spid, attestationKey, null)
+            host.start(spid, attestationKey, null, null)
             check(host.enclaveMode == EnclaveMode.DEBUG)
             host
         }
@@ -118,7 +118,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest() {
     private fun getMockHost(enclaveSpec: EnclaveSpec): MockHost<*> {
         return mockEnclaves.computeIfAbsent(enclaveSpec) {
             val host = MockInternals.createMock(enclaveSpec.enclaveClass, enclaveSpec.isvProdId, enclaveSpec.isvSvn)
-            host.start(null, null, null)
+            host.start(null, null, null, null)
             host
         }
     }

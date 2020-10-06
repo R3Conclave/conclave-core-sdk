@@ -32,14 +32,18 @@ add_library(jvm_host SHARED
         src/host_start_thread.cpp
         src/enclave_metadata.cpp
         src/ecall_context.cpp
+        src/dcap.cpp
         src/enclave_console.cpp)
+
 target_include_directories(jvm_host PUBLIC
         include
         ../jvm-host-shared/include
         ${JNI_INCLUDE_DIRS})
+
 if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
     target_compile_definitions(jvm_host PRIVATE -DSGX_SIM)
 endif()
+
 find_package(Threads)
 target_link_libraries(jvm_host
         avian_headers

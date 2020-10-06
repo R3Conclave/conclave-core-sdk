@@ -13,6 +13,7 @@ interface PKIXParametersFactory {
     // TODO Do we do soft-fail revocation checking?
     object Intel : AbstractPKIXParametersFactory("Intel")
     object Mock : AbstractPKIXParametersFactory("Mock")
+    object DCAP : AbstractPKIXParametersFactory("DCAP")
 
     /**
      * Create a [PKIXParameters] which uses the given [time] for checking the validity of the certificates. If [time] is

@@ -57,6 +57,38 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
+ * Method:    initQuoteDCAP
+ * Signature: ([B)I
+ */
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
+  (JNIEnv *, jobject, jbyteArray);
+
+/*
+ * Class:     com_r3_conclave_host_internal_Native
+ * Method:    calcQuoteSizeDCAP
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     com_r3_conclave_host_internal_Native
+ * Method:    getQuoteDCAP
+ * Signature: ([B[B)I
+ */
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
+  (JNIEnv *, jobject, jbyteArray, jbyteArray);
+
+/*
+ * Class:     com_r3_conclave_host_internal_Native
+ * Method:    getQuoteCollateral
+ * Signature: ([BI)[Ljava/lang/String;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral
+  (JNIEnv *, jobject, jbyteArray, jint);
+
+/*
+ * Class:     com_r3_conclave_host_internal_Native
  * Method:    getMetadata
  * Signature: (Ljava/lang/String;[B)V
  */

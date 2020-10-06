@@ -27,7 +27,7 @@ class AvianTestSuite {
                     config = EnclaveConfig().withTCSNum(32),
                     includeClasses = testCaseClasses + Opcodes::class.java
             ))
-            host.start(null, null, null)
+            host.start(null, null, null, null)
         }
 
         @AfterAll

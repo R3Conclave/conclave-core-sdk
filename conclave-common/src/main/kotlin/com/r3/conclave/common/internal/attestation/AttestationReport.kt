@@ -21,6 +21,7 @@ import com.r3.conclave.common.internal.Cursor
 import com.r3.conclave.common.internal.SgxQuote
 import com.r3.conclave.common.internal.SgxSignedQuote
 import java.time.Instant
+import java.util.*
 
 /**
  * Definitions taken from https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf.
@@ -126,13 +127,6 @@ data class AttestationReport @JsonCreator constructor(
         @JsonProperty("version")
         val version: Int
 ) {
-    companion object {
-        fun register(objectMapper: ObjectMapper): ObjectMapper {
-            objectMapper.registerModule(JavaTimeModule())
-            return objectMapper
-        }
-    }
-
     private class Base16Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
             return OpaqueBytes.parse(p.valueAsString)
@@ -167,3 +161,158 @@ data class AttestationReport @JsonCreator constructor(
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes = OpaqueBytes(p.binaryValue)
     }
 }
+
+// fields are nullable for easier unit-testing
+@JsonInclude(NON_NULL)
+data class TcbInfoSigned @JsonCreator constructor(
+        @JsonProperty("tcbInfo")
+        val tcbInfo: TcbInfo? = null,
+
+        @JsonProperty("signature")
+        val signature: String? = null
+)
+
+@JsonInclude(NON_NULL)
+data class TcbInfo @JsonCreator constructor(
+        @JsonProperty("version")
+        val version: Int? = null,
+
+        @JsonProperty("issueDate")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        val issueDate: Date? = null,
+
+        @JsonProperty("nextUpdate")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        val nextUpdate: Date? = null,
+
+        @JsonProperty("fmspc")
+        val fmspc: String? = null,
+
+        @JsonProperty("pceId")
+        val pceId: String? = null,
+
+        @JsonProperty("tcbType")
+        val tcbType: Int? = null,
+
+        @JsonProperty("tcbEvaluationDataNumber")
+        val tcbEvaluationDataNumber: Int? = null,
+
+        @JsonProperty("tcbLevels")
+        val tcbLevels: List<TcbLevel>? = null
+)
+
+data class TcbLevel @JsonCreator constructor(
+        @JsonProperty("tcb")
+        val tcb: Tcb? = null,
+
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        @JsonProperty("tcbDate")
+        val tcbDate: Date? = null,
+
+        @JsonProperty("tcbStatus")
+        val tcbStatus: String? = null
+)
+
+data class Tcb @JsonCreator constructor(
+        @JsonProperty("sgxtcbcomp01svn")
+        val sgxtcbcomp01svn: Int?,
+        @JsonProperty("sgxtcbcomp02svn")
+        val sgxtcbcomp02svn: Int?,
+        @JsonProperty("sgxtcbcomp03svn")
+        val sgxtcbcomp03svn: Int?,
+        @JsonProperty("sgxtcbcomp04svn")
+        val sgxtcbcomp04svn: Int?,
+        @JsonProperty("sgxtcbcomp05svn")
+        val sgxtcbcomp05svn: Int?,
+        @JsonProperty("sgxtcbcomp06svn")
+        val sgxtcbcomp06svn: Int?,
+        @JsonProperty("sgxtcbcomp07svn")
+        val sgxtcbcomp07svn: Int?,
+        @JsonProperty("sgxtcbcomp08svn")
+        val sgxtcbcomp08svn: Int?,
+        @JsonProperty("sgxtcbcomp09svn")
+        val sgxtcbcomp09svn: Int?,
+        @JsonProperty("sgxtcbcomp10svn")
+        val sgxtcbcomp10svn: Int?,
+        @JsonProperty("sgxtcbcomp11svn")
+        val sgxtcbcomp11svn: Int?,
+        @JsonProperty("sgxtcbcomp12svn")
+        val sgxtcbcomp12svn: Int?,
+        @JsonProperty("sgxtcbcomp13svn")
+        val sgxtcbcomp13svn: Int?,
+        @JsonProperty("sgxtcbcomp14svn")
+        val sgxtcbcomp14svn: Int?,
+        @JsonProperty("sgxtcbcomp15svn")
+        val sgxtcbcomp15svn: Int?,
+        @JsonProperty("sgxtcbcomp16svn")
+        val sgxtcbcomp16svn: Int?,
+        @JsonProperty("pcesvn")
+        val pcesvn: Int?
+)
+
+data class EnclaveIdentitySigned @JsonCreator constructor(
+        @JsonProperty("enclaveIdentity")
+        val enclaveIdentity: EnclaveIdentity? = null,
+
+        @JsonProperty("signature")
+        val signature: String? = null
+)
+
+data class EnclaveIdentity @JsonCreator constructor(
+        @JsonProperty("id")
+        val id: String? = null,
+
+        @JsonProperty("version")
+        val version: Int? = null,
+
+        @JsonProperty("issueDate")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        val issueDate: Date? = null,
+
+        @JsonProperty("nextUpdate")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        val nextUpdate: Date? = null,
+
+        @JsonProperty("tcbEvaluationDataNumber")
+        val tcbEvaluationDataNumber: Int? = null,
+
+        @JsonProperty("miscselect")
+        val miscselect: String? = null,
+
+        @JsonProperty("miscselectMask")
+        val miscselectMask: String? = null,
+
+        @JsonProperty("attributes")
+        val attributes: String? = null,
+
+        @JsonProperty("attributesMask")
+        val attributesMask: String? = null,
+
+        @JsonProperty("mrsigner")
+        val mrsigner: String? = null,
+
+        @JsonProperty("isvprodid")
+        val isvprodid: Int? = null,
+
+        @JsonProperty("tcbLevels")
+        val tcbLevels: List<TcbLevelShort>? = null
+)
+
+data class TcbLevelShort @JsonCreator constructor(
+        @JsonProperty("tcb")
+        val tcb: TcbShort? = null,
+
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        @JsonProperty("tcbDate")
+        val tcbDate: Date? = null,
+
+        @JsonProperty("tcbStatus")
+        val tcbStatus: String? = null
+)
+
+data class TcbShort @JsonCreator constructor(
+        @JsonProperty("isvsvn")
+        val isvsvn: Int
+)
+
+val attestationObjectMapper = ObjectMapper().apply { registerModule(JavaTimeModule()) }

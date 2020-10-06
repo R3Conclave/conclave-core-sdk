@@ -27,3 +27,8 @@ enum class EnclaveMode {
      */
     MOCK
 }
+
+enum class AttestationMode {
+    EPID,
+    DCAP
+}

@@ -1,5 +1,6 @@
 package com.r3.conclave.host.internal
 
+import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
@@ -24,4 +25,8 @@ interface AttestationService {
         }
         return enclaveInstanceInfo
     }
+}
+
+interface AttestationHandlerConnection {
+    fun getSignedQuote(): ByteCursor<SgxSignedQuote>
 }

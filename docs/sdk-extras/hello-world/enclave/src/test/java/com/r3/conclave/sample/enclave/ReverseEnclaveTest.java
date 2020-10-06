@@ -13,7 +13,7 @@ public class ReverseEnclaveTest {
     @Test
     void reverseNumber() throws EnclaveLoadException {
         MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
-        mockHost.start(null, null, null);
+        mockHost.start(null, null, null, null);
         ReverseEnclave reverseEnclave = mockHost.getEnclave();
 
         assertNull(reverseEnclave.previousResult);

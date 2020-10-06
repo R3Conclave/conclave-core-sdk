@@ -1,11 +1,9 @@
 package com.r3.conclave.host.internal
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
-import com.r3.conclave.common.internal.attestation.AttestationReport
-import com.r3.conclave.common.internal.attestation.AttestationResponse
-import com.r3.conclave.common.internal.attestation.QuoteStatus
+import com.r3.conclave.common.internal.attestation.*
 import com.r3.conclave.common.internal.quote
 import java.io.InputStream
 import java.security.KeyFactory
@@ -25,14 +23,14 @@ open class MockAttestationService : AttestationService {
                 isvEnclaveQuoteBody = signedQuote.quote,
                 timestamp = Instant.now(),
                 version = 4
-        ).let { reportMapper.writeValueAsBytes(modifyReport(it)) }
+        ).let { attestationObjectMapper.writeValueAsBytes(modifyReport(it)) }
 
         val signature = Signature.getInstance("SHA256withRSA").apply {
             initSign(signingKey)
             update(reportBytes)
         }.sign()
 
-        return AttestationResponse(reportBytes, signature, certPath)
+        return AttestationResponse(reportBytes, signature, certPath, QuoteCollateral.mock(), AttestationMode.EPID)
     }
 
     protected open fun modifyReport(report: AttestationReport): AttestationReport = report
@@ -42,8 +40,6 @@ open class MockAttestationService : AttestationService {
             KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(it.readBytes()))
         }
         private val certPath = readResource("mock-as-certificate.pem") { it.reader().readText().parsePemCertPath() }
-
-        private val reportMapper = AttestationReport.register(ObjectMapper())
 
         private inline fun <R> readResource(name: String, block: (InputStream) -> R): R {
             val stream = checkNotNull(MockAttestationService::class.java.getResourceAsStream("/mock-as/$name")) {

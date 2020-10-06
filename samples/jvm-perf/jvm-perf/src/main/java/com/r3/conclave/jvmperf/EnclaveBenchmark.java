@@ -39,7 +39,7 @@ public class EnclaveBenchmark {
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
         if (enclave != null) {
             OpaqueBytes spid = (platform.spid.length() == 0) ? new OpaqueBytes(new byte[16]) : OpaqueBytes.parse(platform.spid);
-            enclave.start(spid, platform.attestationKey, null);
+            enclave.start(spid, platform.attestationKey, null, null);
         }
     }
 
