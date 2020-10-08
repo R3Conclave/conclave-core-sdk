@@ -1,4 +1,5 @@
 plugins {
+    id 'org.jetbrains.kotlin.jvm' apply false
     id 'com.github.johnrengelman.shadow' version '6.0.0' apply false
     id "com.github.ben-manes.versions" version "0.27.0"
     id 'base'

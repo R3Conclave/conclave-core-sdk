@@ -1,8 +1,12 @@
 pluginManagement {
     apply from: 'versions.gradle'
-    
-    plugins {
-        id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false
+
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'org.jetbrains.kotlin.jvm') {
+                useVersion kotlin_version
+            }
+        }
     }
 }
 

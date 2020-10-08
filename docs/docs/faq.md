@@ -22,7 +22,7 @@ no plans to support other algorithms or curves at this time.
 
 ## What Kotlin/Java versions are usable?
 
-Inside the enclave you can use Java 8 and Kotlin 1.3.
+Inside the enclave you can use Java 8 and Kotlin 1.4.
 
 ## Which communication channels exist to/from the enclave?
  
