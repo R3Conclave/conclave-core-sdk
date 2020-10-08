@@ -49,7 +49,7 @@ object BuildEnclave {
     fun linkEnclaveCommandLine(enclaveJarO: File, partialEnclave: File, outputEnclave: File): List<String> {
         return listOf("/usr/bin/env", "ld",
                 "-pie", "--entry=enclave_entry",
-                "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic",
+                "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic", "--defsym=__ImageBase=0",
                 "-o", outputEnclave.absolutePath,
                 partialEnclave.absolutePath,
                 enclaveJarO.absolutePath

@@ -2,69 +2,131 @@
 // OS Stubs for functions declared in pthread.h
 //
 #include "vm_enclave_layer.h"
+#include "enclave_shared_data.h"
 #include <pthread.h>
 #include <map>
 
 // Internal to the Linux SGX SDK but we need information on the current thread.
 #include <internal/thread_data.h>
 
+// These two symbols are defined as parameters to the linker when running native-image.
+// __ImageBase is a symbol that is at the address at the base of the image. __StackSize is
+// a symbol at the fake address of &__ImageBase + size of the stack defined in the enclave
+// configuration. We can subtract one address from the other to get the actual stack size.
+extern unsigned long __StackSize;
+extern unsigned long __ImageBase;
+static unsigned long stack_size_pages = (unsigned long)((unsigned long long)&__StackSize - (unsigned long long)&__ImageBase);
+
+namespace r3 { namespace conclave {
+
 // Notes on pthread_attr_t:
 // The SGX SDK provides a subset of pthread functions and types, including pthread_attr_t.
-// The SDK version of this type includes a single 'reserved' field of type char. We need to
-// associate and return more information than this so we use our own internal structure type.
+// The SGX SDK version of this type defines pthread_attr_t as a pointer to a pthread_attr.
+// We need to associate and return more information than the SGX SDK provides so we use our 
+// own internal structure type, redefining pthread_t to an integer that is a key to finding
+// the relevant thread data.
+//
 // The only SDK function that takes this type as a parameter is pthread_create() which, looking
 // at the source code, currently just marks the parameter as unused. However, we should guard
 // against the wrong pointer being passed into these functions.
-// 
-// In order to do this we use the reserved value (as an unsigned char) as a handle into a
-// map of structures. Therefore we can support up to 256 attribute structures at one time,
-// returning ENOMEM if we run out of handles.
 
-// Copied from pthread_imp.h in the Linux SGX SDK
-typedef struct _pthread_attr
-{
-    char    reserved;
-} pthread_attr;
-
-// Maps the 'reserved' field from pthread_attr_t defined in pthread_impl.h to our thread data
-static std::map<unsigned char, thread_data_t>    conclave_attr;
-unsigned char next_conclave_attr = 0;
-
-static thread_data_t* conclave_thread_data(const pthread_attr_t* attr) {
-    // Find the thread data using the 'reserved' field as a handle.
-    auto it = conclave_attr.find((*attr)->reserved);
-    if (it != conclave_attr.end()) {
-        return &it->second;
+/**
+ * This class provides a mapping between a pthread_attr_t pointer and a thread_data_t object.
+ * This is achieved by storing a uint32_t value inside the memory pointed to by pthread_attr_t
+ * which in our implementation is guaranteed to be large enough to hold a 32 bit value.
+ * The lifecycle of the thread_data_t object must match that of the pthread_attr_t pointer.
+ */
+class PthreadData {
+public:
+    static PthreadData& instance() {
+        static PthreadData pd;
+        return pd;
     }
-    return nullptr;
-}
+
+    /**
+     * Creates a new mapping between a pthread_attr_t and a thread_data_t.
+     * @param attr The thread attribute pointer to create mapping for.
+     * @return The thread data object or nullptr if out of handles.
+     */
+    thread_data_t* create(const pthread_attr_t* attr) {
+        thread_data_t* retval = nullptr;
+        
+        if (attr) {
+            // Find an unused handle.
+            int handle;
+            for (handle = 0; handle < MAX_HANDLES; ++handle) {
+                if (!thread_data_[handle]) {
+                    retval = new thread_data_t;
+                    memset(retval, 0, sizeof(thread_data_t));
+                    thread_data_[handle].reset(retval);
+                    // Store the handle in the thread attribute.
+                    *(uint32_t*)attr = handle;
+                    break;
+                }
+            }
+        }
+        return retval;
+    }
+
+    /**
+     * Gets an existing mapping between a pthread_attr_t and a thread_data_t.
+     * @param attr The thread attribute to get the mapping for.
+     * @return The thread data associated with the attribute or nullptr if
+     *         the mapping does not exist.
+     */
+    thread_data_t* get(const pthread_attr_t* attr) {
+        thread_data_t* retval = nullptr;
+
+        if (attr) {
+            // The index into our array is stored as a 32 bit value in attr.
+            uint32_t handle = *(uint32_t*)attr;
+            if (handle < MAX_HANDLES) {
+                retval = thread_data_[handle].get();
+            }
+        }
+        return retval;
+    }
+
+    /**
+     * Destroys the mapping between the pthread_attr_t and thread_data_t, releasing
+     * the memory for the thread_data_t.
+     * @param attr The thread attribute to free the mapping for.
+     */
+    void free(const pthread_attr_t* attr) {
+        if (attr) {
+            // The index into our array is stored as a 32 bit value in attr.
+            uint32_t handle = *(uint32_t*)attr;
+            if (handle < MAX_HANDLES) {
+                thread_data_[handle] = nullptr;
+            }
+        }
+    }
+
+
+private:
+    PthreadData() {}
+
+    static constexpr int MAX_HANDLES = 256;
+    std::unique_ptr<thread_data_t> thread_data_[MAX_HANDLES];
+};
+
+} }
+
+using namespace r3::conclave;
 
 extern "C" {
 
 int pthread_attr_init(pthread_attr_t *attr) {
     enclave_trace("pthread_attr_init\n");
+
     if (!attr) {
         return EINVAL;
     }
 
-    // Find the next empty slot to use as a handle.
-    int handle = -1;
-    for (unsigned index = 0; index < 256; ++index) {
-        if (conclave_attr.find((index + next_conclave_attr) % 256) == conclave_attr.end()) {
-            // Empty
-            handle = (int)((index + next_conclave_attr) % 256);
-            break;
-        }
-    }
-    // See if we ran out of handles.
-    if (handle == -1) {
+    // Create a new mapping to a thread_data_t.
+    if (!PthreadData::instance().create(attr)) {
         return ENOMEM;
     }
-    // Initialise with an empty structure for now.
-    memset(&conclave_attr[(unsigned char)handle], 0, sizeof(thread_data_t));
-    next_conclave_attr = (unsigned char)(((int)next_conclave_attr + 1) % 256);
-
-    (*attr)->reserved = (char)handle;
     return 0;
 }
 
@@ -73,17 +135,13 @@ int pthread_attr_destroy(pthread_attr_t *attr) {
         enclave_trace("pthread_attr_destroy(invalid))\n");
         return EINVAL;
     }
-    auto it = conclave_attr.find((*attr)->reserved);
-    if (it == conclave_attr.end()) {
-        return EINVAL;
-    }
-    conclave_attr.erase(it);
+    PthreadData::instance().free(attr);
     enclave_trace("pthread_attr_destroy(success)\n");
     return 0;
 }
 
 int pthread_attr_getguardsize (const pthread_attr_t *attr, size_t *guardsize) {
-    thread_data_t* td = conclave_thread_data(attr);
+    thread_data_t* td = PthreadData::instance().get(attr);
     if (!td) {
         enclave_trace("pthread_attr_getguardsize(invalid))\n");
         return EINVAL;
@@ -94,7 +152,7 @@ int pthread_attr_getguardsize (const pthread_attr_t *attr, size_t *guardsize) {
 }
 
 int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize) {
-    thread_data_t* td = conclave_thread_data(attr);
+    thread_data_t* td = PthreadData::instance().get(attr);
     if (!td) {
         enclave_trace("pthread_attr_getstack(invalid))\n");
         return EINVAL;
@@ -118,7 +176,7 @@ int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr) {
     if (result != 0) {
         return result;
     }
-    thread_data_t* td = conclave_thread_data(attr);
+    thread_data_t* td = PthreadData::instance().get(attr);
     if (!td) {
         return EINVAL;
     }
@@ -128,12 +186,16 @@ int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr) {
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) {
     enclave_trace("pthread_attr_setdetachstate\n");
-    return -1;
+    return 0;
 }
 
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
+    if (stacksize > (stack_size_pages * 4096)) {
+        jni_throw("The JDK attempted to set the stack size greater than configured in the Conclave enclave configuration. "
+                  "Please increase the stack allocation in the Conclave configuration for your project.");
+    }
     enclave_trace("pthread_attr_setstacksize\n");
-    return -1;
+    return 0;
 }
 
 int pthread_setname_np(pthread_t thread, const char *name) {
@@ -141,10 +203,32 @@ int pthread_setname_np(pthread_t thread, const char *name) {
     return -1;
 }
 
-int pthread_cond_timedwait(pthread_cond_t *__restrict __cond, pthread_mutex_t *__restrict __mutex, const struct timespec *__restrict __abstime) {
-    enclave_trace("pthread_cond_timedwait\n");
-    return 0;
+int pthread_cond_timedwait(pthread_cond_t *__restrict cond, pthread_mutex_t *__restrict mutex, const struct timespec *__restrict abstime) {
+    if (abstime) {
+        struct timespec reltime;
+        // The time passed to this function is always an absolute time. This poses a problem as the SGX SDK
+        // does not have access to absolute time. Therefore we need to convert the time here to a relative
+        // time. If time has elapsed since the caller determined the absolute time then our relative time 
+        // will be inaccurate but it is the best we can do.
+        // Convert seconds and nanoseconds to a single value
+        uint64_t timeout = abstime->tv_sec * NS_PER_SEC + abstime->tv_nsec;
+        uint64_t now = r3::conclave::EnclaveSharedData::instance().real_time();
+
+        if (timeout < now) {
+            return ETIMEDOUT;
+        }
+        timeout -= now;
+        reltime.tv_sec = timeout / NS_PER_SEC;
+        reltime.tv_nsec = timeout % NS_PER_SEC;
+        enclave_trace("pthread_cond_timedwait(tv_sec = %ld, tv_nsec = %ld)\n", reltime.tv_sec, reltime.tv_nsec);
+        return _pthread_cond_timedwait(cond, mutex, &reltime);
+    }
+    else {
+        enclave_trace("pthread_cond_timedwait(abstime == NULL)\n");
+        return pthread_cond_wait(cond, mutex);
+    }
 }
+
 
 int pthread_condattr_init(pthread_condattr_t *attr) {
     enclave_trace("pthread_condattr_init\n");

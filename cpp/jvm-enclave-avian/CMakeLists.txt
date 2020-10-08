@@ -146,7 +146,8 @@ target_link_libraries(jvm_enclave_avian_partial
         "-Wl,--export-dynamic"
         "-Wl,--relocatable"
         "-Wl,--defsym,__ImageBase=0"
-        "-Wl,--defsym,__HeapSize=0")
+        "-Wl,--defsym,__HeapSize=0"
+        "-Wl,--defsym,__StackSize=0")
 add_dependencies(jvm_enclave_avian_partial linux-sgx-ext avian-boot-jar-o avian-javahome-jar-o dlsym)
 
 add_executable(jvm_enclave_avian

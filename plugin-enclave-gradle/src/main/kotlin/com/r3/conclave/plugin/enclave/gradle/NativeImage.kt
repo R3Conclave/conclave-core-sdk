@@ -105,7 +105,7 @@ open class NativeImage @Inject constructor(
         "-H:+ForceNoROSectionRelocations",
         "-H:AlignedHeapChunkSize=4096",
         "-R:MaxHeapSize=" + calculateMaxHeapSize(GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())),
-        "-R:StackSize=" + GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()),
+        "-R:StackSize=" + calculateMaxStackSize(),
         "--enable-all-security-services"
     )
 
@@ -129,6 +129,24 @@ open class NativeImage @Inject constructor(
 
     private fun calculateMaxHeapSize(value: Long): Int {
         return (value * HEAP_SIZE_PERCENTAGE).roundToInt()
+    }
+
+    private fun calculateMaxStackSize(): Long {
+        // Substrate VM takes the value of stack we pass in to native-image and adds a yellow and red zone
+        // area to this. This propogates through to a call to pthread_attr_setstacksize() with a value that
+        // is greater than the size we pass to native-image. The stack cannot be bigger than what we
+        // configure in the Enclave configuration file so subtract the red and yellow zone default sizes.
+        // See Target_java_lang_Thread.java in the SVM source code to see where the stack size is altered.
+        // Default yellow and red zone sizes are in StackOverflowCheck.java in SVM:
+        // yellow zone size = 32K
+        // red zone size = 8K
+        val zoneSize = (32 * 1024) + (8 * 1024)
+        val stackSize = GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
+        if (stackSize <= zoneSize) {
+            // Invalid stack size
+            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack size in the Conclave configuratino for your enclave.");
+        }
+        return stackSize - zoneSize
     }
 
     private fun cLibraryPathsOption(): String {
@@ -331,6 +349,8 @@ open class NativeImage @Inject constructor(
                 "-H:NativeLinkerOption=-Wl,--export-dynamic",
                 "-H:NativeLinkerOption=-Wl,--defsym,__ImageBase=0,--defsym,__HeapSize=" +
                             GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get()) / 4096,
+                "-H:NativeLinkerOption=-Wl,--defsym,__StackSize=" +
+                            GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()) / 4096,
                 "-H:NativeLinkerOption=-Wl,--gc-sections"
         )
     }

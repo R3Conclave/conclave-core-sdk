@@ -38,6 +38,8 @@ int enclave_trace(const char *s, ...);
 // Definitions of types used by the stubs
 #define FILE SGX_FILE
 
+#define NS_PER_SEC (1000 * 1000 * 1000)
+
 typedef int pid_t;
 typedef int sigset_t;
 typedef int uid_t;
@@ -53,6 +55,11 @@ struct timeval {
    long int    tv_usec;  // Number of microseconds of rest of elapsed time minus tv_sec. Always less than one million
 };
 typedef int clockid_t;
+
+struct timespec {
+    time_t tv_sec;
+    long   tv_nsec;
+};
 
 struct timezone {
    int tz_minuteswest;

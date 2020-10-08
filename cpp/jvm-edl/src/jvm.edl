@@ -14,5 +14,7 @@ enclave {
             [in, size=bufferInLen] void* bufferIn,
             int bufferInLen
         ) allow(jvm_ecall);
+
+        void* shared_data_ocall();
     };
 };

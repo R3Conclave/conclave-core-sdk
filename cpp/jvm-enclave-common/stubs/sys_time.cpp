@@ -2,6 +2,7 @@
 // OS Stubs for functions declared in sys/time.h
 //
 #include "vm_enclave_layer.h"
+#include "enclave_shared_data.h"
 
 #if __GNUC__ >= 7
 // The new GCC flags a warnings which is then escalated to an error if we check a parameter for
@@ -19,8 +20,7 @@ extern "C" {
 
 int gettimeofday(struct timeval *tv, struct timezone *tz) {
     if (tv) {
-        tv->tv_sec = 0;
-        tv->tv_usec = 0;
+        r3::conclave::EnclaveSharedData::instance().real_time(tv);
     }
     if (tz) {
         tz->tz_dsttime = 0;

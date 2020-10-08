@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <string>
 
 #include <jni.h>
 
@@ -12,6 +13,8 @@
 #include "sgx_utils.h"
 
 #include "vm_enclave_layer.h"
+#include "substrate_jvm.h"
+#include "enclave_shared_data.h"
 
 using namespace std;
 
@@ -27,30 +30,34 @@ extern "C" {
 int printf(const char *s, ...);
 }
 
-static graal_isolatethread_t *thread = nullptr;
-
 void jvm_ecall(void *bufferIn, int bufferInLen) {
     enclave_trace(">>> Enclave\n");
 
-    /**
-      * The first ecall passes the enclave class name to be instantiated
-      * and is synchronized on the host JVM's side.
-      */
-    auto exitCode = -1;
-    if (!thread && (exitCode = graal_create_isolate(nullptr, nullptr, &thread)) != 0) {
-        enclave_print("Error on isolate creation or attach: %d\n", exitCode);
-        return;
+    using namespace r3::conclave;
+    auto &jvm = Jvm::instance();
+    auto jniEnv = jvm.attach_current_thread();
+    if (!jniEnv) {
+        if (!jvm.is_alive()) {
+            throw std::runtime_error("Attempt to attach a new thread after enclave destruction has started");
+        }
     }
-    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(thread, reinterpret_cast<char*>(bufferIn), bufferInLen);
+
+    // Make sure this enclave has determined the host shared data address
+    EnclaveSharedData::instance().init();
+
+    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(jniEnv.get(), reinterpret_cast<char*>(bufferIn), bufferInLen);
 }
 
 void ecall_finalize_enclave() {
     enclave_trace("ecall_finalize_enclave\n");
-    if (graal_tear_down_isolate(thread) != 0) {
-        enclave_print("Failed to cleanly shutdown enclave.\n");
-    }
+    using namespace r3::conclave;
+    Jvm::instance().close();
 }
 
 void throw_jvm_runtime_exception(const char *message) {
-    throw runtime_error(message);
+    std::string msg(message);
+    using namespace r3::conclave;
+    auto &jvm = Jvm::instance();
+    auto jniEnv = jvm.attach_current_thread();
+    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_runtimeError(jniEnv.get(), reinterpret_cast<char*>(&msg[0]), msg.size());
 }

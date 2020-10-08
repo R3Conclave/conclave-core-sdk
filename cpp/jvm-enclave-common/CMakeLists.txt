@@ -26,6 +26,7 @@ add_library(jvm_enclave_common
         src/memory_manager.cpp
         src/file_manager.cpp
         src/vm_enclave_layer.cpp
+        src/enclave_shared_data.cpp
         src/sigthread.cpp
         src/statvfs.cpp
 

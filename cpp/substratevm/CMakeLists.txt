@@ -19,6 +19,7 @@ GET_DIRECTORY_PROPERTY(EDGER8R_INCLUDE_DIR DIRECTORY ${PROJECT_SOURCE_DIR}/../li
 # SubstrateVM library which includes stubs, edl and jni implementation
 add_library(substratevm
         src/edl.cpp
+        src/substrate_jvm.cpp
 )
 
 target_include_directories(substratevm PUBLIC

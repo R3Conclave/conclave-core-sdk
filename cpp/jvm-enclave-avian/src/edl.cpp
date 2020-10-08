@@ -1,6 +1,7 @@
 #include <jni_utils.h>
 #include <singleton_jvm.h>
 #include <enclave_thread.h>
+#include "enclave_shared_data.h"
 
 namespace {
 
@@ -24,6 +25,10 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
             throw std::runtime_error("Attempt attaching new thread after enclave destruction started");
         }
     }
+
+    // Make sure this enclave has determined the host shared data address
+    EnclaveSharedData::instance().init();
+
     JniScopedRef<jbyteArray> jarrayIn {jniEnv->NewByteArray(bufferInLen), jniEnv.get()};
     jniEnv->SetByteArrayRegion(jarrayIn.value(), 0, bufferInLen, static_cast<const jbyte *>(bufferIn));
     auto NativeEnvClass = jniEnv->FindClass("com/r3/conclave/enclave/internal/NativeEnclaveEnvironment");

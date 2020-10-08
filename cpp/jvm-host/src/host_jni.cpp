@@ -17,6 +17,7 @@
 #include <enclave_platform.h>
 #include <dcap.h>
 #include "enclave_console.h"
+#include "host_shared_data.h"
 
 // TODO pool buffers in ecalls/ocalls
 
@@ -55,6 +56,8 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
     int updated = 0;
     auto returnCode = sgx_create_enclave(path.c_str, isDebug, &token, &updated, &enclave_id, nullptr);
     if (returnCode == SGX_SUCCESS) {
+        // Create the shared data pointer for the enclave
+        r3::conclave::HostSharedData::instance().get(enclave_id);
         return enclave_id;
     } else {
         // Check to see if SGX is supported on the platform
@@ -69,6 +72,8 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
             if (wasEnabled) {
                 returnCode = sgx_create_enclave(path.c_str, isDebug, &token, &updated, &enclave_id, nullptr);
                 if (returnCode == SGX_SUCCESS) {
+                    // Create the shared data pointer for the enclave
+                    r3::conclave::HostSharedData::instance().get(enclave_id);
                     return enclave_id;
                 }
                 // Still failed. System may need a reboot
@@ -99,6 +104,9 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
     if (returnCode != SGX_SUCCESS) {
         raiseException(jniEnv, getErrorMessage(returnCode));
     }
+
+    // Shutdown any shared data associated with this enclave
+    r3::conclave::HostSharedData::instance().free(static_cast<sgx_enclave_id_t>(enclaveId));
 }
 
 void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
@@ -227,6 +235,9 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
     }
 }
 
+void* shared_data_ocall() {
+    return static_cast<void*>(r3::conclave::HostSharedData::instance().get(EcallContext::getEnclaveId()));
+}
 
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
 static r3::conclave::dcap::QuoteProviderAPI* quote_provider_lib = nullptr;
@@ -350,4 +361,3 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         return arr;
     }
 }
-

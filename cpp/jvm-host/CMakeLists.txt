@@ -30,6 +30,7 @@ get_target_property(LINUX_BUILD_ARTIFACT_DIR linux-sgx-ext BUILD_ARTIFACT_DIR)
 add_library(jvm_host SHARED
         src/host_jni.cpp
         src/host_start_thread.cpp
+        src/host_shared_data.cpp
         src/enclave_metadata.cpp
         src/ecall_context.cpp
         src/dcap.cpp
