@@ -81,5 +81,4 @@ target_test(PROJ                  ${PROJECT_NAME}
             TEST_SRC_PATH         "${CMAKE_CURRENT_SOURCE_DIR}/test"
             TEST_OUT_PATH         "${CMAKE_CURRENT_BINARY_DIR}/test_bin"
             CMAKE_BINARY_DIR      "${CMAKE_BINARY_DIR}"
-            PUBLIC_INCLUDE        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-            PRIVATE_INCLUDE       "${CMAKE_CURRENT_SOURCE_DIR}/src" )
+            INCLUDE               "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/src")

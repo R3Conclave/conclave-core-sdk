@@ -64,16 +64,16 @@ int File::handle() const {
     return _handle;
 }
 
-std::string File::filename() {
+const std::string& File::filename() const {
     return _filename;
 }
 
 ///////////////////////////////////////////////////////////////////
 // File Manager
-FileManager::FileManager() : _next_handle(0x10) {
+FileManager::FileManager() : next_handle_(0x10) {
     // Create the standard files. These should never be closed.
-    _files[1] = new StdFile(1, FILENAME_STDOUT); 
-    _files[2] = new StdFile(2, FILENAME_STDERR);
+    files_[1] = new StdFile(1, FILENAME_STDOUT); 
+    files_[2] = new StdFile(2, FILENAME_STDERR);
 }
 
 FileManager& FileManager::instance() {
@@ -81,14 +81,14 @@ FileManager& FileManager::instance() {
     return instance;
 }
 
-File* FileManager::open(std::string filename) {
+File* FileManager::open(const std::string& filename) {
     File* file = nullptr;
     if ((filename == FILENAME_RANDOM) ||
         (filename == FILENAME_URANDOM)) {
-        std::lock_guard<std::mutex> lock(_file_mutex);
+        std::lock_guard<std::mutex> lock(file_mutex_);
         FileHandle handle = allocateHandle();
         file = new RandomFile(handle, filename);
-        _files[handle] = file;
+        files_[handle] = file;
     }
     return file;
 }
@@ -100,18 +100,18 @@ void FileManager::close(const File* file) {
 }
 
 void FileManager::close(int handle) {
-    std::lock_guard<std::mutex> lock(_file_mutex);
-    auto file = _files.find(handle);
-    if (file != _files.end()) {
+    std::lock_guard<std::mutex> lock(file_mutex_);
+    auto file = files_.find(handle);
+    if (file != files_.end()) {
         delete file->second;
-        _files.erase(file);
+        files_.erase(file);
     }
 }
 
 File* FileManager::fromHandle(int handle) {
-    std::lock_guard<std::mutex> lock(_file_mutex);
-    auto file = _files.find(handle);
-    if (file != _files.end()) {
+    std::lock_guard<std::mutex> lock(file_mutex_);
+    auto file = files_.find(handle);
+    if (file != files_.end()) {
         return file->second;
     }
     return nullptr;
@@ -121,18 +121,18 @@ File* FileManager::fromFILE(FILE* fp) {
     // stdout and stderr are special cases. They will point to 'file_std???' defined above
     // which are actually null pointers
     if (fp == stdout) {
-        return _files[1];
+        return files_[1];
     }
     else if (fp == stderr) {
-        return _files[2];
+        return files_[2];
     }
 
     // Normal files
-    std::lock_guard<std::mutex> lock(_file_mutex);
-    auto file = std::find_if(_files.begin(), _files.end(), [fp](std::pair<FileHandle, File*> file_entry) {
+    std::lock_guard<std::mutex> lock(file_mutex_);
+    auto file = std::find_if(files_.begin(), files_.end(), [fp](std::pair<FileHandle, File*> file_entry) {
         return (void*)file_entry.second == (void*)fp;
     });
-    return (file == _files.end()) ? nullptr : file->second;
+    return (file == files_.end()) ? nullptr : file->second;
 }
 
 bool FileManager::exists(std::string filename) {
@@ -145,10 +145,10 @@ bool FileManager::exists(std::string filename) {
 
 int FileManager::allocateHandle() {
     // This variable is unlikely to ever wrap but check just in case.
-    while (_files.find(_next_handle) != _files.end()) {
-        ++_next_handle;
+    while (files_.find(next_handle_) != files_.end()) {
+        ++next_handle_;
     }
-    return _next_handle++;
+    return next_handle_++;
 }
 
 };

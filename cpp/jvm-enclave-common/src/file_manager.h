@@ -44,7 +44,7 @@ public:
     /**
      * Get the filename that was used to open this file
      */
-    std::string filename();
+    const std::string& filename() const;
 
 
     /**
@@ -72,9 +72,9 @@ public:
 
 class FileManager {
 private:
-    std::map<FileHandle, File*> _files;
-    long                        _next_handle;
-    std::mutex                  _file_mutex;
+    std::map<FileHandle, File*> files_;
+    long                        next_handle_;
+    std::mutex                  file_mutex_;
 
 private:
     FileManager();
@@ -93,7 +93,7 @@ public:
      *         file object should be by calling the one of the close() methods in
      *         this class
      */
-    File* open(std::string filename);
+    File* open(const std::string& filename);
     
     /**
      * Close a previously opened file.

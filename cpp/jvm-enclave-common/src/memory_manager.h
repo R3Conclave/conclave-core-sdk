@@ -3,14 +3,16 @@
 //
 #pragma once
 
-#include "vm_enclave_layer.h"
 #include <map>
 #include <mutex>
+#include <memory>
 
 namespace conclave {
 
 class MemoryRegion;
 
+using map_regions    = std::map<void*, std::unique_ptr<MemoryRegion>>;
+using map_regions_it = std::map<void*, std::unique_ptr<MemoryRegion>>::iterator;
 /*
  * Memory manager for emulating mmap for allocating committed memory and for
  * allowing freeing of regions inside a previously allocated region.
@@ -27,8 +29,8 @@ class MemoryRegion;
  */
 class MemoryManager {
 private:
-    std::map<unsigned long long, MemoryRegion*> _regions;
-    std::mutex                                  _mem_mutex;
+    map_regions regions_;
+    std::mutex mem_mutex_;
 
 private:
     MemoryManager() = default;
@@ -39,9 +41,9 @@ private:
 public:
     static MemoryManager& instance();
 
-    void* alloc(unsigned long size);
-    void free(void* p, unsigned long size);
-
+    void* alloc(size_t size, void* p = nullptr);
+    int free(void* p, size_t size);
+    void clear();
+    bool is_empty();
 };
-
 }
