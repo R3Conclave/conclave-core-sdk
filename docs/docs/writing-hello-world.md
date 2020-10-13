@@ -49,6 +49,7 @@ pluginManagement {
 
 include 'enclave'
 include 'host'
+include 'client'
 ```
 
 This boilerplate is unfortunately necessary to copy/paste into each project that uses Conclave. It sets up Gradle to
@@ -116,19 +117,7 @@ subprojects {
     except JavaDoc integration.
 
 ### Configure the host module
-
-SGX enclaves can be used in one of four modes, in order of increasing realism: 
-
-1. Mock: your enclave class is created in the host JVM and no native or SGX specific code is used.
-1. Simulation: an enclave is compiled to native and loaded, but SGX hardware doesn't need to be present.
-1. Debug: the enclave is loaded using SGX hardware and drivers, but with a back door that allows debugger access to the memory.
-1. Release: the enclave is loaded using SGX hardware and drivers, and there's no back door. This is the real deal.
-
-Only release mode locks out the host and provides the standard SGX security model. At this time it requires the 
-enclave to be [signed](signing.md) with a key whitelisted by Intel. Future versions of Conclave will remove this
-restriction for modern hardware that supports *flexible launch control*. 
-
-Add this bit of code to your host `build.gradle` file to let the mode be chosen from the command line:
+Add this bit of code to your host `build.gradle` file to let the [mode](tutorial.md#enclave-modes) be chosen from the command line:
 
 ```groovy
 // Override the default (simulation) with -PenclaveMode=
@@ -196,9 +185,9 @@ Specify the enclave's runtime environment, product ID and revocation level:
 
 ```groovy
 conclave {
-    runtime = graalvm_native_image
     productID = 1
     revocationLevel = 0
+    runtime = graalvm_native_image
 }
 ```
 
@@ -215,11 +204,11 @@ to build `graalvm_native_image` enclaves. Docker is not required for enclaves us
 
 The product ID is an arbitrary number that can be used to distinguish between different enclaves produced by the same
 organisation (which may for internal reasons wish to use a single signing key). This value should not change once you
-picked it.
+have picked it.
 
-The revocation level should be incremented if a weakness in the enclave code discovered and fixed; doing this will enable
-clients to avoid connecting to old, compromised enclaves. The revocation level should not be incremented on every new
-release, but only when security improvements have been made.
+The revocation level should be incremented if a weakness in the enclave code is discovered and fixed; doing this will
+enable clients to avoid connecting to old, compromised enclaves. The revocation level should not be incremented on every
+new release, but only when security improvements have been made.
 
 Specify the signing methods for each of the build types. You could keep your private key in a file for both debug and
 release enclaves if you like, but some organisations require private keys to be held in an offline system or HSM. In
@@ -270,7 +259,7 @@ plugins {
 }
 
 application {
-    mainClassName = "com.r3.conclave.sample.client.Client"
+    mainClassName = "com.r3.conclave.sample.client.Client" // CHANGE THIS
 }
 
 dependencies {
@@ -361,7 +350,8 @@ public class Host {
 
 At first we will be building and running our enclave in simulation mode. This does not require the platform 
 hardware to support SGX. However simulation mode does require us to be using Linux. If we are not using 
-Linux as our host OS then we can use a Linux container or virtual machine. Alternatively we could
+Linux as our host OS then we can use a Linux container or virtual machine as described in
+[Testing on Windows and macOS](tutorial.md#testing-on-windows-and-macos). Alternatively we could
 use [mock mode](writing-hello-world.md#mock) instead of simulation mode. When we want to switch to loading
 either a debug or release build of the enclave we need to ensure the platform supports SGX.
 
@@ -394,7 +384,7 @@ the system in order to successfully enable SGX. The exception message will descr
 To load the enclave we'll put this after the platform check:
 
 ```java
-String className = "com.r3.conclave.sample.enclave.ReverseEnclave";
+String className = "com.r3.conclave.sample.enclave.ReverseEnclave"); // CHANGE THIS
 try (EnclaveHost enclave = EnclaveHost.load(className)) {
     enclave.start(null, null, null);
 
@@ -492,10 +482,13 @@ or `INSECURE`. A assessment of `STALE` means there is a software/firmware/microc
 that improves security in some way. The client may wish to observe when this starts being reported and define a 
 time span in which the remote enclave operator must upgrade.
 
-Now get the serialized bytes to a client via whatever network mechanism you want. The bytes are essentially a large,
-complex digital signature, so it's safe to publish them publicly. An attestation doesn't inherently expire but because 
-the SGX ecosystem is always moving, client code will typically have some frequency with which it expects the host code
-to refresh the `EnclaveInstanceInfo`. At present this is done by stopping/closing and then restarting the enclave.
+We can send the serialized bytes to a client via whatever network mechanism we want. The bytes are essentially a large,
+complex digital signature, so it's safe to publish them publicly. For simplicity in this tutorial we are just going to
+copy them manually and hard-code them in the client, but more on that [later](#writing-the-client).
+
+An attestation doesn't inherently expire but because the SGX ecosystem is always moving, client code will typically have
+some frequency with which it expects the host code to refresh the `EnclaveInstanceInfo`. At present this is done by
+stopping/closing and then restarting the enclave.
 
 ### EPID or DCAP ?
 The remote attestation is using either EPID or DCAP. The former requires SPID and AttestationKey from Intel.
@@ -542,6 +535,10 @@ We can apply the Gradle `application` plugin and set the `mainClassName` propert
 the host from the command line.
 
 Now run `gradlew host:run` and it should print "Hello World!" backwards along with the security info as shown above.
+
+!!! note
+    If you are using Windows or macOS then please compile the enclave using `./gradlew host:assemble` and follow the
+    steps in [Testing on Windows and macOS](tutorial.md#testing-on-windows-and-macos) to run it.
 
 During the build you should see output like this:
 
@@ -649,7 +646,8 @@ we're about to configure.
 ### Receiving and posting mail in the host
 
 Mail posted by an enclave appears in a callback we pass to `EnclaveHost.start`. Let's use a really simple 
-implementation: we'll just store the encrypted bytes in a variable, so we can pick it up later:
+implementation: we'll just store the encrypted bytes in a variable, so we can pick it up later. Replace the call to
+`EnclaveHost.start` with this snippet:
 
 ```java
 // Start it up.
@@ -677,8 +675,8 @@ implementation of `EnclaveHost.MailCallbacks` that has access to your connected 
 a `ThreadLocal` containing a servlet connection and so on. 
 
 At the bottom of our main method let's add some code to accept TCP connections and send the `EnclaveInstanceInfo` to 
-whomever connects. Then we'll accept a mail uploaded by the client, send it to the enclave, and deliver the response 
-back. We'll write the client code in a moment.
+whomever connects. You will also need to add `throws IOException` to the method signature of `main`. Then we'll accept a
+mail uploaded by the client, send it to the enclave, and deliver the response back. We'll write the client code in a moment.
 
 ```java
 int port = 9999;
@@ -944,7 +942,7 @@ private static EnclaveHost enclave;
 
 @BeforeAll
 static void startup() throws EnclaveLoadException {
-    enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
+    enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave"); // CHANGE THIS
     String spid = System.getProperty("spid");
     String attestionKey = System.getProperty("attestation-key");
     enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey, null);
