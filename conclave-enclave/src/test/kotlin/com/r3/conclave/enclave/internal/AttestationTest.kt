@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
@@ -18,7 +19,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
-import java.util.function.Consumer
 
 class AttestationTest {
     companion object {
@@ -56,9 +56,9 @@ class AttestationTest {
                 val targetInfo = Cursor.read(SgxTargetInfo, input)
                 val reportData = Cursor.read(SgxReportData, input)
                 val report = env.createReport(targetInfo, reportData)
-                connection.send(report.encoder.size, Consumer { buffer ->
+                connection.send(report.encoder.size) { buffer ->
                     buffer.put(report.buffer)
-                })
+                }
             }
         }
     }
@@ -110,7 +110,7 @@ class AttestationTest {
         assertEquals(inputBuffer, resultData.read())
 
         // 3. get quote size
-        val quoteSize = Native.calcQuoteSize(null)
+        val quoteBytes = ByteArray(Native.calcQuoteSize(null))
 
         // 4. get quote
         val quoteRequest = Cursor.allocate(SgxGetQuote)
@@ -118,16 +118,16 @@ class AttestationTest {
         quoteRequest[SgxGetQuote.quoteType] = SgxQuoteType32.LINKABLE
         quoteRequest[SgxGetQuote.spid] = Cursor.allocate(SgxSpid).read()
 
-        val signedQuote = Cursor.allocate(SgxSignedQuote(quoteSize))
         Native.getQuote(
                 getQuoteRequestIn = quoteRequest.buffer.array(),
                 signatureRevocationListIn = null,
                 quotingEnclaveReportNonceIn = null,
                 quotingEnclaveReportOut = null,
-                quoteOut = signedQuote.buffer.array()
+                quoteOut = quoteBytes
         )
+        val signedQuote = Cursor.wrap(SgxSignedQuote, quoteBytes)
         println("quote: $signedQuote")
-        assertEquals(report[SgxReport.body], signedQuote.quote[SgxQuote.reportBody])
+        assertEquals(report[SgxReport.body], signedQuote[quote][SgxQuote.reportBody])
     }
 
     class TestEpidAttestationEnclaveHandler(env: EnclaveEnvironment, reportDataString: String) : EpidAttestationEnclaveHandler(env) {
@@ -152,8 +152,7 @@ class AttestationTest {
                 enclaveClass = EpidAttestingEnclave::class.java
         )
         val signedQuote = connection.getSignedQuote()
-        val reportData = signedQuote.quote[SgxQuote.reportBody][SgxReportBody.reportData]
+        val reportData = signedQuote[quote][SgxQuote.reportBody][SgxReportBody.reportData]
         assertTrue(Charsets.UTF_8.decode(reportData.buffer).startsWith("hello"))
     }
-
 }

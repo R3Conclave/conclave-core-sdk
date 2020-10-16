@@ -5,13 +5,15 @@ import com.r3.conclave.common.EnclaveMode.MOCK
 import com.r3.conclave.common.EnclaveMode.SIMULATION
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReportBody.reportData
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.common.internal.attestation.QuoteStatus
 import com.r3.conclave.host.internal.MockAttestationService
 import com.r3.conclave.internaltesting.createSignedQuote
 import com.r3.conclave.mail.Curve25519KeyPairGenerator
 import com.r3.conclave.mail.Curve25519PublicKey
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.time.Instant
@@ -47,7 +49,7 @@ class EnclaveInstanceInfoImplTest {
     @Test
     fun `report data is not the signing key hash`() {
         val containingInvalidReportData = signedQuote.copy {
-            quote[reportBody][reportData] = ByteBuffer.wrap(Random.nextBytes(64))
+            this[quote][reportBody][reportData] = ByteBuffer.wrap(Random.nextBytes(64))
         }
         assertThatIllegalArgumentException().isThrownBy {
             newInstance(signedQuote = containingInvalidReportData)
@@ -121,7 +123,7 @@ class EnclaveInstanceInfoImplTest {
     }
 
     private fun ByteCursor<SgxSignedQuote>.copy(modify: ByteCursor<SgxSignedQuote>.() -> Unit): ByteCursor<SgxSignedQuote> {
-        val copy = Cursor.wrap(SgxSignedQuote(encoder.size), bytes)
+        val copy = Cursor.wrap(SgxSignedQuote, bytes)
         modify(copy)
         return copy
     }

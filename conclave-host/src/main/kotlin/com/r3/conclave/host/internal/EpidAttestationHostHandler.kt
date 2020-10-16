@@ -1,10 +1,10 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import java.nio.ByteBuffer
-import java.util.function.Consumer
 
 class EpidAttestationHostHandler(
         private val quoteType: SgxQuoteType,
@@ -60,26 +60,21 @@ class EpidAttestationHostHandler(
         }
 
         private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>): ByteCursor<SgxReport> {
-            upstream.send(quotingEnclaveTargetInfo.encoder.size, Consumer { buffer ->
+            upstream.send(quotingEnclaveTargetInfo.encoder.size) { buffer ->
                 buffer.put(quotingEnclaveTargetInfo.buffer)
-            })
+            }
             val reportRetrieved = stateManager.checkStateIs<State.ReportRetrieved>()
             return reportRetrieved.report
         }
 
         private fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-            val quoteSize = if (isMock) {
-                // SgxSignedQuote
-                // The 256 is an arbitrary signature size
-                SgxQuote.size + Int32().size + 256
-            } else {
-                Native.calcQuoteSize(null)
-            }
-            val signedQuote = Cursor.allocate(SgxSignedQuote(quoteSize))
-            if (isMock) {
+            val signedQuote = if (isMock) {
+                val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
                 // We can populate the other fields as needed, but for now we just need to copy over the report body.
-                signedQuote.quote[SgxQuote.reportBody] = report[SgxReport.body].read()
+                signedQuote[quote][SgxQuote.reportBody] = report[SgxReport.body].read()
+                signedQuote
             } else {
+                val quoteBytes = ByteArray(Native.calcQuoteSize(null))
                 val getQuote = Cursor.allocate(SgxGetQuote)
                 getQuote[SgxGetQuote.report] = report.read()
                 getQuote[SgxGetQuote.quoteType] = quoteType.value
@@ -90,12 +85,12 @@ class EpidAttestationHostHandler(
                         // TODO Do we need to use the nonce?
                         quotingEnclaveReportNonceIn = null,
                         quotingEnclaveReportOut = null,
-                        quoteOut = signedQuote.buffer.array()
+                        quoteOut = quoteBytes
                 )
+                Cursor.wrap(SgxSignedQuote, quoteBytes)
             }
             stateManager.state = State.QuoteRetrieved(signedQuote)
             return signedQuote
         }
     }
-
 }

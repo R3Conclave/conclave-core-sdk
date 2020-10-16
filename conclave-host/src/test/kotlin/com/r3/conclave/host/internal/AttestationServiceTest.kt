@@ -1,7 +1,12 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxQuote.version
+import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
+import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.conclave.common.internal.attestation.AttestationReport
 import com.r3.conclave.internaltesting.createSignedQuote
 import com.r3.conclave.mail.Curve25519KeyPairGenerator
@@ -17,12 +22,12 @@ class AttestationServiceTest {
     @Test
     fun `signed quote in the response is different`() {
         val differentSignedQuote = signedQuote.copy {
-            quote[SgxQuote.version] = 9
+            this[quote][version] = 9
         }
 
         val attestationService = object : MockAttestationService() {
             override fun modifyReport(report: AttestationReport): AttestationReport {
-                return report.copy(isvEnclaveQuoteBody = differentSignedQuote.quote)
+                return report.copy(isvEnclaveQuoteBody = differentSignedQuote[quote])
             }
         }
 
@@ -33,7 +38,7 @@ class AttestationServiceTest {
     }
 
     private fun ByteCursor<SgxSignedQuote>.copy(modify: ByteCursor<SgxSignedQuote>.() -> Unit): ByteCursor<SgxSignedQuote> {
-        val copy = Cursor.wrap(SgxSignedQuote(encoder.size), bytes)
+        val copy = Cursor.wrap(SgxSignedQuote, bytes)
         modify(copy)
         return copy
     }

@@ -1,6 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import java.nio.ByteBuffer
@@ -64,24 +65,20 @@ class DCAPAttestationHostHandler(
         }
 
         private fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-            val quoteSize = if (isMock) {
-                // SgxSignedQuote
-                // The 256 is an arbitrary signature size
-                SgxQuote.size + Int32().size + 256
-            } else {
-                Native.calcQuoteSizeDCAP()
-            }
-            val signedQuote = Cursor.allocate(SgxSignedQuote(quoteSize))
-            if (isMock) {
+            val signedQuote = if (isMock) {
+                val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
                 // We can populate the other fields as needed, but for now we just need to copy over the report body.
-                signedQuote.quote[SgxQuote.reportBody] = report[SgxReport.body].read()
+                signedQuote[quote][SgxQuote.reportBody] = report[SgxReport.body].read()
+                signedQuote
             } else {
+                val quoteBytes = ByteArray(Native.calcQuoteSizeDCAP())
                 val getQuote = Cursor.allocate(SgxGetQuote)
                 getQuote[SgxGetQuote.report] = report.read()
                 Native.getQuoteDCAP(
                         getQuote.buffer.array(),
-                        signedQuote.buffer.array()
+                        quoteBytes
                 )
+                Cursor.wrap(SgxSignedQuote, quoteBytes)
             }
             stateManager.state = State.QuoteRetrieved(signedQuote)
             return signedQuote

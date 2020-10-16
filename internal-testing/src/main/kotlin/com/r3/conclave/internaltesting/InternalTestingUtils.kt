@@ -4,6 +4,7 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import org.assertj.core.api.Condition
 import java.security.PublicKey
 import java.util.concurrent.CompletableFuture
@@ -19,8 +20,8 @@ fun createSignedQuote(
         dataSigningKey: PublicKey,
         encryptionKey: PublicKey
 ): ByteCursor<SgxSignedQuote> {
-    return Cursor.allocate(SgxSignedQuote(500)).apply {
-        quote[SgxQuote.reportBody].apply {
+    return Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize)).apply {
+        this[quote][SgxQuote.reportBody].apply {
             this[SgxReportBody.cpuSvn] = cpuSvn.buffer()
             this[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
             this[SgxReportBody.mrenclave] = measurement.buffer()

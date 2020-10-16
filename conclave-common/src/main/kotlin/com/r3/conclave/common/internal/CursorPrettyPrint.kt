@@ -22,14 +22,14 @@ object CursorPrettyPrint {
         return this
     }
 
-    private fun <S : Struct> printStructCursor(builder: StringBuilder, cursor: ByteCursor<S>, indent: Int): StringBuilder {
-        builder.append(cursor.encoder.javaClass.simpleName).append('(').append(cursor.encoder.size).append(") {\n")
+    private fun printStructCursor(builder: StringBuilder, cursor: Cursor<*, *>, indent: Int): StringBuilder {
+        builder.append(cursor.encoder.javaClass.simpleName).append('(').append(cursor.size).append(") {\n")
         val fields = cursor.encoder.javaClass.fields
         for (field in fields) {
-            if (Struct.Field::class.java.isAssignableFrom(field.type)) {
+            if (AbstractStruct.Field::class.java.isAssignableFrom(field.type)) {
                 builder.appendIndent(indent + 1).append(field.name).append(" = ")
                 @Suppress("UNCHECKED_CAST")
-                val structField = field.get(cursor.encoder) as Struct.Field<S, Encoder<Any?>>
+                val structField = field.get(cursor.encoder) as AbstractStruct.Field<Encoder<*>, Encoder<Any?>>
                 printCursor(builder, cursor[structField], indent + 1)
                 builder.append('\n')
             }
@@ -39,13 +39,8 @@ object CursorPrettyPrint {
 
     private fun <R> printCursor(builder: StringBuilder, cursor: Cursor<Encoder<R>, R>, indent: Int): StringBuilder {
         return when (cursor.encoder) {
-            is Struct -> {
-                @Suppress("UNCHECKED_CAST")
-                printStructCursor(builder, cursor as ByteCursor<Struct>, indent)
-            }
-            is FixedBytes -> {
-                val buffer = cursor.read() as ByteBuffer
-                builder.append(buffer.getRemainingBytes(avoidCopying = true).toHexString())
+            is AbstractStruct -> {
+                printStructCursor(builder, cursor, indent)
             }
             is ReservedBytes -> {
                 builder.append('<').append(cursor.encoder.size).append(" reserved bytes>")
@@ -88,25 +83,14 @@ object CursorPrettyPrint {
                 }
                 builder.append(" (").append(flagNames.joinToString(" | ")).append(')')
             }
-            is CArray<*, *> -> {
-                @Suppress("UNCHECKED_CAST")
-                cursor as Cursor<CArray<Any?, Encoder<Any?>>, List<Any?>>
-                builder.append("[\n")
-                for (i in 0 until cursor.encoder.length) {
-                    builder.appendIndent(indent + 1)
-                    printCursor(builder, cursor[i], indent + 1)
-                    if (i < cursor.encoder.length - 1) {
-                        builder.append(",\n")
-                    } else {
-                        builder.append('\n')
-                    }
-                }
-                builder.appendIndent(indent).append(']')
-            }
             else -> {
-                builder.append(cursor.read())
+                val value = cursor.read()
+                if (value is ByteBuffer) {
+                    builder.append(value.getRemainingBytes(avoidCopying = true).toHexString())
+                } else {
+                    builder.append(value)
+                }
             }
         }
     }
-
 }

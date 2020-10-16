@@ -1,5 +1,6 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.utilities.internal.addPosition
 import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -30,6 +31,12 @@ class ByteBufferInputStream(private val bytes: ByteBuffer) : InputStream() {
                 EOF
             }
         }
+    }
+
+    override fun skip(n: Long): Long {
+        val skipped = minOf(n, bytes.remaining().toLong())
+        bytes.addPosition(skipped.toInt())
+        return skipped
     }
 
     override fun available(): Int = bytes.remaining()

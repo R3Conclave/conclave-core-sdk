@@ -3,10 +3,10 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
+import com.r3.conclave.common.internal.SgxSignedQuote.signature
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
-import com.r3.conclave.common.internal.quote
-import com.r3.conclave.common.internal.signature
 
 object DCAPAttestationService : AttestationService {
     private const val VersionIndex = 0
@@ -19,8 +19,8 @@ object DCAPAttestationService : AttestationService {
     private const val QeIdentityIndex = 7
 
     override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse {
-        val report = signedQuote.quote.bytes
-        val signature = signedQuote.signature.bytes
+        val report = signedQuote[quote].bytes
+        val signature = signedQuote[signature].bytes
         val certPath = DCAPUtils.parsePemCertPathFromSignature(signature)
         val col = Native.getQuoteCollateral(
                 DCAPUtils.getFMSPC(certPath),

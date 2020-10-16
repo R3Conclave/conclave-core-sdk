@@ -196,18 +196,12 @@ object SgxQuote : Struct() {
  *
  * @see `sgx_quote_t`
  */
-class SgxSignedQuote(quoteSize: Int) : Struct() {
+object SgxSignedQuote : VariableStruct() {
     /** This has been split out into its own because it some circumstances the signature isn't used. */
     @JvmField val quote = field(SgxQuote)
-    /** The size in byte of the following signature. */
-    @Suppress("unused")
-    @JvmField val signatureSize = field(UInt32())
     /** The place holder of the variable length signature. */
-    @JvmField val signature = field(FixedBytes(quoteSize - size))
+    @JvmField val signature = field(UInt32VariableBytes())
 }
-
-val ByteCursor<SgxSignedQuote>.quote: ByteCursor<SgxQuote> get() = this[encoder.quote]
-val ByteCursor<SgxSignedQuote>.signature: ByteCursor<FixedBytes> get() = this[encoder.signature]
 
 /**
  * Enclave attributes definition structure.

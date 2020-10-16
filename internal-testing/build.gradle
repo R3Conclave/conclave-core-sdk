@@ -16,6 +16,7 @@ dependencies {
     runtimeOnly "com.r3.conclave:native-enclave-debug:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-enclave-release:${rootProject.version}"
     runtimeOnly "com.r3.conclave:native-sign-tool:${rootProject.version}"
+    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
     runtimeOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"

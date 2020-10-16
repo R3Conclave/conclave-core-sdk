@@ -3,8 +3,8 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.*
-import com.r3.conclave.common.internal.quote
 import java.io.InputStream
 import java.security.KeyFactory
 import java.security.Signature
@@ -20,7 +20,7 @@ open class MockAttestationService : AttestationService {
         val reportBytes = AttestationReport(
                 id = "MOCK-RESPONSE: ${UUID.randomUUID()}",
                 isvEnclaveQuoteStatus = QuoteStatus.OK,
-                isvEnclaveQuoteBody = signedQuote.quote,
+                isvEnclaveQuoteBody = signedQuote[quote],
                 timestamp = Instant.now(),
                 version = 4
         ).let { attestationObjectMapper.writeValueAsBytes(modifyReport(it)) }

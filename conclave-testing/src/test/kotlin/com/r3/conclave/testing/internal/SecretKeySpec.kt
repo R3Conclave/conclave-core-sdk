@@ -1,7 +1,6 @@
 package com.r3.conclave.testing.internal
 
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.SGXEnclaveSecurityInfo
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
@@ -142,7 +141,7 @@ data class KeyIdField(val keyId: OpaqueBytes) : SetKeyRequestField {
  * This doesn't do anything, but is required when creating the cartesian product of the various key request combinations
  * to make sure that there is a [SecretKeySpec] which leaves the given field blank.
  */
-data class BlankField(val field: KProperty0<Struct.Field<SgxKeyRequest, *>>) : SetKeyRequestField {
+data class BlankField(val field: KProperty0<AbstractStruct.Field<SgxKeyRequest, *>>) : SetKeyRequestField {
     override fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl) = Unit
     override fun toString(): String = "${field.name}=null"
 }
