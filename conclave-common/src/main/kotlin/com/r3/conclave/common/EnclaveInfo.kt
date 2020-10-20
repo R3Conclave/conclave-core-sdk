@@ -40,9 +40,27 @@ class EnclaveInfo(
         require(revocationLevel >= 0 && revocationLevel <= 65534) { "Invalid Revocation level: $revocationLevel" }
     }
 
-    override fun equals(other: Any?): Boolean = other === this || other is EnclaveInfo && other.codeHash == codeHash
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is EnclaveInfo) return false
 
-    override fun hashCode(): Int = codeHash.hashCode()
+        if (codeHash != other.codeHash) return false
+        if (codeSigningKeyHash != other.codeSigningKeyHash) return false
+        if (productID != other.productID) return false
+        if (revocationLevel != other.revocationLevel) return false
+        if (enclaveMode != other.enclaveMode) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = codeHash.hashCode()
+        result = 31 * result + codeSigningKeyHash.hashCode()
+        result = 31 * result + productID
+        result = 31 * result + revocationLevel
+        result = 31 * result + enclaveMode.hashCode()
+        return result
+    }
 
     override fun toString(): String {
         return "EnclaveInfo(codeHash=$codeHash, codeSigningKeyHash=$codeSigningKeyHash, productID=$productID, " +

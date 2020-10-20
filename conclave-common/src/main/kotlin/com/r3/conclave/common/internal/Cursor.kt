@@ -71,9 +71,11 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
 
     override fun toString(): String = CursorPrettyPrint.print(this)
 
-    override fun equals(other: Any?): Boolean = this === other || other is Cursor<*, *> && other.read() == this.read()
+    override fun equals(other: Any?): Boolean {
+        return this === other || other is Cursor<*, *> && this.encoder == other.encoder && this.read() == other.read()
+    }
 
-    override fun hashCode(): Int = read().hashCode()
+    override fun hashCode(): Int = 31 * encoder.hashCode() + read().hashCode()
 
     /**
      * Allows field modifications like so:

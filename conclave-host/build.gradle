@@ -32,8 +32,4 @@ dependencies {
     testImplementation project(":internal-testing")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
-
-    // Log4J for the runtime logging engine. We don't specify this as a production dependency to allow the client code
-    // to specify their own binding.
-    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }

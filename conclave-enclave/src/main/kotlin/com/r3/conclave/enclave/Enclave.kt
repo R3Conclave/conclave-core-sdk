@@ -4,22 +4,19 @@ import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxQuote.reportBody
+import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
+import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.setKeyDerivation
-import java.io.ByteArrayInputStream
-import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
-import com.r3.conclave.utilities.internal.putBoolean
 import com.r3.conclave.utilities.internal.*
 import java.nio.Buffer
 import java.nio.ByteBuffer
@@ -61,6 +58,7 @@ abstract class Enclave {
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
     private lateinit var adminHandler: AdminHandler
+    private lateinit var attestationHandler: EpidAttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
 
     /**
@@ -136,7 +134,7 @@ abstract class Enclave {
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
-            mux.addDownstream(object : EpidAttestationEnclaveHandler(env) {
+            attestationHandler = mux.addDownstream(object : EpidAttestationEnclaveHandler(env) {
                 override val reportData = createReportData()
             })
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
@@ -223,12 +221,20 @@ abstract class Enclave {
             // Wrap an InputStream over the remaining bytes to avoid unnecessary copying.
             val certPath = CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(input))
             val attestationResponse = AttestationResponse(reportBytes, signature, certPath, collateral, attestationMode)
-            _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
+            val enclaveInstanceInfo = EnclaveInstanceInfoImpl(
                     enclave.signatureKey,
                     attestationResponse,
                     env.enclaveMode,
                     enclave.encryptionKeyPair.public as Curve25519PublicKey
             )
+            val attestationReportBody = enclaveInstanceInfo.attestationReport.isvEnclaveQuoteBody[reportBody]
+            val enclaveReportBody = enclave.attestationHandler.report[body]
+            check(attestationReportBody == enclaveReportBody) {
+                """Host has provided attestation for a different enclave.
+Expected: $enclaveReportBody
+Received: $attestationReportBody"""
+            }
+            _enclaveInstanceInfo = enclaveInstanceInfo
         }
 
         private fun sendEnclaveInfo() {
