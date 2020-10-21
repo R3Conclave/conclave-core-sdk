@@ -23,6 +23,7 @@ nav:
     - Server deployment:
       - Machine setup: machine-setup.md
       - IAS: ias.md
+      - Using DCAP: dcap.md
     - Enclave signing: signing.md
     - Renewability: renewability.md
   - FAQ: faq.md
