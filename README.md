@@ -2,7 +2,7 @@
 
 This repository contains an SDK that makes working with SGX enclaves easy.
 
-To find your way around, start reading the docs under [internal-docs](/internal-docs/docs) 
+To find your way around, start reading the docs under [internal-docs](/internal-docs/docs/index.md)
 and in particular [the directory layout](/internal-docs/docs/directories.md).
 
 ## Setting up a development environment
@@ -17,7 +17,7 @@ rate only supported on two versions of Ubuntu.
 Incidentally, to actually build an _enclave_ using the Conclave SDK can be done on
 Windows and macOS, in addition to Linux.
 
-Once Docker is installed and set up, use `./scripts/devenv_shell.sh` to set up the
+Once Docker is [installed and set up](/internal-docs/docs/index.md#using-the-devenv-container), use `./scripts/devenv_shell.sh` to set up the
 build container and log into it. Then run `./gradlew test` to build all the components
 and run the tests.
 
