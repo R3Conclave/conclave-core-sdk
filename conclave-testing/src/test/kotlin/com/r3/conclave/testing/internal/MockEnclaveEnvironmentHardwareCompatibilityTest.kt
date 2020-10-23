@@ -6,7 +6,6 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.internaltesting.HardwareTest
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
@@ -110,7 +109,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest() {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val config = EnclaveConfig().withProdID(enclaveSpec.isvProdId).withISVSVN(enclaveSpec.isvSvn)
             val host = testEnclaves.hostTo(enclaveSpec.enclaveClass, EnclaveBuilder(type = EnclaveType.Debug, config = config))
-            host.start(AttestationParameters.EPID(spid, attestationKey), null)
+            host.start(attestationParams, null)
             check(host.enclaveMode == EnclaveMode.DEBUG)
             host
         }
