@@ -1,5 +1,6 @@
 package com.r3.conclave.common.internal.attestation
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.utilities.internal.readFully
@@ -9,9 +10,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.security.GeneralSecurityException
+import java.security.Signature
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.time.Instant
+import kotlin.random.Random
 
 class QuoteVerifierTest {
     companion object {
@@ -22,16 +26,9 @@ class QuoteVerifierTest {
     }
 
     @Test
-    fun `perfect quote verification does not fail`() {
-        val info = loadData()
-        assertDoesNotThrow {
-            QuoteVerifier.verify(
-                    reportBytes = info.attestationResponse.reportBytes,
-                    signature = info.attestationResponse.signature,
-                    certPath = info.attestationResponse.certPath,
-                    collateral = info.attestationResponse.collateral
-            )
-        }
+    fun `perfect quote does not fail`() {
+        // EnclaveInstanceInfo.deserialize calls QuoteValidator.validate internally
+        assertDoesNotThrow { loadData() }
     }
 
     @Test
@@ -43,13 +40,13 @@ class QuoteVerifierTest {
 
         val message = assertThrows<GeneralSecurityException> {
             QuoteVerifier.verify(
-                    reportBytes = info.attestationResponse.reportBytes,
-                    signature = info.attestationResponse.signature,
-                    certPath = info.attestationResponse.certPath,
-                    collateral = info.attestationResponse.collateral
+                reportBytes = info.attestationResponse.reportBytes,
+                signature = info.attestationResponse.signature,
+                certPath = info.attestationResponse.certPath,
+                collateral = info.attestationResponse.collateral
             )
         }.message
-        assertThat(message).contains("Unsupported quote version $badVersion")
+        assertThat(message).contains("UNSUPPORTED_QUOTE_FORMAT")
     }
 
     @Test
@@ -61,86 +58,94 @@ class QuoteVerifierTest {
 
         val message = assertThrows<GeneralSecurityException> {
             QuoteVerifier.verify(
-                    reportBytes = info.attestationResponse.reportBytes,
-                    signature = info.attestationResponse.signature,
-                    certPath = info.attestationResponse.certPath,
-                    collateral = info.attestationResponse.collateral
+                reportBytes = info.attestationResponse.reportBytes,
+                signature = info.attestationResponse.signature,
+                certPath = info.attestationResponse.certPath,
+                collateral = info.attestationResponse.collateral
             )
         }.message
-        assertThat(message).contains("Unsupported quote key type $badKeyType")
+        assertThat(message).contains("UNSUPPORTED_QUOTE_FORMAT")
     }
 
     @Test
-    fun `pck cert check SGX_PCK_CN_PHRASE`() {
+    fun `bad pck cert path - too short`() {
         val info = loadData()
         val badCertPath = createBadCertPath()
 
-        val status = QuoteVerifier.cert_collateral_check(badCertPath, info.attestationResponse.collateral)
+        val (status, latestIssueDate, collateralExpired) = QuoteVerifier.verify(ByteArray(0), ByteArray(0), badCertPath,
+                info.attestationResponse.collateral)
 
-        assertEquals(QuoteVerifier.Status.STATUS_INVALID_PCK_CERT, status)
+        assertEquals(QuoteVerifier.Status.UNSUPPORTED_CERT_FORMAT, status)
     }
 
     @Test
-    fun `pck crl check SGX_INTERMEDIATE_CN_PHRASE`() {
+    fun `bad pck crl issuer`() {
         val info = loadData()
         val badPckCrlCollateral = createBadPckCrlQuoteCollateral(info.attestationResponse.collateral)
 
-        val status = QuoteVerifier.cert_collateral_check(info.attestationResponse.certPath, badPckCrlCollateral)
+        val (status, latestIssueDate, collateralExpired) = QuoteVerifier.verify(ByteArray(0), ByteArray(0),
+            info.attestationResponse.certPath, badPckCrlCollateral
+        )
 
-        assertEquals(QuoteVerifier.Status.STATUS_INVALID_PCK_CRL, status)
+        assertEquals(QuoteVerifier.Status.SGX_CRL_UNKNOWN_ISSUER, status)
     }
 
     @Test
-    fun `pck crl check RevokedCert`() {
+    fun `tcbinfo bad signature`() {
+        val randomSignature = generateRandomHexString(128)
+
         val info = loadData()
-        val revokedPckCertCollateral = createRevokedPckCertQuoteCollateral(info.attestationResponse.collateral)
+        val good = attestationObjectMapper.readValue(info.attestationResponse.collateral.tcbInfo, TcbInfoSigned::class.java)
+        val bad = modifyTcbInfo(good, signature = randomSignature);
+        val badTcbInfoCollateral = createBadTcbQuoteCollateral(info.attestationResponse.collateral, bad)
 
-        val status = QuoteVerifier.cert_collateral_check(createRevokedCertPath(), revokedPckCertCollateral)
+        val (status, latestIssueDate, collateralExpired) = QuoteVerifier.verify(ByteArray(0), ByteArray(0),
+                info.attestationResponse.certPath, badTcbInfoCollateral
+            )
 
-        assertEquals(QuoteVerifier.Status.STATUS_PCK_REVOKED, status)
+        assertEquals(QuoteVerifier.Status.TCB_INFO_INVALID_SIGNATURE, status)
+    }
+
+    private fun generateRandomHexString(size: Int): String {
+        val charPool: List<Char> = ('a'..'f') + ('0'..'9')
+        val randomSignature = (1..size)
+                .map { i -> Random.nextInt(0, charPool.size) }
+                .map(charPool::get)
+                .joinToString("");
+        return randomSignature
     }
 
     @Test
-    fun `tcbinfo check fmspc`() {
+    fun `tcbinfo bad data`() {
         val info = loadData()
-        val tcbInfo = TcbInfoSigned(tcbInfo = TcbInfo(fmspc = "112233445566"))
-        val badTcbInfoCollateral = createBadTcbQuoteCollateral(info.attestationResponse.collateral, tcbInfo)
+        val good = attestationObjectMapper.readValue(info.attestationResponse.collateral.tcbInfo, TcbInfoSigned::class.java)
+        val bad = modifyTcbInfo(good, pceid = "112233445566")
+        val badTcbInfoCollateral = createBadTcbQuoteCollateral(info.attestationResponse.collateral, bad)
 
-        val status = QuoteVerifier.cert_collateral_check(info.attestationResponse.certPath, badTcbInfoCollateral)
+        val (status, latestIssueDate, collateralExpired) = QuoteVerifier.verify(ByteArray(0), ByteArray(0),
+                info.attestationResponse.certPath, badTcbInfoCollateral
+            )
 
-        assertEquals(status, QuoteVerifier.Status.STATUS_TCB_INFO_MISMATCH)
+        assertEquals(QuoteVerifier.Status.TCB_INFO_INVALID_SIGNATURE, status)
     }
 
-    @Test
-    fun `tcbinfo check pceid`() {
-        val info = loadData()
-        val tcbInfo = TcbInfoSigned(tcbInfo = TcbInfo(pceId = "112233445566"))
-        val bad = createBadTcbQuoteCollateral(info.attestationResponse.collateral, tcbInfo)
-
-        val status = QuoteVerifier.cert_collateral_check(info.attestationResponse.certPath, bad)
-
-        assertEquals(QuoteVerifier.Status.STATUS_TCB_INFO_MISMATCH, status)
+    private fun modifyTcbInfo(good: TcbInfoSigned, signature: String? = null, fmspc: String? = null, pceid: String? = null): TcbInfoSigned {
+        return TcbInfoSigned(
+            tcbInfo = TcbInfo(
+                version = good.tcbInfo.version,
+                issueDate = good.tcbInfo.issueDate,
+                nextUpdate = good.tcbInfo.nextUpdate,
+                fmspc = fmspc ?: good.tcbInfo.fmspc,
+                pceId = pceid ?: good.tcbInfo.pceId,
+                tcbType = good.tcbInfo.tcbType,
+                tcbEvaluationDataNumber = good.tcbInfo.tcbEvaluationDataNumber,
+                tcbLevels = good.tcbInfo.tcbLevels
+            ),
+            signature = signature ?: good.signature
+        )
     }
-
-    @Test
-    fun `tcb status check`() {
-        val info = loadData()
-        val tcbInfo = TcbInfoSigned(tcbInfo = TcbInfo(tcbLevels = listOf(TcbLevel(tcbStatus = "Revoked"))))
-        val badCollateral = createBadTcbQuoteCollateral(info.attestationResponse.collateral, tcbInfo)
-
-        val status = QuoteVerifier.cert_collateral_check(info.attestationResponse.certPath, badCollateral)
-
-        assertEquals(QuoteVerifier.Status.STATUS_TCB_INFO_MISMATCH, status)
-    }
-
     private fun createBadCertPath(): CertPath {
         val cert = getNonSGXCert()
-        val cf = CertificateFactory.getInstance("X.509")
-        return cf.generateCertPath(listOf(cert))
-    }
-
-    private fun createRevokedCertPath(): CertPath {
-        val cert = getRevokedCert()
         val cf = CertificateFactory.getInstance("X.509")
         return cf.generateCertPath(listOf(cert))
     }
@@ -173,27 +178,8 @@ class QuoteVerifierTest {
         )
     }
 
-    private fun createRevokedPckCertQuoteCollateral(good: QuoteCollateral): QuoteCollateral {
-        val badPckCrl = String(javaClass.getResourceAsStream("/revoked_pck.crl.pem").readFully())
-        return QuoteCollateral(
-                version = good.version,
-                pckCrlIssuerChain = good.pckCrlIssuerChain,
-                rootCaCrl = good.rootCaCrl,
-                pckCrl = badPckCrl,
-                tcbInfoIssuerChain = good.tcbInfoIssuerChain,
-                tcbInfo = good.tcbInfo,
-                qeIdentityIssuerChain = good.qeIdentityIssuerChain,
-                qeIdentity = good.qeIdentity
-        )
-    }
-
     private fun getNonSGXCert(): X509Certificate {
         val cf = CertificateFactory.getInstance("X.509")
         return cf.generateCertificate(javaClass.getResourceAsStream("/r3_pck_cert.pem")) as X509Certificate
-    }
-
-    private fun getRevokedCert(): X509Certificate {
-        val cf = CertificateFactory.getInstance("X.509")
-        return cf.generateCertificate(javaClass.getResourceAsStream("/revoked_pck_cert.pem")) as X509Certificate
     }
 }

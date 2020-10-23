@@ -50,7 +50,7 @@ class DCAPAttestationHostHandler(
             if (isMock) {
                 log.debug("Mock initializeQuote")
             } else {
-                Native.initQuoteDCAP(quoteResponse.buffer.array())
+                Native.initQuoteDCAP(NativeLoader.bundleTempPath, quoteResponse.buffer.array())
             }
             stateManager.state = State.QuoteInitialized(quoteResponse)
             return quoteResponse

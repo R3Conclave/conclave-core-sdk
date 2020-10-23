@@ -68,7 +68,7 @@ object Native {
         QeIdentity
     }
 */
-    external fun initQuoteDCAP(initQuoteResponseOut: ByteArray): Int // 0 --> OK
+    external fun initQuoteDCAP(bundlePath: String, initQuoteResponseOut: ByteArray): Int // 0 --> OK
     external fun calcQuoteSizeDCAP(): Int  // > 0 --> OK
     external fun getQuoteDCAP(quoteRequestIn: ByteArray, quoteOut: ByteArray): Int // 0 --> OK
     external fun getQuoteCollateral(fmspc: ByteArray, pck: Int): Array<String>

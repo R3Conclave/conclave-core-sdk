@@ -240,31 +240,43 @@ void* shared_data_ocall() {
 }
 
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
-static r3::conclave::dcap::QuoteProviderAPI* quote_provider_lib = nullptr;
+
+jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
+
+    JniString jpath(jniEnv, bundle);
+
+    r3::conclave::dcap::QuotingAPI::Errors errors;
+    try {
+        // std::string path(std::string(jpath.c_str))
+        std::string path("/usr/lib/x86_64-linux-gnu");
+
+        quoting_lib = new r3::conclave::dcap::QuotingAPI();
+        if ( !quoting_lib->init(path, errors) ){
+            std::string message("failed to initialize DCAP: ");
+            for(auto &err : errors)
+                message += err + ";";
+
+            raiseException(jniEnv, message.c_str());
+            return -1;
+        }
+    }
+    catch(...){
+        quoting_lib = nullptr;
+
+        raiseException(jniEnv, "failed to initialize DCAP: unknown error");
+        return -1;
+    }
+
+    return 0;
+}
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
-        (JNIEnv *jniEnv, jobject, jbyteArray targetInfoOut) {
+        (JNIEnv *jniEnv, jobject, jstring bundle, jbyteArray targetInfoOut) {
 
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
-    if (quoting_lib != nullptr) {
-        raiseException(jniEnv, "initQuoteDCAP: already initialized");
+    if (initDCAP(jniEnv, bundle) != 0)
         return -1;
-    }
-
-    quoting_lib = new r3::conclave::dcap::QuotingAPI();
-    quote_provider_lib = new r3::conclave::dcap::QuoteProviderAPI();
-
-    if ( ! (quoting_lib->is_ready() && quote_provider_lib->is_ready())){
-        delete quoting_lib;
-        delete quote_provider_lib;
-
-        quoting_lib = nullptr;
-        quote_provider_lib = nullptr;
-
-        raiseException(jniEnv, "not ready QuotingAPI/QuoteProviderAPI");
-        return -1;
-    }
 
     quote3_error_t eval_result;
     if (quoting_lib->get_target_info((sgx_target_info_t*)request.ptr, eval_result)) {
@@ -278,11 +290,6 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
         (JNIEnv *jniEnv, jobject) {
-
-    if (quoting_lib == nullptr) {
-        raiseException(jniEnv, "calcQuoteSizeDCAP: not initialized");
-        return -1;
-    }
 
     uint32_t quote_size;
     quote3_error_t eval_result;
@@ -299,11 +306,6 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
 
     JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
     JniPtr<sgx_quote_t> quote(jniEnv, quoteOut);
-
-    if (quoting_lib == nullptr) {
-        raiseException(jniEnv, "getQuoteDCAP: not initialized");
-        return -1;
-    }
 
     quote3_error_t eval_result;
     if (quoting_lib->get_quote(const_cast<sgx_report_t*>(&request.ptr->p_report),
@@ -322,7 +324,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
     JniPtr<uint8_t> p_fmspc(jniEnv, fmspc);
 
     quote3_error_t eval_result;
-    auto collateral = quote_provider_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result);
+    auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result);
     if (collateral == nullptr){
         raiseException(jniEnv, getQuotingErrorMessage(eval_result));
         return nullptr;

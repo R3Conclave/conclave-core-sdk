@@ -8,6 +8,9 @@ import java.nio.file.Path
 object NativeLoader {
     private var linkedEnclaveMode: EnclaveMode? = null
 
+    lateinit var bundleTempPath: String
+        private set
+
     /**
      * Loads host libraries from the classpath, unpacking them temporarily to a directory. This code expects at least
      * one of:
@@ -34,6 +37,7 @@ object NativeLoader {
         }
 
         val tempDirectory = createTempDirectory()
+        bundleTempPath = tempDirectory.toAbsolutePath().toString()
 
         val hostLibrariesResourcePath = "com/r3/conclave/host-libraries/${enclaveMode.name.toLowerCase().capitalize()}"
 

@@ -180,7 +180,7 @@ class EnclaveInstanceInfoImpl(
                 GROUP_OUT_OF_DATE -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
                         "as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
-                CONFIGURATION_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified" +
+                CONFIGURATION_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
                         "identified as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
                 SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified " +

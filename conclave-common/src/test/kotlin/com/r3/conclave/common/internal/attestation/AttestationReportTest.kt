@@ -170,7 +170,9 @@ class TcbInfoTest {
         val signature = "01020304"
         val json = """
             {
-              "tcbInfo":null,
+              "tcbInfo":{"version":2,"issueDate":"2020-01-02T03:04:05Z","nextUpdate":"2021-02-03T04:05:06Z","fmspc":"00906ed50000","pceId":"0000","tcbType":0,"tcbEvaluationDataNumber":7,
+                "tcbLevels":[]
+              },
               "signature":"$signature"
             }
             """.trimIndent()
@@ -197,11 +199,10 @@ class TcbInfoTest {
 }
         """.trimIndent()
         val result = attestationObjectMapper.readValue(json, TcbInfoSigned::class.java)
-        assertThat(result.signature.toString().toUpperCase()).isEqualTo(signature.toUpperCase())
-        assertThat(result.tcbInfo).isNotNull
-        assertThat(result.tcbInfo?.version).isEqualTo(2)
-        assertThat(result.tcbInfo?.issueDate).isEqualTo(Date.from(Instant.parse("2020-01-02T03:04:05Z")))
-        assertThat(result.tcbInfo?.nextUpdate).isEqualTo(Date.from(Instant.parse("2021-02-03T04:05:06Z")))
+        assertThat(result.signature.toUpperCase()).isEqualTo(signature.toUpperCase())
+        assertThat(result.tcbInfo.version).isEqualTo(2)
+        assertThat(result.tcbInfo.issueDate).isEqualTo(Date.from(Instant.parse("2020-01-02T03:04:05Z")))
+        assertThat(result.tcbInfo.nextUpdate).isEqualTo(Date.from(Instant.parse("2021-02-03T04:05:06Z")))
     }
 }
 
@@ -210,11 +211,26 @@ class EnclaveIdentityTest {
     fun `deserialise signature`() {
         val signature = "01020304"
         val json = """
-            {
-              "enclaveIdentity":null,
-              "signature":"$signature"
-            }
-            """.trimIndent()
+{
+    "enclaveIdentity":{
+        "id":"QE",
+        "version":2,
+        "issueDate":"2019-09-05T07:47:08Z",
+        "nextUpdate":"2029-09-05T07:47:08Z",
+        "tcbEvaluationDataNumber":0,
+        "miscselect":"D182B18C",
+        "miscselectMask":"FFFFFFFF",
+        "attributes":"70C8CBF48BD76EAB9C8126CE95E96C90",
+        "attributesMask":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "mrsigner":"8C4F5775D796503E96137F77C68A829A0056AC8DED70140B081B094490C57BFF",
+        "isvprodid":1,
+        "tcbLevels":[
+            {"tcb":{"isvsvn":1},"tcbDate":"2019-09-01T00:00:00Z","tcbStatus":"UpToDate"}
+            ]
+        },
+    "signature":"$signature"
+}
+        """.trimIndent()
         val result = attestationObjectMapper.readValue(json, EnclaveIdentitySigned::class.java)
         assertThat(signature).isEqualTo(result.signature)
     }

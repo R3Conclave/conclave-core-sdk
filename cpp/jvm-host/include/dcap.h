@@ -9,26 +9,20 @@
 #include <sgx_dcap_ql_wrapper.h>
 #include <sgx_dcap_quoteverify.h>
 
+#include <string>
+#include <vector>
+
 namespace r3::conclave::dcap {
 
 #define SGX_QL_DECL(name,...) typedef quote3_error_t (*fun_##name##_t)(__VA_ARGS__); \
     fun_##name##_t name
 
-    class dllib {
-    protected:
+    class QuotingAPI {
 
-        void* handle;
+        void* ql_handle;
+        void* qp_handle;
 
-        dllib(const char* filename);
-        virtual ~dllib();
-
-    public:
-        const char* error() {
-            return dlerror();
-        }
-    };
-
-    class QuotingAPI : public dllib {
+        sgx_ql_qve_collateral_t* collateral;
 
         SGX_QL_DECL(sgx_ql_set_path,sgx_ql_path_type_t,const char *);
         SGX_QL_DECL(sgx_qe_set_enclave_load_policy,sgx_ql_request_policy_t);
@@ -38,35 +32,18 @@ namespace r3::conclave::dcap {
         SGX_QL_DECL(sgx_qe_get_quote_size,uint32_t*);
         SGX_QL_DECL(sgx_qe_get_quote,sgx_report_t *,uint32_t,uint8_t*);
 
-        bool _is_ready;
+        SGX_QL_DECL(sgx_ql_get_quote_verification_collateral, const uint8_t*, uint16_t, const char* pck_ca, sgx_ql_qve_collateral_t**);
 
     public:
-        QuotingAPI();
-        ~QuotingAPI();
+        typedef std::vector<std::string> Errors;
+
+        bool init(const std::string& path, Errors& errors);
 
         bool get_target_info(sgx_target_info_t* target_info, quote3_error_t& eval_result);
         bool get_quote_size(uint32_t* p_size, quote3_error_t& eval_result);
         bool get_quote(sgx_report_t* report, uint32_t size, uint8_t* data, quote3_error_t& eval_result);
 
-        bool is_ready() const { return _is_ready; }
-    };
-
-    class QuoteProviderAPI : public dllib {
-
-        sgx_ql_qve_collateral_t *collateral = nullptr;
-
-        /* const uint8_t* fmspc, const uint16_t fmspc_size, const char* pck_ca, sgx_ql_qve_collateral_t** pp_quote_collateral);*/
-        SGX_QL_DECL(sgx_ql_get_quote_verification_collateral, const uint8_t*, uint16_t, const char* pck_ca, sgx_ql_qve_collateral_t**);
-
-        bool _is_ready;
-
-    public:
-        QuoteProviderAPI();
-        ~QuoteProviderAPI();
-
         sgx_ql_qve_collateral_t* get_quote_verification_collateral(const uint8_t* fmspc, int pck_ca_type, quote3_error_t& result);
-
-        bool is_ready() const { return _is_ready; }
     };
 }
 

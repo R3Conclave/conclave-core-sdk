@@ -12,10 +12,6 @@ class DCAPUtils {
         private const val SGX_EXTENSION_OID = "1.2.840.113741.1.13.1"
         private const val SGX_FMSPC_OID = "1.2.840.113741.1.13.1.4"
 
-        fun parsePemCertPathFromSignedQuote(data: ByteArray): CertPath {
-            return parsePemCertPath(data, 48 + 384 + 4)
-        }
-
         fun parsePemCertPathFromSignature(data: ByteArray): CertPath {
             return parsePemCertPath(data, 0)
         }
@@ -82,17 +78,6 @@ class DCAPUtils {
 
         fun getFMSPC(certPath: CertPath): ByteArray {
             return getFMSPC(getSgxExtension(certPath))
-        }
-
-        fun getReportBytes(quote: ByteArray): ByteArray {
-            return quote.copyOfRange(0, 48 + 384)
-        }
-
-        fun getSignatureBytes(quote: ByteArray): ByteArray {
-            val signatureLengthOffset = 48 + 384
-            val signatureLength = getInt32(quote, signatureLengthOffset)
-            val signatureOffset = signatureLengthOffset + 4
-            return quote.copyOfRange(signatureOffset, signatureOffset + signatureLength)
         }
     }
 }

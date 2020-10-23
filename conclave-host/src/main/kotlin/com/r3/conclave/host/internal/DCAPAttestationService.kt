@@ -7,6 +7,7 @@ import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.SgxSignedQuote.signature
 import com.r3.conclave.common.internal.attestation.AttestationResponse
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
+import com.r3.conclave.utilities.internal.getRemainingBytes
 
 object DCAPAttestationService : AttestationService {
     private const val VersionIndex = 0
@@ -20,7 +21,7 @@ object DCAPAttestationService : AttestationService {
 
     override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse {
         val report = signedQuote[quote].bytes
-        val signature = signedQuote[signature].bytes
+        val signature = signedQuote[signature].read().getRemainingBytes()
         val certPath = DCAPUtils.parsePemCertPathFromSignature(signature)
         val col = Native.getQuoteCollateral(
                 DCAPUtils.getFMSPC(certPath),

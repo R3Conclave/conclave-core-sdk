@@ -162,55 +162,52 @@ data class AttestationReport @JsonCreator constructor(
     }
 }
 
-// fields are nullable for easier unit-testing
-@JsonInclude(NON_NULL)
 data class TcbInfoSigned @JsonCreator constructor(
         @JsonProperty("tcbInfo")
-        val tcbInfo: TcbInfo? = null,
+        val tcbInfo: TcbInfo,
 
         @JsonProperty("signature")
-        val signature: String? = null
+        val signature: String
 )
 
-@JsonInclude(NON_NULL)
 data class TcbInfo @JsonCreator constructor(
         @JsonProperty("version")
-        val version: Int? = null,
+        val version: Int,
 
         @JsonProperty("issueDate")
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
-        val issueDate: Date? = null,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+        val issueDate: Date,
 
         @JsonProperty("nextUpdate")
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
-        val nextUpdate: Date? = null,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+        val nextUpdate: Date,
 
         @JsonProperty("fmspc")
-        val fmspc: String? = null,
+        val fmspc: String,
 
         @JsonProperty("pceId")
-        val pceId: String? = null,
+        val pceId: String,
 
         @JsonProperty("tcbType")
-        val tcbType: Int? = null,
+        val tcbType: Int,
 
         @JsonProperty("tcbEvaluationDataNumber")
-        val tcbEvaluationDataNumber: Int? = null,
+        val tcbEvaluationDataNumber: Int,
 
         @JsonProperty("tcbLevels")
-        val tcbLevels: List<TcbLevel>? = null
+        val tcbLevels: List<TcbLevel>
 )
 
 data class TcbLevel @JsonCreator constructor(
         @JsonProperty("tcb")
-        val tcb: Tcb? = null,
+        val tcb: Tcb,
 
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
         @JsonProperty("tcbDate")
-        val tcbDate: Date? = null,
+        val tcbDate: Date,
 
         @JsonProperty("tcbStatus")
-        val tcbStatus: String? = null
+        val tcbStatus: String
 )
 
 data class Tcb @JsonCreator constructor(
@@ -252,62 +249,62 @@ data class Tcb @JsonCreator constructor(
 
 data class EnclaveIdentitySigned @JsonCreator constructor(
         @JsonProperty("enclaveIdentity")
-        val enclaveIdentity: EnclaveIdentity? = null,
+        val enclaveIdentity: EnclaveIdentity,
 
         @JsonProperty("signature")
-        val signature: String? = null
+        val signature: String
 )
 
 data class EnclaveIdentity @JsonCreator constructor(
         @JsonProperty("id")
-        val id: String? = null,
+        val id: String,
 
         @JsonProperty("version")
-        val version: Int? = null,
+        val version: Int,
 
         @JsonProperty("issueDate")
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
-        val issueDate: Date? = null,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+        val issueDate: Date,
 
         @JsonProperty("nextUpdate")
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
-        val nextUpdate: Date? = null,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+        val nextUpdate: Date,
 
         @JsonProperty("tcbEvaluationDataNumber")
-        val tcbEvaluationDataNumber: Int? = null,
+        val tcbEvaluationDataNumber: Int,
 
         @JsonProperty("miscselect")
-        val miscselect: String? = null,
+        val miscselect: String,
 
         @JsonProperty("miscselectMask")
-        val miscselectMask: String? = null,
+        val miscselectMask: String,
 
         @JsonProperty("attributes")
-        val attributes: String? = null,
+        val attributes: String,
 
         @JsonProperty("attributesMask")
-        val attributesMask: String? = null,
+        val attributesMask: String,
 
         @JsonProperty("mrsigner")
-        val mrsigner: String? = null,
+        val mrsigner: String,
 
         @JsonProperty("isvprodid")
-        val isvprodid: Int? = null,
+        val isvprodid: Int,
 
         @JsonProperty("tcbLevels")
-        val tcbLevels: List<TcbLevelShort>? = null
+        val tcbLevels: List<TcbLevelShort>
 )
 
 data class TcbLevelShort @JsonCreator constructor(
         @JsonProperty("tcb")
-        val tcb: TcbShort? = null,
+        val tcb: TcbShort,
 
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
         @JsonProperty("tcbDate")
-        val tcbDate: Date? = null,
+        val tcbDate: Date,
 
         @JsonProperty("tcbStatus")
-        val tcbStatus: String? = null
+        val tcbStatus: String
 )
 
 data class TcbShort @JsonCreator constructor(

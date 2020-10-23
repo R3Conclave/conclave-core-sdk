@@ -10,6 +10,7 @@ import java.security.cert.CertPath
 import java.security.cert.CertPathValidator
 import java.security.cert.PKIXParameters
 import java.time.Instant
+import java.util.*
 
 /**
  * A cryptographically signed report produced by an [AttestationService] verifying an enclave's quote ([SgxSignedQuote]).
@@ -52,16 +53,30 @@ class AttestationResponse(
     }
 
     private fun verifyECDSA(): AttestationReport {
-        QuoteVerifier.verify(reportBytes, signature, certPath, collateral)
-
-        val ts = Instant.now()
+        val (ecdsaStatus, latestIssueDate, collateralExpired) = QuoteVerifier.verify(reportBytes, signature, certPath, collateral)
+        val quoteStatus = ecdsaStatusToQuoteStatus(ecdsaStatus)
         return AttestationReport(
-            ts.toEpochMilli().toString(),
-            QuoteStatus.OK,
+            UUID.randomUUID().toString(),
+            quoteStatus,
             Cursor.wrap(SgxQuote, reportBytes),
-            timestamp = ts,
+            timestamp = latestIssueDate,
             version = 3
         )
+    }
+
+    private fun ecdsaStatusToQuoteStatus(qvStatus: QuoteVerifier.Status): QuoteStatus {
+        return when(qvStatus){
+            QuoteVerifier.Status.OK -> QuoteStatus.OK
+
+            QuoteVerifier.Status.TCB_CONFIGURATION_NEEDED,
+            QuoteVerifier.Status.TCB_OUT_OF_DATE_CONFIGURATION_NEEDED -> QuoteStatus.CONFIGURATION_NEEDED
+
+            QuoteVerifier.Status.TCB_SW_HARDENING_NEEDED -> QuoteStatus.SW_HARDENING_NEEDED
+            QuoteVerifier.Status.TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED -> QuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED
+
+            QuoteVerifier.Status.TCB_OUT_OF_DATE -> QuoteStatus.GROUP_OUT_OF_DATE
+            else -> throw GeneralSecurityException("Invalid quote $qvStatus")
+        }
     }
 }
 
