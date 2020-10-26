@@ -20,8 +20,8 @@ RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/nul
 RUN apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
 RUN apt-get install kitware-archive-keyring -y
 RUN rm /etc/apt/trusted.gpg.d/kitware.gpg
-#
 
+# Docker and Kubernetes stuff
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN add-apt-repository \
@@ -29,6 +29,11 @@ RUN add-apt-repository \
    $(lsb_release -cs) \
    stable"
 RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
+
+# Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime)
+RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main"
+
 RUN apt-get update -y && apt-get install -y \
     autoconf \
     ccache \
@@ -64,7 +69,11 @@ RUN apt-get update -y && apt-get install -y \
     zip \
     zlib1g-dev \
     kubectl \
-    docker-ce
+    docker-ce \
+    libsgx-quote-ex \
+    libsgx-urts \
+    libsgx-dcap-ql \
+    libsgx-dcap-ql-dev
 
 # GDB - build from source.
 RUN export GDB_VERSION=gdb-9.2 \
