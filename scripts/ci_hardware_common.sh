@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
-source ${SCRIPT_DIR}/ci_build_common.sh
-
 function teardownAESM() {
     docker stop aesmd || true
     docker rm $(docker ps -a -f name=aesmd -f status=exited -q) || true
