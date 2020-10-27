@@ -30,9 +30,12 @@ RUN add-apt-repository \
    stable"
 RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
 
-# Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime)
+# Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
+# last 5 packages installed below)
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main"
+RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/18.04/prod bionic main"
 
 RUN apt-get update -y && apt-get install -y \
     autoconf \
@@ -73,7 +76,8 @@ RUN apt-get update -y && apt-get install -y \
     libsgx-quote-ex \
     libsgx-urts \
     libsgx-dcap-ql \
-    libsgx-dcap-ql-dev
+    libsgx-dcap-ql-dev \
+    az-dcap-client
 
 # GDB - build from source.
 RUN export GDB_VERSION=gdb-9.2 \
