@@ -1,0 +1,55 @@
+plugins {
+    id 'application'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+mainClassName = "com.r3.conclave.threadingtest.host.MainKt"
+
+// Override the default (simulation) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+
+// Create a task that can be used for generating signing materials
+tasks.register("prepareForSigning") {
+    it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
+}
+
+dependencies {
+    implementation "info.picocli:picocli:4.1.4"
+
+    implementation "com.r3.conclave:conclave-host:$conclaveVersion"
+
+    // We need the enclave at runtime but not when compiling the host, because they don't share types.
+    runtimeOnly project(path: ":fibonacci", configuration: mode)
+    runtimeOnly project(path: ":busy", configuration: mode)
+    runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
+
+    // For tests only we depend on the enclave module so we can also use a mock enclave where the enclave object exists
+    // in the host JVM instead of a sub-JVM.
+    testImplementation project(":fibonacci")
+    testImplementation project(":busy")
+    testImplementation "com.r3.conclave:conclave-testing:$conclaveVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+
+test {
+    // Pass through any -Pspid and -Pattestation-key parameters to the tests
+    systemProperties project.properties.subMap(["spid", "attestation-key"])
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
+}
+repositories {
+    mavenCentral()
+}
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}

@@ -1,0 +1,30 @@
+plugins {
+    id 'com.r3.conclave.enclave'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-enclave"
+    testImplementation "com.r3.conclave:conclave-testing"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+}
+
+repositories {
+    mavenCentral()
+}
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
