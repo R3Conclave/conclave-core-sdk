@@ -16,6 +16,9 @@ interface EnclaveHandle<CONNECTION> {
      */
     val connection: CONNECTION
 
+    /** The name of the Enclave subclass inside the sub-JVM. */
+    val enclaveClassName: String
+
     /**
      * Destroy the enclave.
      *

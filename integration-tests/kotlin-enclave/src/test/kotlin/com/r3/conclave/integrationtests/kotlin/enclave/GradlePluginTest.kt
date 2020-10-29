@@ -18,7 +18,7 @@ class GradlePluginTest {
     @Test
     fun `enclave properties specified in the build file are wired up to EnclaveInfo`() {
         host = EnclaveHost.load("com.r3.conclave.integrationtests.kotlin.enclave.KotlinEnclave")
-        host.start(null, null, null, null)
+        host.start(null, null)
         val enclaveInfo = host.enclaveInstanceInfo.enclaveInfo
         assertThat(enclaveInfo.productID).isEqualTo(100)
         assertThat(enclaveInfo.revocationLevel).isEqualTo(2)

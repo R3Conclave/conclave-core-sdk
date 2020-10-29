@@ -29,11 +29,11 @@ class ApiKotlinConsumerTest {
 
         val postedMail = ArrayList<ByteArray>()
 
-        host.start(null, null, object : EnclaveHost.MailCallbacks {
+        host.start(null, object : EnclaveHost.MailCallbacks {
             override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
                 postedMail += encryptedBytes
             }
-        }, null)
+        })
 
         val responseForHost: ByteArray? = host.callEnclave(byteArrayOf(9)) { fromEnclave ->
             host.callEnclave(fromEnclave + 8)
@@ -46,7 +46,7 @@ class ApiKotlinConsumerTest {
         mutableMail.topic = ApiKotlinConsumerTest::class.java.simpleName
         val encryptedMail: ByteArray = mutableMail.encrypt()
 
-        host.deliverMail(1, encryptedMail) { fromEnclave ->
+        host.deliverMail(1, encryptedMail, null) { fromEnclave ->
             fromEnclave + fromEnclave
         }
         assertThat(postedMail).hasSize(1)

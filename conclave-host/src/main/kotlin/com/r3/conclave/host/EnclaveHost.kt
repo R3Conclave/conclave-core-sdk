@@ -1,6 +1,7 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.*
+import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
@@ -181,6 +182,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private var mailCallbacks: MailCallbacks? = null
 
     /**
+     * The name of the sub-class of Enclave that was loaded.
+     */
+    val enclaveClassName: String get() = enclaveHandle.enclaveClassName
+
+    /**
      * The mode the enclave is running in.
      */
     val enclaveMode: EnclaveMode get() = enclaveHandle.enclaveMode
@@ -190,36 +196,18 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * This method must be called before sending is possible. Remember to call
      * [close] to free the associated enclave resources when you're done with it.
      *
-     * @param spid The EPID Service Provider ID (or SPID) needed for creating the enclave quote for attesting. Please see
-     * https://api.portal.trustedservices.intel.com/EPID-attestation for further details on how to obtain one. The EPID
-     * signature mode must be Linkable Quotes.
-     *
-     * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
-     * can be provided.
-     *
-     * Note: This parameter is temporary and will be removed in a future version.
-     *
-     * @param attestationKey The private attestation key needed to access the attestation service. Please see
-     * https://api.portal.trustedservices.intel.com/EPID-attestation for further details on how obtain one.
-     *
-     * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
-     * can be provided.
-     *
+     * @param attestationParameters Either an [AttestationParameters.EPID] object initialised with the required API keys,
+     * or an [AttestationParameters.DCAP] object (which requires no extra parameters) when the host operating system is
+     * pre-configured for DCAP attestation, typically by a cloud provider, or null, when no attestation support is
+     * requested. Null is only useful for development purposes and initialises a mock attestation service.
      * @param mailCallbacks A callback that will be invoked when the enclave requests delivery or acknowledgement of mail.
      * If null then the enclave cannot send or acknowledge mail, although you can still deliver it.
-     *
-     * @param attestationMode Specifies attestation mode - either EPID or DCAP.
-     * If null then the attestation mode will be EPID.
      */
     @Throws(EnclaveLoadException::class)
     @Synchronized
-    // TODO At this stage we need to have a better way to handle the start parameters.
-    fun start(spid: OpaqueBytes?, attestationKey: String?, mailCallbacks: MailCallbacks?, attestationMode: AttestationMode?) {
+    fun start(attestationParameters: AttestationParameters?, mailCallbacks: MailCallbacks?) {
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
-
-        if (attestationMode == AttestationMode.EPID)
-            require(spid == null || spid.size == 16) { "Invalid SPID length" }
 
         try {
             this.mailCallbacks = mailCallbacks
@@ -228,18 +216,18 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
             // The admin handler deserializes keys and other info from the enclave during initialisation.
             adminHandler = mux.addDownstream(AdminHandler(this))
-            // The EPID attestation handler manages the process of generating remote attestations that are then
+            // The attestation handler manages the process of generating remote attestations that are then
             // placed into the EnclaveInstanceInfo.
             val attestationConnection = mux.addDownstream(
-                    when (attestationMode) {
-                        AttestationMode.DCAP -> DCAPAttestationHostHandler(
+                    when (attestationParameters) {
+                        is AttestationParameters.DCAP -> DCAPAttestationHostHandler(
                                 enclaveMode == EnclaveMode.MOCK || enclaveMode == EnclaveMode.SIMULATION
                         )
-                        else -> EpidAttestationHostHandler(
-                                SgxQuoteType.LINKABLE,
-                                spid?.let { Cursor.read(SgxSpid, it.buffer()) } ?: Cursor.allocate(SgxSpid),
-                                enclaveMode == EnclaveMode.MOCK
-                        )
+                        is AttestationParameters.EPID -> {
+                            val spid = Cursor.read(SgxSpid, attestationParameters.spid.buffer())
+                            EpidAttestationHostHandler(SgxQuoteType.LINKABLE, spid, enclaveMode == EnclaveMode.MOCK)
+                        }
+                        null -> EpidAttestationHostHandler(SgxQuoteType.LINKABLE, Cursor.allocate(SgxSpid), enclaveMode == EnclaveMode.MOCK)
                     }
             )
 
@@ -252,7 +240,15 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             //
             // TODO: Change this to fetch quotes on demand.
             val signedQuote = attestationConnection.getSignedQuote()
-            _enclaveInstanceInfo = getAttestationService(attestationKey, attestationMode).doAttest(
+            val attestationService = when (attestationParameters) {
+                is AttestationParameters.DCAP -> when (enclaveMode) {
+                    EnclaveMode.DEBUG, EnclaveMode.RELEASE -> DCAPAttestationService
+                    EnclaveMode.SIMULATION, EnclaveMode.MOCK -> MockAttestationService()
+                }
+                is AttestationParameters.EPID -> getEPIDService(attestationParameters.attestationKey)
+                null -> MockAttestationService()
+            }
+            _enclaveInstanceInfo = attestationService.doAttest(
                     adminHandler.enclaveInfo.signatureKey,
                     adminHandler.enclaveInfo.encryptionKey,
                     signedQuote,
@@ -267,14 +263,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
     }
 
-    private fun getAttestationService(attestationKey: String?, attestationMode: AttestationMode?): AttestationService {
-        if (attestationMode == AttestationMode.DCAP) {
-            return when (enclaveMode) {
-                EnclaveMode.DEBUG, EnclaveMode.RELEASE -> DCAPAttestationService
-                EnclaveMode.SIMULATION, EnclaveMode.MOCK -> MockAttestationService()
-            }
-        }
-
+    private fun getEPIDService(attestationKey: String?): AttestationService {
         return when (enclaveMode) {
             EnclaveMode.RELEASE -> IntelAttestationService(true, requiredAttestationKey(attestationKey))
             EnclaveMode.DEBUG -> IntelAttestationService(false, requiredAttestationKey(attestationKey))
@@ -371,6 +360,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor does it need to be derived
      * from anything in particular. A good choice is a row ID in a database or a queue message ID, for example.
      * @param mail the encrypted mail received from a remote client.
+     * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
+     * back through to [MailCallbacks.postMail] to ask the host to deliver the reply to the right
+     * location.
      * @param callback If the enclave calls `Enclave.callUntrustedHost` then the
      * bytes will be passed to this object for consumption and generation of the
      * response.
@@ -378,8 +370,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
      * @throws IllegalStateException If the host has not been started.
      */
-    fun deliverMail(id: Long, mail: ByteArray, callback: Function<ByteArray, ByteArray?>) {
-        deliverMailInternal(id, mail, callback)
+    fun deliverMail(id: Long, mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
+        deliverMailInternal(id, mail, routingHint, callback)
     }
 
     /**
@@ -405,19 +397,22 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor does it need to be derived
      * from anything in particular. A good choice is a row ID in a database or a queue message ID, for example.
      * @param mail the encrypted mail received from a remote client.
+     * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
+     * back through to [MailCallbacks.postMail] to ask the host to deliver the reply to the right
+     * location.
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
      * @throws IllegalStateException If the host has not been started.
      */
-    fun deliverMail(id: Long, mail: ByteArray) {
-        deliverMailInternal(id, mail, null)
+    fun deliverMail(id: Long, mail: ByteArray, routingHint: String?) {
+        deliverMailInternal(id, mail, routingHint, null)
     }
 
-    private fun deliverMailInternal(id: Long, mail: ByteArray, callback: EnclaveCallback?) {
+    private fun deliverMailInternal(id: Long, mail: ByteArray, routingHint: String?, callback: EnclaveCallback?) {
         when (hostStateManager.state) {
             New -> throw IllegalStateException("The enclave host has not been started.")
             Closed -> throw IllegalStateException("The enclave host has been closed.")
-            Started -> enclaveMessageHandler.deliverMail(id, mail, callback)
+            Started -> enclaveMessageHandler.deliverMail(id, mail, callback, routingHint)
         }
     }
 
@@ -591,9 +586,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: EnclaveCallback?) {
+        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: EnclaveCallback?, routingHint: String?) {
             callEnclaveInternal(callback) { threadID ->
-                sendMailToEnclave(threadID, mailID, mailBytes)
+                sendMailToEnclave(threadID, mailID, mailBytes, routingHint)
             }
         }
 
@@ -655,11 +650,16 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        private fun sendMailToEnclave(threadID: Long, mailID: Long, bytes: ByteArray) {
-            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
+        private fun sendMailToEnclave(threadID: Long, mailID: Long, bytes: ByteArray, routingHint: String?) {
+            val routingHintBytes = routingHint?.toByteArray()
+            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + bytes.size + 4 + (routingHintBytes?.size ?: 0)) { buffer ->
                 buffer.putLong(threadID)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
                 buffer.putLong(mailID)
+                if (routingHintBytes != null) {
+                    buffer.putIntLengthPrefixBytes(routingHintBytes)
+                } else
+                    buffer.putInt(0)
                 buffer.put(bytes)
             }
         }

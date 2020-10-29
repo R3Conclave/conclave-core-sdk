@@ -30,7 +30,7 @@ public class ReverseEnclave extends Enclave {
     }
 
     @Override
-    protected void receiveMail(long id, EnclaveMail mail) {
+    protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
         // This is used when the host delivers a message from the client.
         // First, decode mail body as a String.
         final String stringToReverse = new String(mail.getBodyAsBytes());
@@ -43,6 +43,6 @@ public class ReverseEnclave extends Enclave {
         // Create and send back the mail with the same topic as the sender used.
         final MutableMail reply = createMail(sender, reversedEncodedString);
         reply.setTopic(mail.getTopic());
-        postMail(reply, null);
+        postMail(reply, routingHint);
     }
 }

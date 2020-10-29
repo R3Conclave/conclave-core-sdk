@@ -1,6 +1,7 @@
 package com.r3.conclave.sample.host;
 
 import com.r3.conclave.common.OpaqueBytes;
+import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.testing.MockHost;
@@ -31,8 +32,11 @@ public class HostTest {
         // Optionally pass in the SPID and attestation key which are required for remote attestation. These can be null
         // if running in simulation mode, but are required in debug/release mode.
         String spid = System.getProperty("spid");
-        String attestionKey = System.getProperty("attestation-key");
-        enclave.start(spid != null ? OpaqueBytes.parse(spid) : null, attestionKey, null, null);
+        String attestationKey = System.getProperty("attestation-key");
+        AttestationParameters params = null;
+        if (spid != null && attestationKey != null)
+            params = new AttestationParameters.EPID(OpaqueBytes.parse(spid), attestationKey);
+        enclave.start(params, null);
     }
 
     @AfterAll

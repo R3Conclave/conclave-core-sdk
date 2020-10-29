@@ -37,10 +37,10 @@ class MailHostTest {
 
     @Test
     fun `encrypt and deliver mail`() {
-        echo.start(null, null, null, null)
+        echo.start(null, null)
         val mail: MutableMail = buildMail(echo)
         var response: ByteArray? = null
-        echo.deliverMail(1, mail.encrypt()) { bytes ->
+        echo.deliverMail(1, mail.encrypt(), "test") { bytes ->
             response = bytes
             null  // No response back to enclave.
         }
@@ -52,69 +52,69 @@ class MailHostTest {
 
     @Test
     fun `deliver mail and answer enclave`() {
-        echo.start(null, null, null, null)
+        echo.start(null, null)
         val mail: MutableMail = buildMail(echo)
         // In response to the delivered mail, the enclave sends us a local message, and we send a local message back.
         // It asserts the answer we give is as expected.
-        echo.deliverMail(1, mail.encrypt()) { "an answer".toByteArray() }
+        echo.deliverMail(1, mail.encrypt(), "test") { "an answer".toByteArray() }
     }
 
     @Test
     fun `mail acknowledgement`() {
         var acknowledgementID: Long? = null
-        echo.start(null, null, object : EnclaveHost.MailCallbacks {
+        echo.start(null, object : EnclaveHost.MailCallbacks {
             override fun acknowledgeMail(mailID: Long) {
                 acknowledgementID = mailID
             }
-        }, null)
+        })
         val mail: MutableMail = buildMail(echo)
         // First delivery doesn't acknowledge because we don't tell it to.
-        echo.deliverMail(1, mail.encrypt()) { null }
+        echo.deliverMail(1, mail.encrypt(), "test") { null }
         assertNull(acknowledgementID)
         // Try again and this time we'll get an ack.
         mail.incrementSequenceNumber()
-        echo.deliverMail(2, mail.encrypt()) { "acknowledge".toByteArray() }
+        echo.deliverMail(2, mail.encrypt(), "test") { "acknowledge".toByteArray() }
         assertEquals(2, acknowledgementID!!)
     }
 
     @Test
     fun `sequence numbers`() {
         // Verify that the enclave rejects a replay of the same message, or out of order delivery.
-        noop.start(null, null, null, null)
+        noop.start(null, null)
         val encrypted0 = buildMail(noop, "message 0".toByteArray()).encrypt()
         val encrypted1 = buildMail(noop, "message 1".toByteArray()).also { it.sequenceNumber = 1 }.encrypt()
         val encrypted2 = buildMail(noop, "message 2".toByteArray()).also { it.sequenceNumber = 2 }.encrypt()
         val encrypted50 = buildMail(noop, "message 50".toByteArray()).also { it.sequenceNumber = 50 }.encrypt()
         // Deliver message 1.
-        noop.deliverMail(100, encrypted0)
+        noop.deliverMail(100, encrypted0, "test")
         // Cannot deliver message 2 twice even with different IDs.
-        noop.deliverMail(100, encrypted1)
-        var msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted1) }.message!!
+        noop.deliverMail(100, encrypted1, "test")
+        var msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted1, "test") }.message!!
         assertTrue("Highest sequence number seen is 1, attempted delivery of 1" in msg) { msg }
         // Cannot now re-deliver message 1 because the sequence number would be going backwards.
-        msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted0) }.message!!
+        msg = assertThrows<RuntimeException> { noop.deliverMail(100, encrypted0, "test") }.message!!
         assertTrue("Highest sequence number seen is 1, attempted delivery of 0" in msg) { msg }
         // Can deliver message 3
-        noop.deliverMail(101, encrypted2)
+        noop.deliverMail(101, encrypted2, "test")
         // Seq nums may not have gaps.
-        msg = assertThrows<RuntimeException> { noop.deliverMail(102, encrypted50) }.message!!
+        msg = assertThrows<RuntimeException> { noop.deliverMail(102, encrypted50, "test") }.message!!
         assertTrue("Highest sequence number seen is 2, attempted delivery of 50" in msg) { msg }
 
         // Seq nums of different topics are independent
         val secondTopic = buildMail(noop).also { it.topic = "another-topic" }.encrypt()
-        noop.deliverMail(100, secondTopic)
+        noop.deliverMail(100, secondTopic, "test")
     }
 
     @Test
     fun corruption() {
         // Check the enclave correctly rejects messages with corrupted headers or bodies.
-        noop.start(null, null, null, null)
+        noop.start(null, null)
         val mail = buildMail(noop)
         val encrypted = mail.encrypt()
         for (i in encrypted.indices) {
             encrypted[i]++
             assertThatThrownBy {
-                noop.deliverMail(i.toLong(), encrypted)
+                noop.deliverMail(i.toLong(), encrypted, "test")
             }.`is`(throwableWithMailCorruptionErrorMessage)
             encrypted[i]--
         }
@@ -125,30 +125,30 @@ class MailHostTest {
         // Make a call into enclave1, which then requests sending a mail to a client with its routing hint set. Tests
         // posting mail from inside a local call using an EnclaveInstanceInfo.
         class Enclave1 : Enclave() {
-            override fun receiveMail(id: Long, mail: EnclaveMail) {
+            override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
                 val outbound = createMail(mail.authenticatedSender!!, "hello".toByteArray())
-                postMail(outbound, mail.from!!)
+                postMail(outbound, routingHint!!)
                 acknowledgeMail(id)
             }
         }
         val host = MockHost.loadMock<Enclave1>()
-        host.start(null, null, object : EnclaveHost.MailCallbacks {
+        host.start(null, object : EnclaveHost.MailCallbacks {
             override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
-                assertEquals("bob", routingHint!!)
+                assertEquals("test", routingHint!!)
                 val message: EnclaveMail = Mail.decrypt(encryptedBytes, keyPair.private)
                 assertEquals("hello", String(message.bodyAsBytes))
             }
-        }, null)
+        })
         val messageFromBob = buildMail(host)
         messageFromBob.from = "bob"
-        host.deliverMail(1, messageFromBob.encrypt())
+        host.deliverMail(1, messageFromBob.encrypt(), "test")
     }
 
     @ParameterizedTest
     @EnumSource
     fun `enclave can read mail targeted for older platform version`(api: CreateMailApi) {
         val enclave1 = MockHost.loadMock<CreateMailEnclave>()
-        enclave1.start(null, null, null, null)
+        enclave1.start(null, null)
         val oldEncryptedMail = api.createMail("secret".toByteArray(), enclave1)
         enclave1.close()
 
@@ -157,9 +157,9 @@ class MailHostTest {
         MockEnclaveEnvironment.platformUpdate()
 
         val enclave2 = MockHost.loadMock<CreateMailEnclave>()
-        enclave2.start(null, null, null, null)
+        enclave2.start(null, null)
         var decryptedByEnclave: String? = null
-        enclave2.deliverMail(1, oldEncryptedMail) { bytes ->
+        enclave2.deliverMail(1, oldEncryptedMail, "test") { bytes ->
             decryptedByEnclave = String(bytes)
             null
         }
@@ -173,7 +173,7 @@ class MailHostTest {
         // Imagine the current platform version has a bug in it and so we update and the client creates mail from that.
         MockEnclaveEnvironment.platformUpdate()
         val enclave1 = MockHost.loadMock<CreateMailEnclave>()
-        enclave1.start(null, null, null, null)
+        enclave1.start(null, null)
         val newEncryptedMail = api.createMail("secret".toByteArray(), enclave1)
         enclave1.close()
 
@@ -181,9 +181,9 @@ class MailHostTest {
         MockEnclaveEnvironment.platformDowngrade()
 
         val enclave2 = MockHost.loadMock<CreateMailEnclave>()
-        enclave2.start(null, null, null, null)
+        enclave2.start(null, null)
         assertThatThrownBy {
-            enclave2.deliverMail(1, newEncryptedMail) { null }
+            enclave2.deliverMail(1, newEncryptedMail, null) { null }
         }.hasMessageContaining("SGX_ERROR_INVALID_CPUSVN")
     }
 
@@ -191,14 +191,14 @@ class MailHostTest {
     @EnumSource
     fun `enclave with higher revocation level can read older mail`(api: CreateMailApi) {
         val oldEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
-        oldEnclave.start(null, null, null, null)
+        oldEnclave.start(null, null)
         val oldEncryptedMail = api.createMail("secret!".toByteArray(), oldEnclave)
         oldEnclave.close()
 
         val newEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
-        newEnclave.start(null, null, null, null)
+        newEnclave.start(null, null)
         var decryptedByEnclave: String? = null
-        newEnclave.deliverMail(1, oldEncryptedMail) { bytes ->
+        newEnclave.deliverMail(1, oldEncryptedMail, null) { bytes ->
             decryptedByEnclave = String(bytes)
             null
         }
@@ -210,14 +210,14 @@ class MailHostTest {
     @EnumSource
     fun `enclave with lower revocation level cannot read newer mail`(api: CreateMailApi) {
         val newEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
-        newEnclave.start(null, null, null, null)
+        newEnclave.start(null, null)
         val newEncryptedMail = api.createMail("secret!".toByteArray(), newEnclave)
         newEnclave.close()
 
         val oldEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
-        oldEnclave.start(null, null, null, null)
+        oldEnclave.start(null, null)
         assertThatThrownBy {
-            oldEnclave.deliverMail(1, newEncryptedMail) { null }
+            oldEnclave.deliverMail(1, newEncryptedMail, null) { null }
         }.hasMessageContaining("SGX_ERROR_INVALID_ISVSVN")
     }
 
@@ -230,13 +230,13 @@ class MailHostTest {
     }
 
     class NoopEnclave : Enclave() {
-        override fun receiveMail(id: Long, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
         }
     }
 
     // Receives mail, decrypts it and gives the body back to the host.
     class MailEchoEnclave : Enclave() {
-        override fun receiveMail(id: Long, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
             val answer: ByteArray? = callUntrustedHost(writeData {
                 writeIntLengthPrefixBytes(mail.bodyAsBytes)
                 writeInt(id.toInt())
@@ -244,7 +244,7 @@ class MailHostTest {
             when (val str = answer?.let { String(it) }) {
                 "acknowledge" -> acknowledgeMail(id)
                 "an answer" -> return
-                "post" -> postMail(createMail(Curve25519PublicKey(mail.bodyAsBytes), "sent to second enclave".toByteArray()), "routing hint")
+                "post" -> postMail(createMail(Curve25519PublicKey(mail.bodyAsBytes), "sent to second enclave".toByteArray()), routingHint)
                 null -> return
                 else -> throw IllegalStateException(str)
             }
@@ -263,8 +263,9 @@ class MailHostTest {
                     body = bytes.reversedArray()
             ).encrypt()
         }
+
         // Decrypt
-        override fun receiveMail(id: Long, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
             callUntrustedHost(mail.bodyAsBytes)
         }
     }
