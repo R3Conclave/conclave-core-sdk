@@ -19,6 +19,11 @@ namespace r3::conclave::dcap {
 
     class QuotingAPI {
 
+        void* comm_handle;
+        void* urts_handle;
+        void* qe3_handle;
+        void* pce_handle;
+
         void* ql_handle;
         void* qp_handle;
 

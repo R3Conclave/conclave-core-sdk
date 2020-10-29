@@ -91,7 +91,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 // the current platform - this will happen if the user tries to load an enclave
                 // on a platform other than Linux.
                 enclaveFile.deleteQuietly()
-                throw EnclaveLoadException("Enclaves may only be loaded on Linux hosts.")
+                throw EnclaveLoadException("Enclaves may only be loaded on Linux hosts: ${e.message}")
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
                 throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)

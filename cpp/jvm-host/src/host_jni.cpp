@@ -16,6 +16,7 @@
 #include <munmap_guard.h>
 #include <enclave_platform.h>
 #include <dcap.h>
+#include <mutex>
 #include "enclave_console.h"
 #include "host_shared_data.h"
 
@@ -240,15 +241,18 @@ void* shared_data_ocall() {
 }
 
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
+static std::mutex dcap_mutex;
 
 jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
 
     JniString jpath(jniEnv, bundle);
 
+    if (quoting_lib != nullptr)
+        return 0;
+
     r3::conclave::dcap::QuotingAPI::Errors errors;
     try {
-        // std::string path(std::string(jpath.c_str))
-        std::string path("/usr/lib/x86_64-linux-gnu");
+        std::string path(std::string(jpath.c_str));
 
         quoting_lib = new r3::conclave::dcap::QuotingAPI();
         if ( !quoting_lib->init(path, errors) ){
@@ -275,6 +279,8 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
 
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
+    std::lock_guard<std::mutex> lock(dcap_mutex);
+
     if (initDCAP(jniEnv, bundle) != 0)
         return -1;
 
@@ -290,6 +296,8 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
         (JNIEnv *jniEnv, jobject) {
+
+    std::lock_guard<std::mutex> lock(dcap_mutex);
 
     uint32_t quote_size;
     quote3_error_t eval_result;
@@ -307,6 +315,8 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
     JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
     JniPtr<sgx_quote_t> quote(jniEnv, quoteOut);
 
+    std::lock_guard<std::mutex> lock(dcap_mutex);
+
     quote3_error_t eval_result;
     if (quoting_lib->get_quote(const_cast<sgx_report_t*>(&request.ptr->p_report),
             static_cast<uint32_t>(quote.size()), (uint8_t*)quote.ptr, eval_result)) {
@@ -322,6 +332,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
   (JNIEnv *jniEnv, jobject, jbyteArray fmspc, jint pck_ca_type) {
 
     JniPtr<uint8_t> p_fmspc(jniEnv, fmspc);
+
+    std::lock_guard<std::mutex> lock(dcap_mutex);
 
     quote3_error_t eval_result;
     auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result);

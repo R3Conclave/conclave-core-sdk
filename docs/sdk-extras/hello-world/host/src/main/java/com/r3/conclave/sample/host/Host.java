@@ -59,7 +59,7 @@ public class Host {
 
         OpaqueBytes spid = null;
         String attestationKey = null;
-        AttestationMode attestationMode = (args.length == 1 && "DCAP".equals(args[0])) ? AttestationMode.DCAP : AttestationMode.EPID;
+        AttestationMode attestationMode = (args.length == 1 && "EPID".equals(args[0])) ? AttestationMode.EPID : AttestationMode.DCAP;
 
         if (attestationMode == AttestationMode.EPID) {
             // We need the EPID Service Provider ID (SPID) and attestation key to able to perform remote attestation

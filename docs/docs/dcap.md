@@ -59,18 +59,10 @@ If you plan to use a Docker container with DCAP hardware, you must map two diffe
 docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
 ```
 
-###### SGX PSW & DCAP
-Run the following as `root`:
-```
-echo "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main" >> /etc/apt/sources.list.d/intel-sgx.list
-wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-apt update
+#### Intel SGX PSW & DCAP
+All required libraries are included into Conclave SDK.   
 
-apt install -y -q libsgx-quote-ex libsgx-urts
-apt install -y -q libsgx-dcap-ql libsgx-dcap-ql-dev
-```
-
-The user has to be included into `sgx_prv` group:
+You may still need to add your user into `sgx_prv` group:
 ```
 usermod -aG sgx_prv user
 ```
@@ -78,16 +70,6 @@ usermod -aG sgx_prv user
 Or run the following for your current user (not as `root`):
 ```
 sudo usermod -aG sgx_prv $USER
-```
-
-###### Azure plugin
-You must build one from [source](https://github.com/microsoft/Azure-DCAP-Client).  
-You might have to install some extra packages to build the plugin; follow [Readme](https://github.com/microsoft/Azure-DCAP-Client/blob/master/src/Linux/README.MD) provided.  
-
-Then as `root`, *install* the plugin:
-```
-cp $(Azure-DCAP-Client)/libdcap_quoteprov.so /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.azure
-ln -sf /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.azure /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
 ```
 
 #### hello-world

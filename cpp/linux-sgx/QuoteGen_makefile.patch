@@ -1,0 +1,29 @@
+--- Makefile	2020-10-23 15:41:17.833484127 +0100
++++ Makefile.new	2020-10-23 15:47:45.663941999 +0100
+@@ -31,22 +31,17 @@
+ 
+ CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
+ 
+-.PHONY: all dcap opt_check_failed clean rebuild pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
++.PHONY: all dcap prebuilt clean rebuild pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
+ 
+ all: dcap
+ 
+ # DCAP requires prebuilt enclaves.
+-CHECK_OPT :=
++prebuilt:
+ ifeq ("$(wildcard psw/ae/data/prebuilt)", "")
+-CHECK_OPT := opt_check_failed
++	./download_prebuilt.sh
+ endif
+ 
+-dcap: $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
+-
+-opt_check_failed:
+-	@echo "Please run download_prebuilt.sh before compiling"
+-	@echo "Exiting......"
+-	@exit -2
++dcap: prebuilt pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
+ 
+ pce_logic: 
+ 	$(MAKE) -C pce_wrapper/linux

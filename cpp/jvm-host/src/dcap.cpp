@@ -19,6 +19,11 @@ namespace r3::conclave::dcap {
 
     bool QuotingAPI::init(const std::string& path, QuotingAPI::Errors& errors) {
 
+        comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
+        urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
+        pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);
+        qe3_handle = try_dlopen( path, "libsgx_qe3_logic.so", errors);
+
         ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
         if (ql_handle != nullptr) {
             SGX_QL_RESOLVE(ql_handle, sgx_qe_set_enclave_load_policy);

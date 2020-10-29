@@ -23,6 +23,8 @@ ExternalProject_Add(linux-sgx-ext
             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/qe_logic.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source.patch
 	    && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
 	    && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
+            && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
+            && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
 
         UPDATE_COMMAND ""
 
@@ -32,6 +34,7 @@ ExternalProject_Add(linux-sgx-ext
             && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.9.101.2.bin
             && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw
             && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} dcap_source
+            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/external/dcap_source QuoteGeneration QuoteVerification
 
 
         INSTALL_COMMAND ""

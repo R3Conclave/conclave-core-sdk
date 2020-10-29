@@ -27,6 +27,8 @@ subprojects { Project project ->
         task.dependsOn(":cpp:compileLinuxSgx$type")
         task.dependsOn(":cpp:compileHost$type")
         def linuxSgxBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/build/linux"
+        def linuxAzurePluginDir = "$cppBuildDir/../../azure-plugin"
+        def linuxSgxQuoteGenBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/external/dcap_source/QuoteGeneration/build/linux"
         def hostBuildDir = "$cppBuildDir/$type/jvm-host"
         def hostSharedBuildDir = "$cppBuildDir/$type/jvm-host-shared"
         def libDir = "/usr/lib/x86_64-linux-gnu"
@@ -42,6 +44,8 @@ subprojects { Project project ->
                 include "libsgx_urts${simSuffix}.so"
                 include "libsgx_uae_service${simSuffix}.so"
                 include "libsgx_capable.so"
+                include "libsgx_qe3.signed.so"
+                include "libsgx_pce.signed.so"
             }
             from (hostBuildDir) {
                 include "libjvm_host.so"
@@ -51,6 +55,16 @@ subprojects { Project project ->
             }
             from (libDir) {
                 include "libcrypto.so.1.0.0"
+            }
+            from (linuxSgxQuoteGenBuildDir) {
+                include "libsgx_qe3_logic.so"
+                include "libsgx_pce_logic.so"
+                include "libsgx_dcap_ql.so"
+                rename "libsgx_dcap_ql.so", "libsgx_dcap_ql.so.1"
+            }
+	        from (linuxAzurePluginDir) {
+                include "libdcap_quoteprov.so"
+                rename "libdcap_quoteprov.so", "libdcap_quoteprov.so.1"
             }
             if (type != "Simulation") {
                 from (libDir) {
