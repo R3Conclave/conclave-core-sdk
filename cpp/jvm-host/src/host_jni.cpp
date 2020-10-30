@@ -19,8 +19,13 @@
 #include <mutex>
 #include "enclave_console.h"
 #include "host_shared_data.h"
+#include "enclave_init.h"
+#include <signal.h>
 
 // TODO pool buffers in ecalls/ocalls
+
+// From our patched version of the SGX SDK.
+extern "C" void sgx_configure_thread_blocking(sgx_enclave_id_t enclave_id, uint64_t deadlock_timeout);
 
 static void raiseEnclaveLoadException(JNIEnv *jniEnv, const char *message) {
     raiseException(jniEnv, message, "com/r3/conclave/host/EnclaveLoadException");
@@ -29,6 +34,8 @@ static void raiseEnclaveLoadException(JNIEnv *jniEnv, const char *message) {
 void debug_print(const char *str, int n) {
     enclave_console(str, n);
 }
+
+static bool signal_registered = false;
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getDeviceStatus
         (JNIEnv *, jobject) {
@@ -48,8 +55,48 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getDeviceStatus
 #endif
 }
 
+static void sigill_sigaction(int, siginfo_t *, void *) {
+    std::cerr << "The enclave has aborted. Exiting.\n";
+    exit(-1);
+}
+
+static void initialise_abort_handler() {
+    // If an enclave aborts for any reason then the SGX SDK will signal this
+    // using SIGILL. We cannot allow the host to continue when this happens but
+    // rather than reporting SIGILL to the developer, log a more meaningful
+    // message before exiting.
+    if (!signal_registered) {
+        signal_registered = true;
+        struct sigaction sa;
+        memset(&sa, 0, sizeof(struct sigaction));
+        sigemptyset(&sa.sa_mask);
+        sa.sa_sigaction = sigill_sigaction;
+        sa.sa_flags   = SA_SIGINFO;
+        sigaction(SIGILL, &sa, NULL);
+    }
+
+}
+
+static void initialise_enclave(sgx_enclave_id_t enclave_id) {
+
+    // Create the shared data pointer for the enclave
+    r3::conclave::HostSharedData::instance().get(enclave_id);
+
+    // Exchange configuration with the enclave
+    r3::conclave::EnclaveInit ei;
+    ecall_initialise_enclave(enclave_id, &ei, sizeof(ei));
+
+    // We have patched the SGX SDK to automatically arbitrate threads and
+    // handle deadlocks when there are more host threads calling into the 
+    // enclave than there are TCS slots. Enable this now
+    sgx_configure_thread_blocking(enclave_id, ei.deadlock_timeout_seconds);
+}
+
 jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
         (JNIEnv *jniEnv, jobject, jstring enclavePath, jboolean isDebug) {
+
+    initialise_abort_handler();
+        
     JniString path(jniEnv, enclavePath);
 
     sgx_launch_token_t token = {0};
@@ -57,8 +104,7 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
     int updated = 0;
     auto returnCode = sgx_create_enclave(path.c_str, isDebug, &token, &updated, &enclave_id, nullptr);
     if (returnCode == SGX_SUCCESS) {
-        // Create the shared data pointer for the enclave
-        r3::conclave::HostSharedData::instance().get(enclave_id);
+        initialise_enclave(enclave_id);
         return enclave_id;
     } else {
         // Check to see if SGX is supported on the platform
@@ -73,8 +119,7 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
             if (wasEnabled) {
                 returnCode = sgx_create_enclave(path.c_str, isDebug, &token, &updated, &enclave_id, nullptr);
                 if (returnCode == SGX_SUCCESS) {
-                    // Create the shared data pointer for the enclave
-                    r3::conclave::HostSharedData::instance().get(enclave_id);
+                    initialise_enclave(enclave_id);
                     return enclave_id;
                 }
                 // Still failed. System may need a reboot
@@ -119,12 +164,12 @@ try {
     auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
     checkJniException(jniEnv);
 
-    // Set the enclave ID TLS so that OCALLs have access to it
+        // Set the enclave ID TLS so that OCALLs have access to it
     EcallContext context(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
     auto returnCode = jvm_ecall(
-            static_cast<sgx_enclave_id_t>(enclaveId),
-            inputBuffer,
-            size
+                static_cast<sgx_enclave_id_t>(enclaveId),
+                inputBuffer,
+                size
     );
     if (returnCode != SGX_SUCCESS) {
         raiseException(jniEnv, getErrorMessage(returnCode));

@@ -293,7 +293,7 @@ namespace {
                 return wait(context, time, true);
             }
 
-            bool wait(System::Thread* context, int64_t time UNUSED, bool clearInterrupted)
+            bool wait(System::Thread* context, int64_t time, bool clearInterrupted)
             {
                 Thread* t = static_cast<Thread*>(context);
 
@@ -321,8 +321,9 @@ namespace {
                         sgx_thread_mutex_unlock(&mutex);
 
                         if (not interrupted) {
-                            int rv UNUSED = sgx_thread_cond_wait(&(t->condition), &(t->mutex));
-                            expect(s, rv == 0 or rv == EINTR);
+                            // SGX timeout is in nanoseconds.
+                            int rv UNUSED = sgx_thread_cond_timedwait(&(t->condition), &(t->mutex), time * 1000 * 1000);
+                            expect(s, rv == 0 or rv == EINTR or rv == SGX_WAIT_TIMEOUT);
 
                             interrupted = t->r->interrupted();
                             if (interrupted and clearInterrupted) {

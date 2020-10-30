@@ -33,7 +33,8 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
     -Wl,-Bsymbolic \
     -Wl,--no-undefined \
     -Wl,--export-dynamic \
-    -Wl,--defsym,__ImageBase=0")
+    -Wl,--defsym,__ImageBase=0 \
+    -Wl,--defsym,__DeadlockTimeout=10")
 
 # Dummy signed enclave
 add_custom_command(

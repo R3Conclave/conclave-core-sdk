@@ -200,6 +200,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+                task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
                 task.outputEnclave.set(unsignedEnclaveFile)
             }
 
@@ -210,6 +211,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.inputLd.set(linkerToolFile)
                 task.inputEnclaveObject.set(target.file(partialEnclavefile))
                 task.inputJarObject.set(buildJarObjectTask.outputJarObject)
+                task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
                 task.outputEnclave.set(unsignedEnclaveFile)
                 task.stripped.set(type == BuildType.Release)
             }
@@ -232,6 +234,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.revocationLevel.set(conclaveExtension.revocationLevel)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
+                task.tcsNum.set(conclaveExtension.maxThreads)
                 task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
             }
 

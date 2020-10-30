@@ -18,6 +18,8 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
     val maxStackSize: Property<String> = objects.property(String::class.java)
     @get:Input
     val maxHeapSize: Property<String> = objects.property(String::class.java)
+    @get:Input
+    val tcsNum: Property<Int> = objects.property(Int::class.java)
 
     @get:OutputFile
     val outputConfigFile: RegularFileProperty = objects.fileProperty()
@@ -55,7 +57,7 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
                 <ISVSVN>${revocationLevel + 1}</ISVSVN>
                 <StackMaxSize>0x${maxStackSizeBytes.toString(16)}</StackMaxSize>
                 <HeapMaxSize>0x${maxHeapSizeBytes.toString(16)}</HeapMaxSize>
-                <TCSNum>10</TCSNum>
+                <TCSNum>${tcsNum.get()}</TCSNum>
                 <TCSPolicy>1</TCSPolicy>
                 <DisableDebug>$disableDebug</DisableDebug>
                 <MiscSelect>0</MiscSelect>

@@ -15,9 +15,11 @@ nav:
       - Architecture: architecture.md
       - Mail: mail.md
       - Security discussion: security.md
+      - Threads: threads.md
     - Tutorial:
       - Compiling and running: tutorial.md
       - Writing hello world: writing-hello-world.md
+    - Configuration options for enclaves: enclave-configuration.md
     - API: api/index.html
   - Operations:
     - Server deployment:

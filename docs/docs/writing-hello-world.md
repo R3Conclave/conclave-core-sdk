@@ -191,6 +191,9 @@ conclave {
 }
 ```
 
+These settings are described in detail in the page on [enclave configuration](enclave-configuration.md). A summary
+of these settings follows:
+
 The runtime setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
 `graalvm_native_image`. If the setting is omitted then it defaults to `graalvm_native_image`. See
 [Architecture overview](architecture.md) for details on the differences between the two supported runtime

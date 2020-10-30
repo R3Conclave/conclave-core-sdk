@@ -1,0 +1,8 @@
+@startuml
+HostThread1 -> Enclave: Call (TCS1)
+Enclave -> Enclave: Create thread (TCS1)
+Enclave -> HostThread1: Create thread
+HostThread1 -> HostThread2: Create
+HostThread1 --> Enclave: Thread created (TCS1)
+HostThread2 -> Enclave: Thread entry (TCS2)
+@enduml

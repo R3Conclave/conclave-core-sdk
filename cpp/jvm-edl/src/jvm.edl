@@ -6,6 +6,10 @@ enclave {
             [in, size=bufferInLen] void* bufferIn,
             int bufferInLen
         );
+        public void ecall_initialise_enclave(
+            [in, out, size=initStructLen] void* initStruct,
+            int initStructLen
+        );
         public void ecall_finalize_enclave(void);
     };
 

@@ -165,6 +165,7 @@ target_link_libraries(jvm_enclave_avian
         "-Wl,-Bsymbolic"
         "-Wl,--export-dynamic"
         "-Wl,--relocatable"
+        "-Wl,--defsym,__DeadlockTimeout=10"
         "-Wl,--defsym,__ImageBase=0")
 add_dependencies(jvm_enclave_avian jvm_enclave_avian_partial)
 

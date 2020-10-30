@@ -26,8 +26,8 @@ int putenv(char*) {
 }
 
 void exit(int status) {
-    jni_throw("STUB: exit(%d)\n", status);
-    while(1);   // Avoid warning about a noreturn function that actually returns.
+    enclave_trace("STUB: exit(%d)\n", status);
+    abort();
 }
 
 char *realpath(const char *path, char *resolved_path) {

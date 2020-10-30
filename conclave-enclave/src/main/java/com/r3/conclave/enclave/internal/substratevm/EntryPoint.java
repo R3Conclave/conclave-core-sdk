@@ -17,10 +17,10 @@ public class EntryPoint {
         NativeEnclaveEnvironment.enclaveEntry(byteArray);
     }
 
-    @CEntryPoint(name = "Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_runtimeError")
-    public static void runtimeError(IsolateThread thread, CCharPointer input, int len) {
+    @CEntryPoint(name = "Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_internalError")
+    public static void internalError(IsolateThread thread, CCharPointer input, int len) {
         byte[] byteArray = new byte[len];
         CTypeConversion.asByteBuffer(input, len).get(byteArray);
-        throw new RuntimeException(new String(byteArray, StandardCharsets.UTF_8));
+        throw new InternalError(new String(byteArray, StandardCharsets.UTF_8));
     }
 }

@@ -24,6 +24,9 @@ open class BuildUnsignedAvianEnclave @Inject constructor(objects: ObjectFactory)
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
+    @get:Input
+    val deadlockTimeout: Property<Int> = objects.property(Int::class.java)
+
     private val optionsForStripped: List<String> get() = if (stripped.getOrElse(false)) {
         // For releases, we also need to remove all symbols
         // so that the output artifact is repeatable.
@@ -44,6 +47,7 @@ open class BuildUnsignedAvianEnclave @Inject constructor(objects: ObjectFactory)
                 // does is make a DT_SYMBOLIC tag appear in the .dynamic section but the Intel urts ELF interpreter
                 // doesn't do anything with it - indeed the tag has little meaning in an enclave environment.
                 "-Bstatic", "--no-undefined", "--export-dynamic",
+                "--defsym", "__DeadlockTimeout=" + deadlockTimeout.get(),
                 "-o", outputs.files.first())
                 + optionsForStripped
                 + listOf(inputEnclaveObject.asFile.get(), inputJarObject.asFile.get())

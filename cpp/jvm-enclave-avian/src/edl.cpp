@@ -2,6 +2,16 @@
 #include <singleton_jvm.h>
 #include <enclave_thread.h>
 #include "enclave_shared_data.h"
+#include "enclave_init.h"
+
+// These two symbols are defined as parameters to the linker when running native-image.
+// __ImageBase is a symbol that is at the address at the base of the image. __DeadlockTimeout is
+// a symbol at the fake address of &__ImageBase + the deadlock timeout value configured as
+// part of the Gradle enclave configuration.
+// We can subtract one address from the other to get the actual value.
+extern unsigned long __ImageBase;
+extern unsigned long __DeadlockTimeout;
+static uint64_t deadlock_timeout = (uint64_t)((uint64_t)&__DeadlockTimeout - (uint64_t)&__ImageBase);
 
 namespace {
 
@@ -37,6 +47,14 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     abortOnJniException(jniEnv.get());
     jniEnv->CallStaticObjectMethod(NativeEnvClass, methodId, jarrayIn.value());
     abortOnJniException(jniEnv.get());
+}
+
+void ecall_initialise_enclave(void* initStruct, int initStructLen) {
+    if (!initStruct ||(initStructLen != sizeof(r3::conclave::EnclaveInit))) {
+        throw std::runtime_error("Invalid configuration structure passed to ecall_initialise_enclave()");
+    }
+    r3::conclave::EnclaveInit* ei = static_cast<r3::conclave::EnclaveInit*>(initStruct);
+    ei->deadlock_timeout_seconds = deadlock_timeout;
 }
 
 void ecall_finalize_enclave() {

@@ -50,6 +50,7 @@ object BuildEnclave {
         return listOf("/usr/bin/env", "ld",
                 "-pie", "--entry=enclave_entry",
                 "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic", "--defsym=__ImageBase=0",
+                "--defsym=__DeadlockTimeout=10", 
                 "-o", outputEnclave.absolutePath,
                 partialEnclave.absolutePath,
                 enclaveJarO.absolutePath

@@ -5,6 +5,7 @@
 #include "enclave_shared_data.h"
 #include <pthread.h>
 #include <map>
+#include <mutex>
 
 // Internal to the Linux SGX SDK but we need information on the current thread.
 #include <internal/thread_data.h>
@@ -52,6 +53,7 @@ public:
         thread_data_t* retval = nullptr;
         
         if (attr) {
+            std::lock_guard<std::mutex> lock(mutex_);
             // Find an unused handle.
             int handle;
             for (handle = 0; handle < MAX_HANDLES; ++handle) {
@@ -78,6 +80,7 @@ public:
         thread_data_t* retval = nullptr;
 
         if (attr) {
+            std::lock_guard<std::mutex> lock(mutex_);
             // The index into our array is stored as a 32 bit value in attr.
             uint32_t handle = *(uint32_t*)attr;
             if (handle < MAX_HANDLES) {
@@ -94,6 +97,7 @@ public:
      */
     void free(const pthread_attr_t* attr) {
         if (attr) {
+            std::lock_guard<std::mutex> lock(mutex_);
             // The index into our array is stored as a 32 bit value in attr.
             uint32_t handle = *(uint32_t*)attr;
             if (handle < MAX_HANDLES) {
@@ -106,6 +110,7 @@ public:
 private:
     PthreadData() {}
 
+    std::mutex mutex_;
     static constexpr int MAX_HANDLES = 256;
     std::unique_ptr<thread_data_t> thread_data_[MAX_HANDLES];
 };
@@ -214,7 +219,7 @@ int pthread_cond_timedwait(pthread_cond_t *__restrict cond, pthread_mutex_t *__r
         uint64_t timeout = abstime->tv_sec * NS_PER_SEC + abstime->tv_nsec;
         uint64_t now = r3::conclave::EnclaveSharedData::instance().real_time();
 
-        if (timeout < now) {
+        if (timeout <= now) {
             return ETIMEDOUT;
         }
         timeout -= now;

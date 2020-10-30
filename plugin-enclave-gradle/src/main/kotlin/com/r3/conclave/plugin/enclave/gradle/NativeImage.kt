@@ -89,6 +89,9 @@ open class NativeImage @Inject constructor(
     @get:Input
     val maxHeapSize: Property<String> = objects.property(String::class.java)
 
+    @get:Input
+    val deadlockTimeout: Property<Int> = objects.property(Int::class.java)
+
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -352,6 +355,7 @@ open class NativeImage @Inject constructor(
                             GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get()) / 4096,
                 "-H:NativeLinkerOption=-Wl,--defsym,__StackSize=" +
                             GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()) / 4096,
+                "-H:NativeLinkerOption=-Wl,--defsym,__DeadlockTimeout=" + deadlockTimeout.get(),
                 "-H:NativeLinkerOption=-Wl,--gc-sections"
         )
     }
