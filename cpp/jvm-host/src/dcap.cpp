@@ -1,23 +1,63 @@
 #include <dcap.h>
 #include <qve_header.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 namespace r3::conclave::dcap {
 
 #define SGX_QL_RESOLVE(handle, name) name=(fun_##name##_t)dlsym(handle,#name); \
     if (name == nullptr) errors.push_back(std::string("unresolved: " #name))
 
-    void* try_dlopen(const std::string& path, const char *filename, QuotingAPI::Errors& errors)
+    void* try_dlopen(const std::string& fullpath, QuotingAPI::Errors& errors)
     {
-        auto const fullname = path + "/" + filename;
-
-        void* handle = dlopen(fullname.c_str(),RTLD_NOW | RTLD_GLOBAL);
+        void* handle = dlopen(fullpath.c_str(),RTLD_NOW | RTLD_GLOBAL);
         if (handle == nullptr)
-            errors.push_back(std::string("unable to load: ") + fullname);
+            errors.push_back(std::string("unable to load: ") + fullpath);
 
         return handle;
     }
 
+    void* try_dlopen(const std::string& path, const char *filename, QuotingAPI::Errors& errors)
+    {
+        auto const fullpath = path + "/" + filename;
+        return try_dlopen(fullpath, errors);
+    }
+
+    bool does_file_exist(const std::string& fullpath)
+    {
+        struct stat stats;
+        return stat(fullpath.c_str(), &stats) == 0;
+    }
+
+    // check if there is a plugin installed at fixed locations
+    // if not, default to bundled one
+    const std::string get_plugin_path(const std::string& bundle){
+        const char* plugin_filename = "libdcap_quoteprov.so.1";
+        const char* plugin_legacy_filename = "libdcap_quoteprov.so";
+        auto const locations = {
+            std::string("/usr/lib/x86_64-linux-gnu"),
+            std::string("/usr/lib"),
+            bundle
+        };
+
+        for(auto const& path : locations){
+            auto const& fullpath = path + "/" + plugin_filename;
+            if (does_file_exist(fullpath))
+                return fullpath;
+
+            auto const& legacy_path = path + "/" + plugin_legacy_filename;
+            if (does_file_exist(legacy_path))
+                return legacy_path;
+        }
+
+        throw new std::exception(); // fatal, not suppose to happen
+    }
+
     bool QuotingAPI::init(const std::string& path, QuotingAPI::Errors& errors) {
+
+        auto const qpl = get_plugin_path(path);
 
         comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
         urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
@@ -44,12 +84,11 @@ namespace r3::conclave::dcap {
             if (sgx_ql_set_path(SGX_QL_PCE_PATH, pce.c_str()) != SGX_QL_SUCCESS)
                 errors.push_back(std::string("sgx_ql_set_path failed: ") + pce);
 
-            auto const qpl = path + "/" + "libdcap_quoteprov.so.1";
             if (sgx_ql_set_path(SGX_QL_QPL_PATH, qpl.c_str()) != SGX_QL_SUCCESS)
                 errors.push_back(std::string("sgx_ql_set_path failed: ") + qpl);
         }
 
-        qp_handle = try_dlopen( path, "libdcap_quoteprov.so.1", errors);
+        qp_handle = try_dlopen( qpl, errors);
         if(qp_handle != nullptr) {
             SGX_QL_RESOLVE(qp_handle, sgx_ql_get_quote_verification_collateral);
         }

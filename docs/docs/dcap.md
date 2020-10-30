@@ -52,16 +52,6 @@ Just in case:
   * download the [driver](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-dcap-1.8-release)
   * follow install [instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
 
-#### Using Docker container(s)
-With DCAP driver, the name of SGX device has changed.
-If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
-```
-docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
-```
-
-#### Intel SGX PSW & DCAP
-All required libraries are included into Conclave SDK.   
-
 You may still need to add your user into `sgx_prv` group:
 ```
 usermod -aG sgx_prv user
@@ -70,6 +60,13 @@ usermod -aG sgx_prv user
 Or run the following for your current user (not as `root`):
 ```
 sudo usermod -aG sgx_prv $USER
+```
+
+#### Using Docker container(s)
+With DCAP driver, the name of SGX device has changed.
+If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
+```
+docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
 ```
 
 #### hello-world
