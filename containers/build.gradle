@@ -38,6 +38,7 @@ subprojects {
 
     task buildImagePublish(type: DockerBuildImage, dependsOn: copyDockerfile) {
         registryCredentials = publishRegistryCredentials
+        noCache = true
         inputDir = file("$buildDir/docker/build")
         def imageName = "$publishRegistryUrl/com.r3.sgx/${project.name}"
         tags = ["$imageName:${rootProject.version}", "$imageName:latest"]
@@ -74,6 +75,7 @@ subprojects {
 
     task buildImageTest(type: DockerBuildImage, dependsOn: copyDockerfile) {
         registryCredentials = testRegistryCredentials
+        noCache = true
         inputDir = file("$buildDir/docker/build")
         tags = [ "$testRegistryUrl/com.r3.sgx/${project.name}:latest" ] as Set
         def dummyOutput = file("${project.buildDir}/docker/dummy-build")
