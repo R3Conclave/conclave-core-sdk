@@ -75,7 +75,7 @@ class SealingTest {
 
     @Test
     fun `seal and unseal data`() {
-        val connection = testEnclaves.createOrGetEnclave(
+        val connection = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler1,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
@@ -91,12 +91,12 @@ class SealingTest {
     @Test
     fun `seal in one enclave and unseal in another instance of the same enclave`() {
         val toBeSealed = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()))
-        val connection1 = testEnclaves.createOrGetEnclave(
+        val connection1 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler1,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
         )
-        val connection2 = testEnclaves.createOrGetEnclave(
+        val connection2 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler2,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
@@ -114,12 +114,12 @@ class SealingTest {
     @Test
     fun `seal in one enclave and unseal in another enclave`() {
         val toBeSealed = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()))
-        val connection1 = testEnclaves.createOrGetEnclave(
+        val connection1 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler1,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
         )
-        val connection2 = testEnclaves.createOrGetEnclave(
+        val connection2 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler2,
                 enclaveClass = SealUnsealEnclaveAux::class.java, // Distinct enclave measurement.
                 keyGenInput = "signerA"
@@ -140,12 +140,12 @@ class SealingTest {
         val toBeSealed = PlaintextAndEnvelope(
                 plaintext = OpaqueBytes("Sealing Hello World!".toByteArray()),
                 authenticatedData = OpaqueBytes("Sealing Hello World Authenticated Data!".toByteArray()))
-        val connection1 = testEnclaves.createOrGetEnclave(
+        val connection1 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler1,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
         )
-        val connection2 = testEnclaves.createOrGetEnclave(
+        val connection2 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler2,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
@@ -166,12 +166,12 @@ class SealingTest {
         val toBeSealed = PlaintextAndEnvelope(
                 plaintext = OpaqueBytes("Sealing Hello World!".toByteArray()),
                 authenticatedData = OpaqueBytes("Sealing Hello World Authenticated Data!".toByteArray()))
-        val connection1 = testEnclaves.createOrGetEnclave(
+        val connection1 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler1,
                 enclaveClass = SealUnsealEnclave::class.java,
                 keyGenInput = "signerA"
         )
-        val connection2 = testEnclaves.createOrGetEnclave(
+        val connection2 = testEnclaves.createOrGetEnclaveConnection(
                 handler = sealUnsealRecordingHandler2,
                 enclaveClass = SealUnsealEnclaveAux::class.java, // Distinct enclave measurement.
                 keyGenInput = "signerA"
@@ -191,7 +191,7 @@ class SealingTest {
     fun `seal in one enclave and unseal in another enclave distinct signers`() {
         val toBeSealed = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()))
         // Setup the 1st enclave.
-        val rootConnection1 = testEnclaves.createOrGetEnclave(
+        val rootConnection1 = testEnclaves.createOrGetEnclaveConnection(
                 handler = throwHandler1,
                 enclaveClass = SealUnsealEnclaveExceptionHandler::class.java,
                 keyGenInput = "signerA"
@@ -199,7 +199,7 @@ class SealingTest {
         val connection1 = rootConnection1.downstream
         //
         // Setup the 2nd enclave.
-        val rootConnection2 = testEnclaves.createOrGetEnclave(
+        val rootConnection2 = testEnclaves.createOrGetEnclaveConnection(
                 handler = throwHandler2,
                 enclaveClass = SealUnsealEnclaveExceptionHandler::class.java,
                 keyGenInput = "signerB"

@@ -11,7 +11,7 @@ import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
-import com.r3.conclave.enclave.internal.EpidAttestationEnclaveHandler
+import com.r3.conclave.enclave.internal.AttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
@@ -58,7 +58,7 @@ abstract class Enclave {
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
     private lateinit var adminHandler: AdminHandler
-    private lateinit var attestationHandler: EpidAttestationEnclaveHandler
+    private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
 
     /**
@@ -134,7 +134,7 @@ abstract class Enclave {
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
-            attestationHandler = mux.addDownstream(object : EpidAttestationEnclaveHandler(env) {
+            attestationHandler = mux.addDownstream(object : AttestationEnclaveHandler(env) {
                 override val reportData = createReportData()
             })
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())

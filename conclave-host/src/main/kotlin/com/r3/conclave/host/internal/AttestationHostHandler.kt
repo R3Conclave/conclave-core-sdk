@@ -1,23 +1,23 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxInitQuoteResponse.quotingEnclaveTargetInfo
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
+import com.r3.conclave.host.AttestationParameters
 import java.nio.ByteBuffer
 
-class EpidAttestationHostHandler(
-        private val quoteType: SgxQuoteType,
-        private val spid: ByteCursor<SgxSpid>,
-        private val isMock: Boolean = false
-) : Handler<EpidAttestationHostHandler.Connection> {
+class AttestationHostHandler(
+        private val attestationParameters: AttestationParameters?
+) : Handler<AttestationHostHandler.Connection> {
     companion object {
-        private val log = loggerFor<EpidAttestationHostHandler>()
+        private val log = loggerFor<AttestationHostHandler>()
     }
 
     private sealed class State {
         object Unstarted : State()
-        data class QuoteInitialized(val initQuoteResponse: ByteCursor<SgxInitQuoteResponse>) : State()
+        object QuoteInitialized : State()
         data class ReportRetrieved(val report: ByteCursor<SgxReport>) : State()
         data class QuoteRetrieved(val signedQuote: ByteCursor<SgxSignedQuote>) : State()
     }
@@ -31,8 +31,8 @@ class EpidAttestationHostHandler(
 
     override fun connect(upstream: Sender): Connection = Connection(upstream)
 
-    inner class Connection(private val upstream: Sender) : AttestationHandlerConnection {
-        override fun getSignedQuote(): ByteCursor<SgxSignedQuote> {
+    inner class Connection(private val upstream: Sender) {
+        fun getSignedQuote(): ByteCursor<SgxSignedQuote> {
             val initialState = stateManager.state
             return when (initialState) {
                 State.Unstarted -> {
@@ -49,14 +49,24 @@ class EpidAttestationHostHandler(
         }
 
         private fun initializeQuote(): ByteCursor<SgxTargetInfo> {
-            val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
-            if (isMock) {
-                log.debug("Mock initializeQuote")
-            } else {
-                Native.initQuote(quoteResponse.buffer.array())
+            val signedQuote = when (attestationParameters) {
+                is AttestationParameters.EPID -> {
+                    val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
+                    Native.initQuote(quoteResponse.buffer.array())
+                    quoteResponse[quotingEnclaveTargetInfo]
+                }
+                is AttestationParameters.DCAP -> {
+                    val targetInfo = Cursor.allocate(SgxTargetInfo)
+                    Native.initQuoteDCAP(NativeLoader.libsPath.toString(), targetInfo.buffer.array())
+                    targetInfo
+                }
+                null -> {
+                    log.debug("Mock initializeQuote")
+                    Cursor.allocate(SgxTargetInfo)
+                }
             }
-            stateManager.state = State.QuoteInitialized(quoteResponse)
-            return quoteResponse[SgxInitQuoteResponse.quotingEnclaveTargetInfo]
+            stateManager.state = State.QuoteInitialized
+            return signedQuote
         }
 
         private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>): ByteCursor<SgxReport> {
@@ -68,17 +78,17 @@ class EpidAttestationHostHandler(
         }
 
         private fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-            val signedQuote = if (isMock) {
+            val signedQuote = if (attestationParameters == null) {
                 val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
                 // We can populate the other fields as needed, but for now we just need to copy over the report body.
                 signedQuote[quote][SgxQuote.reportBody] = report[SgxReport.body].read()
                 signedQuote
-            } else {
+            } else if (attestationParameters is AttestationParameters.EPID) {
                 val quoteBytes = ByteArray(Native.calcQuoteSize(null))
                 val getQuote = Cursor.allocate(SgxGetQuote)
                 getQuote[SgxGetQuote.report] = report.read()
-                getQuote[SgxGetQuote.quoteType] = quoteType.value
-                getQuote[SgxGetQuote.spid] = spid.read()
+                getQuote[SgxGetQuote.quoteType] = SgxQuoteType.LINKABLE.value
+                getQuote[SgxGetQuote.spid] = attestationParameters.spid.buffer()
                 Native.getQuote(
                         getQuote.buffer.array(),
                         signatureRevocationListIn = null,
@@ -88,6 +98,14 @@ class EpidAttestationHostHandler(
                         quoteOut = quoteBytes
                 )
                 Cursor.wrap(SgxSignedQuote, quoteBytes)
+            } else if (attestationParameters is AttestationParameters.DCAP) {
+                val quoteBytes = ByteArray(Native.calcQuoteSizeDCAP())
+                val getQuote = Cursor.allocate(SgxGetQuote)
+                getQuote[SgxGetQuote.report] = report.read()
+                Native.getQuoteDCAP(getQuote.buffer.array(), quoteBytes)
+                Cursor.wrap(SgxSignedQuote, quoteBytes)
+            } else {
+                TODO("This line cannot be reached and would be best served as a when-statement. It's currently not to avoid git losing the rename history.")
             }
             stateManager.state = State.QuoteRetrieved(signedQuote)
             return signedQuote

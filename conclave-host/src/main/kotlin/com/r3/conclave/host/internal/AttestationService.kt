@@ -25,7 +25,3 @@ interface AttestationService {
         return enclaveInstanceInfo
     }
 }
-
-interface AttestationHandlerConnection {
-    fun getSignedQuote(): ByteCursor<SgxSignedQuote>
-}

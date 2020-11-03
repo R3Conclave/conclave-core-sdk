@@ -200,6 +200,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * or an [AttestationParameters.DCAP] object (which requires no extra parameters) when the host operating system is
      * pre-configured for DCAP attestation, typically by a cloud provider, or null, when no attestation support is
      * requested. Null is only useful for development purposes and initialises a mock attestation service.
+     *
      * @param mailCallbacks A callback that will be invoked when the enclave requests delivery or acknowledgement of mail.
      * If null then the enclave cannot send or acknowledge mail, although you can still deliver it.
      */
@@ -218,16 +219,20 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             adminHandler = mux.addDownstream(AdminHandler(this))
             // The attestation handler manages the process of generating remote attestations that are then
             // placed into the EnclaveInstanceInfo.
+            // TODO There's some inconsistency with this code and then the use of the attestation service. For example,
+            //      if using EPID in SIMULATION mode then the simulated quote generation code is used even though later
+            //      on we use the MockAttestationService to "attest" it.
+            //      What should happen is that MOCK and SIMULATION will always use a mock attestation code path regardless
+            //      of the attestationParameters provided.
             val attestationConnection = mux.addDownstream(
                     when (attestationParameters) {
-                        is AttestationParameters.DCAP -> DCAPAttestationHostHandler(
-                                enclaveMode == EnclaveMode.MOCK || enclaveMode == EnclaveMode.SIMULATION
+                        is AttestationParameters.DCAP -> AttestationHostHandler(
+                                attestationParameters.takeUnless { enclaveMode == EnclaveMode.MOCK || enclaveMode == EnclaveMode.SIMULATION }
                         )
                         is AttestationParameters.EPID -> {
-                            val spid = Cursor.read(SgxSpid, attestationParameters.spid.buffer())
-                            EpidAttestationHostHandler(SgxQuoteType.LINKABLE, spid, enclaveMode == EnclaveMode.MOCK)
+                            AttestationHostHandler(attestationParameters.takeUnless { enclaveMode == EnclaveMode.MOCK })
                         }
-                        null -> EpidAttestationHostHandler(SgxQuoteType.LINKABLE, Cursor.allocate(SgxSpid), enclaveMode == EnclaveMode.MOCK)
+                        null -> AttestationHostHandler(null)
                     }
             )
 
