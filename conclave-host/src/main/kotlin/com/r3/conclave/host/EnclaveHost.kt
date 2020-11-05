@@ -53,6 +53,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
 
+        /**
+         * Diagnostics output outlining CPU capabilities
+         */
+        @JvmStatic
+        val capabilitiesDiagnostics: String get() = Native.getCpuCapabilities()
+
         // This is synthetic to hide it from Java apps.
         @JvmSynthetic
         internal fun create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {

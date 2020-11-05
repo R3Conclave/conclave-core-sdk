@@ -79,4 +79,5 @@ object Native {
             metadataOut: ByteArray
     )
 
+    external fun getCpuCapabilities(): String
 }

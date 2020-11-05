@@ -34,6 +34,7 @@ add_library(jvm_host SHARED
         src/enclave_metadata.cpp
         src/ecall_context.cpp
         src/dcap.cpp
+        src/sgx_cap.cpp
         src/enclave_console.cpp)
 
 target_include_directories(jvm_host PUBLIC

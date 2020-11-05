@@ -1,6 +1,7 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.enclave.Enclave
@@ -166,6 +167,13 @@ class EnclaveHostNativeTest {
         }
     }
 
+    @Test
+    fun `get cpu capabilities`() {
+        val text = EnclaveHost.capabilitiesDiagnostics
+        println(text)
+        assertThat(text).contains("SGX available:")
+    }
+
     class EnclaveInstanceInfoEnclave : Enclave() {
         override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = enclaveInstanceInfo.serialize()
     }
@@ -277,6 +285,7 @@ class EnclaveHostNativeTest {
             return null
         }
     }
+
 }
 
 private fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()
