@@ -1,7 +1,6 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.SGXExtensionASN1Parser
-import java.io.ByteArrayInputStream
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -12,14 +11,16 @@ class DCAPUtils {
         private const val SGX_EXTENSION_OID = "1.2.840.113741.1.13.1"
         private const val SGX_FMSPC_OID = "1.2.840.113741.1.13.1.4"
 
+        private const val withDelimeterRegex = "(?<=%1\$s)"
+        private const val endCertificateMarker = "-----END CERTIFICATE-----"
+        private const val endCertificateMarkerLength = endCertificateMarker.length
+        private val endCertificateRegex = Regex(String.format(withDelimeterRegex, endCertificateMarker))
+
         fun parsePemCertPathFromSignature(data: ByteArray): CertPath {
             return parsePemCertPath(data, 0)
         }
 
         private fun parsePemCertPath(data: ByteArray, base: Int): CertPath {
-            val certificateFactory = CertificateFactory.getInstance("X.509")
-            val certificates = mutableListOf<Certificate>()
-
             // ecdsa signature data
             // sig      +0      64
             // pub_key  +64     64
@@ -44,20 +45,24 @@ class DCAPUtils {
             offset += 4
 
             // plaintext certs start here
-            val input = ByteArrayInputStream(data, offset, data.size - offset)
-            while (input.available() > 1) { // there are one or two terminating bytes - ignore them
-                certificates += certificateFactory.generateCertificate(input)
-            }
+            return parseCertChain(String(data, offset, data.size - offset))
+        }
 
+        fun parseCertChain(data: String): CertPath {
+            val certificateFactory = CertificateFactory.getInstance("X.509")
+            val certificates = mutableListOf<Certificate>()
+
+            for (text in data.split(endCertificateRegex)) {
+                if (text.length < endCertificateMarkerLength)
+                    break;
+
+                certificates.add(certificateFactory.generateCertificate(text.byteInputStream()))
+            }
             return certificateFactory.generateCertPath(certificates)
         }
 
         private fun getInt16(data: ByteArray, offset: Int): Int {
             return data[offset] + data[offset + 1] * 256
-        }
-
-        private fun getInt32(data: ByteArray, offset: Int): Int {
-            return getInt16(data, offset) + getInt16(data, offset + 2) * 256 * 256
         }
 
         fun getSgxExtension(certPath: CertPath): ByteArray {
