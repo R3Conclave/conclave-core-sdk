@@ -513,12 +513,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     // TODO The collateral shouldn't be serialised if it's not used.
                     val colVersion = ar.collateral.version.toByteArray()
                     val colPckcrlissuerchain = ar.collateral.pckCrlIssuerChain.toByteArray()
-                    val colRootcacrl = ar.collateral.rootCaCrl.toByteArray()
-                    val colPckcrl = ar.collateral.pckCrl.toByteArray()
-                    val colTcbinfoissuerchain = ar.collateral.tcbInfoIssuerChain.toByteArray()
-                    val colTcbinfo = ar.collateral.tcbInfo.toByteArray()
-                    val colQeidentityissuerchain = ar.collateral.qeIdentityIssuerChain.toByteArray()
-                    val colQeidentity = ar.collateral.qeIdentity.toByteArray()
+                    val colRootcacrl = ar.collateral.rawRootCaCrl.toByteArray()
+                    val colPckcrl = ar.collateral.rawPckCrl.toByteArray()
+                    val colTcbinfoissuerchain = ar.collateral.rawTcbInfoIssuerChain.toByteArray()
+                    val colTcbinfo = ar.collateral.rawSignedTcbInfo.toByteArray()
+                    val colQeidentityissuerchain = ar.collateral.rawQeIdentityIssuerChain.toByteArray()
+                    val colQeidentity = ar.collateral.rawSignedQeIdentity.toByteArray()
                     val collateralSize = colVersion.intLengthPrefixSize +
                             colPckcrlissuerchain.intLengthPrefixSize +
                             colRootcacrl.intLengthPrefixSize +

@@ -1,9 +1,6 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.utilities.internal.addPosition
-import com.r3.conclave.utilities.internal.getSlice
-import com.r3.conclave.utilities.internal.getUnsignedShort
-import com.r3.conclave.utilities.internal.putUnsignedShort
+import com.r3.conclave.utilities.internal.*
 import java.lang.reflect.Modifier
 import java.nio.Buffer
 import java.nio.ByteBuffer
@@ -169,17 +166,30 @@ abstract class VariableStruct : AbstractStruct, VariableEncoder<ByteBuffer>() {
     protected fun <S : VariableStruct, T : Encoder<*>> S.field(type: T): AbstractStruct.Field<S, T> = Field(type)
 }
 
-open class UInt32VariableBytes : VariableEncoder<ByteBuffer>() {
-    final override val minSize: Int get() = Int.SIZE_BYTES
-    final override fun size(buffer: ByteBuffer): Int = Int.SIZE_BYTES + buffer.getSize { getInt(position()) }
+abstract class VariableBytes : VariableEncoder<ByteBuffer>() {
+    final override fun size(buffer: ByteBuffer): Int = minSize + getSizeAbsolute(buffer)
     final override fun skip(buffer: ByteBuffer) {
-        val size = buffer.getSize { getInt() }
+        val size = getSizeRelative(buffer)
         buffer.addPosition(size)
     }
     final override fun read(buffer: ByteBuffer): ByteBuffer {
-        val size = buffer.getSize { getInt() }
+        val size = getSizeRelative(buffer)
         return buffer.getSlice(size).asReadOnlyBuffer()
     }
+    protected abstract fun getSizeRelative(buffer: ByteBuffer): Int
+    protected abstract fun getSizeAbsolute(buffer: ByteBuffer): Int
+}
+
+open class UInt16VariableBytes : VariableBytes() {
+    final override val minSize: Int get() = Short.SIZE_BYTES
+    final override fun getSizeRelative(buffer: ByteBuffer): Int = buffer.getUnsignedShort()
+    final override fun getSizeAbsolute(buffer: ByteBuffer): Int = buffer.getUnsignedShort(buffer.position())
+}
+
+open class UInt32VariableBytes : VariableBytes() {
+    final override val minSize: Int get() = Int.SIZE_BYTES
+    final override fun getSizeRelative(buffer: ByteBuffer): Int = buffer.getSize { getInt() }
+    final override fun getSizeAbsolute(buffer: ByteBuffer): Int = buffer.getSize { getInt(position()) }
     private inline fun ByteBuffer.getSize(block: ByteBuffer.() -> Int): Int {
         val size = block(this)
         check(size >= 0) { "ByteBuffer does not support sizes greater than max signed int." }
@@ -201,7 +211,7 @@ open class Int32 : FixedEncoder<Int>() {
 
 open class UInt32 : FixedEncoder<Long>() {
     final override val size get() = Int.SIZE_BYTES
-    final override fun read(buffer: ByteBuffer) = Integer.toUnsignedLong(buffer.getInt())
+    final override fun read(buffer: ByteBuffer) = buffer.getUnsignedInt()
     final override fun write(buffer: ByteBuffer, value: Long): ByteBuffer {
         require(value >= 0 && value <= 4294967295) { "Not an unsigned int: $value" }
         return buffer.putInt(value.toInt())

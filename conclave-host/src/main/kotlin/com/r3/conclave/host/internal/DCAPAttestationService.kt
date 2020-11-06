@@ -1,42 +1,35 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.AttestationMode
-import com.r3.conclave.common.internal.ByteCursor
-import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.SgxSignedQuote.signature
 import com.r3.conclave.common.internal.attestation.AttestationResponse
+import com.r3.conclave.common.internal.attestation.DCAPUtils
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.utilities.internal.getRemainingBytes
+import java.security.cert.CertificateFactory
 
 object DCAPAttestationService : AttestationService {
-    private const val VersionIndex = 0
-    private const val PckCrlIssuerChainIndex = 1
-    private const val RootCaCrlIndex = 2
-    private const val PckCrlIndex = 3
-    private const val TcbInfoIssuerChainIndex = 4
-    private const val TcbInfoIndex = 5
-    private const val QeIdentityIssuerChainIndex = 6
-    private const val QeIdentityIndex = 7
-
     override fun requestSignature(signedQuote: ByteCursor<SgxSignedQuote>): AttestationResponse {
-        val report = signedQuote[quote].bytes
         val signature = signedQuote[signature].read().getRemainingBytes()
-        val certPath = DCAPUtils.parsePemCertPathFromSignature(signature)
+        val authData = Cursor.wrap(SgxEcdsa256BitQuoteAuthData, signature)
+        val pckCertPath = authData[qeCertData].toPckCertPath()
+
         val col = Native.getQuoteCollateral(
-                DCAPUtils.getFMSPC(certPath),
-                DCAPUtils.getPckWord(certPath)
+                DCAPUtils.getFMSPC(pckCertPath),
+                DCAPUtils.getPckWord(pckCertPath)
         )
-        val collateral = QuoteCollateral(
-                col[VersionIndex],
-                col[PckCrlIssuerChainIndex],
-                col[RootCaCrlIndex],
-                col[PckCrlIndex],
-                col[TcbInfoIssuerChainIndex],
-                col[TcbInfoIndex],
-                col[QeIdentityIssuerChainIndex],
-                col[QeIdentityIndex],
+        val collateral = QuoteCollateral(col[0], col[1], col[2], col[3], col[4], col[5], col[6], col[7])
+
+        // TODO AttestationResponse is the wrong class to carry the DCAP attestation data.
+        return AttestationResponse(
+                signedQuote[quote].bytes,
+                signature,
+                pckCertPath,
+                collateral,
+                AttestationMode.DCAP
         )
-        return AttestationResponse(report, signature, certPath, collateral, AttestationMode.DCAP)
     }
 }

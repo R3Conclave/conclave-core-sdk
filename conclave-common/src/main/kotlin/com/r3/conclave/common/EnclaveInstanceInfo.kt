@@ -110,12 +110,12 @@ interface EnclaveInstanceInfo {
                 val collateral = QuoteCollateral(
                     version = String(buffer.getIntLengthPrefixBytes()),
                     pckCrlIssuerChain = String(buffer.getIntLengthPrefixBytes()),
-                    rootCaCrl = String(buffer.getIntLengthPrefixBytes()),
-                    pckCrl = String(buffer.getIntLengthPrefixBytes()),
-                    tcbInfoIssuerChain = String(buffer.getIntLengthPrefixBytes()),
-                    tcbInfo = String(buffer.getIntLengthPrefixBytes()),
-                    qeIdentityIssuerChain = String(buffer.getIntLengthPrefixBytes()),
-                    qeIdentity = String(buffer.getIntLengthPrefixBytes())
+                    rawRootCaCrl = String(buffer.getIntLengthPrefixBytes()),
+                    rawPckCrl = String(buffer.getIntLengthPrefixBytes()),
+                    rawTcbInfoIssuerChain = String(buffer.getIntLengthPrefixBytes()),
+                    rawSignedTcbInfo = String(buffer.getIntLengthPrefixBytes()),
+                    rawQeIdentityIssuerChain = String(buffer.getIntLengthPrefixBytes()),
+                    rawSignedQeIdentity = String(buffer.getIntLengthPrefixBytes())
                 )
 
                 // New fields need to be behind an availability check before being read. Use dis.available() to check if there

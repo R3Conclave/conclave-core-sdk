@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -21,7 +22,6 @@ import com.r3.conclave.common.internal.Cursor
 import com.r3.conclave.common.internal.SgxQuote
 import com.r3.conclave.common.internal.SgxSignedQuote
 import java.time.Instant
-import java.util.*
 
 /**
  * Definitions taken from https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf.
@@ -91,8 +91,6 @@ data class AttestationReport @JsonCreator constructor(
         val isvEnclaveQuoteBody: ByteCursor<SgxQuote>,
 
         @JsonProperty("platformInfoBlob")
-        @JsonSerialize(using = ToStringSerializer::class)
-        @JsonDeserialize(using = Base16Deserializer::class)
         val platformInfoBlob: OpaqueBytes? = null,
 
         @JsonProperty("revocationReason")
@@ -110,8 +108,8 @@ data class AttestationReport @JsonCreator constructor(
         val nonce: String? = null,
 
         @JsonProperty("epidPseudonym")
-        @JsonSerialize(using = OpaqueBytesSerializer::class)
-        @JsonDeserialize(using = OpaqueBytesDeserializer::class)
+        @JsonSerialize(using = Base64Serializer::class)
+        @JsonDeserialize(using = Base64Deserializer::class)
         val epidPseudonym: OpaqueBytes? = null,
 
         @JsonProperty("advisoryURL")
@@ -127,12 +125,6 @@ data class AttestationReport @JsonCreator constructor(
         @JsonProperty("version")
         val version: Int
 ) {
-    private class Base16Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
-            return OpaqueBytes.parse(p.valueAsString)
-        }
-    }
-
     private class SgxQuoteSerializer : JsonSerializer<ByteCursor<SgxQuote>>() {
         override fun serialize(value: ByteCursor<SgxQuote>, gen: JsonGenerator, provider: SerializerProvider) {
             gen.writeBinary(value.bytes)
@@ -151,42 +143,69 @@ data class AttestationReport @JsonCreator constructor(
         }
     }
 
-    private class OpaqueBytesSerializer : StdSerializer<OpaqueBytes>(OpaqueBytes::class.java) {
+    private class Base64Serializer : StdSerializer<OpaqueBytes>(OpaqueBytes::class.java) {
         override fun serialize(value: OpaqueBytes, gen: JsonGenerator, provider: SerializerProvider) {
             gen.writeBinary(value.bytes)
         }
     }
 
-    private class OpaqueBytesDeserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
+    private class Base64Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes = OpaqueBytes(p.binaryValue)
     }
 }
 
-data class TcbInfoSigned @JsonCreator constructor(
+/**
+ * https://api.portal.trustedservices.intel.com/documentation#pcs-tcb-info-v2
+ *
+ * @property signature Signature calculated over [tcbInfo] body without whitespaces using TCB Signing Key
+ * i.e: `{"version":2,"issueDate":"2019-07-30T12:00:00Z","nextUpdate":"2019-08-30T12:00:00Z",...}`
+ */
+data class SignedTcbInfo @JsonCreator constructor(
         @JsonProperty("tcbInfo")
         val tcbInfo: TcbInfo,
 
         @JsonProperty("signature")
-        val signature: String
+        val signature: OpaqueBytes
 )
 
+/**
+ * @property version Version of the structure.
+ *
+ * @property issueDate Date and time the TCB information was created.
+ *
+ * @property nextUpdate Date and time by which next TCB information will be issued.
+ *
+ * @property fmspc FMSPC (Family-Model-Stepping-Platform-CustomSKU).
+ *
+ * @property pceId PCE identifier.
+ *
+ * @property tcbType Type of TCB level composition that determines TCB level comparison logic.
+ *
+ * @property tcbEvaluationDataNumber A monotonically increasing sequence number changed when Intel updates the content
+ * of the TCB evaluation data set: TCB Info, QE Idenity and QVE Identity. The tcbEvaluationDataNumber update is
+ * synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU) and QE/QVE Identity.
+ * This sequence number allows users to easily determine when a particular TCB Info/QE Idenity/QVE Identiy superseedes
+ * another TCB Info/QE Identity/QVE Identity.
+ *
+ * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
+ */
 data class TcbInfo @JsonCreator constructor(
         @JsonProperty("version")
         val version: Int,
 
         @JsonProperty("issueDate")
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-        val issueDate: Date,
+        val issueDate: Instant,
 
         @JsonProperty("nextUpdate")
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-        val nextUpdate: Date,
+        val nextUpdate: Instant,
 
         @JsonProperty("fmspc")
-        val fmspc: String,
+        val fmspc: OpaqueBytes,
 
         @JsonProperty("pceId")
-        val pceId: String,
+        val pceId: OpaqueBytes,
 
         @JsonProperty("tcbType")
         val tcbType: Int,
@@ -198,63 +217,127 @@ data class TcbInfo @JsonCreator constructor(
         val tcbLevels: List<TcbLevel>
 )
 
+/**
+ * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
+ * that were originally published on or prior to this date.
+ *
+ * @property tcbStatus TCB level status.
+ */
 data class TcbLevel @JsonCreator constructor(
         @JsonProperty("tcb")
         val tcb: Tcb,
 
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
         @JsonProperty("tcbDate")
-        val tcbDate: Date,
+        val tcbDate: Instant,
 
         @JsonProperty("tcbStatus")
-        val tcbStatus: String
+        val tcbStatus: TcbStatus
 )
+
+enum class TcbStatus {
+    /** TCB level of the SGX platform is up-to-date. */
+    UpToDate,
+    /**
+     * TCB level of the SGX platform is up-to-date but due to certain issues affecting the platform, additional SW
+     * Hardening in the attesting SGX enclaves may be needed.
+     */
+    SWHardeningNeeded,
+    /**
+     * TCB level of the SGX platform is up-to-date but additional configuration of SGX platform may be needed.*/
+    ConfigurationNeeded,
+    /**
+     * TCB level of the SGX platform is up-to-date but additional configuration for the platform and SW Hardening in the
+     * attesting SGX enclaves may be needed.
+     */
+    ConfigurationAndSWHardeningNeeded,
+    /** TCB level of SGX platform is outdated. */
+    OutOfDate,
+    /** TCB level of SGX platform is outdated and additional configuration of SGX platform may be needed. */
+    OutOfDateConfigurationNeeded,
+    /** TCB level of SGX platform is revoked. The platform is not trustworthy. */
+    Revoked
+}
 
 data class Tcb @JsonCreator constructor(
         @JsonProperty("sgxtcbcomp01svn")
-        val sgxtcbcomp01svn: Int?,
+        val sgxtcbcomp01svn: Int,
         @JsonProperty("sgxtcbcomp02svn")
-        val sgxtcbcomp02svn: Int?,
+        val sgxtcbcomp02svn: Int,
         @JsonProperty("sgxtcbcomp03svn")
-        val sgxtcbcomp03svn: Int?,
+        val sgxtcbcomp03svn: Int,
         @JsonProperty("sgxtcbcomp04svn")
-        val sgxtcbcomp04svn: Int?,
+        val sgxtcbcomp04svn: Int,
         @JsonProperty("sgxtcbcomp05svn")
-        val sgxtcbcomp05svn: Int?,
+        val sgxtcbcomp05svn: Int,
         @JsonProperty("sgxtcbcomp06svn")
-        val sgxtcbcomp06svn: Int?,
+        val sgxtcbcomp06svn: Int,
         @JsonProperty("sgxtcbcomp07svn")
-        val sgxtcbcomp07svn: Int?,
+        val sgxtcbcomp07svn: Int,
         @JsonProperty("sgxtcbcomp08svn")
-        val sgxtcbcomp08svn: Int?,
+        val sgxtcbcomp08svn: Int,
         @JsonProperty("sgxtcbcomp09svn")
-        val sgxtcbcomp09svn: Int?,
+        val sgxtcbcomp09svn: Int,
         @JsonProperty("sgxtcbcomp10svn")
-        val sgxtcbcomp10svn: Int?,
+        val sgxtcbcomp10svn: Int,
         @JsonProperty("sgxtcbcomp11svn")
-        val sgxtcbcomp11svn: Int?,
+        val sgxtcbcomp11svn: Int,
         @JsonProperty("sgxtcbcomp12svn")
-        val sgxtcbcomp12svn: Int?,
+        val sgxtcbcomp12svn: Int,
         @JsonProperty("sgxtcbcomp13svn")
-        val sgxtcbcomp13svn: Int?,
+        val sgxtcbcomp13svn: Int,
         @JsonProperty("sgxtcbcomp14svn")
-        val sgxtcbcomp14svn: Int?,
+        val sgxtcbcomp14svn: Int,
         @JsonProperty("sgxtcbcomp15svn")
-        val sgxtcbcomp15svn: Int?,
+        val sgxtcbcomp15svn: Int,
         @JsonProperty("sgxtcbcomp16svn")
-        val sgxtcbcomp16svn: Int?,
+        val sgxtcbcomp16svn: Int,
         @JsonProperty("pcesvn")
-        val pcesvn: Int?
+        val pcesvn: Int
 )
 
-data class EnclaveIdentitySigned @JsonCreator constructor(
+/**
+ * https://api.portal.trustedservices.intel.com/documentation#pcs-qe-identity-v2
+ *
+ * @property signature Signature calculated over qeIdentity body (without whitespaces) using TCB Info Signing Key.
+ */
+data class SignedEnclaveIdentity @JsonCreator constructor(
         @JsonProperty("enclaveIdentity")
         val enclaveIdentity: EnclaveIdentity,
 
         @JsonProperty("signature")
-        val signature: String
+        val signature: OpaqueBytes
 )
 
+/**
+ * @property id Identifier of the SGX Enclave issued by Intel. Supported values are QE and QVE.
+ *
+ * @property version Version of the structure.
+ *
+ * @property issueDate Date and time the QE Identity information was created.
+ *
+ * @property nextUpdate Date and time by which next QE identity information will be issued.
+ *
+ * @property tcbEvaluationDataNumber A monotonically increasing sequence number changed when Intel updates the content
+ * of the TCB evaluation data set: TCB Info, QE Idenity and QVE Identity. The tcbEvaluationDataNumber update is
+ * synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU) and QE/QVE Identity.
+ * This sequence number allows users to easily determine when a particular TCB Info/QE Idenity/QVE Identiy superseedes
+ * another TCB Info/QE Identity/QVE Identity.
+ *
+ * @property miscselect miscselect "golden" value (upon applying mask).
+ *
+ * @property miscselectMask Mask to be applied to [miscselect] value retrieved from the platform.
+ *
+ * @property attributes attributes "golden" value (upon applying mask).
+ *
+ * @property attributesMask Mask to be applied to attributes value retrieved from the platform.
+ *
+ * @property mrsigner mrsigner hash.
+ *
+ * @property isvprodid Enclave Product ID.
+ *
+ * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
+ */
 data class EnclaveIdentity @JsonCreator constructor(
         @JsonProperty("id")
         val id: String,
@@ -264,52 +347,82 @@ data class EnclaveIdentity @JsonCreator constructor(
 
         @JsonProperty("issueDate")
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-        val issueDate: Date,
+        val issueDate: Instant,
 
         @JsonProperty("nextUpdate")
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-        val nextUpdate: Date,
+        val nextUpdate: Instant,
 
         @JsonProperty("tcbEvaluationDataNumber")
         val tcbEvaluationDataNumber: Int,
 
         @JsonProperty("miscselect")
-        val miscselect: String,
+        val miscselect: OpaqueBytes,
 
         @JsonProperty("miscselectMask")
-        val miscselectMask: String,
+        val miscselectMask: OpaqueBytes,
 
         @JsonProperty("attributes")
-        val attributes: String,
+        val attributes: OpaqueBytes,
 
         @JsonProperty("attributesMask")
-        val attributesMask: String,
+        val attributesMask: OpaqueBytes,
 
         @JsonProperty("mrsigner")
-        val mrsigner: String,
+        val mrsigner: OpaqueBytes,
 
         @JsonProperty("isvprodid")
         val isvprodid: Int,
 
         @JsonProperty("tcbLevels")
-        val tcbLevels: List<TcbLevelShort>
+        val tcbLevels: List<EnclaveTcbLevel>
 )
 
-data class TcbLevelShort @JsonCreator constructor(
+/**
+ * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
+ * that were originally published on or prior to this date.
+ *
+ * @property tcbStatus TCB level status.
+ */
+data class EnclaveTcbLevel @JsonCreator constructor(
         @JsonProperty("tcb")
-        val tcb: TcbShort,
+        val tcb: EnclaveTcb,
 
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
         @JsonProperty("tcbDate")
-        val tcbDate: Date,
+        val tcbDate: Instant,
 
         @JsonProperty("tcbStatus")
-        val tcbStatus: String
+        val tcbStatus: EnclaveTcbStatus
 )
 
-data class TcbShort @JsonCreator constructor(
+enum class EnclaveTcbStatus {
+    /** TCB level of the SGX platform is up-to-date.. */
+    UpToDate,
+    /** TCB level of SGX platform is outdated. */
+    OutOfDate,
+    /** TCB level of SGX platform is revoked. The platform is not trustworthy. */
+    Revoked
+}
+
+/**
+ * @property isvsvn SGX Enclave’s ISV SVN.
+ */
+data class EnclaveTcb @JsonCreator constructor(
         @JsonProperty("isvsvn")
         val isvsvn: Int
 )
 
-val attestationObjectMapper = ObjectMapper().apply { registerModule(JavaTimeModule()) }
+val attestationObjectMapper = ObjectMapper().apply {
+    registerModule(SimpleModule().apply {
+        addDeserializer(OpaqueBytes::class.java, Base16Deserializer())
+        addSerializer(OpaqueBytes::class.java, ToStringSerializer.instance)
+    })
+    registerModule(JavaTimeModule())
+}
+
+private class Base16Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
+        return OpaqueBytes.parse(p.valueAsString)
+    }
+}

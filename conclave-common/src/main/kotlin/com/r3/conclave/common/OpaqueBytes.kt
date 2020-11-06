@@ -13,11 +13,16 @@ import java.nio.ByteBuffer
 open class OpaqueBytes(private val _bytes: ByteArray) {
     val size: Int get() = _bytes.size
 
+    operator fun get(index: Int): Byte {
+        if (index < 0 || index >= _bytes.size) throw IndexOutOfBoundsException()
+        return _bytes[index]
+    }
+
     /** Returns a copy of the underlying byte array. */
     val bytes: ByteArray get() = _bytes.clone()
 
     /** Returns a [ByteArrayInputStream] of the bytes. */
-    fun open(): ByteArrayInputStream = ByteArrayInputStream(_bytes)
+    fun inputStream(): ByteArrayInputStream = ByteArrayInputStream(_bytes)
 
     /** Returns a read-only [ByteBuffer] that is backed by the bytes. */
     fun buffer(): ByteBuffer = ByteBuffer.wrap(_bytes).asReadOnlyBuffer()
@@ -32,7 +37,7 @@ open class OpaqueBytes(private val _bytes: ByteArray) {
      * Returns true iff this sequence of opaque bytes is equal to the sequence of [other], and that they are both of the
      * same class.
      *
-     * This means subclasses of [OpaqueBytes] are never equal to each other or to [OpaqueBytes].
+     * This means different subclasses of [OpaqueBytes] are never equal to each other or to [OpaqueBytes].
      */
     final override fun equals(other: Any?): Boolean {
         if (other === this) return true

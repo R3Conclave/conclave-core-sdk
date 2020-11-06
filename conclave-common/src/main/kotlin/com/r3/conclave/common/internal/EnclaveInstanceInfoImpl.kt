@@ -20,15 +20,11 @@ import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.Mail
 import com.r3.conclave.mail.MutableMail
 import com.r3.conclave.mail.internal.setKeyDerivation
-import com.r3.conclave.utilities.internal.putUnsignedShort
-import com.r3.conclave.utilities.internal.toHexString
-import com.r3.conclave.utilities.internal.writeData
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
-import java.security.cert.X509Certificate
 
 class EnclaveInstanceInfoImpl(
         override val dataSigningKey: PublicKey,
@@ -55,9 +51,10 @@ class EnclaveInstanceInfoImpl(
         // public key that signed the attestion report belongs to the root, and so it's OK to turn off the expiry check.
         val certTime = attestationResponse
                 .certPath
-                .certificates
-                .minByOrNull { (it as X509Certificate).notAfter }
-                .let { (it as X509Certificate).notAfter.toInstant() }
+                .x509Certs
+                .minByOrNull { it.notAfter }!!
+                .notAfter
+                .toInstant()
         // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct in terms of
         // release/debug vs simulation/mock.
         attestationReport = attestationResponse.verify(pkixParametersFactory.create(certTime))
@@ -116,12 +113,12 @@ class EnclaveInstanceInfoImpl(
             write(attestationResponse.attestationMode.ordinal)
             writeIntLengthPrefixBytes(attestationResponse.collateral.version.toByteArray())
             writeIntLengthPrefixBytes(attestationResponse.collateral.pckCrlIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rootCaCrl.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.pckCrl.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.tcbInfoIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.tcbInfo.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.qeIdentityIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.qeIdentity.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rawRootCaCrl.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rawPckCrl.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rawTcbInfoIssuerChain.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rawSignedTcbInfo.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rawQeIdentityIssuerChain.toByteArray())
+            writeIntLengthPrefixBytes(attestationResponse.collateral.rawSignedQeIdentity.toByteArray())
         }
     }
 

@@ -1,23 +1,31 @@
 package com.r3.conclave.common.internal.attestation
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.Cursor
-import com.r3.conclave.common.internal.ECDSASignature
-import com.r3.conclave.common.internal.SGXExtensionASN1Parser
-import com.r3.conclave.common.internal.SgxReportBody
+import com.r3.conclave.common.OpaqueBytes
+import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.ecdsa256BitSignature
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.ecdsaAttestationKey
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeAuthData
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeReport
+import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeReportSignature
+import com.r3.conclave.common.internal.SgxQuote.signType
+import com.r3.conclave.common.internal.SgxQuote.version
+import com.r3.conclave.common.internal.SgxReportBody.isvProdId
+import com.r3.conclave.common.internal.SgxReportBody.isvSvn
+import com.r3.conclave.common.internal.SgxReportBody.miscSelect
+import com.r3.conclave.common.internal.SgxReportBody.mrsigner
+import com.r3.conclave.common.internal.SgxReportBody.reportData
+import com.r3.conclave.common.internal.attestation.DCAPUtils.parseRawEcdsaToDerEncoding
 import com.r3.conclave.common.internal.attestation.QuoteVerifier.Status.*
-import com.r3.conclave.utilities.internal.parseHex
-import com.r3.conclave.utilities.internal.toHexString
-import java.io.ByteArrayInputStream
-import java.math.BigInteger
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.getUnsignedInt
+import com.r3.conclave.utilities.internal.x509Certs
 import java.security.GeneralSecurityException
 import java.security.Signature
 import java.security.SignatureException
 import java.security.cert.*
 import java.time.Instant
 import java.util.*
-
 
 object QuoteVerifier {
 
@@ -40,12 +48,10 @@ object QuoteVerifier {
         TCB_CONFIGURATION_NEEDED,
         TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED,
         TCB_UNRECOGNIZED_STATUS,
-
         UNSUPPORTED_CERT_FORMAT,
         SGX_ROOT_CA_MISSING,
         SGX_INTERMEDIATE_CA_MISSING,
         SGX_PCK_MISSING,
-
         SGX_ROOT_CA_INVALID_ISSUER,
         SGX_INTERMEDIATE_CA_INVALID_ISSUER,
         SGX_PCK_INVALID_ISSUER,
@@ -87,59 +93,65 @@ object QuoteVerifier {
     /// SGX_EXTENSION_PCEID_TCB_LEVEL_N = "1.2.840.113741.1.13.1.2.[1..16]"
 
     private const val QUOTE_VERSION = 3
-    private const val QUOTE_KEY_TYPE = 2
 
     private const val SGX_ROOT_CA_CN_PHRASE = "SGX Root CA"
     private const val SGX_INTERMEDIATE_CN_PHRASE = "CA"
     private const val SGX_PCK_CN_PHRASE = "SGX PCK Certificate"
     private const val SGX_TCB_SIGNING_CN_PHRASE = "SGX TCB Signing"
 
-    fun verify(reportBytes: ByteArray, signature: ByteArray, certPath: CertPath, collateral: QuoteCollateral):
-            Triple<Status,Instant,Boolean> {
+    // TODO The quote and signature parameters can be combined by using a single ByteCursor<SgxSignedQuote> parameter.
+    // QuoteVerification/QvE/Enclave/qve.cpp:sgx_qve_verify_quote
+    fun verify(quote: ByteCursor<SgxQuote>, signature: ByteArray, collateral: QuoteCollateral): Triple<Status, Instant, Boolean> {
+        // See page 48 at https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf
+        if (quote[signType].read() != SgxQuoteSignType.ECDSA_P256)
+            throw GeneralSecurityException("Invalid quote $UNSUPPORTED_QUOTE_FORMAT")
+
+        val authData = Cursor.wrap(SgxEcdsa256BitQuoteAuthData, signature)
 
         val trustedRootCA = loadTrustedRootCA()
 
-        val rootCaCrl = parseCRL(collateral.rootCaCrl)
-        val pckCrl = parseCRL(collateral.pckCrl)
-
-        val tcbSignChain = parseCertPath(collateral.tcbInfoIssuerChain)
-        val tcbInfo = attestationObjectMapper.readValue(collateral.tcbInfo, TcbInfoSigned::class.java)
-
-        val qeIdentityIssuerChain = parseCertPath(collateral.qeIdentityIssuerChain)
-        val qeIdentity = attestationObjectMapper.readValue(collateral.qeIdentity, EnclaveIdentitySigned::class.java)
+        val pckCertPath = authData[qeCertData].toPckCertPath()
 
         var latestIssueDate = getLatestIssueDate(trustedRootCA, Instant.MIN)
-        latestIssueDate = getLatestIssueDate(rootCaCrl, latestIssueDate)
-        latestIssueDate = getLatestIssueDate(pckCrl, latestIssueDate)
-        latestIssueDate = getLatestIssueDate(tcbSignChain, latestIssueDate)
-        latestIssueDate = getLatestIssueDate(tcbInfo.tcbInfo, latestIssueDate)
-        latestIssueDate = getLatestIssueDate(qeIdentityIssuerChain, latestIssueDate)
-        latestIssueDate = getLatestIssueDate(qeIdentity.enclaveIdentity, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(pckCertPath, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(collateral.rootCaCrl, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(collateral.pckCrl, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(collateral.tcbInfoIssuerChain, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(collateral.signedTcbInfo.tcbInfo, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(collateral.qeIdentityIssuerChain, latestIssueDate)
+        latestIssueDate = getLatestIssueDate(collateral.signedQeIdentity.enclaveIdentity, latestIssueDate)
 
         var earliestExpireDate = getEarliestExpirationDate(trustedRootCA, Instant.MAX)
-        earliestExpireDate = getEarliestExpirationDate(rootCaCrl, earliestExpireDate)
-        earliestExpireDate = getEarliestExpirationDate(pckCrl, earliestExpireDate)
-        earliestExpireDate = getEarliestExpirationDate(tcbSignChain, earliestExpireDate)
-        earliestExpireDate = getEarliestExpirationDate(tcbInfo.tcbInfo, earliestExpireDate)
-        earliestExpireDate = getEarliestExpirationDate(qeIdentityIssuerChain, earliestExpireDate)
-        earliestExpireDate = getEarliestExpirationDate(qeIdentity.enclaveIdentity, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(pckCertPath, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(collateral.rootCaCrl, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(collateral.pckCrl, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(collateral.tcbInfoIssuerChain, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(collateral.signedTcbInfo.tcbInfo, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(collateral.qeIdentityIssuerChain, earliestExpireDate)
+        earliestExpireDate = getEarliestExpirationDate(collateral.signedQeIdentity.enclaveIdentity, earliestExpireDate)
 
-        val collateralHasExpiredOut = earliestExpireDate <= latestIssueDate
+        val collateralHasExpired = earliestExpireDate <= latestIssueDate
 
-        val pckCertVerificationStatus = verifyPCKCertificate(certPath, rootCaCrl, pckCrl, trustedRootCA, latestIssueDate)
+        val pckCertVerificationStatus = verifyPckCertificate(pckCertPath, collateral, trustedRootCA, latestIssueDate)
         if (pckCertVerificationStatus != OK && !isExpirationError(pckCertVerificationStatus))
-            return Triple(pckCertVerificationStatus, latestIssueDate, collateralHasExpiredOut)
+            return Triple(pckCertVerificationStatus, latestIssueDate, collateralHasExpired)
 
-        val tcbInfoVerificationStatus = verifyTCBInfo(tcbInfo, tcbSignChain, rootCaCrl, trustedRootCA, latestIssueDate)
+        val tcbInfoVerificationStatus = verifyTcbInfo(collateral, trustedRootCA, latestIssueDate)
         if (tcbInfoVerificationStatus != OK && !isExpirationError(tcbInfoVerificationStatus))
-                return Triple(tcbInfoVerificationStatus, latestIssueDate, collateralHasExpiredOut)
+            return Triple(tcbInfoVerificationStatus, latestIssueDate, collateralHasExpired)
 
-        val qeIdentityVerificationStatus = verifyQeIdentity(qeIdentity, qeIdentityIssuerChain, rootCaCrl, trustedRootCA, latestIssueDate)
+        val qeIdentityVerificationStatus = verifyQeIdentity(collateral, trustedRootCA, latestIssueDate)
         if (qeIdentityVerificationStatus != OK && !isExpirationError(qeIdentityVerificationStatus))
-            return Triple(qeIdentityVerificationStatus, latestIssueDate, collateralHasExpiredOut)
+            return Triple(qeIdentityVerificationStatus, latestIssueDate, collateralHasExpired)
 
-        val quoteVerificationStatus = verifyQuote(reportBytes, signature,
-                certPath.certificates[0] as X509Certificate, pckCrl, tcbInfo.tcbInfo, qeIdentity.enclaveIdentity)
+        val quoteVerificationStatus = verifyQuote(
+                quote,
+                authData,
+                pckCertPath.x509Certs[0],
+                collateral.pckCrl,
+                collateral.signedTcbInfo.tcbInfo,
+                collateral.signedQeIdentity.enclaveIdentity
+        )
 
         return when (quoteVerificationStatus) {
             OK,
@@ -147,7 +159,7 @@ object QuoteVerifier {
             TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED,
             TCB_CONFIGURATION_NEEDED,
             TCB_OUT_OF_DATE,
-            TCB_OUT_OF_DATE_CONFIGURATION_NEEDED -> Triple(quoteVerificationStatus, latestIssueDate, collateralHasExpiredOut)
+            TCB_OUT_OF_DATE_CONFIGURATION_NEEDED -> Triple(quoteVerificationStatus, latestIssueDate, collateralHasExpired)
             else -> throw GeneralSecurityException("Invalid quote $quoteVerificationStatus")
             /*
             7. SGX_QL_QV_RESULT_INVALID_SIGNATURE – Terminal
@@ -157,7 +169,7 @@ object QuoteVerifier {
         }
     }
 
-    fun isExpirationError(status: Status): Boolean {
+    private fun isExpirationError(status: Status): Boolean {
         return when (status) {
             SGX_TCB_INFO_EXPIRED,
             SGX_PCK_CERT_CHAIN_EXPIRED,
@@ -169,12 +181,16 @@ object QuoteVerifier {
     }
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/QuoteVerifier.cpp:176
-    private fun verifyQuote(quoteBytes: ByteArray, signature: ByteArray, pckCert: X509Certificate, pckCrl: X509CRL, tcbInfo: TcbInfo, qeIdentity: EnclaveIdentity): Status {
+    private fun verifyQuote(
+            quote: ByteCursor<SgxQuote>,
+            authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>,
+            pckCert: X509Certificate,
+            pckCrl: X509CRL,
+            tcbInfo: TcbInfo,
+            qeIdentity: EnclaveIdentity
+    ): Status {
         /// 4.1.2.4.2
-        if (getInt16(quoteBytes, 0).toInt() != QUOTE_VERSION)
-            return UNSUPPORTED_QUOTE_FORMAT
-        /// see page 48 at https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf
-        if (getInt16(quoteBytes, 2).toInt() != QUOTE_KEY_TYPE)
+        if (quote[version].read() != QUOTE_VERSION)
             return UNSUPPORTED_QUOTE_FORMAT
 
         /// 4.1.2.4.4
@@ -197,23 +213,22 @@ object QuoteVerifier {
         val tcbs = IntArray(16)
         val (fmspc, pceid, pcesvn) = getFmspcAndPceIdAndTcbs(pckCert, tcbs) // from pck cert chain (from quote)
 
-        if (!Arrays.equals(fmspc, parseHex(tcbInfo.fmspc)))
+        if (OpaqueBytes(fmspc) != tcbInfo.fmspc)
             return TCB_INFO_MISMATCH
 
-        if (!Arrays.equals(pceid, parseHex(tcbInfo.pceId)))
+        if (OpaqueBytes(pceid) != tcbInfo.pceId)
             return TCB_INFO_MISMATCH
 
         /// 4.1.2.4.13
-        val ecdsa = ECDSASignature(signature)
-        if (!validateQeReportSignature(ecdsa, pckCert))
+        if (!validateQeReportSignature(authData, pckCert))
             return INVALID_QE_REPORT_SIGNATURE
 
         /// 4.1.2.4.14
-        if (!checkAttestationKeyAndQeReportDataHash(ecdsa))
+        if (!checkAttestationKeyAndQeReportDataHash(authData))
             return INVALID_QE_REPORT_DATA
 
         /// 4.1.2.4.15
-        val qeIdentityStatus = verifyEnclaveReport(ecdsa.getQEReport(), qeIdentity);
+        val qeIdentityStatus = verifyEnclaveReport(authData[qeReport], qeIdentity)
         when (qeIdentityStatus) {
             SGX_ENCLAVE_REPORT_UNSUPPORTED_FORMAT -> return UNSUPPORTED_QUOTE_FORMAT
 
@@ -230,7 +245,7 @@ object QuoteVerifier {
         }
 
         /// 4.1.2.4.16
-        if (verifyIsvReportSignature(ecdsa, quoteBytes) != OK)
+        if (!verifyIsvReportSignature(authData, quote))
             return INVALID_QUOTE_SIGNATURE
 
         /// 4.1.2.4.17
@@ -238,26 +253,19 @@ object QuoteVerifier {
         return convergeTcbStatus(tcbLevelStatus, qeIdentityStatus)
     }
 
-    private fun verifyIsvReportSignature(ecdsa: ECDSASignature, quoteBytes: ByteArray): Status {
-        val subjectSignature = ecdsa.getSignature()
-
+    private fun verifyIsvReportSignature(authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>, quote: ByteCursor<SgxQuote>): Boolean {
         Signature.getInstance("SHA256withECDSA").apply {
-            initVerify(ecdsa.getPublicKey())
-            update(quoteBytes)
-            if (!verify(subjectSignature)) {
-                return INVALID_QUOTE_SIGNATURE
-            }
+            initVerify(authData[ecdsaAttestationKey].toPublicKey())
+            update(quote.buffer)
+            return verify(authData[ecdsa256BitSignature].toDerEncoding())
         }
-        return OK
     }
 
-    private fun validateQeReportSignature(ecdsa: ECDSASignature, pck: X509Certificate): Boolean {
-        val qeReport = ecdsa.getQEReport()
-        val qeSignature = ecdsa.getQESignature()
+    private fun validateQeReportSignature(authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>, pckCert: X509Certificate): Boolean {
         Signature.getInstance("SHA256withECDSA").apply {
-            initVerify(pck)
-            update(qeReport)
-            return verify(qeSignature)
+            initVerify(pckCert)
+            update(authData[qeReport].buffer)
+            return verify(authData[qeReportSignature].toDerEncoding())
         }
     }
 
@@ -266,19 +274,18 @@ object QuoteVerifier {
     /// affectively, a modified/extended version of java.security.CertPathValidator:
     /// pckCertChain here includes rootCert,
     /// rootCert does not have CRL info, so CertPathValidator will fail the revocation check
-    private fun verifyPCKCertificate(pckCertChain: CertPath, rootCaCrl: X509CRL, intermediateCaCrl: X509CRL, trustedRootCaCert: X509Certificate, currentTime: Instant): Status {
-        if (pckCertChain.certificates.size != 3)
+    private fun verifyPckCertificate(pckCertPath: CertPath, collateral: QuoteCollateral, trustedRootCaCert: X509Certificate, currentTime: Instant): Status {
+        if (pckCertPath.certificates.size != 3)
             return UNSUPPORTED_CERT_FORMAT
 
-        val root = pckCertChain.certificates[2] as X509Certificate
+        val (pck, intermed, root) = pckCertPath.x509Certs
+
         if (!root.subjectDN.name.contains(SGX_ROOT_CA_CN_PHRASE))
             return SGX_ROOT_CA_MISSING
 
-        val intermed = pckCertChain.certificates[1] as X509Certificate
         if (!intermed.subjectDN.name.contains(SGX_INTERMEDIATE_CN_PHRASE))
             return SGX_INTERMEDIATE_CA_MISSING
 
-        val pck = pckCertChain.certificates[0] as X509Certificate
         if (!pck.subjectDN.name.contains(SGX_PCK_CN_PHRASE))
             return SGX_PCK_MISSING
 
@@ -303,18 +310,18 @@ object QuoteVerifier {
         if (!Arrays.equals(root.signature, trustedRootCaCert.signature))
             return SGX_PCK_CERT_CHAIN_UNTRUSTED
 
-        val checkRootCaCrlCorrectness = verifyWithCrl(root, rootCaCrl)
+        val checkRootCaCrlCorrectness = verifyWithCrl(root, collateral.rootCaCrl)
         if (checkRootCaCrlCorrectness != OK)
             return checkRootCaCrlCorrectness
 
-        val checkIntermediateCrlCorrectness = verifyWithCrl(intermed, intermediateCaCrl)
+        val checkIntermediateCrlCorrectness = verifyWithCrl(intermed, collateral.pckCrl)
         if (checkIntermediateCrlCorrectness != OK)
             return checkIntermediateCrlCorrectness
 
-        if (rootCaCrl.isRevoked(intermed))
+        if (collateral.rootCaCrl.isRevoked(intermed))
             return SGX_INTERMEDIATE_CA_REVOKED
 
-        if (intermediateCaCrl.isRevoked(pck))
+        if (collateral.pckCrl.isRevoked(pck))
             return SGX_PCK_REVOKED
 
         try {
@@ -322,14 +329,14 @@ object QuoteVerifier {
             root.checkValidity(dt)
             intermed.checkValidity(dt)
             pck.checkValidity(dt)
-        } catch (ex: CertificateException) {
+        } catch (e: CertificateExpiredException) {
             return SGX_PCK_CERT_CHAIN_EXPIRED
         }
 
-        if (currentTime.isAfter(rootCaCrl.nextUpdate.toInstant()))
+        if (currentTime.isAfter(collateral.rootCaCrl.nextUpdate.toInstant()))
             return SGX_CRL_EXPIRED
 
-        if (currentTime.isAfter(intermediateCaCrl.nextUpdate.toInstant()))
+        if (currentTime.isAfter(collateral.pckCrl.nextUpdate.toInstant()))
             return SGX_CRL_EXPIRED
 
         return OK
@@ -338,29 +345,34 @@ object QuoteVerifier {
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/QuoteVerification.cpp:64 - parsing inputs
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBInfoVerifier.cpp:59
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBSigningChain.cpp:51
-    private fun verifyTCBInfo(tcbInfo: TcbInfoSigned, tcbSignChain: CertPath, rootCaCrl: X509CRL, trustedRootCaCert: X509Certificate, currentTime: Instant): Status {
-        val tcbChainVerificationResult: Status = verifyTcbChain(tcbSignChain, rootCaCrl, trustedRootCaCert)
+    private fun verifyTcbInfo(collateral: QuoteCollateral, trustedRootCaCert: X509Certificate, currentTime: Instant): Status {
+        val tcbChainVerificationResult = verifyTcbChain(collateral.tcbInfoIssuerChain, collateral.rootCaCrl, trustedRootCaCert)
         if (tcbChainVerificationResult != OK)
             return tcbChainVerificationResult
 
-        val tcbSigningCert = tcbSignChain.certificates[0] as X509Certificate
-        val rootCert = tcbSignChain.certificates[1] as X509Certificate
+        val (tcbSigningCert, rootCert) = collateral.tcbInfoIssuerChain.x509Certs
 
-        val tcbInfoSignatureValidationStatus = validateTcbSignature(tcbInfo, tcbSigningCert)
-        if (tcbInfoSignatureValidationStatus != OK)
-            return tcbInfoSignatureValidationStatus
+        val signatureResult = verifyJsonSignature(
+                collateral.rawSignedTcbInfo,
+                """{"tcbInfo":""",
+                collateral.signedTcbInfo.signature,
+                collateral.tcbInfoIssuerChain.x509Certs[0]
+        )
+        if (!signatureResult)
+            return TCB_INFO_INVALID_SIGNATURE
 
         try {
             val dt = Date.from(currentTime)
             rootCert.checkValidity(dt)
             tcbSigningCert.checkValidity(dt)
-        } catch (ex: CertificateException) {
+        } catch (e: CertificateExpiredException) {
             return SGX_SIGNING_CERT_CHAIN_EXPIRED
         }
-        if (currentTime.isAfter(rootCaCrl.nextUpdate.toInstant()))
+
+        if (currentTime.isAfter(collateral.rootCaCrl.nextUpdate.toInstant()))
             return SGX_CRL_EXPIRED
 
-        if (currentTime.isAfter(tcbInfo.tcbInfo.nextUpdate.toInstant())) {
+        if (currentTime.isAfter(collateral.signedTcbInfo.tcbInfo.nextUpdate)) {
             return SGX_TCB_INFO_EXPIRED
         }
 
@@ -369,86 +381,53 @@ object QuoteVerifier {
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/QuoteVerification.cpp:232
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/EnclaveIdentityVerifier.cpp:60
-    private fun verifyQeIdentity(qeIdentity: EnclaveIdentitySigned, qeIdentityIssuerChain: CertPath, rootCaCrl: X509CRL, trustedRootCaCert: X509Certificate, currentTime: Instant): Status {
+    private fun verifyQeIdentity(collateral: QuoteCollateral, trustedRootCaCert: X509Certificate, currentTime: Instant): Status {
         // yes, verifyTcbChain is used to verify qeIdentityIssuerChain
-        val qeIdentityIssuerChainVerificationResult = verifyTcbChain(qeIdentityIssuerChain, rootCaCrl, trustedRootCaCert)
+        val qeIdentityIssuerChainVerificationResult = verifyTcbChain(collateral.qeIdentityIssuerChain, collateral.rootCaCrl, trustedRootCaCert)
         if (qeIdentityIssuerChainVerificationResult != OK)
             return qeIdentityIssuerChainVerificationResult
 
-        val signingCert = qeIdentityIssuerChain.certificates[0] as X509Certificate
-        val rootCert = qeIdentityIssuerChain.certificates[1] as X509Certificate
-        val tcbInfoSignatureValidationStatus = validateEnclaveIdentitySignature(qeIdentity, signingCert)
-        if (tcbInfoSignatureValidationStatus != OK)
-            return tcbInfoSignatureValidationStatus
+        val (signingCert, rootCert) = collateral.qeIdentityIssuerChain.x509Certs
+
+        val signatureResult = verifyJsonSignature(
+                collateral.rawSignedQeIdentity,
+                """{"enclaveIdentity":""",
+                collateral.signedQeIdentity.signature,
+                collateral.qeIdentityIssuerChain.x509Certs[0]
+        )
+        if (!signatureResult)
+            return SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE
 
         try {
             val dt = Date.from(currentTime)
             rootCert.checkValidity(dt)
             signingCert.checkValidity(dt)
-        } catch (ex: CertificateException) {
+        } catch (e: CertificateExpiredException) {
             return SGX_SIGNING_CERT_CHAIN_EXPIRED
         }
 
-        if (currentTime.isAfter(rootCaCrl.nextUpdate.toInstant()))
+        if (currentTime.isAfter(collateral.rootCaCrl.nextUpdate.toInstant()))
             return SGX_CRL_EXPIRED
 
-        if (currentTime.isAfter(qeIdentity.enclaveIdentity.nextUpdate.toInstant()))
+        if (currentTime.isAfter(collateral.signedQeIdentity.enclaveIdentity.nextUpdate))
             return SGX_ENCLAVE_IDENTITY_EXPIRED
 
         return OK
     }
 
-    private fun validateEnclaveIdentitySignature(identity: EnclaveIdentitySigned, tcbSigningCert: Certificate): Status {
-        val objectMapper = ObjectMapper()
-        val body = objectMapper.writeValueAsBytes(identity.enclaveIdentity)
-        val signature = derEncodedSignature(identity.signature)
+    private fun verifyJsonSignature(rawJson: String, prefix: String, signature: OpaqueBytes, cert: X509Certificate): Boolean {
+        // The documentation at https://api.portal.trustedservices.intel.com/documentation would have you believe that
+        // simply removing the whitespace from the body is all that's needed to verify with the signature. However
+        // JSON objects are *unordered* key/value pairs, and the encoding for any hex fields for this API accepts both
+        // upper and lower case chars. So for these reasons we play it safe and verify over the body as it appears in the
+        // raw JSON string.
+        val body = rawJson
+                .take(rawJson.lastIndexOf("""},"signature":"""") + 1)
+                .drop(prefix.length)
         val verifier = Signature.getInstance("SHA256withECDSA")
-        verifier.initVerify(tcbSigningCert)
-        verifier.update(body)
-        if (!verifier.verify(signature))
-            return SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE
-
-        return OK
-    }
-
-    private fun validateTcbSignature(tcbInfo: TcbInfoSigned, tcbSigningCert: X509Certificate): Status {
-        val objectMapper = ObjectMapper()
-        val body = objectMapper.writeValueAsBytes(tcbInfo.tcbInfo)
-        val signature = derEncodedSignature(tcbInfo.signature)
-        val verifier = Signature.getInstance("SHA256withECDSA")
-        verifier.initVerify(tcbSigningCert)
-        verifier.update(body)
-        if (!verifier.verify(signature))
-            return TCB_INFO_INVALID_SIGNATURE
-
-        return OK
-    }
-
-    private fun derEncodedSignature(hex: String): ByteArray {
-        return derEncodedSignature(parseHex(hex), 0)
-    }
-
-    private fun derEncodedSignature(data: ByteArray, offset: Int): ByteArray {
-        // Java 11
-        //val b1 = BigInteger(1, data, offset, 32)
-        //val b2 = BigInteger(1, data, offset + 32, 32)
-        // Java 8
-        val b1 = BigInteger(1, data.copyOfRange(offset, offset + 32))
-        val b2 = BigInteger(1, data.copyOfRange(offset + 32, offset + 64))
-        val data1 = b1.toByteArray()
-        val data2 = b2.toByteArray()
-        val output = ByteArray(6 + data1.size + data2.size)
-        output[0] = 0x30
-        output[1] = (4 + data1.size + data2.size).toByte()
-        encodeChunk(output, 2, data1)
-        encodeChunk(output, 4 + data1.size, data2)
-        return output
-    }
-
-    private fun encodeChunk(output: ByteArray, offset: Int, chunk: ByteArray) {
-        output[offset] = 0x02
-        output[offset + 1] = chunk.size.toByte()
-        System.arraycopy(chunk, 0, output, offset + 2, chunk.size)
+        verifier.initVerify(cert)
+        verifier.update(body.toByteArray())
+        return verifier.verify(parseRawEcdsaToDerEncoding(signature.buffer()))
     }
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBSigningChain.cpp:56
@@ -456,7 +435,7 @@ object QuoteVerifier {
         if (tcbSignChain.certificates.size != 2)
             return UNSUPPORTED_CERT_FORMAT
 
-        val rootCert = tcbSignChain.certificates[1] as X509Certificate
+        val (tcbSigningCert, rootCert) = tcbSignChain.x509Certs
 
         if (!rootCert.subjectDN.name.contains(SGX_ROOT_CA_CN_PHRASE))
             return SGX_ROOT_CA_MISSING
@@ -467,7 +446,6 @@ object QuoteVerifier {
         if (!verifyWithIssuer(rootCert, trustedRootCaCert))
             return SGX_ROOT_CA_INVALID_ISSUER
 
-        val tcbSigningCert = tcbSignChain.certificates[0] as X509Certificate
         if (!tcbSigningCert.subjectDN.name.contains(SGX_TCB_SIGNING_CN_PHRASE))
             return SGX_TCB_SIGNING_CERT_MISSING
 
@@ -516,6 +494,7 @@ object QuoteVerifier {
         } catch (ex: GeneralSecurityException) {
             return SGX_CRL_INVALID_SIGNATURE
         }
+
         return OK
     }
 
@@ -532,38 +511,36 @@ object QuoteVerifier {
         return true
     }
 
-    private fun checkAttestationKeyAndQeReportDataHash(ecdsa: ECDSASignature): Boolean {
-        val pubKey: ByteArray = ecdsa.getPublicKeyRaw()
-        val authData: ByteArray = ecdsa.getAuthDataRaw()
+    private fun checkAttestationKeyAndQeReportDataHash(authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>): Boolean {
+        val expectedReportBody = Cursor.allocate(SgxReportData).apply {
+            // Hash is 32 bytes, and report data is 64 bytes
+            val hash = digest("SHA-256") {
+                update(authData[ecdsaAttestationKey].buffer)
+                update(authData[qeAuthData].read())
+            }
+            buffer.put(hash)
+        }
 
-        val qeReport = ecdsa.getQEReport()
-        val qeReportBody = Cursor.wrap(SgxReportBody, qeReport, 0, qeReport.size)
-
-        val pkAuth = ByteArray(pubKey.size + authData.size)
-        pubKey.copyInto(pkAuth, 0, 0, pubKey.size)
-        authData.copyInto(pkAuth, pubKey.size, 0, authData.size)
-        val hash = SHA256Hash.hash(pkAuth).bytes
-
-        // hash is 32 bytes, and report data is 64 bytes
-        return Arrays.equals(hash.copyOf(64), qeReportBody[SgxReportBody.reportData].bytes)
+        return authData[qeReport][reportData] == expectedReportBody
     }
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/EnclaveReportVerifier.cpp:47
-    private fun verifyEnclaveReport(enclaveReport: ByteArray, enclaveIdentity: EnclaveIdentity): Status {
+    private fun verifyEnclaveReport(enclaveReportBody: ByteCursor<SgxReportBody>, enclaveIdentity: EnclaveIdentity): Status {
         // enclave report vs enclave identify json
         // (only used with QE and QE Identity, actually)
 
         /// 4.1.2.9.5
-        val enclaveReportBody = Cursor.wrap(SgxReportBody, enclaveReport, 0, enclaveReport.size)
-        val miscselectMask = getInt32(parseHex(enclaveIdentity.miscselectMask).reversedArray(), 0)
-        val miscselect = getInt32(parseHex(enclaveIdentity.miscselect).reversedArray(), 0)
-        if ((enclaveReportBody[SgxReportBody.miscSelect].read() and miscselectMask) != miscselect) {
+        // miscselectMask and miscselect from the enclave identity are in big-endian whilst the miscSelect from the
+        // enclave report body is in little-endian.
+        val miscselectMask = enclaveIdentity.miscselectMask.buffer().getUnsignedInt()
+        val miscselect = enclaveIdentity.miscselect.buffer().getUnsignedInt()
+        if ((enclaveReportBody[miscSelect].read() and miscselectMask) != miscselect) {
             return SGX_ENCLAVE_REPORT_MISCSELECT_MISMATCH
         }
 
         /// 4.1.2.9.6
-        val attributes = parseHex(enclaveIdentity.attributes)
-        val attributesMask = parseHex(enclaveIdentity.attributesMask)
+        val attributes = enclaveIdentity.attributes
+        val attributesMask = enclaveIdentity.attributesMask
         val reportAttributes = enclaveReportBody[SgxReportBody.attributes].bytes
         for (i in 0..7) {
             if ((reportAttributes[i].toInt() and attributesMask[i].toInt()) != attributes[i].toInt())
@@ -571,21 +548,20 @@ object QuoteVerifier {
         }
 
         /// 4.1.2.9.8
-        val mrsigner = enclaveIdentity.mrsigner
-        if (!mrsigner.isNullOrEmpty() && !mrsigner.equals(enclaveReportBody[SgxReportBody.mrsigner].bytes.toHexString(), ignoreCase = true)) {
+        if (enclaveReportBody[mrsigner].read() != enclaveIdentity.mrsigner.buffer()) {
             return SGX_ENCLAVE_REPORT_MRSIGNER_MISMATCH
         }
 
         /// 4.1.2.9.9
-        if (enclaveReportBody[SgxReportBody.isvProdId].read() != enclaveIdentity.isvprodid) {
+        if (enclaveReportBody[isvProdId].read() != enclaveIdentity.isvprodid) {
             return SGX_ENCLAVE_REPORT_ISVPRODID_MISMATCH
         }
 
         /// 4.1.2.9.10 & 4.1.2.9.11
-        val isvSvn = enclaveReportBody[SgxReportBody.isvSvn].read()
+        val isvSvn = enclaveReportBody[isvSvn].read()
         val tcbStatus = getTcbStatus(isvSvn, enclaveIdentity.tcbLevels)
-        if (tcbStatus != "UpToDate") {
-            return if (tcbStatus == "Revoked") SGX_ENCLAVE_REPORT_ISVSVN_REVOKED
+        if (tcbStatus != EnclaveTcbStatus.UpToDate) {
+            return if (tcbStatus == EnclaveTcbStatus.Revoked) SGX_ENCLAVE_REPORT_ISVSVN_REVOKED
             else SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE
         }
 
@@ -620,22 +596,20 @@ object QuoteVerifier {
         }
     }
 
-    private fun getTcbStatus(isvSvn: Int, levels: List<TcbLevelShort>): String {
+    private fun getTcbStatus(isvSvn: Int, levels: List<EnclaveTcbLevel>): EnclaveTcbStatus {
         for (lvl in levels) {
             if (lvl.tcb.isvsvn <= isvSvn)
                 return lvl.tcbStatus
         }
-        return "Revoked"
+        return EnclaveTcbStatus.Revoked
     }
 
-
-    private fun getMatchingTcbLevel(tcbInfo: TcbInfo, pckTcb: IntArray, pckPceSvn: Int): String {
+    private fun getMatchingTcbLevel(tcbInfo: TcbInfo, pckTcb: IntArray, pckPceSvn: Int): TcbStatus {
         for (lvl in tcbInfo.tcbLevels) {
-            if (isCpuSvnHigherOrEqual(pckTcb, lvl.tcb) && pckPceSvn >= (lvl.tcb.pcesvn as Int)) {
+            if (isCpuSvnHigherOrEqual(pckTcb, lvl.tcb) && pckPceSvn >= lvl.tcb.pcesvn) {
                 return lvl.tcbStatus
             }
         }
-
         throw GeneralSecurityException("TCB_NOT_SUPPORTED")
     }
 
@@ -653,13 +627,13 @@ object QuoteVerifier {
         val tcbLevelStatus = getMatchingTcbLevel(tcbInfo, pckCertTCBs, pcesvn)
 
         return when {
-            tcbLevelStatus == "OutOfDate" -> TCB_OUT_OF_DATE
-            tcbLevelStatus == "Revoked" -> TCB_REVOKED
-            tcbLevelStatus == "ConfigurationNeeded" -> TCB_CONFIGURATION_NEEDED
-            tcbLevelStatus == "ConfigurationAndSWHardeningNeeded" -> TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED
-            tcbLevelStatus == "UpToDate" -> OK
-            tcbLevelStatus == "SWHardeningNeeded" -> TCB_SW_HARDENING_NEEDED
-            tcbInfo.version == 2 && tcbLevelStatus == "OutOfDateConfigurationNeeded" -> TCB_OUT_OF_DATE_CONFIGURATION_NEEDED
+            tcbLevelStatus == TcbStatus.OutOfDate -> TCB_OUT_OF_DATE
+            tcbLevelStatus == TcbStatus.Revoked -> TCB_REVOKED
+            tcbLevelStatus == TcbStatus.ConfigurationNeeded -> TCB_CONFIGURATION_NEEDED
+            tcbLevelStatus == TcbStatus.ConfigurationAndSWHardeningNeeded -> TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED
+            tcbLevelStatus == TcbStatus.UpToDate -> OK
+            tcbLevelStatus == TcbStatus.SWHardeningNeeded -> TCB_SW_HARDENING_NEEDED
+            tcbInfo.version == 2 && tcbLevelStatus == TcbStatus.OutOfDateConfigurationNeeded -> TCB_OUT_OF_DATE_CONFIGURATION_NEEDED
             else -> throw GeneralSecurityException("TCB_UNRECOGNIZED_STATUS")
         }
     }
@@ -684,7 +658,7 @@ object QuoteVerifier {
             14 -> tcb.sgxtcbcomp15svn
             15 -> tcb.sgxtcbcomp16svn
             else -> throw GeneralSecurityException("Invalid sgxtcbcompsvn index $index")
-        } as Int
+        }
     }
 
     private fun getFmspcAndPceIdAndTcbs(pckCert: X509Certificate, tcbs: IntArray): Array<ByteArray> {
@@ -693,85 +667,52 @@ object QuoteVerifier {
         decoder.parse(ext, ext.size)
 
         for (i in 1..16)
-            tcbs[i - 1] = (decoder.intValue("$SGX_EXTENSION_TCB.$i"))
+            tcbs[i - 1] = decoder.intValue("$SGX_EXTENSION_TCB.$i")
 
         return arrayOf(decoder.value(SGX_EXTENSION_FMSPC_OID), decoder.value(SGX_EXTENSION_PCEID_OID), decoder.value(SGX_EXTENSION_PCESVN))
     }
 
-    private fun getInt16(data: ByteArray, offset: Int): Long {
-        return (data[offset] + (data[offset + 1] * 256)).toLong() and 0x0000FFFF
-    }
-
-    private fun getInt32(data: ByteArray, offset: Int): Long {
-        return (getInt16(data, offset) + getInt16(data, offset + 2) * 256 * 256) and 0x0FFFFFFFF
-    }
-
-    private fun parseCRL(pem: String): X509CRL {
-        return CertificateFactory.getInstance("X.509").generateCRL(pem.byteInputStream()) as X509CRL
-    }
-
-    private fun parseCertPath(pem: String): CertPath {
-        val certificateFactory = CertificateFactory.getInstance("X.509")
-        val certificates = mutableListOf<Certificate>()
-
-        val input = ByteArrayInputStream(pem.toByteArray())
-        while (input.available() > 1) {
-            certificates += certificateFactory.generateCertificate(input)
-        }
-
-        return certificateFactory.generateCertPath(certificates)
-    }
-
     private fun getLatestIssueDate(identity: EnclaveIdentity, latestIssueDate: Instant): Instant {
-        val issued = identity.issueDate.toInstant()
-        return if (issued.isAfter(latestIssueDate)) issued else latestIssueDate
+        return maxOf(identity.issueDate, latestIssueDate)
     }
 
     private fun getEarliestExpirationDate(identity: EnclaveIdentity, earliestExpireDate: Instant): Instant {
-        val expire = identity.nextUpdate.toInstant()
-        return if (expire.isBefore(earliestExpireDate)) expire else earliestExpireDate
+        return minOf(identity.nextUpdate, earliestExpireDate)
     }
 
     private fun getLatestIssueDate(tcb: TcbInfo, latestIssueDate: Instant): Instant {
-        val issued = tcb.issueDate.toInstant()
-        return if (issued.isAfter(latestIssueDate)) issued else latestIssueDate
+        return maxOf(tcb.issueDate, latestIssueDate)
     }
 
     private fun getEarliestExpirationDate(tcb: TcbInfo, earliestExpireDate: Instant): Instant {
-        val expire = tcb.nextUpdate.toInstant()
-        return if (expire.isBefore(earliestExpireDate)) expire else earliestExpireDate
+        return minOf(tcb.nextUpdate, earliestExpireDate)
     }
 
     private fun getLatestIssueDate(crl: X509CRL, latestIssueDate: Instant): Instant {
-        val issued = crl.thisUpdate.toInstant()
-        return if (issued.isAfter(latestIssueDate)) issued else latestIssueDate
+        return maxOf(crl.thisUpdate.toInstant(), latestIssueDate)
     }
 
     private fun getEarliestExpirationDate(crl: X509CRL, earliestExpireDate: Instant): Instant {
-        val expire = crl.nextUpdate.toInstant()
-        return if (expire.isBefore(earliestExpireDate)) expire else earliestExpireDate
+        return minOf(crl.nextUpdate.toInstant(), earliestExpireDate)
     }
 
     private fun getLatestIssueDate(cert: X509Certificate, latestIssueDate: Instant): Instant {
-        val issued = cert.notBefore.toInstant()
-        return if (issued.isAfter(latestIssueDate)) issued else latestIssueDate
+        return maxOf(cert.notBefore.toInstant(), latestIssueDate)
     }
 
     private fun getLatestIssueDate(chain: CertPath, latestIssueDate: Instant): Instant {
         var latestIssueDateOut = latestIssueDate
-        for (cert in chain.certificates) latestIssueDateOut = getLatestIssueDate(cert as X509Certificate, latestIssueDateOut)
+        for (cert in chain.x509Certs) latestIssueDateOut = getLatestIssueDate(cert, latestIssueDateOut)
         return latestIssueDateOut
     }
 
     private fun getEarliestExpirationDate(cert: X509Certificate, earliestExpireDate: Instant): Instant {
-        val expire = cert.notAfter.toInstant()
-        return if (expire.isBefore(earliestExpireDate)) expire else earliestExpireDate
+        return minOf(cert.notAfter.toInstant(), earliestExpireDate)
     }
 
     private fun getEarliestExpirationDate(certPath: CertPath, earliestExpireDate: Instant): Instant {
         var earliestExpireDateOut = earliestExpireDate
-        for (cert in certPath.certificates) earliestExpireDateOut = getEarliestExpirationDate(cert as X509Certificate, earliestExpireDateOut)
+        for (cert in certPath.x509Certs) earliestExpireDateOut = getEarliestExpirationDate(cert, earliestExpireDateOut)
         return earliestExpireDateOut
     }
-
 }

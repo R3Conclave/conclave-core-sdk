@@ -9,7 +9,6 @@ import java.security.Signature
 import java.security.cert.CertPath
 import java.security.cert.CertPathValidator
 import java.security.cert.PKIXParameters
-import java.time.Instant
 import java.util.*
 
 /**
@@ -53,19 +52,19 @@ class AttestationResponse(
     }
 
     private fun verifyECDSA(): AttestationReport {
-        val (ecdsaStatus, latestIssueDate, collateralExpired) = QuoteVerifier.verify(reportBytes, signature, certPath, collateral)
+        val (ecdsaStatus, latestIssueTime) = QuoteVerifier.verify(Cursor.wrap(SgxQuote, reportBytes), signature, collateral)
         val quoteStatus = ecdsaStatusToQuoteStatus(ecdsaStatus)
         return AttestationReport(
-            UUID.randomUUID().toString(),
-            quoteStatus,
-            Cursor.wrap(SgxQuote, reportBytes),
-            timestamp = latestIssueDate,
-            version = 3
+                UUID.randomUUID().toString(),
+                quoteStatus,
+                Cursor.wrap(SgxQuote, reportBytes),
+                timestamp = latestIssueTime,
+                version = 3
         )
     }
 
     private fun ecdsaStatusToQuoteStatus(qvStatus: QuoteVerifier.Status): QuoteStatus {
-        return when(qvStatus){
+        return when (qvStatus) {
             QuoteVerifier.Status.OK -> QuoteStatus.OK
 
             QuoteVerifier.Status.TCB_CONFIGURATION_NEEDED,
@@ -76,33 +75,6 @@ class AttestationResponse(
 
             QuoteVerifier.Status.TCB_OUT_OF_DATE -> QuoteStatus.GROUP_OUT_OF_DATE
             else -> throw GeneralSecurityException("Invalid quote $qvStatus")
-        }
-    }
-}
-
-
-class QuoteCollateral (
-        val version: String,
-        val pckCrlIssuerChain: String,
-        val rootCaCrl: String,
-        val pckCrl: String,
-        val tcbInfoIssuerChain: String,
-        val tcbInfo: String,
-        val qeIdentityIssuerChain: String,
-        val qeIdentity: String
-) {
-    companion object {
-        fun mock(): QuoteCollateral {
-            return QuoteCollateral(
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    ""
-            )
         }
     }
 }

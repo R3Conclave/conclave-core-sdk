@@ -58,3 +58,5 @@ class ByteBufferInputStream(private val bytes: ByteBuffer) : InputStream() {
         }
     }
 }
+
+fun ByteBuffer.inputStream(): ByteBufferInputStream = ByteBufferInputStream(this)

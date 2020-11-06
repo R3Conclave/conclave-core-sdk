@@ -5,6 +5,8 @@ import java.nio.Buffer
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
 
@@ -57,10 +59,14 @@ fun ByteBuffer.putBoolean(value: Boolean): ByteBuffer = put((if (value) 1 else 0
 
 fun ByteBuffer.getUnsignedShort(): Int = java.lang.Short.toUnsignedInt(getShort())
 
+fun ByteBuffer.getUnsignedShort(index: Int): Int = java.lang.Short.toUnsignedInt(getShort(index))
+
 fun ByteBuffer.putUnsignedShort(value: Int): ByteBuffer {
     require(value >= 0 && value <= 65535) { "Not an unsigned short: $value" }
     return putShort(value.toShort())
 }
+
+fun ByteBuffer.getUnsignedInt(): Long = Integer.toUnsignedLong(getInt())
 
 fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(it) }
 
@@ -106,6 +112,18 @@ fun ByteBuffer.getSlice(size: Int): ByteBuffer {
     (slice as Buffer).limit(size)
     addPosition(size)
     return slice
+}
+
+/**
+ * Return a slice, of the given [size], out of the buffer at the given [index]. The receiver buffer is unchanged.
+ *
+ * The sliced buffer will have a position zero and a limit of [size].
+ */
+fun ByteBuffer.getSlice(size: Int, index: Int): ByteBuffer {
+    val duplicate = duplicate()
+    (duplicate as Buffer).position(index)
+    (duplicate as Buffer).limit(index + size)
+    return duplicate.slice()
 }
 
 val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size
@@ -166,3 +184,9 @@ inline fun <reified T> DataInputStream.readList(block: DataInputStream.() -> T):
 
 /** Reads this stream completely into a byte array and then closes it. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
+
+val CertPath.x509Certs: List<X509Certificate> get() {
+    check(type == "X.509") { "Not an X.509 cert path: $type" }
+    @Suppress("UNCHECKED_CAST")
+    return certificates as List<X509Certificate>
+}

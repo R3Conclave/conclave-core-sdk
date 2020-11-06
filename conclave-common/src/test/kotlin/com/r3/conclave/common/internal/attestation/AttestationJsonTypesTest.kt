@@ -137,7 +137,7 @@ class AttestationReportTest {
 }
 
 
-class TcbInfoTest {
+class SignedTcbInfoTest {
     @Test
     fun `deserialise tcb`() {
         val json = """
@@ -176,8 +176,8 @@ class TcbInfoTest {
               "signature":"$signature"
             }
             """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, TcbInfoSigned::class.java)
-        assertThat(signature).isEqualTo(result.signature)
+        val result = attestationObjectMapper.readValue(json, SignedTcbInfo::class.java)
+        assertThat(result.signature).isEqualTo(OpaqueBytes.parse(signature))
     }
 
     @Test
@@ -198,15 +198,15 @@ class TcbInfoTest {
 "signature":"$signature"
 }
         """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, TcbInfoSigned::class.java)
-        assertThat(result.signature.toUpperCase()).isEqualTo(signature.toUpperCase())
+        val result = attestationObjectMapper.readValue(json, SignedTcbInfo::class.java)
+        assertThat(result.signature).isEqualTo(OpaqueBytes.parse(signature))
         assertThat(result.tcbInfo.version).isEqualTo(2)
-        assertThat(result.tcbInfo.issueDate).isEqualTo(Date.from(Instant.parse("2020-01-02T03:04:05Z")))
-        assertThat(result.tcbInfo.nextUpdate).isEqualTo(Date.from(Instant.parse("2021-02-03T04:05:06Z")))
+        assertThat(result.tcbInfo.issueDate).isEqualTo(Instant.parse("2020-01-02T03:04:05Z"))
+        assertThat(result.tcbInfo.nextUpdate).isEqualTo(Instant.parse("2021-02-03T04:05:06Z"))
     }
 }
 
-class EnclaveIdentityTest {
+class SignedEnclaveIdentityTest {
     @Test
     fun `deserialise signature`() {
         val signature = "01020304"
@@ -231,7 +231,7 @@ class EnclaveIdentityTest {
     "signature":"$signature"
 }
         """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, EnclaveIdentitySigned::class.java)
-        assertThat(signature).isEqualTo(result.signature)
+        val result = attestationObjectMapper.readValue(json, SignedEnclaveIdentity::class.java)
+        assertThat(result.signature).isEqualTo(OpaqueBytes.parse(signature))
     }
 }

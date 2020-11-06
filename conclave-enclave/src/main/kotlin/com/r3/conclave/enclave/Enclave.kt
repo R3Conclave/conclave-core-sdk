@@ -211,12 +211,12 @@ abstract class Enclave {
             val collateral = QuoteCollateral(
                     version = String(input.getIntLengthPrefixBytes()),
                     pckCrlIssuerChain = String(input.getIntLengthPrefixBytes()),
-                    rootCaCrl = String(input.getIntLengthPrefixBytes()),
-                    pckCrl = String(input.getIntLengthPrefixBytes()),
-                    tcbInfoIssuerChain = String(input.getIntLengthPrefixBytes()),
-                    tcbInfo = String(input.getIntLengthPrefixBytes()),
-                    qeIdentityIssuerChain = String(input.getIntLengthPrefixBytes()),
-                    qeIdentity = String(input.getIntLengthPrefixBytes())
+                    rawRootCaCrl = String(input.getIntLengthPrefixBytes()),
+                    rawPckCrl = String(input.getIntLengthPrefixBytes()),
+                    rawTcbInfoIssuerChain = String(input.getIntLengthPrefixBytes()),
+                    rawSignedTcbInfo = String(input.getIntLengthPrefixBytes()),
+                    rawQeIdentityIssuerChain = String(input.getIntLengthPrefixBytes()),
+                    rawSignedQeIdentity = String(input.getIntLengthPrefixBytes())
             )
             // Wrap an InputStream over the remaining bytes to avoid unnecessary copying.
             val certPath = CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(input))
