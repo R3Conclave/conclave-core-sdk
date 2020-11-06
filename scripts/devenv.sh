@@ -181,7 +181,7 @@ fi
   if [ "$(uname)" == "Darwin" ]; then
     docker exec -u root $CONTAINER_ID chgrp $(id -g) /var/run/docker.sock
   else
-    docker exec -it $@ -u root $CONTAINER_ID groupadd -g $docker_gid docker_ext
+    docker exec -it $@ -u root $CONTAINER_ID bash -c "groupadd -g ${docker_gid} docker_ext || true"
   fi
   # Add entry to container's hostname in /etc/hosts, if it's not there, due to different behaviour in macOS.
   docker exec -u root $CONTAINER_ID sh -c 'grep "\$\(hostname\)" /etc/hosts || printf "%s\t%s\n" $(ip address show docker0 2> /dev/null | sed -n "s/^.*inet \(addr:[ ]*\)*\([^ ]*\).*/\2/p" | cut -d/ -f1) $(hostname) >> /etc/hosts'
@@ -189,7 +189,7 @@ fi
   # Let us read/write to the home directory.
   docker exec -u root $CONTAINER_ID chown $(id -u):$(id -g) /home
   if [[ ! -z ${cardreader_gid} ]]; then
-    docker exec -it $@ -u root $CONTAINER_ID groupadd -g ${cardreader_gid} cardreader_ext
+    docker exec -it $@ -u root $CONTAINER_ID bash -c "groupadd -g ${cardreader_gid} cardreader_ext || true"
   fi
 
   # Start the docsite servers. They have hot-reload so editing the files in docs (for docs.conclave.net) or
