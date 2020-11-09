@@ -48,6 +48,23 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
+        target.afterEvaluate {
+            // This is called before the build tasks are executed but after the build.gradle file
+            // has been parsed. This gives us an opportunity to perform actions based on the user configuration
+            // of the enclave.
+            // If language support is enabled then automatically add the required dependency.
+            if (conclaveExtension.supportLanguages.get().length > 0) {
+                // Only the graalvm_native_image runtime is supported
+                if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
+                    target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get())
+                } else {
+                    throw GradleException("The enclave is configured to support languages but the runtime is not set to graalvm_native_image. "
+                                        + "Language support is only provided for graalvm_native_image enclaves. "
+                                        + "See https://docs.conclave.net/enclave-configuration.html#supportlanguages.")
+                }
+            }
+        }
+
         val shadowJarTask = target.tasks.withType(ShadowJar::class.java).getByName("shadowJar") { task ->
             task.isPreserveFileTimestamps = false
             task.isReproducibleFileOrder = true
@@ -200,6 +217,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+                task.supportLanguages.set(conclaveExtension.supportLanguages)
                 task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
                 task.outputEnclave.set(unsignedEnclaveFile)
             }

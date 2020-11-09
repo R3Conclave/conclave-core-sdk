@@ -12,14 +12,43 @@ task cloneAndPatchRepository(type: Exec) {
 
 /**
  * From the instructions on the README.md at https://github.com/oracle/graal/tree/vm-20.1.0/vm
+ *
+ * The components that can be included or excluded during the graalvm build:
+ * Components:
+ * - GraalVM compiler ('cmp', /graal)
+ * - Truffle ('tfl', /truffle)
+ * - Component installer ('gu', /installer)
+ * - SubstrateVM ('svm', /svm)
+ * - Native Image licence files ('nil', /svm)
+ * - Native Image ('ni', /svm)
+ * - TRegex ('rgx', /regex)
+ * - Polyglot Native API ('polynative', /polyglot)
+ * - LLVM.org toolchain ('llp', /llvm)
+ * - GraalVM license files ('gvm', /.)
+ * - Truffle NFI ('nfi', /nfi)
+ * - Truffle Macro ('tflm', /truffle)
+ * - SubstrateVM LLVM ('svml', /svm)
+ * - Polyglot Launcher ('poly', /polyglot)
+ * - Native Image JUnit ('nju', /junit)
+ * - Native Image Configure Tool ('nic', /svm)
+ * - Graal.js ('js', /js)
+ * - LibGraal ('lg', /False)
+ * - Graal SDK ('sdk', /graalvm)
+ * - Polyglot Library ('libpoly', /polyglot)
+ * Launchers:
+ * - gu (native)
+ * - native-image (native)
+ * - polyglot (native)
+ * - native-image-configure (native)
+ * - js (native)
  */
 task buildGraal(type: Exec) {
     dependsOn cloneAndPatchRepository
     environment['JAVA_HOME'] = System.getenv('JVMCI_HOME')
 
     workingDir "${project.buildDir}/graal/vm"
-    commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot,native-image-agent', '--dynamicimports', '/substratevm', 
-            '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,tflm,poly,nil,svml', 'build'
+    commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot,native-image-agent', '--dynamicimports', 'graal-js,/substratevm', 
+        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', 'build'
 }
 
 def outputDir = "${project.buildDir}/distributions"

@@ -16,6 +16,7 @@ nav:
       - Mail: mail.md
       - Security discussion: security.md
       - Threads: threads.md
+      - JavaScript: javascript.md
     - Tutorial:
       - Compiling and running: tutorial.md
       - Writing hello world: writing-hello-world.md

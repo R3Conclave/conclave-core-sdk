@@ -90,6 +90,9 @@ open class NativeImage @Inject constructor(
     val maxHeapSize: Property<String> = objects.property(String::class.java)
 
     @get:Input
+    val supportLanguages: Property<String> = objects.property(String::class.java)
+
+    @get:Input
     val deadlockTimeout: Property<Int> = objects.property(Int::class.java)
 
     @get:OutputFile
@@ -148,7 +151,7 @@ open class NativeImage @Inject constructor(
         val stackSize = GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
         if (stackSize <= zoneSize) {
             // Invalid stack size
-            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack size in the Conclave configuratino for your enclave.");
+            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack size in the Conclave configuration for your enclave.");
         }
         return stackSize - zoneSize
     }
@@ -368,6 +371,16 @@ open class NativeImage @Inject constructor(
         return "-H:ReflectionConfigurationFiles=" + reflectionConfiguration.get().asFile.absolutePath
     }
 
+    private fun getLanguages(): List<String> {
+        if (supportLanguages.get().length > 0) {
+            val languages = supportLanguages.get().split(",")
+            return languages.map {
+                "--language:" + it
+            }
+        }
+        return emptyList<String>()
+    }
+
     override fun action() {
         GenerateLinkerScript.writeToFile(linkerScript)
         var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
@@ -397,6 +410,7 @@ open class NativeImage @Inject constructor(
             + sgxLibrariesOptions()
             + linkerScriptOption()
             + reflectConfigurationOption()
+            + getLanguages()
         )
     }
 }

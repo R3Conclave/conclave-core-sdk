@@ -43,6 +43,7 @@ conclave {
     maxHeapSize = "256m"
     maxStackSize = "2m"
     maxThreads = 10
+    supportLanguages = ""
 
     simulation {
     }
@@ -195,6 +196,23 @@ thread that runs inside the enclave.
 !!! tip
     As with `maxHeapSize`, the size is specified in bytes but you can put a `k`, `m` or `g` after the value to 
     specify it in kilobytes, megabytes or gigabytes respectively.
+
+### supportLanguages
+_Default:_ `""`
+
+A comma separated list of languages to support though the polyglot context capability provided by GraalVM that
+is available when using `graalvm_native_image` enclaves.
+
+This allows for code in the supported languages to be parsed and invoked by the enclave giving the ability 
+to deploy dynamic code, or to develop part of your enclave logic in a different language.
+
+The current version of conclave only supports JavaScript so the value for this setting can either be the
+default empty string or `"js"` indicating the enclave should provide support for JavaScript polyglot contexts.
+
+See [this page on running JavaScript in your enclave](javascript.md) for details on how to use this setting.
+
+!!! tip
+    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
 
 ### simulation, debug and release
 
