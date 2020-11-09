@@ -64,7 +64,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
             val seedUniquifier = seedUniquifierField.get(null) as AtomicLong
             seedUniquifierField.isAccessible = false
 
-            // Set the field to a trully random initialiser value. This is XOR'd with the system
+            // Set the field to a truly random initialiser value. This is XOR'd with the system
             // time (which comes from the host so may not be safe) to seed the random number
             // generator.
             val seed = SecureRandom()
