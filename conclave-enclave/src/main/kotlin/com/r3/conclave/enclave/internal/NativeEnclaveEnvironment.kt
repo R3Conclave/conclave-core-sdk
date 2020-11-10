@@ -70,7 +70,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
             val seed = SecureRandom()
             seedUniquifier.set(seed.nextLong())
         } catch (e: Exception) {
-            throw InternalError("Could not set Random seed. Failed to access the seedUniquifier field");
+            throw InternalError("Could not set Random seed. Failed to access the seedUniquifier field.", e)
         }
     }
 
