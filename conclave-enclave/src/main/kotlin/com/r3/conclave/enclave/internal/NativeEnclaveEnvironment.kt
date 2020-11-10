@@ -11,6 +11,10 @@ import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
+import java.security.SecureRandom
+import java.util.*
+import java.util.concurrent.atomic.AtomicLong
+
 
 @PotentialPackagePrivate
 object NativeEnclaveEnvironment : EnclaveEnvironment {
@@ -41,7 +45,38 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         singletonHandler?.onReceive(ByteBuffer.wrap(input).asReadOnlyBuffer())
     }
 
+    private fun seedRandom() {
+        // java.util.Random is not designed for secure use and is even more insecure inside an 
+        // enclave as it uses nanoTime for seeding. We can harden this implementation by seeding
+        // java.util.Random with java.util.SecureRandom in order to create a pseudorandom sequence
+        // from a truly random seed.
+
+        // There is no way to provide a global seed for the random number. Looking at util/Random.java
+        // in the OpenJDK though you can see that it is seeded from the time, combined with a field
+        // named "seedUniquifier" that is updated on each random object creation. We can get hold
+        // of this field and initialise it with a true random number to create a truly random
+        // seed.
+        try {
+            // Get the field that is used to ensure each instance of Random() creates a new
+            // sequence of numbers, even if the time (used as a seed) has not changed.
+            val seedUniquifierField = Random::class.java.getDeclaredField("seedUniquifier")
+            seedUniquifierField.isAccessible = true
+            val seedUniquifier = seedUniquifierField.get(null) as AtomicLong
+            seedUniquifierField.isAccessible = false
+
+            // Set the field to a truly random initialiser value. This is XOR'd with the system
+            // time (which comes from the host so may not be safe) to seed the random number
+            // generator.
+            val seed = SecureRandom()
+            seedUniquifier.set(seed.nextLong())
+        } catch (e: Exception) {
+            throw InternalError("Could not set Random seed. Failed to access the seedUniquifier field.", e)
+        }
+    }
+
     private fun initialiseEnclave(input: ByteArray): HandlerConnected<*> {
+        seedRandom();
+
         val enclaveClassName = String(input)
         // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
         //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.

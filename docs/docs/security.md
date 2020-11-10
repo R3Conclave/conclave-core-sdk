@@ -146,3 +146,22 @@ of academic research, the expectation is that every new Conclave version will pr
 to control their impact. This will continue for the lifespan of the product. As a developer it's your responsibility to
 both upgrade to new versions as they come out, and to take side channels into account when planning the architecture
 and capacity needs of your application.
+
+### Random numbers
+
+Care must be taken when generating random numbers inside the enclave to ensure that you use a suitably strong
+random number generator that cannot be weakened or influenced by the host by tampering with data that is used
+to seed the random number generator.
+
+The safest way to ensure you are using a safe random number generator is to use the `SecureRandom` class to generate
+your random numbers. In Conclave enclaves, the implementation of this class uses the `RDRAND` instruction to 
+use an on-CPU hardware random number generator.
+
+The implementation of the JDK `Random` class normally uses the system time as a seed, XORing it with a fixed value
+that is updated predictably with each new `Random` class instance. This provides an attack surface for the
+host as the time inside the enclave is provided directly by the host. In order to prevent accidental use of
+an insecure random number generator, Conclave modifies this behaviour so the first instance of a `Random`
+class XORs the system time with a truly random number derived from the `RDRAND` instruction. This results in
+the class using a truly unique high entropy seed. Subsequent instances of `Random` transform the seed to
+ensure no two sequences are the same but the entropy is not renewed using the `RDRAND` instruction.
+Therefore for the best quality random data it is still recommended to use `SecureRandom`.
