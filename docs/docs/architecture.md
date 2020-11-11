@@ -147,16 +147,29 @@ Conclave provides full unit testing support for enclaves. Enclaves themselves ca
 
 The modes must match between how the enclave was compiled and how it's loaded. This is handled for you automatically.
 
-Inside the enclave `System.out` and `System.err` are wired up to the host console, but logging to files doesn't work.
-This is to avoid accidentally leaking private data to the host via logging.
+You can also load an enclave in "mock mode". This is not only suitable for unit testing but also for fast, iterative
+development. In mock mode the enclave class runs in the same JVM as the host, so message passing is just regular
+function calls. You can step through in a debugger and enjoy the regular Java development experience. 
+
+Inside the enclave `System.out` and `System.err` are wired up to the host console, but there's no filesystem access.
+Printing is disabled in release mode, so you can log to `stdout` and `stderr` without worrying that it may leak 
+information outside the enclave when in production.
 
 !!! notice
 
     Future versions of the platform may offer encrypted logging of various forms.
-    
-## Virtual machines and performance
 
-Enclave code can run on one of two different virtual machines. Both can execute JVM bytecode. One is a small, specialised
+## Deployment
+
+You can get SGX capable virtual machines from cloud providers. Currently Microsoft Azure provides the easiest, up to
+date source of SGX VMs. A Conclave host app includes the enclave bundled into the same JAR and the native libraries
+required for working with the kernel driver and Intel infrastructure, so you can deploy a Conclave app by simply using
+regular Java deployment procedures. For example, use the Gradle `assemble` plugin to create a tarball/zip of your
+app, or create a fat JAR and copy it to the server.
+
+## JVMs and performance
+
+Enclave code can run on one of two different Java virtual machines. Both can execute bytecode. One is a small, specialised
 runtime called Avian. Avian is slow but can dynamically load bytecode, which some Java frameworks like to do. The other
 is GraalVM Native Image (SubstrateVM). The latter compiles your entire program to native code ahead of time, erasing
 any code that isn't used and optimising it as a whole. This can yield large speedups and memory usage improvements, at
@@ -166,11 +179,8 @@ The differences between the two runtimes is summarised by the table below:
 
 |                          | Avian JVM                  | GraalVM Native Image |
 |--------------------------|----------------------------|----------------------|
-| Execute dynamic JVM code | :heavy_check_mark:         | :heavy_multiplication_x:<sup>*</sup> |
-| Java 8 Support           | :heavy_check_mark:         | :heavy_check_mark: |
-| Java 9+ Support          | :heavy_multiplication_x:   | :heavy_multiplication_x:<sup>*</sup> |
-
-<sup>* Dynamic JVM code execution and Java 9+ support using GraalVM Native Image is planned for a future release of Conclave.</sup>
+| Dynamic class loading    | :heavy_check_mark:         | :heavy_multiplication_x: |
+| Fast ahead of time code  | :heavy_multiplication_x:   | :heavy_check_mark: |
 
 The speedups from using Native Image can be significant. However, as the enclave environment is small the performance will
 still be lower than with a regular HotSpot JVM. This table shows the performance difference and how they vary between

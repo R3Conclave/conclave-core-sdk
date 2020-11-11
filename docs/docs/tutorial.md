@@ -12,29 +12,42 @@ for your own if you want a quick start. We will cover:
 2. How to compile and run the sample app.
 2. [How to write the sample app](writing-hello-world.md).
 
+## Enclave modes
+
+SGX enclaves can be used in one of four modes, in order of increasing realism:
+
+1. Mock: your enclave class is created in the host JVM and no native or SGX specific code is used. This provides a
+   pure Java development experience.
+1. Simulation: an enclave is compiled to native machine code and loaded, but SGX hardware doesn't need to be present.
+1. Debug: the enclave is loaded using SGX hardware and drivers, but with a back door that allows debugger access to the memory.
+1. Release: the enclave is loaded using SGX hardware and drivers, and there's no back door. This is the real deal.
+
+Only release mode locks out the host and provides the standard SGX security model.
+
 ## Setting up your machine
 
-You need Java 8 or 11 (your choice) and Gradle, so make sure you've installed those first. Alternatively use an IDE
-like IntelliJ IDEA, which can download and set up both Gradle and the Java Development Kit (JDK) for you.
+For this tutorial you will need Java 8 or 11 (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
+and the Gradle build system for you, so you don't need anything to get started except the IDE itself (the free 
+Community Edition works fine).
 
 Currently, we support developing enclaves on Windows, macOS and Linux. However, there are a few platform specific
 differences to be aware of.
 
-Firstly, if you plan on building enclaves using the [`graalvm_native_image` runtime](writing-hello-world.md#donfigure-the-enclave-module)
-(which is the default) on Windows and macOS you will need to install Docker. The `graalvm_native_image` build
-process requires access to a Linux build environment which Conclave can automatically configure during the build
-for you if Docker is installed. If you do not have Docker installed then you can still build enclaves targeting
-the `avian` runtime on Windows and macOS.
+Firstly, although you can develop and work on enclaves in the pure Java mock mode, to test against the embedded JVM
+you will need to install Docker. Enclaves are Linux shared libraries with special extensions, and this
+requires access to a Linux build environment. A build container will be constructed for you during the Gradle build
+process automatically, even on Windows and macOS! However Conclave won't actually install Docker for you. Grab it
+from their website, or on Linux, install it via your distribution.
 
-Secondly, executing enclaves without using the "mock mode" requires Linux or a Linux container (e.g. via Docker 
-or Windows Subsystem for Linux) and there are no plans to change this.  Apple doesn't support SGX and the Windows 
-API support is too limited for use at this time. [Instructions are provided below](#testing-on-windows-and-macos) 
-to show you how to use Docker on Windows and macOS to run your enclaves in "simulation mode". Alternatively, for 
-day to day development the mock API is plenty sufficient and allows you to debug into enclave calls as well. 
-Compiling a real enclave is only needed for integration testing or real deployment.
+Secondly, *executing* enclaves without using mock mode also requires Linux or a Linux container. 
+[Instructions are provided below](#testing-on-windows-and-macos) to show you how to use Docker on Windows and macOS to 
+run your entire application in "simulation mode". Alternatively, for day to day development the mock API is plenty 
+sufficient and allows you to debug into enclave calls as well. Compiling a real enclave is only needed for integration 
+testing against the embedded JVM, or real deployment.
 
 Enclaves can run in simulation mode without requiring any special setup of Linux or SGX capable hardware. However you 
-of course get no hardware protections. To run against real SGX hardware you must perform some [additional machine setup](machine-setup.md).
+of course get no hardware protections. To run against real SGX hardware you must perform some 
+[additional machine setup](machine-setup.md).
 
 ## Compiling the sample enclave
 
@@ -61,27 +74,24 @@ Now explore the `build` folder.
 As normal with Gradle, the `assemble` task has bundled the program into a zip, with startup scripts. These scripts are
 nothing special - they just set up the classpath. You could also e.g. make a fat JAR if you want. 
 
-### Enclave modes
-SGX enclaves can be used in one of four modes, in order of increasing realism:
-
-1. Mock: your enclave class is created in the host JVM and no native or SGX specific code is used.
-1. Simulation: an enclave is compiled to native and loaded, but SGX hardware doesn't need to be present.
-1. Debug: the enclave is loaded using SGX hardware and drivers, but with a back door that allows debugger access to the memory.
-1. Release: the enclave is loaded using SGX hardware and drivers, and there's no back door. This is the real deal.
-
-Only release mode locks out the host and provides the standard SGX security model.
+### Selecting your mode
 
 In the sample app, the `assemble` task will build the app for simulation mode by default. Use the `-PenclaveMode`
-argument to configure this. If you are using SGX hardware, you can build the app for debug mode with the command
+argument to configure this. If you are using SGX hardware, you can build the app for debug mode with the command:
+
 ```
 ./gradlew host:assemble -PenclaveMode=debug
 ```
 
+If working from inside IntelliJ, start the assemble task for the host project from the tree on the right hand side,
+and then edit the created run config. Add the `-PenclaveMode=debug` flag to the arguments section of the run config.
+
 For release mode, the sample app has been configured (in the `build.gradle` of the `enclave` subproject) to use external
 signing. This means it must be built in multiple stages:
+
 ```bash
 // Firstly, build the signing material:
-./gradlew prepareForSigning -PenclaveMode="release"
+./gradlew prepareForSigning -PenclaveMode=release
 
 // Generate a signature from the signing material. The password for the sample external key is '12345'
 openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
@@ -94,13 +104,20 @@ openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_p
     See [Enclave signing](signing.md) for more information.
 
 ## Running the host
+
 ### Linux
-Just run the host app like any app - no special startup scripts or setup is required with Conclave!
+Just run the host app like any app - no special customisation or setup is required with Conclave! Here we will run
+a shell script generated by Gradle that starts the JVM:
+
 ```bash
-cd host/build/distributions
-tar xvf host.tar
+./gradlew host:installDist
+cd host/build/install
 ./host/bin/host
 ```
+
+Gradle can also create `.tar.gz` files suitable for copying to the Linux host, fat JARs, WAR files for deployment into
+servlet containers and various other ways to deploy your app. NB: At this time using the JPMS tool `jlink` is not 
+tested.
 
 If your Linux machine doesn't have SGX, you should see something like this:
 
@@ -124,55 +141,44 @@ Listening on port 9999. Use the client app to send strings for reversal.
 ``` 
 
 ### Testing on Windows and macOS
-If you're on Windows or macOS you can test locally in simulation mode using a Docker container. Follow these instructions:
 
-**Step 1:** Ensure you have a Linux docker image
+If you're on Windows or macOS you can test locally in simulation mode using a Docker container. On Linux you can of
+course just run the host directly.
 
-If you have Docker installed and have built your enclave using the `graalvm_native_image` runtime then Conclave
-will have already created a docker image for you. If you used the `avian` runtime then you may need to install Docker 
-and then run this command in the root of your Gradle project to create the image:
-
-___Windows PowerShell___
-```
-gradlew setupLinuxExecEnvironment
-```
-
-___macOS Terminal___
-```
-./gradlew setupLinuxExecEnvironment
-```
-
-This gradle task is normally used as part of the `graalvm_native_image` build process but can be invoked to create
-the Linux docker image that we need.
-
-**Step 2:** Unpack the artifacts and run the `host` binaries
-
-The following command creates a temporary Docker container that mounts the current directory, creates a subdirectory
-named `run`, unpacks the host artifacts into `run` then runs the host within the container. The container is 
-automatically stopped and removed after the host exits.
-
-Note that this command should be run from the root of your Gradle project, i.e. the `hello-world` directory of the conclave sdk.
+!!! note
+    This command should be run from the root of your Gradle project, e.g. the `hello-world` directory of the conclave sdk.
 
 ___Windows PowerShell___
 ```
-docker run -t --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"
+docker run -it --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash
 ```
 
-___macOS Terminal___
+___macOS___
 ```
-docker run -t --rm -p 9999:9999 -v $PWD:/project -w /project --user $(id -u):$(id -g) conclave-build /bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"
+docker run -it --rm -p 9999:9999 -v $PWD:/project -w /project --user $(id -u):$(id -g) conclave-build /bin/bash"
 ```
 
+This will give you a shell inside a Linux virtual machine.
+
+You can then run:
+
+```
+cd build/install
+./host/bin/host
+```
+ 
 You should see the following output:
+
 ```shell
 This platform does not support hardware enclaves: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the CPU in this system
 Listening on port 9999. Use the client app to send strings for reversal.
 ```
 
-**Step 3:** You may want to create an IntelliJ launch configuration to incorporate the `build` and `deploy` stages.
-Put the command above in a .cmd batch file (Windows) or a .sh file (macOS) and then use the "Shell script" launch 
+You may want to create an IntelliJ launch configuration to incorporate the `build` and `deploy` stages.
+Adjust the command above to use `/bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"` 
+instead of just running bash, place it in a .cmd batch file (Windows) or a .sh file (macOS) and then use the "Shell script" launch 
 configuration type, and add a Gradle task in the "Before launch" section. You will then be able to click the run 
-icon in your IDE to build and start up the Java host app inside the Docker container.
+icon in your IDE to build and start up the Java host app inside the Docker container. It should look like this:
 
 ![import project](./images/test-deploy.png)
 

@@ -5,7 +5,8 @@ of the computer on which they run. It is ideally suited to solving multi-party c
 
 ## Why Conclave?
 
-- Write your host app in any language that can run on a Java Virtual Machine. Write your enclave using the GraalVM
+- Write your host app in any language that can run on a Java Virtual Machine like Java, Kotlin or even 
+  [JavaScript](javascript.md). Write your enclave using the GraalVM
   native image technology for incredibly tight memory usage, support for any GraalVM language and instant startup time.
   Eliminate all memory management errors that would undermine the security of your enclave, thanks to the built-in 
   generational garbage collector.
@@ -31,6 +32,8 @@ design. This will explain the concepts referred to in the rest of the documentat
 [**Enclave Configuration.**](enclave-configuration.md) Now you've created your first enclave, take a deeper look at the configuration options
 available for creating enclaves.
 
+[**Using JavaScript.**](javascript.md) How to use JIT compiled JavaScript inside the enclave.
+
 [**Machine setup.**](machine-setup.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
 and then keep your machine trusted by applying updates. 
 
@@ -54,8 +57,35 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
    enclaves on macOS and Windows! [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/)
    support was added in Beta 3 but required a Linux build system. Now, by installing Docker on Windows or macOS you
    can configure your enclaves to use the `graalvm_native_image` runtime and let Conclave simply manage the build process
-   for you.
-2. :jigsaw: **New feature!** Conclave now supports [DCAP](dcap.md) along with EPID attestation. NOTE: This breaks compatibility with previous versions.
+   for you. Creating and managing the container is automated for you.
+1. :jigsaw: **New feature!** Conclave now supports a new remote attestation protocol. That means it now works 
+   out of the box on [Azure Confidential Compute VMs](https://docs.microsoft.com/en-us/azure/confidential-computing/),
+   without any need to get an approved signing key: you can self sign enclaves and go straight to 'release mode' on
+   Azure. Follow our tutorial on [how to deploy your app to Azure](azure.md) to learn more.
+1. :jigsaw: **New feature!** [Easily enable and use JavaScript](javascript.md). It is JIT compiled inside the enclave, 
+   warms up to be as fast as V8 and can interop with JVM bytecode. Full support for the latest ECMAScript standards.
+1. :jigsaw: **New feature!** Mail is now integrated with the SGX data sealing and TCB recovery features. If a version of 
+   the CPU microcode, SGX architectural enclaves or the enclave itself is revoked, old mail will be readable by the newly
+   upgraded system, but downgrade attacks are blocked (old versions cannot be exploited to read new mail). This support
+   is fully automatic and especially useful when using the 'mail to self' pattern for storage.
+1. :jigsaw: **New feature!** The new `EnclaveHost.capabilitiesDiagnostics` API prints a wealth of detailed technical
+   information about the host platform, useful for diagnostics and debugging.
+1. `System.currentTimeMillis` now provides high performance, side-channel free access to the host's clock. The host
+   copies the current time to a memory location the enclave can read, thus avoiding a call out of the enclave that
+   could give away information about where in the program the enclave is. Remember however that as per usual, 
+   the host can change the time to whatever it wants, or even make it go backwards.
+1. Significantly improved multi-threading support. [Learn more about threads inside the enclave](threads.md). Write
+   scalable, thread safe enclaves and use thread-pools of different sizes inside and outside the enclave.
+1. Conclave's internal dependencies are better isolated. As a consequence it's now loadable from inside an app designed 
+   for [R3's Corda platform](https://www.corda.net). Corda is one of the world's leading blockchain platforms and its 
+   privacy needs are what drove development of Conclave. We plan to release a sample app showing Corda/Conclave 
+   integration soon.  
+1. API improvements! The API for receiving local calls into an enclave has been simplified, the mail API lets the host
+   provide a routing hint when delivering, and the API for passing attestation parameters has been simplified due to the
+   introduction of support for the new DCAP attestation protocol. [Learn more about the API changes](api-changes.md).
+1. Mail has been optimised to reduce the size overhead and do fewer memory copies.
+1. Bug fixes, usability and security improvements. Upgrade to ensure your enclave is secure. We've improved error 
+   messages for a variety of situations where Conclave isn't being used correctly.
 
 ### Beta 3
 

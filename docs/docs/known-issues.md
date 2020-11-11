@@ -9,12 +9,13 @@ This release ships with the following known issues that we plan to address in fu
 1. The Mail API will change in future beta releases. 
 1. Conclave doesn't presently implement any automatic side channel attack mitigations.
 1. Some system level exceptions like divide by zero or using null reference may crash the enclave/host process.
-1. The type of attestation used currently requires you to sign up with and be whitelisted by Intel. Future versions
-   will implement "DCAP attestation" which will allow the owner of the hardware to whitelist enclaves, not just Intel.
-1. [TCB recoveries](renewability.md) invalidate remote attestations, such that enclaves cannot read mail sent to them
-   from before the upgrade.
-1. The enclave hangs if it's asked to terminate whilst threads are still active inside it.
 1. Some Java APIs won't currently work due to lack of full operating system access inside the enclave. We plan to fix
    these issues in upcoming betas, to present the enclave with e.g. an empty file system.
 1. Mail is limited in size by the size of the enclave heap, and the size of a Java array (2 gigabytes).
-1. Windows enclave builds don't identically reproduce Linux and macOS builds. 
+1. SubstrateVM builds are not currently reproducible. Avian builds are, however. 
+1. There is no filesystem inside the enclave. Future versions of Conclave will provide a POSIX compatible purely
+   in memory filesystem, to enhance compatibility with pre-existing code. To load files from the host system, use
+   local messaging and have the host pass the loaded data into the enclave, but remember that the host may arbitrarily
+   corrupt or modify the contents unless it's tied to some external root of trust, e.g. via a signature.
+1. JavaDocs don't integrate with IntelliJ properly. This is due to a bug in IntelliJ when loading modules from
+   on disk repositories.

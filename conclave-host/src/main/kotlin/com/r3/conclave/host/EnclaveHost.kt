@@ -54,7 +54,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private val signatureScheme = SignatureSchemeEdDSA()
 
         /**
-         * Diagnostics output outlining CPU capabilities
+         * Diagnostics output outlining CPU capabilities. This is a free text field and should only be used for
+         * debugging, logging. Don't try to parse the output.
          */
         @JvmStatic
         val capabilitiesDiagnostics: String get() = Native.getCpuCapabilities()

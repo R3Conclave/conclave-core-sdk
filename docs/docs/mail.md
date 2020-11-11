@@ -1,8 +1,11 @@
 # Mail
 
-A mail is an authenticated message with an encrypted body and a cleartext envelope. The mail can be up to two
+A mail is an authenticated byte array with an encrypted body and a cleartext envelope. The mail can be up to two
 gigabytes in size, however, it must at this time fit into memory when loaded all at once. In practice mails will
-usually be much smaller than that. Mail provides a variety of features that are useful when building applications:
+usually be much smaller than that. 
+
+Conclave Mail unifies messaging and data storage. It provides a variety of features that are useful when building 
+applications:
 
 **Encryption.** The encryption key used by the enclave is private to that enclave but stable across restarts and
 enclave upgrades. This means messages encrypted and delivered by older clients can still be decrypted. The format
@@ -76,7 +79,7 @@ access to the unencrypted data to index or search it. The mail-to-self pattern a
 in memory and always reading all stored data at startup.
 
 !!! note
-    In beta 3 storage management is delegated to the application. The enclave may signal acknowledgement requests
+    Currently storage management is delegated to the application. The enclave may signal acknowledgement requests
     to the host but by default nothing is done with them.
 
 ## Attacks on messaging
@@ -325,7 +328,7 @@ load balancing, require databases for stored state and so on.
 
 With a stream or RPC oriented approach the enclave would be expected to respond to bytes from a client more or less
 immediately, meaning it has to be always running and would have to persist uploaded data itself. Unfortunately
-persistence in enclaves is tricky due to the existence of Memento attacks (see "[Handling time and state](enclaves.md#handling-time-and-state)").
+persistence in enclaves is tricky due to the existence of [Memento attacks](security.md#memento-attacks)").
 
 RPCs (including REST) can be hard to integrate with fully reliable systems that can tolerate restarts at any moment.
 Because server restarts break connections, in a loosely coupled multi-party system connection-oriented protocols

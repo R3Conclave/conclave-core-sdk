@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveMode
 import io.github.classgraph.ClassGraph
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 object NativeLoader {
     private var linkedEnclaveMode: EnclaveMode? = null
@@ -48,7 +49,9 @@ object NativeLoader {
                     it.allResources.forEachInputStream { resource, stream ->
                         val name = resource.path.substringAfterLast('/')
                         val destination = libsPath.resolve(name)
-                        Files.copy(stream, destination)
+                        // REPLACE_EXISTING is a hack to work around an issue observed by IntellectEU that has not
+                        // yet been diagnosed. See bug CON-239.
+                        Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING)
                     }
                 }
 

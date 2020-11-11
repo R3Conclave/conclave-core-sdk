@@ -34,7 +34,7 @@ import java.util.function.Function
  * 1. Local connections from the host. But remember the host is malicious in the SGX
  *    threat model, so anything received from the host cannot be completely trusted.
  *    Override and implement [receiveFromUntrustedHost] to receive the byte arrays sent via
- *    [EnclaveHost.callEnclave].
+ *    `EnclaveHost.callEnclave`.
  * 2. [EnclaveMail], an encrypted, authenticated and padded asynchronous messaging
  *    scheme. Clients that obtain a [EnclaveInstanceInfo] from the host can create
  *    mails and send it to the host for delivery. Override and implement [receiveMail] to receive mail via the host.

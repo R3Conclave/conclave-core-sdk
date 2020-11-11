@@ -1,11 +1,13 @@
 # Frequently asked questions
 
-## What app architecture issues should we consider?
+## Design/architecture questions
+
+### What app architecture issues should we consider?
 
 We plan to offer more guidance on this in future. Until then consider:
 
 * Dataset size. It must fit in memory in a single CPU machine.
-* Lower performance than usual. The extra security checks used by SGX reduce execution performance and the embedded 
+* Slightly lower performance than usual. The extra security checks used by SGX reduce execution performance and the embedded 
   JVM inside the enclave isn't as sophisticated as HotSpot, so peak performance will be lower than normal for Java.
 * Client-side tooling. Enclaves are useless unless the end user of the service they provide is checking a remote
   attestation. Because web browsers know nothing about remote attestation you will have to provide an independent tool
@@ -13,35 +15,41 @@ We plan to offer more guidance on this in future. Until then consider:
   a browser won't work given the enclave security model, as the JavaScript would come from the same host you're trying
   to audit). 
 
-## What cryptographic algorithm(s) does Conclave support?
+### What cryptographic algorithm(s) does Conclave support?
 
 The elliptic curve used is Curve25519 for encryption and Ed25519 for signing. The symmetric cipher is AES256/GCM. 
 The hash function is SHA256. The Noise protocol is used to perform Diffie-Hellman key agreement and set up the 
 ciphering keys. As these algorithms represent the state of the art and are widely deployed on the web, there are
 no plans to support other algorithms or curves at this time.
 
-## What Kotlin/Java versions are usable?
-
-Inside the enclave you can use Java 8 and Kotlin 1.4.
-
-## Which communication channels exist to/from the enclave?
+### Which communication channels exist to/from the enclave?
  
-The host can send and receive messages with the enclave, and an encryption key is included in the remote attestation.
-Clients may choose to use this key with Conclave Mail to communicate with the enclave in 
-an encrypted manner. It's up to the host to route messages to and from the network. 
+The host can exchange local messages with the enclave, and an encryption key is included in the remote attestation.
+Clients can use this key transparently via Conclave Mail to communicate with the enclave in an encrypted manner. 
 
-## Why are you using Intel SGX versus mathematical techniques?
- 
-Mathematically based secure multi-party computation and zero knowledge proofs are closely related and have similar
-tradeoffs/problems such as high complexity, low performance, difficult to use without intense dedicated training and 
-not stable (i.e. the best known algorithms change frequently).
+It's up to the host to route messages to and from the network. Conclave doesn't define any particular network protocol to 
+use. Mails and serialized `EnclaveInstanceInfo` objects are just byte arrays, so you can send them using REST, gRPC, 
+Corda flows, raw sockets, embed them inside some other protocol, use files etc.
 
-SGX is relatively simple, high performance, much easier to use, and stable over time.
+### Will using Conclave require any agreements with Intel?
 
-However, we acknowledge the limits of relying on hardware based solutions and are interested in bringing easy to use
-circuit-based cryptographic algorithms to market one day.
+Not if you use the latest generation of hardware. Modern chips support a feature called flexible launch control that
+allows the owner of the hardware to decide which enclaves can be loaded. For example, if you deploy to Microsoft Azure 
+no agreement or interaction with Intel is needed: Azure allows any self-signed enclave. 
 
-## How are upgrades performed when patches are released?
+On older hardware that uses the EPID attestation protocol, to go live you'll need:
+
+1. A "service provider ID" that grants access to the [Intel attestation servers](ias.md). This is free.
+2. To sign a (very simple, one page) agreement that you won't sign malware. Intel will whitelist your signing key and
+   Release Mode then becomes available. This is also free.
+
+!!! note
+    Due to Conclave's design enclave clients don't need to interact with Intel at any point. The
+    host does it and then publishes to clients a serialised `EnclaveInstanceInfo` object. The Conclave client libraries
+    embed the necessary certificates to verify Intel's signature over this data, and the integrity of the object 
+    is checked automatically when it's deserialized. The developer doesn't have to do anything: it's all fully automated. 
+
+### How are upgrades performed when patches are released?
 
 There are several components which might need an upgrade when a vulnerability is found. It might involve updates to 
 the Intel platform services software (a daemon and some libraries on the host Linux machine), the BIOS or UEFI 
@@ -57,26 +65,28 @@ no state needs to be transferred to other enclave instances. In the case of stat
 for doing state transfers depend on the application requirements, since data sealed on a system cannot be 
 unsealed on a different system.
 
-## Who and what will we be trusting exactly?
+### Who and what will we be trusting exactly?
 
-To ensure an enclave is behaving as expected one needs to verify its source and verify that the Intel attested reported 
-measurement matches the expected measurement at runtime, which requires a reproducible build system. We provide this 
-in Conclave.
+You must trust the CPU vendor. However, you have to trust your CPU to use computers in the first place, regardless 
+of whether you're using SGX or not. It's well within the capabilities of CPU microcode to detect code patterns and 
+create back doors or rewrite programs on the fly. A few minutes reflection will demonstrate that [you would usually have 
+no way to detect this](https://users.ece.cmu.edu/~ganger/712.fall02/papers/p761-thompson.pdf), unless you can recruit 
+some other CPU that isn't back doored to assist. 
 
-Regarding the who and what needs to be trusted, the above assumes trust in Intel and, when using Conclave, R3. Trust 
-is needed on Intel’s software, hardware and remote attestation services and R3’s Conclave software stack implementation.
-However you don't need to trust the owner of the hardware on which you run.
+You don't need to trust the owner of the hardware on which you run.
 
-We plan in future to allow audits of the source code of Conclave, to allow users to establish trust in it directly.
+We will allow audits of Conclave's source code to paying customers, so the full code inside the enclave can be verified
+directly. Therefore, you don't have to trust R3 if you have a commercial relationship with us.
 
-You must verify the source code of the enclave itself to ensure it’s "behaving properly", e.g. it’s not sending 
-secrets to the host.
+The users of an enclave-backed service must either verify the source code of the enclave themselves, to ensure 
+it’s "behaving properly" (i.e. not sending  secrets to the host), or they must outsource this task to a third party
+auditor they trust to accurately summarise the enclave's behaviour for them.
 
-Verifying the enclave measurement through Intel’s remote attestation service is needed to ensure the source code 
-matches the actual code running in the enclave. This also lets you check the remote system is fully up to date,
-and that the enclave is not running in debug mode (i.e. that the memory is really encrypted).
+Verifying the enclave measurement via remote attestation ensures the source code matches the actual code running in 
+the enclave. This also lets you check the remote system is fully up to date, and that the enclave is not running in 
+debug mode (i.e. that the memory really is encrypted).
 
-## How long should we trust an attestation verification report?
+### How long should we trust an attestation verification report?
 
 When a flaw in the system is found Intel performs a "trusted computing base recovery" operation. This involves releasing
 security updates and adjusting their servers to start reporting that old versions are known to be compromised. Thus you
@@ -95,35 +105,60 @@ the enclave will force a re-attestation and thus make the `EnclaveInstanceInfo` 
 should be synchronised between the host and client side tool (but remember to make the host server refresh more
 frequently than the client requires, to avoid synchronisation errors). 
 
-## What about side-channel attacks?
+### Isn't putting a whole JVM into an enclave a bit fat?
+
+The so-called native images produced by Conclave don't include a traditional full JVM like HotSpot. All code is compiled
+ahead of time and dynamic classloading isn't possible, which gives a model more similar to that of Rust. The runtime
+aspects of the enclave are the garbage collector (which is certainly worth its weight in gold when lack of memory safety
+bugs is considered), and some small pieces of code for miscellaneous runtime tasks like the generation of stack traces.
+
+Keeping an enclave small is a good idea to reduce the chance of security critical bugs, but this logic mostly applies
+when writing code in unsafe languages like C, C++ or when using unsafe blocks in Rust. The runtime in Conclave enclaves
+exists mostly to prevent security bugs in the rest of the code, additionally, the runtime is itself written in Java
+meaning the same bounds checking and memory safety technologies that protect your code also protect the runtime. The 
+lack of dynamic code loading (when using normal JVM bytecode) means even the runtime functions aren't exposed to
+attackers, so on balance we feel this is a clear security win.
+
+### What about side-channel attacks?
  
 Please see the discussion of [side channel attacks](security.md#side-channel-attacks) in the security documentation.
 
-## At which points in time is a connection with Intel needed?
+## Development and deployment
 
-A connection to Intel's servers will be made by the `aesmd` daemon and the host program when an enclave is loaded, as 
-part of the startup sequence. See the information about [machine setup](machine-setup.md) to learn about firewall and 
-proxy configuration.
+### What Kotlin/Java versions are usable?
 
-## Will using Conclave require any agreements with Intel?
+Inside the enclave you can use Java 8 or 11, and Kotlin 1.4.
 
-To develop enclaves no agreements are required. To run enclaves in production you currently need:
+### At which points in time is a connection with Intel needed?
 
-1. A "service provider ID" that grants access to the attestation servers. This is free.
-2. To sign a (very simple, one page) agreement that you won't sign malware. Intel will whitelist your signing key and
-   Release Mode then becomes available. This is also free.
+When using DCAP attestation (which requires the latest hardware), e.g. on Microsoft Azure, no direct connection to Intel is
+required. The cloud provider runs caching proxies in-cloud and Conclave uses them automatically.
 
-So whilst enclave developers must interact with Intel to be able to use SGX it's not a difficult task, and step (2) is becoming
-optional in newer versions of SGX. Technically, the whitelisting authority becomes configurable via the BIOS/UEFI so
-you can set it to yourself, or for cloud/datacenter providers, enforce your own restrictions. This means that for
-example if you run a datacenter you can't find yourself unexpectedly serving un-analysable malware command and control 
-servers, etc. 
+When using the older EPID attestation protocol a connection to Intel's servers will be made by the `aesmd` daemon and 
+the host program when an enclave is loaded, as part of the startup sequence. See the information about 
+[machine setup](machine-setup.md) to learn about firewall and proxy configuration.
 
-Note that due to how Conclave is designed, enclave clients don't need to interact with Intel at any point. Instead the
-host does it for them, and then sends them a serialised `EnclaveInstanceInfo` object. Because the data in this object
-is signed by Intel the clients can check it despite it being relayed through the untrusted host. 
+### Can I print debug output to the console from my enclave?
 
-## Do you have plans to support AMD SEV?
+Conclave enclaves built for debug and simulation support output to the console from inside the enclave 
+through the use of `System.out.println()`. Release builds of enclaves do not support printing to the console.
+Calling `System.out.println()` in release builds of enclaves is allowed but the output is discarded 
+inside the enclave. This is to prevent accidental leakage of enclave state through the use of debug logging. 
+
+### Can I load more than one enclave at once?
+
+Yes, but each enclave must be a separate (Gradle) module. One module can only have one enclave entrypoint. On current
+hardware you may need to keep the enclaves small in order to avoid running out of fast EPC RAM, in which case the
+enclave memory will be 'swapped' in and out of EPC, at a considerable performance penalty.
+
+You can consider an alternative approach. Because of how Conclave Mail is designed, enclaves can message each other
+when offline. Therefore, it's possible to load one enclave, have it send a message to another enclave, unload it,
+load the second enclave and have it process the message from the first. Splitting up app logic in this way can be
+useful for allowing modules to be upgraded and audited independently.
+
+## Competing technologies
+
+### Do you have plans to support AMD SEV?
  
 Not at this time. We will re-evaluate future versions of SEV. The main problems are:
  
@@ -132,19 +167,38 @@ Not at this time. We will re-evaluate future versions of SEV. The main problems 
    state of the calculation.
 2. It has no equivalent of SGX TCB recovery, meaning flaws permanently break the system. Prior versions of SEV have been
    rendered useless by the discovery of numerous fatal bugs in AMD's firmware. Although patches were made available 
-   there's no way to remotely detect if they are actually applied.  
+   there was no way to remotely detect if they are actually applied, which made patching meaningless.
 
-Additionally, in SEV remote attestation is randomized, which means you can’t ask a remote host "what are you running".
+Additionally in SEV remote attestation is randomized, which means you can’t ask a remote host "what are you running".
 You are expected to know this already (because you set up the remote VM to begin with). This doesn't fit well with
 most obvious enclave APIs.
 
-## Do you have plans to support ARM TrustZone?
+AMD and Intel are in increasingly strong competition, and so we expect AMD to catch up with the SGX feature set in 
+future. Additionally Intel are working on an SEV-equivalent feature for protecting entire (Linux) virtual machines from 
+the host hardware. Conclave may add support for this at some point in the future as well.
+
+### Do you have plans to support ARM TrustZone?
 
 Not at this time. ARM TrustZone doesn't have any form of remote attestation support. It's meant for hardening
-mobile phone operating systems and supported use cases don't really go beyond that.
+mobile phone operating systems and supported use cases don't really go beyond that. ARM will likely enhance their
+CPUs to support remote attestation in future, and we will re-evaluate when such support ships.
 
-## Can I print debug output to the console from my enclave?
-Conclave enclaves built for debug and simulation support output to the console from inside the enclave 
-through the use of `System.out.println()`. Release builds of enclaves do not support printing to the console.
-Calling `System.out.println()` in release builds of enclaves is allowed but the output is discarded 
-inside the enclave. This is to prevent accidental leakage of enclave state through the use of debug logging.
+### Do you have plans to support AWS/Nitro?
+
+Nitro is the name Amazon uses to refer to in-house security technology on their custom servers that restricts
+access by AWS employees. It's not an enclave and Amazon must still be assumed to have access to all your data,
+institutionally, because they design and implement Nitro, thus you have only their assurance that there are no
+back doors or internally known weaknesses.
+
+As it's not an enclave we currently have no plans to support Nitro.
+
+### Why are you using Intel SGX versus mathematical techniques?
+ 
+Mathematically based secure multi-party computation and zero knowledge proofs are closely related and have similar
+tradeoffs/problems such as high complexity, low performance, difficult to use without intense dedicated training and 
+not stable (i.e. the best known algorithms change frequently).
+
+SGX is relatively simple, high performance, much easier to use, and stable over time.
+
+However, we acknowledge the limits of relying on hardware based solutions and are interested in bringing easy to use
+circuit-based cryptographic algorithms to market one day.

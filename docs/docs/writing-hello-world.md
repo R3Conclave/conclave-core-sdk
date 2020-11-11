@@ -64,10 +64,10 @@ a couple of lines like this:
 
 ```text
 conclaveRepo=/path/to/sdk/repo
-conclaveVersion=0.3
+conclaveVersion=0.4
 ```
 
-0.3 here means use beta 3.
+0.4 here means use beta 4.
 
 Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory.
 You may wish to put the version in the project's `gradle.properties` file and the path in each developer's personal
@@ -78,27 +78,8 @@ SDK to the source tree.
     
 Add the following code to your root `build.gradle` file to import the repository:
 
-```groovy hl_lines="21 22 23 24 25 26"
-plugins {
-    id 'java'
-    id 'idea'
-}
-
-idea {
-    module {
-        downloadJavadoc = true
-    }
-}
-
+```groovy
 subprojects {
-    apply plugin: 'idea'
-
-    idea {
-        module {
-            downloadJavadoc = true
-        }
-    }
-
     repositories {
         maven {
             url = rootProject.file(conclaveRepo)
@@ -107,14 +88,6 @@ subprojects {
     }
 }
 ```
-
-!!! tip
-    Most of this boilerplate isn't strictly necessary except for the highlighted region. However, the rest works around
-    [a bug in IntelliJ IDEA](https://youtrack.jetbrains.com/issue/IDEA-231254) if you wish to use that IDE in which 
-    interactive JavaDocs would otherwise not be available. To benefit from the workaround you should run `./gradlew idea`
-    to generate your IntelliJ project. If IntelliJ is running at the time it should automatically notice the changes and
-    apply them. If you click "import from Gradle" in the notification popup workflow then everything will work fine 
-    except JavaDoc integration.
 
 ### Configure the host module
 Add this bit of code to your host `build.gradle` file to let the [mode](tutorial.md#enclave-modes) be chosen from the command line:

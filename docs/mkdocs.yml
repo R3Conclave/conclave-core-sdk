@@ -11,22 +11,22 @@ nav:
   - Welcome: index.md
   - Enclaves: enclaves.md
   - Development:
-    - Conclave architecture:
-      - Architecture: architecture.md
-      - Mail: mail.md
-      - Security discussion: security.md
-      - Threads: threads.md
-      - JavaScript: javascript.md
     - Tutorial:
-      - Compiling and running: tutorial.md
-      - Writing hello world: writing-hello-world.md
+        - Compiling and running: tutorial.md
+        - Writing hello world: writing-hello-world.md
+    - Conclave architecture: architecture.md
+    - Mail: mail.md
+    - Threads: threads.md
+    - JavaScript: javascript.md
     - Configuration options for enclaves: enclave-configuration.md
+    - Security discussion: security.md
     - API: api/index.html
+    - API migration notes: api-changes.md
   - Operations:
     - Server deployment:
       - Machine setup: machine-setup.md
       - IAS: ias.md
-      - Using DCAP: dcap.md
+      - Deploying to Azure: azure.md
     - Enclave signing: signing.md
     - Renewability: renewability.md
   - FAQ: faq.md

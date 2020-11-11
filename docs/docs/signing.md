@@ -19,23 +19,15 @@ cores, and is part of the privacy (anti-tracking) infrastructure in SGX.
 Using signatures to link binaries into a single upgrade path is the same technique used by Android and iOS to move
 permissions and stored data from old to new apps.
 
-Signing is also used to authorise which enclaves can start. Intel chips won't start an enclave unless it's signed by
-a key recognised by a launch approver.
- 
-## Who can sign
- 
-On the most common kind of hardware, permission from Intel is required to create a launchable enclave. Getting 
-whitelisted is free and can be done quickly. It's a similar process to getting an SSL certificate but using 
-different tools.
+Signing is also used to authorise which enclaves can start. By default Intel chips won't start an enclave unless it's 
+signed by an Intel key, but this behaviour can be changed and on Azure (see ["Deploying to Azure"](azure.md)) enclaves
+can be self-signed. If you want to use older hardware getting whitelisted by Intel is free and can be done quickly. 
+It's a similar process to getting an SSL certificate but using different tools.
 
-On Xeon E CPUs with Intel SPS support in the chipset, and a recent enough kernel driver, the owner can add their 
-own whitelisting authorities via BIOS/UEFI firmware settings. This means they can whitelist their own 
-enclaves / enclave vendors.
-
-Current Conclave versions aren't able to use this capability at present. To run in production (fully secured) mode
-you need a whitelisted Intel key. We plan to implement support for the *flexible launch control* feature in future
-versions. At this time not much shipping hardware supports it however, so for near term uses you should plan on
-getting a whitelisted Intel key.
+On Xeon E CPUs with Intel FLC support in the chipset, and a recent enough kernel driver, the owner can add their 
+own whitelisting authorities via BIOS/UEFI firmware settings. This means they can replace the default "must be approved
+by Intel" launch control logic with their own (which may e.g. only allow their own enclaves, or may allow any self-signed
+enclave).
 
 ## How to sign your enclaves
 
@@ -195,6 +187,7 @@ The task makes the following two Gradle invocations equivalent:
 See the [tutorial](tutorial.md) and the ```hello-world``` sample in the Conclave SDK for an example of this configuration.
 
 #### Generate the signing material
+
 Invoke Gradle to generate the files that need to be signed by the external signing process.
 
 ```
@@ -204,6 +197,7 @@ Invoke Gradle to generate the files that need to be signed by the external signi
 The output of this stage is a file that contains the material to be signed in ```enclave/build/enclave/Release/signing_material.bin```
 
 #### Sign the material
+
 Perform the required steps to manually sign the file generated in the previous step. This might require copying the file onto a different platform or onto an HSM to generate the signed file.
 
 As an example, given a private key the following command can be used to sign the file:
@@ -214,6 +208,7 @@ openssl dgst -sha256 -out signature.bin -sign my_private_key.pem -keyform PEM si
 Once completed, copy the signed file and the public key back onto the build system into the location specified in the ```mrsignerPublicSignature``` and ```mrsignerPublicKey``` properties in the enclave signing configuration.
 
 #### Complete the build
+
 Invoke Gradle to complete the build.
 
 ```

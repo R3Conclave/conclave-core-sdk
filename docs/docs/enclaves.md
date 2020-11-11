@@ -72,7 +72,7 @@ messages to the enclave using the public key P after checking what kind of encla
 list of known code hashes clients can effectively whitelist particular enclaves and treat them as trustworthy
 servers.
 
-In Conclave, a remote attestation is an instance of the [`EnclaveInstanceInfo`](api/com/r3/conclave/client/EnclaveInstanceInfo.html) class.
+In Conclave, a remote attestation is an instance of the [`EnclaveInstanceInfo`](api/com/r3/conclave/common/EnclaveInstanceInfo.html) class.
 
 ## Measurements vs signers
 

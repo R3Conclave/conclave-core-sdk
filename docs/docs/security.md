@@ -8,17 +8,13 @@ malicious, and defended against using encryption and authentication.
 
 This has implications for reading the system clock. The current time is maintained by a battery powered real-time clock chip
 outside the CPU, which can be tampered with by the untrusted machine owner at any time. For this reason inside the
-enclave the current time isn't available. Trying to read it will yield a default, unchanging timestamp. Additionally, 
-the enclave may be paused at any moment for an arbitrary duration without the enclave code being aware of that, so
-if you were to read a timestamp it might be very old at the moment you actually used it.
+enclave the current time should only be used with care, e.g. when errors in it aren't security critical. Trying to read
+it will yield a time from the host that may not map to real time, could go backwards, be invalid, or have other problems. 
+Additionally, the enclave may be paused at any moment for an arbitrary duration without the enclave code being aware of 
+that, so if you were to read a timestamp it might be very old at the moment you actually used it.
 
-For these reasons timestamping events requires special support and discussion. Future versions of Conclave will be
-usable together with [Corda](https://www.corda.net), a decentralised ledger technology that provides trusted 
-logical and real-time clocks suitable for ordering database transactions and recording an approximate UTC timestamp
-at which they occurred.
-
-If you need a timestamp without using Corda, you can get a signed timestamp from many sources. For instance doing an
-HTTP GET request to www.google.com will provide a reading from Google's clocks in the HTTP result headers.     
+However the protocol for accessing the timestamp doesn't involve doing any calls out of the enclave, so, the host can't
+observe the program's progress by watching OCALLs (which would otherwise be a side channel).
 
 ## Memento attacks
 
@@ -43,14 +39,14 @@ the operating system and decrypted inside the enclave.
 
 Conclave handles the sealing process for you. Unfortunately there's one class of attack encryption cannot stop. It
 must instead be considered in the design of your app. That attack is when the host gives you back older data than
-was requested. The system clock is controlled by the owner of the computer and so can't be relied on. Additionally
+was requested. The system clock is controlled by the owner of the computer and so can't be relied on. Additionally,
 the owner can kill and restart the host process whenever they like.
 
 Together this means an enclave's sense of time and ordering of events can be tampered with to create confusion. By
 snapshotting the stored (sealed, encrypted) data an enclave has provided after each network message from a client is
 delivered, the enclave can be "rewound" to any point. Then stored messages from the clients can be replayed back to
 the enclave in different orders, or with some messages dropped. We call this a Memento attack, after [the film in which
-the protagonist has anterograde amenesia](https://en.wikipedia.org/wiki/Memento_(film)).
+the protagonist has anterograde amnesia](https://en.wikipedia.org/wiki/Memento_(film)).
 
 !!! warning
 
@@ -99,14 +95,14 @@ Here is a non-exhaustive set of examples:
 
 * **Message sizes**. If your enclave is known to process only two kinds of message of around 1 kilobyte or 100 kilobytes
   respectively, then the size of the encrypted message by itself leaks information about what kind of message it is.
-* **Message processing time**. The same as message sizes but with processing time, e.g. a message type that takes 1msec 
-  to process vs 100 msec can leak what kind of message it is by simply observing how much work the enclave does when
+* **Message processing time**. The same as message sizes but with processing time, e.g. a message type that takes 1 millisecond 
+  to process vs 100 milliseconds can leak what kind of message it is by simply observing how much work the enclave does when
   the host passes it the new data.
-* **Storage access patterns**. If your enclave doesn't access the database when processing a message of type A but does
+* **Storage access patterns**. If your enclave doesn't access the database when processing a message of type A, but does
   when processing a message of type B, or accesses the database with a different sequence, number or type of accesses,
   the host can learn the message type by observing those accesses.  
 
-Many of these techniques can be used to reveal fine grained information, not just message types. For instance if an
+Many of these techniques can be used to reveal fine-grained information, not just message types. For instance if an
 encrypted piece of data contains a number that's then used to control a loop that does data lookups, counting the
 number of external data lookups reveals the number.
 
@@ -136,7 +132,7 @@ encryption, execution inside an enclave can run a lot slower than normal softwar
 ### Impact of side channel attacks
 
 Not all enclaves operate on secret data. Some types of enclave are used for their auditable execution rather than to
-work with secret data unaccessible to the host. For those kinds of enclave it's sufficient to protect the signing keys
+work with secret data inaccessible to the host. For those kinds of enclave it's sufficient to protect the signing keys
 rather than all data the enclave accesses. Other types of enclave work purely with secret data, but expect that the host
 isn't normally malicious: in this scenario enclaves are being used to slow down or stop attackers in the face of a 
 hacked host network. It thus makes up one part of a standard suite of security measures.   
