@@ -1,7 +1,7 @@
 ext {
     // Make sure to also update the following:
     // * docs/sdk-extras/hello-world/gradle.properties
-    default_conclave_version = '0.4-SNAPSHOT'
+    default_conclave_version = '0.5-SNAPSHOT'
     conclave_version = System.getenv('PROJECT_VERSION') ?: default_conclave_version
     kotlin_version = '1.4.10'
     asm_version = '7.3.1'
