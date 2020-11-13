@@ -63,7 +63,8 @@ of course get no hardware protections. To run against real SGX hardware you must
 
 ![Import Gradle script](./images/gradle-import.png) 
  
-**Step 4:** If on Linux or Windows, double-click on `:host:assemble`. Voila! :smile: You have just built your first enclave.
+**Step 4:** If on Linux or Windows, double-click on `:host:assemble`. This is the second 
+highlighted `assemble` in the screenshot below. Voila! :smile: You have just built your first enclave.
   
 ![Double-click on `:host:assemble`](./images/gradle-tasks.png)
   
@@ -150,12 +151,14 @@ course just run the host directly.
 
 ___Windows PowerShell___
 ```
+gradlew.bat host:installDist
 docker run -it --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash
 ```
 
 ___macOS___
 ```
-docker run -it --rm -p 9999:9999 -v $PWD:/project -w /project --user $(id -u):$(id -g) conclave-build /bin/bash"
+./gradlew host:installDist
+docker run -it --rm -p 9999:9999 -v $PWD:/project -w /project --user $(id -u):$(id -g) conclave-build /bin/bash
 ```
 
 This will give you a shell inside a Linux virtual machine.
@@ -163,7 +166,7 @@ This will give you a shell inside a Linux virtual machine.
 You can then run:
 
 ```
-cd build/install
+cd host/build/install
 ./host/bin/host
 ```
  
@@ -175,12 +178,12 @@ Listening on port 9999. Use the client app to send strings for reversal.
 ```
 
 You may want to create an IntelliJ launch configuration to incorporate the `build` and `deploy` stages.
-Adjust the command above to use `/bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"` 
-instead of just running bash, place it in a .cmd batch file (Windows) or a .sh file (macOS) and then use the "Shell script" launch 
-configuration type, and add a Gradle task in the "Before launch" section. You will then be able to click the run 
-icon in your IDE to build and start up the Java host app inside the Docker container. It should look like this:
 
-![import project](./images/test-deploy.png)
+Adjust the Docker command above to use `/bin/bash -c "mkdir -p run && tar xf host/build/distributions/host.tar -C run && ./run/host/bin/host"` 
+and place it all in a .cmd batch file (Windows) or a .sh file (macOS). Use the "Shell script" launch 
+configuration type in IntelliJ, with this script (and its full path) as "Script path" and the `hello-world` directory (and its full path)
+as "Working Directory". Add the `host:assemble` Gradle task in the "Before launch" section. You will then be able to click the run 
+icon in your IDE to build and start up the Java host app inside the Docker container. 
 
 ## Running the client
 
