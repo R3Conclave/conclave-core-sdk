@@ -13,16 +13,16 @@ import java.time.ZonedDateTime
 import java.util.*
 import kotlin.random.Random
 
-class AttestationReportTest {
+class EpidVerificationReportTest {
     @Test
     fun `serialise minimum fields`() {
         val isvEnclaveQuoteBody = Cursor.wrap(SgxQuote, Random.nextBytes(432))
 
-        val report = AttestationReport(
+        val report = EpidVerificationReport(
                 id = "165171271757108173876306223827987629752",
                 timestamp = ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant(),
                 version = 3,
-                isvEnclaveQuoteStatus = QuoteStatus.OK,
+                isvEnclaveQuoteStatus = EpidQuoteStatus.OK,
                 isvEnclaveQuoteBody = isvEnclaveQuoteBody
         )
 
@@ -55,11 +55,11 @@ class AttestationReportTest {
             """.trimIndent()
 
 
-        val report = attestationObjectMapper.readValue(json, AttestationReport::class.java)
+        val report = attestationObjectMapper.readValue(json, EpidVerificationReport::class.java)
         assertThat(report.id).isEqualTo("165171271757108173876306223827987629752")
         assertThat(report.timestamp).isEqualTo(ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant())
         assertThat(report.version).isEqualTo(3)
-        assertThat(report.isvEnclaveQuoteStatus).isEqualTo(QuoteStatus.OK)
+        assertThat(report.isvEnclaveQuoteStatus).isEqualTo(EpidQuoteStatus.OK)
         assertThat(report.isvEnclaveQuoteBody).isEqualTo(isvEnclaveQuoteBody)
     }
 
@@ -70,11 +70,11 @@ class AttestationReportTest {
         val pseManifestHash = SHA256Hash.wrap(Random.nextBytes(32))
         val epidPseudonym = OpaqueBytes(Random.nextBytes(100))
 
-        val report = AttestationReport(
+        val report = EpidVerificationReport(
                 id = "165171271757108173876306223827987629752",
                 timestamp = ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant(),
                 version = 3,
-                isvEnclaveQuoteStatus = QuoteStatus.OK,
+                isvEnclaveQuoteStatus = EpidQuoteStatus.OK,
                 isvEnclaveQuoteBody = isvEnclaveQuoteBody,
                 platformInfoBlob = platformInfoBlob,
                 revocationReason = 1,
@@ -121,11 +121,11 @@ class AttestationReportTest {
             }
             """.trimIndent()
 
-        val report = attestationObjectMapper.readValue(json, AttestationReport::class.java)
+        val report = attestationObjectMapper.readValue(json, EpidVerificationReport::class.java)
         assertThat(report.id).isEqualTo("165171271757108173876306223827987629752")
         assertThat(report.timestamp).isEqualTo(ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant())
         assertThat(report.version).isEqualTo(3)
-        assertThat(report.isvEnclaveQuoteStatus).isEqualTo(QuoteStatus.OK)
+        assertThat(report.isvEnclaveQuoteStatus).isEqualTo(EpidQuoteStatus.OK)
         assertThat(report.isvEnclaveQuoteBody).isEqualTo(isvEnclaveQuoteBody)
         assertThat(report.platformInfoBlob).isEqualTo(platformInfoBlob)
         assertThat(report.revocationReason).isEqualTo(1)

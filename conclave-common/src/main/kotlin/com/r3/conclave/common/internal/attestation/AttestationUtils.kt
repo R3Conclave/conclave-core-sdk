@@ -14,7 +14,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.util.regex.Pattern
 
-object DCAPUtils {
+object AttestationUtils {
     private const val SGX_EXTENSION_OID = "1.2.840.113741.1.13.1"
     private const val SGX_FMSPC_OID = "1.2.840.113741.1.13.1.4"
 
@@ -55,6 +55,9 @@ object DCAPUtils {
         System.arraycopy(chunk, 0, output, offset + 2, chunk.size)
     }
 
+    /**
+     * Parse the given byte buffer representing a cert path encoded as concatented certificates in PEM format.
+     */
     fun parsePemCertPath(bytes: ByteBuffer): CertPath {
         val chars: CharBuffer = StandardCharsets.US_ASCII.decode(bytes)
 
@@ -71,5 +74,4 @@ object DCAPUtils {
 
         return certificateFactory.generateCertPath(certificates)
     }
-
 }

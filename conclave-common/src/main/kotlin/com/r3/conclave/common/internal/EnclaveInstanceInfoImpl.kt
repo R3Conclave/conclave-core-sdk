@@ -1,20 +1,13 @@
 package com.r3.conclave.common.internal
 
 import com.r3.conclave.common.*
-import com.r3.conclave.common.EnclaveMode.*
-import com.r3.conclave.common.EnclaveSecurityInfo.Summary
-import com.r3.conclave.common.internal.SgxAttributes.flags
-import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxReportBody.cpuSvn
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.common.internal.attestation.AttestationReport
-import com.r3.conclave.common.internal.attestation.AttestationResponse
-import com.r3.conclave.common.internal.attestation.PKIXParametersFactory
-import com.r3.conclave.common.internal.attestation.QuoteStatus.*
+import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.Mail
@@ -28,46 +21,14 @@ import java.security.Signature
 
 class EnclaveInstanceInfoImpl(
         override val dataSigningKey: PublicKey,
-        val attestationResponse: AttestationResponse,
-        val enclaveMode: EnclaveMode,
-        val encryptionKey: Curve25519PublicKey
+        val encryptionKey: Curve25519PublicKey,
+        val attestation: Attestation
 ) : EnclaveInstanceInfo {
-    // The verification of the parameters are done at construction time. This is especially important when deserialising.
-    val attestationReport: AttestationReport
     override val enclaveInfo: EnclaveInfo
     override val securityInfo: SGXEnclaveSecurityInfo
 
     init {
-        val pkixParametersFactory = when (enclaveMode) {
-            RELEASE, DEBUG -> when (attestationResponse.attestationMode) {
-                AttestationMode.DCAP -> PKIXParametersFactory.DCAP
-                else -> PKIXParametersFactory.Intel
-            }
-            SIMULATION, MOCK -> PKIXParametersFactory.Mock
-        }
-
-        // We want to be able to deserialise EnclaveInstanceInfoImpl inside an enclave but it has no access to a trusted
-        // source of time to do the cert expiry check that comes with verifing the RA cert. We're only concerned that the
-        // public key that signed the attestion report belongs to the root, and so it's OK to turn off the expiry check.
-        val certTime = attestationResponse
-                .certPath
-                .x509Certs
-                .minByOrNull { it.notAfter }!!
-                .notAfter
-                .toInstant()
-        // By successfully verifying with the PKIX parameters we are sure that the enclaveMode is correct in terms of
-        // release/debug vs simulation/mock.
-        attestationReport = attestationResponse.verify(pkixParametersFactory.create(certTime))
-
-        val reportBody = attestationReport.isvEnclaveQuoteBody[SgxQuote.reportBody]
-
-        val isDebug = reportBody[attributes][flags].isSet(SgxEnclaveFlags.DEBUG)
-        // Now we check the debug flag from the attested quote matches release vs debug enclaveMode. The only thing left
-        // is the distinction between simulation and mock - we can't be sure which it is but it doesn't matter.
-        when (enclaveMode) {
-            RELEASE -> require(!isDebug) { "Mismatch between debug flag and enclaveMode" }
-            DEBUG, SIMULATION, MOCK -> require(isDebug) { "Mismatch between debug flag and enclaveMode" }
-        }
+        val reportBody = attestation.reportBody
 
         val expectedReportDataHash = SHA512Hash.hash(dataSigningKey.encoded + encryptionKey.encoded)
         val reportDataHash = SHA512Hash.get(reportBody[reportData].read())
@@ -80,18 +41,15 @@ class EnclaveInstanceInfoImpl(
                 codeSigningKeyHash = SHA256Hash.get(reportBody[mrsigner].read()),
                 productID = reportBody[isvProdId].read(),
                 revocationLevel = reportBody[isvSvn].read() - 1,
-                enclaveMode = enclaveMode
+                enclaveMode = attestation.enclaveMode
         )
 
-        val (summary, reason) = when (enclaveMode) {
-            RELEASE -> getSummaryAndReason(attestationReport)
-            DEBUG -> Pair(Summary.INSECURE, "Enclave is running in debug mode and is thus insecure. " +
-                    "Security status of the underlying hardware: ${getSummaryAndReason(attestationReport).second}")
-            SIMULATION -> Pair(Summary.INSECURE, "Enclave is running in simulation mode.")
-            MOCK -> Pair(Summary.INSECURE, "Enclave is running in mock mode.")
-        }
-        val cpuSVN = OpaqueBytes(reportBody[cpuSvn].bytes)
-        securityInfo = SGXEnclaveSecurityInfo(summary, reason, attestationReport.timestamp, cpuSVN)
+        securityInfo = SGXEnclaveSecurityInfo(
+                summary = attestation.securitySummary,
+                reason = attestation.securityReason,
+                timestamp = attestation.timestamp,
+                cpuSVN = OpaqueBytes(reportBody[cpuSvn].bytes)
+        )
     }
 
     override fun verifier(): Signature {
@@ -100,25 +58,12 @@ class EnclaveInstanceInfoImpl(
         return signature
     }
 
-    // New fields MUST be added to the end, even if they belong in AttestationResponse
     override fun serialize(): ByteArray {
         return writeData {
             write(magic)
             writeIntLengthPrefixBytes(dataSigningKey.encoded)
             writeIntLengthPrefixBytes(encryptionKey.encoded)
-            writeIntLengthPrefixBytes(attestationResponse.reportBytes)
-            writeIntLengthPrefixBytes(attestationResponse.signature)
-            writeIntLengthPrefixBytes(attestationResponse.certPath.encoded)
-            write(enclaveMode.ordinal)
-            write(attestationResponse.attestationMode.ordinal)
-            writeIntLengthPrefixBytes(attestationResponse.collateral.version.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.pckCrlIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rawRootCaCrl.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rawPckCrl.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rawTcbInfoIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rawSignedTcbInfo.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rawQeIdentityIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(attestationResponse.collateral.rawSignedQeIdentity.toByteArray())
+            attestation.writeTo(this)
         }
     }
 
@@ -143,9 +88,27 @@ class EnclaveInstanceInfoImpl(
         }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is EnclaveInstanceInfoImpl) return false
+
+        if (dataSigningKey != other.dataSigningKey) return false
+        if (encryptionKey != other.encryptionKey) return false
+        if (attestation != other.attestation) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = dataSigningKey.hashCode()
+        result = 31 * result + encryptionKey.hashCode()
+        result = 31 * result + attestation.hashCode()
+        return result
+    }
+
     override fun toString() = """
         Remote attestation for enclave ${enclaveInfo.codeHash}:
-          - Mode: $enclaveMode
+          - Mode: ${enclaveInfo.enclaveMode}
           - Code signing key hash: ${enclaveInfo.codeSigningKeyHash}
           - Public signing key: ${dataSigningKey.encoded.toHexString()}
           - Public encryption key: ${encryptionKey.encoded.toHexString()}
@@ -158,43 +121,5 @@ class EnclaveInstanceInfoImpl(
 
     companion object {
         private val magic = "EII".toByteArray()
-
-        private fun getSummaryAndReason(report: AttestationReport): Pair<Summary, String> {
-            return when (report.isvEnclaveQuoteStatus) {
-                OK -> Pair(Summary.SECURE, "A signature of the ISV enclave QUOTE was verified correctly and the TCB " +
-                        "level of the SGX platform is up-to-date.")
-                SIGNATURE_INVALID -> Pair(Summary.INSECURE, "The signature of the ISV enclave QUOTE was invalid. The " +
-                        "content of the QUOTE is not trustworthy.")
-                GROUP_REVOKED -> Pair(Summary.INSECURE, "The EPID group has been revoked (reason=${report.revocationReason}). " +
-                        "The content of the QUOTE is not trustworthy.")
-                SIGNATURE_REVOKED -> Pair(Summary.INSECURE, "The EPID private key used to sign the QUOTE has been revoked " +
-                        "by signature. The content of the QUOTE is not trustworthy.")
-                KEY_REVOKED -> Pair(Summary.INSECURE, "The EPID private key used to sign the QUOTE has been directly " +
-                        "revoked (not by signature). The content of the QUOTE is not trustworthy.")
-                SIGRL_VERSION_MISMATCH -> Pair(Summary.INSECURE, "The Signature Revocation List (SigRL) version in ISV " +
-                        "enclave QUOTE does not match the most recent version of the SigRL. Please try again with the " +
-                        "most recent version of SigRL from the IAS. Until then the content of the QUOTE is not trustworthy.")
-                GROUP_OUT_OF_DATE -> Pair(Summary.STALE, "The EPID signature of the ISV enclave QUOTE has been verified " +
-                        "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
-                        "as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
-                CONFIGURATION_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified " +
-                        "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
-                        "identified as compromised and thus it is not revoked.${advistoryIdsSentence(report)}")
-                SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE has been verified " +
-                        "correctly but due to certain issues affecting the platform, additional software hardening in the " +
-                        "attesting SGX enclaves may be needed.${advistoryIdsSentence(report)}")
-                CONFIGURATION_AND_SW_HARDENING_NEEDED -> Pair(Summary.STALE, "The signature of the ISV enclave QUOTE " +
-                        "has been verified correctly but additional configuration for the platform and software hardening in " +
-                        "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
-                        "thus it is not revoked.${advistoryIdsSentence(report)}")
-            }
-        }
-
-        private fun advistoryIdsSentence(report: AttestationReport): String {
-            return when (report.advisoryIDs?.size ?: 0) {
-                0 -> ""
-                else -> " For further details see Advisory IDs ${report.advisoryIDs!!.joinToString(", ")}."
-            }
-        }
     }
 }

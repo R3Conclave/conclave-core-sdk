@@ -47,7 +47,19 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
          * @throws IllegalArgumentException If the remaining bytes of [buffer] is less than the size of [type].
          */
         fun <T : Encoder<R>, R> read(type: T, buffer: ByteBuffer): Cursor<T, R> {
-            val size = type.size(buffer.order(ByteOrder.LITTLE_ENDIAN))
+            val size = if (type is FixedEncoder<*>) {
+                type.size
+            } else {
+                // We need read the buffer to determine the size of the variable encoder. This needs to be done in little-endian
+                // mode (as Cursor assumes only that). Once we've determined the size we revert the mode back since this
+                // method is only meant to advance the position of the buffer, not change its endianess.
+                val bo = buffer.order()
+                try {
+                    type.size(buffer.order(ByteOrder.LITTLE_ENDIAN))
+                } finally {
+                    buffer.order(bo)
+                }
+            }
             require(buffer.remaining() >= size) {
                 "Size of ${type.javaClass.simpleName} is $size whereas there are only ${buffer.remaining()} bytes remaining in the buffer."
             }
@@ -68,6 +80,10 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
 
     /** Write the pointed-to data from [R]. */
     fun write(value: R): ByteBuffer = encoder.write(buffer, value)
+
+    fun asReadOnly(): Cursor<T, R> = Cursor(encoder, underlyingBuffer.asReadOnlyBuffer())
+
+    val isReadOnly: Boolean get() = underlyingBuffer.isReadOnly
 
     override fun toString(): String = CursorPrettyPrint.print(this)
 

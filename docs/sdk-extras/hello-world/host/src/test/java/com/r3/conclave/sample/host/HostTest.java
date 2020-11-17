@@ -29,14 +29,7 @@ public class HostTest {
         } catch (UnsatisfiedLinkError e) {
             enclave = MockHost.loadMock(com.r3.conclave.sample.enclave.ReverseEnclave.class);
         }
-        // Optionally pass in the SPID and attestation key which are required for remote attestation. These can be null
-        // if running in simulation mode, but are required in debug/release mode.
-        String spid = System.getProperty("spid");
-        String attestationKey = System.getProperty("attestation-key");
-        AttestationParameters params = null;
-        if (spid != null && attestationKey != null)
-            params = new AttestationParameters.EPID(OpaqueBytes.parse(spid), attestationKey);
-        enclave.start(params, null);
+        enclave.start(new AttestationParameters.DCAP(), null);
     }
 
     @AfterAll

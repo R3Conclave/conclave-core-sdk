@@ -8,6 +8,7 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.internaltesting.HardwareTest
+import com.r3.conclave.internaltesting.HardwareTest.Companion.attestationParams
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.EnclaveType
@@ -25,7 +26,7 @@ import kotlin.random.Random
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
-class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest() {
+class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
     companion object {
         @JvmField
         @RegisterExtension

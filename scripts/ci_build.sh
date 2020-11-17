@@ -16,8 +16,8 @@ TEST_OPTS=${TEST_OPTS:-}
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE test publish sdkFiles sdk -i $TEST_OPTS \
     && cd $CODE_DOCKER_DIR/samples && \$GRADLE --refresh-dependencies test -i"
 
-# Run the SDK tests.
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh"
+# Run the SDK tests and integration tests.
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh && ./integration-tests.sh"
 
 # Now ensure that we build the Release enclave artifacts.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"

@@ -1,7 +1,5 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.enclave.Enclave
@@ -152,30 +150,10 @@ class EnclaveHostNativeTest {
     }
 
     @Test
-    fun `EnclaveInstanceInfo matches across host and enclave`() {
-        start<EnclaveInstanceInfoEnclave>(EnclaveBuilder(EnclaveConfig().withHeapMaxSize(0x20000000)))
-        val eiiFromEnclave = EnclaveInstanceInfo.deserialize(host.callEnclave(byteArrayOf())!!)
-        val eiiFromHost = host.enclaveInstanceInfo
-        with(eiiFromEnclave) {
-            assertThat(enclaveInfo).isEqualTo(eiiFromHost.enclaveInfo)
-            assertThat(dataSigningKey).isEqualTo(eiiFromHost.dataSigningKey)
-            with(securityInfo) {
-                assertThat(summary).isEqualTo(eiiFromHost.securityInfo.summary)
-                assertThat(reason).isEqualTo(eiiFromHost.securityInfo.reason)
-                assertThat(timestamp).isEqualTo(eiiFromHost.securityInfo.timestamp)
-            }
-        }
-    }
-
-    @Test
     fun `get cpu capabilities`() {
         val text = EnclaveHost.capabilitiesDiagnostics
         println(text)
         assertThat(text).contains("SGX available:")
-    }
-
-    class EnclaveInstanceInfoEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = enclaveInstanceInfo.serialize()
     }
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {

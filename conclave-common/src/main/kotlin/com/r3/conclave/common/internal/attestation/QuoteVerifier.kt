@@ -8,14 +8,14 @@ import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeAuthData
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeReport
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeReportSignature
-import com.r3.conclave.common.internal.SgxQuote.signType
 import com.r3.conclave.common.internal.SgxQuote.version
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.miscSelect
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.common.internal.attestation.DCAPUtils.parseRawEcdsaToDerEncoding
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
+import com.r3.conclave.common.internal.attestation.AttestationUtils.parseRawEcdsaToDerEncoding
 import com.r3.conclave.common.internal.attestation.QuoteVerifier.Status.*
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getUnsignedInt
@@ -99,15 +99,9 @@ object QuoteVerifier {
     private const val SGX_PCK_CN_PHRASE = "SGX PCK Certificate"
     private const val SGX_TCB_SIGNING_CN_PHRASE = "SGX TCB Signing"
 
-    // TODO The quote and signature parameters can be combined by using a single ByteCursor<SgxSignedQuote> parameter.
     // QuoteVerification/QvE/Enclave/qve.cpp:sgx_qve_verify_quote
-    fun verify(quote: ByteCursor<SgxQuote>, signature: ByteArray, collateral: QuoteCollateral): Triple<Status, Instant, Boolean> {
-        // See page 48 at https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf
-        if (quote[signType].read() != SgxQuoteSignType.ECDSA_P256)
-            throw GeneralSecurityException("Invalid quote $UNSUPPORTED_QUOTE_FORMAT")
-
-        val authData = Cursor.wrap(SgxEcdsa256BitQuoteAuthData, signature)
-
+    fun verify(signedQuote: ByteCursor<SgxSignedQuote>, collateral: QuoteCollateral): Triple<Status, Instant, Boolean> {
+        val authData = signedQuote.toEcdsaP256AuthData()
         val trustedRootCA = loadTrustedRootCA()
 
         val pckCertPath = authData[qeCertData].toPckCertPath()
@@ -145,7 +139,7 @@ object QuoteVerifier {
             return Triple(qeIdentityVerificationStatus, latestIssueDate, collateralHasExpired)
 
         val quoteVerificationStatus = verifyQuote(
-                quote,
+                signedQuote[quote],
                 authData,
                 pckCertPath.x509Certs[0],
                 collateral.pckCrl,
@@ -469,7 +463,7 @@ object QuoteVerifier {
     }
 
     private fun loadTrustedRootCA(): X509Certificate {
-        return javaClass.getResourceAsStream("/DCAPAttestationReportSigningCACert.pem").use {
+        return javaClass.getResourceAsStream("intel-dcap-root-cert.pem").use {
             CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
         }
     }

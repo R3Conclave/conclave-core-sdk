@@ -23,6 +23,9 @@ import com.r3.conclave.common.internal.SgxQuote
 import com.r3.conclave.common.internal.SgxSignedQuote
 import java.time.Instant
 
+// We could avoid the redundant usage of @JsonProperty if we used the Kotlin Jackson module. However that makes shading
+// Kotlin more difficult and so we just put up with this minor boilerplate.
+
 /**
  * Definitions taken from https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf.
  *
@@ -72,18 +75,16 @@ import java.time.Instant
  * @property advisoryIDs List of advisory IDs that can be searched on the page indicated by [advisoryURL]. Advisory IDs
  * refer to articles providing insight into enclave-related security issues that may affect the attested platform.
  *
- * This is only populated if [isvEnclaveQuoteStatus] is either [QuoteStatus.GROUP_OUT_OF_DATE], [QuoteStatus.CONFIGURATION_NEEDED],
- * [QuoteStatus.SW_HARDENING_NEEDED] or [QuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED].
+ * This is only populated if [isvEnclaveQuoteStatus] is either [EpidQuoteStatus.GROUP_OUT_OF_DATE], [EpidQuoteStatus.CONFIGURATION_NEEDED],
+ * [EpidQuoteStatus.SW_HARDENING_NEEDED] or [EpidQuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED].
  */
-// We could avoid the redundant usage of @JsonProperty if we used the Kotlin Jackson module. However that makes shading
-// Kotlin more difficult and so we just put up with this minor boilerplate.
 @JsonInclude(NON_NULL)
-data class AttestationReport @JsonCreator constructor(
+data class EpidVerificationReport @JsonCreator constructor(
         @JsonProperty("id")
         val id: String,
 
         @JsonProperty("isvEnclaveQuoteStatus")
-        val isvEnclaveQuoteStatus: QuoteStatus,
+        val isvEnclaveQuoteStatus: EpidQuoteStatus,
 
         @JsonProperty("isvEnclaveQuoteBody")
         @JsonSerialize(using = SgxQuoteSerializer::class)

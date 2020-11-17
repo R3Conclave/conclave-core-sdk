@@ -1,20 +1,18 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.ByteBufferInputStream
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.SignatureSchemeEdDSA
-import com.r3.conclave.common.internal.attestation.AttestationResponse
-import com.r3.conclave.common.internal.attestation.QuoteCollateral
+import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MutableMail
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.getSlice
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
-import java.security.cert.CertificateFactory
 
 /**
  * Contains serializable information about an instantiated enclave running on a
@@ -81,7 +79,6 @@ interface EnclaveInstanceInfo {
     companion object {
         private val magic = ByteBuffer.wrap("EII".toByteArray())
         private val signatureScheme = SignatureSchemeEdDSA()
-        private val enclaveModes = EnclaveMode.values()
 
         /**
          * Deserializes this object from its custom format.
@@ -97,35 +94,10 @@ interface EnclaveInstanceInfo {
             try {
                 val dataSigningKey = buffer.getIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
                 val encryptionKey = Curve25519PublicKey(buffer.getIntLengthPrefixBytes())
-                val reportBytes = buffer.getIntLengthPrefixBytes()
-                val signature = buffer.getIntLengthPrefixBytes()
-                val certPath = run {
-                    val certPathSize = buffer.getInt()
-                    CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(buffer.getSlice(certPathSize)))
-                }
-                val enclaveMode = enclaveModes[buffer.get().toInt()]
-                val attestationMode = AttestationMode.values()[buffer.get().toInt()]
-
-                // collateral is always present - will use empty strings for EPID
-                val collateral = QuoteCollateral(
-                    version = String(buffer.getIntLengthPrefixBytes()),
-                    pckCrlIssuerChain = String(buffer.getIntLengthPrefixBytes()),
-                    rawRootCaCrl = String(buffer.getIntLengthPrefixBytes()),
-                    rawPckCrl = String(buffer.getIntLengthPrefixBytes()),
-                    rawTcbInfoIssuerChain = String(buffer.getIntLengthPrefixBytes()),
-                    rawSignedTcbInfo = String(buffer.getIntLengthPrefixBytes()),
-                    rawQeIdentityIssuerChain = String(buffer.getIntLengthPrefixBytes()),
-                    rawSignedQeIdentity = String(buffer.getIntLengthPrefixBytes())
-                )
-
+                val attestation = Attestation.get(buffer)
                 // New fields need to be behind an availability check before being read. Use dis.available() to check if there
                 // are more bytes available and only parse them if there are. If not then provide defaults.
-                return EnclaveInstanceInfoImpl(
-                        dataSigningKey,
-                        AttestationResponse(reportBytes, signature, certPath, collateral, attestationMode),
-                        enclaveMode,
-                        encryptionKey
-                )
+                return EnclaveInstanceInfoImpl(dataSigningKey, encryptionKey, attestation)
             } catch (e: BufferUnderflowException) {
                 throw IllegalArgumentException("Truncated EnclaveInstanceInfo bytes", e)
             } catch (e: Exception) {

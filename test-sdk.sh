@@ -4,24 +4,16 @@ set -eou pipefail
 
 ./gradlew sdk
 
-SPID=***REMOVED***
-AK=***REMOVED***
 GRADLE_ARGS=""
 if [ "${1:-}" == "hardware" ]; then
-    GRADLE_ARGS="-PenclaveMode=debug -Pspid=$SPID -Pattestation-key=$AK"
+    GRADLE_ARGS="-PenclaveMode=debug"
 fi
-
-echo
-echo Running the integration tests
-echo
-cd integration-tests
-./gradlew --stacktrace $GRADLE_ARGS test
 
 echo
 echo Now trying to build and test the hello-world sample
 echo
-cd ../build/sdk/hello-world
+cd build/sdk/hello-world
 ./gradlew --stacktrace $GRADLE_ARGS host:test
 ./gradlew -q $GRADLE_ARGS host:installDist
-./host/build/install/host/bin/host $SPID $AK &
+./host/build/install/host/bin/host &
 ./gradlew --stacktrace -q client:run --args "abc"

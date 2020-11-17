@@ -4,7 +4,7 @@ package com.r3.conclave.common.internal.attestation
  * Definition of each enum value is taken from https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf
  * section 4.2.1.
  */
-enum class QuoteStatus {
+enum class EpidQuoteStatus {
     /**
      * EPID signature of the ISV enclave QUOTE was verified correctly and the TCB level of the SGX platform is up-to-date.
      */

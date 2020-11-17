@@ -1,13 +1,10 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.common.AttestationMode
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
-import com.r3.conclave.common.internal.attestation.AttestationResponse
-import com.r3.conclave.common.internal.attestation.QuoteCollateral
+import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
@@ -23,7 +20,6 @@ import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.Signature
-import java.security.cert.CertificateFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
@@ -205,36 +201,25 @@ abstract class Enclave {
         }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            val reportBytes = input.getIntLengthPrefixBytes()
-            val signature = input.getIntLengthPrefixBytes()
-            val attestationMode = AttestationMode.values()[input.getInt()]
-            val collateral = QuoteCollateral(
-                    version = String(input.getIntLengthPrefixBytes()),
-                    pckCrlIssuerChain = String(input.getIntLengthPrefixBytes()),
-                    rawRootCaCrl = String(input.getIntLengthPrefixBytes()),
-                    rawPckCrl = String(input.getIntLengthPrefixBytes()),
-                    rawTcbInfoIssuerChain = String(input.getIntLengthPrefixBytes()),
-                    rawSignedTcbInfo = String(input.getIntLengthPrefixBytes()),
-                    rawQeIdentityIssuerChain = String(input.getIntLengthPrefixBytes()),
-                    rawSignedQeIdentity = String(input.getIntLengthPrefixBytes())
-            )
-            // Wrap an InputStream over the remaining bytes to avoid unnecessary copying.
-            val certPath = CertificateFactory.getInstance("X.509").generateCertPath(ByteBufferInputStream(input))
-            val attestationResponse = AttestationResponse(reportBytes, signature, certPath, collateral, attestationMode)
-            val enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-                    enclave.signatureKey,
-                    attestationResponse,
-                    env.enclaveMode,
-                    enclave.encryptionKeyPair.public as Curve25519PublicKey
-            )
-            val attestationReportBody = enclaveInstanceInfo.attestationReport.isvEnclaveQuoteBody[reportBody]
+            val attestation = Attestation.get(input)
+            val attestationReportBody = attestation.reportBody
             val enclaveReportBody = enclave.attestationHandler.report[body]
             check(attestationReportBody == enclaveReportBody) {
                 """Host has provided attestation for a different enclave.
 Expected: $enclaveReportBody
 Received: $attestationReportBody"""
             }
-            _enclaveInstanceInfo = enclaveInstanceInfo
+            // It's also important to check the enclave modes match. Specifically we want to prevent an attestation marked
+            // as secure from being used when the enclave is running in non-hardware mode (all non-hardware attestations
+            // are insecure).
+            check(attestation.enclaveMode == env.enclaveMode) {
+                "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
+            }
+            _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
+                    enclave.signatureKey,
+                    enclave.encryptionKeyPair.public as Curve25519PublicKey,
+                    attestation
+            )
         }
 
         private fun sendEnclaveInfo() {
@@ -249,7 +234,7 @@ Received: $attestationReportBody"""
 
         /**
          * Return the [EnclaveInstanceInfoImpl] for this enclave. The first time this is called it asks the host for the
-         * [AttestationResponse] it received from the attestation service. From that the enclave is able to construct the
+         * [Attestation] object it received from the attestation service. From that the enclave is able to construct the
          * info object. By making this lazy we avoid slowing down the enclave startup process if it's never used.
          */
         @get:Synchronized
@@ -261,7 +246,7 @@ Received: $attestationReportBody"""
         }
 
         /**
-         * Send a request to the host for the [AttestationResponse] object. The enclave has the other properties needed
+         * Send a request to the host for the [Attestation] object. The enclave has the other properties needed
          * to construct its [EnclaveInstanceInfoImpl].
          *
          * This is simpler than serialising the info object itself as then the enclave has to check it's the correct one.
@@ -307,7 +292,7 @@ Received: $attestationReportBody"""
                 val id = input.getLong()
                 val routingHint = String(input.getIntLengthPrefixBytes()).takeIf { it.isNotEmpty() }
                 // Wrap the remaining bytes in a InputStream to avoid copying.
-                val decryptingStream = MailDecryptingStream(ByteBufferInputStream(input))
+                val decryptingStream = MailDecryptingStream(input.inputStream())
                 val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
                     requireNotNull(keyDerivation) { "Key derivation header required for decrypting enclave mail" }
                     // Ignore any extra bytes in the keyDerivation.

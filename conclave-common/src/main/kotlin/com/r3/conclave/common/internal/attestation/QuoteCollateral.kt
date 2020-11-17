@@ -5,7 +5,7 @@ import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509CRL
 
-class QuoteCollateral(
+data class QuoteCollateral(
         val version: String,
         val pckCrlIssuerChain: String,
         val rawRootCaCrl: String,
@@ -15,21 +15,6 @@ class QuoteCollateral(
         val rawQeIdentityIssuerChain: String,
         val rawSignedQeIdentity: String
 ) {
-    companion object {
-        fun mock(): QuoteCollateral {
-            return QuoteCollateral(
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    ""
-            )
-        }
-    }
-
     val rootCaCrl: X509CRL by lazy { parseCRL(rawRootCaCrl) }
 
     val pckCrl: X509CRL by lazy { parseCRL(rawPckCrl) }
@@ -48,7 +33,7 @@ class QuoteCollateral(
 
     private fun parseCertPath(pem: String): CertPath {
         // TODO Don't convert the cert paths in the JNI code to Strings. Keep them as the raw byte arrays.
-        return DCAPUtils.parsePemCertPath(ByteBuffer.wrap(pem.toByteArray()))
+        return AttestationUtils.parsePemCertPath(ByteBuffer.wrap(pem.toByteArray()))
     }
 
     private fun parseCRL(pem: String): X509CRL {

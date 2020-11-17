@@ -2,8 +2,11 @@ package com.r3.conclave.common.internal
 
 import com.r3.conclave.common.internal.SgxQeCertData.data
 import com.r3.conclave.common.internal.SgxQeCertData.type
-import com.r3.conclave.common.internal.attestation.DCAPUtils
-import com.r3.conclave.common.internal.attestation.DCAPUtils.parseRawEcdsaToDerEncoding
+import com.r3.conclave.common.internal.SgxQuote.signType
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
+import com.r3.conclave.common.internal.SgxSignedQuote.signature
+import com.r3.conclave.common.internal.attestation.AttestationUtils
+import com.r3.conclave.common.internal.attestation.AttestationUtils.parseRawEcdsaToDerEncoding
 import java.nio.ByteBuffer
 import java.security.KeyFactory
 import java.security.PublicKey
@@ -228,6 +231,13 @@ object SgxSignedQuote : VariableStruct() {
      * @see [SgxQuote.signType]
      */
     @JvmField val signature = field(UInt32VariableBytes())
+}
+
+fun ByteCursor<SgxSignedQuote>.toEcdsaP256AuthData(): ByteCursor<SgxEcdsa256BitQuoteAuthData> {
+    check(this[quote][signType].read() == SgxQuoteSignType.ECDSA_P256) {
+        "Not a ECDSA-256-with-P-256 auth data."
+    }
+    return Cursor.read(SgxEcdsa256BitQuoteAuthData, this[signature].read())
 }
 
 /**
@@ -487,6 +497,6 @@ object SgxQeCertData : VariableStruct() {
 }
 
 fun ByteCursor<SgxQeCertData>.toPckCertPath(): CertPath {
-    check(this[type].read() == 5)
-    return DCAPUtils.parsePemCertPath(this[data].read())
+    check(this[type].read() == 5) { "Not a PCK cert path" }
+    return AttestationUtils.parsePemCertPath(this[data].read())
 }
