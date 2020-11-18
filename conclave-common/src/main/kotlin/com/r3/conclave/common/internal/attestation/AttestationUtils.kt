@@ -4,35 +4,27 @@ import com.r3.conclave.common.internal.SGXExtensionASN1Parser
 import com.r3.conclave.common.internal.inputStream
 import com.r3.conclave.utilities.internal.getBytes
 import com.r3.conclave.utilities.internal.getSlice
-import com.r3.conclave.utilities.internal.x509Certs
 import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.regex.Pattern
 
 object AttestationUtils {
     private const val SGX_EXTENSION_OID = "1.2.840.113741.1.13.1"
-    private const val SGX_FMSPC_OID = "1.2.840.113741.1.13.1.4"
+
+    const val SGX_TCB_OID = "$SGX_EXTENSION_OID.2"
+    const val SGX_PCESVN_OID = "$SGX_TCB_OID.17"
+    const val SGX_PCEID_OID = "$SGX_EXTENSION_OID.3"
+    const val SGX_FMSPC_OID = "$SGX_EXTENSION_OID.4"
 
     private val PEM_CERT_PATTERN = Pattern.compile("-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----")
 
-    private fun getSgxExtension(certPath: CertPath): ByteArray {
-        return certPath.x509Certs[0].getExtensionValue(SGX_EXTENSION_OID)
-    }
-
-    fun getFMSPC(ext: ByteArray): ByteArray {
-        val parser = SGXExtensionASN1Parser()
-        parser.parse(ext, ext.size)
-        return parser.value(SGX_FMSPC_OID)
-    }
-
-    fun getPckWord(certPath: CertPath): Int = if ("Processor" in certPath.x509Certs[0].issuerDN.name) 0 else 1
-
-    fun getFMSPC(certPath: CertPath): ByteArray = getFMSPC(getSgxExtension(certPath))
+    val X509Certificate.sgxExtension: SGXExtensionASN1Parser
+        get() = SGXExtensionASN1Parser(getExtensionValue(SGX_EXTENSION_OID))
 
     fun parseRawEcdsaToDerEncoding(buffer: ByteBuffer): ByteArray {
         // Java 11
@@ -59,8 +51,17 @@ object AttestationUtils {
      * Parse the given byte buffer representing a cert path encoded as concatented certificates in PEM format.
      */
     fun parsePemCertPath(bytes: ByteBuffer): CertPath {
-        val chars: CharBuffer = StandardCharsets.US_ASCII.decode(bytes)
+        return parsePemCertPath(bytes, StandardCharsets.US_ASCII.decode(bytes))
+    }
 
+    /**
+     * Parse the given string representing a cert path encoded as concatented certificates in PEM format.
+     */
+    fun parsePemCertPath(string: String): CertPath {
+        return parsePemCertPath(ByteBuffer.wrap(string.toByteArray(StandardCharsets.US_ASCII)), string)
+    }
+
+    private fun parsePemCertPath(bytes: ByteBuffer, chars: CharSequence): CertPath {
         val certificateFactory = CertificateFactory.getInstance("X.509")
         val certificates = mutableListOf<Certificate>()
 

@@ -113,10 +113,7 @@ data class EpidAttestation(
     val report: EpidVerificationReport
 
     init {
-        val certTime = certPath
-                .x509Certs
-                .minByOrNull { it.notAfter }!!
-                .notAfter
+        val certTime = certPath.x509Certs.minOf { it.notAfter }
         val pkixParameters = PKIXParameters(setOf(TrustAnchor(rootCert, null))).apply {
             isRevocationEnabled = false
             date = certTime
@@ -224,7 +221,7 @@ data class EpidAttestation(
 
 data class DcapAttestation(val signedQuote: ByteCursor<SgxSignedQuote>, val collateral: QuoteCollateral) : HardwareAttestation() {
     override val timestamp: Instant
-    private val verificationStatus: QuoteVerifier.Status
+    private val verificationStatus: VerificationStatus
 
     init {
         require(signedQuote.isReadOnly)
@@ -236,41 +233,48 @@ data class DcapAttestation(val signedQuote: ByteCursor<SgxSignedQuote>, val coll
     override val reportBody: ByteCursor<SgxReportBody> get() = signedQuote[quote][SgxQuote.reportBody]
 
     override val hardwareSecuritySummary: EnclaveSecurityInfo.Summary get() {
+        if (verificationStatus !is TcbStatus) {
+            return EnclaveSecurityInfo.Summary.INSECURE
+        }
+
         return when (verificationStatus) {
-            QuoteVerifier.Status.OK -> EnclaveSecurityInfo.Summary.SECURE
+            TcbStatus.UpToDate -> EnclaveSecurityInfo.Summary.SECURE
 
-            QuoteVerifier.Status.TCB_SW_HARDENING_NEEDED,
-            QuoteVerifier.Status.TCB_CONFIGURATION_NEEDED,
-            QuoteVerifier.Status.TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED,
-            QuoteVerifier.Status.TCB_OUT_OF_DATE,
-            QuoteVerifier.Status.TCB_OUT_OF_DATE_CONFIGURATION_NEEDED -> EnclaveSecurityInfo.Summary.STALE
+            TcbStatus.SWHardeningNeeded,
+            TcbStatus.ConfigurationNeeded,
+            TcbStatus.ConfigurationAndSWHardeningNeeded,
+            TcbStatus.OutOfDate,
+            TcbStatus.OutOfDateConfigurationNeeded -> EnclaveSecurityInfo.Summary.STALE
 
-            else -> EnclaveSecurityInfo.Summary.INSECURE
+            TcbStatus.Revoked -> EnclaveSecurityInfo.Summary.INSECURE
         }
     }
 
     override val hardwareSecurityReason: String get() {
+        if (verificationStatus !is TcbStatus) {
+            return "Enclave QUOTE has not been verified correctly and thus is untrustworthy ($verificationStatus)"
+        }
+
         return when (verificationStatus) {
-            QuoteVerifier.Status.OK -> "A signature of the ISV enclave QUOTE was verified correctly and the TCB level " +
+            TcbStatus.UpToDate -> "A signature of the ISV enclave QUOTE was verified correctly and the TCB level " +
                     "of the SGX platform is up-to-date."
-            QuoteVerifier.Status.TCB_SW_HARDENING_NEEDED -> "The signature of the ISV enclave QUOTE has been verified " +
+            TcbStatus.SWHardeningNeeded -> "The signature of the ISV enclave QUOTE has been verified " +
                     "correctly but due to certain issues affecting the platform, additional software hardening in the " +
                     "attesting SGX enclaves may be needed."
-            QuoteVerifier.Status.TCB_CONFIGURATION_NEEDED -> "The signature of the ISV enclave QUOTE has been verified " +
+            TcbStatus.ConfigurationNeeded -> "The signature of the ISV enclave QUOTE has been verified " +
                     "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
                     "identified as compromised and thus it is not revoked."
-            QuoteVerifier.Status.TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED -> "The signature of the ISV enclave QUOTE " +
+            TcbStatus.ConfigurationAndSWHardeningNeeded -> "The signature of the ISV enclave QUOTE " +
                     "has been verified correctly but additional configuration for the platform and software hardening in " +
                     "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
                     "thus it is not revoked."
-            QuoteVerifier.Status.TCB_OUT_OF_DATE -> "The signature of the ISV enclave QUOTE has been verified " +
+            TcbStatus.OutOfDate -> "The signature of the ISV enclave QUOTE has been verified " +
                     "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
                     "as compromised and thus it is not revoked."
-            QuoteVerifier.Status.TCB_OUT_OF_DATE_CONFIGURATION_NEEDED -> "The signature of the ISV enclave QUOTE has been " +
+            TcbStatus.OutOfDateConfigurationNeeded -> "The signature of the ISV enclave QUOTE has been " +
                     "verified correctly, but the TCB level of SGX platform is outdated and additional configuration of " +
                     "it may be needed. The platform has not been identified as compromised and thus it is not revoked."
-            QuoteVerifier.Status.TCB_REVOKED -> "The TCB level of SGX platform is revoked. The platform is not trustworthy."
-            else -> "Enclave QUOTE has not been verified correctly and thus is untrustworthy ($verificationStatus)"
+            TcbStatus.Revoked -> "The TCB level of SGX platform is revoked. The platform is not trustworthy."
         }
     }
 

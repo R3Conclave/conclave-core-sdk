@@ -49,7 +49,7 @@ class AttestationHostHandler(
         }
 
         private fun initializeQuote(): ByteCursor<SgxTargetInfo> {
-            val signedQuote = when (attestationParameters) {
+            val targetInfo = when (attestationParameters) {
                 is AttestationParameters.EPID -> {
                     val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
                     Native.initQuote(quoteResponse.buffer.array())
@@ -66,7 +66,7 @@ class AttestationHostHandler(
                 }
             }
             stateManager.state = State.QuoteInitialized
-            return signedQuote
+            return targetInfo
         }
 
         private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>): ByteCursor<SgxReport> {
@@ -78,34 +78,36 @@ class AttestationHostHandler(
         }
 
         private fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-            val signedQuote = if (attestationParameters == null) {
-                val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
-                // We can populate the other fields as needed, but for now we just need to copy over the report body.
-                signedQuote[quote][SgxQuote.reportBody] = report[SgxReport.body].read()
-                signedQuote
-            } else if (attestationParameters is AttestationParameters.EPID) {
-                val quoteBytes = ByteArray(Native.calcQuoteSize(null))
-                val getQuote = Cursor.allocate(SgxGetQuote)
-                getQuote[SgxGetQuote.report] = report.read()
-                getQuote[SgxGetQuote.quoteType] = SgxQuoteType.LINKABLE.value
-                getQuote[SgxGetQuote.spid] = attestationParameters.spid.buffer()
-                Native.getQuote(
-                        getQuote.buffer.array(),
-                        signatureRevocationListIn = null,
-                        // TODO Do we need to use the nonce?
-                        quotingEnclaveReportNonceIn = null,
-                        quotingEnclaveReportOut = null,
-                        quoteOut = quoteBytes
-                )
-                Cursor.wrap(SgxSignedQuote, quoteBytes)
-            } else if (attestationParameters is AttestationParameters.DCAP) {
-                val quoteBytes = ByteArray(Native.calcQuoteSizeDCAP())
-                val getQuote = Cursor.allocate(SgxGetQuote)
-                getQuote[SgxGetQuote.report] = report.read()
-                Native.getQuoteDCAP(getQuote.buffer.array(), quoteBytes)
-                Cursor.wrap(SgxSignedQuote, quoteBytes)
-            } else {
-                TODO("This line cannot be reached and would be best served as a when-statement. It's currently not to avoid git losing the rename history.")
+            val signedQuote = when (attestationParameters) {
+                is AttestationParameters.EPID -> {
+                    val quoteBytes = ByteArray(Native.calcQuoteSize(null))
+                    val getQuote = Cursor.allocate(SgxGetQuote)
+                    getQuote[SgxGetQuote.report] = report.read()
+                    getQuote[SgxGetQuote.quoteType] = SgxQuoteType.LINKABLE.value
+                    getQuote[SgxGetQuote.spid] = attestationParameters.spid.buffer()
+                    Native.getQuote(
+                            getQuote.buffer.array(),
+                            signatureRevocationListIn = null,
+                            // TODO Do we need to use the nonce?
+                            quotingEnclaveReportNonceIn = null,
+                            quotingEnclaveReportOut = null,
+                            quoteOut = quoteBytes
+                    )
+                    Cursor.wrap(SgxSignedQuote, quoteBytes)
+                }
+                is AttestationParameters.DCAP -> {
+                    val quoteBytes = ByteArray(Native.calcQuoteSizeDCAP())
+                    val getQuote = Cursor.allocate(SgxGetQuote)
+                    getQuote[SgxGetQuote.report] = report.read()
+                    Native.getQuoteDCAP(getQuote.buffer.array(), quoteBytes)
+                    Cursor.wrap(SgxSignedQuote, quoteBytes)
+                }
+                null -> {
+                    val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
+                    // We can populate the other fields as needed, but for now we just need to copy over the report body.
+                    signedQuote[quote][SgxQuote.reportBody] = report[SgxReport.body].read()
+                    signedQuote
+                }
             }
             stateManager.state = State.QuoteRetrieved(signedQuote)
             return signedQuote

@@ -3,18 +3,21 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
 import com.r3.conclave.common.internal.SgxSignedQuote
-import com.r3.conclave.common.internal.attestation.AttestationUtils
+import com.r3.conclave.common.internal.attestation.AttestationUtils.SGX_FMSPC_OID
+import com.r3.conclave.common.internal.attestation.AttestationUtils.sgxExtension
 import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.common.internal.toEcdsaP256AuthData
 import com.r3.conclave.common.internal.toPckCertPath
+import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.x509Certs
 
 class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
-        val pckCertPath = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath()
+        val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
         val col = Native.getQuoteCollateral(
-                AttestationUtils.getFMSPC(pckCertPath),
-                AttestationUtils.getPckWord(pckCertPath)
+                fmspc = pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes(),
+                pck = if ("Processor" in pckCert.issuerDN.name) 0 else 1
         )
         // TODO There's no reason why the JNI can't create the QuoteCollateral directly. Doing so allows the properties
         //      to have better types, such as int for the version. The other fields can also just be byte arrays as

@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.security.GeneralSecurityException
 import kotlin.random.Random
 
 class QuoteVerifierTest {
@@ -38,13 +37,11 @@ class QuoteVerifierTest {
         val invalidSignedQuote = Cursor.wrap(SgxSignedQuote, signedQuote.bytes)
         invalidSignedQuote[quote][version] = 99
 
-        val message = assertThrows<GeneralSecurityException> {
-            QuoteVerifier.verify(
-                    signedQuote = invalidSignedQuote,
-                    collateral = collateral
-            )
-        }.message
-        assertThat(message).contains("UNSUPPORTED_QUOTE_FORMAT")
+        val (verificationStatus) = QuoteVerifier.verify(
+                signedQuote = invalidSignedQuote,
+                collateral = collateral
+        )
+        assertThat(verificationStatus).isEqualTo(QuoteVerifier.ErrorStatus.UNSUPPORTED_QUOTE_FORMAT)
     }
 
     @Test
@@ -73,7 +70,7 @@ class QuoteVerifierTest {
                 badPckCrlCollateral
         )
 
-        assertEquals(QuoteVerifier.Status.SGX_CRL_UNKNOWN_ISSUER, status)
+        assertEquals(QuoteVerifier.ErrorStatus.SGX_CRL_UNKNOWN_ISSUER, status)
     }
 
     @Test
@@ -87,7 +84,7 @@ class QuoteVerifierTest {
                 badTcbInfoCollateral
         )
 
-        assertEquals(QuoteVerifier.Status.TCB_INFO_INVALID_SIGNATURE, status)
+        assertEquals(QuoteVerifier.ErrorStatus.TCB_INFO_INVALID_SIGNATURE, status)
     }
 
     @Test
@@ -102,6 +99,6 @@ class QuoteVerifierTest {
                 badTcbInfoCollateral
         )
 
-        assertEquals(QuoteVerifier.Status.TCB_INFO_INVALID_SIGNATURE, status)
+        assertEquals(QuoteVerifier.ErrorStatus.TCB_INFO_INVALID_SIGNATURE, status)
     }
 }

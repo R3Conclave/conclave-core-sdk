@@ -14,7 +14,6 @@ import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
 import java.net.URLDecoder
-import java.nio.ByteBuffer
 import java.security.cert.CertPath
 import java.util.*
 
@@ -69,7 +68,7 @@ class EpidAttestationService(override val isRelease: Boolean, private val subscr
     private fun HttpURLConnection.parseResponseCertPath(): CertPath {
         val urlEncodedPemCertPath = getHeaderField("X-IASReport-Signing-Certificate")
         val pemCertPathString = URLDecoder.decode(urlEncodedPemCertPath, "UTF-8")
-        return AttestationUtils.parsePemCertPath(ByteBuffer.wrap(pemCertPathString.toByteArray()))
+        return AttestationUtils.parsePemCertPath(pemCertPathString)
     }
 
     private class ReportRequest(

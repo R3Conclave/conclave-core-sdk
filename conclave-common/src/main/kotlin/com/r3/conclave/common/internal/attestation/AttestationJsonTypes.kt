@@ -236,7 +236,7 @@ data class TcbLevel @JsonCreator constructor(
         val tcbStatus: TcbStatus
 )
 
-enum class TcbStatus {
+enum class TcbStatus : VerificationStatus {
     /** TCB level of the SGX platform is up-to-date. */
     UpToDate,
     /**

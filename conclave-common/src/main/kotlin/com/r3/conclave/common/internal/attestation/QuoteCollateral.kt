@@ -1,6 +1,5 @@
 package com.r3.conclave.common.internal.attestation
 
-import java.nio.ByteBuffer
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509CRL
@@ -33,7 +32,7 @@ data class QuoteCollateral(
 
     private fun parseCertPath(pem: String): CertPath {
         // TODO Don't convert the cert paths in the JNI code to Strings. Keep them as the raw byte arrays.
-        return AttestationUtils.parsePemCertPath(ByteBuffer.wrap(pem.toByteArray()))
+        return AttestationUtils.parsePemCertPath(pem)
     }
 
     private fun parseCRL(pem: String): X509CRL {
