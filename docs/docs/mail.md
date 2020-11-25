@@ -87,7 +87,7 @@ in memory and always reading all stored data at startup.
 Mail is designed to block a variety of attacks the host can mount on the enclave.
 
 **Observation.** The body of the mail is encrypted with industry standard AES/GCM. The host can't see what the client
-is sending to the client.
+is sending to the enclave.
 
 **Tampering.** All the encrypted body, the plaintext headers and the user-specifiable envelope header are
 authenticated such that the enclave can detect if they were tampered with. See below for more information on this.  
