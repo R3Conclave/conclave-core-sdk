@@ -147,8 +147,10 @@ inside the enclave. This is to prevent accidental leakage of enclave state throu
 
 ### Can I load more than one enclave at once?
 
-Yes, but each enclave must be a separate (Gradle) module. One module can only have one enclave entrypoint. On current
-hardware you may need to keep the enclaves small in order to avoid running out of fast EPC RAM, in which case the
+Yes, but each enclave must be a separate (Gradle) module. One module can only have one enclave entrypoint, but the same
+host can load multiple enclaves.
+
+On current hardware you may need to keep the enclaves small in order to avoid running out of fast EPC RAM, in which case the
 enclave memory will be 'swapped' in and out of EPC, at a considerable performance penalty.
 
 You can consider an alternative approach. Because of how Conclave Mail is designed, enclaves can message each other

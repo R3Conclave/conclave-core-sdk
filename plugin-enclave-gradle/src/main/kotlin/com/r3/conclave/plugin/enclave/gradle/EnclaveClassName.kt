@@ -28,7 +28,9 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
                     when (enclaveClasses.size) {
                         0 -> throw GradleException("There are no classes that extend com.r3.conclave.enclave.Enclave")
                         1 -> enclaveClasses[0].name
-                        else -> throw GradleException("Found multiple enclave classes: ${enclaveClasses.joinToString { it.name }}")
+                        else -> throw GradleException("There can only be one Enclave class in a Gradle module but multiple " +
+                                "were found (${enclaveClasses.joinToString { it.name }}). See " +
+                                "https://docs.conclave.net/faq.html#can-i-load-more-than-one-enclave-at-once for more information.")
                     }
                 }
         _outputEnclaveClassName.set(enclaveClassName)
