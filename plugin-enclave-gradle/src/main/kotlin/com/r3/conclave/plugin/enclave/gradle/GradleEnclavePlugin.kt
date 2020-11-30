@@ -319,7 +319,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
                 task.inputSignedEnclave.set(signedEnclaveFile)
                 task.inputs.files(signToolFile.parent, signedEnclaveFile)
-                task.outputEnclaveMetadata.set(enclaveDirectory.resolve("metadata.yml").toFile())
             }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->

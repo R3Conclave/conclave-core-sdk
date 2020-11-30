@@ -1,12 +1,11 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.SecureHash
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.internaltesting.RecordingCallback
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
+import com.r3.conclave.testing.internal.EnclaveMetadata
 import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -17,12 +16,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
 import java.util.stream.IntStream
-import kotlin.streams.asSequence
 import kotlin.streams.toList
 
 class EnclaveHostNativeTest {
@@ -66,9 +62,10 @@ class EnclaveHostNativeTest {
     fun `enclave info`() {
         start<StatefulEnclave>()
         val metadataFile = testEnclaves.getEnclaveMetadata(StatefulEnclave::class.java, EnclaveBuilder())
+        val enclaveMetadata = EnclaveMetadata.parseMetadataFile(metadataFile)
         host.enclaveInstanceInfo.enclaveInfo.apply {
-            assertThat(codeHash).isEqualTo(getMeasurement(metadataFile))
-            assertThat(codeSigningKeyHash).isEqualTo(getMrsigner(metadataFile))
+            assertThat(codeHash).isEqualTo(enclaveMetadata.mrenclave)
+            assertThat(codeSigningKeyHash).isEqualTo(enclaveMetadata.mrsigner)
         }
     }
 
@@ -139,7 +136,7 @@ class EnclaveHostNativeTest {
         start<RecursingEnclave>()
         val callback = object : Function<ByteArray, ByteArray?> {
             var called = 0
-            override fun apply(bytes: ByteArray): ByteArray? {
+            override fun apply(bytes: ByteArray): ByteArray {
                 called++
                 val response = bytes.toInt() - 1
                 return response.toByteArray()
@@ -162,35 +159,10 @@ class EnclaveHostNativeTest {
         }
     }
 
-    private fun getSha256Value(metadataFile: Path, key: String): SecureHash {
-        // Example:
-        //
-        // metadata->enclave_css.body.enclave_hash.m:
-        // 0xca 0x5d 0xb9 0x8c 0xde 0x0d 0x87 0xe5 0x47 0x0b 0x16 0x89 0x79 0xa2 0xa2 0x63
-        // 0xe3 0xc9 0x99 0x19 0x61 0x63 0xf3 0xb5 0xda 0x3e 0x46 0xa8 0xa4 0x97 0xad 0x0d
-        return Files.lines(metadataFile).use { lines ->
-            lines.asSequence()
-                    .dropWhile { line -> line != key }
-                    .drop(1)
-                    .take(2)
-                    .flatMap { line -> line.splitToSequence(' ').map { it.removePrefix("0x") } }
-                    .joinToString("")
-                    .let { SHA256Hash.parse(it) }
-        }
-    }
-
-    private fun getMeasurement(metadataFile: Path): SecureHash {
-        return getSha256Value(metadataFile, "metadata->enclave_css.body.enclave_hash.m:")
-    }
-
-    private fun getMrsigner(metadataFile: Path): SecureHash {
-        return getSha256Value(metadataFile, "mrsigner->value:")
-    }
-
     class StatefulEnclave : Enclave() {
         private var previousResult = ""
 
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             val builder = StringBuilder(previousResult)
             for (byte in bytes) {
                 val lookupValue = callUntrustedHost(byteArrayOf(byte))!!

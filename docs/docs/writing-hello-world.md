@@ -507,12 +507,14 @@ Now run `gradlew host:run` and it should print "Hello World!" backwards along wi
 During the build you should see output like this:
 
 ```text
-> Task :enclave:generateEnclaveletMetadataSimulation
+> Task :enclave:generateEnclaveMetadataSimulation
 Succeed.
-Enclave measurement: 04EDA32215B496C3890348752F47D77DC34989FE4ECACCF5EC5C054F1D68BBE6
+Enclave code hash:   61AE6A28838CE9EFBE16A7078F9A506D69BBA70B69FAD229F1FBDB45AA786109
+Enclave code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
 ```
 
-The measurement should correspond to the value found in the `EnclaveInstanceInfo.getCodeHash()` property.
+The code hash will correspond to the value found in the `EnclaveInstanceInfo.getEnclaveInfo().getCodeHash()` property
+and the code signer will be `EnclaveInstanceInfo.getEnclaveInfo().getCodeSigningKeyHash()`.
 
 You can switch to debug mode by specifying the `enclaveMode` property. In debug mode the real hardware is used and 
 virtually everything is identical to how it will be in production, but there's a small back door that can be used 
