@@ -64,8 +64,16 @@ open class LinuxExec  @Inject constructor(objects: ObjectFactory) : ConclaveTask
                     tag.get()
             ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
         }
-        project.exec {spec ->
+        val result = project.exec { spec ->
             spec.commandLine(args)
+            spec.isIgnoreExitValue = true   // We'll handle it in a moment.
         }
+        if (result.exitValue == 137) {
+            // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
+            throw GradleException("The build process ran out of RAM. On macOS or Windows, open the Docker preferences and " +
+                    "alter the amount of memory granted to the underlying virtual machine. We recommend at least 6 gigabytes of RAM " +
+                    "as the native image build process is memory intensive.")
+        }
+        result.assertNormalExitValue()
     }
 }
