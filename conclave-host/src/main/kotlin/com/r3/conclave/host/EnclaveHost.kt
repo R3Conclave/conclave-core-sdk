@@ -310,6 +310,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * direction. By chaining callbacks together, a kind of virtual stack can be constructed
      * allowing complex back-and-forth conversations between enclave and untrusted host.
      *
+     * Any uncaught exceptions thrown by `receiveFromUntrustedHost` will propagate across the enclave-host boundary and
+     * will be rethrown here.
+     *
      * @param bytes Bytes to send to the enclave.
      * @param callback Bytes received from the enclave via `Enclave.callUntrustedHost`.
      *
@@ -334,6 +337,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * The enclave does not have the option of using `Enclave.callUntrustedHost` for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
+     * Any uncaught exceptions thrown by `receiveFromUntrustedHost` will propagate across the enclave-host boundary and
+     * will be rethrown here.
+     *
      * @param bytes Bytes to send to the enclave.
      *
      * @return The return value of the enclave's `receiveFromUntrustedHost`.
@@ -352,8 +358,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     }
 
     /**
-     * Delivers the given encrypted mail bytes to the enclave. If the enclave throws
-     * an exception it will be rethrown.
+     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement `receiveMail`
+     * to receive it. If the enclave throws an exception it will be rethrown.
      * It's up to the caller to decide what to do with mails that don't seem to be
      * handled properly: discarding it and logging an error is a simple option, or
      * alternatively queuing it to disk in anticipation of a bug fix or upgrade
@@ -378,7 +384,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * bytes will be passed to this object for consumption and generation of the
      * response.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveMail`.
      * @throws IllegalStateException If the host has not been started.
      */
     fun deliverMail(id: Long, mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
@@ -386,8 +392,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     }
 
     /**
-     * Delivers the given encrypted mail bytes to the enclave. If the enclave throws
-     * an exception it will be rethrown.
+     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement `receiveMail`
+     * to receive it. If the enclave throws an exception it will be rethrown.
      * It's up to the caller to decide what to do with mails that don't seem to be
      * handled properly: discarding it and logging an error is a simple option, or
      * alternatively queuing it to disk in anticipation of a bug fix or upgrade
@@ -412,7 +418,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * back through to [MailCallbacks.postMail] to ask the host to deliver the reply to the right
      * location.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveMail`.
      * @throws IllegalStateException If the host has not been started.
      */
     fun deliverMail(id: Long, mail: ByteArray, routingHint: String?) {

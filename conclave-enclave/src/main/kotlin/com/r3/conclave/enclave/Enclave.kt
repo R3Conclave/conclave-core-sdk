@@ -80,6 +80,9 @@ abstract class Enclave {
      *
      * Default implementation throws [UnsupportedOperationException] so you should not perform a supercall.
      *
+     * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.callEnclave`. In Java, checked
+     * exceptions can be made to propagate by rethrowing them in an unchecked one.
+     *
      * @param bytes Bytes received from the host.
      *
      * @return Bytes to sent back to the host as the return value of the `EnclaveHost.callEnclave` call. Can be null.
@@ -400,9 +403,8 @@ Received: $attestationReportBody"""
     private lateinit var keyDerivation: ByteArray
 
     /**
-     * Invoked when a mail has been delivered by the host, successfully decrypted
-     * and authenticated (so the [EnclaveMail.authenticatedSender] property
-     * is reliable).
+     * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted
+     * and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
      *
      * Default implementation throws [UnsupportedOperationException] so you should not
      * perform a supercall.
@@ -413,6 +415,9 @@ Received: $attestationReportBody"""
      * By not acknowledging mail in a topic until a multi-step messaging conversation
      * is finished, you can ensure that the conversation survives restarts and
      * upgrades.
+     *
+     * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.deliverMail`. In Java, checked
+     * exceptions can be made to propagate by rethrowing them in an unchecked one.
      *
      * @param id An opaque identifier for the mail.
      * @param routingHint An optional string provided by the host that can be passed to [postMail] to tell the
