@@ -140,7 +140,6 @@ class MailHostTest {
             }
         })
         val messageFromBob = buildMail(host)
-        messageFromBob.from = "bob"
         host.deliverMail(1, messageFromBob.encrypt(), "test")
     }
 

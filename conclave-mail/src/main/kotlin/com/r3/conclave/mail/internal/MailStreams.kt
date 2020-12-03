@@ -492,7 +492,6 @@ class MailDecryptingStream(
         return DecryptedEnclaveMail(
                 header.sequenceNumber,
                 header.topic,
-                header.from,
                 senderPublicKey?.let(::Curve25519PublicKey),
                 header.envelope,
                 mailBody
@@ -502,7 +501,6 @@ class MailDecryptingStream(
     private class DecryptedEnclaveMail(
             override val sequenceNumber: Long,
             override val topic: String,
-            override val from: String?,
             override val authenticatedSender: PublicKey?,
             private val _envelope: ByteArray?,
             private val _bodyAsBytes: ByteArray

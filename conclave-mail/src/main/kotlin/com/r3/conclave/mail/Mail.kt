@@ -70,15 +70,6 @@ interface EnclaveMailHeader {
     val topic: String
 
     /**
-     * If present, contains a string the host may use to route replies. This is
-     * analogous to the From field in email and just like email, it's
-     * unauthenticated: senders can put whatever routing hint they want here. However
-     * if mail is encrypted to the authenticated sender, then misdirected replies
-     * won't be readable.
-     */
-    val from: String?
-
-    /**
      * Extension area for apps to put whatever additional fields or data they would
      * like. Like with the other headers, the envelope is not encrypted but is
      * authenticated, so intermediaries and the untrusted host cannot tamper with
@@ -122,9 +113,6 @@ interface EnclaveMail : EnclaveMailHeader {
  * untrusted host software can't tamper with it but can use it for routing,
  * prioritisation and so on. If no topic is provided then "default" is used. The
  * topic may not be the empty string.
- *
- * Finally, a [from] header may be optionally provided to assist the remote
- * host in routing replies back to you.
  *
  * When the fields are set correctly call [encrypt] to get back the encrypted byte array.
  *
@@ -183,7 +171,6 @@ class MutableMail(
             }
             field = value
         }
-    override var from: String? = null
     override var envelope: ByteArray? = null
     override val authenticatedSender: PublicKey? get() = privateKey?.let { privateToPublic(it) }
 
@@ -196,13 +183,13 @@ class MutableMail(
 
     /**
      * Uses the public key provided in the constructor to encrypt the mail. The returned ciphertext will include
-     * [sequenceNumber], [topic], [from] and [envelope] in the clear but authenticated (for the recipient only)
+     * [sequenceNumber], [topic] and [envelope] in the clear but authenticated (for the recipient only)
      * as coming from the holder of the [privateKey] (if one was specified).
      *
      * @return a ciphertext that can be fed to [Mail.decrypt] to obtain the original mail.
      */
     fun encrypt(): ByteArray {
-        val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, from, envelope, keyDerivation).encoded
+        val header: ByteArray = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation).encoded
         val output = ByteArrayOutputStream()
         val stream = MailEncryptingStream(output, destinationKey, header, privateKey)
         stream.write(bodyAsBytes)

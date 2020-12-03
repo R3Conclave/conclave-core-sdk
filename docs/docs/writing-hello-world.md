@@ -580,11 +580,6 @@ also exposes some other header fields:
    as a form of user authentication.
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
    can be thought of as equivalent to a URL path or port number.
-1. The _from field_. This is a string that the sender can pick to identify itself. Unlike the authenticated sender key
-   this is entirely arbitrary, and nothing stops a sender picking any value it likes. Often this field won't be used.
-   It's intended to hold some sort of routing address where the sender would like to receive replies - sometimes this
-   is implied, but an explicit routing address can be useful when implementing more complex hosts and enclave that may
-   not reply straight away.
 1. The _envelope_. This is a slot that can hold any arbitrary byte array the sender likes. It's a holding zone for 
    app specific data that should be authenticated but unencrypted.
 1. The _sequence number_. This must increment by one for every mail delivered on a topic. Conclave will automatically 
@@ -630,8 +625,8 @@ Java doesn't let us directly change variables from a callback, so we use an `Ato
 !!! tip
     Kotlin lets you alter mutable variables from callbacks directly, without needing this sort of trick.
     
-The enclave can provide a _routing hint_ to tell the host where it'd like the message delivered. For example, this
-could be set to the value of the _from_ header. It's called a "hint" because the enclave must always remember that
+The enclave can provide a _routing hint_ to tell the host where it'd like the message delivered.
+It's called a "hint" because the enclave must always remember that
 the host is untrusted. It can be arbitrarily malicious and could, for example, not deliver the mail at all, or
 it could deliver it to the wrong place. However if it does deliver it wrongly, the encryption will ensure the
 bogus recipient can't do anything with the mail. In this simple hello world tutorial we can only handle one client

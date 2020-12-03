@@ -1,7 +1,6 @@
 package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.EnclaveMailHeader
-import com.r3.conclave.mail.MutableMail
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.writeData
 import java.io.DataInputStream
@@ -18,7 +17,6 @@ import java.util.*
 data class EnclaveMailHeaderImpl(
         override val sequenceNumber: Long,
         override val topic: String,
-        override val from: String?,
         override val envelope: ByteArray?,
         val keyDerivation: ByteArray?
 ) : EnclaveMailHeader {
@@ -31,10 +29,9 @@ data class EnclaveMailHeaderImpl(
                 return encoded.deserialise {
                     val seqNo = readLong()
                     val topic = readUTF()
-                    val from = readUTF().takeIf { it.isNotEmpty() }
                     val envelope = readLengthPrefixBytes()
                     val keyDerivation = readLengthPrefixBytes()
-                    EnclaveMailHeaderImpl(seqNo, topic, from, envelope, keyDerivation)
+                    EnclaveMailHeaderImpl(seqNo, topic, envelope, keyDerivation)
                 }
             } catch (e: EOFException) {
                 throw IllegalArgumentException("Truncated Conclave Mail header", e)
@@ -63,11 +60,6 @@ data class EnclaveMailHeaderImpl(
         return writeData {
             writeLong(sequenceNumber)
             writeUTF(topic)
-            if (from != null) {
-                writeUTF(from)
-            } else {
-                writeShort(0)
-            }
             writeLengthPrefixBytes(envelope)
             writeLengthPrefixBytes(keyDerivation)
         }
@@ -79,7 +71,6 @@ data class EnclaveMailHeaderImpl(
 
         if (sequenceNumber != other.sequenceNumber) return false
         if (topic != other.topic) return false
-        if (from != other.from) return false
         if (!Arrays.equals(envelope, other.envelope)) return false
         if (!Arrays.equals(keyDerivation, other.keyDerivation)) return false
 
@@ -89,7 +80,6 @@ data class EnclaveMailHeaderImpl(
     override fun hashCode(): Int {
         var result = sequenceNumber.hashCode()
         result = 31 * result + topic.hashCode()
-        result = 31 * result + (from?.hashCode() ?: 0)
         result = 31 * result + envelope.contentHashCode()
         result = 31 * result + keyDerivation.contentHashCode()
         return result

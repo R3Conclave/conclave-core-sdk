@@ -32,7 +32,6 @@ class MailTests {
         // Test the base case of sending mail from anonymous to Bob without any special headers.
         val mutableMail = MutableMail(message1, bob.public, alice.private.takeIf { withSenderAuth })
         if (withHeaders) {
-            mutableMail.from = "alice"
             mutableMail.sequenceNumber = 5
             mutableMail.topic = "stuff"
         }
@@ -41,7 +40,6 @@ class MailTests {
         }
 
         fun assertEnvelope(of: EnclaveMailHeader) {
-            assertEquals("alice".takeIf { withHeaders }, of.from)
             assertEquals(if (withHeaders) "stuff" else "default", of.topic)
             assertEquals(if (withHeaders) 5L else 0L, of.sequenceNumber)
             assertEquals("env".takeIf { withEnvelope }, of.envelope?.let { String(it) })
