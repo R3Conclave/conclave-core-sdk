@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
+import com.r3.conclave.host.MailCommand;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -62,14 +63,15 @@ public class Host {
         // multiple clients, you shouldn't start one enclave per client. That'd be wasteful and won't fit in available
         // encrypted memory. A real app should use the routingHint parameter to select the right connection back
         // to the client, here.
-        enclave.start(new AttestationParameters.DCAP(), new EnclaveHost.MailCallbacks() {
-            @Override
-            public void postMail(byte[] encryptedBytes, String routingHint) {
-                try {
-                    sendArray(output, encryptedBytes);
-                } catch (IOException e) {
-                    System.err.println("Failed to send reply to client.");
-                    e.printStackTrace();
+        enclave.start(new AttestationParameters.DCAP(), (commands) -> {
+            for (MailCommand command : commands) {
+                if (command instanceof MailCommand.PostMail) {
+                    try {
+                        sendArray(output, ((MailCommand.PostMail) command).getEncryptedBytes());
+                    } catch (IOException e) {
+                        System.err.println("Failed to send reply to client.");
+                        e.printStackTrace();
+                    }
                 }
             }
         });

@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.kotlin.enclave
 
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.MailCommand
 import com.r3.conclave.mail.Curve25519KeyPairGenerator
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MutableMail
@@ -29,11 +30,9 @@ class ApiKotlinConsumerTest {
 
         val postedMail = ArrayList<ByteArray>()
 
-        host.start(null, object : EnclaveHost.MailCallbacks {
-            override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
-                postedMail += encryptedBytes
-            }
-        })
+        host.start(null) { commands ->
+            postedMail += (commands.single() as MailCommand.PostMail).encryptedBytes
+        }
 
         val responseForHost: ByteArray? = host.callEnclave(byteArrayOf(9)) { fromEnclave ->
             host.callEnclave(fromEnclave + 8)

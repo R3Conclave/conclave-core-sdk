@@ -6,6 +6,8 @@ import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.host.internal.AttestationHostHandler.State.QuoteInitialized
+import com.r3.conclave.host.internal.AttestationHostHandler.State.ReportRetrieved
 import java.nio.ByteBuffer
 
 class AttestationHostHandler(
@@ -25,8 +27,8 @@ class AttestationHostHandler(
     private val stateManager: StateManager<State> = StateManager(State.Unstarted)
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
-        stateManager.checkStateIs<State.QuoteInitialized>()
-        stateManager.state = State.ReportRetrieved(Cursor.read(SgxReport, input))
+        val report = Cursor.read(SgxReport, input)
+        stateManager.transitionStateFrom<QuoteInitialized>(to = ReportRetrieved(report))
     }
 
     override fun connect(upstream: Sender): Connection = Connection(upstream)
@@ -65,7 +67,7 @@ class AttestationHostHandler(
                     Cursor.allocate(SgxTargetInfo)
                 }
             }
-            stateManager.state = State.QuoteInitialized
+            stateManager.state = QuoteInitialized
             return targetInfo
         }
 
@@ -73,7 +75,7 @@ class AttestationHostHandler(
             upstream.send(quotingEnclaveTargetInfo.encoder.size) { buffer ->
                 buffer.put(quotingEnclaveTargetInfo.buffer)
             }
-            val reportRetrieved = stateManager.checkStateIs<State.ReportRetrieved>()
+            val reportRetrieved = stateManager.checkStateIs<ReportRetrieved>()
             return reportRetrieved.report
         }
 

@@ -9,8 +9,7 @@ enum class InternalCallType {
     /** Bytes returned from [java.util.function.Function.apply] callback. */
     CALL_RETURN,
     /**
-     * On the inbound-to-enclave path, contains a mail to be decrypted. On the outbound path, contains a serialised
-     * [MailCommand].
+     * On the inbound-to-enclave path, contains a mail to be decrypted. On the outbound path, contains a mail command.
      */
     MAIL_DELIVERY
 }

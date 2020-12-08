@@ -281,11 +281,12 @@ Received: $attestationReportBody"""
 
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val enclaveCallId = input.getLong()
+            val threadID = input.getLong()
             val type = callTypeValues[input.get().toInt()]
-            // Assign the call ID to the current thread so that callUntrustedHost can pick up the right state for the thread.
-            currentEnclaveCall.set(enclaveCallId)
-            val stateManager = enclaveCalls.computeIfAbsent(enclaveCallId) {
+            // Assign the host thread ID to the current thread so that callUntrustedHost/postMail/etc can pick up the
+            // right state for the thread.
+            currentEnclaveCall.set(threadID)
+            val stateManager = enclaveCalls.computeIfAbsent(threadID) {
                 // The initial state is to receive on receiveFromUntrustedHost.
                 StateManager(Receive(::receiveFromUntrustedHost, receiveFromUntrustedHost = true))
             }
@@ -316,7 +317,7 @@ Received: $attestationReportBody"""
                 }
                 val response = state.callback.apply(input.getRemainingBytes())
                 if (response != null) {
-                    sendCallToHost(enclaveCallId, response, InternalCallType.CALL_RETURN)
+                    sendCallToHost(threadID, response, InternalCallType.CALL_RETURN)
                 }
             }
         }
@@ -336,10 +337,10 @@ Received: $attestationReportBody"""
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {
-            val enclaveCallId = checkNotNull(currentEnclaveCall.get()) {
-                "Thread ${Thread.currentThread()} has not been given the call ID"
+            val threadID = checkNotNull(currentEnclaveCall.get()) {
+                "Thread ${Thread.currentThread()} may not attempt to call out to the host outside the context of a call."
             }
-            val stateManager = enclaveCalls.getValue(enclaveCallId)
+            val stateManager = enclaveCalls.getValue(threadID)
             val newReceiveState = Receive(callback, receiveFromUntrustedHost = false)
             // We don't expect the enclave to be in the Response state here as that implies a bug since Response is only
             // a temporary holder to capture the return value.
@@ -349,7 +350,7 @@ Received: $attestationReportBody"""
             val previousReceiveState = stateManager.transitionStateFrom<Receive>(to = newReceiveState)
             var response: Response? = null
             try {
-                sendCallToHost(enclaveCallId, bytes, InternalCallType.CALL)
+                sendCallToHost(threadID, bytes, InternalCallType.CALL)
             } finally {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have
                 // their own exception handling and reuse of the host-enclave communication channel for another call.
@@ -366,29 +367,49 @@ Received: $attestationReportBody"""
         /**
          * Pass the given [bytes] to the host, who will receive them synchronously.
          *
-         * @param enclaveCallId The call ID received from the host which is sent back as is so that the host can know
+         * @param threadID The thread ID received from the host which is sent back as is so that the host can know
          * which of the possible many concurrent calls this response is for.
          * @param type Tells the host whether these bytes are the return value of a callback
          * (in which case it has to return itself) or are from [callUntrustedHost] (in which case they need to be passed
          * to the callback).
          */
-        private fun sendCallToHost(enclaveCallId: Long, bytes: ByteArray, type: InternalCallType) {
+        private fun sendCallToHost(threadID: Long, bytes: ByteArray, type: InternalCallType) {
             sender.send(Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
-                buffer.putLong(enclaveCallId)
+                buffer.putLong(threadID)
                 buffer.put(type.ordinal.toByte())
                 buffer.put(bytes)
             }
         }
 
-        fun sendMailCommandToHost(cmd: MailCommand) {
-            val enclaveCallId = checkNotNull(currentEnclaveCall.get()) {
+        fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
+            val routingHintBytes = routingHint?.toByteArray()
+            val size = Int.SIZE_BYTES + (routingHintBytes?.size ?: 0) + encryptedBytes.size
+            sendMailCommandToHost(size, mailType = 0) { buffer ->
+                if (routingHintBytes != null) {
+                    buffer.putIntLengthPrefixBytes(routingHintBytes)
+                } else {
+                    buffer.putInt(0)
+                }
+                buffer.put(encryptedBytes)
+            }
+        }
+
+        fun acknowledgeMail(mailID: Long) {
+            sendMailCommandToHost(Long.SIZE_BYTES, mailType = 1) { buffer ->
+                buffer.putLong(mailID)
+            }
+        }
+
+        private fun sendMailCommandToHost(size: Int, mailType: Byte, block: (ByteBuffer) -> Unit) {
+            val threadID = checkNotNull(currentEnclaveCall.get()) {
                 "Thread ${Thread.currentThread()} may not attempt to send or acknowledge mail outside the context of a call or delivery."
             }
 
-            sender.send(Long.SIZE_BYTES + 1 + cmd.serialisedSize) { buffer ->
-                buffer.putLong(enclaveCallId)
+            sender.send(Long.SIZE_BYTES + 2 + size) { buffer ->
+                buffer.putLong(threadID)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
-                cmd.putTo(buffer)
+                buffer.put(mailType)
+                block(buffer)
             }
         }
     }
@@ -437,8 +458,8 @@ Received: $attestationReportBody"""
      * this method multiple times on multiple different mails is safe even if the
      * enclave is interrupted part way through.
      */
-    protected fun acknowledgeMail(id: Long) {
-        enclaveMessageHandler.sendMailCommandToHost(MailCommand.Acknowledge(id))
+    protected fun acknowledgeMail(mailID: Long) {
+        enclaveMessageHandler.acknowledgeMail(mailID)
     }
 
     /**
@@ -478,7 +499,7 @@ Received: $attestationReportBody"""
     protected fun postMail(mail: MutableMail, routingHint: String?) {
         val encryptedBytes = mail.encrypt()
         // TODO: Track size of encryptedBytes here, and adjust minSize before calling encrypt to ensure uniform sizes.
-        enclaveMessageHandler.sendMailCommandToHost(MailCommand.Post(routingHint, encryptedBytes))
+        enclaveMessageHandler.postMail(encryptedBytes, routingHint)
         mail.incrementSequenceNumber()
     }
     //endregion

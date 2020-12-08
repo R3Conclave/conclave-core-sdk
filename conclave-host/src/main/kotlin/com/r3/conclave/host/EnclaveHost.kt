@@ -11,10 +11,7 @@ import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.utilities.internal.getBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
-import com.r3.conclave.utilities.internal.putIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.*
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -25,6 +22,7 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Consumer
 import java.util.function.Function
 
 /**
@@ -186,7 +184,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
-    private var mailCallbacks: MailCallbacks? = null
+    private var mailCallback: Consumer<List<MailCommand>>? = null
 
     /**
      * The name of the sub-class of Enclave that was loaded.
@@ -209,7 +207,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * in mock or simulation mode and a mock attestation is used instead. Likewise, null can also be used for development
      * purposes.
      *
-     * @param mailCallbacks A callback that will be invoked when the enclave requests delivery or acknowledgement of mail.
+     *
+     * @param mailCallback A callback that will be invoked when the enclave requires the host to carry mail-related
+     * actions, such as requesting delivery to the client or acknowledgement of mail. These actions, or [MailCommand]s, are
+     * grouped together within the scape of a [deliverMail] or [callEnclave] call. This enables the host to action these
+     * commands within the same transaction.
+     *
      * If null then the enclave cannot send or acknowledge mail, although you can still deliver it.
      *
      * @throws IllegalArgumentException If the [enclaveMode] is either release or debug and no attestation parameters
@@ -218,7 +221,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      */
     @Throws(EnclaveLoadException::class)
     @Synchronized
-    fun start(attestationParameters: AttestationParameters?, mailCallbacks: MailCallbacks?) {
+    fun start(attestationParameters: AttestationParameters?, mailCallback: Consumer<List<MailCommand>>?) {
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
@@ -226,7 +229,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         val attestationService = getAttestationService(attestationParameters)
 
         try {
-            this.mailCallbacks = mailCallbacks
+            this.mailCallback = mailCallback
             // Set up a set of channels in and out of the enclave. Each byte array sent/received comes with
             // a prefixed channel ID that lets us split them out to separate classes.
             val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
@@ -349,12 +352,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      */
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
-    private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCallback?): ByteArray? {
-        return when (hostStateManager.state) {
-            New -> throw IllegalStateException("The enclave host has not been started.")
-            Closed -> throw IllegalStateException("The enclave host has been closed.")
-            Started -> enclaveMessageHandler.callEnclave(bytes, callback)
-        }
+    private fun callEnclaveInternal(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>?): ByteArray? {
+        return checkStateFirst { enclaveMessageHandler.callEnclave(bytes, callback) }
     }
 
     /**
@@ -365,26 +364,25 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * alternatively queuing it to disk in anticipation of a bug fix or upgrade
      * is also workable.
      *
-     * There is likely to be a callback on the same thread to the
-     * [MailCallbacks.postMail] function, requesting mail to be sent back in response
-     * and/or acknowledgement. However, it's also possible the enclave will hold
-     * the mail without requesting any action.
+     * It's possible the callback provided to [start] will receive a [MailCommand.PostMail] or [MailCommand.AcknowledgeMail]
+     * on the same thread, requesting mail to be sent back in response and/or acknowledgement, respectively. However, it's
+     * also possible the enclave will hold the mail without requesting any action.
      *
      * When an enclave is started, you must redeliver, in order, any unacknowledged
      * mail so the enclave can rebuild its internal state.
      *
-     * @param id an identifier that may be passed to [MailCallbacks.acknowledgeMail]. The scope of this ID is up until
-     * the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor does it need to be derived
-     * from anything in particular. A good choice is a row ID in a database or a queue message ID, for example.
-     * @param mail the encrypted mail received from a remote client.
+     * @param id An identifier that will be used to identify acknowledged mail via [MailCommand.AcknowledgeMail]. The
+     * scope of this ID is up until the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor
+     * does it need to be derived from anything in particular. A good choice is a row ID in a database or a queue message
+     * ID, for example.
+     * @param mail The encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
-     * back through to [MailCallbacks.postMail] to ask the host to deliver the reply to the right
-     * location.
+     * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
      * @param callback If the enclave calls `Enclave.callUntrustedHost` then the
      * bytes will be passed to this object for consumption and generation of the
      * response.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveMail`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
      * @throws IllegalStateException If the host has not been started.
      */
     fun deliverMail(id: Long, mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
@@ -399,10 +397,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * alternatively queuing it to disk in anticipation of a bug fix or upgrade
      * is also workable.
      *
-     * There is likely to be a callback on the same thread to the
-     * [MailCallbacks.postMail] function, requesting mail to be sent back in response
-     * and/or acknowledgement. However, it's also possible the enclave will hold
-     * the mail without requesting any action.
+     * It's possible the callback provided to [start] will receive a [MailCommand.PostMail] or [MailCommand.AcknowledgeMail]
+     * on the same thread, requesting mail to be sent back in response and/or acknowledgement, respectively. However, it's
+     * also possible the enclave will hold the mail without requesting any action.
      *
      * When an enclave is started, you must redeliver, in order, any unacknowledged
      * mail so the enclave can rebuild its internal state.
@@ -410,67 +407,30 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * Note: The enclave does not have the option of using `Enclave.callUntrustedHost` for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
-     * @param id an identifier that may be passed to [MailCallbacks.acknowledgeMail]. The scope of this ID is up until
-     * the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor does it need to be derived
-     * from anything in particular. A good choice is a row ID in a database or a queue message ID, for example.
+     * @param id an identifier that will be used to identify acknowledged mail via [MailCommand.AcknowledgeMail]. The
+     * scope of this ID is up until the enclave acknowledges the mail, so it doesn't have to be fully unique forever, nor
+     * does it need to be derived from anything in particular. A good choice is a row ID in a database or a queue message
+     * ID, for example.
      * @param mail the encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
-     * back through to [MailCallbacks.postMail] to ask the host to deliver the reply to the right
-     * location.
+     * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveMail`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
      * @throws IllegalStateException If the host has not been started.
      */
     fun deliverMail(id: Long, mail: ByteArray, routingHint: String?) {
         deliverMailInternal(id, mail, routingHint, null)
     }
 
-    private fun deliverMailInternal(id: Long, mail: ByteArray, routingHint: String?, callback: EnclaveCallback?) {
-        when (hostStateManager.state) {
-            New -> throw IllegalStateException("The enclave host has not been started.")
-            Closed -> throw IllegalStateException("The enclave host has been closed.")
-            Started -> enclaveMessageHandler.deliverMail(id, mail, callback, routingHint)
-        }
+    private fun deliverMailInternal(id: Long, mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>?) {
+        return checkStateFirst { enclaveMessageHandler.deliverMail(id, mail, callback, routingHint) }
     }
 
-    // TODO: Rewrite MailCallbacks to expose MailCommands directly as a group, so the host can more easily process them atomically.
-
-    /**
-     * Implement this on an object you provide that binds messages from the enclave
-     * back to the network or processes them locally.
-     *
-     * Callbacks will never be invoked concurrently as the platform provides
-     * synchronisation for you.
-     *
-     * From an enclave writer's perspective, all the implementations of these methods
-     * should be considered malicious.
-     */
-    interface MailCallbacks {
-        /**
-         * Called when the enclave wants to send an encrypted message over the network
-         * to a client. The host should examine the public key and/or the
-         * [routingHint] parameter to decide where the enclave wants it to be sent.
-         *
-         * The routing hint may be "self". In that case you are expected to send the mail
-         * back to the enclave when the enclave is restarted.
-         *
-         * You don't have to perform the actual send synchronously if that's inappropriate
-         * for your app. However, the mail must be recorded for delivery synchronously, so
-         * no messages can be lost in case of crash failure.
-         */
-        @JvmDefault
-        fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
-        }
-
-        /**
-         * Called when the enclave wants to mark a given piece of mail as
-         * acknowledged, so it can be deleted and should not be re-delivered.
-         *
-         * You should perform the acknowledgement synchronously and atomically with any posts,
-         * as this is required for clients to observe transactional behaviour.
-         */
-        @JvmDefault
-        fun acknowledgeMail(mailID: Long) {
+    private inline fun <T> checkStateFirst(block: () -> T): T {
+        return when (hostStateManager.state) {
+            New -> throw IllegalStateException("The enclave host has not been started.")
+            Closed -> throw IllegalStateException("The enclave host has been closed.")
+            Started -> block()
         }
     }
 
@@ -540,12 +500,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private val threadIDToTransaction = ConcurrentHashMap<Long, Transaction>()
 
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val enclaveCallId = input.getLong()
-            val type = callTypeValues[input.get().toInt()]
-            val transaction = threadIDToTransaction.getValue(enclaveCallId)
+            val threadID = input.getLong()
+            val callType = callTypeValues[input.get().toInt()]
+            val transaction = threadIDToTransaction.getValue(threadID)
             val enclaveCallStateManager = transaction.stateManager
             val intoEnclaveState = enclaveCallStateManager.checkStateIs<IntoEnclave>()
-            when (type) {
+            when (callType) {
                 InternalCallType.CALL_RETURN -> enclaveCallStateManager.state = Response(input.getRemainingBytes())
                 InternalCallType.CALL -> {
                     val bytes = input.getRemainingBytes()
@@ -554,17 +514,28 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     }
                     val response = intoEnclaveState.callback.apply(bytes)
                     if (response != null) {
-                        sendCallToEnclave(enclaveCallId, InternalCallType.CALL_RETURN, response)
+                        sendCallToEnclave(threadID, InternalCallType.CALL_RETURN, response)
                     }
                 }
                 InternalCallType.MAIL_DELIVERY -> {
-                    val cmd = MailCommand.deserialise(input)
+                    val cmdType = input.get().toInt()
+                    val cmd = when (cmdType) {
+                        0 -> {
+                            // routingHint can be null/missing.
+                            val routingHint = String(input.getIntLengthPrefixBytes()).takeIf { it.isNotBlank() }
+                            // rest of the body to deliver (should be encrypted).
+                            val encryptedBytes = input.getRemainingBytes()
+                            MailCommand.PostMail(encryptedBytes, routingHint)
+                        }
+                        1 -> MailCommand.AcknowledgeMail(input.getLong())
+                        else -> throw IllegalStateException("Unknown type $callType")
+                    }
                     transaction.mailCommands.add(cmd)
                 }
             }
         }
 
-        fun callEnclave(bytes: ByteArray, callback: EnclaveCallback?): ByteArray? {
+        fun callEnclave(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>?): ByteArray? {
             // To support concurrent calls into the enclave, the current thread's ID is used a call ID which is passed between
             // the host and enclave. This enables each thread to have its own state for managing the calls.
             return callEnclaveInternal(callback) { threadID ->
@@ -572,14 +543,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: EnclaveCallback?, routingHint: String?) {
+        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: Function<ByteArray, ByteArray?>?, routingHint: String?) {
             callEnclaveInternal(callback) { threadID ->
                 sendMailToEnclave(threadID, mailID, mailBytes, routingHint)
             }
         }
 
         // Sets up the state tracking and handle re-entrancy. "id" is either a call ID or a mail ID.
-        private fun callEnclaveInternal(callback: EnclaveCallback?, body: (id: Long) -> Unit): ByteArray? {
+        private fun callEnclaveInternal(callback: Function<ByteArray, ByteArray?>?, body: (id: Long) -> Unit): ByteArray? {
             val threadID = Thread.currentThread().id
             val transaction = threadIDToTransaction.computeIfAbsent(threadID) { Transaction() }
             val callStateManager = transaction.stateManager
@@ -609,17 +580,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // If fully unwound and we have mail commands to deliver ...
             if (callStateManager.state == Ready && transaction.mailCommands.isNotEmpty()) {
                 // ... the transaction ends here so pass mail commands to the host for processing.
-                // If the host throws an exception, all following commands that were given are ignored.
                 try {
-                    val callbacks = checkNotNull(mailCallbacks) { "Enclave tried to send or acknowledge mail, but the host doesn't support that." }
-                    for (cmd in transaction.mailCommands) {
-                        // TODO: Is letting exceptions propagate here the right behaviour?
-                        when (cmd) {
-                            is MailCommand.Acknowledge -> callbacks.acknowledgeMail(cmd.id)
-                            // TODO: Don't convert back and forth between byte arrays and buffers here, it's wasteful and needless.
-                            is MailCommand.Post -> callbacks.postMail(cmd.bytes, cmd.routingHint)
-                        }
+                    val mailCallback = checkNotNull(mailCallback) {
+                        "Enclave tried to send or acknowledge mail, but the host doesn't support that."
                     }
+                    mailCallback.accept(transaction.mailCommands)
                 } finally {
                     threadIDToTransaction.remove(threadID)
                 }
@@ -636,9 +601,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        private fun sendMailToEnclave(threadID: Long, mailID: Long, bytes: ByteArray, routingHint: String?) {
+        private fun sendMailToEnclave(threadID: Long, mailID: Long, mailBytes: ByteArray, routingHint: String?) {
             val routingHintBytes = routingHint?.toByteArray()
-            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + bytes.size + 4 + (routingHintBytes?.size ?: 0)) { buffer ->
+            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + mailBytes.size + 4 + (routingHintBytes?.size ?: 0)) { buffer ->
                 buffer.putLong(threadID)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
                 buffer.putLong(mailID)
@@ -646,14 +611,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     buffer.putIntLengthPrefixBytes(routingHintBytes)
                 } else
                     buffer.putInt(0)
-                buffer.put(bytes)
+                buffer.put(mailBytes)
             }
         }
     }
 
     private sealed class CallState {
         object Ready : CallState()
-        class IntoEnclave(val callback: EnclaveCallback?) : CallState()
+        class IntoEnclave(val callback: Function<ByteArray, ByteArray?>?) : CallState()
         class Response(val bytes: ByteArray) : CallState()
     }
 
@@ -663,6 +628,3 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         object Closed : HostState()
     }
 }
-
-// Typealias to make this code easier to read.
-private typealias EnclaveCallback = Function<ByteArray, ByteArray?>

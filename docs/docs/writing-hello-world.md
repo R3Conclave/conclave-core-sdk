@@ -612,10 +612,11 @@ implementation: we'll just store the encrypted bytes in a variable, so we can pi
 ```java
 // Start it up.
 AtomicReference<byte[]> mailToSend = new AtomicReference<>();
-enclave.start(attestationParameters, new EnclaveHost.MailCallbacks() {
-    @Override
-    public void postMail(byte[] encryptedBytes, String routingHint) {
-        mailToSend.set(encryptedBytes);
+enclave.start(attestationParameters, (commands) -> {
+    for (MailCommand command : commands) {
+        if (command instanceof MailCommand.PostMail) {
+            mailToSend.set(((MailCommand.PostMail) command).getEncryptedBytes());
+        }
     }
 });
 ``` 
@@ -624,15 +625,18 @@ Java doesn't let us directly change variables from a callback, so we use an `Ato
 
 !!! tip
     Kotlin lets you alter mutable variables from callbacks directly, without needing this sort of trick.
-    
+
+The callback is a list of `MailCommand` objects, and what we're interested in are requests for delivery which are
+represented as `MailCommand.PostMail` objects. They contain the encrypted mail bytes to send. More information about the
+mail commands can be found [below](#mail-commands).
+
 The enclave can provide a _routing hint_ to tell the host where it'd like the message delivered.
 It's called a "hint" because the enclave must always remember that
 the host is untrusted. It can be arbitrarily malicious and could, for example, not deliver the mail at all, or
 it could deliver it to the wrong place. However if it does deliver it wrongly, the encryption will ensure the
 bogus recipient can't do anything with the mail. In this simple hello world tutorial we can only handle one client
-at once so we're going to ignore the routing hint here. In a more sophisticated server you could provide an 
-implementation of `EnclaveHost.MailCallbacks` that has access to your connected clients, a database, a durable queue,
-a `ThreadLocal` containing a servlet connection and so on. 
+at once so we're going to ignore the routing hint here. In a more sophisticated server your callback implementation can
+have access to your connected clients, a database, a durable queue, a `ThreadLocal` containing a servlet connection and so on. 
 
 At the bottom of our main method let's add some code to accept TCP connections and send the `EnclaveInstanceInfo` to 
 whomever connects. You will also need to add `throws IOException` to the method signature of `main`. Then we'll accept a
@@ -683,6 +687,27 @@ useless for the host to mis-direct mail.
 
 !!! todo
     In future we will provide APIs to bind enclaves to common transports, to avoid this sort of boilerplate.
+
+### Mail commands
+
+The second parameter to `EnclaveHost.start` is a callback which returns a list of `MailCommand` objects from the enclave.
+There are two commands the host can receive:
+
+1. **Post mail** This is when the enclave wants to send mail over the network to a client. The enclave may provide a
+   routing hint with the mail to help the host route the message. The host is also expected to safely store the message
+   in case the enclave is restarted. If that happens then it needs to redeliver all the (unacknowledged) mail back to
+   the enclave in order.
+1. **Acknowledge mail** This is when the enclave no longer needs the mail to be redelivered to it on restart and the host
+   is thus expected to delete it from its store. There are many reasons why an enclave may not want a message redelivered.
+   For example, the conversation with the client has reached its end and so it acknowledges all the mail in that thread;
+   or the enclave can checkpoint in the middle by creating a mail to itself which condenses all the previous mail, which
+   are then all acknowledged.
+
+The host receives these commands grouped together within the scope of a single `EnclaveHost.deliverMail` or `EnclaveHost.callEnclave`
+call. This allows the host to add transactionality when processing the commands. So for example, the delivery of the mail
+from the client to the enclave and the subsequent reply back can be processed atomically within the same database transaction
+when the host is providing persistent, durable messaging. Likewise the acknowledgement of any mail can occur within the
+same transaction.
 
 ## Writing the client
 

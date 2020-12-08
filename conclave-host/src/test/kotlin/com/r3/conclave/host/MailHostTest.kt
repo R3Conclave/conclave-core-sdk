@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import java.security.PublicKey
 
 class MailHostTest {
     companion object {
@@ -62,11 +63,9 @@ class MailHostTest {
     @Test
     fun `mail acknowledgement`() {
         var acknowledgementID: Long? = null
-        echo.start(null, object : EnclaveHost.MailCallbacks {
-            override fun acknowledgeMail(mailID: Long) {
-                acknowledgementID = mailID
-            }
-        })
+        echo.start(null) { commands ->
+            acknowledgementID = (commands.single() as MailCommand.AcknowledgeMail).mailID
+        }
         val mail: MutableMail = buildMail(echo)
         // First delivery doesn't acknowledge because we don't tell it to.
         echo.deliverMail(1, mail.encrypt(), "test") { null }
@@ -132,15 +131,59 @@ class MailHostTest {
             }
         }
         val host = MockHost.loadMock<Enclave1>()
-        host.start(null, object : EnclaveHost.MailCallbacks {
-            override fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
-                assertEquals("test", routingHint!!)
-                val message: EnclaveMail = Mail.decrypt(encryptedBytes, keyPair.private)
-                assertEquals("hello", String(message.bodyAsBytes))
-            }
-        })
+        var postCommand: MailCommand.PostMail? = null
+        host.start(null) { commands ->
+            postCommand = commands.filterIsInstance<MailCommand.PostMail>().single()
+        }
         val messageFromBob = buildMail(host)
         host.deliverMail(1, messageFromBob.encrypt(), "test")
+        assertThat(postCommand!!.routingHint).isEqualTo("test")
+        val message: EnclaveMail = Mail.decrypt(postCommand!!.encryptedBytes, keyPair.private)
+        assertEquals("hello", String(message.bodyAsBytes))
+    }
+
+    @Test
+    fun `multiple commands`() {
+        class Enclave1 : Enclave() {
+            private var previousSender: PublicKey? = null
+            override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+                previousSender = mail.authenticatedSender
+                postMail(createMail(mail.authenticatedSender!!, "hello".toByteArray()), null)
+                postMail(createMail(mail.authenticatedSender!!, "world".toByteArray()), null)
+                acknowledgeMail(id)
+            }
+            override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+                postMail(createMail(previousSender!!, "123".toByteArray()), null)
+                postMail(createMail(previousSender!!, "456".toByteArray()), null)
+                return null
+            }
+        }
+
+        val host = MockHost.loadMock<Enclave1>()
+        var previousCommands: List<MailCommand>? = null
+        host.start(null) { commands -> previousCommands = commands }
+
+        val messageFromBob = buildMail(host)
+        host.deliverMail(123, messageFromBob.encrypt(), "test")
+
+        assertThat(previousCommands).hasSize(3)
+        with(previousCommands!![0] as MailCommand.PostMail) {
+            assertEquals("hello", String(Mail.decrypt(encryptedBytes, keyPair.private).bodyAsBytes))
+        }
+        with(previousCommands!![1] as MailCommand.PostMail) {
+            assertEquals("world", String(Mail.decrypt(encryptedBytes, keyPair.private).bodyAsBytes))
+        }
+        assertThat(previousCommands!![2]).isEqualTo(MailCommand.AcknowledgeMail(123))
+
+        // callEnclave should cause a separate set of commands to come through.
+        host.callEnclave(byteArrayOf())
+        assertThat(previousCommands).hasSize(2)
+        with(previousCommands!![0] as MailCommand.PostMail) {
+            assertEquals("123", String(Mail.decrypt(encryptedBytes, keyPair.private).bodyAsBytes))
+        }
+        with(previousCommands!![1] as MailCommand.PostMail) {
+            assertEquals("456", String(Mail.decrypt(encryptedBytes, keyPair.private).bodyAsBytes))
+        }
     }
 
     @ParameterizedTest
@@ -269,6 +312,9 @@ class MailHostTest {
         }
     }
 
+    /**
+     * Enumerates the various ways mail can be created via the API.
+     */
     enum class CreateMailApi {
         /** @see Enclave.createMail */
         ENCLAVE {

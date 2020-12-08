@@ -1,37 +1,8 @@
 package com.r3.conclave.internaltesting
 
-import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.SHA512Hash
-import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import org.assertj.core.api.Condition
-import java.security.PublicKey
 import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
-import kotlin.random.Random
-
-fun createSignedQuote(
-        cpuSvn: OpaqueBytes = OpaqueBytes(Random.nextBytes(16)),
-        measurement: SHA256Hash = SHA256Hash.wrap(Random.nextBytes(32)),
-        mrsigner: SHA256Hash = SHA256Hash.wrap(Random.nextBytes(32)),
-        isvProdId: Int = 1,
-        isvSvn: Int = 1,
-        dataSigningKey: PublicKey,
-        encryptionKey: PublicKey
-): ByteCursor<SgxSignedQuote> {
-    return Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize)).apply {
-        this[quote][SgxQuote.reportBody].apply {
-            this[SgxReportBody.cpuSvn] = cpuSvn.buffer()
-            this[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
-            this[SgxReportBody.mrenclave] = measurement.buffer()
-            this[SgxReportBody.mrsigner] = mrsigner.buffer()
-            this[SgxReportBody.isvProdId] = isvProdId
-            this[SgxReportBody.isvSvn] = isvSvn
-            this[SgxReportBody.reportData] = SHA512Hash.hash(dataSigningKey.encoded + encryptionKey.encoded).buffer()
-        }
-    }
-}
 
 /**
  * Executes the given block on a new thread, returning a [CompletableFuture] linked to the result. If [block] throws
