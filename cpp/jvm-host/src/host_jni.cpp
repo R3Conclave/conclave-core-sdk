@@ -107,29 +107,11 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
         initialise_enclave(enclave_id);
         return enclave_id;
     } else {
-        // Check to see if SGX is supported on the platform
-        std::string message;
-        bool wasEnabled = false;
-        if (!checkAndEnableEnclaveSupport(true, wasEnabled, message)) {
-            // SGX not enabled
-            raiseEnclaveLoadException(jniEnv, message.c_str());
-        }
-        else {
-            // SGX is enabled. If the function enabled it then attempt to load the enclave again
-            if (wasEnabled) {
-                returnCode = sgx_create_enclave(path.c_str, isDebug, &token, &updated, &enclave_id, nullptr);
-                if (returnCode == SGX_SUCCESS) {
-                    initialise_enclave(enclave_id);
-                    return enclave_id;
-                }
-                // Still failed. System may need a reboot
-                raiseEnclaveLoadException(jniEnv, getDeviceStatusMessage(SGX_DISABLED_REBOOT_REQUIRED));
-            }
-            else {
-                // Not a platform problem
-                raiseEnclaveLoadException(jniEnv, getErrorMessage(returnCode));
-            }
-        }
+        // The load might have failed due to SGX being disabled, in a way that we can auto-enable. But the user can
+        // use the explicit API we provide to do this (it might require running as root, for example), so we just throw
+        // here. We used to try and auto-enable on load but that's probably not quite right due to the permissions
+        // issues, and it led to us accidentally hiding the true error when the attempt to enable failed as well.
+        raiseEnclaveLoadException(jniEnv, getErrorMessage(returnCode));
         return -1;
     }
 }
