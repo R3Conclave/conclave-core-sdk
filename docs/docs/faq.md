@@ -158,6 +158,36 @@ when offline. Therefore, it's possible to load one enclave, have it send a messa
 load the second enclave and have it process the message from the first. Splitting up app logic in this way can be
 useful for allowing modules to be upgraded and audited independently.
 
+### Why does my enclave build fail?
+
+We use the GraalVM native image technology. Builds can fail if you are trying to dynamically load bytecode (this doesn't
+work yet), if you use a feature not supported by our version of Native Image, or if you're on Windows/macOS and you 
+don't allocate enough RAM to Docker. The build is memory intensive, so please allocate at least 6GB of RAM to Docker
+and possibly more. However you don't need to do builds all the time when working on an enclave. You always have the
+option of using mock mode to directly load the enclave code into the host JVM, which gives a regular Java development
+experience.
+
+### Java object serialization doesn't work?
+
+On GraalVM native image builds, this is because Java object serialization isn't implemented yet. It will arrive in
+future versions. On Avian builds this is because Java object serialization is configured with a filter that blocks all
+usage by default. This is to protect the enclave against ["mad gadget" attacks](https://owasp.org/www-community/vulnerabilities/Deserialization_of_untrusted_data).
+You can make it work again by setting a less restrictive serialization filter on your `ObjectInputStream`. Alternatively,
+consider some other serialization mechanism.
+
+### How do I control the Native Image parameters?
+
+You can add flags to the `native-image` command line when building to optimise your enclave binary and control the
+details of how it's compiled. Create a file called `src/main/resources/META-INF/native-image/native-image.properties`
+in your enclave module and set it to contain:
+
+```
+Args = -H:Whatever
+```
+
+!!! note
+    This doesn't let you alter or override the flags we already specify in order to create a working enclave.
+
 ## Competing technologies
 
 ### Do you have plans to support AMD SEV?
@@ -171,12 +201,12 @@ Not at this time. We will re-evaluate future versions of SEV. The main problems 
    rendered useless by the discovery of numerous fatal bugs in AMD's firmware. Although patches were made available 
    there was no way to remotely detect if they are actually applied, which made patching meaningless.
 
-Additionally in SEV remote attestation is randomized, which means you can’t ask a remote host "what are you running".
+Additionally, in SEV remote attestation is randomized which means you can’t ask a remote host "what are you running".
 You are expected to know this already (because you set up the remote VM to begin with). This doesn't fit well with
 most obvious enclave APIs.
 
 AMD and Intel are in increasingly strong competition, and so we expect AMD to catch up with the SGX feature set in 
-future. Additionally Intel are working on an SEV-equivalent feature for protecting entire (Linux) virtual machines from 
+future. Intel are also working on an SEV-equivalent feature for protecting entire (Linux) virtual machines from 
 the host hardware. Conclave may add support for this at some point in the future as well.
 
 ### Do you have plans to support ARM TrustZone?
@@ -193,6 +223,12 @@ institutionally, because they design and implement Nitro, thus you have only the
 back doors or internally known weaknesses.
 
 As it's not an enclave we currently have no plans to support Nitro.
+
+### Do you have plans to support cloud providers as the root of trust?
+
+Although Nitro is not an enclave, some cloud providers do allow you to generate an attestation-like structure that
+asserts what disk image was used to boot a virtual machine. For cases where you're willing to trust a cloud provider
+but still want an auditable code module as part of your app, we may consider adding support for this in future.
 
 ### Why are you using Intel SGX versus mathematical techniques?
  
