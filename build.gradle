@@ -499,8 +499,8 @@ task sdkCopyExtras(type: Copy) {
     group = "SDK Build"
     description = "Copy the docs/sdk-extras directory into the $buildDir/sdk directory"
     from("docs/sdk-extras") {
-        exclude("hello-world/.gradle")
-        exclude("**/build")
+        exclude("**/.gradle/**")
+        exclude("**/build/**")
     }
     into "$buildDir/sdk"
     doLast {

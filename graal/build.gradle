@@ -5,6 +5,7 @@ plugins {
 def graalMajorMinorVersion = graal_version.substring(0, graal_version.length() - 2)
 task cloneAndPatchRepository(type: Exec) {
     inputs.file("clone.sh")
+    inputs.file("patches/graal_20.2.patch")
     commandLine "${project.projectDir}/clone.sh", "$graalMajorMinorVersion"
     outputs.dir("${project.buildDir}/graal")
     workingDir "${project.buildDir}"
