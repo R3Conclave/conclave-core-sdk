@@ -388,7 +388,7 @@ open class NativeImage @Inject constructor(
             nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/bin/native-image")
         }
 
-        linuxExec.exec(
+        val errorOut = linuxExec.exec(
             listOf<String>(
                     nativeImageFile.absolutePath,
                     "--shared",
@@ -412,5 +412,10 @@ open class NativeImage @Inject constructor(
             + reflectConfigurationOption()
             + getLanguages()
         )
+        if (errorOut?.any { "Image generator watchdog is aborting image generation" in it } == true) {
+            // If there is too much memory pressure in the container, native image can just get slower and slower until
+            // a watchdog timer fires. Give the user some advice on how to fix it.
+            linuxExec.throwOutOfMemoryException()
+        }
     }
 }

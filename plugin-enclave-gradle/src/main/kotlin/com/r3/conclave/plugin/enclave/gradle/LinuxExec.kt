@@ -7,9 +7,10 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.internal.os.OperatingSystem
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
-open class LinuxExec  @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:InputFile
     val dockerFile: RegularFileProperty = objects.fileProperty()
 
@@ -29,24 +30,27 @@ open class LinuxExec  @Inject constructor(objects: ObjectFactory) : ConclaveTask
         if (!OperatingSystem.current().isLinux) {
             try {
                 project.exec { spec ->
-                    spec.commandLine("docker",
-                            "build",
-                            "--tag", tag.get(),
-                            "--tag", tagLatest.get(),
-                            dockerFile.asFile.get().parentFile.absolutePath
+                    spec.commandLine(
+                        "docker",
+                        "build",
+                        "--tag", tag.get(),
+                        "--tag", tagLatest.get(),
+                        dockerFile.asFile.get().parentFile.absolutePath
                     )
                 }
-            }
-            catch (e: Exception) {
-                throw GradleException("Conclave requires Docker to be installed when building GraalVM native-image based enclaves on non-Linux platforms. "
-                                    + "Try installing Docker or setting 'runtime = avian' in your enclave build.gradle file instead. "
-                                    + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
-                                    + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module")
+            } catch (e: Exception) {
+                throw GradleException(
+                    "Conclave requires Docker to be installed when building GraalVM native-image based enclaves on non-Linux platforms. "
+                            + "Try installing Docker or setting 'runtime = avian' in your enclave build.gradle file instead. "
+                            + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
+                            + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
+                )
             }
         }
     }
 
-    fun exec(params: List<String>) {
+    /** Returns the ERROR output of the command only, in the returned list. */
+    fun exec(params: List<String>): List<String>? {
         // If the host OS is Linux then we just execute the params that we are given. The first param is the name of the
         // executable to run. If the host OS is not Linux then we execute in the context of a VM (currently Docker) by
         // mounting the Host build directory as /project in the VM. We need to fix-up any path in parameters that point
@@ -55,25 +59,38 @@ open class LinuxExec  @Inject constructor(objects: ObjectFactory) : ConclaveTask
         val args: List<String> = when (OperatingSystem.current().isLinux) {
             true -> params
             false -> listOf(
-                    "docker",
-                    "run",
-                    "-i",
-                    "--rm",
-                    "-v",
-                    "${baseDirectory.get()}:/project",
-                    tag.get()
+                "docker",
+                "run",
+                "-i",
+                "--rm",
+                "-v",
+                "${baseDirectory.get()}:/project",
+                tag.get()
             ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
         }
+        val errorOut = ByteArrayOutputStream()
         val result = project.exec { spec ->
             spec.commandLine(args)
             spec.isIgnoreExitValue = true   // We'll handle it in a moment.
+            spec.errorOutput = errorOut
         }
         if (result.exitValue == 137) {
             // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
-            throw GradleException("The build process ran out of RAM. On macOS or Windows, open the Docker preferences and " +
-                    "alter the amount of memory granted to the underlying virtual machine. We recommend at least 6 gigabytes of RAM " +
-                    "as the native image build process is memory intensive.")
+            throwOutOfMemoryException()
+        }
+        if (result.exitValue != 0) {
+            errorOut.writeTo(System.err)
+            // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
+            // Hopefully it's UTF-8 - it should be!
+            return String(errorOut.toByteArray()).split(System.lineSeparator())
         }
         result.assertNormalExitValue()
+        return null
     }
+
+    fun throwOutOfMemoryException(): Nothing = throw GradleException(
+        "The sub-process ran out of RAM. On macOS or Windows, open the Docker preferences and " +
+        "alter the amount of memory granted to the underlying virtual machine. We recommend at least 6 gigabytes of RAM " +
+        "as the native image build process is memory intensive."
+    )
 }
