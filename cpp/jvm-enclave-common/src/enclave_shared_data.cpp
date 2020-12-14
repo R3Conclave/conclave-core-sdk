@@ -11,10 +11,9 @@ EnclaveSharedData& EnclaveSharedData::instance() {
 
 uint64_t EnclaveSharedData::real_time() {
     init();
-    if (!shared_data_) {
-        return 0;
-    }
-    return shared_data_->real_time;
+    SharedData sd;
+    getSharedData(&sd);
+    return sd.real_time;
 }
 
 void EnclaveSharedData::real_time(struct timespec* t) {
@@ -39,10 +38,26 @@ EnclaveSharedData::EnclaveSharedData() : shared_data_(nullptr) {
 EnclaveSharedData::~EnclaveSharedData() {
 }
 
+void EnclaveSharedData::getSharedData(SharedData* sd) {
+    // On each access, grab the pointer and check it lies outside the enclave
+    SharedData* p = shared_data_;
+    if (!p || !sgx_is_outside_enclave(p, sizeof(SharedData))) {
+        // This suggests a malicious host so just abort the enclave.
+        abort();
+    }
+    memcpy(sd, p, sizeof(SharedData));
+}
+
 void EnclaveSharedData::init() {
     if (!shared_data_) {
         void* p = nullptr;
         if (shared_data_ocall(&p) == SGX_SUCCESS) {
+            // Make sure the pointer points outside the enclave for the entire size
+            // we are going to be reading.
+            if (!sgx_is_outside_enclave(p, sizeof(SharedData))) {
+                // This suggests a malicious host so just abort the enclave.
+                abort();
+            }
             shared_data_ = static_cast<SharedData*>(p);
         }
         else {

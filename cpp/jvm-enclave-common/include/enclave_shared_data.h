@@ -56,6 +56,8 @@ private:
     explicit EnclaveSharedData();
     virtual ~EnclaveSharedData();
 
+    void getSharedData(SharedData* sd);
+
     SharedData* shared_data_;
 };
 

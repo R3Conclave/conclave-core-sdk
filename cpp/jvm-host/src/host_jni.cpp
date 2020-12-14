@@ -263,8 +263,9 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
     }
 }
 
-void* shared_data_ocall() {
-    return static_cast<void*>(r3::conclave::HostSharedData::instance().get(EcallContext::getEnclaveId()));
+void shared_data_ocall(void** sharedBufferAddr) {
+    void* shared_data = static_cast<void*>(r3::conclave::HostSharedData::instance().get(EcallContext::getEnclaveId()));
+    *sharedBufferAddr = shared_data;
 }
 
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
