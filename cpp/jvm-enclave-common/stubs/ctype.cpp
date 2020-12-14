@@ -77,6 +77,8 @@ static const uint32_t __toupper_loc[] = {
     0xC6080000, 0xC6080000, 0xC6080000, 0xC0040000, 0xC0040000, 0xC0040000, 0xC0040000, 0x20000
 };
 
+static const uint32_t *const p__toupper_loc = __toupper_loc;
+
 extern "C" {
 
 const unsigned short * * __ctype_b_loc() {
@@ -84,8 +86,9 @@ const unsigned short * * __ctype_b_loc() {
     return NULL;
 }
 
+
 const int32_t **__ctype_toupper_loc() {
-    return (const int32_t **)&__toupper_loc;
+    return (const int32_t **)&p__toupper_loc;
 }
 
 }
