@@ -23,7 +23,9 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
                         "allDeclaredMethods" : true,
                         "allPublicMethods" : true,
                         "allDeclaredClasses" : true,
-                        "allPublicClasses" : true
+                        "allPublicClasses" : true,
+                        "allPublicFields" : true,
+                        "allDeclaredFields" : true
                     },
                 """.trimIndent())
             }

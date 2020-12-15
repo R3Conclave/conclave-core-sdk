@@ -44,6 +44,7 @@ conclave {
     maxStackSize = "2m"
     maxThreads = 10
     supportLanguages = ""
+    reflectionConfigurationFiles.from("config.json")
 
     simulation {
     }
@@ -219,4 +220,15 @@ See [this page on running JavaScript in your enclave](javascript.md) for details
 These sections contain the settings for signing the enclave. See [the page on signing](signing.md) for information
 on these settings.
 
+### reflectionConfigurationFiles
+_Default:_ empty list
 
+A list of reflection configuration files as specified in the
+[Reflection](https://www.graalvm.org/reference-manual/native-image/Reflection/#manual-configuration) section
+of Graal's reference manual.
+
+This allows for code which rely on reflection to specify which classes, methods, fields and their properties
+will be available at run time.
+
+!!! tip
+    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.

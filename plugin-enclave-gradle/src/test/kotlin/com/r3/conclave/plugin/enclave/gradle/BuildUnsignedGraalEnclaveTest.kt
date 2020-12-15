@@ -10,7 +10,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 class BuildUnsignedGraalEnclaveTest {
     companion object {
@@ -78,5 +81,38 @@ class BuildUnsignedGraalEnclaveTest {
         assertLinkerScriptContent()
         // Revert changes for the next test
         ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$expectedMaxStackSize\"", "maxStackSize = \"$initialMaxStackSize\"")
+    }
+
+    @EnumSource(BuildType::class)
+    @ParameterizedTest(name = "{index} => {0}")
+    fun reflectionConfigurationFilesIncrementalBuild(buildType: BuildType) {
+        var task = runTask(buildType)
+        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+
+        val filePaths = mutableListOf<String>()
+        for (i in 0..1) {
+            val file = "$projectDirectory/reflectionconfig$i.json"
+            filePaths.add(file)
+            val className = "Class${i}"
+            val configuration = GenerateReflectionConfig.generateContent(listOf("com.r3.conclave.example.$className"))
+            FileOutputStream(file).use { fos ->
+                fos.write(configuration.toByteArray())
+            }
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+
+            val newConfiguration = configuration.replace(className, "Another$className")
+            FileOutputStream(file).use { fos ->
+                fos.write(newConfiguration.toByteArray())
+            }
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+        }
+
+        for (file in filePaths) {
+            Files.delete(Paths.get(file))
+        }
     }
 }

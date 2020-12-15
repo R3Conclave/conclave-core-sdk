@@ -11,4 +11,5 @@ conclave {
     revocationLevel = 0
     maxHeapSize = "268435456"
     maxStackSize = "2097152"
+    reflectionConfigurationFiles.from("reflectionconfig0.json", "reflectionconfig1.json")
 }

@@ -6,6 +6,8 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.GradleException
+import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.ListProperty
 import org.gradle.internal.os.OperatingSystem
 import java.io.File
 import java.nio.file.Path
@@ -82,6 +84,9 @@ open class NativeImage @Inject constructor(
 
     @get:InputFile
     val reflectionConfiguration: RegularFileProperty = objects.fileProperty()
+
+    @get:InputFiles
+    val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     @get:Input
     val maxStackSize: Property<String> = objects.property(String::class.java)
@@ -368,7 +373,11 @@ open class NativeImage @Inject constructor(
     }
 
     private fun reflectConfigurationOption(): String {
-        return "-H:ReflectionConfigurationFiles=" + reflectionConfiguration.get().asFile.absolutePath
+        val fileList = StringBuilder(reflectionConfiguration.get().asFile.absolutePath)
+        reflectionConfigurationFiles.forEach {
+            fileList.append(",${it.absolutePath}")
+        }
+        return "-H:ReflectionConfigurationFiles=$fileList"
     }
 
     private fun getLanguages(): List<String> {

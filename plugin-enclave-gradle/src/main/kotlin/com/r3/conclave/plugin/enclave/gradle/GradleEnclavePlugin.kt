@@ -215,6 +215,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "$substrateDependenciesPath/libjvm_enclave_common.a"
                 )
                 task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
+                task.reflectionConfigurationFiles.from(conclaveExtension.reflectionConfigurationFiles)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                 task.supportLanguages.set(conclaveExtension.supportLanguages)

@@ -1,6 +1,7 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import org.gradle.api.Action
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import javax.inject.Inject
@@ -18,6 +19,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.GraalVMNativeImage)
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     val graalVMSDKVersion: Property<String> = objects.property(String::class.java).convention("20.2.0")
+    val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     val avian = RuntimeType.Avian
     val graalvm_native_image = RuntimeType.GraalVMNativeImage
