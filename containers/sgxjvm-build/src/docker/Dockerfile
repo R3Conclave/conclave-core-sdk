@@ -104,14 +104,14 @@ RUN export GDB_VERSION=gdb-9.2 \
 ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
-ENV MX_VERSION          5.271.0
+ENV MX_VERSION          5.279.4
 ENV JAVA_HOME           /usr/lib/jvm/java-8-openjdk-amd64
-ENV JVMCI_VERSION       20.2-b03
-ENV LABSJDK_VERSION     11.0.8
+ENV JVMCI_VERSION       21.0-b03
+ENV LABSJDK_VERSION     11.0.9
 ENV LABSJDK_CE_11_FILE  labsjdk-ce-$LABSJDK_VERSION+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
 ENV LABSJDK_HOME        /opt/labsjdk-ce-$LABSJDK_VERSION-jvmci-$JVMCI_VERSION
-ENV JVMCI_FILE          openjdk-8u262+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
-ENV JVMCI_HOME          /opt/openjdk1.8.0_262-jvmci-$JVMCI_VERSION
+ENV JVMCI_FILE          openjdk-8u272+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
+ENV JVMCI_HOME          /opt/openjdk1.8.0_272-jvmci-$JVMCI_VERSION
 ENV MX_HOME             /opt/mx-$MX_VERSION
 ENV SGX_SDK_VERSION     2.9.1
 
@@ -128,20 +128,20 @@ RUN tar -xaf /opt/as.ld.objdump.gold.r1.tar.gz -C /usr/local/bin --strip=2
 
 # MX
 RUN curl -sSL -o /opt/$MX_VERSION.tar.gz https://github.com/graalvm/mx/archive/$MX_VERSION.tar.gz
-RUN echo "6af1cb33405dde5f74b564de36c1c62e4e9bd398096ee111adcdd4858c8aaac7 /opt/$MX_VERSION.tar.gz" | sha256sum -c -
+RUN echo "cc56f15d9a84352ee6a1379275850bb0050b7815c684e50c3692330e2de8b022 /opt/$MX_VERSION.tar.gz" | sha256sum -c -
 RUN tar -xaf /opt/$MX_VERSION.tar.gz -C /opt
 RUN rm -v /opt/$MX_VERSION.tar.gz
 RUN chmod a+wx /opt/mx-$MX_VERSION
 
 # JVMCI-enabled JDK8
 RUN curl -sSL -o /opt/$JVMCI_FILE https://github.com/graalvm/graal-jvmci-8/releases/download/jvmci-$JVMCI_VERSION/$JVMCI_FILE
-RUN echo "21eef2f252a688e900b929467187a71740128eb0  /opt/$JVMCI_FILE" | shasum -c -
+RUN echo "2ddcf577de907ad298ad361eda8895355dbbaa43  /opt/$JVMCI_FILE" | shasum -c -
 RUN tar -xaf /opt/$JVMCI_FILE -C /opt
 RUN rm -v /opt/$JVMCI_FILE
 
 # labs-openjdk-11
 RUN curl -sSL -o /opt/$LABSJDK_CE_11_FILE https://github.com/graalvm/labs-openjdk-11/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_11_FILE
-RUN echo "3ad1494babc0d8cd1f59dd659ca2dfd272c05f31  /opt/$LABSJDK_CE_11_FILE" | shasum -c -
+RUN echo "1dd78393a9bf9084d3508e911476ae4c28932627  /opt/$LABSJDK_CE_11_FILE" | shasum -c -
 RUN tar -xaf /opt/$LABSJDK_CE_11_FILE -C /opt
 RUN rm -v /opt/$LABSJDK_CE_11_FILE
 

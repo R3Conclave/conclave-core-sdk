@@ -56,6 +56,7 @@ add_library(jvm_enclave_common
         stubs/sched.cpp
         stubs/netdb.cpp
         stubs/sys_socket.cpp
+        stubs/sys_poll.cpp
         stubs/dirent.cpp
         stubs/ioctl.cpp
         stubs/utime.cpp
