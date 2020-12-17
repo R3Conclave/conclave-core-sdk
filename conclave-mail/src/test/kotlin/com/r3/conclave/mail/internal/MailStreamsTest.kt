@@ -17,6 +17,7 @@ import java.io.EOFException
 import java.io.IOException
 import java.security.PrivateKey
 import kotlin.math.ceil
+import kotlin.random.Random
 
 class MailStreamsTest {
     companion object {
@@ -25,6 +26,7 @@ class MailStreamsTest {
         private val receivingPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
         private val publicKey = receivingPrivateKey.publicKey
 
+        private val header = EnclaveMailHeaderImpl(sequenceNumber = 1, topic = "topic", envelope = Random.nextBytes(10), keyDerivation = null)
         private val msg = "Hello, can you hear me?".toByteArray()
 
         @JvmStatic
@@ -51,7 +53,7 @@ class MailStreamsTest {
         assertEquals(2, getPacketCount(bytes))
         val stream = decrypt(bytes)
         assertNull(stream.senderPublicKey)
-        assertEquals(0, stream.headerBytes.size)
+        assertThat(stream.header).isEqualTo(header)
     }
 
     @ParameterizedTest
@@ -85,7 +87,7 @@ class MailStreamsTest {
         val data = ByteArray(dataSize).also(Noise::random)
 
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, publicKey, null, senderPrivateKey).use { encrypt ->
+        MailEncryptingStream(baos, publicKey, header, senderPrivateKey).use { encrypt ->
             block(encrypt, data)
         }
         val encrypted = baos.toByteArray()
@@ -128,20 +130,18 @@ class MailStreamsTest {
     @Test
     fun headers() {
         val baos = ByteArrayOutputStream()
-        val headerData = "header data".toByteArray()
-        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
-        assertNotEquals(-1, String(encrypted).indexOf("header data"),
+        assertNotEquals(-1, String(encrypted).indexOf(header.topic),
                 "Could not locate the unencrypted header data in the output bytes.")
         val stream = decrypt(encrypted)
-        assertArrayEquals(headerData, stream.headerBytes)
+        assertThat(stream.header).isEqualTo(header)
     }
 
     @Test
     fun `not able to read stream if private key not provided`() {
         val baos = ByteArrayOutputStream()
-        val headerData = "header data".toByteArray()
-        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream())
@@ -153,11 +153,10 @@ class MailStreamsTest {
     @Test
     fun `provide private key after reading header`() {
         val baos = ByteArrayOutputStream()
-        val headerData = "header data".toByteArray()
-        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
         val decryptingStream = MailDecryptingStream(encrypted.inputStream(), privateKey = null)
-        assertArrayEquals(headerData, decryptingStream.headerBytes)
+        assertThat(decryptingStream.header).isEqualTo(header)
 
         decryptingStream.setPrivateKey(receivingPrivateKey)
         val all = decryptingStream.readBytes()
@@ -168,16 +167,16 @@ class MailStreamsTest {
     @Test
     fun `setPrivateKey can detect corruption in header`() {
         val baos = ByteArrayOutputStream()
-        val headerData = "header data".toByteArray()
-        MailEncryptingStream(baos, publicKey, headerData, null).use { it.write(msg) }
+        val header = header.copy(topic = "topic")
+        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
         val encrypted = baos.toByteArray()
 
-        val headerDataIndex = String(encrypted).indexOf("header data")
-        encrypted[headerDataIndex] = 'H'.toByte()
+        val topicIndex = String(encrypted).indexOf("topic")
+        encrypted[topicIndex] = 'T'.toByte()
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream())
         // The change goes unnoticed.
-        assertArrayEquals("Header data".toByteArray(), decryptingStream.headerBytes)
+        assertThat(decryptingStream.header).isEqualTo(header.copy(topic = "Topic"))
 
         // But it should be detected as soon as the private key is supplied.
         assertThatThrownBy {
@@ -187,7 +186,7 @@ class MailStreamsTest {
 
     private fun encryptMessage(senderPrivateKey: PrivateKey? = null): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream(baos, publicKey, null, senderPrivateKey)
+        val encrypt = MailEncryptingStream(baos, publicKey, header, senderPrivateKey)
         encrypt.write(msg)
         encrypt.close()
         return baos.toByteArray()

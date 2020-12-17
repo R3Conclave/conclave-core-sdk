@@ -36,7 +36,6 @@ private val mailCorruptionErrors = listOf(
         "Premature end of stream",
         "Protocol name must have 5 components",
         "Tag mismatch!",
-        "Truncated Conclave Mail header",
         "SGX_ERROR_INVALID_CPUSVN",
         "SGX_ERROR_INVALID_ISVSVN",
 )

@@ -1,11 +1,6 @@
 package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.EnclaveMailHeader
-import com.r3.conclave.utilities.internal.deserialise
-import com.r3.conclave.utilities.internal.writeData
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.io.EOFException
 import java.util.*
 
 /**
@@ -20,51 +15,6 @@ data class EnclaveMailHeaderImpl(
         override val envelope: ByteArray?,
         val keyDerivation: ByteArray?
 ) : EnclaveMailHeader {
-    companion object {
-        /**
-         * Decodes the format produced by [EnclaveMailHeaderImpl.encoded], which is a custom format.
-         */
-        fun decode(encoded: ByteArray): EnclaveMailHeaderImpl {
-            try {
-                return encoded.deserialise {
-                    val seqNo = readLong()
-                    val topic = readUTF()
-                    val envelope = readLengthPrefixBytes()
-                    val keyDerivation = readLengthPrefixBytes()
-                    EnclaveMailHeaderImpl(seqNo, topic, envelope, keyDerivation)
-                }
-            } catch (e: EOFException) {
-                throw IllegalArgumentException("Truncated Conclave Mail header", e)
-            }
-        }
-
-        private fun DataInputStream.readLengthPrefixBytes(): ByteArray? {
-            val size = readUnsignedShort()
-            return if (size == 0) null else ByteArray(size).also(::readFully)
-        }
-
-        private fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray?) {
-            if (bytes != null) {
-                writeShort(bytes.size)
-                write(bytes)
-            } else {
-                writeShort(0)
-            }
-        }
-    }
-
-    /**
-     * Encodes the [EnclaveMailHeaderImpl] into a custom binary format.
-     */
-    val encoded: ByteArray get() {
-        return writeData {
-            writeLong(sequenceNumber)
-            writeUTF(topic)
-            writeLengthPrefixBytes(envelope)
-            writeLengthPrefixBytes(keyDerivation)
-        }
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EnclaveMailHeaderImpl) return false

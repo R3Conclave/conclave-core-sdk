@@ -3,7 +3,9 @@ package com.r3.conclave.mail.internal
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.internal.noise.protocol.*
+import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readExactlyNBytes
+import com.r3.conclave.utilities.internal.writeData
 import java.io.*
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -11,17 +13,6 @@ import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
 
 // Utils for encoding a 16 bit unsigned value in big endian.
-private fun ByteArray.writeShort(offset: Int, value: Int) {
-    this[offset] = (value shr 8).toByte()
-    this[offset + 1] = value.toByte()
-}
-
-private fun ByteArray.readShort(offset: Int): Int {
-    val b1 = this[offset].toInt() and 0xFF
-    val b2 = this[offset + 1].toInt() and 0xFF
-    return (b1 shl 8) or b2
-}
-
 private fun OutputStream.writeShort(value: Int) {
     write((value ushr 8) and 0xFF)
     write(value and 0xFF)
@@ -58,7 +49,7 @@ private fun OutputStream.writeShort(value: Int) {
 class MailEncryptingStream(
         out: OutputStream,
         private val destinationPublicKey: PublicKey,
-        header: ByteArray?,
+        private val header: EnclaveMailHeaderImpl,
         private val senderPrivateKey: PrivateKey?
 ) : FilterOutputStream(out) {
     companion object {
@@ -66,7 +57,6 @@ class MailEncryptingStream(
     }
 
     private var cipherState: CipherState? = null
-    private val header: ByteArray? = header?.clone()
     private val buffer = ByteArray(Noise.MAX_PACKET_LEN)
     private var bufferPosition = 0
 
@@ -99,7 +89,7 @@ class MailEncryptingStream(
             //    with what the receiver thinks we're using.
             // 2. It authenticates the header, whilst leaving it unencrypted (vs what would happen if we put it in a
             //    handshake payload).
-            val prologue: ByteArray = computePrologue(protocol, header)
+            val prologue: ByteArray = computePrologue(protocol)
             out.writeShort(prologue.size)
             out.write(prologue)
             handshake.setPrologue(prologue, 0, prologue.size)
@@ -126,18 +116,27 @@ class MailEncryptingStream(
         }
     }
 
-    private fun computePrologue(protocol: MailProtocol, header: ByteArray?): ByteArray {
-        // Format:
-        // 1 byte - mail protocol id
-        // 2 bytes - caller specified header length
-        // N bytes - caller header
-        // remaining bytes - future extensions
-        val headerLen = header?.size ?: 0
-        val prologue = ByteArray(1 + 2 + headerLen)
-        prologue[0] = protocol.ordinal.toByte()
-        prologue.writeShort(1, headerLen)
-        header?.copyInto(prologue, 1 + 2)
-        return prologue
+    /**
+     * The prologue format is the protocol ID followed by the fields in the user header. It's written out prefixed by its
+     * size which allows new fields to be added to the end.
+     */
+    private fun computePrologue(protocol: MailProtocol): ByteArray {
+        return writeData {
+            writeByte(protocol.ordinal)
+            writeLong(header.sequenceNumber)
+            writeUTF(header.topic)
+            writeLengthPrefixBytes(header.envelope)
+            writeLengthPrefixBytes(header.keyDerivation)
+        }
+    }
+
+    private fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray?) {
+        if (bytes != null) {
+            writeShort(bytes.size)
+            write(bytes)
+        } else {
+            writeShort(0)
+        }
     }
 
     override fun write(b: Int) {
@@ -230,7 +229,7 @@ class MailEncryptingStream(
  * stream (until [read] returns -1) before acting on it.
  *
  * Perhaps surprisingly, the private key to decrypt the stream is optional. By not providing one you are only able to
- * read the user provided associated data ([headerBytes]), but it will not have been authenticated. This is useful if you
+ * read the user provided associated data ([header]), but it will not have been authenticated. This is useful if you
  * don't have the private key but want to read the (unauthenticated) header, and secondly it allows embedding
  * material needed for deriving the key in the header. Once the key is known, calling [setPrivateKey] authenticates the
  * header (if it has been read) and enables decryption of the stream.
@@ -288,7 +287,7 @@ class MailDecryptingStream(
         return `in`.readExactlyNBytes(length)
     }
 
-    private class Prologue(val protocol: MailProtocol, val header: ByteArray, val raw: ByteArray)
+    private class Prologue(val protocol: MailProtocol, val header: EnclaveMailHeaderImpl, val raw: ByteArray)
 
     private var _prologue: Prologue? = null
     /**
@@ -306,23 +305,28 @@ class MailDecryptingStream(
         } catch (e: EOFException) {
             error("Premature end of stream whilst reading the prologue", e)
         }
-        if (prologueBytes.size < 3) {
-            error("Invalid prologue length")
+        val prologueStream = prologueBytes.dataStream()
+        val prologue = try {
+            val protocol: MailProtocol = protocolValues[prologueStream.readUnsignedByte()]
+            val sequenceNumber = prologueStream.readLong()
+            val topic = prologueStream.readUTF()
+            val envelope = prologueStream.readLengthPrefixBytes()
+            val keyDerivation = prologueStream.readLengthPrefixBytes()
+            val header = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation)
+            Prologue(protocol, header, prologueBytes)
+        } catch (e: EOFException) {
+            error("Truncated prologue", e)
         }
-        val protocol: MailProtocol = protocolValues[prologueBytes[0].toInt()]
-        val headerSize = prologueBytes.readShort(1)
-        if (prologueBytes.size < 3 + headerSize) {
-            error("Invalid prologue length")
-        }
-        val header = prologueBytes.copyOfRange(3, 3 + headerSize)
-        val prologue = Prologue(protocol, header, prologueBytes)
         _prologue = prologue
         return prologue
     }
 
-    val headerBytes: ByteArray get() = prologue.header
+    private fun DataInputStream.readLengthPrefixBytes(): ByteArray? {
+        val size = readUnsignedShort()
+        return if (size == 0) null else ByteArray(size).also(::readFully)
+    }
 
-    val header: EnclaveMailHeaderImpl by lazy { EnclaveMailHeaderImpl.decode(headerBytes) }
+    val header: EnclaveMailHeaderImpl get() = prologue.header
 
     private fun error(s: String, cause: Exception? = null): Nothing {
         throw IOException("$s. Corrupt stream or not Conclave Mail.", cause)
