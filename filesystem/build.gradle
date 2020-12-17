@@ -1,4 +1,5 @@
 plugins {
+    id 'java'
     id 'com.github.johnrengelman.shadow'
 }
 
@@ -13,10 +14,6 @@ dependencies {
 }
 
 description = 'Jimfs'
-
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
-}
 
 /*
  * Relocate guava packages which are forcing the use of initialize-at-build-time in NativeImage.
@@ -33,7 +30,7 @@ shadowJar {
     archiveClassifier = ''
 }
 
-tasks.withType(Test) {
+test {
     // Jimfs tests are broken due to changes to make it the default file system for Graal.
     if (!project.hasProperty('runJimfsTests')) {
         exclude '*'
