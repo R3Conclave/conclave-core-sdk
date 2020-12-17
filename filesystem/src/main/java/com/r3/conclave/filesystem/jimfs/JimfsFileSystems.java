@@ -16,6 +16,8 @@
 
 package com.r3.conclave.filesystem.jimfs;
 
+import static com.r3.conclave.filesystem.jimfs.Jimfs.URI_SCHEME;
+
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,8 +25,6 @@ import java.net.URI;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.HashMap;
 import java.util.Map;
-
-import static com.r3.conclave.filesystem.jimfs.Jimfs.URI_SCHEME;
 
 /**
  * Initializes and configures new file system instances.
@@ -43,7 +43,7 @@ final class JimfsFileSystems {
 
   private static FileSystemProvider getSystemJimfsProvider() {
     for (FileSystemProvider provider : FileSystemProvider.installedProviders()) {
-      if (provider.getScheme().equals(URI_SCHEME)) {
+      if (provider.getScheme().equals(URI_SCHEME) && provider instanceof SystemJimfsFileSystemProvider) {
         return provider;
       }
     }

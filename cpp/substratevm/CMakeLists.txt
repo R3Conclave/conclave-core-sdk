@@ -20,6 +20,9 @@ GET_DIRECTORY_PROPERTY(EDGER8R_INCLUDE_DIR DIRECTORY ${PROJECT_SOURCE_DIR}/../li
 add_library(substratevm
         src/edl.cpp
         src/substrate_jvm.cpp
+        src/fcntl.cpp
+        src/sys_stat.cpp
+        src/unistd.cpp
 )
 
 target_include_directories(substratevm PUBLIC

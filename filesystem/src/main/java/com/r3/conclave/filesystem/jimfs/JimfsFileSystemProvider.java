@@ -16,14 +16,9 @@
 
 package com.r3.conclave.filesystem.jimfs;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.r3.conclave.filesystem.jimfs.Feature.FILE_CHANNEL;
-import static com.r3.conclave.filesystem.jimfs.Jimfs.URI_SCHEME;
-import static java.nio.file.StandardOpenOption.APPEND;
-
 import com.google.common.collect.ImmutableSet;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,16 +26,7 @@ import java.net.URI;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.file.AccessMode;
-import java.nio.file.CopyOption;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
-import java.nio.file.Path;
-import java.nio.file.ProviderMismatchException;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.FileAttribute;
@@ -50,7 +36,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-import javax.annotation.Nullable;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.r3.conclave.filesystem.jimfs.Feature.FILE_CHANNEL;
+import static java.nio.file.StandardOpenOption.APPEND;
 
 /**
  * {@link FileSystemProvider} implementation for Jimfs. This provider implements the actual file
@@ -60,11 +49,14 @@ import javax.annotation.Nullable;
  *
  * @author Colin Decker
  */
-final class JimfsFileSystemProvider extends FileSystemProvider {
+final public class JimfsFileSystemProvider extends SystemJimfsFileSystemProvider {
 
+  public static final String DEFAULT_FILE_SYSTEM_PATH = "/";
   private static final JimfsFileSystemProvider INSTANCE = new JimfsFileSystemProvider();
 
   static {
+    // Create the default file system which will be used by Graal
+    Jimfs.newFileSystem(DEFAULT_FILE_SYSTEM_PATH);
     // Register the URL stream handler implementation.
     try {
       Handler.register();
@@ -76,27 +68,8 @@ final class JimfsFileSystemProvider extends FileSystemProvider {
   /**
    * Returns the singleton instance of this provider.
    */
-  static JimfsFileSystemProvider instance() {
+  public static JimfsFileSystemProvider instance() {
     return INSTANCE;
-  }
-
-  @Override
-  public String getScheme() {
-    return URI_SCHEME;
-  }
-
-  @Override
-  public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
-    throw new UnsupportedOperationException(
-        "This method should not be called directly;"
-            + "use an overload of Jimfs.newFileSystem() to create a FileSystem.");
-  }
-
-  @Override
-  public FileSystem getFileSystem(URI uri) {
-    throw new UnsupportedOperationException(
-        "This method should not be called directly; "
-            + "use FileSystems.getFileSystem(URI) instead.");
   }
 
   @Override
@@ -115,12 +88,6 @@ final class JimfsFileSystemProvider extends FileSystemProvider {
       // viewing it as a file system
       throw new UnsupportedOperationException(e);
     }
-  }
-
-  @Override
-  public Path getPath(URI uri) {
-    throw new UnsupportedOperationException(
-        "This method should not be called directly; " + "use Paths.get(URI) instead.");
   }
 
   private static JimfsPath checkPath(Path path) {

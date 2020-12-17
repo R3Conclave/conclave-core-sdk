@@ -12,9 +12,14 @@ using namespace std;
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
-STUB(dlopen);
+STUB(dlclose);
 
 extern "C" {
+
+void *dlopen(const char *filename, int flags) {
+    enclave_trace("dlopen\n");
+    return nullptr;
+}
 
 int dladdr(void* addr, Dl_info* info) {
     enclave_trace("dladdr\n");

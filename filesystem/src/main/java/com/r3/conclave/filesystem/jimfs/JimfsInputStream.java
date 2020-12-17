@@ -32,7 +32,7 @@ import javax.annotation.concurrent.GuardedBy;
  *
  * @author Colin Decker
  */
-final class JimfsInputStream extends InputStream {
+public final class JimfsInputStream extends InputStream implements JimfsStream {
 
   @GuardedBy("this")
   @VisibleForTesting
@@ -157,5 +157,18 @@ final class JimfsInputStream extends InputStream {
   @GuardedBy("this")
   private boolean isOpen() {
     return file != null;
+  }
+
+  @Override
+  public synchronized long position() {
+    return pos;
+  }
+
+  @Override
+  public synchronized void position(long newPosition) {
+    if (newPosition < 0) {
+      throw new IllegalArgumentException("Cannot set position to a negative value: " + newPosition + '.');
+    }
+    pos = newPosition;
   }
 }

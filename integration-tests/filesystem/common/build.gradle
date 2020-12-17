@@ -1,0 +1,28 @@
+plugins {
+    id 'idea'
+    id 'java'
+    id 'com.google.protobuf'
+}
+
+dependencies {
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$protobuf_version"
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java { }
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file("${buildDir}/generated/source/proto/main/java");
+    }
+}

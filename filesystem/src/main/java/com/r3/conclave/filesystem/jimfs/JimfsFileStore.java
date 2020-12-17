@@ -235,12 +235,12 @@ final class JimfsFileStore extends FileStore {
 
   @Override
   public String name() {
-    return "jimfs";
+    return Jimfs.URI_SCHEME;
   }
 
   @Override
   public String type() {
-    return "jimfs";
+    return Jimfs.URI_SCHEME;
   }
 
   @Override

@@ -103,6 +103,7 @@ public class Host {
         // Closing the output stream closes the connection. Different clients will block each other but this
         // is just a hello world sample.
         output.close();
+        enclave.close();
     }
 
     private static void sendArray(DataOutputStream stream, byte[] bytes) throws IOException {

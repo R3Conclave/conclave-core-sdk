@@ -1,0 +1,16 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.conclave.enclave'
+}
+
+dependencies {
+    implementation project(":filesystem:common")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.r3.conclave:conclave-enclave"
+    implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+}

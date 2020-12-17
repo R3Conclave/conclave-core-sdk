@@ -95,7 +95,7 @@ final class PathURLConnection extends URLConnection {
 
     FileTime lastModified = Files.getLastModifiedTime(path);
     String contentType =
-        MoreObjects.firstNonNull(Files.probeContentType(path), DEFAULT_CONTENT_TYPE);
+        MoreObjects.firstNonNull(null, DEFAULT_CONTENT_TYPE);
 
     ImmutableListMultimap.Builder<String, String> builder = ImmutableListMultimap.builder();
     builder.put("content-length", "" + length);

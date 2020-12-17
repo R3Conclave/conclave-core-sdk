@@ -32,6 +32,7 @@ else
 fi
 
 mkdir -p ${HOME}/.gradle
+mkdir -p ${HOME}/.m2
 mkdir -p ${HOME}/.mx
 mkdir -p ${HOME}/.container
 
@@ -158,6 +159,7 @@ fi
        ${GROUP_CARDREADER} \
        ${docker_group_add} \
        -v ${HOME}/.gradle:/gradle \
+       -v ${HOME}/.m2:/home/.m2 \
        -v ${HOME}/.mx:/home/.mx \
        -v ${HOME}/.container:/home \
        -v $CODE_HOST_DIR:$CODE_DOCKER_DIR \

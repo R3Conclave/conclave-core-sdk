@@ -67,3 +67,4 @@ include 'load-test:load-test-runner'
 include 'plugin-enclave-gradle'
 
 include 'graal'
+include 'filesystem'

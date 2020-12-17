@@ -73,7 +73,7 @@ public class ClassLoaderTest {
         // Next, some sanity checks:
 
         // The file system is a JimfsFileSystem
-        assertEquals("com.google.common.jimfs.JimfsFileSystem", fs.getClass().getName());
+        assertEquals("com.r3.conclave.filesystem.JimfsFileSystem", fs.getClass().getName());
 
         // But it is not seen as an instance of JimfsFileSystem here because it was loaded by a
         // different ClassLoader

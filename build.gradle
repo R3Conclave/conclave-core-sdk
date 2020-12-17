@@ -349,6 +349,10 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':containers:conclave-build',
                 description: 'Conclave docker container for native-image builds'
+        ),
+        new PublishedProject(
+                projectPath: ':filesystem',
+                description: 'Jimfs used by SubstrateVM as its default file system'
         )
 ]
 

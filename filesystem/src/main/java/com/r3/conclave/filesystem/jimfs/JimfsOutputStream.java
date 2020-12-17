@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkPositionIndexes;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,7 +32,7 @@ import javax.annotation.concurrent.GuardedBy;
  *
  * @author Colin Decker
  */
-final class JimfsOutputStream extends OutputStream {
+public final class JimfsOutputStream extends OutputStream implements JimfsStream {
 
   @GuardedBy("this")
   @VisibleForTesting
@@ -115,5 +116,23 @@ final class JimfsOutputStream extends OutputStream {
   @GuardedBy("this")
   private boolean isOpen() {
     return file != null;
+  }
+
+  @Override
+  public int available() throws IOException {
+    checkNotClosed();
+    long available = Math.max(file.size() - pos, 0);
+    return Ints.saturatedCast(available);
+  }
+
+  public synchronized long position() {
+    return pos;
+  }
+
+  public synchronized void position(long newPosition) {
+    if (newPosition < 0) {
+      throw new IllegalArgumentException("Cannot set position to a negative value: " + newPosition + '.');
+    }
+    pos = newPosition;
   }
 }

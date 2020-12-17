@@ -19,9 +19,9 @@ package com.r3.conclave.filesystem.jimfs;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.r3.conclave.filesystem.jimfs.Jimfs.URI_SCHEME;
+import static com.r3.conclave.filesystem.jimfs.JimfsFileSystemProvider.DEFAULT_FILE_SYSTEM_PATH;
 
 import com.google.auto.service.AutoService;
-import com.google.common.collect.MapMaker;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -47,6 +47,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -61,7 +62,7 @@ import java.util.concurrent.ConcurrentMap;
  * @since 1.1
  */
 @AutoService(FileSystemProvider.class)
-public final class SystemJimfsFileSystemProvider extends FileSystemProvider {
+public class SystemJimfsFileSystemProvider extends FileSystemProvider {
 
   /**
    * Env map key that maps to the already-created {@code FileSystem} instance in
@@ -87,8 +88,8 @@ public final class SystemJimfsFileSystemProvider extends FileSystemProvider {
    * garbage collected just need to ensure they hold a reference to it somewhere for as long as they
    * need it to stick around.
    */
-  private static final ConcurrentMap<URI, FileSystem> fileSystems =
-      new MapMaker().weakValues().makeMap();
+  public static final ConcurrentMap<URI, FileSystem> fileSystems =
+      new ConcurrentHashMap<>();
 
   /**
    * @deprecated Not intended to be called directly; this class is only for use by Java itself.
@@ -109,7 +110,7 @@ public final class SystemJimfsFileSystemProvider extends FileSystemProvider {
         uri,
         URI_SCHEME);
     checkArgument(
-        isValidFileSystemUri(uri), "uri (%s) may not have a path, query or fragment", uri);
+        isValidFileSystemUri(uri), "uri (%s) may not have a host, query or fragment", uri);
     checkArgument(
         env.get(FILE_SYSTEM_KEY) instanceof FileSystem,
         "env map (%s) must contain key '%s' mapped to an instance of %s",
@@ -146,11 +147,11 @@ public final class SystemJimfsFileSystemProvider extends FileSystemProvider {
 
   /**
    * Returns whether or not the given URI is valid as a base file system URI. It must not have a
-   * path, query or fragment.
+   * host, query or fragment.
    */
   private static boolean isValidFileSystemUri(URI uri) {
     // would like to just check null, but fragment appears to be the empty string when not present
-    return isNullOrEmpty(uri.getPath())
+    return isNullOrEmpty(uri.getHost())
         && isNullOrEmpty(uri.getQuery())
         && isNullOrEmpty(uri.getFragment());
   }
@@ -160,8 +161,12 @@ public final class SystemJimfsFileSystemProvider extends FileSystemProvider {
    */
   private static URI toFileSystemUri(URI uri) {
     try {
+      /*
+       * https://r3-cev.atlassian.net/browse/CON-264 discusses the URI host/path indexing and assesses whether these
+       * changes are useful or if we should return to the original Jimfs behaviour.
+       */
       return new URI(
-          uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), null, null, null);
+          uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), DEFAULT_FILE_SYSTEM_PATH, null, null);
     } catch (URISyntaxException e) {
       throw new AssertionError(e);
     }
@@ -182,12 +187,6 @@ public final class SystemJimfsFileSystemProvider extends FileSystemProvider {
     } catch (InvocationTargetException | IllegalAccessException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Override
-  public FileSystem newFileSystem(Path path, Map<String, ?> env) throws IOException {
-    FileSystemProvider realProvider = path.getFileSystem().provider();
-    return realProvider.newFileSystem(path, env);
   }
 
   /**

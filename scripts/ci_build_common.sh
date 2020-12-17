@@ -18,6 +18,7 @@ fi
 export GRADLE_OPTS="-Dorg.gradle.workers.max=$(nproc) --stacktrace"
 
 mkdir -p /home/$(id -un)/.gradle
+mkdir -p /home/$(id -un)/.m2
 mkdir -p /home/$(id -un)/.ccache
 mkdir -p /home/$(id -un)/.mx
 
@@ -61,6 +62,7 @@ function runDocker() {
        --group-add $(cut -d: -f3 < <(getent group docker)) \
        --ulimit core=512000000 \
        -v /home/$(id -un)/.gradle:/gradle \
+       -v /home/$(id -un)/.m2:/home/.m2 \
        -v /home/$(id -un)/.mx:/home/.mx \
        -v /home/$(id -un)/.ccache:/home/.ccache \
        -v ${CODE_HOST_DIR}:${CODE_DOCKER_DIR} \

@@ -55,7 +55,7 @@ final class PollingWatchService extends AbstractWatchService {
    */
   private static final ThreadFactory THREAD_FACTORY =
       new ThreadFactoryBuilder()
-          .setNameFormat("com.google.common.jimfs.PollingWatchService-thread-%d")
+          .setNameFormat("com.r3.conclave.filesystem.jimfs.PollingWatchService-thread-%d")
           .setDaemon(true)
           .build();
 

@@ -118,7 +118,17 @@ open class NativeImage @Inject constructor(
         // "-H:AlignedHeapChunkSize=4096",
         "-R:MaxHeapSize=" + calculateMaxHeapSize(GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())),
         "-R:StackSize=" + calculateMaxStackSize(),
-        "--enable-all-security-services"
+        "--enable-all-security-services",
+        /*
+         * Explicitly set Jimfs classes and its guava dependency to initialize at build time,
+         * otherwise NativeImage claims they were unintentionally initialized at build time and errors.
+         * These classes are being initialized at build time since the new default filesystem is being
+         * instantiated during Graal's build.
+         */
+        "--initialize-at-build-time=com.r3.conclave.shaded.com.google.common",
+        "--initialize-at-build-time=com.r3.conclave.filesystem.jimfs",
+        "-H:-AddAllFileSystemProviders",
+        "--features=com.oracle.svm.core.jdk.DefaultFileSystemFeature"
     )
 
     private val compilerOptions get() = listOf(

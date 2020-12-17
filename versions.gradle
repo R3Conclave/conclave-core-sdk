@@ -24,4 +24,5 @@ ext {
     djvm_version = '1.0'
     protobuf_version = '3.5.1'
     protobuf_plugin_version = '0.8.12'
+    mockito_version = "3.6.0"
 }

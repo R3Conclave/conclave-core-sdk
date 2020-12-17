@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.util.UUID;
 
 /**
@@ -75,7 +74,7 @@ public final class Jimfs {
   /**
    * The URI scheme for the Jimfs file system ("jimfs").
    */
-  public static final String URI_SCHEME = "jimfs";
+  public static final String URI_SCHEME = "file";
 
   private Jimfs() {}
 
@@ -127,7 +126,7 @@ public final class Jimfs {
    */
   public static FileSystem newFileSystem(String name, Configuration configuration) {
     try {
-      URI uri = new URI(URI_SCHEME, name, null, null);
+      URI uri = new URI(URI_SCHEME, null, name, null);
       return newFileSystem(uri, configuration);
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
@@ -153,7 +152,7 @@ public final class Jimfs {
       // loads SystemJimfsFileSystemProvider using ServiceLoader. See
       // https://github.com/google/jimfs/issues/18 for gory details.
       ImmutableMap<String, ?> env = ImmutableMap.of(FILE_SYSTEM_KEY, fileSystem);
-      FileSystems.newFileSystem(uri, env, SystemJimfsFileSystemProvider.class.getClassLoader());
+      JimfsFileSystemProvider.instance().newFileSystem(uri, env);
 
       return fileSystem;
     } catch (IOException e) {

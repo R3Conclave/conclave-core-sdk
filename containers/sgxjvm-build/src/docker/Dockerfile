@@ -28,7 +28,6 @@ RUN add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
 
 # Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
 # last 5 packages installed below)
@@ -71,7 +70,6 @@ RUN apt-get update -y && apt-get install -y \
     virtualenv \
     zip \
     zlib1g-dev \
-    kubectl \
     docker-ce \
     libsgx-quote-ex \
     libsgx-urts \
@@ -152,3 +150,4 @@ RUN pip3 install wheel
 # Without setting the locale to UTF-8 some python3 modules just refuse to work.
 ENV LC_ALL              C.UTF-8
 ENV LANG                C.UTF-8
+

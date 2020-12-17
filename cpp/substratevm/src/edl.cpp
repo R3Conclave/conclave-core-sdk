@@ -44,13 +44,7 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     enclave_trace(">>> Enclave\n");
 
     using namespace r3::conclave;
-    auto &jvm = Jvm::instance();
-    auto jniEnv = jvm.attach_current_thread();
-    if (!jniEnv) {
-        if (!jvm.is_alive()) {
-            throw std::runtime_error("Attempt to attach a new thread after enclave destruction has started");
-        }
-    }
+    auto jniEnv = Jvm::instance().jniEnv();
 
     // Make sure this enclave has determined the host shared data address
     EnclaveSharedData::instance().init();

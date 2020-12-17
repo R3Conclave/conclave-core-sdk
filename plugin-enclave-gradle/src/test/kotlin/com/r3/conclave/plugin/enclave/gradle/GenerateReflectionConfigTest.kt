@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.plugin.enclave.gradle.GenerateReflectionConfig.Companion.DEFAULT_CLASSES
 import com.r3.conclave.plugin.enclave.gradle.util.GradleRunnerUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.TaskOutcome
@@ -27,11 +28,11 @@ class GenerateReflectionConfigTest {
     fun incrementalBuild() {
         var task = gradleRunner.build().task(":$taskName")
         assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(File(reflectConfigPath).readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
+        assertThat(File(reflectConfigPath).readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(DEFAULT_CLASSES + listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
 
         task = gradleRunner.build().task(":$taskName")
         assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
-        assertThat(File(reflectConfigPath).readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
+        assertThat(File(reflectConfigPath).readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(DEFAULT_CLASSES + listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
     }
 
     @Test
@@ -39,12 +40,12 @@ class GenerateReflectionConfigTest {
         var task = gradleRunner.build().task(":$taskName")
         assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
         val file = File(reflectConfigPath)
-        assertThat(file.readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
+        assertThat(file.readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(DEFAULT_CLASSES + listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
 
         assertTrue(file.delete())
 
         task = gradleRunner.build().task(":$taskName")
         assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(File(reflectConfigPath).readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
+        assertThat(File(reflectConfigPath).readBytes()).isEqualTo(GenerateReflectionConfig.generateContent(DEFAULT_CLASSES + listOf("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")).toByteArray())
     }
 }

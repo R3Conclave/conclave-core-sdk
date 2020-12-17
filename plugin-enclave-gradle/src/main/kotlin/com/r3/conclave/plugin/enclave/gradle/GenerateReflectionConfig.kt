@@ -5,12 +5,19 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
-import java.lang.StringBuilder
 import java.nio.file.Files
 import javax.inject.Inject
 
 open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
+        private val JIMFS_CLASSES = listOf(
+                "com.r3.conclave.filesystem.jimfs.Handler",
+                "com.r3.conclave.filesystem.jimfs.JimfsFileSystem",
+                "com.r3.conclave.filesystem.jimfs.SystemJimfsFileSystemProvider"
+        )
+
+        val DEFAULT_CLASSES = JIMFS_CLASSES
+
         @JvmStatic
         fun generateContent(classNames: List<String>): String {
             val builder = StringBuilder("[${System.lineSeparator()}")
@@ -42,7 +49,7 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
     val reflectionConfig: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val content = generateContent(listOf(enclaveClass.get()))
+        val content = generateContent(JIMFS_CLASSES + enclaveClass.get())
         Files.write(reflectionConfig.get().asFile.toPath(), content.toByteArray())
     }
 

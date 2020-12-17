@@ -1,0 +1,41 @@
+plugins {
+    id 'com.github.johnrengelman.shadow'
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:29.0-jre'
+    implementation 'com.ibm.icu:icu4j:51.2'
+    implementation 'com.google.auto.service:auto-service:1.0-rc2'
+    implementation 'com.google.code.findbugs:jsr305:2.0.1'
+    testImplementation 'junit:junit:4.13.1'
+    testImplementation 'com.google.guava:guava-testlib:29.0-jre'
+    testImplementation 'com.google.truth:truth:0.27'
+}
+
+description = 'Jimfs'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+/*
+ * Relocate guava packages which are forcing the use of initialize-at-build-time in NativeImage.
+ * This way, even if user code depends on guava, they should be able to use initialize-at-run-time.
+ * ICU is being relocated to avoid conflicts with Graal's version of ICU.
+ */
+shadowJar {
+    dependencies {
+        include(dependency('com.google.guava:guava:29.0-jre'))
+        include(dependency('com.ibm.icu:icu4j:51.2'))
+    }
+    relocate('com.google.common', 'com.r3.conclave.shaded.com.google.common')
+    relocate('com.ibm.icu', 'com.r3.conclave.shaded.com.ibm.icu')
+    archiveClassifier = ''
+}
+
+tasks.withType(Test) {
+    // Jimfs tests are broken due to changes to make it the default file system for Graal.
+    if (!project.hasProperty('runJimfsTests')) {
+        exclude '*'
+    }
+}

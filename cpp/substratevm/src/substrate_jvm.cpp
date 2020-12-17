@@ -166,4 +166,15 @@ Jvm& Jvm::instance() {
     return result;
 }
 
+std::shared_ptr<graal_isolatethread_t> Jvm::jniEnv() {
+    auto &jvm = instance();
+    auto jniEnv = jvm.attach_current_thread();
+    if (!jniEnv) {
+        if (!jvm.is_alive()) {
+            throw std::runtime_error("Attempt to attach a new thread after enclave destruction has started");
+        }
+    }
+    return jniEnv;
+}
+
 }}

@@ -106,6 +106,9 @@ add_executable(jvm_enclave_avian_partial
         src/singleton_jvm.cpp
         src/debug_utils.cpp
         src/edl.cpp
+        src/fcntl.cpp
+        src/sys_stat.cpp
+        src/unistd.cpp
         ${BOOT_JAR_O_PATH}
         ${JAVAHOME_JAR_O_PATH})
 set_target_properties(jvm_enclave_avian_partial PROPERTIES LINKER_LANGUAGE C)

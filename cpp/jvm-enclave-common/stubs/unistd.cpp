@@ -3,6 +3,7 @@
 //
 #include "vm_enclave_layer.h"
 #include "file_manager.h"
+#include "unistd.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
@@ -13,11 +14,17 @@ STUB(geteuid);
 STUB(getgid);
 STUB(gethostname);
 STUB(lseek);
-STUB(lseek64);
 STUB(lstat);
 STUB(pathconf);
 STUB(readlink);
 STUB(_exit);
+STUB(fchown);
+STUB(lchown);
+STUB(chown);
+STUB(fchmod);
+STUB(symlink);
+STUB(__xmknod);
+STUB(link);
 
 extern "C" {
 
@@ -28,6 +35,7 @@ extern "C" {
 extern unsigned long __HeapSize;
 extern unsigned long __ImageBase;
 unsigned long heap_size = (unsigned long)((unsigned long long)&__HeapSize - (unsigned long long)&__ImageBase);
+off64_t lseek64_impl(int fd, off64_t offset, int whence);
 
 int access(const char *pathname, int) {
     // SubstrateVM checks for access to the random device. Just let that
@@ -45,22 +53,28 @@ int access(const char *pathname, int) {
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
     conclave::File* file = conclave::FileManager::instance().fromHandle(fd);
     if (file) {
-        enclave_trace("read(%s)\n", file->filename().c_str());
+        enclave_trace("pread(%s)\n", file->filename().c_str());
         return file->read((unsigned char*)buf, count, offset);
     }
+
+    ssize_t read = pread_impl(fd, buf, count, offset);
+    if (read != -1) {
+        return (ssize_t)read;
+    }
+
     errno = -EPERM;
-    enclave_trace("read()\n");
+    enclave_trace("pread()\n");
     return (ssize_t)-1;
 }
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
     conclave::File* file = conclave::FileManager::instance().fromHandle(fd);
     if (file) {
-        enclave_trace("write(%s)\n", file->filename().c_str());
+        enclave_trace("pwrite(%s)\n", file->filename().c_str());
         return file->write((const unsigned char*)buf, count, offset);
-    } 
-    enclave_trace("write(%d)\n", fd);
-    return (ssize_t)-1;
+    }
+    enclave_trace("pwrite(%d)\n", fd);
+    return pwrite_impl(fd, buf, count, offset);
 }
 
 ssize_t pread64(int fd, void *buf, size_t count, off_t offset) {
@@ -72,16 +86,38 @@ ssize_t pwrite64(int fd, const void *buf, size_t count, off_t offset) {
 }
 
 ssize_t read(int fd, void* buf, size_t count) {
-    return pread(fd, buf, count, 0);
+    conclave::File* file = conclave::FileManager::instance().fromHandle(fd);
+    if (file) {
+        enclave_trace("read(%s)\n", file->filename().c_str());
+        return file->read((unsigned char*)buf, count, 0);
+    }
+
+    ssize_t read = read_impl(fd, buf, count);
+    if (read != -1) {
+        return (ssize_t)read;
+    }
+
+    errno = -EPERM;
+    enclave_trace("read()\n");
+    return (ssize_t)-1;
 }
 
 ssize_t write(int fd, const void *buf, size_t count) {
-    return pwrite(fd, buf, count, 0);
+    conclave::File* file = conclave::FileManager::instance().fromHandle(fd);
+    if (file) {
+        enclave_trace("write(%s)\n", file->filename().c_str());
+        return file->write((const unsigned char*)buf, count, 0);
+    }
+    enclave_trace("write(%d)\n", fd);
+    return write_impl(fd, buf, count);
 }
 
 int close(int handle) {
     enclave_trace("close\n");
-    conclave::FileManager::instance().close(handle);
+    if (!conclave::FileManager::instance().close(handle)) {
+        return 0;
+    }
+    close_impl(handle);
     return 0;
 }
 
@@ -197,6 +233,11 @@ pid_t vfork() {
 int execve(const char* pathname, char* const argv[], char* const envp[]) {
     errno = EACCES;
     return -1;
+}
+
+off64_t lseek64(int fd, off64_t offset, int whence) {
+    enclave_trace("lseek64\n");
+    return lseek64_impl(fd, offset, whence);
 }
 
 }

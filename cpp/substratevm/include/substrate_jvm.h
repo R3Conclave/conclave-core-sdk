@@ -49,6 +49,11 @@ public:
      */
     bool is_alive();
 
+    /**
+      * Returns a shared pointer to the jniEnv or throws a runtime error if the enclave is shutting down
+      */
+    static std::shared_ptr<graal_isolatethread_t> jniEnv();
+
 private:
     // Constructed via instance()
     explicit Jvm();

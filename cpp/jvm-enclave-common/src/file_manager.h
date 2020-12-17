@@ -100,14 +100,14 @@ public:
      *
      * @param file The file to close.
      */
-    void close(const File* file);
+    int close(const File* file);
 
     /**
      * Close a previously opened file.
      *
      * @param handle The handle of the file to close.
      */
-    void close(int handle);
+    int close(int handle);
 
     /**
      * Get a file from its handle.
@@ -134,7 +134,6 @@ public:
     */
     bool exists(std::string filename);
 
-private:
     int allocateHandle();
 };
 

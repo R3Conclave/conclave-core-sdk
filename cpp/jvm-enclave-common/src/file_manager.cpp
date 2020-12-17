@@ -93,19 +93,22 @@ File* FileManager::open(const std::string& filename) {
     return file;
 }
 
-void FileManager::close(const File* file) {
+int FileManager::close(const File* file) {
     if (file) {
-        close(file->handle());
+        return close(file->handle());
     }
+    return -1;
 }
 
-void FileManager::close(int handle) {
+int FileManager::close(int handle) {
     std::lock_guard<std::mutex> lock(file_mutex_);
     auto file = files_.find(handle);
     if (file != files_.end()) {
         delete file->second;
         files_.erase(file);
+        return 0;
     }
+    return -1;
 }
 
 File* FileManager::fromHandle(int handle) {
