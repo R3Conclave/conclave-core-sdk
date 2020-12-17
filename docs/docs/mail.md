@@ -125,7 +125,7 @@ Let's call the protocol ID, unencrypted headers and envelope the *prologue*.
 
 At the core of Mail's security is the handshake. It consists of the data needed to do an elliptic curve Diffie-Hellman
 calculation and derive a unique (per mail) AES/GCM key, using the 
-[Noise protocol specification](https://noiseprotocol.org/noise.org). 
+[Noise protocol specification](https://noiseprotocol.org/noise.html). 
 
 AES/GCM is an *authenticated* encryption mechanism. That means the key is used not only to encrypt data, but also 
 calculate a special hash called a "tag" that allows detection of modifications to the encrypted data. This matters 
