@@ -19,7 +19,6 @@ import java.security.PublicKey
 //       Figure out the request-with-response, request-with-no-response API.
 // TODO: Research how best to buffer messages to disk for unacknowledged mails (log with confirms/deletes)
 // TODO: Implement support for very large mails (seekable access).
-// TODO: Implement size padding properly.
 
 /**
  * Access to the headers on a mail.
@@ -153,6 +152,10 @@ class MutableMail(
      * closing a message size side channel that could give away hints about the content.
      */
     var minSize: Int = 0
+        set(value) {
+            require(minSize >= 0) { "minSize cannot be negative" }
+            field = value
+        }
 
     /**
      * Increments the [sequenceNumber] field by one. Not thread safe.
@@ -191,7 +194,7 @@ class MutableMail(
     fun encrypt(): ByteArray {
         val header = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation)
         val output = ByteArrayOutputStream()
-        val stream = MailEncryptingStream(output, destinationKey, header, privateKey)
+        val stream = MailEncryptingStream(output, destinationKey, header, privateKey, minSize)
         stream.write(bodyAsBytes)
         stream.close()
         return output.toByteArray()

@@ -2,6 +2,7 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.*
 import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readExactlyNBytes
@@ -13,9 +14,20 @@ import javax.crypto.BadPaddingException
 import javax.crypto.ShortBufferException
 
 // Utils for encoding a 16 bit unsigned value in big endian.
+private fun ByteArray.writeShort(offset: Int, value: Int) {
+    this[offset] = (value shr 8).toByte()
+    this[offset + 1] = value.toByte()
+}
+
 private fun OutputStream.writeShort(value: Int) {
     write((value ushr 8) and 0xFF)
     write(value and 0xFF)
+}
+
+private fun ByteArray.readShort(offset: Int): Int {
+    val b1 = this[offset].toInt() and 0xFF
+    val b2 = this[offset + 1].toInt() and 0xFF
+    return (b1 shl 8) or b2
 }
 
 /**
@@ -45,20 +57,26 @@ private fun OutputStream.writeShort(value: Int) {
  *                             you encrypted the message. Only provide one if it's stable and the public part would
  *                             be recognised or remembered by the enclave, otherwise a dummy key meaning 'anonymous'
  *                             will be used instead.
+ * @param minSize              Pad the end of the stream to make sure the number of encrypted bytes is at least this amount.
  */
 class MailEncryptingStream(
         out: OutputStream,
         private val destinationPublicKey: PublicKey,
         private val header: EnclaveMailHeaderImpl,
-        private val senderPrivateKey: PrivateKey?
+        private val senderPrivateKey: PrivateKey?,
+        private val minSize: Int
 ) : FilterOutputStream(out) {
     companion object {
-        internal const val MAX_PAYLOAD_LENGTH = Noise.MAX_PACKET_LEN - 16
+        internal const val MAX_PLAINTEXT_LENGTH = Noise.MAX_PACKET_LEN - 16
+        // The payload defined as the user bytes plus any padding of zeros. It does not include the length of the user
+        // bytes, even though that is encrypted with the payload.
+        internal const val MAX_PAYLOAD_LENGTH = MAX_PLAINTEXT_LENGTH - 2
     }
 
     private var cipherState: CipherState? = null
     private val buffer = ByteArray(Noise.MAX_PACKET_LEN)
     private var bufferPosition = 0
+    private var payloadBytesWritten = 0
 
     // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
     // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
@@ -141,7 +159,7 @@ class MailEncryptingStream(
 
     override fun write(b: Int) {
         buffer[bufferPosition++] = b.toByte()
-        writePacketFromBufferIfFull()
+        writePacketIfBufferFull()
     }
 
     /**
@@ -161,55 +179,58 @@ class MailEncryptingStream(
             val remainingLength = endOffset - currentOffset
             if (remainingLength == 0) break
             val length = remainingLength.coerceAtMost(MAX_PAYLOAD_LENGTH - bufferPosition)
-            if (length == MAX_PAYLOAD_LENGTH) {
-                // If the current chunk can fit entirely into a packet, avoid the unnecessary copy into the internal buffer
-                // and encrypt it directly from the source.
-                writePacket(b, currentOffset, length)
-            } else {
-                System.arraycopy(b, currentOffset, buffer, bufferPosition, length)
-                bufferPosition += length
-                writePacketFromBufferIfFull()
-            }
+            System.arraycopy(b, currentOffset, buffer, bufferPosition, length)
+            bufferPosition += length
+            writePacketIfBufferFull()
             currentOffset += length
         }
     }
 
-    private fun writePacketFromBufferIfFull() {
+    private fun writePacketIfBufferFull() {
         if (bufferPosition == MAX_PAYLOAD_LENGTH) {
-            writePacketFromBuffer()
+            writePacket()
         }
     }
 
     override fun close() {
-        // First write out any remaining bytes into the penultimate packet.
+        // First write out any remaining user bytes.
         if (bufferPosition > 0) {
-            writePacketFromBuffer()
+            writePacket()
         }
-        // Write the terminator packet: an encryption of the empty byte array. This lets the other side know we
+        // Then continually write out padding packets (which contain no user bytes) until the required minSize is reached.
+        // Having identical packets with just zeros is not a problem since Noise makes sure there is a unique IV for each
+        // packet.
+        while (payloadBytesWritten < minSize) {
+            writePacket()
+        }
+        // Finally write the terminator packet: an encryption of an empty payload. This lets the other side know we
         // intended to end the stream and there's no MITM maliciously truncating our packets.
-        writePacketFromBuffer()
+        writePacket()
         // And propagate the close.
         super.close()
     }
 
     /**
-     * Write out an encrypted packet for the given plaintext to the underlying stream. The packet is prefixed by the
-     * ciphertext length.
+     * Write out an encrypted packet of the current state of the buffer, with added padding where necessary. The length
+     * of the user bytes is appended to the end of the padding and is encrypted as well. The packet is prefixed by the
+     * ciphertext length .
      */
-    private fun writePacket(plaintext: ByteArray, offset: Int, length: Int) {
+    private fun writePacket() {
         val cipherState = maybeHandshake()
-        val encryptedLength = cipherState.encryptWithAd(null, plaintext, offset, buffer, 0, length)
-        check(encryptedLength == length + cipherState.macLength)
+        val remainingPayloadLength = MAX_PAYLOAD_LENGTH - bufferPosition
+        val paddingLength = (minSize - payloadBytesWritten).coerceIn(0, remainingPayloadLength)
+        // Append zeros to the end as padding towards reaching minSize.
+        val payloadLength = bufferPosition + paddingLength
+        buffer.fill(0, fromIndex = bufferPosition, toIndex = payloadLength)
+        // Append the user bytes length to the end of the payload so that it's encrypted with it.
+        buffer.writeShort(offset = payloadLength, value = bufferPosition)
+        val plaintextLength = payloadLength + 2
+        val encryptedLength = cipherState.encryptWithAd(null, buffer, 0, buffer, 0, plaintextLength)
+        check(encryptedLength == plaintextLength + cipherState.macLength)
         out.writeShort(encryptedLength)
         out.write(buffer, 0, encryptedLength)
         out.flush()
-    }
-
-    /**
-     * Write out an encrypted packet for the internal buffer to the underlying stream.
-     */
-    private fun writePacketFromBuffer() {
-        writePacket(plaintext = buffer, offset = 0, length = bufferPosition)
+        payloadBytesWritten += payloadLength
         bufferPosition = 0  // Reset the buffer for the next packet.
     }
 }
@@ -333,9 +354,9 @@ class MailDecryptingStream(
     }
 
     private val encryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
-    private val currentDecryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Current decrypted packet.
-    private var currentReadPosition = 0 // How far through the decrypted packet we got.
-    private var currentPacketLength = 0 // Real length of data in currentDecryptedBuffer.
+    private val currentDecryptedBuffer = ByteArray(MAX_PLAINTEXT_LENGTH) // Current decrypted packet.
+    private var currentUserBytesIndex = 0 // How far through the decrypted packet we got.
+    private var currentUserBytesLength = 0 // Real length of user bytes in currentDecryptedBuffer.
 
     /** To get [mark] back, wrap this stream in a [BufferedInputStream]. */
     override fun markSupported(): Boolean {
@@ -343,44 +364,55 @@ class MailDecryptingStream(
     }
 
     override fun read(): Int {
-        maybeHandshake()
-        if (currentReadPosition == currentPacketLength) {
+        while (currentUserBytesIndex == currentUserBytesLength) {
             // We reached the end of the current in memory decrypted packet so read another from the stream.
+            // We do this in a loop so that we can skip over packets which are just padding.
             readNextPacket()
         }
-        return if (currentReadPosition == -1)
+        return if (currentUserBytesIndex == -1)
             -1             // We reached the terminator packet and shouldn't read further.
         else
-            currentDecryptedBuffer[currentReadPosition++].toInt() and 0xFF
+            currentDecryptedBuffer[currentUserBytesIndex++].toInt() and 0xFF
     }
 
     private fun readNextPacket() {
-        // Read the length, which includes the MAC tag.
-        val cipherState = cipherState!!
+        val cipherState = maybeHandshake()
         val input = `in`
-        val packetLen: Int = readUnsignedShort()
-        if (packetLen < cipherState.macLength)
-            error("Packet length $packetLen is less than MAC length ${cipherState.macLength}")
+        // Read the length, which includes the MAC tag.
+        val packetLength: Int = readUnsignedShort()
+        if (packetLength < cipherState.macLength)
+            error("Packet length $packetLength is less than MAC length ${cipherState.macLength}")
 
         // Swallow the next packet, blocking until we got it.
         try {
-            input.readExactlyNBytes(encryptedBuffer, packetLen)
+            input.readExactlyNBytes(encryptedBuffer, packetLength)
         } catch (e: EOFException) {
             // We shouldn't run out of data before reaching the terminator packet, that could be a MITM attack.
             error("Stream ended without a terminator marker. Truncation can imply a MITM attack.")
         }
 
         // Now we can decrypt it.
-        currentPacketLength = try {
-            cipherState.decryptWithAd(null, encryptedBuffer, 0, currentDecryptedBuffer, 0, packetLen)
+        val plaintextLength = try {
+            cipherState.decryptWithAd(null, encryptedBuffer, 0, currentDecryptedBuffer, 0, packetLength)
         } catch (e: ShortBufferException) {
             // Data was possibly corrupted.
             throw IOException(e)
         } catch (e: BadPaddingException) {
             throw IOException(e)
         }
-        // Have we reached the terminator packet?
-        currentReadPosition = if (currentPacketLength == 0) -1 else 0
+        // The plaintext has a user bytes length field.
+        if (plaintextLength < 2) {
+            error("Invalid plaintext length of $plaintextLength")
+        }
+
+        val payloadLength = plaintextLength - 2
+        // The user bytes length is the last two bytes of the plaintext (see writePacket).
+        currentUserBytesLength = currentDecryptedBuffer.readShort(offset = payloadLength)
+        if (currentUserBytesLength > payloadLength) {
+            error("Invalid user bytes length")
+        }
+        // Check if this is the terminator packet, which is defined as a packet with no user bytes or padding
+        currentUserBytesIndex = if (payloadLength == 0) -1 else 0
     }
 
     override fun skip(n: Long): Long {
@@ -424,8 +456,8 @@ class MailDecryptingStream(
         return i
     }
 
-    private fun maybeHandshake() {
-        if (cipherState != null) return
+    private fun maybeHandshake(): CipherState {
+        cipherState?.let { return it }
         handshakeFailure?.let { throw it }
         try {
             // We ignore prologue extensions for forwards compatibility.
@@ -438,15 +470,18 @@ class MailDecryptingStream(
                 val split: CipherStatePair = handshake.split()
                 split.receiverOnly()
                 check(handshake.action == HandshakeState.COMPLETE)
-                cipherState = split.receiver
+                val cipherState = split.receiver
+                this.cipherState = cipherState
+                return cipherState
             }
         } catch (e: Exception) {
-            handshakeFailure = if (e is IOException) e else IOException(e)
+            val handshakeFailure = if (e is IOException) e else IOException(e)
+            this.handshakeFailure = handshakeFailure
+            throw handshakeFailure
         } finally {
             // No longer need the private key now we've established the session key.
             privateKey = null
         }
-        handshakeFailure?.let { throw it }
     }
 
     private fun setupHandshake(prologue: Prologue): HandshakeState {

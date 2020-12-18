@@ -3,6 +3,7 @@ package com.r3.conclave.mail.internal
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PAYLOAD_LENGTH
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.utilities.internal.readFully
 import org.assertj.core.api.Assertions.*
@@ -36,6 +37,8 @@ class MailStreamsTest {
                 MAX_PAYLOAD_LENGTH - 1,
                 MAX_PAYLOAD_LENGTH + 0,
                 MAX_PAYLOAD_LENGTH + 1,
+                MAX_PLAINTEXT_LENGTH + 0,
+                MAX_PLAINTEXT_LENGTH + 1,
                 Noise.MAX_PACKET_LEN - 1,
                 Noise.MAX_PACKET_LEN + 0,
                 Noise.MAX_PACKET_LEN + 1,
@@ -87,7 +90,7 @@ class MailStreamsTest {
         val data = ByteArray(dataSize).also(Noise::random)
 
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, publicKey, header, senderPrivateKey).use { encrypt ->
+        MailEncryptingStream(baos, publicKey, header, senderPrivateKey, 0).use { encrypt ->
             block(encrypt, data)
         }
         val encrypted = baos.toByteArray()
@@ -130,7 +133,7 @@ class MailStreamsTest {
     @Test
     fun headers() {
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null, 0).use { it.write(msg) }
         val encrypted = baos.toByteArray()
         assertNotEquals(-1, String(encrypted).indexOf(header.topic),
                 "Could not locate the unencrypted header data in the output bytes.")
@@ -141,7 +144,7 @@ class MailStreamsTest {
     @Test
     fun `not able to read stream if private key not provided`() {
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null, 0).use { it.write(msg) }
         val encrypted = baos.toByteArray()
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream())
@@ -153,7 +156,7 @@ class MailStreamsTest {
     @Test
     fun `provide private key after reading header`() {
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null, 0).use { it.write(msg) }
         val encrypted = baos.toByteArray()
         val decryptingStream = MailDecryptingStream(encrypted.inputStream(), privateKey = null)
         assertThat(decryptingStream.header).isEqualTo(header)
@@ -168,7 +171,7 @@ class MailStreamsTest {
     fun `setPrivateKey can detect corruption in header`() {
         val baos = ByteArrayOutputStream()
         val header = header.copy(topic = "topic")
-        MailEncryptingStream(baos, publicKey, header, null).use { it.write(msg) }
+        MailEncryptingStream(baos, publicKey, header, null, 0).use { it.write(msg) }
         val encrypted = baos.toByteArray()
 
         val topicIndex = String(encrypted).indexOf("topic")
@@ -184,9 +187,18 @@ class MailStreamsTest {
         }.`is`(throwableWithMailCorruptionErrorMessage)
     }
 
-    private fun encryptMessage(senderPrivateKey: PrivateKey? = null): ByteArray {
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `min size`(minSize: Int) {
+        val encrypted = encryptMessage(minSize = minSize)
+        assertThat(encrypted).hasSizeGreaterThanOrEqualTo(minSize)
+        val stream = decrypt(encrypted)
+        assertThat(stream.header).isEqualTo(header)
+    }
+
+    private fun encryptMessage(senderPrivateKey: PrivateKey? = null, minSize: Int = 0): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream(baos, publicKey, header, senderPrivateKey)
+        val encrypt = MailEncryptingStream(baos, publicKey, header, senderPrivateKey, minSize)
         encrypt.write(msg)
         encrypt.close()
         return baos.toByteArray()

@@ -1,9 +1,9 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -94,11 +94,10 @@ class MailTests {
     }
 
     @Test
-    @Disabled("not implemented yet")
     fun sizePadding() {
         val mutableMail = MutableMail(message1, bob.public)
         mutableMail.minSize = 10 * 1024
         val encrypted = mutableMail.encrypt()
-        assertTrue(encrypted.size >= 10 * 1024)
+        assertThat(encrypted).hasSizeGreaterThanOrEqualTo(10 * 1024)
     }
 }
