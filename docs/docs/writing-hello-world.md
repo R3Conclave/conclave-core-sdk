@@ -931,3 +931,6 @@ static void startup() throws EnclaveLoadException {
 ```gradlew -PenclaveMode=debug host:test```
 
 Note that native tests are located in the host module while mock tests in the enclave module.
+
+To run tests on a non-Linux machine you can use Docker, which manages Linux VMs for you. See the instructions for
+[compiling and running the host](tutorial.md#running-the-host) for more information.

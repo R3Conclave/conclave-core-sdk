@@ -421,7 +421,7 @@ public final class Curve25519 {
         // that Curve25519 requires.
         //
         // The high bit in a Curve25519 private key must be zero. This forces the private key to be less than the
-        // curve order (the number of points that exist on the elliptic curve). Because a public key is a point on the
+        // curve order (the number of points that exist on the elliptic curve). Because a public key is a point on the
         // curve derived from the private key, we can't have more private keys than there are actual equivalent points.
         //
         // The second high bit must be 1. This is because Curve25519 uses the Montgomery Ladder algorithm, which must

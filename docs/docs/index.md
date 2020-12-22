@@ -51,6 +51,12 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
 
 ## Release notes
 
+### Beta 5
+
+1. :jigsaw: **New feature!** A new script is provided to make it easier to run your application inside a Docker container
+   on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine.
+1. The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
+
 ### Beta 4
 
 1. :jigsaw: **New feature!** Conclave now supports building [GraalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/)
