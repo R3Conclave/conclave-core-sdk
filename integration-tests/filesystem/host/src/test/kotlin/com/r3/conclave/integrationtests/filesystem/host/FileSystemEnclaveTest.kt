@@ -1,8 +1,10 @@
+package com.r3.conclave.integrationtests.filesystem.host
+
 import com.google.protobuf.ByteString
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.filesystem.proto.Request
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.integrationtests.filesystem.common.proto.Request
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import java.util.concurrent.atomic.AtomicInteger
@@ -11,7 +13,7 @@ open class FileSystemEnclaveTest {
 
     companion object {
         val uid = AtomicInteger()
-        lateinit var enclaveHost : EnclaveHost
+        private lateinit var enclaveHost : EnclaveHost
         private var referenceCounter = 0
 
         @BeforeAll
@@ -21,7 +23,7 @@ open class FileSystemEnclaveTest {
                 if (++referenceCounter > 0) {
                     val spid = OpaqueBytes.parse(System.getProperty("conclave.spid"))
                     val attestationKey = checkNotNull(System.getProperty("conclave.attestation-key"))
-                    enclaveHost = EnclaveHost.load("com.r3.conclave.filesystem.FileSystemEnclave")
+                    enclaveHost = EnclaveHost.load("com.r3.conclave.integrationtests.filesystem.enclave.FileSystemEnclave")
                     enclaveHost.start(AttestationParameters.EPID(spid, attestationKey), null)
                 }
             }

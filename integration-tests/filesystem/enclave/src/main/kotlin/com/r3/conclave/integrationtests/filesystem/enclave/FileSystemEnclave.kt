@@ -1,13 +1,12 @@
-package com.r3.conclave.filesystem
+package com.r3.conclave.integrationtests.filesystem.enclave
 
 import com.google.protobuf.Int32Value
 import com.google.protobuf.Int64Value
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.filesystem.proto.Request
-import com.r3.conclave.filesystem.proto.StringList
+import com.r3.conclave.integrationtests.filesystem.common.proto.Request
+import com.r3.conclave.integrationtests.filesystem.common.proto.StringList
 import sun.nio.fs.DefaultFileSystemProvider
 import java.io.*
-import java.lang.IllegalArgumentException
 import java.net.URL
 import java.nio.channels.ByteChannel
 import java.nio.file.FileSystems

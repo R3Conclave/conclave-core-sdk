@@ -1,7 +1,9 @@
-import FilesTest.Companion.filesDelete
-import FilesTest.Companion.filesDeleteNonExistingFile
-import FilesTest.Companion.filesWrite
-import com.r3.conclave.filesystem.proto.Request
+package com.r3.conclave.integrationtests.filesystem.host
+
+import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesDelete
+import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesDeleteNonExistingFile
+import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesWrite
+import com.r3.conclave.integrationtests.filesystem.common.proto.Request
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

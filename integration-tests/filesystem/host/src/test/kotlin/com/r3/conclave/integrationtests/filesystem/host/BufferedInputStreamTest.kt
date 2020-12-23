@@ -1,5 +1,7 @@
+package com.r3.conclave.integrationtests.filesystem.host
+
 import com.google.protobuf.Int32Value
-import com.r3.conclave.filesystem.proto.Request
+import com.r3.conclave.integrationtests.filesystem.common.proto.Request
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.io.BufferedInputStream

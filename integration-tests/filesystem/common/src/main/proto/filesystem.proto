@@ -1,7 +1,7 @@
 syntax = "proto2";
 
 option java_multiple_files = true;
-option java_package = "com.r3.conclave.filesystem.proto";
+option java_package = "com.r3.conclave.integrationtests.filesystem.common.proto";
 
 message Request {
     enum Type {

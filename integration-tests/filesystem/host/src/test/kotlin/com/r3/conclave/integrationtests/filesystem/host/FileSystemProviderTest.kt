@@ -1,5 +1,7 @@
-import com.r3.conclave.filesystem.proto.Request
-import com.r3.conclave.filesystem.proto.StringList
+package com.r3.conclave.integrationtests.filesystem.host
+
+import com.r3.conclave.integrationtests.filesystem.common.proto.Request
+import com.r3.conclave.integrationtests.filesystem.common.proto.StringList
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

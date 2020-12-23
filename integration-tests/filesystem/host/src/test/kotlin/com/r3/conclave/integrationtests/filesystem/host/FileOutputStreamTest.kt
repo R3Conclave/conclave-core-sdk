@@ -1,7 +1,9 @@
-import FileInputStreamTest.Companion.fileInputStreamNonExistingFile
-import FilesTest.Companion.filesDelete
-import FilesTest.Companion.filesReadAllBytes
-import com.r3.conclave.filesystem.proto.Request
+package com.r3.conclave.integrationtests.filesystem.host
+
+import com.r3.conclave.integrationtests.filesystem.host.FileInputStreamTest.Companion.fileInputStreamNonExistingFile
+import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesDelete
+import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesReadAllBytes
+import com.r3.conclave.integrationtests.filesystem.common.proto.Request
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.io.FileOutputStream
