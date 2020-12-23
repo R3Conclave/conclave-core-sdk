@@ -25,9 +25,10 @@ import java.security.PublicKey
 class MailHostTest {
     companion object {
         private val messageBytes = "message".toByteArray()
+        private val keyPairGenerator = Curve25519KeyPairGenerator()
     }
 
-    private val keyPair = Curve25519KeyPairGenerator().generateKeyPair()
+    private val keyPair = keyPairGenerator.generateKeyPair()
     private val echo by lazy { MockHost.loadMock<MailEchoEnclave>() }
     private val noop by lazy { MockHost.loadMock<NoopEnclave>() }
 
@@ -102,6 +103,19 @@ class MailHostTest {
         // Seq nums of different topics are independent
         val secondTopic = buildMail(noop).also { it.topic = "another-topic" }.encrypt()
         noop.deliverMail(100, secondTopic, "test")
+
+        // Seq nums from different senders are independent
+        val secondSender = buildMail(noop).also { it.senderPrivateKey = keyPairGenerator.generateKeyPair().private }.encrypt()
+        noop.deliverMail(100, secondSender, "test")
+    }
+
+    @Test
+    fun `sequence numbers must start from zero`() {
+        noop.start(null, null)
+        val encrypted1 = buildMail(noop, "message 1".toByteArray()).also { it.sequenceNumber = 1 }.encrypt()
+        assertThatThrownBy {
+            noop.deliverMail(100, encrypted1, "test")
+        }.hasMessageContaining("Sequence number must start from zero, attempted delivery of 1")
     }
 
     @Test
@@ -125,7 +139,7 @@ class MailHostTest {
         // posting mail from inside a local call using an EnclaveInstanceInfo.
         class Enclave1 : Enclave() {
             override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
-                val outbound = createMail(mail.authenticatedSender!!, "hello".toByteArray())
+                val outbound = createMail(mail.authenticatedSender, "hello".toByteArray())
                 postMail(outbound, routingHint!!)
                 acknowledgeMail(id)
             }
@@ -148,8 +162,8 @@ class MailHostTest {
             private var previousSender: PublicKey? = null
             override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
                 previousSender = mail.authenticatedSender
-                postMail(createMail(mail.authenticatedSender!!, "hello".toByteArray()), null)
-                postMail(createMail(mail.authenticatedSender!!, "world".toByteArray()), null)
+                postMail(createMail(mail.authenticatedSender, "hello".toByteArray()), null)
+                postMail(createMail(mail.authenticatedSender, "world".toByteArray()), null)
                 acknowledgeMail(id)
             }
             override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
@@ -267,7 +281,7 @@ class MailHostTest {
         val mail = host.enclaveInstanceInfo.createMail(body)
         mail.topic = "topic-123"
         mail.sequenceNumber = 0
-        mail.privateKey = keyPair.private
+        mail.senderPrivateKey = keyPair.private
         return mail
     }
 

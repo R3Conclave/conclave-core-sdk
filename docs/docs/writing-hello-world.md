@@ -571,19 +571,20 @@ to tell the host the enclave is done processing the mail if it doesn't want to r
 more in future tutorials. In this simple tutorial we reply immediately so don't need to use this feature, and thus we
 ignore the ID.
 
+#### Mail headers
+
 The second parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
 also exposes some other header fields:
 
-1. The _authenticated sender public key_. This is the public key of the client that sent the mail. It's called 
-   "authenticated" because the encryption used by Conclave means you can trust that the mail was encrypted by an entity
-   holding the private key matching this public key. If your enclave recognises the public key this feature can be used
-   as a form of user authentication.
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
-   can be thought of as equivalent to a URL path or port number.
+   can be thought of as equivalent to a URL path or port number. Topics are scoped per-sender and are not global. The
+   client can send multiple streams of related mail by using a different topic for each stream, and it can do this
+   concurrently.
+1. The _sequence number_. Starting from zero, this must increment by one for every mail delivered on a topic. Conclave will
+   automatically reject messages for which this doesn't hold true, thus ensuring to the client that the stream of related
+   mail is received by the enclave in the order they were sent, and that the host is unable to re-order or drop them.
 1. The _envelope_. This is a slot that can hold any arbitrary byte array the sender likes. It's a holding zone for 
    app specific data that should be authenticated but unencrypted.
-1. The _sequence number_. This must increment by one for every mail delivered on a topic. Conclave will automatically 
-   reject messages for which this doesn't hold true, within the scope of messages seen whilst the enclave is loaded.
 
 **These header fields are available to the host and therefore should not contain secrets**. It may seem odd to have
 data that's unencrypted, but it's often useful for the client, host and enclave to collaborate in various ways related
@@ -591,6 +592,11 @@ to storage and routing of data. Even when the host is untrusted it may still be 
 that is readable by the host and enclave simultaneously, but which the host cannot tamper with. Inside the enclave
 you can be assured that the header fields contain the values set by the client, because they're checked before 
 `receiveMail` is invoked.
+
+In addition to the headers there is also the _authenticated sender public key_. This is the public key of the client that
+sent the mail. Like the body it's encrypted so that the host cannot learn the client identities. It's called "authenticated"
+because the encryption used by Conclave means you can trust that the mail was encrypted by an entity holding the private
+key matching this public key. If your enclave recognises the public key this feature can be used as a form of user authentication.
 
 In this simple tutorial we only care about the body and sender public key. We reverse the bytes in the mail body
 and then create a response mail that will be encrypted to the sender. It contains the reversed bytes. We use the
@@ -823,8 +829,7 @@ classes. In future we may offer support for using the Java 11 JCA types directly
 Now we have a key with which to receive the response, we create a mail to the enclave. This is done using the
 `EnclaveInstanceInfo.createMail` method, which returns a `MutableMail` object. We must set our private key on the mail
 so it's mixed in to the calculations when the mail is encrypted and thus becomes available in `getAuthenticatedSender()`
-inside the enclave: without the call to `setPrivateKey` the authenticated sender will be null. This can sometimes be
-appropriate, if for example, the enclave already knows the sender's private key via some other mechanism.
+inside the enclave.
 
 The sequence number for this newly created mail is zero. That means if we re-run the program twice we'll try to send
 the enclave two mails with the same topic, sender and sequence number. This is invalid: the enclave will reject it as

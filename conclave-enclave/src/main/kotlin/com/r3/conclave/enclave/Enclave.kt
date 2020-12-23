@@ -261,15 +261,15 @@ Received: $attestationReportBody"""
         }
     }
 
+    private data class SenderAndTopic(val sender: PublicKey, val topic: String)
     private class Watermark(var value: Long)
 
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
-        // Maps topics to the highest sequence number seen so far. Seqnos on a topic can start anywhere, but must
-        // increment by one for each delivered mail. It's up to the app to check that a message starts with an
-        // expected sequence number (e.g. zero) to avoid the host dropping initial messages.
-        private val topicSequenceWatermarks = HashMap<String, Watermark>()
+        // Maps sender + topic pairs to the highest sequence number seen so far. Seqnos must start from zero and can only
+        // increment by one for each delivered mail.
+        private val sequenceWatermarks = HashMap<SenderAndTopic, Watermark>()
         private lateinit var sender: Sender
 
         override fun connect(upstream: Sender): EnclaveMessageHandler {
@@ -323,15 +323,18 @@ Received: $attestationReportBody"""
         }
 
         private fun checkMailOrdering(mail: EnclaveMail) {
-            synchronized(topicSequenceWatermarks) {
-                var andReturn = false
-                val highestSeen = topicSequenceWatermarks.computeIfAbsent(mail.topic) {
-                    andReturn = true
-                    Watermark(0)
+            synchronized(sequenceWatermarks) {
+                val key = SenderAndTopic(mail.authenticatedSender, mail.topic)
+                val highestSeen = sequenceWatermarks.computeIfAbsent(key) { Watermark(-1) }
+                // The -1 allows us to check the first mail in this sequence is zero.
+                check(mail.sequenceNumber == highestSeen.value + 1) {
+                    val msg = if (highestSeen.value == -1L) {
+                        "Sequence number must start from zero"
+                    } else {
+                        "Highest sequence number seen is ${highestSeen.value}"
+                    }
+                    "Mail delivered out of order or replayed. $msg, attempted delivery of ${mail.sequenceNumber}"
                 }
-                if (andReturn) return
-                if (mail.sequenceNumber != highestSeen.value + 1)
-                    throw InvalidSequenceException(mail.sequenceNumber, highestSeen.value)
                 highestSeen.value++
             }
         }

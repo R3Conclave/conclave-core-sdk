@@ -1,5 +1,6 @@
 package com.r3.conclave.mail
 
+import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.security.*
 
@@ -30,7 +31,7 @@ class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
 
     override fun toString(): String = "Curve25519PrivateKey()"
 
-    val publicKey get() = Curve25519PublicKey(Noise.createDH("25519").apply { setPrivateKey(encoded, 0) }.publicKey)
+    val publicKey: Curve25519PublicKey get() = privateCurve25519KeyToPublic(this)
 }
 
 /**
@@ -74,4 +75,12 @@ class Curve25519KeyPairGenerator : KeyPairGeneratorSpi() {
         require(keysize == 256) { "keysize must be 256, was $keysize" }
         rng = random
     }
+}
+
+// This is synthetic to hide it from Java apps.
+@JvmSynthetic
+internal fun privateCurve25519KeyToPublic(privateKey: PrivateKey): Curve25519PublicKey {
+    val dh: DHState = Noise.createDH("25519")
+    dh.setPrivateKey(privateKey.encoded, 0)
+    return Curve25519PublicKey(dh.publicKey)
 }

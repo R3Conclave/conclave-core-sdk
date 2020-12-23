@@ -41,7 +41,7 @@ class ApiKotlinConsumerTest {
 
         val mutableMail: MutableMail = host.enclaveInstanceInfo.createMail("abc".toByteArray())
         val keyPair: KeyPair = Curve25519KeyPairGenerator().generateKeyPair()
-        mutableMail.privateKey = keyPair.private
+        mutableMail.senderPrivateKey = keyPair.private
         mutableMail.topic = ApiKotlinConsumerTest::class.java.simpleName
         val encryptedMail: ByteArray = mutableMail.encrypt()
 

@@ -23,12 +23,14 @@ along with the encrypted body.
 **Headers.** Mail has unencrypted but authenticated (tamperproof) headers that can be used to link messages together.
 This allows clients to structure a conversation as if they were using a socket, but also hold multiple conversations
 simultaneously. This can be used to implement usage tracking, prioritisation, or other tasks not directly 
-relevant to data processing that the host can assist with (despite its untrusted nature). 
+relevant to data processing that the host can assist with (despite its untrusted nature).
 
 Headers provide strong sequence numbers that are set by the sender and prevent the host re-ordering messages, a 
 "topic" string field that is more useful than a port number (e.g. can identify what it's about, be mapped to
 message queue names), and applications can put their own data in the envelope part of the headers thus enabling 
 hosts to see part of the messages. This can frequently be a useful design pattern.
+
+The headers are described in more detail in the [tutorial](writing-hello-world.md#mail-headers).
 
 **Framing.** A typical need with any socket or stream based transport is to add framing on top, because the application
 really needs to work with messages. In textual protocols framing can be remarkably tricky to get right, as user 
@@ -94,10 +96,10 @@ authenticated such that the enclave can detect if they were tampered with. See b
 
 **Reordering.** The enclave can't directly access any hardware other than the CPU and RAM. That means it can't know
 that messages came from the network card or hard disk in the right order, or that no messages were dropped. 
-Mails include a sequence number in the headers, meaning it is *visible* to the host but can't be tampered with. This
+Mails include a sequence number and topic in the headers, meaning it is *visible* to the host but can't be tampered with. This
 enlists the client as an ally in the enclave's war against the host: the client wants its messages to be delivered in
 the right order and without being dropped. The Conclave runtime checks the sequence numbers in the headers always
-increment before passing the mail to your code.
+increment, on a per-topic basis, before passing the mail to your code.
 
 !!! note
     The host may arbitrarily delay or even refuse to deliver mail, but it can only end the stream of mails early, it can't
@@ -147,17 +149,20 @@ by an `EnclaveInstanceInfo` object, or because the enclave is replying and obtai
 mail. Two public keys is all that's needed for both parties to compute the same AES key, without any man-in-the-middle
 being able to calculate the same value.
 
-The sender may also have a long term "static" public key that the target will recognise. However, at this point we may
-choose to finish the handshake, either because we are sending a mail anonymously or because the target will recognise 
-us in some other manner than our static key. Alternatively, we may now append an encryption of our long term static
-public key and repeat the calculation between the enclave's public key and our static key, generating a new AES/GCM
-key as a result.
+The sender may also have a long term "static" public key that the target will recognise. We append an encryption of this
+public key and repeat the calculation between the enclave's public key and the static key, generating a new AES/GCM key
+as a result.
+
+!!! note
+    Even if the sender doesn't have a static key a random one is generated and used. This is so that every mail
+    has a valid sender value which allows the enclave to ensure mail is ordered per sender (and topic), as discussed
+    [previously](#attacks-on-messaging).
 
 As each step in the handshake progresses, a running hash is maintained that mixes in the hash of the prologue and the
 various intermediate stages. This allows the unencrypted headers to be tamper-proofed against the host as well, because
 the host will not be able to recalculate the authentication tag emitted to the end of the handshake.
 
-Thus, in the case where the sender has a long term keypair, the handshake consists of a random public key, an 
+Thus the handshake consists of a random public key, an 
 authenticated encryption of the sender's public key, and an authentication hash. Once this is done the mail's AES
 key has been computed. The initialization vector for each AES encryption is a counter (an exception will be thrown
 if the mail is so large the counter would wrap around, as that would potentially reveal information for cryptanalysis,

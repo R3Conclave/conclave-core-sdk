@@ -3,12 +3,11 @@ package com.r3.conclave.mail
 import com.r3.conclave.mail.internal.EnclaveMailHeaderImpl
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.MailEncryptingStream
-import com.r3.conclave.mail.internal.noise.protocol.DHState
-import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.SecureRandom
 
 // TODO: Add sample demo code with a simple HTTP binding, document.
 // TODO: Key types probably need to be public or properly wired to JCA - cannot assume they are only retrieved from
@@ -86,12 +85,12 @@ interface EnclaveMailHeader {
  */
 interface EnclaveMail : EnclaveMailHeader {
     /**
-     * The encrypted public key of the sender or null if none provided. This field is authenticated,
+     * The encrypted public key of the sender. This field is authenticated,
      * so only the holder of the corresponding private key can get that public key into
      * this field. Can be used to encrypt a reply back to them, used for user authentication and
      * so on.
      */
-    val authenticatedSender: PublicKey?
+    val authenticatedSender: PublicKey
 
     /**
      * Whatever data was encrypted into the mail by the sender.
@@ -102,7 +101,7 @@ interface EnclaveMail : EnclaveMailHeader {
 /**
  * Mail that's in the process of being built. All mail must have a body and
  * a destination public key which is used to encrypt the body. You may also specify
- * your own [privateKey], the public part of which will be received by the recipient
+ * your own [senderPrivateKey], the public part of which will be received by the recipient
  * in an encrypted and authenticated manner ([EnclaveMail.authenticatedSender]) i.e. others cannot impersonate your key,
  * nor can the enclave host learn what your public key is, only the enclave can.
  *
@@ -120,20 +119,21 @@ interface EnclaveMail : EnclaveMailHeader {
  *
  * @property bodyAsBytes The next content of the mail to encrypt. You can re-assign this and then call [incrementSequenceNumber]
  * and [encrypt] again to generate a new encrypted mail that shares the same properties as the previous.
- * @property destinationKey The public key of the recipient of the encrypted message.
- * @property privateKey The private key of the sender, used for message authentication.
+ * @property destinationPublicKey The public key of the recipient of the encrypted message.
+ * @property senderPrivateKey The private key of the sender, used for message authentication. If a key isn't specified
+ * then one a random one is created.
  */
 class MutableMail(
         override var bodyAsBytes: ByteArray,
-        val destinationKey: PublicKey,
-        var privateKey: PrivateKey? = null
+        val destinationPublicKey: PublicKey,
+        var senderPrivateKey: PrivateKey? = null
 ) : EnclaveMail {
 
     constructor(body: ByteArray, destinationKey: PublicKey) : this(body, destinationKey, null)
 
     init {
         // This is a runtime check so we can switch to JDK11+ types later without breaking our own API.
-        require(destinationKey is Curve25519PublicKey) {
+        require(destinationPublicKey is Curve25519PublicKey) {
             "At this time only Conclave originated Curve25519 public keys may be used."
         }
     }
@@ -174,30 +174,34 @@ class MutableMail(
             }
             field = value
         }
-    override var envelope: ByteArray? = null
-    override val authenticatedSender: PublicKey? get() = privateKey?.let { privateToPublic(it) }
 
-    // Convert to the corresponding public key.
-    private fun privateToPublic(privateKey: PrivateKey): PublicKey {
-        val dh: DHState = Noise.createDH("25519")
-        dh.setPrivateKey(privateKey.encoded, 0)
-        return Curve25519PublicKey(dh.publicKey)
-    }
+    override var envelope: ByteArray? = null
+
+    override val authenticatedSender: PublicKey get() = privateCurve25519KeyToPublic(getSenderKeyOrCreateIfAbsent())
 
     /**
      * Uses the public key provided in the constructor to encrypt the mail. The returned ciphertext will include
      * [sequenceNumber], [topic] and [envelope] in the clear but authenticated (for the recipient only)
-     * as coming from the holder of the [privateKey] (if one was specified).
+     * as coming from the holder of the [senderPrivateKey]. If a sender key isn't specified then a random one is created
+     * and used.
      *
      * @return a ciphertext that can be fed to [Mail.decrypt] to obtain the original mail.
      */
     fun encrypt(): ByteArray {
         val header = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation)
         val output = ByteArrayOutputStream()
-        val stream = MailEncryptingStream(output, destinationKey, header, privateKey, minSize)
+        val stream = MailEncryptingStream(output, destinationPublicKey, header, getSenderKeyOrCreateIfAbsent(), minSize)
         stream.write(bodyAsBytes)
         stream.close()
         return output.toByteArray()
+    }
+
+    private fun getSenderKeyOrCreateIfAbsent(): PrivateKey {
+        return senderPrivateKey ?: Curve25519PrivateKey(rng.generateSeed(32)).also { senderPrivateKey = it }
+    }
+
+    companion object {
+        private val rng = SecureRandom.getInstanceStrong()
     }
 }
 
@@ -244,13 +248,3 @@ object Mail {
         return MailDecryptingStream(encryptedEnclaveMail.inputStream()).header
     }
 }
-
-// TODO: This exception doesn't propagate across enclave boundaries. Figure out exception handling in more detail.
-
-/**
- * Thrown if mail is delivered in a different order to the sequence numbers in the header require. This exception
- * indicates a bug in the host (or a maliciously tampered with host).
- */
-class InvalidSequenceException(val attemptedSequenceNumber: Long, val highestSequenceNumber: Long) :
-        RuntimeException("Mail delivered out of order or replayed. Highest sequence number seen is " +
-                "$highestSequenceNumber, attempted delivery of $attemptedSequenceNumber")

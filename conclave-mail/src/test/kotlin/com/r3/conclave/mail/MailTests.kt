@@ -18,19 +18,15 @@ class MailTests {
 
     @Test
     fun featureCombinations() {
-        encryptDecrypt(withHeaders = false, withSenderAuth = false, withEnvelope = false)
-        encryptDecrypt(withHeaders = true, withSenderAuth = false, withEnvelope = false)
-        encryptDecrypt(withHeaders = false, withSenderAuth = true, withEnvelope = false)
-        encryptDecrypt(withHeaders = true, withSenderAuth = true, withEnvelope = false)
-        encryptDecrypt(withHeaders = false, withSenderAuth = false, withEnvelope = true)
-        encryptDecrypt(withHeaders = true, withSenderAuth = false, withEnvelope = true)
-        encryptDecrypt(withHeaders = false, withSenderAuth = true, withEnvelope = true)
-        encryptDecrypt(withHeaders = true, withSenderAuth = true, withEnvelope = true)
+        encryptDecrypt(withHeaders = false, withEnvelope = false)
+        encryptDecrypt(withHeaders = true, withEnvelope = false)
+        encryptDecrypt(withHeaders = false, withEnvelope = true)
+        encryptDecrypt(withHeaders = true, withEnvelope = true)
     }
 
-    private fun encryptDecrypt(withHeaders: Boolean, withSenderAuth: Boolean, withEnvelope: Boolean) {
+    private fun encryptDecrypt(withHeaders: Boolean, withEnvelope: Boolean) {
         // Test the base case of sending mail from anonymous to Bob without any special headers.
-        val mutableMail = MutableMail(message1, bob.public, alice.private.takeIf { withSenderAuth })
+        val mutableMail = MutableMail(message1, bob.public, alice.private)
         if (withHeaders) {
             mutableMail.sequenceNumber = 5
             mutableMail.topic = "stuff"
@@ -61,7 +57,7 @@ class MailTests {
         val decrypted: EnclaveMail = Mail.decrypt(encrypted, bob.private)
         assertArrayEquals(message1, decrypted.bodyAsBytes)
         assertEnvelope(decrypted)
-        assertEquals(alice.public.takeIf { withSenderAuth }, decrypted.authenticatedSender)
+        assertEquals(alice.public, decrypted.authenticatedSender)
     }
 
     @Test

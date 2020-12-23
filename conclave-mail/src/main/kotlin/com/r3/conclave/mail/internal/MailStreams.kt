@@ -53,17 +53,15 @@ private fun ByteArray.readShort(offset: Int): Int {
  * @param out                  The [OutputStream] to use.
  * @param destinationPublicKey The public key to encrypt the stream to.
  * @param header               If not null, unencrypted data that will be included and authenticated.
- * @param senderPrivateKey     If not null, your private key. The recipient will receive your public key and be sure
- *                             you encrypted the message. Only provide one if it's stable and the public part would
- *                             be recognised or remembered by the enclave, otherwise a dummy key meaning 'anonymous'
- *                             will be used instead.
+ * @param senderPrivateKey     Your private key. The recipient will receive your public key and be sure
+ *                             you encrypted the message.
  * @param minSize              Pad the end of the stream to make sure the number of encrypted bytes is at least this amount.
  */
 class MailEncryptingStream(
         out: OutputStream,
         private val destinationPublicKey: PublicKey,
         private val header: EnclaveMailHeaderImpl,
-        private val senderPrivateKey: PrivateKey?,
+        private val senderPrivateKey: PrivateKey,
         private val minSize: Int
 ) : FilterOutputStream(out) {
     companion object {
@@ -84,7 +82,7 @@ class MailEncryptingStream(
     private fun maybeHandshake(): CipherState {
         cipherState?.let { return it }  // Already set up the stream.
 
-        val protocol = if (senderPrivateKey != null) MailProtocol.SENDER_KEY_TRANSMITTED else MailProtocol.NO_SENDER_KEY
+        val protocol = MailProtocol.SENDER_KEY_TRANSMITTED
         // Noise can be used in various modes, the protocol name is an ASCII string that identifies the settings.
         // We write it here. It looks like this: Noise_X_25519_AESGCM_SHA256
         return HandshakeState(protocol.noiseProtocolName, HandshakeState.INITIATOR).use { handshake ->
@@ -95,11 +93,8 @@ class MailEncryptingStream(
             //
             // The nature of the handshake changes when a sender private key is supplied: we use the X handshake instead
             // of the N handshake. These two types are described in the Noise specification.
-            val localKeyPair: DHState? = handshake.localKeyPair
-            if (senderPrivateKey != null) {
-                // localKeyPair will be non-null due to the selection of the protocol name above.
-                localKeyPair!!.setPrivateKey(senderPrivateKey.encoded, 0)
-            }
+            val localKeyPair = handshake.localKeyPair
+            localKeyPair.setPrivateKey(senderPrivateKey.encoded, 0)
 
             // The prologue can be set to any data we like. Noise won't do anything with it except incorporating the
             // hash into the handshake, thus authenticating it. We use it to achieve two things:
@@ -266,16 +261,17 @@ class MailDecryptingStream(
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
     private var handshakeFailure: IOException? = null
 
+
+    private lateinit var _senderPublicKey: ByteArray
+
     /**
      * Returns the authenticated public key of the sender. This may be useful to understand who sent you the
      * data, if you know the sender's possible public keys in advance.
      */
-    var senderPublicKey: ByteArray? = null
-        private set
-        get() {
-            maybeHandshake()
-            return field
-        }
+    val senderPublicKey: ByteArray get() {
+        maybeHandshake()
+        return _senderPublicKey
+    }
 
     // We have a separate flag to track whether the private key has been provided or not because we want to be able to
     // clear the key as soon as it's not needed.
@@ -290,7 +286,7 @@ class MailDecryptingStream(
         this.privateKey = privateKey
         privateKeyProvided = true
         if (_prologue != null) {
-            // If the header has already been read then make sure it's OK.
+            // If the header has already been read then make sure it's valid.
             maybeHandshake()
         }
     }
@@ -328,7 +324,11 @@ class MailDecryptingStream(
         }
         val prologueStream = prologueBytes.dataStream()
         val prologue = try {
-            val protocol: MailProtocol = protocolValues[prologueStream.readUnsignedByte()]
+            val protocolId = prologueStream.readUnsignedByte()
+            if (protocolId >= protocolValues.size) {
+                error("Invalid protocol ID $protocolId")
+            }
+            val protocol: MailProtocol = protocolValues[protocolId]
             val sequenceNumber = prologueStream.readLong()
             val topic = prologueStream.readUTF()
             val envelope = prologueStream.readLengthPrefixBytes()
@@ -462,10 +462,7 @@ class MailDecryptingStream(
         try {
             // We ignore prologue extensions for forwards compatibility.
             setupHandshake(prologue).use { handshake ->
-                // The sender has the option of whether to authenticate or not. If not, it'll be a Noise_N_ handshake.
-                if (prologue.protocol == MailProtocol.SENDER_KEY_TRANSMITTED) {
-                    senderPublicKey = handshake.remotePublicKey.publicKey
-                }
+                _senderPublicKey = handshake.remotePublicKey.publicKey
                 // Setup done, so retrieve the per-message key.
                 val split: CipherStatePair = handshake.split()
                 split.receiverOnly()
@@ -531,7 +528,7 @@ class MailDecryptingStream(
         return DecryptedEnclaveMail(
                 header.sequenceNumber,
                 header.topic,
-                senderPublicKey?.let(::Curve25519PublicKey),
+                Curve25519PublicKey(senderPublicKey),
                 header.envelope,
                 mailBody
         )
@@ -540,7 +537,7 @@ class MailDecryptingStream(
     private class DecryptedEnclaveMail(
             override val sequenceNumber: Long,
             override val topic: String,
-            override val authenticatedSender: PublicKey?,
+            override val authenticatedSender: PublicKey,
             private val _envelope: ByteArray?,
             private val _bodyAsBytes: ByteArray
     ) : EnclaveMail {
@@ -553,7 +550,7 @@ class MailDecryptingStream(
     }
 }
 
-// We limit the handshakes to just two here, with the same ciphers. Adding new ciphers won't be forwards
+// For now we have one handshake. Any new ones will have to use the same ciphers. Adding new ciphers won't be forwards
 // compatible. The justification is as follows. Curve25519, AESGCM and SHA256 are by this point mature,
 // well tested algorithms that are widely deployed to protect all internet traffic. Although new ciphers
 // are regularly designed, in practice few are every deployed because elliptic curve crypto with AES and SHA2
@@ -581,5 +578,4 @@ enum class MailProtocol(
         val handshakeLength: Int
 ) {
     SENDER_KEY_TRANSMITTED("Noise_X_25519_AESGCM_SHA256", 96),
-    NO_SENDER_KEY("Noise_N_25519_AESGCM_SHA256", 48)
 }

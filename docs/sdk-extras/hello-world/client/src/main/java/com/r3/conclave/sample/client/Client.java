@@ -61,7 +61,7 @@ public class Client {
         // we can send mail to it. We will provide our own private key whilst encrypting, so the enclave
         // gets our public key and can encrypt a reply.
         MutableMail mail = attestation.createMail(toReverse.getBytes(StandardCharsets.UTF_8));
-        mail.setPrivateKey(myKey.getPrivate());
+        mail.setSenderPrivateKey(myKey.getPrivate());
         // Set a random topic, so we can re-run this program against the same server.
         mail.setTopic(UUID.randomUUID().toString());
         byte[] encryptedMail = mail.encrypt();

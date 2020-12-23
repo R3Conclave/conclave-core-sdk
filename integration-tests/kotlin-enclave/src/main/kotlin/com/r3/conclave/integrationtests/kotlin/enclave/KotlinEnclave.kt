@@ -12,7 +12,7 @@ class KotlinEnclave : Enclave() {
 
     override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
         val fromHost = callUntrustedHost(mail.bodyAsBytes.reversedArray())!!
-        val response = createMail(mail.authenticatedSender!!, fromHost)
+        val response = createMail(mail.authenticatedSender, fromHost)
         response.topic = mail.topic
         postMail(response, null)
     }
