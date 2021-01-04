@@ -358,6 +358,15 @@ class EnclaveHostMockTest {
         }
     }
 
+    @Test
+    fun `load enclave with private c'tor`() {
+        checkLeakedCallbacks = false
+        host = MockHost.loadMock<PrivateCtorEnclave>()
+        host.start(null, null)
+    }
+
+    class PrivateCtorEnclave private constructor() : Enclave()
+
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {
         val callback = RecordingCallback()
         val response = callEnclave(bytes, callback)

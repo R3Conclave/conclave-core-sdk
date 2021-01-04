@@ -81,7 +81,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
         //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
         val enclaveClass = Class.forName(enclaveClassName)
-        val enclave = enclaveClass.asSubclass(Enclave::class.java).getConstructor().newInstance()
+        val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }.newInstance()
         return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
