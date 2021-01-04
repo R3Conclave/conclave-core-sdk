@@ -2,20 +2,18 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PAYLOAD_LENGTH
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PLAINTEXT_LENGTH
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PAYLOAD_LENGTH
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.utilities.internal.readFully
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.EOFException
-import java.io.IOException
 import java.security.PrivateKey
 import kotlin.math.ceil
 import kotlin.random.Random
@@ -33,15 +31,15 @@ class MailStreamsTest {
         val dataSizes = intArrayOf(
                 0,
                 1,
-                MAX_PAYLOAD_LENGTH - 1,
-                MAX_PAYLOAD_LENGTH + 0,
-                MAX_PAYLOAD_LENGTH + 1,
-                MAX_PLAINTEXT_LENGTH + 0,
-                MAX_PLAINTEXT_LENGTH + 1,
+                MAX_PACKET_PAYLOAD_LENGTH - 1,
+                MAX_PACKET_PAYLOAD_LENGTH + 0,
+                MAX_PACKET_PAYLOAD_LENGTH + 1,
+                MAX_PACKET_PLAINTEXT_LENGTH + 0,
+                MAX_PACKET_PLAINTEXT_LENGTH + 1,
                 Noise.MAX_PACKET_LEN - 1,
                 Noise.MAX_PACKET_LEN + 0,
                 Noise.MAX_PACKET_LEN + 1,
-                2 * MAX_PAYLOAD_LENGTH,
+                2 * MAX_PACKET_PAYLOAD_LENGTH,
                 50 * 1024 * 1024,
         )
     }
@@ -93,18 +91,71 @@ class MailStreamsTest {
         val encrypted = baos.toByteArray()
 
         // Each packet should be max noise packet size, minus the remainder bytes and the terminator packet.
-        assertThat(getPacketCount(encrypted)).isEqualTo(ceil(data.size.toDouble() / MAX_PAYLOAD_LENGTH).toInt() + 1)
+        assertThat(getPacketCount(encrypted)).isEqualTo(ceil(data.size.toDouble() / MAX_PACKET_PAYLOAD_LENGTH).toInt() + 1)
 
         val decrypted = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey).readFully()
         assertArrayEquals(data, decrypted)
     }
 
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `single byte reads`(dataSize: Int) {
+        testRead(dataSize) { decryptingStream, out ->
+            while (true) {
+                val b = decryptingStream.read()
+                if (b == -1) {
+                    assertThat(decryptingStream.read(ByteArray(0))).isEqualTo(0)
+                    assertThat(decryptingStream.read(ByteArray(1))).isEqualTo(-1)
+                    break
+                }
+                out.write(b)
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `read entire data at once`(dataSize: Int) {
+        testRead(dataSize) { decryptingStream, out ->
+            val buffer = ByteArray(dataSize)
+            val n = decryptingStream.read(buffer)
+            assertThat(n).isEqualTo(dataSize)
+            out.write(buffer)
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("getDataSizes")
+    fun `read in chunks`(dataSize: Int) {
+        testRead(dataSize) { decryptingStream, out ->
+            val n = decryptingStream.copyTo(out, 8192)
+            assertThat(n.toInt()).isEqualTo(dataSize)
+        }
+    }
+
+    private fun testRead(dataSize: Int, block: (MailDecryptingStream, ByteArrayOutputStream) -> Unit) {
+        val data = ByteArray(dataSize).also(Noise::random)
+        val encrypted = encryptMessage(message = data)
+
+        val decryptingStream = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey)
+        val out = ByteArrayOutputStream()
+        block(decryptingStream, out)
+        assertThat(decryptingStream.read()).isEqualTo(-1)
+        decryptingStream.close()
+
+        assertArrayEquals(data, out.toByteArray())
+    }
+
     @Test
     fun truncated() {
         val bytes = encryptMessage()
-        val truncated = bytes.copyOf(bytes.size - 1)
-        val e = assertThrows<IOException> { decrypt(truncated) }
-        assertTrue("Truncated" in e.message!!, e.message!!)
+        for (truncatedSize in bytes.indices) {
+            val truncated = bytes.copyOf(truncatedSize)
+            assertThatIOException()
+                    .describedAs("Truncated size $truncatedSize")
+                    .isThrownBy { decrypt(truncated) }
+                    .withMessageContaining("Corrupt stream or not Conclave Mail.")
+        }
     }
 
     private fun decrypt(src: ByteArray): MailDecryptingStream {
@@ -186,10 +237,11 @@ class MailStreamsTest {
 
     private fun encryptMessage(senderPrivateKey: PrivateKey = Companion.senderPrivateKey,
                                header: EnclaveMailHeaderImpl = Companion.header,
-                               minSize: Int = 0): ByteArray {
+                               minSize: Int = 0,
+                               message: ByteArray = msg): ByteArray {
         val baos = ByteArrayOutputStream()
         val encrypt = MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, senderPrivateKey, minSize)
-        encrypt.write(msg)
+        encrypt.write(message)
         encrypt.close()
         return baos.toByteArray()
     }

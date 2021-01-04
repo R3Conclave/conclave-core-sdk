@@ -3,6 +3,9 @@ package com.r3.conclave.mail
 import com.r3.conclave.mail.internal.EnclaveMailHeaderImpl
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.MailEncryptingStream
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PAYLOAD_LENGTH
+import com.r3.conclave.mail.internal.MailProtocol
+import com.r3.conclave.mail.internal.noise.protocol.Noise.MAX_PACKET_LEN
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.PrivateKey
@@ -189,11 +192,18 @@ class MutableMail(
      */
     fun encrypt(): ByteArray {
         val header = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation)
-        val output = ByteArrayOutputStream()
+        val output = ByteArrayOutputStream(getExpectedSize(header))
         val stream = MailEncryptingStream(output, destinationPublicKey, header, getSenderKeyOrCreateIfAbsent(), minSize)
         stream.write(bodyAsBytes)
         stream.close()
         return output.toByteArray()
+    }
+
+    private fun getExpectedSize(header: EnclaveMailHeaderImpl): Int {
+        val prologueSize = 1 + header.encodedSize()
+        val payloadSize = maxOf(bodyAsBytes.size, minSize)
+        val packetCount = (payloadSize / MAX_PACKET_PAYLOAD_LENGTH) + 1
+        return 2 + prologueSize + MailProtocol.SENDER_KEY_TRANSMITTED.handshakeLength + (packetCount * PACKET_OVERHEAD) + payloadSize
     }
 
     private fun getSenderKeyOrCreateIfAbsent(): PrivateKey {
@@ -201,6 +211,8 @@ class MutableMail(
     }
 
     companion object {
+        private const val PACKET_OVERHEAD = MAX_PACKET_LEN - MAX_PACKET_PAYLOAD_LENGTH
+
         private val rng = SecureRandom.getInstanceStrong()
     }
 }

@@ -2,7 +2,7 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PLAINTEXT_LENGTH
+import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.*
 import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readExactlyNBytes
@@ -65,10 +65,10 @@ class MailEncryptingStream(
         private val minSize: Int
 ) : FilterOutputStream(out) {
     companion object {
-        internal const val MAX_PLAINTEXT_LENGTH = Noise.MAX_PACKET_LEN - 16
+        internal const val MAX_PACKET_PLAINTEXT_LENGTH = Noise.MAX_PACKET_LEN - 16
         // The payload defined as the user bytes plus any padding of zeros. It does not include the length of the user
         // bytes, even though that is encrypted with the payload.
-        internal const val MAX_PAYLOAD_LENGTH = MAX_PLAINTEXT_LENGTH - 2
+        internal const val MAX_PACKET_PAYLOAD_LENGTH = MAX_PACKET_PLAINTEXT_LENGTH - 2
     }
 
     private var cipherState: CipherState? = null
@@ -136,19 +136,7 @@ class MailEncryptingStream(
     private fun computePrologue(protocol: MailProtocol): ByteArray {
         return writeData {
             writeByte(protocol.ordinal)
-            writeLong(header.sequenceNumber)
-            writeUTF(header.topic)
-            writeLengthPrefixBytes(header.envelope)
-            writeLengthPrefixBytes(header.keyDerivation)
-        }
-    }
-
-    private fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray?) {
-        if (bytes != null) {
-            writeShort(bytes.size)
-            write(bytes)
-        } else {
-            writeShort(0)
+            header.encodeTo(this)
         }
     }
 
@@ -173,7 +161,7 @@ class MailEncryptingStream(
         while (true) {
             val remainingLength = endOffset - currentOffset
             if (remainingLength == 0) break
-            val length = remainingLength.coerceAtMost(MAX_PAYLOAD_LENGTH - bufferPosition)
+            val length = remainingLength.coerceAtMost(MAX_PACKET_PAYLOAD_LENGTH - bufferPosition)
             System.arraycopy(b, currentOffset, buffer, bufferPosition, length)
             bufferPosition += length
             writePacketIfBufferFull()
@@ -182,7 +170,7 @@ class MailEncryptingStream(
     }
 
     private fun writePacketIfBufferFull() {
-        if (bufferPosition == MAX_PAYLOAD_LENGTH) {
+        if (bufferPosition == MAX_PACKET_PAYLOAD_LENGTH) {
             writePacket()
         }
     }
@@ -212,7 +200,7 @@ class MailEncryptingStream(
      */
     private fun writePacket() {
         val cipherState = maybeHandshake()
-        val remainingPayloadLength = MAX_PAYLOAD_LENGTH - bufferPosition
+        val remainingPayloadLength = MAX_PACKET_PAYLOAD_LENGTH - bufferPosition
         val paddingLength = (minSize - payloadBytesWritten).coerceIn(0, remainingPayloadLength)
         // Append zeros to the end as padding towards reaching minSize.
         val payloadLength = bufferPosition + paddingLength
@@ -354,7 +342,7 @@ class MailDecryptingStream(
     }
 
     private val encryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
-    private val currentDecryptedBuffer = ByteArray(MAX_PLAINTEXT_LENGTH) // Current decrypted packet.
+    private val currentDecryptedBuffer = ByteArray(MAX_PACKET_PLAINTEXT_LENGTH) // Current decrypted packet.
     private var currentUserBytesIndex = 0 // How far through the decrypted packet we got.
     private var currentUserBytesLength = 0 // Real length of user bytes in currentDecryptedBuffer.
 
@@ -364,15 +352,46 @@ class MailDecryptingStream(
     }
 
     override fun read(): Int {
+        return if (ensureAvailablePacket()) {
+            currentDecryptedBuffer[currentUserBytesIndex++].toInt() and 0xFF
+        } else {
+            -1
+        }
+    }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        val limit = off + len
+
+        if (limit > b.size || off < 0 || len < 0) {
+            throw IndexOutOfBoundsException("$off + $len >= ${b.size}")
+        }
+        if (len == 0) {
+            return 0
+        }
+
+        var index = off
+
+        while (ensureAvailablePacket()) {
+            val length = minOf(currentUserBytesLength - currentUserBytesIndex, limit - index)
+            System.arraycopy(currentDecryptedBuffer, currentUserBytesIndex, b, index, length)
+            currentUserBytesIndex += length
+            index += length
+            if (index == limit) {
+                break
+            }
+        }
+
+        return if (index == off) -1 else index - off
+    }
+
+    private fun ensureAvailablePacket(): Boolean {
         while (currentUserBytesIndex == currentUserBytesLength) {
             // We reached the end of the current in memory decrypted packet so read another from the stream.
             // We do this in a loop so that we can skip over packets which are just padding.
             readNextPacket()
         }
-        return if (currentUserBytesIndex == -1)
-            -1             // We reached the terminator packet and shouldn't read further.
-        else
-            currentDecryptedBuffer[currentUserBytesIndex++].toInt() and 0xFF
+        // We reached the terminator packet and shouldn't read further.
+        return currentUserBytesIndex != -1
     }
 
     private fun readNextPacket() {
@@ -424,36 +443,6 @@ class MailDecryptingStream(
             c++
         }
         return c.toLong()
-    }
-
-    override fun read(b: ByteArray, off: Int, len: Int): Int {
-        // TODO: When we fully target Java 9+ replace with default InputStream.read(byte[], int, int)
-        //       and use Objects.checkFromIndexSize(off, len, b.length);
-        if (off + len > b.size || off < 0 || len < 0)
-            throw IndexOutOfBoundsException("$off + $len >= ${b.size}")
-
-        if (len == 0) {
-            return 0
-        }
-        var c = read()
-        if (c == -1) {
-            return -1
-        }
-        b[off] = c.toByte()
-        var i = 1
-        try {
-            while (i < len) {
-                c = read()
-                if (c == -1) {
-                    break
-                }
-                b[off + i] = c.toByte()
-                i++
-            }
-        } catch (ee: IOException) {
-            // See the spec for InputStream.read(byte[], int, int) to understand this empty catch block.
-        }
-        return i
     }
 
     private fun maybeHandshake(): CipherState {

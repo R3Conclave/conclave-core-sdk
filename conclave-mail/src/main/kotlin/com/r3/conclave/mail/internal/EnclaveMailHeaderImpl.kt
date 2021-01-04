@@ -1,6 +1,7 @@
 package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.EnclaveMailHeader
+import java.io.DataOutputStream
 import java.util.*
 
 /**
@@ -26,6 +27,26 @@ data class EnclaveMailHeaderImpl(
 
         return true
     }
+
+    fun encodeTo(out: DataOutputStream) {
+        out.writeLong(sequenceNumber)
+        out.writeUTF(topic)
+        out.writeLengthPrefixBytes(envelope)
+        out.writeLengthPrefixBytes(keyDerivation)
+    }
+
+    private fun DataOutputStream.writeLengthPrefixBytes(bytes: ByteArray?) {
+        if (bytes != null) {
+            writeShort(bytes.size)
+            write(bytes)
+        } else {
+            writeShort(0)
+        }
+    }
+
+    fun encodedSize(): Int = 8 + 2 + topic.length + envelope.encodedSize() + keyDerivation.encodedSize()
+
+    private fun ByteArray?.encodedSize() = if (this != null) 2 + size else 2
 
     override fun hashCode(): Int {
         var result = sequenceNumber.hashCode()
