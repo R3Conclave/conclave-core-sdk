@@ -150,13 +150,35 @@ pid_t fork() {
 
 char *getcwd(char *buf, size_t size) {
     enclave_trace("getcwd\n");
-    if (!buf) {
-        buf = (char*) malloc(size);
+    const char* root = "/";
+    const size_t minimumSize = strlen(root) + 1;
+
+    if (size == 0 && buf != nullptr) {
+        errno = EINVAL;
+        return nullptr;
     }
+
+    /*
+        As an extension to the POSIX.1-2001 standard, glibc's getcwd() allocates the buffer dynamically using malloc(3) if buf is NULL. In this case, the allocated buffer
+        has the length size unless size is zero, when buf is allocated as big as necessary. The caller should free(3) the returned buffer.
+    */
+    const size_t actualSize = size >= minimumSize ? size : minimumSize;
     if (!buf) {
-        return NULL;
+        buf = (char*) calloc(actualSize, sizeof(char));
+        if (!buf) {
+            errno = ENOMEM;
+            return nullptr;
+        }
     }
-    strncpy(buf, "/", size);
+    else if (size < minimumSize) {
+        /*
+            If the length of the absolute pathname of the current working directory, including the terminating null byte, exceeds size bytes, NULL is returned, and errno is set
+            to ERANGE; an application should check for this error, and allocate a larger buffer if necessary.
+        */
+        errno = ERANGE;
+        return nullptr;
+    }
+    strncpy(buf, root, actualSize);
     return buf;
 }
 
