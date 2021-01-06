@@ -9,7 +9,7 @@ index fb7c359..9630d36 100644
 +        },
 +        "JIMFS": {
 +            "sha1": "5b311b772390a79700d1a0693d282cb88a19fb19",
-+            "urls": ["file:../../../../filesystem/build/libs/filesystem-0.5-SNAPSHOT.jar"]
++            "urls": ["file:filesystem.jar"]
          }
      },
  

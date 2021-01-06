@@ -7,10 +7,7 @@ def filesystemShadowJarTask = (Task) project.tasks.getByPath(':filesystem:shadow
 task cloneAndPatchRepository(type: Exec) {
     dependsOn filesystemShadowJarTask
     inputs.files("clone.sh", "patches/graal_${graalMajorMinorVersion}.patch", filesystemShadowJarTask.getOutputs())
-    commandLine "${project.projectDir}/clone.sh",
-            "$graalMajorMinorVersion",
-            "${project.version.toString()}",
-            "${project.version.toString().replace(".","\\.")}"
+    commandLine "${project.projectDir}/clone.sh", "$graalMajorMinorVersion", filesystemShadowJarTask.getOutputs().files.singleFile.toPath().toString()
     outputs.dir("${project.buildDir}/graal")
     workingDir "${project.buildDir}"
 }
