@@ -59,16 +59,19 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         val capabilitiesDiagnostics: String get() = Native.getCpuCapabilities()
 
         // This is synthetic to hide it from Java apps.
+        // The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
+        // thus effectively converting them into Java classes.
+        // TODO: Fold mock mode into the conclave-host module and make it a 'first class' mode. It will eliminate the need for this.
         @JvmSynthetic
-        internal fun create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
+        internal fun __internal_create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
             val host = EnclaveHost()
-            init(host, enclaveHandle)
+            __internal_init(host, enclaveHandle)
             return host
         }
 
         // This is synthetic to hide it from Java apps.
         @JvmSynthetic
-        internal fun init(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
+        internal fun __internal_init(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
             host.enclaveHandle = enclaveHandle
         }
 

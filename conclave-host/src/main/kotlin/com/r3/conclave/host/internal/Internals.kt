@@ -8,9 +8,9 @@ import java.nio.file.Path
 
 fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {
     val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ThrowingErrorHandler())
-    return EnclaveHost.create(enclaveHandle)
+    return EnclaveHost.__internal_create(enclaveHandle)
 }
 
 fun initHost(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
-    EnclaveHost.init(host, enclaveHandle)
+    EnclaveHost.__internal_init(host, enclaveHandle)
 }

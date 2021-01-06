@@ -408,10 +408,10 @@ if (includeNative) {
                 exclude '**/*.kotlin_builtins'
                 // Everyone needs to have their import lines modified to the new shaded ones.
                 relocate 'com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson'
-                relocate('kotlin', 'com.r3.conclave.shaded.kotlin') {
-                    // Allow the Kotlin compiler on client apps to recognise any internal members and thus prevent access to them
-                    exclude 'kotlin.Metadata'
-                }
+                // Get rid of the Kotlin related stuff. We don't allow the metadata annotation to leak through because
+                // it causes the IntelliJ plugin to crash, but this does unfortunately mean internal members will appear
+                // in auto-completion for Kotlin users. TODO: Hide internal APIs better.
+                relocate('kotlin', 'com.r3.conclave.shaded.kotlin')
                 // Replace the output of the "jar" task with this one.
                 archiveClassifier = ''
             }

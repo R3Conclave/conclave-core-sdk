@@ -12,8 +12,7 @@ object DJVMMemoryURLStreamHandler {
     private const val URL_SCHEME = "memory"
 
     private val memoryURLStreamHandler = MemoryURLStreamHandler(URL_SCHEME)
-    private val handlers = listOf(memoryURLStreamHandler)
-            .associateBy(MemoryURLStreamHandler::scheme)
+    private val handlers = listOf(memoryURLStreamHandler).associateBy { it.scheme }
 
     init {
         URL.setURLStreamHandlerFactory { protocol -> handlers[protocol] }
