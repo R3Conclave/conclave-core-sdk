@@ -1,0 +1,25 @@
+pluginManagement {
+    repositories {
+        maven {
+            if (conclaveRepo == null)
+                throw new Exception("Make sure the 'conclaveRepo' setting exists in gradle.properties, or your \$HOME/gradle.properties file. See the Conclave tutorial on https://docs.conclave.net")
+            else if (!new File(conclaveRepo, "com").isDirectory()) {
+                conclaveRepo = "/repo"
+                if (!new File("/repo/com").isDirectory())
+                    throw new Exception("Neither $conclaveRepo nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory. See the Conclave tutorial on https://docs.conclave.net")
+            }
+            url = file(conclaveRepo)
+        }
+        // Add standard repositories back.
+        gradlePluginPortal()
+        jcenter()
+        mavenCentral()
+    }
+
+    plugins {
+        id 'com.r3.conclave.enclave' version conclaveVersion apply false
+    }
+}
+
+include 'enclave'
+include 'workflows'

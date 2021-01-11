@@ -50,7 +50,7 @@ fi
 # `PROJECT_VERSION` should only be passed to the container if set, even if empty, otherwise leave it unset.
 # This should be in tune with the CI configurations.
 PROJECT_VERSION_FLAGS=""
-if [ -n "${PROJECT_VERSION-}" ] || [ -n "${PROJECT_VERSION+empty}" = empty ]; then
+if [ -n "${PROJECT_VERSION-}" ] || [ -n "${PROJECT_VERSION+empty}" = "empty" ]; then
     PROJECT_VERSION_FLAGS="-e PROJECT_VERSION=${PROJECT_VERSION}"
 fi
 

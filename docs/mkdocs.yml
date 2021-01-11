@@ -15,6 +15,7 @@ nav:
         - Compiling and running: tutorial.md
         - Writing hello world: writing-hello-world.md
         - Container Gradle: container-gradle.md
+        - Writing a CorDapp: writing-cordapps.md
     - Conclave architecture: architecture.md
     - Mail: mail.md
     - Threads: threads.md

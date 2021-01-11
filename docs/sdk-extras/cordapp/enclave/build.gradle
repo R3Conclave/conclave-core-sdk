@@ -1,0 +1,29 @@
+plugins {
+    id 'com.r3.conclave.enclave'
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-enclave"
+    testImplementation "com.r3.conclave:conclave-testing"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+
+    simulation {
+        signingType = privateKey
+        signingKey = file("sample_private_key.pem")
+    }
+
+    debug {
+        signingType = privateKey
+        signingKey = file("sample_private_key.pem")
+    }
+
+    release {
+        signingType = privateKey
+        signingKey = file("sample_private_key.pem")
+    }
+}
