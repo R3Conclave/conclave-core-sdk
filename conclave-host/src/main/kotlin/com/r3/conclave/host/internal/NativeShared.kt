@@ -42,4 +42,6 @@ object NativeShared {
     }
 
     external fun checkPlatformSupportsEnclaves(enableSupport: Boolean)
+
+    external fun getCpuFeatures(): Long
 }

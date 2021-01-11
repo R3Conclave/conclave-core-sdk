@@ -15,6 +15,14 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_NativeShared_checkPlatformSupportsEnclaves
   (JNIEnv *, jobject, jboolean);
 
+/*
+ * Class:     com_r3_conclave_host_internal_NativeShared
+ * Method:    getCpuFeatures
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_com_r3_conclave_host_internal_NativeShared_getCpuFeatures
+  (JNIEnv *, jobject);
+
 #ifdef __cplusplus
 }
 #endif

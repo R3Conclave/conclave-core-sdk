@@ -24,6 +24,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
+import kotlin.collections.LinkedHashSet
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -56,7 +57,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * debugging, logging. Don't try to parse the output.
          */
         @JvmStatic
-        val capabilitiesDiagnostics: String get() = Native.getCpuCapabilities()
+        val capabilitiesDiagnostics: String get() = Native.getCpuCapabilitiesSummary()
 
         // This is synthetic to hide it from Java apps.
         // The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
@@ -79,9 +80,10 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * Load the signed enclave for the given enclave class name.
          *
          * @throws IllegalArgumentException if there is no enclave file for the given class name.
-         * @throws IllegalStateException if multiple enclave files were found for the given class name.
          * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
          *                              not support hardware enclaves or if enclave support is disabled.
+         * @throws MockOnlySupportedException if the host OS is not Linux or if the CPU doesn't support even SIMULATION
+         *                                    enclaves.
          */
         @JvmStatic
         @Throws(EnclaveLoadException::class)
@@ -100,7 +102,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 // the current platform - this will happen if the user tries to load an enclave
                 // on a platform other than Linux.
                 enclaveFile.deleteQuietly()
-                throw EnclaveLoadException("Enclaves may only be loaded on Linux hosts: ${e.message}")
+                throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts: ${e.message}")
             } catch (e: Exception) {
                 enclaveFile.deleteQuietly()
                 throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
@@ -157,8 +159,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * @param enableSupport Set to true to attempt to enable enclave support on the platform if support is
          * currently disabled.
          *
-         * @throws EnclaveLoadException if enclave support is not available on the platform. The exception message
-         * gives a detailed reason why enclaves are not supported.
+         * @throws EnclaveLoadException if HARDWARE enclave support is not available on the platform. The exception
+         * message gives a detailed reason why HARDWARE enclaves are not supported.
+         *
+         * @throws MockOnlySupportedException if mock only enclave is supported on the platform. The exception message
+         * gives a detailed reason why mock only enclaves are supported.
          */
         @JvmStatic
         @Throws(EnclaveLoadException::class)
@@ -167,14 +172,26 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 // Note the EnclaveLoadMode does not matter in this case as we are always checking the hardware
                 NativeShared.checkPlatformSupportsEnclaves(enableSupport)
             } catch (e: EnclaveLoadException) {
-                throw e
+                // Retrieve all CPU features.
+                val features = NativeApi.cpuFeatures
+                // Check if SSE4.1 (required even for SIMULATION) is available.
+                if (!features.contains(CpuFeature.SSE4_1)) {
+                    // Improve the error message, listing all available features.
+                    val sb = StringBuilder()
+                    sb.append(e.message)
+                    sb.append(features.joinToString(prefix = "\nCPU features: ", separator = ", ",
+                    postfix = "\nReason: SSE4.1 is required but was not found."))
+                    throw MockOnlySupportedException(sb.toString())
+                } else {
+                    throw e
+                }
             } catch (e: UnsatisfiedLinkError) {
                 // We get an unsatisifed link error if the native library could not be loaded on
                 // the current platform - this will happen if the user tries to load an enclave
                 // on a platform other than Linux.
-                throw EnclaveLoadException("Enclaves may only be loaded on Linux hosts.")
+                throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts.")
             } catch (e: Exception) {
-                throw EnclaveLoadException("Unable to check platform support", e)
+                throw IllegalStateException("Unable to check platform support", e)
             }
         }
     }

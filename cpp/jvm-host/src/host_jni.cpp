@@ -405,9 +405,9 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
 }
 
 namespace r3::conclave {
-std::string getCpuCapabilities();
+std::string getCpuCapabilitiesSummary();
 }
 
-JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilities(JNIEnv *jniEnv, jobject) {
-    return jniEnv->NewStringUTF(r3::conclave::getCpuCapabilities().c_str());
+JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary(JNIEnv *jniEnv, jobject) {
+    return jniEnv->NewStringUTF(r3::conclave::getCpuCapabilitiesSummary().c_str());
 }

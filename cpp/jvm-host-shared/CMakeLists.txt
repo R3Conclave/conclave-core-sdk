@@ -21,10 +21,11 @@ SET(CMAKE_BUILD_RPATH "$ORIGIN")
 
 get_target_property(LINUX_BUILD_ARTIFACT_DIR linux-sgx-ext BUILD_ARTIFACT_DIR)
 
-add_library(jvm_host_shared SHARED
-        src/host_jni_shared.cpp
-        src/enclave_platform.cpp
-        )
+# Sources 
+file(GLOB sources "src/*.cpp" "src/*.c")
+
+add_library(jvm_host_shared SHARED ${sources})
+
 target_include_directories(jvm_host_shared PUBLIC
         include
         ${JNI_INCLUDE_DIRS})

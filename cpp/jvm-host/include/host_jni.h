@@ -97,10 +97,10 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
- * Method:    getCpuCapabilities
+ * Method:    getCpuCapabilitiesSummary
  * Signature: ()Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilities
+JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary
   (JNIEnv *, jobject);
 
 #ifdef __cplusplus

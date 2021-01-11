@@ -26,7 +26,7 @@ public class HostTest {
     static void startup() throws EnclaveLoadException {
         try {
             enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
-        } catch (UnsatisfiedLinkError e) {
+        } catch (EnclaveLoadException e) {
             enclave = MockHost.loadMock(com.r3.conclave.sample.enclave.ReverseEnclave.class);
         }
         enclave.start(new AttestationParameters.DCAP(), null);

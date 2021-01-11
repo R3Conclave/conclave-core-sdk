@@ -8,7 +8,7 @@ Before you can deploy an enclave to use real SGX hardware you need to configure 
 
 !!! note
     To just *develop* enclaves it's sufficient to have any Linux or Windows host, as the simulation mode requires no 
-    special machine setup.
+    special machine setup. However, Intel requires that the CPU must at least support [SSE4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1).
 
 ## Hardware support
 

@@ -34,7 +34,7 @@ void native_cpuid(unsigned int *eax, unsigned int *ebx,
 "**************************************************************************\n"
 
 namespace r3::conclave {
-std::string getCpuCapabilities()
+std::string getCpuCapabilitiesSummary()
 {
   /* This program prints some CPUID information and tests the SGX support of the CPU */
 

@@ -5,6 +5,7 @@ import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.host.MailCommand;
+import com.r3.conclave.host.MockOnlySupportedException;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -32,6 +33,9 @@ public class Host {
         try {
             EnclaveHost.checkPlatformSupportsEnclaves(true);
             System.out.println("This platform supports enclaves in simulation, debug and release mode.");
+        } catch (MockOnlySupportedException e) {
+            System.out.println("This platform only supports mock enclaves: " + e.getMessage());
+            System.exit(1);
         } catch (EnclaveLoadException e) {
             System.out.println("This platform does not support hardware enclaves: " + e.getMessage());
         }
