@@ -26,12 +26,9 @@ import com.r3.conclave.common.internal.attestation.QuoteVerifier.ErrorStatus.*
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getUnsignedInt
 import com.r3.conclave.utilities.internal.x509Certs
+import java.security.cert.*
 import java.security.GeneralSecurityException
 import java.security.Signature
-import java.security.cert.CertPath
-import java.security.cert.CertificateFactory
-import java.security.cert.X509CRL
-import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.*
 
@@ -71,7 +68,8 @@ object QuoteVerifier {
     private const val QUOTE_VERSION = 3
 
     private const val SGX_ROOT_CA_CN_PHRASE = "SGX Root CA"
-    private const val SGX_INTERMEDIATE_CN_PHRASE = "CA"
+    private const val SGX_INTERMEDIATE_CN_PLATFORM_PHRASE = "SGX PCK Platform CA"
+    private const val SGX_INTERMEDIATE_CN_PROCESSOR_PHRASE = "SGX PCK Processor CA"
     private const val SGX_PCK_CN_PHRASE = "SGX PCK Certificate"
     private const val SGX_TCB_SIGNING_CN_PHRASE = "SGX TCB Signing"
 
@@ -143,7 +141,8 @@ object QuoteVerifier {
         /// 4.1.2.4.4
         verify(SGX_PCK_CN_PHRASE in pckCert.subjectDN.name, INVALID_PCK_CERT)
         /// 4.1.2.4.6
-        verify(SGX_INTERMEDIATE_CN_PHRASE in pckCrl.issuerDN.name, INVALID_PCK_CRL)
+        verify(SGX_INTERMEDIATE_CN_PLATFORM_PHRASE in pckCrl.issuerDN.name
+                || SGX_INTERMEDIATE_CN_PROCESSOR_PHRASE in pckCrl.issuerDN.name, INVALID_PCK_CRL)
         /// 4.1.2.4.6
         verify(pckCrl.issuerDN.name == pckCert.issuerDN.name, INVALID_PCK_CRL)
         /// 4.1.2.4.7
@@ -204,11 +203,10 @@ object QuoteVerifier {
         val (pckCert, intermediateCert, rootCert) = pckCertPath.x509Certs
 
         verify(SGX_ROOT_CA_CN_PHRASE in rootCert.subjectDN.name, SGX_ROOT_CA_MISSING)
-        verify(SGX_INTERMEDIATE_CN_PHRASE in intermediateCert.subjectDN.name, SGX_INTERMEDIATE_CA_MISSING)
+        verify(SGX_INTERMEDIATE_CN_PLATFORM_PHRASE in intermediateCert.subjectDN.name
+                || SGX_INTERMEDIATE_CN_PROCESSOR_PHRASE in intermediateCert.subjectDN.name, SGX_INTERMEDIATE_CA_MISSING)
         verify(SGX_PCK_CN_PHRASE in pckCert.subjectDN.name, SGX_PCK_MISSING)
 
-        // meaning 'root' is self-signed
-        verifyAgainstIssuer(rootCert, rootCert, SGX_ROOT_CA_INVALID_ISSUER)
         // meaning 'root' is signed with 'trusted root'
         // if all good, root and trusted root are actually the same certificate
         verifyAgainstIssuer(rootCert, trustedRootCert, SGX_ROOT_CA_INVALID_ISSUER)
