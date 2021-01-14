@@ -28,6 +28,10 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
     }
 
     fun getInt(id: String): Int {
+        val type = type(id)
+        if (type != INT_TAG && type != ENUM_TAG)
+            throw IllegalArgumentException("value[$id] is not an integer or an enum: type=$type")
+
         val position = _values.getValue(id)
         var result = 0
         repeat(position.length) { i ->
@@ -37,16 +41,16 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
         return result
     }
 
-    fun type(id: String?): Int {
+    internal fun type(id: String?): Int {
         val i = _types[id]
         return i ?: 0
     }
 
-    fun keys(): Set<String> {
+    internal fun keys(): Set<String> {
         return _values.keys
     }
 
-    fun types(): Set<String> {
+    internal fun types(): Set<String> {
         return _types.keys
     }
 
@@ -60,8 +64,7 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
         var value: ValuePos? = null
         var type = 0
         while (offset < end) {
-            val tag = readUByte()
-            when (tag) {
+            when (val tag = readUByte()) {
                 SEQ_TAG -> {
                     decode()
                     key = null
@@ -78,6 +81,12 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
                 else -> throw IllegalArgumentException(String.format("unknown tag 0x%02X", tag))
             }
             if (key != null && value != null) {
+                if (_values.containsKey(key))
+                    throw java.lang.IllegalArgumentException("values: duplicate key $key")
+
+                if (_types.containsKey(key)) // this should never happen - _values and _types are in-sync
+                    throw java.lang.RuntimeException("types: duplicate key $key")
+
                 _values[key] = value
                 _types[key] = type
             }

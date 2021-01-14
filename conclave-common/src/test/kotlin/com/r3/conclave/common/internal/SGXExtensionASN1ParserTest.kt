@@ -79,4 +79,19 @@ class SGXExtensionASN1ParserTest {
         assertThat(parser.keys()).contains("0.1")
         assertThat(parser.getBytes("0.1")).isEqualTo(ByteBuffer.wrap(byteArrayOf(3)))
     }
+
+    @Test
+    fun `duplicate key @ values`() {
+        val data = parseHex("0412301030060601010201033006060101020105") // [0.1]=3, [0.1]=5
+        val exception = assertThrows<IllegalArgumentException> { SGXExtensionASN1Parser(data) }
+        assertThat(exception.message).contains("values: duplicate key")
+    }
+
+    @Test
+    fun `getting Int from OctoString fails`() {
+        val data = parseHex("040A30083006060101040130") // [0.1]='0'
+        val parser = SGXExtensionASN1Parser(data)
+        val exception = assertThrows<IllegalArgumentException> { parser.getInt("0.1") }
+        assertThat(exception.message).contains("is not an integer or an enum")
+    }
 }
