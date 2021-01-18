@@ -9,10 +9,6 @@ abstract class ConclaveTask : DefaultTask() {
         const val CONCLAVE_GROUP = "Conclave"
     }
 
-    init {
-        group = CONCLAVE_GROUP
-    }
-
     abstract fun action()
 
     @TaskAction

@@ -83,7 +83,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val osDependentTools = getOSDependentTools(conclaveDependenciesDirectory)
 
         val copySgxToolsTask = target.createTask<Copy>("copySgxTools") { task ->
-            task.group = CONCLAVE_GROUP
             task.fromDependencies(*osDependentTools.getToolsDependenciesIDs(sdkVersion).toTypedArray())
             task.into(baseDirectory)
         }
@@ -118,7 +117,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
-            task.group = CONCLAVE_GROUP
             task.fromDependencies(
                     "com.r3.conclave:graal:$sdkVersion",
                     "com.r3.conclave:conclave-build:$sdkVersion"
@@ -140,7 +138,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val graalVMPath = "$baseDirectory/com/r3/conclave/graalvm"
         val graalVMDistributionPath = "$graalVMPath/distribution"
         val untarGraalVM = target.createTask<Exec>("untarGraalVM") { task ->
-            task.group = CONCLAVE_GROUP
             task.dependsOn(copyGraalVM)
             Files.createDirectories(Paths.get(graalVMDistributionPath))
             val graalVMTarPath = "$graalVMPath/graalvm.tar"
@@ -174,7 +171,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
 
             val copyPartialEnclaveTask = target.createTask<Copy>("copyPartialEnclave$type") { task ->
-                task.group = CONCLAVE_GROUP
                 task.fromDependencies("com.r3.conclave:native-enclave-$typeLowerCase:$sdkVersion")
                 task.into(baseDirectory)
             }
@@ -182,7 +178,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val substrateDependenciesPath = "$conclaveDependenciesDirectory/substratevm/$type"
             val sgxDirectory = "$conclaveDependenciesDirectory/sgx/$type"
             val copySubstrateDependenciesTask = target.createTask<Copy>("copySubstrateDependencies$type") { task ->
-                task.group = CONCLAVE_GROUP
                 task.fromDependencies(
                         "com.r3.conclave:native-substratevm-$typeLowerCase:$sdkVersion",
                         "com.r3.conclave:linux-sgx-$typeLowerCase:$sdkVersion"
@@ -274,6 +269,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type") { task ->
+                task.group = CONCLAVE_GROUP
+                task.description = "Generate standalone signing material for a ${type} mode enclave that can be used with a HSM."
                 task.dependsOn(copySgxToolsTask)
                 task.inputs.files(signToolFile.parent, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile, enclaveExtension.signingMaterial)
                 task.signTool.set(signToolFile)
@@ -330,6 +327,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val signedEnclaveJarTask = target.createTask<Jar>("signedEnclave${type}Jar") { task ->
                 task.group = CONCLAVE_GROUP
+                task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
                 task.dependsOn(enclaveClassNameTask)
                 task.archiveAppendix.set("signed-so")
                 task.archiveClassifier.set(typeLowerCase)
