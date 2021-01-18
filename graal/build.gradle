@@ -50,7 +50,7 @@ task buildGraal(type: Exec) {
 
     workingDir "${project.buildDir}/graal/vm"
     commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot,native-image-agent', '--dynamicimports', 'graal-js,/substratevm', 
-        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', 'build'
+        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=js', 'build'
 }
 
 def outputDir = "${project.buildDir}/distributions"
