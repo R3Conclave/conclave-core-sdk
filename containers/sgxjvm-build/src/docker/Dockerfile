@@ -41,6 +41,7 @@ RUN apt-get update -y && apt-get install -y \
     ccache \
     cmake \
     cpio \
+    debhelper \
     exuberant-ctags \
     g++ \
     gcc \
@@ -65,6 +66,7 @@ RUN apt-get update -y && apt-get install -y \
     python3-pip \
     python3-venv \
     python3-wheel \
+    reprepro \
     texinfo \
     unzip \
     virtualenv \
@@ -111,7 +113,7 @@ ENV LABSJDK_HOME        /opt/labsjdk-ce-$LABSJDK_VERSION-jvmci-$JVMCI_VERSION
 ENV JVMCI_FILE          openjdk-8u272+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
 ENV JVMCI_HOME          /opt/openjdk1.8.0_272-jvmci-$JVMCI_VERSION
 ENV MX_HOME             /opt/mx-$MX_VERSION
-ENV SGX_SDK_VERSION     2.9.1
+ENV SGX_SDK_VERSION     2.12
 
 # The Avian build requires Java 8 regardless of what JAVA_HOME is set to above.
 # If this variable does not exists then it defaults to using JAVA_HOME but it is
@@ -120,9 +122,9 @@ ENV SGX_SDK_VERSION     2.9.1
 ENV JAVA_8_HOME         /usr/lib/jvm/java-8-openjdk-amd64
 
 # Linux SGX mitigation binaries
-RUN curl -sSL -o /opt/as.ld.objdump.gold.r1.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.gold.r1.tar.gz
-RUN echo "eff285796ba97b4bcafc1e2c88534e486524d3295448207381cc9664a155e70d  /opt/as.ld.objdump.gold.r1.tar.gz" | sha256sum -c -
-RUN tar -xaf /opt/as.ld.objdump.gold.r1.tar.gz -C /usr/local/bin --strip=2
+RUN curl -sSL -o /opt/as.ld.objdump.gold.r3.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.gold.r3.tar.gz
+RUN echo "794963ca90fb0561caf3ed2bee1d9ba394226f355689cdda28161e6e0620a713  /opt/as.ld.objdump.gold.r3.tar.gz" | sha256sum -c -
+RUN tar -zxf /opt/as.ld.objdump.gold.r3.tar.gz -C /usr/local/bin external/toolset/ubuntu18.04 --strip=3
 
 # MX
 RUN curl -sSL -o /opt/$MX_VERSION.tar.gz https://github.com/graalvm/mx/archive/$MX_VERSION.tar.gz

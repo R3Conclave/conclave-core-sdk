@@ -48,6 +48,7 @@ open class BuildUnsignedAvianEnclave @Inject constructor(objects: ObjectFactory)
                 // doesn't do anything with it - indeed the tag has little meaning in an enclave environment.
                 "-Bstatic", "--no-undefined", "--export-dynamic",
                 "--defsym", "__DeadlockTimeout=" + deadlockTimeout.get(),
+                "--defsym", "__ImageBase=0",
                 "-o", outputs.files.first())
                 + optionsForStripped
                 + listOf(inputEnclaveObject.asFile.get(), inputJarObject.asFile.get())

@@ -1,0 +1,64 @@
+diff --git a/QuoteGeneration/download_prebuilt.sh b/QuoteGeneration/download_prebuilt.sh
+index 18004c4..741d039 100755
+--- a/QuoteGeneration/download_prebuilt.sh
++++ b/QuoteGeneration/download_prebuilt.sh
+@@ -39,14 +39,14 @@ server_ae_url=$server_url_path/$ae_file_name
+ server_checksum_url=$server_url_path/$checksum_file
+ 
+ rm -rf $out_dir/$ae_file_name
+-wget $server_ae_url -P $out_dir
++curl -SL -o $out_dir/$ae_file_name $server_ae_url
+ if [ $? -ne 0 ]; then
+     echo "Fail to download file $server_ae_url"
+     exit -1
+ fi
+ 
+ rm -f $out_dir/$checksum_file
+-wget $server_checksum_url -P $out_dir
++curl -SL -o $out_dir/$checksum_file $server_checksum_url
+ if [ $? -ne 0 ]; then
+     echo "Fail to download file $server_checksum_url"
+     exit -1
+@@ -54,7 +54,7 @@ fi
+ 
+ pushd $out_dir
+ 
+-sha256sum -c $checksum_file
++shasum -a 256 -c $checksum_file
+ if [ $? -ne 0 ]; then
+     echo "Checksum verification failure"
+     exit -1
+diff --git a/QuoteVerification/prepare_sgxssl.sh b/QuoteVerification/prepare_sgxssl.sh
+index 2af6561..309bc09 100755
+--- a/QuoteVerification/prepare_sgxssl.sh
++++ b/QuoteVerification/prepare_sgxssl.sh
+@@ -33,6 +33,7 @@
+ ARG1=${1:-build}
+ top_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ sgxssl_dir=$top_dir/sgxssl
++mkdir -p "$sgxssl_dir"
+ openssl_out_dir=$sgxssl_dir/openssl_source
+ openssl_ver_name=openssl-1.1.1g
+ sgxssl_github_archive=https://github.com/01org/intel-sgx-ssl/archive
+@@ -46,8 +47,8 @@ sgxssl_chksum=12828839c4555e0f5e88e86db090c995053d98d99091862c498fc55f379183fc
+ openssl_chksum=ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46
+ rm -f check_sum_sgxssl.txt check_sum_openssl.txt
+ if [ ! -f $build_script ]; then
+-	wget $sgxssl_github_archive/$sgxssl_file_name.zip -P $sgxssl_dir/ || exit 1
+-	sha256sum $sgxssl_dir/$sgxssl_file_name.zip > $sgxssl_dir/check_sum_sgxssl.txt
++	curl -SL -o $sgxssl_dir/$sgxssl_file_name.zip $sgxssl_github_archive/$sgxssl_file_name.zip || exit 1
++	shasum -a256 $sgxssl_dir/$sgxssl_file_name.zip > $sgxssl_dir/check_sum_sgxssl.txt
+ 	grep $sgxssl_chksum $sgxssl_dir/check_sum_sgxssl.txt
+ 	if [ $? -ne 0 ]; then
+     	echo "File $sgxssl_dir/$sgxssl_file_name.zip checksum failure"
+@@ -61,8 +62,8 @@ if [ ! -f $build_script ]; then
+ fi
+ 
+ if [ ! -f $openssl_out_dir/$openssl_ver_name.tar.gz ]; then
+-	wget $full_openssl_url_old -P $openssl_out_dir || wget $full_openssl_url -P $openssl_out_dir || exit 1
+-	sha256sum $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
++	curl -SL -o $openssl_out_dir/$openssl_ver_name.tar.gz $full_openssl_url_old  || curl -SL -o $openssl_out_dir/$openssl_ver_name.tar.gz $full_openssl_url || exit 1
++	shasum -a256 $openssl_out_dir/$openssl_ver_name.tar.gz > $sgxssl_dir/check_sum_openssl.txt
+ 	grep $openssl_chksum $sgxssl_dir/check_sum_openssl.txt
+ 	if [ $? -ne 0 ]; then
+     	echo "File $openssl_out_dir/$openssl_ver_name.tar.gz checksum failure"

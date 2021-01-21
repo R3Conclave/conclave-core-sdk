@@ -1,8 +1,8 @@
 diff --git a/buildenv.mk b/buildenv.mk
-index 767bfc4f..97d9f894 100644
+index fd91672..e6930db 100644
 --- a/buildenv.mk
 +++ b/buildenv.mk
-@@ -115,7 +115,7 @@ CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
+@@ -121,7 +121,7 @@ CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
  # additional warnings flags for C++
  CXXFLAGS += -Wnon-virtual-dtor
  
@@ -11,7 +11,7 @@ index 767bfc4f..97d9f894 100644
  
  .DEFAULT_GOAL := all
  # this turns off the RCS / SCCS implicit rules of GNU Make
-@@ -163,8 +163,12 @@ endif
+@@ -169,8 +169,12 @@ endif
  CFLAGS   += $(COMMON_FLAGS)
  CXXFLAGS += $(COMMON_FLAGS)
  
@@ -25,7 +25,7 @@ index 767bfc4f..97d9f894 100644
  # mitigation options
  MITIGATION_INDIRECT ?= 0
 diff --git a/common/inc/internal/se_event.h b/common/inc/internal/se_event.h
-index e2a15019..27c85f1c 100644
+index e2a1501..27c85f1 100644
 --- a/common/inc/internal/se_event.h
 +++ b/common/inc/internal/se_event.h
 @@ -34,7 +34,9 @@
@@ -40,7 +40,7 @@ index e2a15019..27c85f1c 100644
  
  #include "sgx_defs.h"
 diff --git a/common/inc/internal/se_thread.h b/common/inc/internal/se_thread.h
-index df39e1c3..40ecfbfe 100644
+index df39e1c..40ecfbf 100644
 --- a/common/inc/internal/se_thread.h
 +++ b/common/inc/internal/se_thread.h
 @@ -40,7 +40,9 @@
@@ -55,7 +55,7 @@ index df39e1c3..40ecfbfe 100644
  typedef pthread_mutex_t se_mutex_t;
  typedef pthread_cond_t se_cond_t;
 diff --git a/psw/urts/linux/isgx_user.h b/psw/urts/linux/isgx_user.h
-index 007dfd86..a01b9302 100644
+index 007dfd8..a01b930 100644
 --- a/psw/urts/linux/isgx_user.h
 +++ b/psw/urts/linux/isgx_user.h
 @@ -60,9 +60,14 @@

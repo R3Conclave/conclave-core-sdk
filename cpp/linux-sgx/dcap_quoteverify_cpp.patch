@@ -1,0 +1,13 @@
+diff --git a/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp b/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp
+index dbfcf98..a5cc43b 100644
+--- a/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp
++++ b/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp
+@@ -91,7 +91,7 @@ int sgx_thread_wait_untrusted_event_ocall(const void *self)
+         return SGX_ERROR_UNEXPECTED;
+     }
+ 
+-    return p_sgx_thread_wait_untrusted_event_ocall(self);
++    return p_sgx_thread_wait_untrusted_event_ocall(self, 0);
+ }
+ 
+ int sgx_thread_set_untrusted_event_ocall(const void *waiter)

@@ -2,7 +2,7 @@
 #include <map>
 
 #include <sgx_ql_lib_common.h>
-#include <qve_header.h>
+#include <sgx_qve_header.h>
 
 namespace {
     /* Error code returned by sgx_create_enclave */

@@ -79,7 +79,7 @@ index df39e1c..d44af1b 100644
  int se_thread_cond_signal(se_cond_t *cond);
  int se_thread_cond_broadcast(se_cond_t *cond);
 diff --git a/common/inc/sgx_error.h b/common/inc/sgx_error.h
-index 6f469d5..1ab520c 100644
+index 67b0983..fab8d73 100644
 --- a/common/inc/sgx_error.h
 +++ b/common/inc/sgx_error.h
 @@ -121,6 +121,9 @@ typedef enum _status_t
@@ -93,10 +93,10 @@ index 6f469d5..1ab520c 100644
  
  } sgx_status_t;
 diff --git a/common/inc/sgx_thread.h b/common/inc/sgx_thread.h
-index 2be8bb4..5de4e82 100644
+index 323a79c..568b78f 100644
 --- a/common/inc/sgx_thread.h
 +++ b/common/inc/sgx_thread.h
-@@ -101,6 +101,7 @@ int SGXAPI sgx_thread_cond_init(sgx_thread_cond_t *cond, const sgx_thread_condat
+@@ -133,6 +133,7 @@ int SGXAPI sgx_thread_cond_init(sgx_thread_cond_t *cond, const sgx_thread_condat
  int SGXAPI sgx_thread_cond_destroy(sgx_thread_cond_t *cond);
  
  int SGXAPI sgx_thread_cond_wait(sgx_thread_cond_t *cond, sgx_thread_mutex_t *mutex);
@@ -118,7 +118,7 @@ index 6dc006b..f965d64 100644
          /* Wake a thread waiting on its untrusted event */
          [cdecl] int sgx_thread_set_untrusted_event_ocall([user_check] const void *waiter);
 diff --git a/common/inc/tlibc/pthread.h b/common/inc/tlibc/pthread.h
-index f59770c..fd10b0d 100644
+index ab3b605..8d0f49b 100644
 --- a/common/inc/tlibc/pthread.h
 +++ b/common/inc/tlibc/pthread.h
 @@ -95,6 +95,12 @@ int SGXAPI pthread_cond_init(pthread_cond_t *, const pthread_condattr_t *);
@@ -202,12 +202,6 @@ index 5af4c45..8db884e 100644
  int se_thread_cond_wait(se_cond_t *cond, se_mutex_t *mutex){return (0 == pthread_cond_wait(cond, mutex));}
  int se_thread_cond_signal(se_cond_t *cond){return (0 == pthread_cond_signal(cond));}
  int se_thread_cond_broadcast(se_cond_t *cond){return (0 == pthread_cond_broadcast(cond));}
-diff --git a/external/openmp/openmp_code b/external/openmp/openmp_code
---- a/external/openmp/openmp_code
-+++ b/external/openmp/openmp_code
-@@ -1 +1 @@
--Subproject commit c9e7fc8c97382d61565f7ed180e4ea1cc8895b95
-+Subproject commit c9e7fc8c97382d61565f7ed180e4ea1cc8895b95-dirty
 diff --git a/psw/urts/enclave_mutex.cpp b/psw/urts/enclave_mutex.cpp
 index bda7345..c7467a8 100644
 --- a/psw/urts/enclave_mutex.cpp
@@ -279,7 +273,7 @@ index 44897f2..776e0fd 100644
          sgx_get_target_info;
          sgx_create_encrypted_enclave;
 diff --git a/psw/urts/tcs.cpp b/psw/urts/tcs.cpp
-index 380c3f6..d3e838d 100644
+index df3feeb..f2d2fdb 100644
 --- a/psw/urts/tcs.cpp
 +++ b/psw/urts/tcs.cpp
 @@ -41,6 +41,7 @@
@@ -294,7 +288,7 @@ index 380c3f6..d3e838d 100644
      m_event = NULL;
  }
  
-+void CTrustThread::decrease_ref() { 
++void CTrustThread::decrease_ref() {
 +    if (--m_reference == 0) {
 +        if (m_enclave) {
 +            m_enclave->get_thread_pool()->notify_free_thread();
@@ -479,7 +473,7 @@ index 389915a..102e666 100644
  
  class CThreadPoolBindMode : public CTrustThreadPool
 diff --git a/sdk/pthread/pthread.cpp b/sdk/pthread/pthread.cpp
-index 28dff18..7bc56d9 100644
+index 28dff18..4862026 100644
 --- a/sdk/pthread/pthread.cpp
 +++ b/sdk/pthread/pthread.cpp
 @@ -86,6 +86,7 @@ static volatile sgx_pthread_common_queue_t  g_work_queue = {NULL, NULL};
@@ -494,7 +488,7 @@ index 28dff18..7bc56d9 100644
      pthread_info_tls.m_pthread = NULL;
      pthread_info_tls.m_state = SGX_SUCCESS;
      memset((char*)&pthread_info_tls.m_mark, 0x00, sizeof(jmp_buf));
-+    
++
 +    // R3: This function is called for threads created inside the enclave during the next ecall
 +    // but also for host threads during the first ecall from that thread. Use this to setup a
 +    // placeholder m_pthread so that pthread_self() returns a unique thread ID even for host
@@ -579,7 +573,7 @@ index 161a04e..a291da9 100644
  
  typedef struct _pthread
 diff --git a/sdk/tlibthread/sethread_cond.cpp b/sdk/tlibthread/sethread_cond.cpp
-index 0dea08d..b77b7af 100644
+index 0dea08d..57d1799 100644
 --- a/sdk/tlibthread/sethread_cond.cpp
 +++ b/sdk/tlibthread/sethread_cond.cpp
 @@ -64,7 +64,7 @@ int sgx_thread_cond_destroy(sgx_thread_cond_t *cond)
@@ -622,38 +616,15 @@ index 0dea08d..b77b7af 100644
 +
 +int sgx_thread_cond_wait(sgx_thread_cond_t *cond, sgx_thread_mutex_t *mutex)
 +{
-+    return sgx_thread_cond_timedwait(cond, mutex, 0);   
++    return sgx_thread_cond_timedwait(cond, mutex, 0);
  }
  
  int sgx_thread_cond_signal(sgx_thread_cond_t *cond)
 diff --git a/sdk/tlibthread/sethread_internal.h b/sdk/tlibthread/sethread_internal.h
-index a782a95..74a1e5f 100644
+index d875ac2..1b1fdce 100644
 --- a/sdk/tlibthread/sethread_internal.h
 +++ b/sdk/tlibthread/sethread_internal.h
-@@ -76,6 +76,22 @@ typedef struct _thread_data_t *pTD;
-         (total)++;                                  \
- } while(0)                                          \
- 
-+#define QUEUE_REMOVE(head, elm) do {                                    \
-+    sgx_thread_t thr = SGX_THREAD_T_NULL;                               \
-+    sgx_thread_t prev = SGX_THREAD_T_NULL;                              \
-+    QUEUE_FOREACH(thr, head) {                                          \
-+        if (thr == (elm)) {                                             \
-+            if (prev != SGX_THREAD_T_NULL)                              \
-+                ((pTD)prev)->m_next = ((pTD)(elm))->m_next;             \
-+            else                                                        \
-+                (head)->m_first = (sgx_thread_t)((pTD)(elm))->m_next;   \
-+            break;                                                      \
-+        }                                                               \
-+        prev = thr;                                                     \
-+    }                                                                   \
-+} while(0)
-+
-+
- /* Spinlock */
- #define SPIN_LOCK(_lck)     sgx_spin_lock((sgx_spinlock_t *)_lck);
- #define SPIN_UNLOCK(_lck)   sgx_spin_unlock((sgx_spinlock_t *)_lck);
-@@ -88,7 +104,7 @@ typedef struct _thread_data_t *pTD;
+@@ -119,7 +119,7 @@ typedef struct _thread_data_t *pTD;
  } while (0)
  
  /* Generated OCALLs */
@@ -663,7 +634,7 @@ index a782a95..74a1e5f 100644
  extern "C" sgx_status_t sgx_thread_set_multiple_untrusted_events_ocall(int* retval, const void** waiters, size_t total);
  extern "C" sgx_status_t sgx_thread_setwait_untrusted_events_ocall(int* retval, const void *waiter, const void *self);
 diff --git a/sdk/tlibthread/sethread_mutex.cpp b/sdk/tlibthread/sethread_mutex.cpp
-index cc28cd1..b53b63f 100644
+index 38cef7c..82a53b3 100644
 --- a/sdk/tlibthread/sethread_mutex.cpp
 +++ b/sdk/tlibthread/sethread_mutex.cpp
 @@ -117,7 +117,7 @@ int sgx_thread_mutex_lock(sgx_thread_mutex_t *mutex)
@@ -675,3 +646,25 @@ index cc28cd1..b53b63f 100644
      }
  
      /* NOTREACHED */
+diff --git a/sdk/tlibthread/sethread_rwlock.cpp b/sdk/tlibthread/sethread_rwlock.cpp
+index fc440e2..2899979 100644
+--- a/sdk/tlibthread/sethread_rwlock.cpp
++++ b/sdk/tlibthread/sethread_rwlock.cpp
+@@ -121,7 +121,7 @@ int sgx_thread_rwlock_rdlock(sgx_thread_rwlock_t *rwlock)
+             SPIN_UNLOCK(&rwlock->m_lock);
+ 
+             //make an OCall to wait for the lock
+-            sgx_thread_wait_untrusted_event_ocall(&err, TD2TCS(self));
++            sgx_thread_wait_untrusted_event_ocall(&err, TD2TCS(self), 0);
+ 
+             SPIN_LOCK(&rwlock->m_lock);
+ 
+@@ -212,7 +212,7 @@ int sgx_thread_rwlock_wrlock(sgx_thread_rwlock_t *rwlock)
+             SPIN_UNLOCK(&rwlock->m_lock);
+ 
+             //make an OCall to wait for the lock
+-            sgx_thread_wait_untrusted_event_ocall(&err, TD2TCS(self));
++            sgx_thread_wait_untrusted_event_ocall(&err, TD2TCS(self), 0);
+             
+             SPIN_LOCK(&rwlock->m_lock);
+ 

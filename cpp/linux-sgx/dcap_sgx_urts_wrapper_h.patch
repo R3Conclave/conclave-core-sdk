@@ -1,0 +1,13 @@
+diff --git a/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h b/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h
+index 238f6fe..1dc1e0c 100644
+--- a/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h
++++ b/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h
+@@ -96,7 +96,7 @@ typedef sgx_status_t(SGXAPI* sgx_ecall_func_t)(const sgx_enclave_id_t eid, const
+ 
+ typedef void (*sgx_oc_cpuidex_func_t)(int cpuinfo[4], int leaf, int subleaf);
+ 
+-typedef int (*sgx_thread_wait_untrusted_event_ocall_func_t)(const void *self);
++typedef int (*sgx_thread_wait_untrusted_event_ocall_func_t)(const void* self, size_t timeout);
+ 
+ typedef int (*sgx_thread_set_untrusted_event_ocall_func_t)(const void *waiter);
+ 

@@ -1,23 +1,23 @@
---- a/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile	2020-05-19 22:37:34.624358200 +0000
-+++ b/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile	2020-05-19 23:01:55.944358200 +0000
+--- a/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile	2021-01-11 18:09:47.163528235 +0000
++++ b/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile	2021-01-11 18:10:09.371240187 +0000
 @@ -28,6 +28,7 @@
  # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #
  #
 +.NOTPARALLEL: all
-
+ 
  ######## SGX SDK Settings ########
  TOP_DIR  = ../../..
-@@ -47,7 +47,7 @@
+@@ -47,7 +48,7 @@
  Quote_C_Files := qe3_u.c se_thread.c se_trace.c
  Quote_Cpp_Files := $(wildcard ../*.cpp)
-
+ 
 -Quote_Include_Paths := -I$(SGX_SDK)/include -I../inc -I../../common/inc -I./ -I../enclave -I$(TOP_DIR)/pce_wrapper/inc -I$(COMMON_DIR)/inc/internal -I$(COMMON_DIR)/inc/internal/linux
 +Quote_Include_Paths := -I$(SGX_SDK)/include -I../inc -I../../common/inc -I. -I../enclave -I$(TOP_DIR)/pce_wrapper/inc -I$(COMMON_DIR)/inc/internal -I$(COMMON_DIR)/inc/internal/linux
-
+ 
  Quote_C_Flags := $(COMMON_FLAGS) -g -fPIC -Wno-attributes $(Quote_Include_Paths)
-
-@@ -69,6 +69,9 @@
+ 
+@@ -69,6 +70,9 @@
  .PHONY: all
  all:  install_lib
  
@@ -26,15 +26,15 @@
 +
  install_lib: $(Quote_Name) | $(BUILD_DIR)
  	@$(CP) $(Quote_Name) $|
-
-@@ -79,6 +79,10 @@
-        $(SGX_EDGER8R) --untrusted ../enclave/qe3.edl --search-path ../enclave
-        @echo "GEN  =>  $@"
-
+ 
+@@ -79,6 +83,10 @@
+ 	$(SGX_EDGER8R) --untrusted ../enclave/qe3.edl --search-path ../enclave
+ 	@echo "GEN  =>  $@"
+ 
 +../qe_logic.cpp: qe3_u.c
 +	@echo QE_LOGIC
 +
 +
  %.o: %.c
-        @$(CC) $(Quote_C_Flags) -c $< -o $@
-        @echo "CC   <=  $<" 
+ 	@$(CC) $(Quote_C_Flags) -c $< -o $@
+ 	@echo "CC   <=  $<"

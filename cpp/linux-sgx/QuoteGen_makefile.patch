@@ -1,5 +1,5 @@
---- Makefile	2020-10-23 15:41:17.833484127 +0100
-+++ Makefile.new	2020-10-23 15:47:45.663941999 +0100
+--- a/external/dcap_source/QuoteGeneration/Makefile	2021-01-11 17:11:54.590165381 +0000
++++ b/external/dcap_source/QuoteGeneration/Makefile	2021-01-12 09:41:11.225302161 +0000
 @@ -31,22 +31,17 @@
  
  CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
@@ -25,5 +25,5 @@
 -	@exit -2
 +dcap: prebuilt pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
  
- pce_logic: 
+ pce_logic:
  	$(MAKE) -C pce_wrapper/linux

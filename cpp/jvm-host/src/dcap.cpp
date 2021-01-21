@@ -1,5 +1,5 @@
 #include <dcap.h>
-#include <qve_header.h>
+#include <sgx_qve_header.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>

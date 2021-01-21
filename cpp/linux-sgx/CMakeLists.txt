@@ -12,29 +12,34 @@ else()
 endif()
 
 ExternalProject_Add(linux-sgx-ext
+# Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
 
         DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
-            && git clone -b sgx_2.9.1 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
-            && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1
+            && git clone -b sgx_2.12 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+            && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
+            && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
+            && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
+            && bash -c "cd ${BUILD_SRC_DIR} && ./download_prebuilt.sh"
+            && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteGeneration/download_prebuilt.sh"
 
         SOURCE_DIR ${BUILD_SRC_DIR}
 
         PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff
-            && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/qe_logic.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source.patch
-	    && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
-	    && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
-            && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
-            && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quoteverify_cpp.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/dcap_sgx_urts_wrapper_h.patch
+	     && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
+	     && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
 
         UPDATE_COMMAND ""
 
         CONFIGURE_COMMAND ""
 
         BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
-            && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.9.101.2.bin
-            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw
-            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} dcap_source
-            && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/external/dcap_source QuoteGeneration QuoteVerification
+             && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.12.100.3.bin
+             && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw_install_pkg
+             && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/external/dcap_source QuoteGeneration QuoteVerification
 
 
         INSTALL_COMMAND ""
@@ -42,17 +47,25 @@ ExternalProject_Add(linux-sgx-ext
         TEST_COMMAND "")
 
 ExternalProject_Add(macos-sign-tool
+# Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
     DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
-                && git clone -b sgx_2.9.1 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
-                && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1
+        && git clone -b sgx_2.12 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+        && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
+        && bash -c "cd ${BUILD_SRC_DIR}/external/dcap_source && git apply ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source_macos.diff"
+        && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
+        && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
+        && bash -c "cd ${BUILD_SRC_DIR} && git apply ${CMAKE_CURRENT_SOURCE_DIR}/macos.diff && ./download_prebuilt.sh"
+        && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteGeneration/download_prebuilt.sh"
 
     SOURCE_DIR ${BUILD_SRC_DIR}
 
     PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff
-        && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/qe_logic.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source.patch
-        && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
-        && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
-        && git apply --ignore-whitespace --whitespace=fix ${CMAKE_CURRENT_SOURCE_DIR}/sgx_sign_macos.diff ${CMAKE_CURRENT_SOURCE_DIR}/wget.diff
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quoteverify_cpp.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/dcap_sgx_urts_wrapper_h.patch
+	     && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
+	     && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
+             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
 
     UPDATE_COMMAND ""
 
@@ -64,20 +77,6 @@ ExternalProject_Add(macos-sign-tool
 
     TEST_COMMAND ""
 )
-
-ExternalProject_Add_Step(macos-sign-tool download-prebuilt
-        # Check a random downloaded file to avoid executing download_prebuilt.sh
-        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a ] || ./download_prebuilt.sh"
-        WORKING_DIRECTORY ${BUILD_SRC_DIR}
-        DEPENDERS build
-        DEPENDEES configure)
-
-ExternalProject_Add_Step(linux-sgx-ext download-prebuilt
-        # Check a random downloaded file to avoid executing download_prebuilt.sh
-        COMMAND bash -c "[ -f ${BUILD_SRC_DIR}/external/ippcp_internal/lib/linux/intel64/no_mitigation/libippcp.a ] || ./download_prebuilt.sh"
-        WORKING_DIRECTORY ${BUILD_SRC_DIR}
-        DEPENDERS build
-        DEPENDEES configure)
 
 add_library(linux-sgx_headers INTERFACE)
 target_include_directories(linux-sgx_headers INTERFACE
