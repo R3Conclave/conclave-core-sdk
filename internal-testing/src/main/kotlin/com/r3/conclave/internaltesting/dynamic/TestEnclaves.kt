@@ -3,6 +3,7 @@ package com.r3.conclave.internaltesting.dynamic
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.MailCommand
 import com.r3.conclave.host.internal.createHost
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.toHexString
@@ -16,6 +17,7 @@ import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.function.Consumer
 
 class TestEnclaves : BeforeAllCallback, AfterAllCallback {
     private lateinit var executorService: ExecutorService
@@ -99,10 +101,6 @@ data class EnclaveBuilder(
         val config: EnclaveConfig = EnclaveConfig(),
         val type: EnclaveType = EnclaveType.Simulation,
         val key: File? = null,
-        val includeClasses: List<Class<*>> = emptyList()
-) {
-    fun withConfig(config: EnclaveConfig) = copy(config = config)
-    fun withType(type: EnclaveType) = copy(type = type)
-    fun withKey(key: File) = copy(key = key)
-    fun withClass(clazz: Class<*>) = copy(includeClasses = includeClasses + clazz)
-}
+        val includeClasses: List<Class<*>> = emptyList(),
+        val mailCallback: Consumer<List<MailCommand>>? = null
+)

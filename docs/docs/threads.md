@@ -1,13 +1,29 @@
-# Using threads with enclaves
+# Using threads in enclaves
 
-## The enclave current context ##
+## Writing thread safe enclaves
+
+Writing a thread safe enclave is no different to writing any other thread safe code in Java, with one exception.
+Whilst all the same concurrency tools and utilities are available, you must opt-in to multi-threading. If you
+don't then all threads that enter the enclave will synchronize on the enclave object lock and execute serially. To opt in,
+override the `isThreadSafe` method and return true.
+
+This is a safety mechanism. It would be easy to write an enclave that isn't thread safe without thinking about it, 
+perhaps because the additional performance isn't important. That would be hard to notice as anyone reading the code
+would be looking for the absence of something rather than its presence. The host could then multi-thread the enclave
+without it being prepared for that and corrupt your application-level data structures in ways that might be exploitable.
+When you return true from `isThreadSafe` you're asserting to Conclave that you've taken care to ensure your 
+`receiveFromUntrustedHost` and `receiveMail` methods can handle concurrent execution, so it's safe for Conclave to stop
+locking the enclave itself. By requiring an opt-in it becomes visible to other developers and code reviewers, thus 
+reminding them that the code needs to be thread safe.
+
+## The enclave current context
 
 When your code is running inside an enclave the CPU maintains a lot of state about your code and potentially
 your private data. This information is all security contained within the boundary of the SGX enclave: Code
 outside the enclave cannot peek into the enclave CPU state to try to see these secrets.
 
-This 'state' information, along with other private information such as the current stack contents is called
-the 'current context'. 
+This state information along with other private information such as the current stack contents is called
+the _current context_. 
 
 Now, when a host application calls into an enclave, the host itself has a current context. We could feasibly 
 use the host current context within the enclave as the host isn't hiding secrets from the enclave. However, 
@@ -17,9 +33,9 @@ the current context does not contain any enclave secrets?
 
 Intel SGX solves this by maintaining a different version of the current context inside the enclave to the
 context outside the enclave. Whenever you make a call from the host to the enclave the host context is
-saved and the context switches to an in-enclave current context that only the enclave can see. When the
+saved, and the context switches to an in-enclave current context that only the enclave can see. When the
 enclave exits back to the host, the enclave current context is saved in encrypted memory that only the
-enclave can see and the host context is restored. Thus the secrets inside the enclave remain safe.
+enclave can see, and the host context is restored. Thus the secrets inside the enclave remain safe.
 
 ## Thread Control Structure and threads
 

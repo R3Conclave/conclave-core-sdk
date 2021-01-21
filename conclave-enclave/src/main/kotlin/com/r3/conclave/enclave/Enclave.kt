@@ -76,6 +76,15 @@ abstract class Enclave {
     protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
 
     /**
+     * If this property is false (the default) then a lock will be taken and the enclave will process mail and calls
+     * from the host serially. To build a multi-threaded enclave you must firstly, obviously, write thread safe code
+     * so the untrusted host cannot cause malicious data corruption by causing race conditions inside the enclave, and
+     * then override this method to make it return true. By doing so you signal that you're taking responsibility
+     * for your own thread safety.
+     */
+    protected open val threadSafe: Boolean get() = false
+
+    /**
      * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
      *
      * Default implementation throws [UnsupportedOperationException] so you should not perform a supercall.
@@ -277,18 +286,22 @@ Received: $attestationReportBody"""
             return this
         }
 
+        // .values() returns a fresh array each time so cache it here.
         private val callTypeValues = InternalCallType.values()
+
+        // Variable so we can compare it in an assertion later.
+        private val receiveFromUntrustedHostCallback = HostCallback { receiveFromUntrustedHost(it) }
 
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val threadID = input.getLong()
+            val hostThreadID = input.getLong()
             val type = callTypeValues[input.get().toInt()]
             // Assign the host thread ID to the current thread so that callUntrustedHost/postMail/etc can pick up the
             // right state for the thread.
-            currentEnclaveCall.set(threadID)
-            val stateManager = enclaveCalls.computeIfAbsent(threadID) {
+            currentEnclaveCall.set(hostThreadID)
+            val stateManager = enclaveCalls.computeIfAbsent(hostThreadID) {
                 // The initial state is to receive on receiveFromUntrustedHost.
-                StateManager(Receive(::receiveFromUntrustedHost, receiveFromUntrustedHost = true))
+                StateManager(Receive(receiveFromUntrustedHostCallback, receiveFromUntrustedHost = true))
             }
             if (type == InternalCallType.CALL_RETURN) {
                 stateManager.state = Response(input.getRemainingBytes())
@@ -309,15 +322,41 @@ Received: $attestationReportBody"""
                     Curve25519PrivateKey(entropy)
                 }
                 checkMailOrdering(mail)
-                this@Enclave.receiveMail(id, routingHint, mail)
+                // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
+                // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
+                // require spotting the absence of something rather than the presence of something, which is hard.
+                // This works even if the host calls back into the enclave on the same stack. However if the host
+                // makes a call on a separate thread, it's treated as a separate call as you'd expect.
+                if (!threadSafe) {
+                    synchronized(this@Enclave) { this@Enclave.receiveMail(id, routingHint, mail) }
+                } else {
+                    this@Enclave.receiveMail(id, routingHint, mail)
+                }
             } else {
                 val state = stateManager.checkStateIs<Receive>()
                 checkNotNull(state.callback) {
                     "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
                 }
-                val response = state.callback.apply(input.getRemainingBytes())
+                // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
+                // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
+                // require spotting the absence of something rather than the presence of something, which is hard.
+                // This works even if the host calls back into the enclave on the same stack. However if the host
+                // makes a call on a separate thread, it's treated as a separate call as you'd expect.
+                val response = if (!threadSafe) {
+                    // If this is a recursive call, we already hold the lock and the synchronized statement is a no-op.
+                    // This assertion is here to document that fact.
+                    if (state.callback != receiveFromUntrustedHostCallback) check(Thread.holdsLock(this@Enclave))
+                    synchronized(this@Enclave) { state.callback.apply(input.getRemainingBytes()) }
+                } else {
+                    state.callback.apply(input.getRemainingBytes())
+                }
                 if (response != null) {
-                    sendCallToHost(threadID, response, InternalCallType.CALL_RETURN)
+                    // If the user calls back into the host whilst handling a local call or a mail, they end up
+                    // inside callUntrustedHost. So, for a non-thread safe enclave it's OK that this is outside the
+                    // lock, because it'll be held whilst calling out to the enclave during an operation which is when
+                    // there's actual risk of corruption. By the time we get here the enclave should be done and ready
+                    // for the next request.
+                    sendCallToHost(hostThreadID, response, InternalCallType.CALL_RETURN)
                 }
             }
         }
@@ -340,10 +379,10 @@ Received: $attestationReportBody"""
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {
-            val threadID = checkNotNull(currentEnclaveCall.get()) {
+            val hostThreadID = checkNotNull(currentEnclaveCall.get()) {
                 "Thread ${Thread.currentThread()} may not attempt to call out to the host outside the context of a call."
             }
-            val stateManager = enclaveCalls.getValue(threadID)
+            val stateManager = enclaveCalls.getValue(hostThreadID)
             val newReceiveState = Receive(callback, receiveFromUntrustedHost = false)
             // We don't expect the enclave to be in the Response state here as that implies a bug since Response is only
             // a temporary holder to capture the return value.
@@ -353,7 +392,8 @@ Received: $attestationReportBody"""
             val previousReceiveState = stateManager.transitionStateFrom<Receive>(to = newReceiveState)
             var response: Response? = null
             try {
-                sendCallToHost(threadID, bytes, InternalCallType.CALL)
+                // This could re-enter the enclave in onReceive, if the user has provided a callback.
+                sendCallToHost(hostThreadID, bytes, InternalCallType.CALL)
             } finally {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have
                 // their own exception handling and reuse of the host-enclave communication channel for another call.

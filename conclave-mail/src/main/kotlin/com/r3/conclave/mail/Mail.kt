@@ -213,7 +213,7 @@ class MutableMail(
     companion object {
         private const val PACKET_OVERHEAD = MAX_PACKET_LEN - MAX_PACKET_PAYLOAD_LENGTH
 
-        private val rng = SecureRandom.getInstanceStrong()
+        private val rng = SecureRandom()
     }
 }
 

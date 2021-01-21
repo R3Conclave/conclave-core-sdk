@@ -303,6 +303,16 @@ method which takes a byte array and optionally returns a byte array back. Here w
     In a real app you would use the byte array to hold serialised data structures. You can use whatever data formats you
     like. You could use a simple string format or a binary format like protocol buffers.
 
+### Threading
+
+In this tutorial we won't write a multi-threaded enclave. If you want to do this, you'll need to override the 
+`boolean isThreadSafe()` method in the `Enclave` class (use `override val threadSafe: Boolean get() = true` in Kotlin).
+This tells Conclave to allow multiple threads into the enclave simultaneously. You're required to opt-in to allowing
+multi-threading to avoid accidents when someone writes a simple enclave that isn't thread safe, and forgets that the host
+is malicious and can enter your code with multiple threads simultaneously even if you aren't ready for it, corrupting
+your application level data via race conditions. By blocking multi-threading until you indicate readiness, the hope 
+is that some types of attack can be avoided. See the page on [enclave threading](threads.md) to learn more.
+
 ## Write a simple host program
 
 An enclave by itself is just a library: you must therefore load it from inside a host program.

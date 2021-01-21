@@ -6,6 +6,7 @@ import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.internaltesting.threadWithFuture
+import com.r3.conclave.mail.EnclaveMail
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -13,12 +14,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
+import java.util.function.Consumer
 import java.util.function.Function
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
@@ -66,7 +69,7 @@ class EnclaveTest {
     fun `TCS reallocation`() {
         val tcs = WaitingEnclave.PARALLEL_ECALLS + 3 // Some TCS are reserved for Avian internal threads
         start<WaitingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(tcs)))
-        repeat (3) {
+        repeat(3) {
             val responses = RecordingCallback()
             val futures = (1..WaitingEnclave.PARALLEL_ECALLS).map {
                 threadWithFuture {
@@ -175,9 +178,44 @@ class EnclaveTest {
         assertThat(recorder.calls.single()).isEqualTo("test".toByteArray())
     }
 
+    @Test
+    fun notMultiThreadedByDefault() {
+        start<NonThreadSafeByDefaultEnclave>(
+            EnclaveBuilder(config = EnclaveConfig().withTCSNum(10), mailCallback = Consumer {
+                // Do nothing.
+            })
+        )
+        // Run a bunch of threads through the enclave. They will check that only one thread is inside
+        // receiveFromUntrustedHost at once and throw if not.
+        (0..10).map {
+            threadWithFuture {
+                host.callEnclave(byteArrayOf()) {
+                    // Pause to give other threads a time to start and try to enter the enclave.
+                    // Not ideal to use Thread.sleep in a test of course, however, we are trying to prove that
+                    // they will NOT enter, and we can't tell the difference here between "didn't enter because
+                    // they are still starting" and "didn't enter because they hit the lock". There's probably
+                    // a better way to do this.
+                    Thread.sleep(100)
+                    null
+                }
+            }
+        }.forEach { it.join() }
+
+        // Now do it again but with mail.
+        (0..10).map {
+            threadWithFuture {
+                val mail = host.enclaveInstanceInfo.createMail(byteArrayOf())
+                mail.topic = it.toString()
+                host.deliverMail(it.toLong(), mail.encrypt(), null) {
+                    null
+                }
+            }
+        }.forEach { it.join() }
+    }
+
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {
         host = testEnclaves.hostTo<T>(enclaveBuilder).apply {
-            start(null, null)
+            start(null, enclaveBuilder.mailCallback)
         }
         closeHost = true
     }
@@ -210,6 +248,8 @@ class EnclaveTest {
 
         private val ecalls = AtomicInteger(0)
 
+        override val threadSafe: Boolean get() = true
+
         override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             ecalls.incrementAndGet()
             while (ecalls.get() < PARALLEL_ECALLS) {
@@ -223,6 +263,8 @@ class EnclaveTest {
     }
 
     class ThreadingEnclave : Enclave() {
+        override val threadSafe: Boolean get() = true
+
         override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
             val n = bytes.toInt()
             val latchBefore = CountDownLatch(n)
@@ -266,6 +308,34 @@ class EnclaveTest {
         }
     }
 
+    // Check that if we don't opt-in to multi-threading, the host cannot force us to run in parallel, including across
+    // re-entrancy points (calls back into the host).
+    class NonThreadSafeByDefaultEnclave : Enclave() {
+        private val hostCalls = AtomicInteger(0)
+        private val mailCalls = AtomicInteger(0)
+
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+            check(hostCalls) {
+                callUntrustedHost(bytes)
+            }
+            return null
+        }
+
+        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+            check(mailCalls) {
+                postMail(enclaveInstanceInfo.createMail(byteArrayOf()), "self")
+            }
+        }
+
+        private fun check(atomicInteger: AtomicInteger, block: () -> Unit) {
+            val x = atomicInteger.incrementAndGet()
+            if (x > 1)
+                throw IllegalStateException("All calls should be serialized by default: $x")
+            Thread.sleep(100)
+            block()
+            atomicInteger.decrementAndGet()
+        }
+    }
 }
 
 private fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()

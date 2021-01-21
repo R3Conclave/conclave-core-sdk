@@ -60,6 +60,8 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
    allows the enclave to enforce correct mail ordering with respect to the sequence numbers on a per-sender basis. This
    means `EnclaveMail.authenticatedSender` is no longer nullable and will always return an authenticated sender, i.e. if
    a sender private key is not specified in `MutableMail` then one is automatically created.
+1. Multi-threaded enclaves are now opt-in. By default, the enclave object will be locked before data from the host is
+   delivered. This ensures that a malicious host cannot multi-thread an enclave that's not expecting it.
 
 ### Beta 4
 
