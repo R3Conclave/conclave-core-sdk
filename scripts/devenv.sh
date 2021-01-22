@@ -3,8 +3,8 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
 # You can set this variable to mount the IDEs from the host
 HOST_IDE_DIR=${HOST_IDE_DIR:-"${HOME}/.opt"}
-IDEA_VERSION=${IDEA_VERSION:-"IC-203.5981.155"}
-IDEA_DOWNLOAD_FILE=ideaIC-2020.3.tar.gz
+IDEA_VERSION=${IDEA_VERSION:-"IC-203.6682.168"}
+IDEA_DOWNLOAD_FILE=ideaIC-2020.3.1.tar.gz
 IDEA_DOWNLOAD_ADDRESS=https://download-cf.jetbrains.com/idea/$IDEA_DOWNLOAD_FILE
 CLION_VERSION=${CLION_VERSION:-"2020.2.4"}
 CLION_DOWNLOAD_FILE=CLion-2020.2.4.tar.gz
@@ -114,7 +114,7 @@ if [[ -z ${CONTAINER_ID} ]]; then
       echo "Downloading IntelliJ IDEA from ${IDEA_DOWNLOAD_ADDRESS}..."
       mkdir -p $HOST_IDE_DIR
       curl -SL -o ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE $IDEA_DOWNLOAD_ADDRESS
-      echo "fed1717a2ca795795aa6ca32f05313eba26e557e  ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE" | shasum -c -
+      echo "ae00e8cfc9a41a772d3f7a7aba463a744ea832f8  ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE" | shasum -c -
       tar -C $HOST_IDE_DIR -zxvf ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE
       rm ${HOST_IDE_DIR}/$IDEA_DOWNLOAD_FILE
     fi
