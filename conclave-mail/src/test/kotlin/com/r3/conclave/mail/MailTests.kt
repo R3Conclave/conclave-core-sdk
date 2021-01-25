@@ -1,17 +1,16 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class MailTests {
     private companion object {
-        val keyGen = Curve25519KeyPairGenerator()
-        val alice = keyGen.generateKeyPair()
-        val bob = keyGen.generateKeyPair()
+        val alice = Curve25519PrivateKey.random()
+        val bob = Curve25519PrivateKey.random()
 
         val message1 = "rumours gossip nonsense misinformation fake news good stuff".toByteArray()
     }
@@ -26,74 +25,79 @@ class MailTests {
 
     private fun encryptDecrypt(withHeaders: Boolean, withEnvelope: Boolean) {
         // Test the base case of sending mail from anonymous to Bob without any special headers.
-        val mutableMail = MutableMail(message1, bob.public, alice.private)
-        if (withHeaders) {
-            mutableMail.sequenceNumber = 5
-            mutableMail.topic = "stuff"
+        val sendingPostOffice = if (withHeaders) {
+            PostOffice.create(bob.publicKey, alice, "stuff")
+        } else {
+            PostOffice.create(bob.publicKey)
         }
-        if (withEnvelope) {
-            mutableMail.envelope = "env".toByteArray()
+        val senderPublicKey = sendingPostOffice.senderPublicKey
+
+        fun encrypt(): ByteArray {
+            return sendingPostOffice.encryptMail(message1, "env".toByteArray().takeIf { withEnvelope })
         }
 
-        fun assertEnvelope(of: EnclaveMailHeader) {
+        fun assertHeader(of: EnclaveMailHeader) {
             assertEquals(if (withHeaders) "stuff" else "default", of.topic)
-            assertEquals(if (withHeaders) 5L else 0L, of.sequenceNumber)
             assertEquals("env".takeIf { withEnvelope }, of.envelope?.let { String(it) })
         }
 
-        // Now check we can read the headers in the encrypted mail without needing the private key.
-        val encrypted: ByteArray = mutableMail.encrypt()
+        val encrypted: ByteArray = encrypt()
+
         // Two encryptions of the same message encrypt to different byte arrays, even if the sequence number is the
         // same. It just means that you can't tell if the same content is being sent twice in a row.
-        assertFalse(encrypted.contentEquals(mutableMail.encrypt()))
-        assertEnvelope(Mail.getUnauthenticatedHeader(encrypted))
-
-        // Encrypt again.
-        mutableMail.incrementSequenceNumber()
-        val encrypted2 = mutableMail.encrypt()
-        assertEquals(Mail.getUnauthenticatedHeader(encrypted).sequenceNumber + 1, Mail.getUnauthenticatedHeader(encrypted2).sequenceNumber)
+        assertFalse(encrypted.contentEquals(encrypt()))
+        // Now check we can read the headers in the encrypted mail without needing the private key.
+        assertHeader(Mail.getUnauthenticatedHeader(encrypted))
 
         // Decrypt and check.
-        val decrypted: EnclaveMail = Mail.decrypt(encrypted, bob.private)
+        val decrypted: EnclaveMail = PostOffice.create(senderPublicKey, bob, "topic").decryptMail(encrypted)
         assertArrayEquals(message1, decrypted.bodyAsBytes)
-        assertEnvelope(decrypted)
-        assertEquals(alice.public, decrypted.authenticatedSender)
+        assertHeader(decrypted)
+        if (withHeaders) {
+            assertEquals(alice.publicKey, decrypted.authenticatedSender)
+        }
+
+        assertThat(decrypted.authenticatedSender).isEqualTo(sendingPostOffice.senderPublicKey)
     }
 
     @Test
-    fun topicChars() {
-        val mutableMail = MutableMail(message1, bob.public, null)
-        mutableMail.topic = "valid-topic"
-        assertThrows<IllegalArgumentException> { mutableMail.topic = "no whitespace allowed" }
-        assertThrows<IllegalArgumentException> { mutableMail.topic = "!!!" }
-        assertThrows<IllegalArgumentException> { mutableMail.topic = "😂" }
-        // Disallow dots as they are often meaningful in queue names.
-        assertThrows<IllegalArgumentException> { mutableMail.topic = "1234.5678" }
+    fun `sequence numbers start from zero and increment by 1`() {
+        val postOffice = PostOffice.create(bob.publicKey)
+        assertThat(Mail.getUnauthenticatedHeader(postOffice.encryptMail(message1)).sequenceNumber).isEqualTo(0)
+        assertThat(Mail.getUnauthenticatedHeader(postOffice.encryptMail(message1)).sequenceNumber).isEqualTo(1)
+        assertThat(Mail.getUnauthenticatedHeader(postOffice.encryptMail(message1)).sequenceNumber).isEqualTo(2)
+    }
+
+    @ParameterizedTest
+    // Disallow dots as they are often meaningful in queue names.
+    @ValueSource(strings = [ "no whitespace allowed", "!!!", "😂", "1234.5678"])
+    fun `invalid topics`(topic: String) {
+        assertThatIllegalArgumentException().isThrownBy { PostOffice.create(bob.publicKey, alice, topic) }
     }
 
     @Test
     fun corrupted() {
-        val mutableMail = MutableMail(message1, bob.public, alice.private)
-        mutableMail.topic = "valid-topic"
+        val alicePostOffice = PostOffice.create(bob.publicKey, alice, "topic")
+        val bobPostOffice = PostOffice.create(alice.publicKey, bob, "topic")
+        val bytes = alicePostOffice.encryptMail(message1)
         // Corrupt every byte in the array and check we get an exception with a reasonable
         // error message for each.
-        val bytes = mutableMail.encrypt()
         for (i in bytes.indices) {
             bytes[i]++
             assertThatThrownBy {
-                Mail.decrypt(bytes, bob.private)
+                bobPostOffice.decryptMail(bytes)
             }.`is`(throwableWithMailCorruptionErrorMessage)
             bytes[i]--
             // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
-            Mail.decrypt(bytes, bob.private)
+            bobPostOffice.decryptMail(bytes)
         }
     }
 
     @Test
     fun sizePadding() {
-        val mutableMail = MutableMail(message1, bob.public)
-        mutableMail.minSize = 10 * 1024
-        val encrypted = mutableMail.encrypt()
+        val postOffice = PostOffice.create(bob.publicKey)
+        postOffice.minSize = 10 * 1024
+        val encrypted = postOffice.encryptMail(message1)
         assertThat(encrypted).hasSizeGreaterThanOrEqualTo(10 * 1024)
     }
 }

@@ -21,8 +21,8 @@ import kotlin.random.Random
 class MailStreamsTest {
     companion object {
         private const val protocolNameX = "Noise_X_25519_AESGCM_SHA256"
-        private val senderPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
-        private val receivingPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
+        private val senderPrivateKey = Curve25519PrivateKey.random()
+        private val receivingPrivateKey = Curve25519PrivateKey.random()
 
         private val header = EnclaveMailHeaderImpl(sequenceNumber = 1, topic = "topic", envelope = Random.nextBytes(10), keyDerivation = null)
         private val msg = "Hello, can you hear me?".toByteArray()
@@ -81,7 +81,7 @@ class MailStreamsTest {
     }
 
     private fun testWrite(dataSize: Int, block: (MailEncryptingStream, ByteArray) -> Unit) {
-        val senderPrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
+        val senderPrivateKey = Curve25519PrivateKey.random()
         val data = ByteArray(dataSize).also(Noise::random)
 
         val baos = ByteArrayOutputStream()

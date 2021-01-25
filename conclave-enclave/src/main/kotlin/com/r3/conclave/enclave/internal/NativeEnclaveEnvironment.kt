@@ -9,12 +9,13 @@ import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.enclave.internal.substratevm.EntryPoint
+import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.atomic.AtomicLong
-
 
 @PotentialPackagePrivate
 object NativeEnclaveEnvironment : EnclaveEnvironment {
@@ -28,12 +29,11 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
     private var singletonHandler: HandlerConnected<*>? = null
 
     /**
-     * The ECALL entry point. This code does *not* handle exceptions and must be done e.g. by using [com.r3.conclave.core.enclave.RootEnclave]
+     * The ECALL entry point. In addition to [EntryPoint.entryPoint], this is also called from JNI code.
      *
      * @param input The chunk of data sent from the host.
      */
     @JvmStatic
-    @Suppress("UNUSED")
     fun enclaveEntry(input: ByteArray) {
         val singletonHandler = synchronized(this) {
             singletonHandler ?: run {
@@ -169,6 +169,8 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
 
     // Static enclave registration
     init {
+        val alwaysInsideEnclave = object : EnclaveContext { override fun isInsideEnclave() = true }
+        EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }.set(null, alwaysInsideEnclave)
         EnclaveSecurityProvider.register()
     }
 }

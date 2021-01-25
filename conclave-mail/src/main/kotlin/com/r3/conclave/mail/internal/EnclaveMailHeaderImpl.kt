@@ -8,7 +8,8 @@ import java.util.*
  * Encoder/decoder for the authenticated data bytes in a mail stream.
  *
  * [keyDerivation] is an internal header used by the enclave to derive the private key needed for encryption. Currently
- * it only contains the CPUSVN value, but it's variable length to allow future additions.
+ * it only contains the CPUSVN value, but it's variable length to allow future additions. This is only populated, and
+ * required, if the destination is an enclave.
  */
 data class EnclaveMailHeaderImpl(
         override val sequenceNumber: Long,

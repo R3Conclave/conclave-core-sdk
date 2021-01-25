@@ -2,6 +2,7 @@ package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
+import com.r3.conclave.utilities.internal.toHexString
 import java.security.*
 
 // Note: we don't implement ECPrivateKey here because in Java 11+ there is a different interface
@@ -32,6 +33,14 @@ class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
     override fun toString(): String = "Curve25519PrivateKey()"
 
     val publicKey: Curve25519PublicKey get() = privateCurve25519KeyToPublic(this)
+
+    companion object {
+        /**
+         * Create a new random Curve 25519 private key.
+         */
+        @JvmStatic
+        fun random(): Curve25519PrivateKey = Curve25519PrivateKey(ByteArray(32).also(Noise::random))
+    }
 }
 
 /**
@@ -56,25 +65,7 @@ class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
 
     override fun hashCode(): Int = encoded.contentHashCode()
 
-    override fun toString(): String = encoded.contentToString()
-}
-
-/**
- * Creates Curve25519 keys. Equivalent to what you get back from KeyPairGenerator.getInstance("X25519") on Java 11+.
- */
-class Curve25519KeyPairGenerator : KeyPairGeneratorSpi() {
-    @Volatile
-    private var rng: SecureRandom = SecureRandom.getInstanceStrong()
-
-    override fun generateKeyPair(): KeyPair {
-        val privateKey = Curve25519PrivateKey(rng.generateSeed(32))
-        return KeyPair(privateKey.publicKey, privateKey)
-    }
-
-    override fun initialize(keysize: Int, random: SecureRandom) {
-        require(keysize == 256) { "keysize must be 256, was $keysize" }
-        rng = random
-    }
+    override fun toString(): String = "Curve25519PublicKey(${encoded.toHexString()})"
 }
 
 // This is synthetic to hide it from Java apps.

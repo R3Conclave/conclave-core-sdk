@@ -4,8 +4,7 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.attestation.MockAttestation
-import com.r3.conclave.mail.Curve25519KeyPairGenerator
-import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.Curve25519PrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
@@ -18,7 +17,7 @@ import kotlin.random.Random
  */
 class EnclaveInstanceInfoImplTest {
     private val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
-    private val encryptionKeyPair = Curve25519KeyPairGenerator().generateKeyPair()
+    private val encryptionPrivateKey = Curve25519PrivateKey.random()
     private val measurement = SHA256Hash.wrap(Random.nextBytes(32))
     private val cpuSvn = OpaqueBytes(Random.nextBytes(16))
     private val mrsigner = SHA256Hash.wrap(Random.nextBytes(32))
@@ -30,7 +29,7 @@ class EnclaveInstanceInfoImplTest {
         this[SgxReportBody.mrsigner] = mrsigner.buffer()
         this[SgxReportBody.isvProdId] = isvProdId
         this[SgxReportBody.isvSvn] = isvSvn
-        this[SgxReportBody.reportData] = SHA512Hash.hash(signingKeyPair.public.encoded + encryptionKeyPair.public.encoded).buffer()
+        this[SgxReportBody.reportData] = SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
     }
 
     private val timestamp = Instant.now()
@@ -75,7 +74,7 @@ class EnclaveInstanceInfoImplTest {
     private fun newInstance(): EnclaveInstanceInfoImpl {
         return EnclaveInstanceInfoImpl(
                 signingKeyPair.public,
-                encryptionKeyPair.public as Curve25519PublicKey,
+                encryptionPrivateKey.publicKey,
                 MockAttestation(timestamp, reportBody.asReadOnly(), false)
         )
     }

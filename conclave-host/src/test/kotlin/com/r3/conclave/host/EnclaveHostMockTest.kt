@@ -3,12 +3,15 @@ package com.r3.conclave.host
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.internaltesting.RecordingCallback
+import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.testing.MockHost
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.writeData
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class EnclaveHostMockTest {
     private lateinit var host: MockHost<*>
@@ -16,7 +19,7 @@ class EnclaveHostMockTest {
 
     @AfterEach
     fun `make sure the host is not leaking any callbacks`() {
-        if (checkLeakedCallbacks) {
+        if (checkLeakedCallbacks && ::host.isInitialized) {
             val enclaveCallHandler = host.field("enclaveMessageHandler", EnclaveHost::class.java)
             @Suppress("UNCHECKED_CAST")
             val enclaveCalls = (enclaveCallHandler.field("threadIDToTransaction") as Map<Long, Any>).values.map {
@@ -28,7 +31,7 @@ class EnclaveHostMockTest {
 
     @AfterEach
     fun `make sure the enclave is not leaking any callbacks`() {
-        if (checkLeakedCallbacks) {
+        if (checkLeakedCallbacks && ::host.isInitialized) {
             val enclaveCallHandler = host.enclave.field("enclaveMessageHandler", Enclave::class.java)
             @Suppress("UNCHECKED_CAST")
             val enclaveCalls = enclaveCallHandler.field("enclaveCalls") as Map<Long, StateManager<*>>
@@ -108,7 +111,7 @@ class EnclaveHostMockTest {
     }
 
     class SimpleReturnEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = bytes + 2
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray = bytes + 2
     }
 
     @Test
@@ -146,7 +149,7 @@ class EnclaveHostMockTest {
     }
 
     class CallbacksAndReturnEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             callUntrustedHost(bytes + 2)
             callUntrustedHost(bytes + 3)
             return bytes + 4
@@ -162,7 +165,7 @@ class EnclaveHostMockTest {
     }
 
     class SimpleBackAndForthEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             val response1 = callUntrustedHost(bytes + 2)!!
             assertThat(response1).isEqualTo(byteArrayOf(1, 2, 3))
             val response2 = callUntrustedHost(response1 + 4)!!
@@ -182,7 +185,7 @@ class EnclaveHostMockTest {
     }
 
     class NestedCallbackEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             return callUntrustedHost(bytes + 2) { fromHost -> fromHost + 4 }!! + 6
         }
     }
@@ -207,7 +210,7 @@ class EnclaveHostMockTest {
     }
 
     class ComplexCallbackEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             return callUntrustedHost(bytes + 2) { fromHost ->
                 val response1 = callUntrustedHost(fromHost + 4)!! + 6
                 val response2 = callUntrustedHost(response1)!!
@@ -241,7 +244,7 @@ class EnclaveHostMockTest {
     }
 
     class ThrowingEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             val (throwException, message) = bytes.throwCommand()
             if (throwException) {
                 throw RuntimeException(message)
@@ -366,6 +369,33 @@ class EnclaveHostMockTest {
     }
 
     class PrivateCtorEnclave private constructor() : Enclave()
+
+    @ParameterizedTest
+    @ValueSource(strings = [ "PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()" ])
+    fun `cannot create PostOffice directly when inside enclave`(source: String) {
+        class CreatePostOfficeEnclave : Enclave() {
+            override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+                when (String(bytes)) {
+                    "PostOffice.create()" -> PostOffice.create(enclaveInstanceInfo.encryptionKey)
+                    "EnclaveInstanceInfo.createPostOffice()" -> enclaveInstanceInfo.createPostOffice()
+                }
+                return null
+            }
+        }
+
+        host = MockHost.loadMock<CreatePostOfficeEnclave>()
+        host.start(null, null)
+
+        // Outside of the enclave is fine, before and after
+        host.enclaveInstanceInfo.createPostOffice()
+
+        // But not while inside
+        assertThatIllegalStateException()
+                .isThrownBy { host.callEnclave(source.toByteArray()) }
+                .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
+
+        host.enclaveInstanceInfo.createPostOffice()
+    }
 
     private fun EnclaveHost.recordCallbacksFromEnclave(bytes: ByteArray): Pair<ByteArray?, List<ByteArray>> {
         val callback = RecordingCallback()

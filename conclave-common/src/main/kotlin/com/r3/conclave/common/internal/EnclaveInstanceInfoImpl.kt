@@ -9,11 +9,11 @@ import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.Mail
-import com.r3.conclave.mail.MutableMail
-import com.r3.conclave.mail.internal.setKeyDerivation
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.mail.PostOffice
+import com.r3.conclave.utilities.internal.putUnsignedShort
+import com.r3.conclave.utilities.internal.toHexString
+import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.nio.ByteBuffer
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -21,7 +21,7 @@ import java.security.Signature
 
 class EnclaveInstanceInfoImpl(
         override val dataSigningKey: PublicKey,
-        val encryptionKey: Curve25519PublicKey,
+        override val encryptionKey: Curve25519PublicKey,
         val attestation: Attestation
 ) : EnclaveInstanceInfo {
     override val enclaveInfo: EnclaveInfo
@@ -67,25 +67,15 @@ class EnclaveInstanceInfoImpl(
         }
     }
 
-    private val keyDerivation: ByteArray by lazy {
+    val keyDerivation: ByteArray by lazy {
         val buffer = ByteBuffer.allocate(SgxCpuSvn.size + SgxIsvSvn.size)
         securityInfo.cpuSVN.putTo(buffer)
         buffer.putUnsignedShort(enclaveInfo.revocationLevel + 1)
         buffer.array()
     }
 
-    override fun createMail(body: ByteArray): MutableMail {
-        return MutableMail(body, encryptionKey).apply {
-            setKeyDerivation(keyDerivation)
-        }
-    }
-
-    override fun decryptMail(mailBytes: ByteArray, withPrivateKey: PrivateKey): EnclaveMail {
-        return Mail.decrypt(mailBytes, withPrivateKey).also {
-            check(it.authenticatedSender == encryptionKey) {
-                "Mail does not appear to be sent by the target enclave. Authenticated sender was ${it.authenticatedSender} but expected $encryptionKey"
-            }
-        }
+    override fun createPostOffice(senderPrivateKey: PrivateKey, topic: String): PostOffice {
+        return EIIPostOffice(senderPrivateKey, topic)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -118,6 +108,11 @@ class EnclaveInstanceInfoImpl(
         Assessed security level at ${securityInfo.timestamp} is ${securityInfo.summary}
           - ${securityInfo.reason}
     """.trimIndent()
+
+    private inner class EIIPostOffice(senderPrivateKey: PrivateKey, topic: String) : PostOffice(senderPrivateKey, topic) {
+        override val destinationPublicKey: PublicKey get() = this@EnclaveInstanceInfoImpl.encryptionKey
+        override val keyDerivation: ByteArray get() = this@EnclaveInstanceInfoImpl.keyDerivation
+    }
 
     companion object {
         private val magic = "EII".toByteArray()

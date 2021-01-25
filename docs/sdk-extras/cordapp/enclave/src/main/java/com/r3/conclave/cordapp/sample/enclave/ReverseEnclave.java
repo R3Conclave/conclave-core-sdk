@@ -1,10 +1,8 @@
 package com.r3.conclave.cordapp.sample.enclave;
 
 import com.r3.conclave.enclave.Enclave;
+import com.r3.conclave.enclave.EnclavePostOffice;
 import com.r3.conclave.mail.EnclaveMail;
-import com.r3.conclave.mail.MutableMail;
-
-import java.security.PublicKey;
 
 /**
  * Simply reverses the bytes that are passed in.
@@ -21,12 +19,10 @@ public class ReverseEnclave extends Enclave {
     protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
         // Reverse it and re-encode to UTF-8 to send back.
         final byte[] reversedEncodedString = reverse(new String(mail.getBodyAsBytes())).getBytes();
-        // Check the client that sent the mail set things up so we can reply.
-        final PublicKey sender = mail.getAuthenticatedSender();
-        if (sender == null)
-            throw new IllegalArgumentException("Mail sent to this enclave must be authenticated so we can reply.");
-        // Create and send back the mail to the sender.
-        final MutableMail reply = createMail(sender, reversedEncodedString);
+        // Get the PostOffice instance for responding back to this mail. Our response will use the same topic.
+        final EnclavePostOffice postOffice = postOffice(mail);
+        // Create the encrypted response and send it back to the sender.
+        final byte[] reply = postOffice.encryptMail(reversedEncodedString);
         postMail(reply, routingHint);
     }
 }

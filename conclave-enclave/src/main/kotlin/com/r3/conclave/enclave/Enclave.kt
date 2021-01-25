@@ -13,15 +13,16 @@ import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.InternalEnclave
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
-import com.r3.conclave.mail.internal.setKeyDerivation
 import com.r3.conclave.utilities.internal.*
-import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.security.KeyPair
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
+import kotlin.collections.HashMap
 
 /**
  * Subclass this inside your enclave to provide an entry point. The outside world
@@ -56,6 +57,8 @@ abstract class Enclave {
     private lateinit var adminHandler: AdminHandler
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
+
+    private val postOffices = HashMap<DestinationAndTopic, EnclavePostOffice>()
 
     /**
      * Returns a [Signature] object pre-initialised with the private key corresponding
@@ -172,15 +175,9 @@ abstract class Enclave {
     }
 
     private fun initCryptography() {
-        val reportBody = env.createReport(null, null)[SgxReport.body]
+        val reportBody = env.createReport(null, null)[body]
         val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
         val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
-        keyDerivation = ByteBuffer.allocate(SgxCpuSvn.size + SgxIsvSvn.size).let {
-            it.put(cpuSvn)
-            it.putUnsignedShort(isvSvn)
-            it.array()
-        }
-        (cpuSvn as Buffer).rewind()  // Prepare to read again.
         val entropy = getSecretEntropy(cpuSvn, isvSvn)
         signingKeyPair = signatureScheme.generateKeyPair(entropy)
         val private = Curve25519PrivateKey(entropy)
@@ -259,9 +256,8 @@ Received: $attestationReportBody"""
 
         /**
          * Send a request to the host for the [Attestation] object. The enclave has the other properties needed
-         * to construct its [EnclaveInstanceInfoImpl].
-         *
-         * This is simpler than serialising the info object itself as then the enclave has to check it's the correct one.
+         * to construct its [EnclaveInstanceInfoImpl]. This way less bytes are transferred and there's less checking that
+         * needs to be done.
          */
         private fun sendAttestationRequest() {
             sender.send(1) { buffer ->
@@ -270,7 +266,6 @@ Received: $attestationReportBody"""
         }
     }
 
-    private data class SenderAndTopic(val sender: PublicKey, val topic: String)
     private class Watermark(var value: Long)
 
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
@@ -278,7 +273,7 @@ Received: $attestationReportBody"""
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
         // Maps sender + topic pairs to the highest sequence number seen so far. Seqnos must start from zero and can only
         // increment by one for each delivered mail.
-        private val sequenceWatermarks = HashMap<SenderAndTopic, Watermark>()
+        private val sequenceWatermarks = HashMap<DestinationAndTopic, Watermark>()
         private lateinit var sender: Sender
 
         override fun connect(upstream: Sender): EnclaveMessageHandler {
@@ -311,7 +306,9 @@ Received: $attestationReportBody"""
                 // Wrap the remaining bytes in a InputStream to avoid copying.
                 val decryptingStream = MailDecryptingStream(input.inputStream())
                 val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
-                    requireNotNull(keyDerivation) { "Key derivation header required for decrypting enclave mail" }
+                    requireNotNull(keyDerivation) {
+                        "Key derivation header is required for decrypting enclave mail. Make sure EnclaveInstanceInfo.createPostOffice is used."
+                    }
                     // Ignore any extra bytes in the keyDerivation.
                     require(keyDerivation.size >= SgxCpuSvn.size + SgxIsvSvn.size) { "Invalid key derivation header size" }
                     val keyDerivationBuffer = ByteBuffer.wrap(keyDerivation)
@@ -363,16 +360,27 @@ Received: $attestationReportBody"""
 
         private fun checkMailOrdering(mail: EnclaveMail) {
             synchronized(sequenceWatermarks) {
-                val key = SenderAndTopic(mail.authenticatedSender, mail.topic)
+                val key = DestinationAndTopic(mail.authenticatedSender, mail.topic)
                 val highestSeen = sequenceWatermarks.computeIfAbsent(key) { Watermark(-1) }
                 // The -1 allows us to check the first mail in this sequence is zero.
-                check(mail.sequenceNumber == highestSeen.value + 1) {
-                    val msg = if (highestSeen.value == -1L) {
-                        "Sequence number must start from zero"
-                    } else {
-                        "Highest sequence number seen is ${highestSeen.value}"
+                val expected = highestSeen.value + 1
+                check(mail.sequenceNumber == expected) {
+                    when {
+                        highestSeen.value == -1L -> {
+                            "First time seeing mail with topic ${mail.topic} so the sequence number must be zero but is " +
+                                    "instead ${mail.sequenceNumber}. It may be the host is delivering mail out of order."
+                        }
+                        mail.sequenceNumber < expected -> {
+                            "Mail with sequence number ${mail.sequenceNumber} on topic ${mail.topic} has already been seen, " +
+                                    "was expecting $expected. Make sure the same PostOffice instance is used for the same " +
+                                    "sender key and topic, or if the sender key is long-term then a per-process topic is used. " +
+                                    "Otherwise it may be the host is replaying older messages."
+                        }
+                        else -> {
+                            "Next sequence number on topic ${mail.topic} should be $expected but is instead " +
+                                    "${mail.sequenceNumber}. It may be the host is delivering mail out of order."
+                        }
                     }
-                    "Mail delivered out of order or replayed. $msg, attempted delivery of ${mail.sequenceNumber}"
                 }
                 highestSeen.value++
             }
@@ -464,7 +472,6 @@ Received: $attestationReportBody"""
 
     //region Mail
     private lateinit var encryptionKeyPair: KeyPair
-    private lateinit var keyDerivation: ByteArray
 
     /**
      * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted
@@ -506,27 +513,99 @@ Received: $attestationReportBody"""
     }
 
     /**
-     * Returns a new [MutableMail] object for the given recipient. It is initialized with the enclave's
-     * private encryption key which means this enclave will be authenticated to them.
+     * Returns a post office for mail targeted at the given destination key, and having the given topic. The post office
+     * is setup with the enclave's private encryption key so the receipient can be sure mail originated from this enclave.
      *
-     * You should set the [MutableMail.minSize] appropriately based on your knowledge
-     * of the application's communication patterns. The outbound mail will not be
-     * padded for you.
+     * The enclave will cache post offices so that the same instance is used for the same public key and topic. This
+     * ensures mail is sequenced correctly.
      *
-     * The recipient should use [EnclaveInstanceInfo.decryptMail] to make sure it verifies this enclave as the sender
-     * of the mail.
+     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
+     * communication patterns. The outbound mail will not be padded for you.
+     *
+     * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
+     *
+     * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
      */
-    protected fun createMail(to: PublicKey, body: ByteArray): MutableMail {
-        return MutableMail(body, to, encryptionKeyPair.private).apply {
-            setKeyDerivation(keyDerivation)
+    protected fun postOffice(destinationPublicKey: PublicKey, topic: String): EnclavePostOffice {
+        synchronized(postOffices) {
+            return postOffices.computeIfAbsent(DestinationAndTopic(destinationPublicKey, topic)) {
+                EnclavePostOfficeImpl(destinationPublicKey, topic, null)
+            }
         }
     }
 
     /**
+     * Returns a post office for mail targeted at the given destination key, and having the topic "default". The post office
+     * is setup with the enclave's private encryption key so the receipient can be sure mail originated from this enclave.
+     *
+     * The enclave will cache post offices so that the same instance is used for the same public key and topic. This
+     * ensures mail is sequenced correctly.
+     *
+     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
+     * communication patterns. The outbound mail will not be padded for you.
+     *
+     * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
+     *
+     * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
+     */
+    protected fun postOffice(destinationPublicKey: PublicKey): EnclavePostOffice {
+        return postOffice(destinationPublicKey, "default")
+    }
+
+    /**
+     * Returns a post office for responding back to the sender of the given mail. This is a convenience method which calls
+     * `postOffice(PublicKey, String)` with the mail's authenticated sender key and topic.
+     */
+    protected fun postOffice(mail: EnclaveMail): EnclavePostOffice = postOffice(mail.authenticatedSender, mail.topic)
+
+    /**
+     * Returns a post office for mail targeted to an enclave with the given topic. The target enclave can be one running
+     * on this host or on another machine, and can even be this enclave if [enclaveInstanceInfo] is used (and thus enabling
+     * the mail-to-self pattern). The post office is setup with the enclave's private encryption key so the receipient
+     * can be sure mail originated from this enclave.
+     *
+     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
+     * communication patterns. The outbound mail will not be padded for you.
+     *
+     * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
+     * This ensures mail is sequenced correctly.
+     *
+     * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
+     *
+     * // TODO Add in docs how to do mail-to-self
+     */
+    protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo, topic: String): EnclavePostOffice {
+        enclaveInstanceInfo as EnclaveInstanceInfoImpl
+        synchronized(postOffices) {
+            return postOffices.computeIfAbsent(DestinationAndTopic(enclaveInstanceInfo.encryptionKey, topic)) {
+                EnclavePostOfficeImpl(enclaveInstanceInfo.encryptionKey, topic, enclaveInstanceInfo.keyDerivation)
+            }
+        }
+    }
+
+    /**
+     * Returns a post office for mail targeted to an enclave with the topic "default". The target enclave can be one running
+     * on this host or on another machine, and can even be this enclave if [enclaveInstanceInfo] is used (and thus enabling
+     * the mail-to-self pattern). The post office is setup with the enclave's private encryption key so the receipient
+     * can be sure mail did indeed originate from this enclave.
+     *
+     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
+     * communication patterns. The outbound mail will not be padded for you.
+     *
+     * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
+     * This ensures mail is sequenced correctly.
+     *
+     * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
+     *
+     * // TODO Add in docs how to do mail-to-self
+     */
+    protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo): EnclavePostOffice {
+        return postOffice(enclaveInstanceInfo, "default")
+    }
+
+    /**
      * The provided mail will be encrypted, authenticated and passed to the host
-     * for delivery. Once the host accepts, the mail's sequence number is automatically
-     * incremented, meaning you can immediately change the body and call [postMail]
-     * again.
+     * for delivery.
      *
      * Where the mail gets delivered depends on the host logic: in some
      * applications the public key may be sufficient, in others, the enclave may
@@ -539,12 +618,18 @@ Received: $attestationReportBody"""
      * you can acknowledge a mail and post a reply, or the other way around, and it
      * doesn't matter which order you pick: you cannot get lost or replayed messages.
      */
-    protected fun postMail(mail: MutableMail, routingHint: String?) {
-        val encryptedBytes = mail.encrypt()
+    protected fun postMail(encryptedMail: ByteArray, routingHint: String?) {
         // TODO: Track size of encryptedBytes here, and adjust minSize before calling encrypt to ensure uniform sizes.
-        enclaveMessageHandler.postMail(encryptedBytes, routingHint)
-        mail.incrementSequenceNumber()
+        enclaveMessageHandler.postMail(encryptedMail, routingHint)
     }
+
+    private inner class EnclavePostOfficeImpl(destinationPublicKey: PublicKey,
+                                              topic: String,
+                                              override val keyDerivation: ByteArray?) : EnclavePostOffice(destinationPublicKey, topic) {
+        override val senderPrivateKey: PrivateKey get() = encryptionKeyPair.private
+    }
+
+    private data class DestinationAndTopic(val destination: PublicKey, val topic: String)
     //endregion
 }
 

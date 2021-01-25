@@ -3,9 +3,7 @@ package com.r3.conclave.common
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.SignatureSchemeEdDSA
 import com.r3.conclave.common.internal.attestation.Attestation
-import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.MutableMail
+import com.r3.conclave.mail.*
 import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getSlice
 import java.nio.BufferUnderflowException
@@ -32,7 +30,15 @@ interface EnclaveInstanceInfo {
     val enclaveInfo: EnclaveInfo
 
     /**
+     * Returns the enclave's public encryption key.
+     *
+     * For creating mail targeted to this enclave use a [PostOffice] from [createPostOffice].
+     */
+    val encryptionKey: PublicKey
+
+    /**
      * A key used by the enclave to digitally sign static data structures.
+     *
      * This is not the same as the enclave code signing key, which just links
      * a specific enclave file to its author.
      */
@@ -53,23 +59,37 @@ interface EnclaveInstanceInfo {
     fun serialize(): ByteArray
 
     /**
-     * Creates a mail to this target enclave. It can be encrypted with [MutableMail.encrypt] and the results then
-     * delivered to the host for onwards delivery to the enclave.
+     * Returns a new [PostOffice] instance far encrypting mail to this target enclave on the given topic.
+     *
+     * Each mail created by this post office will be authenticated with the given private key, and will act as the client's
+     * authenticated identity to the enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is
+     * required per client (a new one can be created using [Curve25519PrivateKey.random]).
+     *
+     * It's very important that related mail are created from the same post office instance, i.e. having the same topic and
+     * sender key. This is so the post office can apply an increasing sequence number to each mail, which the target
+     * enclave will use to make sure they are received in order and that none have been dropped (see
+     * [EnclaveMailHeader.sequenceNumber]).
+     *
+     * For a different stream of mail create another post office with a different topic.
      */
-    fun createMail(body: ByteArray): MutableMail
+    fun createPostOffice(senderPrivateKey: PrivateKey, topic: String): PostOffice
 
     /**
-     * Decrypts mail that should have been sent by this enclave, verifying that the
-     * authenticated sender matches this enclave instance. Use this in preference
-     * to [com.r3.conclave.mail.Mail.decrypt], as that call doesn't check the sender
-     * is the enclave.
+     * Returns a new [PostOffice] instance for encrypting mail to this target enclave on the "default" topic.
      *
-     * @param mailBytes The encrypted bytes received from a client, typically produced by
-     * calling [createMail] and then [MutableMail.encrypt].
-     * @param withPrivateKey Your private key - the key that the mail was sent to by the enclave,
-     * i.e. provided to `Enclave.createMail` in the `to` parameter.
+     * A new sender private key will be used (which can be retrieved with [PostOffice.senderPrivateKey]), and each mail
+     * created by this post office will be authenticated with it and act as the client's authenticated identity to the
+     * enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is required per client .
+     *
+     * It's very important that related mail are created from the same post office instance, i.e. having the same topic and
+     * sender key. This is so the post office can apply an increasing sequence number to each mail, which the target
+     * enclave will use to make sure they are received in order and that none have been dropped (see
+     * [EnclaveMailHeader.sequenceNumber]).
+     *
+     * For a different stream of mail create another post office with a different topic.
      */
-    fun decryptMail(mailBytes: ByteArray, withPrivateKey: PrivateKey): EnclaveMail
+    @JvmDefault
+    fun createPostOffice(): PostOffice = createPostOffice(Curve25519PrivateKey.random(), "default")
 
     /**
      * Suppress kotlin specific companion objects from our API documentation.

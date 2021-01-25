@@ -52,7 +52,7 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
             } else {
                 // We need read the buffer to determine the size of the variable encoder. This needs to be done in little-endian
                 // mode (as Cursor assumes only that). Once we've determined the size we revert the mode back since this
-                // method is only meant to advance the position of the buffer, not change its endianess.
+                // method is only meant to advance the position of the buffer, not change its endianness.
                 val bo = buffer.order()
                 try {
                     type.size(buffer.order(ByteOrder.LITTLE_ENDIAN))

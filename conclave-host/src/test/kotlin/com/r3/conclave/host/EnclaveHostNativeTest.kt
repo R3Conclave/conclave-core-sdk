@@ -5,16 +5,18 @@ import com.r3.conclave.internaltesting.RecordingCallback
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
+import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.testing.internal.EnclaveMetadata
 import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
@@ -151,6 +153,26 @@ class EnclaveHostNativeTest {
         val text = EnclaveHost.capabilitiesDiagnostics
         println(text)
         assertThat(text).contains("SGX available:")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = [ "PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()" ])
+    fun `cannot create PostOffice directly when inside enclave`(source: String) {
+        class CreatePostOfficeEnclave : Enclave() {
+            override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+                when (String(bytes)) {
+                    "PostOffice.create()" -> PostOffice.create(enclaveInstanceInfo.encryptionKey)
+                    "EnclaveInstanceInfo.createPostOffice()" -> enclaveInstanceInfo.createPostOffice()
+                }
+                return null
+            }
+        }
+
+        start<CreatePostOfficeEnclave>()
+
+        assertThatIllegalStateException()
+                .isThrownBy { host.callEnclave(source.toByteArray()) }
+                .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
     }
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {

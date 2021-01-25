@@ -8,6 +8,7 @@ import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.host.internal.EnclaveHandle
+import com.r3.conclave.utilities.internal.EnclaveContext
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 
@@ -20,6 +21,10 @@ class MockEnclaveHandle<CONNECTION>(
     companion object {
         // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
         private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java).apply { isAccessible = true }
+
+        init {
+            EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }.set(null, ThreadLocalEnclaveContext)
+        }
     }
 
     override val enclaveMode: EnclaveMode get() = EnclaveMode.MOCK
@@ -38,9 +43,20 @@ class MockEnclaveHandle<CONNECTION>(
     }
 
     override fun sendSerialized(serializedBuffer: ByteBuffer) {
-        enclaveHandler.onReceive(serializedBuffer)
+        check(!EnclaveContext.isInsideEnclave())
+        ThreadLocalEnclaveContext.set(true)
+        try {
+            enclaveHandler.onReceive(serializedBuffer)
+        } finally {
+            ThreadLocalEnclaveContext.set(false)
+        }
     }
 
     override fun destroy() {
     }
+}
+
+object ThreadLocalEnclaveContext : EnclaveContext, ThreadLocal<Boolean>() {
+    override fun initialValue(): Boolean = false
+    override fun isInsideEnclave(): Boolean = get()
 }

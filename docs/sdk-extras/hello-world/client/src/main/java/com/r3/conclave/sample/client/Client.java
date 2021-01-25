@@ -2,9 +2,9 @@ package com.r3.conclave.sample.client;
 
 import com.r3.conclave.client.EnclaveConstraint;
 import com.r3.conclave.common.EnclaveInstanceInfo;
-import com.r3.conclave.mail.Curve25519KeyPairGenerator;
+import com.r3.conclave.mail.Curve25519PrivateKey;
 import com.r3.conclave.mail.EnclaveMail;
-import com.r3.conclave.mail.MutableMail;
+import com.r3.conclave.mail.PostOffice;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -12,8 +12,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.util.UUID;
+import java.security.PrivateKey;
 
 public class Client {
     public static void main(String[] args) throws Exception {
@@ -54,17 +53,27 @@ public class Client {
         System.out.println("Connected to " + attestation);
         EnclaveConstraint.parse("S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE").check(attestation);
 
-        // Generate our own Curve25519 keypair so we can receive a response.
-        KeyPair myKey = new Curve25519KeyPairGenerator().generateKeyPair();
+        // Now we checked the enclave's identity and are satisfied it's the enclave from this project, we can send mail
+        // to it.
 
-        // Now we checked the enclave's identity and are satisfied it's the enclave from this project,
-        // we can send mail to it. We will provide our own private key whilst encrypting, so the enclave
-        // gets our public key and can encrypt a reply.
-        MutableMail mail = attestation.createMail(toReverse.getBytes(StandardCharsets.UTF_8));
-        mail.setSenderPrivateKey(myKey.getPrivate());
-        // Set a random topic, so we can re-run this program against the same server.
-        mail.setTopic(UUID.randomUUID().toString());
-        byte[] encryptedMail = mail.encrypt();
+        // We will need to provide our own private key whilst encrypting, so the enclave gets our public key and can
+        // encrypt a reply. If you already have a long term key then you can use that and the enclave can then
+        // use the public key as a form of identity.
+        PrivateKey privateKey = Curve25519PrivateKey.random();
+
+        // For encrypting mail to the enclave we need to create a PostOffice from the enclave's attestation object.
+        // The post office will manage sequence numbers for us if we send more than one mail, which allows the enclave
+        // to check that no mail has been dropped or reordered by the host.
+        //
+        // We use a topic value of "reverse" but any will do in this example. However, mail related to each other and
+        // which need to be ordered must use their own topic. Topics are scoped to the sender key and so multiple clients
+        // can use the same topic without overlapping with each other.
+        //
+        // In this example it doesn't matter as we only send one mail with each random key, but in general it is very
+        // important to use the same post office instance when encrypting mail with the same topic and private key.
+        PostOffice postOffice = attestation.createPostOffice(privateKey, "reverse");
+
+        byte[] encryptedMail = postOffice.encryptMail(toReverse.getBytes(StandardCharsets.UTF_8));
 
         System.out.println("Sending the encrypted mail to the host.");
 
@@ -75,7 +84,8 @@ public class Client {
         byte[] encryptedReply = new byte[fromHost.readInt()];
         System.out.println("Reading reply mail of length " + encryptedReply.length + " bytes.");
         fromHost.readFully(encryptedReply);
-        EnclaveMail reply = attestation.decryptMail(encryptedReply, myKey.getPrivate());
+        // The same post office will decrypt the response.
+        EnclaveMail reply = postOffice.decryptMail(encryptedReply);
         System.out.println("Enclave reversed '" + toReverse + "' and gave us the answer '" + new String(reply.getBodyAsBytes()) + "'");
 
         toHost.close();

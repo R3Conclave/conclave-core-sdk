@@ -2,13 +2,13 @@ package com.r3.conclave.integrationtests.kotlin.enclave
 
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand
-import com.r3.conclave.mail.Curve25519KeyPairGenerator
+import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.MutableMail
+import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import java.security.KeyPair
+import java.security.PrivateKey
 
 /**
  * This test makes sure that the shading of Kotlin into the Conclave SDK does not prevent an app from being written in
@@ -39,17 +39,15 @@ class ApiKotlinConsumerTest {
         }
         assertThat(responseForHost).isEqualTo(byteArrayOf(9, 1, 8, 2))
 
-        val mutableMail: MutableMail = host.enclaveInstanceInfo.createMail("abc".toByteArray())
-        val keyPair: KeyPair = Curve25519KeyPairGenerator().generateKeyPair()
-        mutableMail.senderPrivateKey = keyPair.private
-        mutableMail.topic = ApiKotlinConsumerTest::class.java.simpleName
-        val encryptedMail: ByteArray = mutableMail.encrypt()
+        val privateKey: PrivateKey = Curve25519PrivateKey.random()
+        val postOffice: PostOffice = host.enclaveInstanceInfo.createPostOffice(privateKey, ApiKotlinConsumerTest::class.java.simpleName)
+        val encryptedMail: ByteArray = postOffice.encryptMail("abc".toByteArray())
 
         host.deliverMail(1, encryptedMail, null) { fromEnclave ->
             fromEnclave + fromEnclave
         }
         assertThat(postedMail).hasSize(1)
-        val responseForClient: EnclaveMail = host.enclaveInstanceInfo.decryptMail(postedMail[0], keyPair.private)
+        val responseForClient: EnclaveMail = postOffice.decryptMail(postedMail[0])
         assertThat(responseForClient.bodyAsBytes).isEqualTo("cbacba".toByteArray())
     }
 }

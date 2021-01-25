@@ -6,6 +6,7 @@ import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.internaltesting.threadWithFuture
+import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.EnclaveMail
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -14,14 +15,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.Consumer
 import java.util.function.Function
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
@@ -181,7 +180,7 @@ class EnclaveTest {
     @Test
     fun notMultiThreadedByDefault() {
         start<NonThreadSafeByDefaultEnclave>(
-            EnclaveBuilder(config = EnclaveConfig().withTCSNum(10), mailCallback = Consumer {
+            EnclaveBuilder(config = EnclaveConfig().withTCSNum(10), mailCallback = {
                 // Do nothing.
             })
         )
@@ -203,10 +202,9 @@ class EnclaveTest {
 
         // Now do it again but with mail.
         (0..10).map {
+            val postOffice = host.enclaveInstanceInfo.createPostOffice(Curve25519PrivateKey.random(), it.toString())
             threadWithFuture {
-                val mail = host.enclaveInstanceInfo.createMail(byteArrayOf())
-                mail.topic = it.toString()
-                host.deliverMail(it.toLong(), mail.encrypt(), null) {
+                host.deliverMail(it.toLong(), postOffice.encryptMail(byteArrayOf()), null) {
                     null
                 }
             }
@@ -221,7 +219,7 @@ class EnclaveTest {
     }
 
     class EchoEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = bytes
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray = bytes
     }
 
     class EchoCallbackEnclave : Enclave() {
@@ -235,7 +233,7 @@ class EnclaveTest {
     }
 
     class IncrementingEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             val n = bytes.toInt()
             return (n + 1).toByteArray()
         }
@@ -265,7 +263,7 @@ class EnclaveTest {
     class ThreadingEnclave : Enclave() {
         override val threadSafe: Boolean get() = true
 
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
             val n = bytes.toInt()
             val latchBefore = CountDownLatch(n)
             val latchAfter = CountDownLatch(n)
@@ -323,7 +321,8 @@ class EnclaveTest {
 
         override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
             check(mailCalls) {
-                postMail(enclaveInstanceInfo.createMail(byteArrayOf()), "self")
+                val mailBytes = postOffice(enclaveInstanceInfo).encryptMail(byteArrayOf())
+                postMail(mailBytes, "self")
             }
         }
 
