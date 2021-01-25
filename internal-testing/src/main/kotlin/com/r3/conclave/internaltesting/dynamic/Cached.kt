@@ -47,11 +47,11 @@ sealed class Cached<out A : Any> {
 
     val key: CacheKey by lazy {
         when (this) {
-            is Cached.Pure -> DigestTools.md5String(value.hashCode().toString())
-            is Cached.FMap<*, *> -> DigestTools.md5String(md5Lambda(f) + a.key)
-            is Cached.FApply<*, *> -> DigestTools.md5String(f.key + a.key)
+            is Cached.Pure -> DigestTools.sha256String(value.hashCode().toString())
+            is Cached.FMap<*, *> -> DigestTools.sha256String(sha256Lambda(f) + a.key)
+            is Cached.FApply<*, *> -> DigestTools.sha256String(f.key + a.key)
             is Cached.SingleCached -> providedKey
-            is Cached.FApplyCached<*, *> -> DigestTools.md5String(produce.key + a.key)
+            is Cached.FApplyCached<*, *> -> DigestTools.sha256String(produce.key + a.key)
         }
     }
 
@@ -60,11 +60,11 @@ sealed class Cached<out A : Any> {
     }
 
     companion object {
-        private fun md5Lambda(lambda: Function<*>): String {
+        private fun sha256Lambda(lambda: Function<*>): String {
             val byteArrayOutputStream = ByteArrayOutputStream()
             val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
             objectOutputStream.writeObject(lambda)
-            return DigestTools.md5ByteArray(byteArrayOutputStream.toByteArray())
+            return DigestTools.sha256ByteArray(byteArrayOutputStream.toByteArray())
         }
 
         private fun <A> ExecutorService.fork(f: () -> A): CompletableFuture<A> {

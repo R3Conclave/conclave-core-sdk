@@ -8,7 +8,7 @@ import java.security.MessageDigest
 import kotlin.experimental.and
 
 object DigestTools {
-    val md5Digest: MessageDigest = MessageDigest.getInstance("MD5")
+    val sha256Digest: MessageDigest = MessageDigest.getInstance("SHA-256")
 
     val hexArray = "0123456789ABCDEF".toCharArray()
 
@@ -23,24 +23,24 @@ object DigestTools {
         return String(hexChars)
     }
 
-    fun md5String(input: String): String {
-        return md5ByteArray(input.toByteArray())
+    fun sha256String(input: String): String {
+        return sha256ByteArray(input.toByteArray())
     }
 
-    fun md5InputStream(inputStream: InputStream): String {
+    fun sha256InputStream(inputStream: InputStream): String {
         val uselessBuffer = ByteArray(64 * 1024)
-        val digest = DigestInputStream(inputStream, md5Digest).use { digestStream ->
+        val digest = DigestInputStream(inputStream, sha256Digest).use { digestStream ->
             while (digestStream.read(uselessBuffer) > -1) {}
             digestStream.messageDigest
         }
         return bytesToHex(digest.digest())
     }
 
-    fun md5File(file: File): String {
-        return md5InputStream(FileInputStream(file))
+    fun sha256File(file: File): String {
+        return sha256InputStream(FileInputStream(file))
     }
 
-    fun md5ByteArray(input: ByteArray): String {
-        return bytesToHex(md5Digest.digest(input))
+    fun sha256ByteArray(input: ByteArray): String {
+        return bytesToHex(sha256Digest.digest(input))
     }
 }

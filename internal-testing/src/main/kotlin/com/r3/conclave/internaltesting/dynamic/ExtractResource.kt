@@ -11,8 +11,8 @@ object ExtractResource {
         return Cached.SingleCached(
                 name = resourcePath,
                 providedKey = keyCache.getOrPut(resourcePath + permissions, {
-                    DigestTools.md5String(
-                            DigestTools.md5InputStream(clazz.getResourceAsStream(resourcePath)) +
+                    DigestTools.sha256String(
+                            DigestTools.sha256InputStream(clazz.getResourceAsStream(resourcePath)) +
                                     permissions)
                 }),
                 produce = { outputDirectory ->

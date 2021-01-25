@@ -13,7 +13,7 @@ object SignEnclave {
         val byteStream = ByteArrayOutputStream()
         enclaveConfig.marshal(byteStream)
         val bytes = byteStream.toByteArray()
-        return Cached.singleFile(DigestTools.md5ByteArray(bytes), "enclave.xml") { output ->
+        return Cached.singleFile(DigestTools.sha256ByteArray(bytes), "enclave.xml") { output ->
             output.writeBytes(bytes)
         }
     }
@@ -34,7 +34,7 @@ object SignEnclave {
     }
 
     fun createDummyKey(input: String? = null): Cached<File> {
-        return Cached.singleFile(DigestTools.md5String(input ?: "dummy"), "dummy.key") { output ->
+        return Cached.singleFile(DigestTools.sha256String(input ?: "dummy"), "dummy.key") { output ->
             val rsaKeyGen = KeyPairGenerator.getInstance("RSA")
             rsaKeyGen.initialize(RSAKeyGenParameterSpec(3072, BigInteger.valueOf(3)))
             val privateKey = rsaKeyGen.generateKeyPair().private
