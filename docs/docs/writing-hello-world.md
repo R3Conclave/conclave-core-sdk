@@ -387,6 +387,9 @@ then performed involving Intel's servers. This procedure can fail if attempting 
 and the platform does not support SGX. This is why it is important to perform the platform check we made in the code 
 above. If the enclave does fail to load for any reason then an exception is thrown describing the reason why.
 
+!!! tip
+    You can use the command `EnclaveHost.getCapabilitiesDiagnostics()` to print out some diagnostic information about the CPU, which can be helpful for troubleshooting.
+
 We then call `start` which initialises the enclave and the `MyEnclave` class inside it.
 You can load multiple enclaves at once but they must all use same mode, and each enclave will get its own isolated
 JVM.

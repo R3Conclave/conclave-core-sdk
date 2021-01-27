@@ -77,7 +77,7 @@ nothing special - they just set up the classpath. You could also e.g. make a fat
 
 ### Selecting your mode
 
-In the sample app, the `assemble` task will build the app for simulation mode by default. Use the `-PenclaveMode`
+In the sample app, the `assemble` task will build the app for [simulation mode](#enclave-modes) by default. Use the `-PenclaveMode`
 argument to configure this. If you are using SGX hardware, you can build the app for debug mode with the command:
 
 ```
@@ -121,26 +121,16 @@ Gradle can also create `.tar.gz` files suitable for copying to the Linux host, f
 servlet containers and various other ways to deploy your app. NB: At this time using the JPMS tool `jlink` is not 
 tested.
 
-If your Linux machine doesn't have SGX, you should see something like this:
+If your Linux machine doesn't have SGX, you should see something like the following. Don't worry, you can still complete the tutorial in [simulation mode](#selecting-your-mode):
 
 ```text
 This platform does not support hardware enclaves: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the CPU in this system
-This attestation requires 2163 bytes.
-Remote attestation for enclave F86798C4B12BE12073B87C3F57E66BCE7A541EE3D0DDA4FE8853471139C9393F:
-  - Mode: SIMULATION
-  - Code signing key hash: 01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B
-  - Public signing key: 302A300506032B65700321000568034F335BE25386FD405A5997C25F49508AA173E0B413113F9A80C9BBF542
-  - Public encryption key: A0227D6D11078AAB73407D76DB9135C0D43A22BEACB0027D166937C18C5A7973
-  - Product ID: 1
-  - Revocation level: 0
+```
 
-Assessed security level at 2020-07-17T16:31:51.894697Z is INSECURE
-  - Enclave is running in simulation mode.
-
-Reversing Hello World!: !dlrow olleH
-
+You can proceed to [Running the client](#running-the-client) when you see the following output:
+```text
 Listening on port 9999. Use the client app to send strings for reversal.
-``` 
+```
 
 ### macOS
 
@@ -183,26 +173,52 @@ IntelliJ will run the `container-gradle` script whilst  thinking it's running no
 
 ## Running the client
 
-The host has loaded the enclave, obtained its remote attestation (the `EnclaveInstanceInfo` object), printed it out,
-asked the enclave to reverse a string and finally opened up a TCP port which will now listen for requests from remote
-clients.
-
-So, let's run the client app:
+The host has opened up a TCP port which will now listen for requests from remote clients. So, let's run the client app:
 
 ```bash
-./gradlew client:run --args="reverse me!"
+./gradlew client:run --args="Reverse me"
 ```
+!!! tip
+    Docker is only required to run the *host* on macOS or windows. The client can be run without Docker.
 
-The client will connect to the host, download the `EnclaveInstanceInfo`, check it, and then send an encrypted string
-to reverse. The host will deliver this encrypted string to the enclave, and the enclave will send back to the client
-the encrypted reversed response:
+The host will load the enclave, obtain its remote attestation (the `EnclaveInstanceInfo` object), print it out,
+and ask the enclave to reverse a string. You should see the following output from the host:
+
+```
+Remote attestation for enclave D4FFB9E1539148401529035C202A9904D7562C83B2A95E33E3B639BE8693E87B:
+  - Mode: SIMULATION
+  - Code signing key hash: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+  - Public signing key: 302A300506032B657003210007C159388855F2ECD0B34C36C31F00ED276D144F1DC077D294F3F28F542E98B8
+  - Public encryption key: 4D92642BF5C7B93DDB912D809230DE3BFE09531F9095617BF3E90D720F84E151
+  - Product ID: 1
+  - Revocation level: 0
+
+Assessed security level at 2021-01-26T10:31:02.974Z is INSECURE
+  - Enclave is running in simulation mode.
+
+Reversing Hello World!: !dlroW olleH
+``` 
+
+The client will connect to the host, download the `EnclaveInstanceInfo`, check it, print it out, and then send an encrypted string to reverse. The host will deliver this encrypted string to the enclave, and the enclave will send back to the client the encrypted reversed response. You should see the following output from the client:
 
 ```text
-Reading a remote attestation of length 2163 bytes.
+Attempting to connect to localhost:9999
+Connected to Remote attestation for enclave D4FFB9E1539148401529035C202A9904D7562C83B2A95E33E3B639BE8693E87B:
+  - Mode: SIMULATION
+  - Code signing key hash: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+  - Public signing key: 302A300506032B657003210007C159388855F2ECD0B34C36C31F00ED276D144F1DC077D294F3F28F542E98B8
+  - Public encryption key: 4D92642BF5C7B93DDB912D809230DE3BFE09531F9095617BF3E90D720F84E151
+  - Product ID: 1
+  - Revocation level: 0
+
+Assessed security level at 2021-01-26T10:31:02.974Z is INSECURE
+  - Enclave is running in simulation mode.
 Sending the encrypted mail to the host.
-Reading reply mail of length 196 bytes.
-Enclave reversed 'reverse me!' and gave us the answer '!em esrever'
+Reading reply mail of length 170 bytes.
+Enclave reversed 'Reverse me' and gave us the answer 'em esreveR'
 ```
+
+Finally, the host and the client will exit.
 
 Try this:
 

@@ -61,12 +61,10 @@ public class Host {
         // because the CPU must hash the contents of the enclave binary.
         EnclaveHost enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
 
-        System.out.println(EnclaveHost.getCapabilitiesDiagnostics());
-
-        // Start it up with a callback that will deliver the response. But remember: in a real app that can handle
-        // multiple clients, you shouldn't start one enclave per client. That'd be wasteful and won't fit in available
-        // encrypted memory. A real app should use the routingHint parameter to select the right connection back
-        // to the client, here.
+        // Start up the enclave with a callback that will deliver the response. But remember: in a real app that can
+        // handle multiple clients, you shouldn't start one enclave per client. That'd be wasteful and won't fit in
+        // available encrypted memory. A real app should use the routingHint parameter to select the right connection
+        // back to the client, here.
         enclave.start(new AttestationParameters.DCAP(), (commands) -> {
             for (MailCommand command : commands) {
                 if (command instanceof MailCommand.PostMail) {
