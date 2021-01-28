@@ -26,11 +26,11 @@ import com.r3.conclave.common.internal.attestation.QuoteVerifier.ErrorStatus.*
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getUnsignedInt
 import com.r3.conclave.utilities.internal.x509Certs
-import java.security.cert.*
 import java.security.GeneralSecurityException
 import java.security.Signature
+import java.security.cert.*
 import java.time.Instant
-import java.util.*
+import javax.security.auth.x500.X500Principal
 
 object QuoteVerifier {
 
@@ -43,19 +43,13 @@ object QuoteVerifier {
         SGX_ROOT_CA_MISSING,
         SGX_INTERMEDIATE_CA_MISSING,
         SGX_PCK_MISSING,
-        SGX_ROOT_CA_INVALID_ISSUER,
-        SGX_INTERMEDIATE_CA_INVALID_ISSUER,
-        SGX_PCK_INVALID_ISSUER,
-        SGX_PCK_CERT_CHAIN_UNTRUSTED,
         SGX_CRL_UNKNOWN_ISSUER,
         SGX_CRL_INVALID_EXTENSIONS,
         SGX_CRL_INVALID_SIGNATURE,
         SGX_INTERMEDIATE_CA_REVOKED,
         SGX_PCK_REVOKED,
         SGX_TCB_SIGNING_CERT_MISSING,
-        SGX_TCB_SIGNING_CERT_INVALID_ISSUER,
         SGX_TCB_SIGNING_CERT_REVOKED,
-        SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED,
         TCB_INFO_INVALID_SIGNATURE,
         SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE,
         INVALID_QE_REPORT_DATA,
@@ -67,19 +61,15 @@ object QuoteVerifier {
 
     private const val QUOTE_VERSION = 3
 
-    private const val SGX_ROOT_CA_CN_PHRASE = "SGX Root CA"
-    private const val SGX_INTERMEDIATE_CN_PLATFORM_PHRASE = "SGX PCK Platform CA"
-    private const val SGX_INTERMEDIATE_CN_PROCESSOR_PHRASE = "SGX PCK Processor CA"
-    private const val SGX_PCK_CN_PHRASE = "SGX PCK Certificate"
-    private const val SGX_TCB_SIGNING_CN_PHRASE = "SGX TCB Signing"
+    private const val INTEL_SUBJECT_PREFIX = "C=US, ST=CA, L=Santa Clara, O=Intel Corporation, "
+    private val SGX_ROOT_CA_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX Root CA")
+    private val SGX_INTERMEDIATE_DN_PLATFORM = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX PCK Platform CA")
+    private val SGX_INTERMEDIATE_DN_PROCESSOR = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX PCK Processor CA")
+    private val SGX_PCK_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX PCK Certificate")
+    private val SGX_TCB_SIGNING_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX TCB Signing")
 
     private val trustedRootCert: X509Certificate = javaClass.getResourceAsStream("intel-dcap-root-cert.pem").use {
         CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
-    }
-
-    init {
-        check(trustedRootCert.subjectDN.name == trustedRootCert.issuerDN.name)
-        verifyAgainstIssuer(trustedRootCert, trustedRootCert)
     }
 
     // QuoteVerification/QvE/Enclave/qve.cpp:sgx_qve_verify_quote
@@ -136,29 +126,21 @@ object QuoteVerifier {
             tcbInfo: TcbInfo,
             qeIdentity: EnclaveIdentity
     ): TcbStatus {
-        /// 4.1.2.4.2
         verify(quote[version].read() == QUOTE_VERSION, UNSUPPORTED_QUOTE_FORMAT)
-        /// 4.1.2.4.4
-        verify(SGX_PCK_CN_PHRASE in pckCert.subjectDN.name, INVALID_PCK_CERT)
-        /// 4.1.2.4.6
-        verify(SGX_INTERMEDIATE_CN_PLATFORM_PHRASE in pckCrl.issuerDN.name
-                || SGX_INTERMEDIATE_CN_PROCESSOR_PHRASE in pckCrl.issuerDN.name, INVALID_PCK_CRL)
-        /// 4.1.2.4.6
-        verify(pckCrl.issuerDN.name == pckCert.issuerDN.name, INVALID_PCK_CRL)
-        /// 4.1.2.4.7
+
+        verify(SGX_PCK_DN == pckCert.subjectX500Principal, INVALID_PCK_CERT)
+        verify(listOf(SGX_INTERMEDIATE_DN_PLATFORM, SGX_INTERMEDIATE_DN_PROCESSOR).contains(pckCrl.issuerX500Principal), INVALID_PCK_CRL)
+
+        verify(pckCrl.issuerX500Principal == pckCert.issuerX500Principal, INVALID_PCK_CRL)
         verify(!pckCrl.isRevoked(pckCert), PCK_REVOKED)
 
         val pckExtension = pckCert.sgxExtension
 
-        /// 4.1.2.4.9
         verify(pckExtension.getBytes(SGX_FMSPC_OID) == tcbInfo.fmspc.buffer(), TCB_INFO_MISMATCH)
         verify(pckExtension.getBytes(SGX_PCEID_OID) == tcbInfo.pceId.buffer(), TCB_INFO_MISMATCH)
-        /// 4.1.2.4.13
         verifyQeReportSignature(authData, pckCert)
-        /// 4.1.2.4.14
         verifyAttestationKeyAndQeReportDataHash(authData)
 
-        /// 4.1.2.4.15
         val qeIdentityStatus = verifyEnclaveReport(authData[qeReport], qeIdentity)
         when (qeIdentityStatus) {
             MISCSELECT_MISMATCH,
@@ -169,10 +151,8 @@ object QuoteVerifier {
             else -> {}
         }
 
-        /// 4.1.2.4.16
         verifyIsvReportSignature(authData, quote)
 
-        /// 4.1.2.4.17
         val tcbLevelStatus = checkTcbLevel(pckExtension, tcbInfo)
         return convergeTcbStatus(tcbLevelStatus, qeIdentityStatus)
     }
@@ -195,26 +175,19 @@ object QuoteVerifier {
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/QuoteVerification.cpp:77 - parsing inputs
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/PckCertVerifier.cpp:51 - verification
-    /// affectively, a modified/extended version of java.security.CertPathValidator:
-    /// pckCertChain here includes rootCert,
-    /// rootCert does not have CRL info, so CertPathValidator will fail the revocation check
     private fun verifyPckCertificate(pckCertPath: CertPath, collateral: QuoteCollateral) {
+        validateCertPath(pckCertPath)
+
+        // Intel assumes a pck chain of 3 certs
         verify(pckCertPath.certificates.size == 3, UNSUPPORTED_CERT_FORMAT)
+
+        // expected Intel's certs
         val (pckCert, intermediateCert, rootCert) = pckCertPath.x509Certs
+        verify(SGX_ROOT_CA_DN == rootCert.subjectX500Principal, SGX_ROOT_CA_MISSING)
+        verify(listOf(SGX_INTERMEDIATE_DN_PLATFORM,SGX_INTERMEDIATE_DN_PROCESSOR).contains(intermediateCert.subjectX500Principal), SGX_INTERMEDIATE_CA_MISSING)
+        verify(SGX_PCK_DN == pckCert.subjectX500Principal, SGX_PCK_MISSING)
 
-        verify(SGX_ROOT_CA_CN_PHRASE in rootCert.subjectDN.name, SGX_ROOT_CA_MISSING)
-        verify(SGX_INTERMEDIATE_CN_PLATFORM_PHRASE in intermediateCert.subjectDN.name
-                || SGX_INTERMEDIATE_CN_PROCESSOR_PHRASE in intermediateCert.subjectDN.name, SGX_INTERMEDIATE_CA_MISSING)
-        verify(SGX_PCK_CN_PHRASE in pckCert.subjectDN.name, SGX_PCK_MISSING)
-
-        // meaning 'root' is signed with 'trusted root'
-        // if all good, root and trusted root are actually the same certificate
-        verifyAgainstIssuer(rootCert, trustedRootCert, SGX_ROOT_CA_INVALID_ISSUER)
-        verifyAgainstIssuer(intermediateCert, rootCert, SGX_INTERMEDIATE_CA_INVALID_ISSUER)
-        verifyAgainstIssuer(pckCert, intermediateCert, SGX_PCK_INVALID_ISSUER)
-
-        verify(Arrays.equals(rootCert.signature, trustedRootCert.signature), SGX_PCK_CERT_CHAIN_UNTRUSTED)
-
+        // CRLs are coming from collateral
         verifyAgainstCrl(rootCert, collateral.rootCaCrl)
         verifyAgainstCrl(intermediateCert, collateral.pckCrl)
 
@@ -268,23 +241,32 @@ object QuoteVerifier {
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBSigningChain.cpp:56
     private fun verifyTcbChain(tcbSignChain: CertPath, rootCaCrl: X509CRL) {
-        verify(tcbSignChain.certificates.size == 2, UNSUPPORTED_CERT_FORMAT)
-        val (tcbSigningCert, rootCert) = tcbSignChain.x509Certs
+        validateCertPath(tcbSignChain)
 
-        verify(SGX_ROOT_CA_CN_PHRASE in rootCert.subjectDN.name, SGX_ROOT_CA_MISSING)
-        verifyAgainstIssuer(rootCert, rootCert, SGX_ROOT_CA_INVALID_ISSUER)
-        verifyAgainstIssuer(rootCert, trustedRootCert, SGX_ROOT_CA_INVALID_ISSUER)
-        verify(SGX_TCB_SIGNING_CN_PHRASE in tcbSigningCert.subjectDN.name, SGX_TCB_SIGNING_CERT_MISSING)
-        verifyAgainstIssuer(tcbSigningCert, rootCert, SGX_TCB_SIGNING_CERT_INVALID_ISSUER)
+        // Intel assumes a tcb chain of 2 certs
+        verify(tcbSignChain.certificates.size == 2, UNSUPPORTED_CERT_FORMAT)
+
+        val (tcbSigningCert, rootCert) = tcbSignChain.x509Certs
+        verify(SGX_ROOT_CA_DN == rootCert.subjectX500Principal, SGX_ROOT_CA_MISSING)
+        verify(SGX_TCB_SIGNING_DN == tcbSigningCert.subjectX500Principal, SGX_TCB_SIGNING_CERT_MISSING)
+
         verifyAgainstCrl(rootCert, rootCaCrl)
         verify(!rootCaCrl.isRevoked(tcbSigningCert), SGX_TCB_SIGNING_CERT_REVOKED)
-        verify(Arrays.equals(rootCert.signature, trustedRootCert.signature), SGX_TCB_SIGNING_CERT_CHAIN_UNTRUSTED)
+    }
+
+    private fun validateCertPath(chain: CertPath) {
+        val certTime = chain.x509Certs.minOf { it.notAfter }
+        val pkixParameters = PKIXParameters(setOf(TrustAnchor(trustedRootCert, null))).apply {
+            isRevocationEnabled = false
+            date = certTime
+        }
+        CertPathValidator.getInstance("PKIX").validate(chain, pkixParameters)
     }
 
     private fun verifyAgainstCrl(cert: X509Certificate, crl: X509CRL) {
         val rootCrlIssuer = crl.issuerX500Principal
         val rootSubject = cert.subjectX500Principal
-        verify(rootCrlIssuer.name == rootSubject.name, SGX_CRL_UNKNOWN_ISSUER)
+        verify(rootCrlIssuer == rootSubject, SGX_CRL_UNKNOWN_ISSUER)
 
         // https://boringssl.googlesource.com/boringssl/+/master/include/openssl/nid.h
         // #define NID_crl_number 88
@@ -302,16 +284,8 @@ object QuoteVerifier {
     }
 
     private fun verifyAgainstIssuer(cert: X509Certificate, issuer: X509Certificate) {
-        check(cert.issuerDN.name == issuer.subjectDN.name)
+        check(cert.issuerX500Principal == issuer.subjectX500Principal)
         cert.verify(issuer.publicKey)
-    }
-
-    private fun verifyAgainstIssuer(cert: X509Certificate, issuer: X509Certificate, errorStatus: ErrorStatus) {
-        try {
-            verifyAgainstIssuer(cert, issuer)
-        } catch (e: Exception) {
-            throw VerificationException(errorStatus, e)
-        }
     }
 
     private fun verifyAttestationKeyAndQeReportDataHash(authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>) {
@@ -332,7 +306,6 @@ object QuoteVerifier {
         // enclave report vs enclave identify json
         // (only used with QE and QE Identity, actually)
 
-        /// 4.1.2.9.5
         // miscselectMask and miscselect from the enclave identity are in big-endian whilst the miscSelect from the
         // enclave report body is in little-endian.
         val miscselectMask = enclaveIdentity.miscselectMask.buffer().getUnsignedInt()
@@ -341,7 +314,6 @@ object QuoteVerifier {
             return MISCSELECT_MISMATCH
         }
 
-        /// 4.1.2.9.6
         val attributes = enclaveIdentity.attributes
         val attributesMask = enclaveIdentity.attributesMask
         val reportAttributes = enclaveReportBody[SgxReportBody.attributes].bytes
@@ -350,17 +322,14 @@ object QuoteVerifier {
                 return ATTRIBUTES_MISMATCH
         }
 
-        /// 4.1.2.9.8
         if (enclaveReportBody[mrsigner].read() != enclaveIdentity.mrsigner.buffer()) {
             return MRSIGNER_MISMATCH
         }
 
-        /// 4.1.2.9.9
         if (enclaveReportBody[isvProdId].read() != enclaveIdentity.isvprodid) {
             return ISVPRODID_MISMATCH
         }
 
-        /// 4.1.2.9.10 & 4.1.2.9.11
         val isvSvn = enclaveReportBody[isvSvn].read()
         val tcbStatus = getTcbStatus(isvSvn, enclaveIdentity.tcbLevels)
         if (tcbStatus != EnclaveTcbStatus.UpToDate) {
@@ -428,7 +397,6 @@ object QuoteVerifier {
     }
 
     private fun checkTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
-        /// 4.1.2.4.17.1 & 4.1.2.4.17.2
         val tcbLevelStatus = getMatchingTcbLevel(pckExtensions, tcbInfo)
         check(tcbInfo.version == 2 || tcbLevelStatus != TcbStatus.OutOfDateConfigurationNeeded) {
             "TCB_UNRECOGNIZED_STATUS"
