@@ -554,7 +554,7 @@ API, JMS message queues, a simple TCP socket as in this tutorial, or even files.
 Firstly we need to upgrade our little enclave to be able to receive mails from clients. This is easy! Just override
 the `receiveMail` method:
 
-```java hl_lines="14 15 16 17 18 19"
+```java hl_lines="14 15 16 17 18 19 20"
 /**
  * Simply reverses the bytes that are passed in.
  */
@@ -569,32 +569,36 @@ public class ReverseEnclave extends Enclave {
     }
 
     @Override
-    protected void receiveMail(long id, EnclaveMail mail) {
+    protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
         byte[] reversed = receiveFromUntrustedHost(mail.getBodyAsBytes());
-        MutableMail reply = createMail(mail.getAuthenticatedSender(), reversed);
-        postMail(reply, null);
+        byte[] responseBytes = postOffice(mail).encryptMail(reversed);
+        postMail(responseBytes, routingHint);
     }
 }
 ```
 
 The `receiveFromUntrustedHost` method here isn't really needed, it's just because we're already using this to demonstrate local calls.
-The new part is `receiveMail`. This method takes two parameters: an identifier that the host gets to pick, which doesn't
+The new part is `receiveMail`. This method takes three parameters: the first is an identifier that the host gets to pick, which doesn't
 mean anything but we can use to acknowledge the mail if we want to using `Enclave.acknowledgeMail`. Acknowledgement can be used
 to tell the host the enclave is done processing the mail if it doesn't want to reply immediately. It will be discussed
 more in future tutorials. In this simple tutorial we reply immediately so don't need to use this feature, and thus we
 ignore the ID.
 
+The second parameter is a routing hint string. It's also provided by the host and it helps the host route replies when
+dealing with multiple clients. It's passed into `postMail` when the enclave posts a reply. In our example the host only
+deals with one client and so it's not used.
+
 #### Mail headers
 
-The second parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
+The third parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
 also exposes some other header fields:
 
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
    can be thought of as equivalent to a URL path or port number. Topics are scoped per-sender and are not global. The
    client can send multiple streams of related mail by using a different topic for each stream, and it can do this
    concurrently.
-1. The _sequence number_. Starting from zero, this must increment by one for every mail delivered on a topic. Conclave will
-   automatically reject messages for which this doesn't hold true, thus ensuring to the client that the stream of related
+1. The _sequence number_. Starting from zero, this is incremented by one for every mail delivered on a topic. Conclave will
+   automatically reject messages if this doesn't hold true, thus ensuring to the client that the stream of related
    mail is received by the enclave in the order they were sent, and that the host is unable to re-order or drop them.
 1. The _envelope_. This is a slot that can hold any arbitrary byte array the sender likes. It's a holding zone for 
    app specific data that should be authenticated but unencrypted.
@@ -611,12 +615,13 @@ sent the mail. Like the body it's encrypted so that the host cannot learn the cl
 because the encryption used by Conclave means you can trust that the mail was encrypted by an entity holding the private
 key matching this public key. If your enclave recognises the public key this feature can be used as a form of user authentication.
 
-In this simple tutorial we only care about the body and sender public key. We reverse the bytes in the mail body
-and then create a response mail that will be encrypted to the sender. It contains the reversed bytes. We use the
-`createMail` method to do this. It gives us back a `MutableMail` object, which is a builder with setters we can use 
-to control the sequence number, topic and so on. Once we've done configuring it to our liking we pass it to
-`postMail` which performs the encryption and delivers the newly encrypted mail to the host. It will emerge in a callback
-we're about to configure.
+In this simple tutorial we only care about the body. We reverse the bytes in the mail body and then create a response
+mail that will be encrypted to the sender. It contains the reversed bytes. We use the `postOffice` method to do this. It
+gives us back a post office object, which is a factory for creating encrpted mail. Because we want to create a
+response, we pass in the original mail to `postOffice` and it will give us an instance which is configured to encrypt mail
+back to the sender. It will also use the same topic as the original mail. `encryptMail` will encrypt the reversed bytes
+and add on the authenticated header. The resulting mail bytes are passed to `postMail` which delivers it to the host.
+It will emerge in a callback we're about to configure.
 
 !!! tip
     You can post mail anytime and to anyone you like. It doesn't have to be a response to the sender, you can post
@@ -831,31 +836,35 @@ host-local calls. Alternatively, use that other algorithm to encrypt/decrypt a C
 a key is straightforward: 
 
 ```java
-KeyPair myKey = new Curve25519KeyPairGenerator().generateKeyPair();
+PrivateKey myKey = Curve25519PrivateKey.random();
 ```
 
 Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. At the
-moment in Conclave therefore, you must utilize our `Curve25519KeyPairGenerator`, `Curve25519PublicKey` and `Curve25519PrivateKey`
+moment in Conclave therefore, you must utilize our `Curve25519PublicKey` and `Curve25519PrivateKey`
 classes. In future we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply
 32 random bytes, which you can access using the `getEncoded()` method on `PrivateKey`. 
 
 Now we have a key with which to receive the response, we create a mail to the enclave. This is done using the
-`EnclaveInstanceInfo.createMail` method, which returns a `MutableMail` object. We must set our private key on the mail
-so it's mixed in to the calculations when the mail is encrypted and thus becomes available in `getAuthenticatedSender()`
-inside the enclave.
-
-The sequence number for this newly created mail is zero. That means if we re-run the program twice we'll try to send
-the enclave two mails with the same topic, sender and sequence number. This is invalid: the enclave will reject it as
-an apparent replay attack until it's restarted and forgets what mail it received. We could keep a counter on disk and 
-increment it, but it's easier to simply set the topic to a random UUID. After that, we can encrypt the mail. 
+`EnclaveInstanceInfo.createPostOffice` method, which returns a new `PostOffice` object. This is similar to the post office
+inside the enclave and let's us create mail with increasing sequence numbers. We pass in our private key when creating
+the post office so it's mixed in to the calculations when the mail is encrypted and thus becomes available in
+`getAuthenticatedSender()` inside the enclave.
 
 ```java
-MutableMail mail = attestation.createMail(toReverse.getBytes(StandardCharsets.UTF_8));
-mail.setPrivateKey(myKey.getPrivate());
-// Set a random topic, so we can re-run this program against the same server.
-mail.setTopic(UUID.randomUUID().toString());
-byte[] encryptedMail = mail.encrypt();
+PostOffice postOffice = attestation.createPostOffice(myKey, "reverse");
+byte[] encryptedMail = postOffice.encryptMail(toReverse.getBytes(StandardCharsets.UTF_8));
 ```
+
+We've chosen a topic value of "reverse" but any will do as the client uses a random key and only sends one mail using it.
+However, if a client needs to send multiple mail which are related to each other such that it's important they reach the
+enclave in the same order then these mail need to all use the same topic and private key. In other words, they need to
+be created from the same `PostOffice` instance. This way the enclave is able to detect any dropped or reordered messages.
+
+!!! tip
+    Make sure to cache the `PostOffice` instances you create such there's only one instance per (destination public key,
+    sender private key, topic) triple. This can be done very easily in Kotlin by using a data class with these three
+    properties as a key to a `HashMap`. The same can be done in Java except it will be slightly more verbose as you will
+    need to override the `equals` and `hashCode`methods of your key class. Modern IDEs let you do this very quickly.
 
 In more complex apps it might be smart to use the topic in more complex ways, like how a web app can use the URL to
 separate different functions of the app.
@@ -873,17 +882,18 @@ byte[] encryptedReply = new byte[fromHost.readInt()];
 System.out.println("Reading reply mail of length " + encryptedReply.length + " bytes.");
 fromHost.readFully(encryptedReply);
 
-// Decrypt the reply
-EnclaveMail reply = attestation.decryptMail(encryptedReply, myKey.getPrivate());
+// The same post office will decrypt the response.
+EnclaveMail reply = postOffice.decryptMail(encryptedReply);
 System.out.println("Enclave reversed '" + toReverse + "' and gave us the answer '" + new String(reply.getBodyAsBytes()) + "'");
+
 socket.close();
 ```
 
 We write out the length of the mail, then the mail bytes, then read the length of the response and read the response 
-bytes. Finally we use `EnclaveInstanceInfo.decryptMail`, passing in the encrypted reply we got and our own private key.
-This method checks the bytes really did come from that enclave (by checking the authenticated sender key against the
-enclave's public key in the attestation), decodes the bytes and yields the reply. We can then access the body of the
-message using `EnclaveMail.getBodyAsBytes()`.
+bytes. Finally we use `PostOffice.decryptMail` on the same instance we used to create our request, passing in the encrypted
+reply. This method decrypts the bytes using our private key, checks they really did come from that enclave (by checking
+the authenticated sender key against the enclave's public key in the attestation), decodes the bytes and yields the reply.
+We can then access the body of the message using `EnclaveMail.getBodyAsBytes()`.
 
 Finally we close the socket, and we're done. Phew! 😅
 

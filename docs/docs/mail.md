@@ -42,10 +42,6 @@ messages such that you can always tell where they begin and end, without needing
 
 We plan to add additional features to the mail API in upcoming releases:
 
-**Padding.** The body of a mail will be automatically padded to reduce or eliminate size-based side channel attacks. 
-The size of a message won't give away information about the contents. 
-See [side channel attacks](security.md#side-channel-attacks).
-
 **Storage.** Mail will be stored by the host process. Often an enclave is implementing a form of batch job. By allowing
 the host to handle storage of messages, mail allows it to delay starting the enclave until enough data has arrived. This
 in turn allows the host to best utilise the limited pool of encrypted RAM available for enclaves. 

@@ -59,7 +59,7 @@ public class Client {
         // We will need to provide our own private key whilst encrypting, so the enclave gets our public key and can
         // encrypt a reply. If you already have a long term key then you can use that and the enclave can then
         // use the public key as a form of identity.
-        PrivateKey privateKey = Curve25519PrivateKey.random();
+        PrivateKey myKey = Curve25519PrivateKey.random();
 
         // For encrypting mail to the enclave we need to create a PostOffice from the enclave's attestation object.
         // The post office will manage sequence numbers for us if we send more than one mail, which allows the enclave
@@ -69,9 +69,9 @@ public class Client {
         // which need to be ordered must use their own topic. Topics are scoped to the sender key and so multiple clients
         // can use the same topic without overlapping with each other.
         //
-        // In this example it doesn't matter as we only send one mail with each random key, but in general it is very
+        // In this example it doesn't matter as we only send one mail with a random key, but in general it is very
         // important to use the same post office instance when encrypting mail with the same topic and private key.
-        PostOffice postOffice = attestation.createPostOffice(privateKey, "reverse");
+        PostOffice postOffice = attestation.createPostOffice(myKey, "reverse");
 
         byte[] encryptedMail = postOffice.encryptMail(toReverse.getBytes(StandardCharsets.UTF_8));
 

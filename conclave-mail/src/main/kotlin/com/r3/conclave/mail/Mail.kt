@@ -1,11 +1,9 @@
 package com.r3.conclave.mail
 
+import com.r3.conclave.mail.internal.AbstractPostOffice
 import com.r3.conclave.mail.internal.EnclaveMailHeaderImpl
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.MailEncryptingStream
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PAYLOAD_LENGTH
-import com.r3.conclave.mail.internal.MailProtocol
-import com.r3.conclave.mail.internal.noise.protocol.Noise.MAX_PACKET_LEN
 import com.r3.conclave.utilities.internal.EnclaveContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -101,117 +99,6 @@ interface EnclaveMail : EnclaveMailHeader {
 }
 
 /**
- * This is an internal class, so do not extend it. Only the public members of this class are part of the API; protected
- * members are internal.
- */
-abstract class InternalAbstractPostOffice(
-        /**
-         * The topic mail created by this post office will have.
-         *
-         * @see [EnclaveMailHeader.topic]
-         */
-        val topic: String
-) {
-    init {
-        require(topic.isNotBlank()) { "Topic must not be blank" }
-        require(topic.length < 256) { "Topic length must be less than 256 characters, is ${topic.length}" }
-        for ((index, char) in topic.withIndex()) {
-            require(char.isLetterOrDigit() || char == '-') { "Character $index of the topic is not a character, digit or -" }
-        }
-    }
-
-    /**
-     * The public key of the recipient to which mail will be encrypted to.
-     */
-    abstract val destinationPublicKey: PublicKey
-
-    protected abstract val senderPrivateKey: PrivateKey
-    protected abstract val keyDerivation: ByteArray?
-
-    protected var sequenceNumber: Long = 0
-    protected var encryptCalled = false
-
-    // TODO Replace this with a MinSizePolicy class which allows different implementations such as moving average or max
-    //  seen size, etc. Do this before 1.0
-    /**
-     * The [minSize] parameter can be set to be larger than any message you reasonably
-     * expect to send. The encrypted bytes will be padded to be at least this size,
-     * closing a message size side channel that could give away hints about the content.
-     */
-    var minSize: Int = 0
-        set(value) {
-            require(minSize >= 0) { "minSize cannot be negative" }
-            field = value
-        }
-
-    /**
-     * Returns the sequence number that will be assigned to the next mail.
-     */
-    val nextSequenceNumber: Long get() = sequenceNumber
-
-    /**
-     * Uses [destinationPublicKey] to encrypt mail with the given body. Only the corresponding private key will be able to
-     * decrypt the mail. The returned ciphertext will include [topic], incremented sequence number (see [nextSequenceNumber])
-     * in the clear but authenticated (for the recipient only) as coming from the holder of the sender private key.
-     *
-     * The given envelope will be added to the mail's header and like the rest of the header, will be authenticated
-     * as coming from the sender.
-     *
-     * You should set [minSize] appropriately based on your knowledge of the application's communication patterns. The
-     * mail will not be padded for you.
-     *
-     * The recipient needs to call [PostOffice.decryptMail] on a post office with the private key of [destinationPublicKey]
-     * to decrypt the bytes.
-     *
-     * The encoded bytes containing the body, the envelope, the handshake bytes that set up the shared session key and
-     * so on. A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
-     * subject to change.
-     *
-     * @return the encrypted mail bytes.
-     */
-    fun encryptMail(body: ByteArray): ByteArray = encryptMail(body, null)
-
-    /**
-     * Uses [destinationPublicKey] to encrypt mail with the given body. Only the coresponding private key will be able to
-     * decrypt the mail. The returned ciphertext will include [topic], incremented sequence number (see [nextSequenceNumber])
-     * and [envelope] in the clear but authenticated (for the recipient only) as coming from the holder of the sender
-     * private key.
-     *
-     * You should set [minSize] appropriately based on your knowledge of the application's communication patterns. The
-     * mail will not be padded for you.
-     *
-     * The recipient needs to call [PostOffice.decryptMail] on a post office with the private key of [destinationPublicKey]
-     * to decrypt the bytes.
-     *
-     * The encoded bytes containing the body, the envelope, the handshake bytes that set up the shared session key and
-     * so on. A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
-     * subject to change.
-     *
-     * @return the encrypted mail bytes.
-     */
-    fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
-        encryptCalled = true
-        val header = EnclaveMailHeaderImpl(sequenceNumber++, topic, envelope, keyDerivation)
-        val output = ByteArrayOutputStream(getExpectedSize(header, body))
-        val stream = MailEncryptingStream(output, destinationPublicKey, header, senderPrivateKey, minSize)
-        stream.write(body)
-        stream.close()
-        return output.toByteArray()
-    }
-
-    private fun getExpectedSize(header: EnclaveMailHeaderImpl, body: ByteArray): Int {
-        val prologueSize = 1 + header.encodedSize()
-        val payloadSize = maxOf(body.size, minSize)
-        val packetCount = (payloadSize / MAX_PACKET_PAYLOAD_LENGTH) + 1
-        return 2 + prologueSize + MailProtocol.SENDER_KEY_TRANSMITTED.handshakeLength + (packetCount * PACKET_OVERHEAD) + payloadSize
-    }
-
-    companion object {
-        private const val PACKET_OVERHEAD = MAX_PACKET_LEN - MAX_PACKET_PAYLOAD_LENGTH
-    }
-}
-
-/**
  * A post office is an object for creating a stream of related mail encrypted to a [destinationPublicKey].
  *
  * Related mail form an ordered list on the same [topic]. This ordering is defined by the sequence number field in each
@@ -222,6 +109,12 @@ abstract class InternalAbstractPostOffice(
  * recipient as an authenticated public key (see [EnclaveMail.authenticatedSender]). This can be used by the recipient
  * for user authentication but is also required if they want to reply back.
  *
+ * The sender key can either be a short-term eptherimal key which is used only once and then discarded (e.g. when the client
+ * process exits) or it can be a long-term identity key. If the later then it's important to keep track of the current
+ * sequence number (using [nextSequenceNumber]) and persit it so that in the event of a client restart the sequence number
+ * can be restored (using [setNextSequenceNumber]). Otherwise the it will reset to zero and since the enclave has already
+ * seen mail with the same sender key it will reject it.
+ *
  * Starting from zero, the post office applies an increasing sequence number to each mail it creates. The sequence number,
  * along with the topic and optional envelope (which can be provided when encrypting), are authenticted to the receiving
  * enclave. This means it can detect dropped or reordered messages and thus the ordering is preserved.
@@ -229,6 +122,10 @@ abstract class InternalAbstractPostOffice(
  * However for this to work, the same post office instance must be used for the same sender key and topic pair. This
  * means there can only be one [PostOffice] instance per (destination, sender, topic) triple. It's up the user to make
  * sure this is the case.
+ *
+ * To make it make it more difficult for an adversary to guess the contents of the mail just by observing their sizes,
+ * the post office pads the mail to a minimum size. By default it uses a moving average of the previous mail created.
+ * This can be changed with [minSizePolicy] if that's not a sensible policy for the application.
  *
  * The recepient of mail can decrypt using [decryptMail] on a post office instance which has the same private key.
  * For a mail response this will be the same post office that created the original request. Inside an enclave nothing
@@ -245,8 +142,16 @@ abstract class PostOffice(
          * @see [EnclaveMail.authenticatedSender]
          */
         public final override val senderPrivateKey: PrivateKey,
-        topic: String
-) : InternalAbstractPostOffice(topic) {
+        /**
+         * The topic mail created by this post office will have.
+         *
+         * @see [EnclaveMailHeader.topic]
+         */
+        final override val topic: String
+) : AbstractPostOffice() {
+    /**
+     * @suppress
+     */
     companion object {
         /**
          * Create a new post office instance far encrypting mail to the given recipient. Each mail will be authenticated
@@ -281,10 +186,16 @@ abstract class PostOffice(
         require(senderPrivateKey is Curve25519PrivateKey) {
             "At this time only Conclave originated Curve25519 private keys may be used."
         }
+        checkTopic(topic)
         check(!EnclaveContext.isInsideEnclave()) {
             "Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave."
         }
     }
+
+    /**
+     * The public key of the recipient to which mail will be encrypted to.
+     */
+    abstract override val destinationPublicKey: PublicKey
 
     /**
      * Returns the corresponding public key of [senderPrivateKey]. The recipient of mail will receive this as the
@@ -294,6 +205,19 @@ abstract class PostOffice(
      * @see [EnclaveMail.authenticatedSender]
      */
     val senderPublicKey: PublicKey get() = privateCurve25519KeyToPublic(senderPrivateKey)
+
+    /**
+     * Returns the [MinSizePolicy] used to apply the minimum size for each encrypted mail. If none is specified then
+     * [MinSizePolicy.movingAverage] is used.
+     */
+    final override var minSizePolicy: MinSizePolicy
+        get() = super.minSizePolicy
+        set(value) { super.minSizePolicy = value }
+
+    /**
+     * Returns the sequence number that will be assigned to the next mail.
+     */
+    val nextSequenceNumber: Long get() = sequenceNumber
 
     /**
      * Set the next sequence number to be used. This can only be called before any mail have been encrypted to ensure
@@ -311,6 +235,49 @@ abstract class PostOffice(
         require(sequenceNumber >= 0) { "Sequence number cannot be negative." }
         this.sequenceNumber = sequenceNumber
         return this
+    }
+
+    /**
+     * Uses [destinationPublicKey] to encrypt mail with the given body. Only the corresponding private key will be able to
+     * decrypt the mail. The returned ciphertext will include [topic], incremented sequence number (see [nextSequenceNumber])
+     * in the clear but authenticated (for the recipient only) as coming from the holder of the sender private key.
+     *
+     * The recipient needs to call [PostOffice.decryptMail] on a post office with the private key of [destinationPublicKey]
+     * to decrypt the bytes.
+     *
+     * The encoded bytes contains the [body], header and the handshake bytes that set up the shared session key.
+     * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
+     * subject to change.
+     *
+     * It's safe to call this method from multiple threads.
+     *
+     * @return the encrypted mail bytes.
+     *
+     * @see EnclaveMailHeader
+     */
+    fun encryptMail(body: ByteArray): ByteArray = encryptMail(body, null)
+
+    /**
+     * Uses [destinationPublicKey] to encrypt mail with the given body. Only the coresponding private key will be able to
+     * decrypt the mail. The returned ciphertext will include [topic], incremented sequence number (see [nextSequenceNumber])
+     * and [envelope] in the clear but authenticated (for the recipient only) as coming from the holder of the sender
+     * private key.
+     *
+     * The recipient needs to call [PostOffice.decryptMail] on a post office with the private key of [destinationPublicKey]
+     * to decrypt the bytes.
+     *
+     * The encoded bytes contains the [body], the [envelope], header, the handshake bytes that set up the shared session key.
+     * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
+     * subject to change.
+     *
+     * It's safe to call this method from multiple threads.
+     *
+     * @return the encrypted mail bytes.
+     *
+     * @see EnclaveMailHeader
+     */
+    final override fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
+        return super.encryptMail(body, envelope)
     }
 
     /**

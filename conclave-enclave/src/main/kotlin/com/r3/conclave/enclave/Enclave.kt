@@ -519,9 +519,6 @@ Received: $attestationReportBody"""
      * The enclave will cache post offices so that the same instance is used for the same public key and topic. This
      * ensures mail is sequenced correctly.
      *
-     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
-     * communication patterns. The outbound mail will not be padded for you.
-     *
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
@@ -540,9 +537,6 @@ Received: $attestationReportBody"""
      *
      * The enclave will cache post offices so that the same instance is used for the same public key and topic. This
      * ensures mail is sequenced correctly.
-     *
-     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
-     * communication patterns. The outbound mail will not be padded for you.
      *
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
@@ -563,9 +557,6 @@ Received: $attestationReportBody"""
      * on this host or on another machine, and can even be this enclave if [enclaveInstanceInfo] is used (and thus enabling
      * the mail-to-self pattern). The post office is setup with the enclave's private encryption key so the receipient
      * can be sure mail originated from this enclave.
-     *
-     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
-     * communication patterns. The outbound mail will not be padded for you.
      *
      * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
      * This ensures mail is sequenced correctly.
@@ -588,9 +579,6 @@ Received: $attestationReportBody"""
      * on this host or on another machine, and can even be this enclave if [enclaveInstanceInfo] is used (and thus enabling
      * the mail-to-self pattern). The post office is setup with the enclave's private encryption key so the receipient
      * can be sure mail did indeed originate from this enclave.
-     *
-     * You should set the [PostOffice.minSize] property appropriately based on your knowledge of the application's
-     * communication patterns. The outbound mail will not be padded for you.
      *
      * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
      * This ensures mail is sequenced correctly.
@@ -626,8 +614,15 @@ Received: $attestationReportBody"""
     private inner class EnclavePostOfficeImpl(destinationPublicKey: PublicKey,
                                               topic: String,
                                               override val keyDerivation: ByteArray?) : EnclavePostOffice(destinationPublicKey, topic) {
+        init {
+            minSizePolicy = defaultMinSizePolicy
+        }
         override val senderPrivateKey: PrivateKey get() = encryptionKeyPair.private
     }
+
+    // By default let all post office instances use the same moving average instance to make it harder to analyse mail
+    // sizes within any given topic.
+    private val defaultMinSizePolicy = MinSizePolicy.movingAverage()
 
     private data class DestinationAndTopic(val destination: PublicKey, val topic: String)
     //endregion

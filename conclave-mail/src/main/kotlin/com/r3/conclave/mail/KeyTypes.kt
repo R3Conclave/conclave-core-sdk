@@ -34,6 +34,9 @@ class Curve25519PrivateKey(private val encoded: ByteArray) : PrivateKey {
 
     val publicKey: Curve25519PublicKey get() = privateCurve25519KeyToPublic(this)
 
+    /**
+     * @suppress
+     */
     companion object {
         /**
          * Create a new random Curve 25519 private key.

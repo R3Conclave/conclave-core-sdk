@@ -40,7 +40,6 @@ following import statements to `ReverseEnclave.java`:
 ```java hl_lines="4 5"
 import com.r3.conclave.enclave.Enclave;
 import com.r3.conclave.mail.EnclaveMail;
-import com.r3.conclave.mail.MutableMail;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 ```

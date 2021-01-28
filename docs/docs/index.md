@@ -53,13 +53,16 @@ You can also [email us directly](mailto:conclave@r3.com). In future R3 will offe
 
 ### Beta 5
 
+1. :jigsaw: **New feature!** A new `PostOffice` API makes using mail easier and also automatically applies a reasonable 
+   minimum size to each mail to help defend against the host guessing message contents by looking at how big it is. The 
+   default min size policy is a moving average. See `MinSizePolicy` for more information. Mail topic semantics have been 
+   improved by making them scoped to the sender public key rather than being global. This allows the enclave to enforce 
+   correct mail ordering with respect to the sequence numbers on a per-sender basis. This means 
+   `EnclaveMail.authenticatedSender` is no longer nullable and will always return an authenticated sender, i.e. if
+   a sender private key is not specified then one is automatically created.
 1. :jigsaw: **New feature!** A new script is provided to make it easier to run your application inside a Docker container
    on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine.
 1. The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
-1. Mail topic semantics have been improved by making them scoped to the sender public key rather than being global. This
-   allows the enclave to enforce correct mail ordering with respect to the sequence numbers on a per-sender basis. This
-   means `EnclaveMail.authenticatedSender` is no longer nullable and will always return an authenticated sender, i.e. if
-   a sender private key is not specified in `MutableMail` then one is automatically created.
 1. Multi-threaded enclaves are now opt-in. By default, the enclave object will be locked before data from the host is
    delivered. This ensures that a malicious host cannot multi-thread an enclave that's not expecting it.
 

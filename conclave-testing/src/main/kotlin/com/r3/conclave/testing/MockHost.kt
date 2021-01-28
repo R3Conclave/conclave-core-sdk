@@ -18,6 +18,9 @@ import com.r3.conclave.testing.internal.MockInternals
  * internal state of the object (if any).
  */
 class MockHost<T : Enclave> private constructor(val enclave: T) : EnclaveHost() {
+    /**
+     * @suppress
+     */
     companion object {
         // The weird name is to make it harder to use this in Java apps.
         internal fun <T : Enclave> `internal create`(enclave: T): MockHost<T> = MockHost(enclave)

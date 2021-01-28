@@ -94,10 +94,27 @@ class MailTests {
     }
 
     @Test
-    fun sizePadding() {
+    fun `fixed min size`() {
         val postOffice = PostOffice.create(bob.publicKey)
-        postOffice.minSize = 10 * 1024
-        val encrypted = postOffice.encryptMail(message1)
-        assertThat(encrypted).hasSizeGreaterThanOrEqualTo(10 * 1024)
+        postOffice.minSizePolicy = MinSizePolicy.fixedMinSize(10 * 1024)
+        assertThat(postOffice.encryptMail(message1)).hasSizeGreaterThanOrEqualTo(10 * 1024)
+        assertThat(postOffice.encryptMail(message1 + message1)).hasSizeGreaterThanOrEqualTo(10 * 1024)
+    }
+
+    @Test
+    fun `largest seen min size`() {
+        val postOffice = PostOffice.create(bob.publicKey)
+        postOffice.minSizePolicy = MinSizePolicy.largestSeen()
+        assertThat(postOffice.encryptMail(message1 + message1)).hasSizeGreaterThanOrEqualTo(2 * message1.size)
+        assertThat(postOffice.encryptMail(message1)).hasSizeGreaterThanOrEqualTo(2 * message1.size)
+    }
+
+    @Test
+    fun `moving average min size`() {
+        val message2 = "Hello".toByteArray()
+        val postOffice = PostOffice.create(bob.publicKey)
+        postOffice.minSizePolicy = MinSizePolicy.movingAverage()
+        assertThat(postOffice.encryptMail(message1)).hasSizeGreaterThanOrEqualTo(message1.size)
+        assertThat(postOffice.encryptMail(message1 + message2)).hasSizeGreaterThanOrEqualTo((message1.size + message2.size) / 2)
     }
 }

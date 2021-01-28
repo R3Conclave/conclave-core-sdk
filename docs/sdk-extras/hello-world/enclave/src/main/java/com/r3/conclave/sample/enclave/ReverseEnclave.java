@@ -35,7 +35,7 @@ public class ReverseEnclave extends Enclave {
         // Reverse it and re-encode to UTF-8 to send back.
         final byte[] reversedEncodedString = reverse(stringToReverse).getBytes();
         // Get the post office object for responding back to this mail and use it to encrypt our response.
-        final byte[] reply = postOffice(mail).encryptMail(reversedEncodedString);
-        postMail(reply, routingHint);
+        final byte[] responseBytes = postOffice(mail).encryptMail(reversedEncodedString);
+        postMail(responseBytes, routingHint);
     }
 }
