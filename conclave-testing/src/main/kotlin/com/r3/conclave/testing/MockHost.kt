@@ -22,8 +22,10 @@ class MockHost<T : Enclave> private constructor(val enclave: T) : EnclaveHost() 
      * @suppress
      */
     companion object {
-        // The weird name is to make it harder to use this in Java apps.
-        internal fun <T : Enclave> `internal create`(enclave: T): MockHost<T> = MockHost(enclave)
+        // The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
+        // thus effectively converting them into Java classes. Making it synthetic hides it from the compiler.
+        @JvmSynthetic
+        internal fun <T : Enclave> create(enclave: T): MockHost<T> = MockHost(enclave)
 
         /**
          * Creates a [MockHost] suitable for unit tests, that connects to the given [Enclave].

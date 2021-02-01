@@ -71,7 +71,8 @@ class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
     override fun toString(): String = "Curve25519PublicKey(${encoded.toHexString()})"
 }
 
-// This is synthetic to hide it from Java apps.
+// The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
+// thus effectively converting them into Java classes. Making it synthetic hides it from the compiler.
 @JvmSynthetic
 internal fun privateCurve25519KeyToPublic(privateKey: PrivateKey): Curve25519PublicKey {
     val dh: DHState = Noise.createDH("25519")
