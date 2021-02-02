@@ -1,5 +1,20 @@
-Before you can deploy an enclave to use real SGX hardware you need to configure the host system, and get access to the
-[Intel Attestation Service](ias.md). At this time the host must be Linux and requires the following steps:
+# Machine setup
+
+So. There's an easy way to do this, and a hard way.
+
+## The easy way
+
+1. [Requisition a Microsoft Azure Gen 2 VM](azure.md).
+1. Upload your Java app to it and run it, as if it were any other Java app.
+1. There is no step 3!
+
+When using Azure everything is fully automatic.
+
+## The harder way
+
+To deploy an enclave using real SGX hardware you need to configure the host system, and if your hardware
+does not support DCAP attestation also get access to the [Intel Attestation Service](ias.md). At this time 
+the host must be Linux and requires the following steps:
 
 1. Installing the SGX kernel driver, which isn't yet included in upstream kernels.
 2. Installing the Intel platform services software.
@@ -24,22 +39,23 @@ permissions.
 
 ## Hosting providers
 
-In the cloud Microsoft Azure offers [virtual machines with SGX hardware](https://azure.microsoft.com/en-us/solutions/confidential-compute/), 
-and rented colo hardware is often available with it too. OVH offers [rentable SGX hardware](https://www.ovh.com/world/dedicated-servers/software-guard-extensions/), 
-as an example of one provider.
+* Microsoft Azure offers [virtual machines with SGX hardware](https://azure.microsoft.com/en-us/solutions/confidential-compute/)
+* OVH offers [rentable SGX hardware](https://www.ovh.com/world/dedicated-servers/software-guard-extensions/)
 
 ## Distribution support
 
 The following Linux distros are formally supported by Intel:
 
-* Ubuntu 16.04.3 LTS Desktop 64bits
-* Ubuntu 16.04.3 LTS Server 64bits
+* Ubuntu 16.04 LTS Desktop 64bits
+* Ubuntu 16.04 LTS Server 64bits
 * Ubuntu 18.04 LTS Desktop 64bits
 * Ubuntu 18.04 LTS Server 64bits
-* Red Hat Enterprise Linux Server release 7.4 64bits
-* Red Hat Enterprise Linux Server release 8.0 64bits
-* CentOS 7.4.1708 64bits
-* SUSE Linux Enterprise Server 12 64bits
+* Ubuntu 20.04 LTS Desktop 64bits
+* Ubuntu 20.04 LTS Server 64bits
+* Red Hat Enterprise Linux Server release 7.6 64bits
+* Red Hat Enterprise Linux Server release 8.2 64bits
+* CentOS 8.2 64bits
+* Fedora 31 Server 64bits
 
 However, others will probably still work.
 

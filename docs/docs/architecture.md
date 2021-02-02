@@ -78,10 +78,6 @@ the remote attestation provided by the client.
 **Cloud provider.** A cloud provider needs to support SGX for Conclave to be usable. They may operate their own
 provisioning servers that take over from Intel's.
 
-!!! notice
-
-    Cloud providers running their own provisioning servers is a new feature of SGX and not yet supported by Conclave.
-
 **Auditor.** In the pure enclave-oriented model, the user is responsible for understanding what the enclave does before
 using it by reading the enclave's source code. If the user doesn't do this then enclaves have no point. In practice the
 user may wish to outsource this auditing to someone else.
@@ -157,7 +153,11 @@ information outside the enclave when in production.
 
 !!! notice
 
-    Future versions of the platform may offer encrypted logging of various forms.
+    Future versions of the platform may automatically set up encrypted logging. For now, if you want release mode
+    logging you can log to the [in-memory filesystem](filesystem.md) and export logs from time to time to a 
+    trusted client or another enclave. Alternatively you may decide that due to the sensitive nature of what your 
+    enclave does, nobody should receive its logs when in release mode: this is a perfectly normal and reasonable 
+    choice! 
 
 ## Deployment
 

@@ -1,7 +1,9 @@
 # Intel Attestation Service
 
 !!! important
-    You need to read and perform these steps to deploy a Conclave app.
+    You don't need to read and perform these steps to deploy a Conclave app, unless you wish to use older
+    hardware that isn't capable of using the DCAP protocol. [Azure Gen 2 Virtual Machines](azure.md) in particular do not
+    need any of these steps.
 
 How do you know a remote computer is fully up to date with the latest security patches and isn't physically compromised?
 This is the question Intel's Attestation Service (IAS) exists to answer. IAS is an online service that evaluates

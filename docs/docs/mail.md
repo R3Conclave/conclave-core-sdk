@@ -103,10 +103,14 @@ increment, on a per-topic basis, before passing the mail to your code.
     deliver mail that would imply it had actually taken over the computer somehow and was forcing it to provide services
     to the enclave. SGX isn't a form of remote control and nobody can force a host to run enclaves against its will.
 
-**Side channel inspection.** Future versions of mail will provide automatic and manual ways to pad messages, so their
-size can't give away any clues as to their contents. This is in fact one of the benefits of mail: if Conclave couldn't
-understand the message structure of your app (e.g. because it provided only a stream interface) then it wouldn't be
-able to do this type of padding.
+**Size side channels.** Simply knowing how big a message is can be [surprisingly powerful](https://www.schneier.com/blog/archives/2010/03/side-channel_at.html). 
+Mail is automatically padded by Conclave to give messages a uniform size. This blocks attempts to infer the contents of
+the message based on the precise size. By default Mail uses a moving average but the policy is configurable and so if
+you know a reasonable upper limit on the size of your messages, you can pad every message to be that size. The host will
+be blinded and have to try and infer what's going on just from message timing. You can fix that by sending empty
+mails even when you have nothing to say. For example, if an enclave is running some sort of auction or competition 
+between users and you wish to hide who won, the enclave can simply send a "you won" or "you lost" message to every
+client. Even if the winner needs additional data the padding will ensure the host can't tell which client won.
 
 ## How does Mail work
 

@@ -1,3 +1,8 @@
+---
+hide:
+- navigation
+---
+
 # Enclave oriented computing
 
 Conclave implements the latest iteration of a simple idea: we can make computing more secure and private by

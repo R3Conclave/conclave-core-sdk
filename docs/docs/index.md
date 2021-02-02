@@ -1,3 +1,8 @@
+---
+hide:
+- navigation
+---
+
 # Conclave
 
 Conclave is a toolkit for building _enclaves_, small pieces of software that are protected from attack by the owner
@@ -41,30 +46,39 @@ and then keep your machine trusted by applying updates.
 
 ## Get in touch
 
-There's a public mailing list for discussion of using Conclave and SGX. Join [conclave-discuss@groups.io](https://groups.io/g/conclave-discuss).
+There's a public mailing list for discussion of using Conclave and SGX. 
 
-You can also [email us directly](mailto:conclave@r3.com). In future R3 will offer ticket based commercial support. 
+[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } 
 
-!!! warning
-    This is a **developer preview** release of Conclave. You **may not** run enclaves built with it in production. 
-    Please read the list of [known issues](known-issues.md).
+In future R3 will offer ticket based commercial support.
 
 ## Release notes
 
-### Beta 5
+### 1.0
 
 1. :jigsaw: **New feature!** A new `PostOffice` API makes using mail easier and also automatically applies a reasonable 
-   minimum size to each mail to help defend against the host guessing message contents by looking at how big it is. The 
-   default min size policy is a moving average. See `MinSizePolicy` for more information. Mail topic semantics have been 
-   improved by making them scoped to the sender public key rather than being global. This allows the enclave to enforce 
-   correct mail ordering with respect to the sequence numbers on a per-sender basis. This means 
+   minimum size to each mail to help defend against the host guessing message contents by looking at how big it is (a size
+   side channel attack). The default size policy is a moving average. See `MinSizePolicy` for more information. Mail 
+   topic semantics have been improved by making them scoped to the sender public key rather than being global. This 
+   allows the enclave to enforce correct mail ordering with respect to the sequence numbers on a per-sender basis. This means 
    `EnclaveMail.authenticatedSender` is no longer nullable and will always return an authenticated sender, i.e. if
    a sender private key is not specified then one is automatically created.
+1. :jigsaw: **New feature!** An embedded, in-memory file system is provided that emulates POSIX semantics. This is 
+   intended to provide compatibility with libraries and programs that expect to load data or config files from disk.
+   [Learn more about the in-memory filesystem](filesystem.md).
 1. :jigsaw: **New feature!** A new script is provided to make it easier to run your application inside a Docker container
-   on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine.
-1. The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
+   on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine. Learn more about
+   the [container-gradle](container-gradle.md) script.
+1. :jigsaw: **New feature!** The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
 1. Multi-threaded enclaves are now opt-in. By default, the enclave object will be locked before data from the host is
    delivered. This ensures that a malicious host cannot multi-thread an enclave that's not expecting it.
+1. The Gradle tasks list has been cleaned up to hide internal tasks that aren't useful to invoke from the command line.
+1. GraalVM has been updated to version 20.3. An upgrade to 21.0 will come soon. 
+1. Usability improvements: better error messages, more FAQs. 
+1. Bug fixes: improve CPU compatibility checks, enclaves with non-public constructors are now loadable.
+1. Security improvements and fixes.
+
+Please read the list of [known issues](known-issues.md).
 
 ### Beta 4
 

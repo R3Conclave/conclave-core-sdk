@@ -1,22 +1,22 @@
 # Writing the sample CorDapp
 
 [Corda](https://www.corda.net) is R3's open source enterprise blockchain platform. You can think of it as a peer
-to peer database platform in which user-written apps can be installed. Enclaves can be used inside your apps to
+to peer database in which user-written apps can be installed. Enclaves can be used inside "CorDapps" to
 provide multi-party computation over the peer to peer network. Or look at it the other way around: Corda can provide
 communication and identity services to your enclave.
 
-The sample CorDapp builds on the [hello-world](writing-hello-world.md) sample enclave allowing nodes to perform the 
+The sample CorDapp builds on the [hello-world](writing-hello-world.md) sample allowing nodes to perform the 
 reverse string task between two nodes, one of which loads the enclave. Smart contracts and identity aren't used in this 
 sample, only flows are needed.
 
-The sample divides the code into several pieces. The parts in packages that _don't_ have `samples` in the name are
-utility classes intended to be copy/pasted into your own code. They'll be turned into a full API in future. The code
+The sample divides the code into several pieces. The packages that _don't_ have `samples` in the name are
+intended to be copy/pasted into your own code. They'll be turned into a full API in future. The code
 expects a DCAP capable host, but if you want to use EPID you can edit the enclave startup code to make it use your
 Intel API keys.
 
 !!! important
-    To understand this tutorial you are expected to have read both the Conclave "Hello World" tutorial and the Corda 
-    tutorials already. 
+    To understand this tutorial you are expected to have read both the [Conclave Hello World tutorial](writing-hello-world.md) 
+    and [the Corda tutorials](https://docs.corda.net/docs/corda-os/4.7/hello-world-introduction.html) already. 
 
 ## Configure your workflow CorDapp module
 
@@ -162,6 +162,10 @@ public class ReverseFlow extends FlowLogic<String> {
     }
 }
 ```
+
+!!! important
+    **DO NOT BLINDLY COPY THE `SEC:INSECURE` PART INTO PRODUCTION CODE.** IT DOES NOT TAKE SHERLOCK HOLMES TO DEDUCE THAT YOUR APP WILL BE
+    INSECURE IF YOU KEEP THAT BIT. :face_with_monocle:
 
 We start in the usual manner for a Corda flow. Once we've established a session with the hosting node, we instantiate
 the helper class giving it the session and a constraint. Then we call `start` to receive the `EnclaveInstanceInfo` and

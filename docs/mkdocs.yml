@@ -11,26 +11,31 @@ nav:
   - Welcome: index.md
   - Enclaves: enclaves.md
   - Development:
-    - Tutorial:
+    - Tutorials:
         - Compiling and running: tutorial.md
         - Writing hello world: writing-hello-world.md
-        - Container Gradle: container-gradle.md
         - Writing a CorDapp: writing-cordapps.md
-    - Conclave architecture: architecture.md
-    - Mail: mail.md
-    - Threads: threads.md
-    - JavaScript: javascript.md
-    - Configuration options for enclaves: enclave-configuration.md
-    - Security discussion: security.md
-    - API: api/index.html
-    - API migration notes: api-changes.md
+        - Container Gradle: container-gradle.md
+    - Design topics:
+        - Conclave architecture: architecture.md
+        - Mail: mail.md
+        - Security discussion: security.md
+    - Reference:
+        - Threads: threads.md
+        - JavaScript: javascript.md
+        - File system: filesystem.md
+        - Configuration options for enclaves: enclave-configuration.md
+    - API:
+        - JavaDocs: api/index.html
+        - Migration notes: api-changes.md
   - Operations:
     - Server deployment:
       - Machine setup: machine-setup.md
       - IAS: ias.md
       - Deploying to Azure: azure.md
-    - Enclave signing: signing.md
-    - Renewability: renewability.md
+    - Upgrades:
+      - Enclave signing: signing.md
+      - Renewability: renewability.md
   - FAQ: faq.md
 
 theme:
@@ -39,13 +44,19 @@ theme:
     primary: 'red'
     accent: 'red'
   features:
-    - tabs
+    - navigation.tabs
+    - navigation.instant
+    - navigation.sections
 
 markdown_extensions:
   - admonition
   - pymdownx.snippets
-  - codehilite:
+  - pymdownx.inlinehilite
+  - attr_list
+  - meta
+  - pymdownx.highlight:
       linenums: true
+  - pymdownx.superfences
   - toc:
       permalink: true
   - pymdownx.emoji:

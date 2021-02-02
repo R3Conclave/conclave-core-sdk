@@ -99,7 +99,7 @@ def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation
 
 Then add the following dependencies, also to the host's `build.gradle`:
 
-```groovy hl_lines="2,3"
+```groovy hl_lines="2 3"
 dependencies {
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
     runtimeOnly project(path: ":enclave", configuration: mode)
@@ -858,7 +858,8 @@ byte[] encryptedMail = postOffice.encryptMail(toReverse.getBytes(StandardCharset
 We've chosen a topic value of "reverse" but any will do as the client uses a random key and only sends one mail using it.
 However, if a client needs to send multiple mail which are related to each other such that it's important they reach the
 enclave in the same order then these mail need to all use the same topic and private key. In other words, they need to
-be created from the same `PostOffice` instance. This way the enclave is able to detect any dropped or reordered messages.
+be created from the same `PostOffice` instance. The enclave will automatically detect any dropped or reordered messages
+and throw an exception.
 
 !!! tip
     Make sure to cache the `PostOffice` instances you create such there's only one instance per (destination public key,

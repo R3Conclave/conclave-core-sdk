@@ -1,11 +1,13 @@
+# Renewability and TCB recovery
+
 All tamperproof systems need a way to be re-secured in the field after someone finds a way to breach their security.
 This property is called renewability. For Intel SGX renewability is obtained via a process called "TCB recovery". 
 
 ## What is a TCB?
 
 The *trusted computing base* is defined as the set of computing technologies that must be working correctly and not be
-malicious or compromised for a security system to operate. Obviously the larger a TCB is, the more likely something can
-go wrong. In SGX the TCB is quite small relative to other such systems. It consists of:
+malicious or compromised for a security system to operate. The larger a TCB is, the more easily can something 
+go wrong. In SGX the TCB is very small relative to comparable systems. It consists of:
 
 * The CPU itself, including:
   * The silicon
@@ -16,11 +18,12 @@ go wrong. In SGX the TCB is quite small relative to other such systems. It consi
   * The Conclave JVM and message routing code.
 
 Other components you might expect to be a part of the TCB aren't, for instance the operating system isn't, nor is the
-the BIOS or the `aesmd` daemon that handles interaction with Intel's remote attestation assessment servers. 
+the BIOS nor the `aesmd` daemon that handles interaction with Intel's remote attestation assessment servers. 
 Only small parts of the SGX infrastructure and code that runs inside enclaves needs to be operating correctly. 
 
 Intel systems also have a chip called the 'management engine' (ME). Although some SGX apps use capabilities from this chip,
-Conclave doesn't use any ME services and thus the ME isn't a part of the trusted computing base.
+Conclave doesn't use any ME services and thus the ME isn't a part of the trusted computing base. By implication
+bugs in the ME have no effect on your enclave.
 
 ## Recovering the TCB
 
@@ -46,9 +49,30 @@ may also provide more detailed advice on what to do in the `EnclaveSecurityInfo`
 `EnclaveInstanceInfo` object to a string will usually include a textual summary explaining why a machine is judged to
 be insecure or stale and what can be done to resolve the problem.
 
+## Key rotation
+
+When a TCB recovery occurs, enclave keys must be changed. This is to stop someone upgrading their machine past the 
+security fix, convincing someone to send them data, then downgrading the machine so the data can be accessed.
+Recovery must be a one way door: *new* enclaves should be able to read *old* data, but *old* enclaves should not be able
+to read *new* data.
+
+Conclave Mail handles TCB recovery automatically. Mails sent to the enclave prior to a TCB recovery are still decryptable
+after the recovery. Once clients have downloaded a fresh `EnclaveInstanceInfo` any new mails sent to the enclave using it
+will not be decryptable by the old system, or one that's been downgraded.
+
+## Enclave-specific TCB recovery
+
+The enclave itself makes up a part of the overall system's TCB, because it's trusted to work correctly. If there's a
+security bug in the enclave business logic itself (or in Conclave) you will need to do an enclave-specific TCB recovery.
+This is easy: just increment the revocationLevel in your [enclave configuration](enclave-configuration.md). Enclaves
+with a higher revocation level can read mail sent to enclaves with a lower level, but not vice-versa. When clients 
+download a fresh `EnclaveInstanceInfo` then they will start sending mail that can't be decrypted by the revoked enclave.
+The final step is for clients to adjust their enclave constraint to require the new revocation level, thus forcing the
+server to run the upgraded version.
+
 ## Timeframes for TCB recovery
 
-When a TCB recovery begins Intel announce it via their website. Deadlines are provided at which time remote attestations
+When a global TCB recovery begins Intel announce it via their website. Deadlines are provided at which time remote attestations
 from non-upgraded systems will become labelled as `STALE`. This doesn't happen immediately: time is provided with which
 to implement any required changes and upgrade. This is to avoid apps that require fully upgraded systems from 
 unexpectedly breaking on the day of the security announcements.

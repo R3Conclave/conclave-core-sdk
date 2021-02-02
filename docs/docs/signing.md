@@ -1,6 +1,9 @@
-Enclaves must be signed in order to be loaded. This section covers:
+# Enclave signing
+
+Enclaves must be signed. With modern SGX servers you may self-sign your enclaves, but, a signature is still
+required. This section covers:
  
-* *Why* is signing required
+* *Why* signing is required
 * *Who* can sign enclaves
 * *How* to sign your enclaves
 
@@ -44,7 +47,7 @@ process and doesn't cost anything or impose other requirements. Following the in
 should allow you to get a signing key.
 
 !!! tip
-    It's up to you whether or not to store the key in an HSM.
+    It's up to you whether to store the key in an HSM.
 
 ### Signing configurations
 

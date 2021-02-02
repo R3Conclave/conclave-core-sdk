@@ -23,8 +23,8 @@ automated for you.
 Because caches are run by cloud providers DCAP supports vendor-specific plugins. Intel provides a default one 
 which requires a [subscription](https://api.portal.trustedservices.intel.com/products/liv-intel-software-guard-extensions-provisioning-certification-service).  
 
-Azure provides a DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) that does not require a subscription.  
-Conclave bundles and uses the Azure plugin by default. The Azure caches are open to the public internet and can actually
+Azure provides a DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) that does not require a subscription. Conclave 
+bundles and uses that plugin by default. The Azure caches are open to the public internet and can actually
 be used from anywhere. Azure Confidential Computing instances (DC4s_v2) come pre-provisioned for DCAP and as Conclave
 comes with the necessary libraries bundled, you don't need to do any further setup.
 

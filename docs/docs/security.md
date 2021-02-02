@@ -16,7 +16,7 @@ that, so if you were to read a timestamp it might be very old at the moment you 
 However the protocol for accessing the timestamp doesn't involve doing any calls out of the enclave, so, the host can't
 observe the program's progress by watching OCALLs (which would otherwise be a side channel).
 
-## Memento attacks
+## Memento/rewind/replay attacks
 
 Your enclave has protected RAM which it uses to store normal, in-memory data. Reads are guaranteed to observe prior writes.
 

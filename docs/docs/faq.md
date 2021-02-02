@@ -1,3 +1,8 @@
+---
+hide:
+    - navigation
+---
+
 # Frequently asked questions
 
 ## Design/architecture questions
@@ -13,12 +18,12 @@ We plan to offer more guidance on this in future. Until then consider:
   attestation. Because web browsers know nothing about remote attestation you will have to provide an independent tool
   that verifies this as part of interacting with the service (note: trying to implement this in JavaScript to run in
   a browser won't work given the enclave security model, as the JavaScript would come from the same host you're trying
-  to audit). 
+  to audit). You can read more about this below.
 
 ### What cryptographic algorithm(s) does Conclave support?
 
 The elliptic curve used is Curve25519 for encryption and Ed25519 for signing. The symmetric cipher is AES256/GCM. 
-The hash function is SHA256. The Noise protocol is used to perform Diffie-Hellman key agreement and set up the 
+The hash function is SHA256. The [Noise protocol](https://noiseprotocol.org/) is used to perform Diffie-Hellman key agreement and set up the 
 ciphering keys. As these algorithms represent the state of the art and are widely deployed on the web, there are
 no plans to support other algorithms or curves at this time.
 
@@ -30,6 +35,77 @@ Clients can use this key transparently via Conclave Mail to communicate with the
 It's up to the host to route messages to and from the network. Conclave doesn't define any particular network protocol to 
 use. Mails and serialized `EnclaveInstanceInfo` objects are just byte arrays, so you can send them using REST, gRPC, 
 Corda flows, raw sockets, embed them inside some other protocol, use files etc.
+
+### What is a confidential service?
+
+A confidential service is a service built using the principles of enclave-oriented design. Such services can keep their 
+data secure and give end users hard guarantees about how their data will be used, guarantees that do *not* require the
+service provider to be trusted.
+
+In any confidential service there must be at least three parties: the service provider, the service consumer/end user, 
+and an auditor. The auditor provides the link between a natural language specification of what the service is meant to 
+do in a form understandable by the users and the actually executing code.
+
+Service providers and auditors are just roles and can be allocated amongst different people or groups in different ways.
+For example, in the simplest case the service's users are their own auditors. This requires the users to be comfortable
+reading source code, and to have the time and energy to audit new versions as they're released. Because that will rarely 
+be the case it's more conventional to have third party auditors who perform this service for a fee. The output of the
+auditor can be one of:
+
+1. An enclave constraint (see the [tutorial](writing-hello-world.md)) that specifies which enclaves are acceptable for
+   use, and a description of what they do. Those constraints are then incorporated into clients or integrations by the
+   users directly.
+2. A full download of a client app that has the constraint hard-coded into it.
+
+The advantage of the latter is that the client app is also audited, providing extra guarantees of security. If the client
+isn't checked or written by the service users themselves, then they have no real guarantee an enclave is even being used at all. 
+It's also got better usability because users can simply download the client directly from the website of the auditors, 
+thus establishing them as the root of trust.
+
+Obviously having the service provider be their own auditor doesn't make sense, although unfortunately we have seen a
+few enclave deployments in the wild that try to work this way! Such setups give the appearance of security without 
+actually providing any.
+
+### How should my confidential service UI be implemented and distributed?
+
+The primary constraint is that the provider of the client (the UI) and the provider of the hosting should be different.
+It must be so because the purpose of the enclave is protect secrets, and if the host also provides you
+with the user interface or client app then you don't even know the client is talking to the enclave in the first place.
+It may take the data when it's unencrypted (e.g. on your screen or disk) and simply send it elsewhere, encrypt it
+with a back door or break the protection of the system in many other ways.
+
+Fixing this depends on how you're using enclaves. If you're using it to defend against malicious datacenter 
+operators/clouds then the client app must be distributed *outside* of those clouds. For example, providing the client
+app for download from the same server that hosts the enclave wouldn't make sense: a malicious host could just tamper
+with the client instead of the enclave.
+
+This constraint poses special difficulties when trying to implement a classical web or mobile-app based service with
+enclaves. On the web the client UI logic always comes from the same server it interacts with, and the user has no way
+to control what version of the HTML and JavaScript is downloaded. As web browsers don't understand enclave
+attestations you can't host a web server inside an enclave either (and it would be highly inefficient to do so).
+
+One way to solve this is to take the approach outlined in the previous question: make the user interface and client
+logic a totally separate artifact that can be downloaded directly from the auditors. The client then communicates with
+the host and through it the enclave using whatever protocol you like.
+
+Another way is to have the users download the client from the service provider but require it to be signed by the auditor. 
+
+In practical terms this means you should be designing your client UI as a downloadable desktop or mobile app, not a
+web app. You should also consider who will play the role of auditor in your design early on.
+
+### Can I write clients in languages other than Java?
+
+Yes, in three ways:
+
+1. You can use JNI to load a JVM and invoke the client library that way.
+1. You can run your client program on top of the JVM directly. Modern JVMs are capable of running many languages these 
+   days and giving them transparent Java interop, including languages you might not think of like C++, Rust, Ruby,
+   Python, JavaScript, and so on.
+1. You can compile the client library to a standalone C library that exports a regular C API by using GraalVM native-image.
+   This library can then be used directly (if writing in C/C++) or via your languages foreign function interface.
+   
+The latter approach may be provided out of the box by Conclave in future. If your project needs such support please
+[email us directly](mailto:conclave@r3.com) to ask about it. The amount of work involved isn't large.
 
 ### Will using Conclave require any agreements with Intel?
 
@@ -67,24 +143,48 @@ unsealed on a different system.
 
 ### Who and what will we be trusting exactly?
 
-You must trust the CPU vendor. However, you have to trust your CPU to use computers in the first place, regardless 
-of whether you're using SGX or not. It's well within the capabilities of CPU microcode to detect code patterns and 
-create back doors or rewrite programs on the fly. A few minutes reflection will demonstrate that [you would usually have 
+You must trust the CPU vendor. However, you have to trust your CPU vendor to use computers in the first place, regardless 
+of whether you're using SGX or not, thus this requirement doesn't actually change anything. It's well within the 
+capabilities of CPU microcode to detect code patterns and create back doors or rewrite programs on the fly. A few minutes reflection will demonstrate that [you would usually have 
 no way to detect this](https://users.ece.cmu.edu/~ganger/712.fall02/papers/p761-thompson.pdf), unless you can recruit 
 some other CPU that isn't back doored to assist. 
 
-You don't need to trust the owner of the hardware on which you run.
+You don't need to trust the hardware manufacturers *other* than the CPU vendor. RAM, disk, firmware, the operating
+system, PCI devices etc are all untrusted in the SGX threat model. Only the CPU itself needs to be correct for secrets to
+be protected. 
 
-We will allow audits of Conclave's source code to paying customers, so the full code inside the enclave can be verified
-directly. Therefore, you don't have to trust R3 if you have a commercial relationship with us.
+You don't need to trust the owner of the hardware on which your enclave is running. Verifying the remote attestation
+lets you check the remote system is fully up to date, and that the enclave is not running in debug mode i.e. that the 
+memory really is encrypted.
 
-The users of an enclave-backed service must either verify the source code of the enclave themselves, to ensure 
-it’s "behaving properly" (i.e. not sending  secrets to the host), or they must outsource this task to a third party
-auditor they trust to accurately summarise the enclave's behaviour for them.
+You don't have to trust R3 if you have a commercial relationship with us. We will allow audits of Conclave's source code 
+to paying customers, so the full code inside the enclave can be verified directly. 
 
-Verifying the enclave measurement via remote attestation ensures the source code matches the actual code running in 
-the enclave. This also lets you check the remote system is fully up to date, and that the enclave is not running in 
-debug mode (i.e. that the memory really is encrypted).
+You must 'trust but verify' the source code of the enclave. Users of an enclave-backed service must either audit the 
+source code of the enclave themselves to ensure it’s "behaving properly" (i.e. not sending secrets to the host or other
+users), or they must outsource this task to a third party they trust to accurately summarise the enclave's behaviour for 
+them. See the discussion of this in the questions above. Verifying the remote attestation ensures the source code 
+matches the actual code running in the enclave. 
+
+Your enclave may need a trusted authentication system if the business logic requires a notion of identified users. 
+See below for more discussion.
+
+### How should I authenticate users of my enclave?
+
+The service provider that runs the enclave cannot also be the account provider, as if they were they could just force
+a password reset operation - which your service presumably has to support if it's used by humans - and then the host 
+could impersonate any user including all users. The protections offered by enclaves are of no use if the host can simply
+walk in through the front door. 
+
+This can be fixed in several ways:
+
+1. Identify users by long term public keys and hard code lists of them. This is very simple but may have poor usability. 
+1. Use cryptographic identity tied to an independent ID provider, like a certificate authority. This works particularly 
+   well if your users are institutions, as then you can use the [Corda Network identity system](https://corda.network/).
+   Talk to R3 for more details if you're interested in this.
+1. Use OAuth/OpenID and allow users to sign in via their Google, Office 365, LinkedIn, or corporate SAML accounts. This
+   is the most sophisticated approach but also the hardest to implement. Conclave may offer pre-canned APIs for this in 
+   future.
 
 ### How long should we trust an attestation verification report?
 
@@ -169,11 +269,8 @@ experience.
 
 ### Java object serialization doesn't work?
 
-On GraalVM native image builds, this is because Java object serialization isn't implemented yet. It will arrive in
-future versions. On Avian builds this is because Java object serialization is configured with a filter that blocks all
-usage by default. This is to protect the enclave against ["mad gadget" attacks](https://owasp.org/www-community/vulnerabilities/Deserialization_of_untrusted_data).
-You can make it work again by setting a less restrictive serialization filter on your `ObjectInputStream`. Alternatively,
-consider some other serialization mechanism.
+This will be addressed in the next release after 1.0 by upgrading GraalVM to the 21.0 release. Unfortunately this
+release came out too close to our 1.0 QA effort to be incorporated, but it will arrive soon!
 
 ### How do I control the Native Image parameters?
 
@@ -220,7 +317,8 @@ CPUs to support remote attestation in future, and we will re-evaluate when such 
 Nitro is the name Amazon uses to refer to in-house security technology on their custom servers that restricts
 access by AWS employees. It's not an enclave and Amazon must still be assumed to have access to all your data,
 institutionally, because they design and implement Nitro, thus you have only their assurance that there are no
-back doors or internally known weaknesses.
+back doors or internally known weaknesses and of course you must assume sufficiently privileged administrators can
+override Nitro if they need to.
 
 As it's not an enclave we currently have no plans to support Nitro.
 
