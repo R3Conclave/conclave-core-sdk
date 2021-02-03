@@ -319,7 +319,7 @@ class EnclaveTest {
             return null
         }
 
-        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
             check(mailCalls) {
                 val mailBytes = postOffice(enclaveInstanceInfo).encryptMail(byteArrayOf())
                 postMail(mailBytes, "self")

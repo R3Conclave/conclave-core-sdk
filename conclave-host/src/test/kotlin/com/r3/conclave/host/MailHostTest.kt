@@ -140,7 +140,7 @@ class MailHostTest {
         // Make a call into enclave1, which then requests sending a mail to a client with its routing hint set. Tests
         // posting mail from inside a local call using an EnclaveInstanceInfo.
         class Enclave1 : Enclave() {
-            override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+            override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
                 val outbound = postOffice(mail).encryptMail("hello".toByteArray())
                 postMail(outbound, routingHint!!)
                 acknowledgeMail(id)
@@ -162,7 +162,7 @@ class MailHostTest {
     fun `multiple commands`() {
         class Enclave1 : Enclave() {
             private var previousSender: PublicKey? = null
-            override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+            override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
                 previousSender = mail.authenticatedSender
                 postMail(postOffice(mail).encryptMail("hello".toByteArray()), null)
                 postMail(postOffice(mail).encryptMail("world".toByteArray()), null)
@@ -283,7 +283,7 @@ class MailHostTest {
     @ValueSource(strings = [ "destination+topic", "destination", "mail", "topic+eii", "eii" ])
     fun `postOffice() methods return cached instances`(overload: String) {
         class PostOfficeEnclave : Enclave() {
-            override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+            override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
                 val receivedOverload = String(mail.bodyAsBytes)
                 val instances = HashSet<EnclavePostOffice>()
                 repeat(2) {
@@ -350,13 +350,13 @@ class MailHostTest {
     }
 
     class NoopEnclave : Enclave() {
-        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
         }
     }
 
     // Receives mail, decrypts it and gives the body back to the host.
     class MailEchoEnclave : Enclave() {
-        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
             val answer: ByteArray? = callUntrustedHost(writeData {
                 writeIntLengthPrefixBytes(mail.bodyAsBytes)
                 writeInt(id.toInt())
@@ -378,7 +378,7 @@ class MailHostTest {
         }
 
         // Decrypt
-        override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+        override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
             callUntrustedHost(mail.bodyAsBytes)
         }
     }

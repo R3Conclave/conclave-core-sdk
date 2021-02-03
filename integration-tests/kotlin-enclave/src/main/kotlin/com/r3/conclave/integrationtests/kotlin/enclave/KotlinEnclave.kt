@@ -10,7 +10,7 @@ class KotlinEnclave : Enclave() {
         }
     }
 
-    override fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+    override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
         val fromHost = callUntrustedHost(mail.bodyAsBytes.reversedArray())!!
         val response = postOffice(mail).encryptMail(fromHost)
         postMail(response, null)

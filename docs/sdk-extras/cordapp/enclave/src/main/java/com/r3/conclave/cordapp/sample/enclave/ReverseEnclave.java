@@ -16,7 +16,7 @@ public class ReverseEnclave extends Enclave {
     }
 
     @Override
-    protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
+    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
         // Reverse it and re-encode to UTF-8 to send back.
         final byte[] reversedEncodedString = reverse(new String(mail.getBodyAsBytes())).getBytes();
         // Get the PostOffice instance for responding back to this mail. Our response will use the same topic.

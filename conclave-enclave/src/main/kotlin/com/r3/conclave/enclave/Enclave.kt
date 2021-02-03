@@ -325,9 +325,9 @@ Received: $attestationReportBody"""
                 // This works even if the host calls back into the enclave on the same stack. However if the host
                 // makes a call on a separate thread, it's treated as a separate call as you'd expect.
                 if (!threadSafe) {
-                    synchronized(this@Enclave) { this@Enclave.receiveMail(id, routingHint, mail) }
+                    synchronized(this@Enclave) { this@Enclave.receiveMail(id, mail, routingHint) }
                 } else {
-                    this@Enclave.receiveMail(id, routingHint, mail)
+                    this@Enclave.receiveMail(id, mail, routingHint)
                 }
             } else {
                 val state = stateManager.checkStateIs<Receive>()
@@ -491,13 +491,13 @@ Received: $attestationReportBody"""
      * exceptions can be made to propagate by rethrowing them in an unchecked one.
      *
      * @param id An opaque identifier for the mail.
+     * @param mail Access to the decrypted/authenticated mail body+envelope.
      * @param routingHint An optional string provided by the host that can be passed to [postMail] to tell the
      * host that you wish to reply to whoever provided it with this mail (e.g. connection ID). Note that this may
      * not be the same as the logical sender of the mail if advanced anonymity techniques are being used, like
      * users passing mail around between themselves before it's delivered.
-     * @param mail Access to the decrypted/authenticated mail body+envelope.
      */
-    protected open fun receiveMail(id: Long, routingHint: String?, mail: EnclaveMail) {
+    protected open fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
         throw UnsupportedOperationException("This enclave does not support receiving mail.")
     }
 
@@ -607,7 +607,6 @@ Received: $attestationReportBody"""
      * doesn't matter which order you pick: you cannot get lost or replayed messages.
      */
     protected fun postMail(encryptedMail: ByteArray, routingHint: String?) {
-        // TODO: Track size of encryptedBytes here, and adjust minSize before calling encrypt to ensure uniform sizes.
         enclaveMessageHandler.postMail(encryptedMail, routingHint)
     }
 
