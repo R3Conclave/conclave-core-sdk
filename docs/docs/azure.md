@@ -43,22 +43,55 @@ Pick a size that's got plenty of RAM, for example, you might want to click "Sele
 Just in case:
 
 * Check that the `/dev/sgx/enclave` device is present.
-* Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+
+* Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+.
 * If either check fails:
-  * Download the [driver](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-dcap-1.8-release)
-  * Follow the install [instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
+  * Download the [driver](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-dcap-1.8-release).
+  * Follow the install [instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf).
 
 You may need to add your user into `sgx_prv` group to give it access to SGX.
 
-```
+```sh
 sudo usermod -aG sgx_prv $USER
 ```
+
+### A Plugin
+In order to perform attestation using DCAP Conclave needs a way to gather information about the platform the enclave is hosted on. This information provides proof from Intel that a system supports SGX and that it is patched and up to date.
+
+DCAP is designed to work on many different server topologies, therefore rather than directly connecting to Intel services to retrieve this information, the cloud vendor or owner of the SGX system must provide a DCAP client plugin that will provide the required information. Intel provide a generic DCAP client plugin as part of the DCAP runtime. In order to use this you also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provide an example and some instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md).
+
+However, if you are using Azure things are a lot simpler. Microsoft has already written a DCAP client plugin that works with its Confidential Compute virtual machines. In fact, it also works outside of Azure for single CPU systems but this may not always be the case.
+
+Follow these steps to ensure you are using the Azure DCAP client plugin:
+* Identify the currently installed DCAP client plugin. It will always have a name of the form libdcap_quoteprov.so* .
+```sh
+ls /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so*
+```
+* If you already have the Azure plugin installed then it will contain the text 'AZDCAP'.
+```sh
+grep AZDCAP /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so*
+```
+* If the Azure plugin is not currently installed then:
+    * You can build it from [source](github.com/microsoft/Azure-DCAP-Client).
+    * Or extract from a pre-built package provided by Microsoft. E.g. for Ubuntu 18.04 via the command below (only libdcap_quoteprov.so is required).
+```sh
+wget https://packages.microsoft.com/ubuntu/18.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.6_amd64.deb && ar x az-dcap-client_1.6_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.6_amd64.deb data.tar.xz
+```
+* The name and location of the DCAP client plugin has to be `/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1` .
+```sh
+cp $(Azure-DCAP-Client)/libdcap_quoteprov.so /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.azure
+ln -sf /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.azure /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
+```
+* Set the Azure DCAP client logging level to FATAL as the log out by default is fairly verbose.
+```sh
+export AZDCAP_DEBUG_LOG_LEVEL=FATAL
+```
+* If you have happen to have the Intel DCAP plugin installed alongside with Azure one, bear in mind that running `apt update` might reset the symlink above to point to Intel's plugin.
 
 ## Using Docker container(s)
 
 If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
 
-```
+```sh
 docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
 ```
 
