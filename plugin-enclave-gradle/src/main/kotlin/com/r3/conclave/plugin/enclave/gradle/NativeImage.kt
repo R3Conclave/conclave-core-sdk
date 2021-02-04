@@ -436,5 +436,17 @@ open class NativeImage @Inject constructor(
             // a watchdog timer fires. Give the user some advice on how to fix it.
             linuxExec.throwOutOfMemoryException()
         }
+        else if (errorOut?.any { "Default native-compiler executable 'gcc' not found via environment variable PATH" in it } == true) {
+            // This error will only occur on Linux because on other platforms native-image is run in a docker container that
+            // already has gcc installed.
+            throw GradleException(
+                    "Conclave requires gcc to be installed when building GraalVM native-image based enclaves. "
+                            + "Try running 'sudo apt-get install build-essential' or the equivalent command on your distribution to install gcc. "
+                            + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine"
+            )
+        }
+        else if (errorOut != null) {
+            throw GradleException("The native-image enclave build failed. See the error message above for details.")
+        }
     }
 }
