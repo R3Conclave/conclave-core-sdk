@@ -29,6 +29,12 @@ class BuildUnsignedGraalEnclaveTest {
         private fun assertLinkerScriptContent() {
             assertThat(File("$projectDirectory/build/conclave/Enclave.lds").readText()).isEqualTo(GenerateLinkerScript.content)
         }
+
+        private fun writeConfigurationToFile(file: String, newConfiguration: String) {
+            FileOutputStream(file).use { fos ->
+                fos.write(newConfiguration.toByteArray())
+            }
+        }
     }
 
     @BeforeEach
@@ -86,33 +92,30 @@ class BuildUnsignedGraalEnclaveTest {
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun reflectionConfigurationFilesIncrementalBuild(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-
-        val filePaths = mutableListOf<String>()
+        val originalConfigurations = mutableListOf<String>()
         for (i in 0..1) {
             val file = "$projectDirectory/reflectionconfig$i.json"
-            filePaths.add(file)
             val className = "Class${i}"
-            val configuration = GenerateReflectionConfig.generateContent(listOf("com.r3.conclave.example.$className"))
-            FileOutputStream(file).use { fos ->
-                fos.write(configuration.toByteArray())
-            }
-            task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            val configuration = String(Files.readAllBytes(Paths.get(file)))
+            originalConfigurations.add(configuration)
 
             val newConfiguration = configuration.replace(className, "Another$className")
-            FileOutputStream(file).use { fos ->
-                fos.write(newConfiguration.toByteArray())
-            }
-            task = runTask(buildType)
+            writeConfigurationToFile(file, newConfiguration)
+            var task = runTask(buildType)
             assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
             task = runTask(buildType)
             assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
         }
 
-        for (file in filePaths) {
-            Files.delete(Paths.get(file))
+        // Restore configurations
+        for (i in 0..1) {
+            val file = "$projectDirectory/reflectionconfig$i.json"
+            writeConfigurationToFile(file, originalConfigurations[i])
+
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
         }
     }
 }
