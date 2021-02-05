@@ -52,6 +52,8 @@ markdown_extensions:
   - admonition
   - pymdownx.snippets
   - pymdownx.inlinehilite
+  - pymdownx.tabbed
+  - pymdownx.superfences
   - attr_list
   - meta
   - pymdownx.highlight:

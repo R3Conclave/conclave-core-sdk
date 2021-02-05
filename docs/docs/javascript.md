@@ -50,7 +50,7 @@ The next step is to define and parse our JavaScript code. Once we have done this
 to Java which allow us to access the functions and variables that are defined within the JavaScript
 code. Add a constructor that prepares the JavaScript context:
 
-```java hl_lines="4 5 6 7 8 9 10 11 12 13 14 15"
+```java hl_lines="4-15"
     // We store the previous result to showcase that the enclave internals can be examined in a mock test.
     byte[] previousResult;
 
@@ -77,7 +77,7 @@ Remove the Java code that reverses the string and replace it with the following 
 that `static` has been removed from the function declaration because it now accesses the `bindings`
 member variable.
 
-```java hl_lines="4 5 6 7"
+```java hl_lines="4-7"
         return result;
     }
 

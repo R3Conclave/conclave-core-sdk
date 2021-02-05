@@ -42,11 +42,11 @@ Pick a size that's got plenty of RAM, for example, you might want to click "Sele
 
 Just in case:
 
-* Check that the `/dev/sgx/enclave` device is present.
-* Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+.
+* Check that the `enclave` device is present in the `/dev/sgx/` directory
+* Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+
 * If either check fails:
-  * Download the [driver](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-dcap-1.8-release).
-  * Follow the install [instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf).
+    * Download the [driver](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-dcap-1.8-release)
+    * Follow the [install instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
 
 You may need to add your user into `sgx_prv` group to give it access to SGX.
 
@@ -99,10 +99,11 @@ docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
     Azure offers a "Confidential Kubernetes" service. At this time we haven't tested Conclave with that. If you try it,
     let us and the community know if it works (conclave-discuss@groups.io)
 
-## Code for using DCAP attestation
-    
-You have to choose attestation method at compile time (see Host.java).
-  
+## Running a Conclave Application
+Once the machine is set up, you can follow the [Compiling and running](tutorial.md) tutorial to run the `hello-world` sample.
+
+The sample is configured to use DCAP attestation with the
+following line in `Host.java`
 ```java
 enclave.start(new AttestationParameters.DCAP(), ... );
 ```

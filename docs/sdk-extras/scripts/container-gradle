@@ -33,10 +33,20 @@ if [[ $(uname) != "Darwin" ]]; then
   exit 1
 fi
 
-REPO_PATH=$(cat gradle.properties | col -b | awk -F= '/conclaveRepo/ { print $2 }')
-if [ ! -d "$REPO_PATH" ]; then
+REPO_PATH=$(cat gradle.properties | col -b | awk -F= '$1 ~ /^conclaveRepo$/ { print $2 }')
+
+if [ ! "$REPO_PATH" ]; then
   echo "There should be a property called conclaveRepo in the gradle.properties file, pointing to the repo sub-directory of your Conclave SDK."
   exit 1
+elif [ ! -d "$REPO_PATH" ]; then
+  echo "Could not resolve the directory '$REPO_PATH'. The conclaveRepo property in the gradle.properties file should point to the repo sub-directory of your Conclave SDK."
+  exit 1
+fi
+
+if [[ ${REPO_PATH:0:1} == "/" ]]; then
+  ABSOLUTE_REPO_PATH=$REPO_PATH
+else
+  ABSOLUTE_REPO_PATH="$PWD/$REPO_PATH"
 fi
 
 function print_rm_help() {
@@ -91,7 +101,7 @@ function create_container() {
   CONTAINER_ID=$(
     docker run -it -d \
       -v "$PWD:/project" \
-      -v "$PWD/$REPO_PATH:/repo" \
+      -v "$ABSOLUTE_REPO_PATH:/repo" \
       $MAP_JAVA_HOME \
       -e "JAVA_HOME=$CONTAINER_JAVA_HOME" \
       $PORT_FLAG \
