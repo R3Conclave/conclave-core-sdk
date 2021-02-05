@@ -851,6 +851,15 @@ constraint from a configuration file, system property or command line flag. Fina
 the attestation object. If anything is amiss an exception is thrown, so past this point we know we're talking to the
 real `ReverseEnclave` we wrote earlier.  
 
+!!! tip
+    If needed, more than one key hash could be added to the list of enclave constraints (e.g. if simulation and debug 
+    modes use a distinct key from release mode). The enclave is accepted if one key hash matches.
+    ```java
+    // Below, two distinct signing key hashes can be accepted.
+    EnclaveConstraint.parse("S:5124CA3A9C8241A3C0A51A1909197786401D2B79FA9FF849F2AA798A942165D3 "
+            + "S:01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B PROD:1 SEC:INSECURE").check(attestation);
+    ```
+
 ### Keys and mail
 
 The client wants to receive a response from the enclave, and we want that to be encrypted/tamperproofed too. That means it

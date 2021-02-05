@@ -51,7 +51,11 @@ public class Client {
 
         // Check it's the enclave we expect. This will throw InvalidEnclaveException if not valid.
         System.out.println("Connected to " + attestation);
-        EnclaveConstraint.parse("S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE").check(attestation);
+        // Two distinct signing key hashes can be accepted.
+        // Release mode: 360585776942A4E8A6BD70743E7C114A81F9E901BF90371D27D55A241C738AD9
+        // Debug mode:   4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+        EnclaveConstraint.parse("S:360585776942A4E8A6BD70743E7C114A81F9E901BF90371D27D55A241C738AD9 "
+                + "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE").check(attestation);
 
         // Now we checked the enclave's identity and are satisfied it's the enclave from this project, we can send mail
         // to it.
