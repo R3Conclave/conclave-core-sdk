@@ -62,8 +62,8 @@ However, others will probably still work.
 ## Install the kernel driver and system software
 
 Installers for the system software can be [obtained from Intel](https://01.org/intel-software-guard-extensions/downloads).
-We recommend reading the [installation user guide](https://download.01.org/intel-sgx/sgx-linux/2.9.1/docs/Intel_SGX_Installation_Guide_Linux_2.9.1_Open_Source.pdf).
-The installation process is simple. Intel provide:
+We recommend reading the [installation user guide](https://download.01.org/intel-sgx/sgx-linux/2.12/docs/Intel_SGX_Installation_Guide_Linux_2.12_Open_Source.pdf).
+The installation process is simple. Intel provides:
 
 * APT repositories for Ubuntu
 * Cross-distro installer binaries for other platforms, which set up the system software and compile/install the kernel driver.
@@ -72,7 +72,7 @@ The installation process is simple. Intel provide:
 
     The installer will need to be re-run when the kernel is upgraded.
 
-Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.9.1) yourself.
+Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.12) yourself.
 The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).  
 
 For SGX remote attestation to operate and machine provisioning to succeed, a small daemon called `aesmd` is used. This
