@@ -943,7 +943,7 @@ fully in-memory. There is no need for SGX hardware or a specific OS and thus ide
 underlying enclave object is also exposed enabling you to make assertions on the enclave's state, something that
 cannot be done on real hardware or even in simulation mode.
 
-In your enclave module add the following test dependency
+In your **enclave** module build.gradle file add the following test dependency
 
 ```groovy hl_lines="2"
 testImplementation "com.r3.conclave:conclave-testing"
@@ -953,7 +953,7 @@ You create your mock enclave by calling `MockHost.loadMock`.
 
 ```java
 MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
-mockHost.start(null, null, null);
+mockHost.start(null, null);
 ReverseEnclave reverseEnclave = mockHost.getEnclave();
 ```
 
@@ -963,37 +963,35 @@ enclave object instance with `mockHost.getEnclave()`.
 ### Native
 
 Testing the enclave natively is relatively straightforward: the enclave needs to be loaded with `EnclaveHost.load`. By
-default this will run the tests in a simulated environment and will require the correct OS. Native tests are ideal for 
+default this will run the tests in a simulated environment and will require the Linux OS. Native tests are ideal for 
 integration testing.
 
-To test the enclave in debug mode on real secure hardware the `-PenclaveMode=debug` flag needs to be specified and the
-SPID and attestation key need to be passed into the test. This can be done with system properties.
-
-In your host module build file:
-
-```groovy hl_lines="2"
-test {
-    useJUnitPlatform()
-    // Pass through any -Pspid and -Pattestation-key parameters to the tests
-    systemProperties project.properties.subMap(["spid", "attestation-key"])
-}
-```
-
-Pass these values to `EnclaveHost.start` in your test:
-
 ```java
-private static EnclaveHost enclave;
+@EnabledOnOs(OS.LINUX)
+public class NativeTest {
+    private static EnclaveHost enclave;
 
-@BeforeAll
-static void startup() throws EnclaveLoadException {
-    enclave = EnclaveHost.load("com.superfirm.enclave.ReverseEnclave") // CHANGE THIS
-    enclave.start(new AttestationParameters.DCAP(), null);
+    @BeforeAll
+    static void startup() throws EnclaveLoadException {
+        enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
+        enclave.start(new AttestationParameters.DCAP(), null);
+    }
 }
 ```
+
+You'll notice that we annotated the test class with `@EnabledOnOs(OS.LINUX)`. This is from
+[JUnit 5](https://junit.org/junit5/docs/current/user-guide/#writing-tests-conditional-execution-os) and it will make sure
+the native test isn't run on non-Linux environments.
+
+Running
+
+```gradlew host:test```
+
+will execute the test using a simulation enclave, or not at all if the OS is not Linux. You can switch to a debug enclave
+and test on real secure hardware by using the `-PenclaveMode` flag:
 
 ```gradlew -PenclaveMode=debug host:test```
 
-Note that native tests are located in the host module while mock tests in the enclave module.
-
-To run tests on a non-Linux machine you can use Docker, which manages Linux VMs for you. See the instructions for
-[compiling and running the host](tutorial.md#running-the-host) for more information.
+!!! tip
+    To run the native tests on a non-Linux machine you can use Docker, which manages Linux VMs for you. See the instructions
+    for [compiling and running the host](tutorial.md#running-the-host) for more information.

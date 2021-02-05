@@ -9,7 +9,7 @@ def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation
 
 // Create a task that can be used for generating signing materials
 tasks.register("prepareForSigning") {
-    it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
+    it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
 }
 
 dependencies {
@@ -19,10 +19,6 @@ dependencies {
     runtimeOnly project(path: ":enclave", configuration: mode)
     runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
 
-    // For tests only we depend on the enclave module so we can also use a mock enclave where the enclave object exists
-    // in the host JVM instead of a sub-JVM.
-    testImplementation project(":enclave")
-    testImplementation "com.r3.conclave:conclave-testing:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 

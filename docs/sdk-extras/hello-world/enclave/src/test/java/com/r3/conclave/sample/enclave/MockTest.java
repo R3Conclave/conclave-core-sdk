@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests the enclave fully in-memory in a mock environment.
  */
-public class ReverseEnclaveTest {
+public class MockTest {
     @Test
     void reverseNumber() throws EnclaveLoadException {
         MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
