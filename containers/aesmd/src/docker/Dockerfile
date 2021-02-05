@@ -1,8 +1,8 @@
 FROM ubuntu:bionic-20200219
 
-LABEL version="1.1"
+LABEL version="1.0"
 LABEL description="Intel aesmd container"
-LABEL maintainer="SGX@r3.com"
+LABEL maintainer="conclave@r3.com"
 
 # Install dependencies
 RUN apt-get update -y && apt-get install -y \

@@ -3,9 +3,9 @@ FROM ubuntu:bionic-20200219
 # A build container for the full sgxjvm project.
 # TODO Separate out the enclave build and make it completely reproducible.
 
-LABEL version="1.1"
+LABEL version="1.0"
 LABEL description="SGXJVM build container"
-LABEL maintainer="SGX@r3.com"
+LABEL maintainer="conclave@r3.com"
 
 RUN apt-get update -y && apt-get install -y \
     curl \
