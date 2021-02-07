@@ -467,8 +467,16 @@ idea {
 //
 // The publishAllPublicationsToSdkRepoRepository target is synthesised automatically by the maven-publish Gradle
 // plugin, based on the repositories block inside the if(includeNative) block above.
+task cleanSDK(type: Delete) {
+    delete "$buildDir/sdk/repo"
+    delete "$buildDir/sdk/hello-world/client/build"
+    delete "$buildDir/sdk/hello-world/enclave/build"
+    delete "$buildDir/sdk/hello-world/host/build"
+    delete "$buildDir/sdk/hello-world/.gradle"
+}
+
 task sdkRepo {
-    dependsOn = publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }
+    dependsOn = ["cleanSDK", publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" } ]
 }
 
 task zipGPL2Sources(type: Zip) {
