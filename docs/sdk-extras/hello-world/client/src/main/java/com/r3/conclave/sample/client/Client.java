@@ -23,7 +23,7 @@ public class Client {
         // as a basis for your own apps.
 
         if (args.length == 0) {
-            System.err.println("Please pass the string to reverse on the command line");
+            System.err.println("Please pass the string to reverse on the command line using --args=\"String to Reverse\"");
             return;
         }
         String toReverse = String.join(" ", args);

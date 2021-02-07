@@ -68,11 +68,11 @@ of course get no hardware protections. To run against real SGX hardware you must
 
 ![Look at the SDK's top level directory](./images/import-sdk.png) 
  
-**Step 3:** Click "import" when notified that there's a Gradle build script
+**Step 3:** When notified that there's a Gradle build script, click "hello-world" to import the project.
 
 ![Import Gradle script](./images/gradle-import.png) 
  
-**Step 4:** If on Linux or Windows, double-click on `:host:assemble`. This is the second 
+**Step 4:** Double-click on `:host:assemble`. This is the second
 highlighted `assemble` in the screenshot below. Voila! :smile: You have just built your first enclave.
   
 ![Double-click on `:host:assemble`](./images/gradle-tasks.png)
