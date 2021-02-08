@@ -68,7 +68,7 @@ code. Add a constructor that prepares the JavaScript context:
     }
 
     @Override
-    protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
+    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
 ```
 
 ### Replace the Java function with a call to the JavaScript function
@@ -87,7 +87,7 @@ member variable.
     }
 
     @Override
-    protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
+    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
 ```
 
 Finally, run the sample code as described in the tutorial. The result should be the same: the string passed 

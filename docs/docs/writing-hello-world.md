@@ -581,7 +581,7 @@ public class ReverseEnclave extends Enclave {
     }
 
     @Override
-    protected void receiveMail(long id, String routingHint, EnclaveMail mail) {
+    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
         byte[] reversed = receiveFromUntrustedHost(mail.getBodyAsBytes());
         byte[] responseBytes = postOffice(mail).encryptMail(reversed);
         postMail(responseBytes, routingHint);
