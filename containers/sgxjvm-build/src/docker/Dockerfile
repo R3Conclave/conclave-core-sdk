@@ -67,6 +67,7 @@ RUN apt-get update -y && apt-get install -y \
     python3-venv \
     python3-wheel \
     reprepro \
+    sudo \
     texinfo \
     unzip \
     virtualenv \
@@ -153,3 +154,9 @@ RUN pip3 install wheel
 ENV LC_ALL              C.UTF-8
 ENV LANG                C.UTF-8
 
+# Enable ptrace
+COPY root/etc/sysctl.d/10-ptrace.conf /etc/sysctl.d/10-ptrace.conf
+
+# Set up a fake user. Without this System.getProperty("user.home") returns '?' which confuses Corda.
+COPY root/scripts/setup-users.sh /scripts/setup-users.sh
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && /scripts/setup-users.sh
