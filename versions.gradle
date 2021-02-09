@@ -13,7 +13,6 @@ ext {
     bouncycastle_version = '1.66'
     typesafe_config_version = '1.4.0'
     jopt_simple_version = '5.0.2'
-    jmeter_version = '5.1.1'
     i2pcrypto_eddsa_version = '0.3.0'
     classgraph_version = '4.8.69'
     junit_jupiter_version = '5.6.0'

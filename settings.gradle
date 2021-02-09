@@ -62,8 +62,6 @@ include 'containers:conclave-build'
 
 include 'hsm-tool'
 
-include 'load-test:load-test-runner'
-
 include 'plugin-enclave-gradle'
 
 include 'graal'
