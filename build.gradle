@@ -5,6 +5,7 @@ plugins {
     id 'base'
     id 'idea'
     id 'org.jetbrains.dokka' version '0.10.1'
+    id 'com.github.jk1.dependency-license-report' version '1.16'
 }
 
 apply from: 'versions.gradle'
@@ -542,3 +543,11 @@ task sdk(type: Zip, dependsOn: ["sdkFiles"]) {
     }
 }
 //endregion
+
+// Run gradlew dependencyLicenseReport and open build/reports/dependency-license/index.html
+import com.github.jk1.license.render.*
+import com.github.jk1.license.filter.*
+licenseReport {
+    renderers = [new InventoryHtmlReportRenderer()]
+    filters = [new LicenseBundleNormalizer()]
+}
