@@ -33,24 +33,20 @@ Community Edition works fine).
 Currently, we support developing enclaves on Windows, macOS and Linux. However, there are a few platform specific
 differences to be aware of.
 
-Firstly, although you can develop and work on enclaves in the pure Java mock mode, to test against the embedded JVM
-you will need to install Docker. Enclaves are Linux shared libraries with special extensions, and this
-requires access to a Linux build environment. A build container will be constructed for you during the Gradle build
-process automatically, even on Windows and macOS! However Conclave won't actually install Docker for you. Grab it
-from their website, or on Linux, install it via your distribution.
+Firstly, you need a Linux environment to build and execute enclaves, including for native testing. This is because
+enclaves are Linux shared libraries with special extensions. If you are not using Linux you will need to install Docker.
+On Windows and macOS, Conclave uses Docker to build the enclave in a Linux environment.
+[Instructions are provided below](#running-the-host) to show you how to use Docker on Windows and macOS to run your
+entire application in "simulation mode". Alternatively, for day to day development the mock API is plenty sufficient
+and allows you to debug into enclave calls as well. Compiling a real enclave is only needed for integration testing
+against the embedded JVM, or real deployment.
 
-Secondly, *executing* enclaves without using mock mode also requires Linux or a Linux container. 
-[Instructions are provided below](#testing-on-windows-and-macos) to show you how to use Docker on Windows and macOS to 
-run your entire application in "simulation mode". Alternatively, for day to day development the mock API is plenty 
-sufficient and allows you to debug into enclave calls as well. Compiling a real enclave is only needed for integration 
-testing against the embedded JVM, or real deployment.
-
-Thirdly, when building enclaves using the `graalvm_native_image` runtime, Conclave internally uses the C++ compiler
+Secondly, when building enclaves using the `graalvm_native_image` runtime, Conclave internally uses the C++ compiler
 gcc. This is automatically installed when building on Windows and macOS but on Linux you need to make sure you have
 installed gcc yourself. If your build system uses the aptitude package manager then you can install everything you need with
 this command:
 
-```
+```bash
 sudo apt-get install build-essential
 ```
 
@@ -150,6 +146,10 @@ openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_p
     ```
 
     For more information see the [Container Gradle](container-gradle.md) page.
+
+    !!! tip
+        Don't be surprised if the application gets built again from scratch! We do this to ensure the build and
+        runtime environments match.
 
 === "Windows"
 

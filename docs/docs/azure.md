@@ -14,7 +14,7 @@ There are two protocols for establishing what code is running in an enclave: EPI
 protocol designed for consumer applications, and as such includes some sophisticated privacy features. For servers
 where the IP address doesn't need to be hidden (because it's public in DNS to begin with), these features 
 aren't helpful and thus there is DCAP (_datacenter attestation primitives_). DCAP requires more modern hardware 
-but is otherwise simpler and more robust. You may also see it referred to as "ECDSA attestation".
+but is otherwise simpler and more robust. You may also see DCAP referred to as "ECDSA attestation".
 
 In DCAP repeating attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed 
 machine obtains a machine certificate from Intel via the cache which may then be persisted to disk. All this is
