@@ -1,0 +1,7 @@
+Conclave is proprietary software of R3 (subject to copyright protection).
+
+* If you wish to obtain a trial-period evaluation license to Conclave, then you shall enter into the Conclave Evaluation License (at the following URL: https://customerhub.r3.com).
+* If you are an eligible early-stage startup or an individual, then you may elect to enter into the Conclave Community License (at the following URL: https://conclave.net/community-license).
+* If you have purchased a license to Conclave, the terms of the agreement entered into with R3 for such license govern your use of Conclave.
+
+You are not otherwise authorised to use Conclave.
