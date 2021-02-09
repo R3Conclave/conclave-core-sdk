@@ -5,32 +5,26 @@ may copy/paste it to act as the basis of your own commercial or open source apps
 
 # Usage
 
-## Running the nodes (locally)
+Unlike most CorDapps this one will *only run on Linux* due to the need for an enclave. But don't fear: you can use 
+virtualisation to run it on Windows and macOS as well. For Windows it will unfortunately require some manual work. 
+On macOS you can install Docker Desktop and then use the handy `container-gradle` script found in the SDK scripts 
+directory, which does everything for you.
 
-Build and deploy the nodes:
+## Linux
 
-```
-./gradlew deployNodes
-```
+1. Download an Oracle Java 8 and unpack it somewhere.
+2. Run `./gradlew workflows:test`
 
-After the build finishes, navigate to build/nodes/ where you will find two folders, one for each node (PartyA and PartyB).
+## MacOS
 
-Navigate to PartyA and PartyB folders, and from the terminal, in each, enter:
+1. Download an Oracle Java 8 **for Linux** ("Linux x64 Compressed Archive") and unpack it somewhere **in your home directory**. 
+   It must be under $HOME as otherwise Docker will complain. For example, use `~/jdk8`.
+2. Run `env LINUX_JAVA_HOME=$HOME/jdk8 ../scripts/container-gradle workflows:test`
 
-```
-java -jar corda.jar
-```
+If you make any mistakes during this process you may need to use the `docker ps -a` and `docker rm` commands to delete
+the container the script creates.
 
-## Interacting with the nodes's shell
+## Windows
 
-When started via the command line, each node will display an interactive shell.
-
-To securely reverse a string between two parties, enter the following shell command:
-- from PartyA's shell
-```
-flow start ReverseFlow sendTo: "PartyB"
-```
-- from PartyB's shell
-```
-flow start ReverseFlow sendTo: "PartyA"
-```
+We don't have tested instructions for that at this point but you can try using WSL2 to set up an Ubuntu environment
+and then follow the Linux instructions. It should work! Of course, only in simulation mode.

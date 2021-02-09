@@ -519,7 +519,17 @@ task sdkCopyExtras(type: Copy) {
     into "$buildDir/sdk"
     doLast {
         // Patch the gradle.properties file in the sample app so it uses the SDK copy of the repository.
-        file("$buildDir/sdk/hello-world/gradle.properties").write("conclaveRepo=../repo\r\nconclaveVersion=${rootProject.version}")
+        for (p in ["hello-world", "cordapp"]) {
+            def props = new Properties()
+            file("$buildDir/sdk/$p/gradle.properties").newInputStream().withCloseable {
+                props.load(it)
+                props["conclaveRepo"] = "../repo"
+                props["conclaveVersion"] = "${rootProject.version}".toString()
+            }
+            file("$buildDir/sdk/$p/gradle.properties").newOutputStream().withCloseable {
+                props.store(it, "")
+            }
+        }
     }
 }
 

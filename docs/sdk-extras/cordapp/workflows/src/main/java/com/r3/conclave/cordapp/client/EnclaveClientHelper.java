@@ -9,6 +9,7 @@ import com.r3.conclave.mail.PostOffice;
 import net.corda.core.flows.FlowException;
 import net.corda.core.flows.FlowSession;
 import org.jetbrains.annotations.NotNull;
+import java.io.IOException;
 
 /**
  * A helper class that wraps some boilerplate for communicating with enclaves.
@@ -61,7 +62,13 @@ public class EnclaveClientHelper {
     public byte[] receiveFromEnclave() throws FlowException {
         if (postOffice == null)
             throw new IllegalStateException("You must call start() first.");
-        EnclaveMail reply = session.receive(byte[].class).unwrap(postOffice::decryptMail);
-        return reply.getBodyAsBytes();
+            EnclaveMail reply = session.receive(byte[].class).unwrap((mail) -> {
+                try {
+                    return postOffice.decryptMail(mail);
+                } catch (IOException e) {
+                    throw new FlowException(e);
+                }
+            });
+            return reply.getBodyAsBytes();
     }
 }

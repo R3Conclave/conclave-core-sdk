@@ -1,3 +1,6 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
 // This is based on the standard CorDapp Gradle template.
 buildscript {
     Properties constants = new Properties()
@@ -38,15 +41,6 @@ plugins {
     id 'com.adarshr.test-logger' version '2.1.1' apply false
 }
 
-// TODO: Find a way to eliminate the code duplication between here and settings.gradle
-if (!new File(conclaveRepo, "com").isDirectory()) {
-    // We're running Gradle recursively inside the conclave container, so must look in the right place.
-    conclaveRepo = "/repo"
-    if (!new File("/repo/com").isDirectory())
-        throw new Exception("Neither $conclaveRepo nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory. See the Conclave tutorial on https://docs.conclave.net")
-}
-def conclaveRepoDir = new File(rootDir, conclaveRepo)
-
 allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
@@ -59,7 +53,16 @@ allprojects {
     repositories {
         // Add the Conclave repository to every project.
         maven {
-            url = conclaveRepoDir
+            def path = Paths.get(rootDir.absolutePath).resolve(conclaveRepo).toAbsolutePath().normalize()
+            if (!Files.isDirectory(path.resolve("com"))) {
+                if (Files.isDirectory(Paths.get("/repo/com"))) {
+                    path = Paths.get("/repo")
+                } else {
+                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory. " +
+                            "If on macOS, try using the container-gradle script to execute run the tests. See the Conclave CorDapp tutorial on https://docs.conclave.net/writing-cordapps.html")
+                }
+            }
+            url = path.toFile()
         }
 
         mavenCentral()
