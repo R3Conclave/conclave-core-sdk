@@ -45,7 +45,6 @@ RUN apt-get update -y && apt-get install -y \
     exuberant-ctags \
     g++ \
     gcc \
-    gdbserver \
     git \
     libcurl4-openssl-dev \
     libprotobuf-dev \
@@ -79,25 +78,6 @@ RUN apt-get update -y && apt-get install -y \
     libsgx-dcap-ql \
     libsgx-dcap-ql-dev \
     az-dcap-client
-
-# GDB - build from source.
-RUN export GDB_VERSION=gdb-9.2 \
-    && export PREV_DIR=$PWD \
-    && export TEMPDIR=$(mktemp -d) \
-    && cd ${TEMPDIR} \
-    && wget "http://ftp.gnu.org/gnu/gdb/${GDB_VERSION}.tar.xz" \
-    && tar -xvf ${GDB_VERSION}.tar.xz \
-    && mkdir ${GDB_VERSION}/build \
-    && cd ${GDB_VERSION}/build \
-    && ../configure --with-python=python3 \
-    && make -j$(nproc) \
-    && make install \
-    && cd ../../ && rm -fr ${GDB_VERSION}.tar.xz ${GDB_VERSION} \
-    && cd ${PREV_DIR} \
-    && rm -fr ${TEMPDIR} \
-    && unset GDB_VERSION \
-    && unset PREV_DIR \
-    && unset TEMPDIR
 
 # MX and JVMCI versions should be aligned with Graal's build instructions,
 # which can be found at https://github.com/oracle/graal/blob/vm-20.0.0/vm/README.md,
