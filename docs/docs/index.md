@@ -9,6 +9,8 @@ Conclave is a toolkit for building _enclaves_, small pieces of software that are
 of the computer on which they run. It is ideally suited to solving multi-party collaboration and privacy problems
 but can also be used to secure your infrastructure against attack.
 
+**[Visit the main Conclave website](https://www.conclave.net)**
+
 ## Why Conclave?
 
 - High level, simple API that is much easier to use than other enclave APIs.
@@ -33,8 +35,8 @@ but can also be used to secure your infrastructure against attack.
 - Tutorials, guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our Slack 
   channel and mailing list, even if you don't have a proper support contract!
   
-Finally, **Conclave is free for open source projects**, and there are easy licensing terms for individuals and 
-early stage startups.
+Finally, **Conclave is free for non-commercial open source projects**, and there are easy licensing terms for individuals 
+and early stage startups.
 
 ## Documentation
 
@@ -63,12 +65,14 @@ blockchain platform that offers many useful features when you progress beyond en
 
 ## Get in touch
 
+R3 offers [full ticket based commercial support](https://conclave.net/get-conclave/).
+
 There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
 is available where you can find the development team during UK office hours (GMT 0900-1700).
 
 [:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
 
-In future R3 will offer ticket based commercial support.
+
 
 ## Release notes
 
