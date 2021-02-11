@@ -9,7 +9,9 @@ Conclave is a toolkit for building _enclaves_, small pieces of software that are
 of the computer on which they run. It is ideally suited to solving multi-party collaboration and privacy problems
 but can also be used to secure your infrastructure against attack.
 
-**[Visit the main Conclave website](https://www.conclave.net)**
+* **[Visit the Conclave website](https://www.conclave.net)**
+
+* **[Get Conclave](https://conclave.net/get-conclave/)** (SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`)
 
 ## Why Conclave?
 
