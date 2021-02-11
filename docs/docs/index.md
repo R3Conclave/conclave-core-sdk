@@ -6,31 +6,46 @@ hide:
 # Conclave
 
 Conclave is a toolkit for building _enclaves_, small pieces of software that are protected from attack by the owner
-of the computer on which they run. It is ideally suited to solving multi-party collaboration and privacy problems.
+of the computer on which they run. It is ideally suited to solving multi-party collaboration and privacy problems
+but can also be used to secure your infrastructure against attack.
+
+**[Visit the main Conclave website](https://www.conclave.net)**
 
 ## Why Conclave?
 
-- Write your host app in any language that can run on a Java Virtual Machine like Java, Kotlin or even 
-  [JavaScript](javascript.md). Write your enclave using the GraalVM
-  native image technology for incredibly tight memory usage, support for any GraalVM language and instant startup time.
-  Eliminate all memory management errors that would undermine the security of your enclave, thanks to the built-in 
-  generational garbage collector.
 - High level, simple API that is much easier to use than other enclave APIs.
+- Write your host app in any language that can run on a Java Virtual Machine like Java, Kotlin or even 
+  [JavaScript](javascript.md). Write your enclave using the GraalVM native image technology for incredibly tight memory 
+  usage, support for any GraalVM language and instant startup time. Eliminate all memory management errors that would 
+  undermine the security of your enclave, thanks to the built-in compacting generational garbage collector.
+- Develop gracefully on all operating systems, not just Linux: Windows and macOS are fully supported as well.
 - Full support for auditing enclaves over the internet, including remote attestation and fully deterministic,
   reproducible builds. A user can verify what the source code of the remotely running enclave is, to ensure it will
   behave as they expect.
+- A message oriented communication and storage system that eliminates size-based side channel attacks and integrates with
+  the Intel SGX secure upgrade mechanisms. Roll forward through security upgrades without clients being aware of it.
 - A Gradle plugin to automate compiling, signing and calculating the code hash of your enclave. No need to use the Intel
   SDK - everything needed is included.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
-- A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, using just JUnit.
-- Tutorials, guides and commercial support from the SGX experts at R3.
+- Easily deploy to Microsoft Azure Gen2 VMs by just uploading your Java app and running it as normal. There is no setup!
+- A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, 
+  using just JUnit.
+- Integrate and benefit from [Corda](https://www.corda.net), an open source peer-to-peer network for business uses with
+  enterprise support.
+- Tutorials, guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our Slack 
+  channel and mailing list, even if you don't have a proper support contract!
+  
+Finally, **Conclave is free for non-commercial open source projects**, and there are easy licensing terms for individuals 
+and early stage startups.
 
 ## Documentation
 
-[**Enclaves.**](enclaves.md) If you're totally new to enclave development, start with our introduction to enclave-oriented
+Click through the tabs above to see all our documentation. If you're not sure where to start, these pages are good:
+
+[**Enclaves.**](enclaves.md) If you're totally new to enclave development start with our introduction to enclave-oriented
 design. This will explain the concepts referred to in the rest of the documentation.
 
-[**Architectural overview.**](architecture.md) This explains the core Conclave APIs.
+[**Architectural overview.**](architecture.md) This explains the core Conclave APIs and how it's structured.
 
 [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
 
@@ -40,17 +55,24 @@ available for creating enclaves.
 [**Using JavaScript.**](javascript.md) How to use JIT compiled JavaScript inside the enclave.
 
 [**Machine setup.**](machine-setup.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
-and then keep your machine trusted by applying updates. 
+and then keep your machine trusted by applying updates.
+
+[**Writing CorDapps with Conclave**](writing-cordapps.md) You'll need a way for your users to get data to and from your
+service that has integrated identity, workflow, firewall handling, database integration and more. Corda is an enterprise
+blockchain platform that offers many useful features when you progress beyond encrypting your business logic.
 
 [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
 
 ## Get in touch
 
-There's a public mailing list for discussion of using Conclave and SGX. 
+R3 offers [full ticket based commercial support](https://conclave.net/get-conclave/).
 
-[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } 
+There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
+is available where you can find the development team during UK office hours (GMT 0900-1700).
 
-In future R3 will offer ticket based commercial support.
+[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
+
+
 
 ## Release notes
 
@@ -70,6 +92,9 @@ In future R3 will offer ticket based commercial support.
    on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine. Learn more about
    the [container-gradle](container-gradle.md) script.
 1. :jigsaw: **New feature!** The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
+1. :jigsaw: **New feature!** A tutorial for how to write [CorDapps](https://www.corda.net) has been added. Corda can
+   provide your enclave with a business oriented peer-to-peer network that has integrated identity. [Learn more about
+   writing CorDapps with Conclave](writing-cordapps.md).
 1. Multi-threaded enclaves are now opt-in. By default, the enclave object will be locked before data from the host is
    delivered. This ensures that a malicious host cannot multi-thread an enclave that's not expecting it.
 1. The Gradle tasks list has been cleaned up to hide internal tasks that aren't useful to invoke from the command line.
