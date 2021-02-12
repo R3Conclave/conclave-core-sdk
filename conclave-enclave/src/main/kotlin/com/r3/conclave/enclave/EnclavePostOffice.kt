@@ -1,10 +1,10 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.mail.internal.AbstractPostOffice
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMailHeader
 import com.r3.conclave.mail.MinSizePolicy
 import com.r3.conclave.mail.PostOffice
+import com.r3.conclave.mail.internal.AbstractPostOffice
 import java.security.PublicKey
 
 /**
@@ -19,16 +19,16 @@ import java.security.PublicKey
  * @see [Enclave.postOffice]
  */
 abstract class EnclavePostOffice(
-        /**
-         * The public key of the recipient to which mail will be encrypted to.
-         */
-        final override val destinationPublicKey: PublicKey,
-        /**
-         * The topic mail created by this post office will have.
-         *
-         * @see [EnclaveMailHeader.topic]
-         */
-        final override val topic: String
+    /**
+     * The public key of the recipient to which mail will be encrypted to.
+     */
+    final override val destinationPublicKey: PublicKey,
+    /**
+     * The topic mail created by this post office will have.
+     *
+     * @see [EnclaveMailHeader.topic]
+     */
+    final override val topic: String
 ) : AbstractPostOffice() {
     init {
         // This is a runtime check so we can switch to JDK11+ types later without breaking our own API.
@@ -44,7 +44,9 @@ abstract class EnclavePostOffice(
      */
     final override var minSizePolicy: MinSizePolicy
         get() = super.minSizePolicy
-        set(value) { super.minSizePolicy = value }
+        set(value) {
+            super.minSizePolicy = value
+        }
 
     /**
      * Returns the sequence number that will be assigned to the next mail.

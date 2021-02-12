@@ -35,7 +35,8 @@ class EnclaveConstraintTest {
     fun `parse one code hash`() {
         val actual = EnclaveConstraint.parse("C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
         val expected = EnclaveConstraint().apply {
-            acceptableCodeHashes = mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
+            acceptableCodeHashes =
+                mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
         }
         assertThat(actual).isEqualTo(expected)
         assertThat(EnclaveConstraint.parse(actual.toString())).isEqualTo(expected)
@@ -43,9 +44,11 @@ class EnclaveConstraintTest {
 
     @Test
     fun `parse one code signer`() {
-        val actual = EnclaveConstraint.parse("PROD:10 S:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
+        val actual =
+            EnclaveConstraint.parse("PROD:10 S:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
         val expected = EnclaveConstraint().apply {
-            acceptableSigners = mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
+            acceptableSigners =
+                mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
             productID = 10
         }
         assertThat(actual).isEqualTo(expected)
@@ -55,19 +58,20 @@ class EnclaveConstraintTest {
     @Test
     fun `parse multiple code hashes and code signers`() {
         val actual = EnclaveConstraint.parse(
-                "C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26 " +
-                        "S:edd5c98fcb260633a6e6abd0aaa59c07aee6e2492fe22fb89413edd875edf27a " +
-                        "C:0f738309dee76fcd9ad1b50f1c208ad3b1d2c8a62059c410b4806a88451c66ee " +
-                        "S:f77e0720c4dd119395e195223908d0e98baeca678bf9af8cabea2cc5278dac8d " +
-                        "PROD:3123")
+            "C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26 " +
+                    "S:edd5c98fcb260633a6e6abd0aaa59c07aee6e2492fe22fb89413edd875edf27a " +
+                    "C:0f738309dee76fcd9ad1b50f1c208ad3b1d2c8a62059c410b4806a88451c66ee " +
+                    "S:f77e0720c4dd119395e195223908d0e98baeca678bf9af8cabea2cc5278dac8d " +
+                    "PROD:3123"
+        )
         val expected = EnclaveConstraint().apply {
             acceptableCodeHashes = mutableSetOf(
-                    SHA256Hash.parse("0f738309dee76fcd9ad1b50f1c208ad3b1d2c8a62059c410b4806a88451c66ee"),
-                    SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
+                SHA256Hash.parse("0f738309dee76fcd9ad1b50f1c208ad3b1d2c8a62059c410b4806a88451c66ee"),
+                SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
             )
             acceptableSigners = mutableSetOf(
-                    SHA256Hash.parse("edd5c98fcb260633a6e6abd0aaa59c07aee6e2492fe22fb89413edd875edf27a"),
-                    SHA256Hash.parse("f77e0720c4dd119395e195223908d0e98baeca678bf9af8cabea2cc5278dac8d")
+                SHA256Hash.parse("edd5c98fcb260633a6e6abd0aaa59c07aee6e2492fe22fb89413edd875edf27a"),
+                SHA256Hash.parse("f77e0720c4dd119395e195223908d0e98baeca678bf9af8cabea2cc5278dac8d")
             )
             productID = 3123
         }
@@ -77,10 +81,12 @@ class EnclaveConstraintTest {
 
     @Test
     fun `parse minimum revocation level`() {
-        val actual = EnclaveConstraint.parse("REVOKE:3 C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
+        val actual =
+            EnclaveConstraint.parse("REVOKE:3 C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
         val expected = EnclaveConstraint().apply {
             minRevocationLevel = 3
-            acceptableCodeHashes = mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
+            acceptableCodeHashes =
+                mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
         }
         assertThat(actual).isEqualTo(expected)
         assertThat(EnclaveConstraint.parse(actual.toString())).isEqualTo(expected)
@@ -88,10 +94,12 @@ class EnclaveConstraintTest {
 
     @Test
     fun `parse minimum security level`() {
-        val actual = EnclaveConstraint.parse("SEC:SECURE C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
+        val actual =
+            EnclaveConstraint.parse("SEC:SECURE C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
         val expected = EnclaveConstraint().apply {
             minSecurityLevel = SECURE
-            acceptableCodeHashes = mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
+            acceptableCodeHashes =
+                mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
         }
         assertThat(actual).isEqualTo(expected)
         assertThat(EnclaveConstraint.parse(actual.toString())).isEqualTo(expected)
@@ -134,7 +142,10 @@ class EnclaveConstraintTest {
         enclave.checkAgainstConstraint {
             acceptableCodeHashes.add(codeHash)
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave code hash does not match any of the acceptable code hashes.", enclave) {
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave code hash does not match any of the acceptable code hashes.",
+            enclave
+        ) {
             acceptableCodeHashes.add(randomSha256())
         }
     }
@@ -146,7 +157,10 @@ class EnclaveConstraintTest {
             acceptableSigners.add(codeSigner)
             productID = productId
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave code signer does not match any of the acceptable code signers.", enclave) {
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave code signer does not match any of the acceptable code signers.",
+            enclave
+        ) {
             acceptableSigners.add(randomSha256())
             productID = productId
         }
@@ -165,7 +179,10 @@ class EnclaveConstraintTest {
             acceptableSigners.add(codeSigner)
             productID = productId
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave does not match any of the acceptable code hashes or code signers.", enclave) {
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave does not match any of the acceptable code hashes or code signers.",
+            enclave
+        ) {
             acceptableCodeHashes.add(randomSha256())
             acceptableSigners.add(randomSha256())
             productID = productId
@@ -179,7 +196,10 @@ class EnclaveConstraintTest {
             acceptableSigners.add(codeSigner)
             productID = 10
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave has a product ID of 10 which does not match the criteria of 1.", enclave) {
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave has a product ID of 10 which does not match the criteria of 1.",
+            enclave
+        ) {
             acceptableSigners.add(codeSigner)
             productID = 1
         }
@@ -194,7 +214,10 @@ class EnclaveConstraintTest {
                 minRevocationLevel = minLevel
             }
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave has a revocation level of 3 which is lower than the required level of 4.", enclave) {
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave has a revocation level of 3 which is lower than the required level of 4.",
+            enclave
+        ) {
             acceptableCodeHashes.add(codeHash)
             minRevocationLevel = 4
         }
@@ -209,7 +232,10 @@ class EnclaveConstraintTest {
                 minSecurityLevel = minLevel
             }
         }
-        assertThatCheckThrowsInvalidEnclaveException("Enclave has a security level of STALE which is lower than the required level of SECURE.", staleEnclave) {
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave has a security level of STALE which is lower than the required level of SECURE.",
+            staleEnclave
+        ) {
             acceptableCodeHashes.add(codeHash)
             minSecurityLevel = SECURE
         }
@@ -230,39 +256,45 @@ class EnclaveConstraintTest {
         }.withMessage(message)
     }
 
-    private fun assertThatCheckThrowsInvalidEnclaveException(message: String, enclave: EnclaveInstanceInfo, block: EnclaveConstraint.() -> Unit) {
+    private fun assertThatCheckThrowsInvalidEnclaveException(
+        message: String,
+        enclave: EnclaveInstanceInfo,
+        block: EnclaveConstraint.() -> Unit
+    ) {
         val constraint = EnclaveConstraint()
         block(constraint)
         assertThatThrownBy { constraint.check(enclave) }
-                .isInstanceOf(InvalidEnclaveException::class.java)
-                .hasMessageContaining(message)
+            .isInstanceOf(InvalidEnclaveException::class.java)
+            .hasMessageContaining(message)
     }
 
     private class TestEnclaveInstanceInfo(
-            codeHash: SecureHash = Companion.codeHash,
-            codeSigningKeyHash: SecureHash = Companion.codeSigner,
-            productID: Int = Companion.productId,
-            revocationLevel: Int = Companion.revocationLevel,
-            summary: EnclaveSecurityInfo.Summary = STALE
+        codeHash: SecureHash = Companion.codeHash,
+        codeSigningKeyHash: SecureHash = Companion.codeSigner,
+        productID: Int = Companion.productId,
+        revocationLevel: Int = Companion.revocationLevel,
+        summary: EnclaveSecurityInfo.Summary = STALE
     ) : EnclaveInstanceInfo {
         override val enclaveInfo: EnclaveInfo = EnclaveInfo(
-                codeHash = codeHash,
-                codeSigningKeyHash = codeSigningKeyHash,
-                productID = productID,
-                revocationLevel = revocationLevel,
-                enclaveMode = EnclaveMode.SIMULATION
+            codeHash = codeHash,
+            codeSigningKeyHash = codeSigningKeyHash,
+            productID = productID,
+            revocationLevel = revocationLevel,
+            enclaveMode = EnclaveMode.SIMULATION
         )
 
         override val securityInfo: EnclaveSecurityInfo = SGXEnclaveSecurityInfo(
-                summary = summary,
-                reason = "for reasons...",
-                timestamp = Instant.now(),
-                cpuSVN = OpaqueBytes(Random.nextBytes(16))
+            summary = summary,
+            reason = "for reasons...",
+            timestamp = Instant.now(),
+            cpuSVN = OpaqueBytes(Random.nextBytes(16))
         )
 
         override val encryptionKey: PublicKey get() = TODO("encryptionKey")
         override val dataSigningKey: PublicKey get() = TODO("dataSigningKey")
-        override fun createPostOffice(senderPrivateKey: PrivateKey, topic: String): PostOffice = TODO("createPostOffice")
+        override fun createPostOffice(senderPrivateKey: PrivateKey, topic: String): PostOffice =
+            TODO("createPostOffice")
+
         override fun verifier(): Signature = TODO("verifier")
         override fun serialize(): ByteArray = TODO("serialize")
     }

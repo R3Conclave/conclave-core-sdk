@@ -19,11 +19,11 @@ class EpidVerificationReportTest {
         val isvEnclaveQuoteBody = Cursor.wrap(SgxQuote, Random.nextBytes(432))
 
         val report = EpidVerificationReport(
-                id = "165171271757108173876306223827987629752",
-                timestamp = ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant(),
-                version = 3,
-                isvEnclaveQuoteStatus = EpidQuoteStatus.OK,
-                isvEnclaveQuoteBody = isvEnclaveQuoteBody
+            id = "165171271757108173876306223827987629752",
+            timestamp = ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant(),
+            version = 3,
+            isvEnclaveQuoteStatus = EpidQuoteStatus.OK,
+            isvEnclaveQuoteBody = isvEnclaveQuoteBody
         )
 
         val jsonTree = ObjectMapper().readTree(attestationObjectMapper.writeValueAsBytes(report))
@@ -31,7 +31,9 @@ class EpidVerificationReportTest {
         assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
         assertThat(jsonTree["version"].intValue()).isEqualTo(3)
         assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes))
+        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(
+            Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes)
+        )
         assertThat(jsonTree["platformInfoBlob"]).isNull()
         assertThat(jsonTree["revocationReason"]).isNull()
         assertThat(jsonTree["pseManifestStatus"]).isNull()
@@ -71,17 +73,17 @@ class EpidVerificationReportTest {
         val epidPseudonym = OpaqueBytes(Random.nextBytes(100))
 
         val report = EpidVerificationReport(
-                id = "165171271757108173876306223827987629752",
-                timestamp = ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant(),
-                version = 3,
-                isvEnclaveQuoteStatus = EpidQuoteStatus.OK,
-                isvEnclaveQuoteBody = isvEnclaveQuoteBody,
-                platformInfoBlob = platformInfoBlob,
-                revocationReason = 1,
-                pseManifestStatus = ManifestStatus.INVALID,
-                pseManifestHash = pseManifestHash,
-                nonce = "12345",
-                epidPseudonym = epidPseudonym
+            id = "165171271757108173876306223827987629752",
+            timestamp = ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant(),
+            version = 3,
+            isvEnclaveQuoteStatus = EpidQuoteStatus.OK,
+            isvEnclaveQuoteBody = isvEnclaveQuoteBody,
+            platformInfoBlob = platformInfoBlob,
+            revocationReason = 1,
+            pseManifestStatus = ManifestStatus.INVALID,
+            pseManifestHash = pseManifestHash,
+            nonce = "12345",
+            epidPseudonym = epidPseudonym
         )
 
         val jsonTree = ObjectMapper().readTree(attestationObjectMapper.writeValueAsBytes(report))
@@ -89,13 +91,17 @@ class EpidVerificationReportTest {
         assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
         assertThat(jsonTree["version"].intValue()).isEqualTo(3)
         assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes))
+        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(
+            Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes)
+        )
         assertThat(jsonTree["platformInfoBlob"].textValue()).isEqualToIgnoringCase(platformInfoBlob.toString())
         assertThat(jsonTree["revocationReason"].intValue()).isEqualTo(1)
         assertThat(jsonTree["pseManifestStatus"].textValue()).isEqualTo("INVALID")
         assertThat(jsonTree["pseManifestHash"].textValue()).isEqualToIgnoringCase(pseManifestHash.toString())
         assertThat(jsonTree["nonce"].textValue()).isEqualTo("12345")
-        assertThat(jsonTree["epidPseudonym"].textValue()).isEqualTo(Base64.getEncoder().encodeToString(epidPseudonym.bytes))
+        assertThat(jsonTree["epidPseudonym"].textValue()).isEqualTo(
+            Base64.getEncoder().encodeToString(epidPseudonym.bytes)
+        )
     }
 
     @Test
@@ -182,7 +188,8 @@ class SignedTcbInfoTest {
 
     @Test
     fun `deserialise tcb info`() {
-        val signature = "2fcfea244996d64794c3729acff632887de67722cfca7b0458464a74d4101d01879fe28fa01594f28c6e0e97e9558ff0a45898bd6af275e8edffc2364780fe06"
+        val signature =
+            "2fcfea244996d64794c3729acff632887de67722cfca7b0458464a74d4101d01879fe28fa01594f28c6e0e97e9558ff0a45898bd6af275e8edffc2364780fe06"
         val json = """
 {
 "tcbInfo":{

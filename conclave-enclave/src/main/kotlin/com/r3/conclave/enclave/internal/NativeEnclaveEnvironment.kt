@@ -23,7 +23,9 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
 
     // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
     // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
-    private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java).apply { isAccessible = true }
+    private val initialiseMethod =
+        Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
+            .apply { isAccessible = true }
 
     /** The singleton instance of the user supplied enclave. */
     private var singletonHandler: HandlerConnected<*>? = null
@@ -81,16 +83,21 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
         //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
         val enclaveClass = Class.forName(enclaveClassName)
-        val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+        val enclave =
+            enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }
+                .newInstance()
         return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
-    override fun createReport(targetInfo: ByteCursor<SgxTargetInfo>?, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport> {
+    override fun createReport(
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxReport> {
         val report = Cursor.allocate(SgxReport)
         Native.createReport(
-                targetInfo?.buffer?.getRemainingBytes(avoidCopying = true),
-                reportData?.buffer?.getRemainingBytes(avoidCopying = true),
-                report.buffer.array()
+            targetInfo?.buffer?.getRemainingBytes(avoidCopying = true),
+            reportData?.buffer?.getRemainingBytes(avoidCopying = true),
+            report.buffer.array()
         )
         return report
     }
@@ -111,17 +118,18 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
         require(toBeSealed.plaintext.size > 0)
-        val sealedData = ByteArray(Native.calcSealedBlobSize(toBeSealed.plaintext.size, toBeSealed.authenticatedData?.size ?: 0))
+        val sealedData =
+            ByteArray(Native.calcSealedBlobSize(toBeSealed.plaintext.size, toBeSealed.authenticatedData?.size ?: 0))
         Native.sealData(
-                output = sealedData,
-                outputOffset = 0,
-                outputSize = sealedData.size,
-                plaintext = toBeSealed.plaintext.bytes,
-                plaintextOffset = 0,
-                plaintextSize = toBeSealed.plaintext.size,
-                authenticatedData = toBeSealed.authenticatedData?.bytes,
-                authenticatedDataOffset = 0,
-                authenticatedDataSize = toBeSealed.authenticatedData?.size ?: 0
+            output = sealedData,
+            outputOffset = 0,
+            outputSize = sealedData.size,
+            plaintext = toBeSealed.plaintext.bytes,
+            plaintextOffset = 0,
+            plaintextSize = toBeSealed.plaintext.size,
+            authenticatedData = toBeSealed.authenticatedData?.bytes,
+            authenticatedDataOffset = 0,
+            authenticatedDataSize = toBeSealed.authenticatedData?.size ?: 0
         )
         return sealedData
     }
@@ -132,15 +140,15 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         val authenticatedData = Native.authenticatedDataSize(sealedBlob).let { if (it > 0) ByteArray(it) else null }
 
         Native.unsealData(
-                sealedBlob = sealedBlob,
-                sealedBlobOffset = 0,
-                sealedBlobLength = sealedBlob.size,
-                dataOut = plaintext,
-                dataOutOffset = 0,
-                dataOutLength = plaintext.size,
-                authenticatedDataOut = authenticatedData,
-                authenticatedDataOutOffset = 0,
-                authenticatedDataOutLength = authenticatedData?.size ?: 0
+            sealedBlob = sealedBlob,
+            sealedBlobOffset = 0,
+            sealedBlobLength = sealedBlob.size,
+            dataOut = plaintext,
+            dataOutOffset = 0,
+            dataOutLength = plaintext.size,
+            authenticatedDataOut = authenticatedData,
+            authenticatedDataOutOffset = 0,
+            authenticatedDataOutLength = authenticatedData?.size ?: 0
         )
 
         return PlaintextAndEnvelope(OpaqueBytes(plaintext), authenticatedData?.let(::OpaqueBytes))
@@ -169,8 +177,11 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
 
     // Static enclave registration
     init {
-        val alwaysInsideEnclave = object : EnclaveContext { override fun isInsideEnclave() = true }
-        EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }.set(null, alwaysInsideEnclave)
+        val alwaysInsideEnclave = object : EnclaveContext {
+            override fun isInsideEnclave() = true
+        }
+        EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
+            .set(null, alwaysInsideEnclave)
         EnclaveSecurityProvider.register()
     }
 }

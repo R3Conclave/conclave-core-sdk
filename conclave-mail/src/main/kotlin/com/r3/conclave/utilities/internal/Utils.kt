@@ -191,8 +191,9 @@ inline fun <reified T> DataInputStream.readList(block: DataInputStream.() -> T):
 /** Reads this stream completely into a byte array and then closes it. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 
-val CertPath.x509Certs: List<X509Certificate> get() {
-    check(type == "X.509") { "Not an X.509 cert path: $type" }
-    @Suppress("UNCHECKED_CAST")
-    return certificates as List<X509Certificate>
-}
+val CertPath.x509Certs: List<X509Certificate>
+    get() {
+        check(type == "X.509") { "Not an X.509 cert path: $type" }
+        @Suppress("UNCHECKED_CAST")
+        return certificates as List<X509Certificate>
+    }

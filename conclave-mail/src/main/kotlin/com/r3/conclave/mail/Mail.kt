@@ -1,11 +1,8 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.AbstractPostOffice
-import com.r3.conclave.mail.internal.EnclaveMailHeaderImpl
 import com.r3.conclave.mail.internal.MailDecryptingStream
-import com.r3.conclave.mail.internal.MailEncryptingStream
 import com.r3.conclave.utilities.internal.EnclaveContext
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -136,18 +133,18 @@ interface EnclaveMail : EnclaveMailHeader {
  * private key is correctly applied as the sender.
  */
 abstract class PostOffice(
-        /**
-         * The sender private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field.
-         *
-         * @see [EnclaveMail.authenticatedSender]
-         */
-        public final override val senderPrivateKey: PrivateKey,
-        /**
-         * The topic mail created by this post office will have.
-         *
-         * @see [EnclaveMailHeader.topic]
-         */
-        final override val topic: String
+    /**
+     * The sender private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field.
+     *
+     * @see [EnclaveMail.authenticatedSender]
+     */
+    public final override val senderPrivateKey: PrivateKey,
+    /**
+     * The topic mail created by this post office will have.
+     *
+     * @see [EnclaveMailHeader.topic]
+     */
+    final override val topic: String
 ) : AbstractPostOffice() {
     /**
      * @suppress
@@ -212,7 +209,9 @@ abstract class PostOffice(
      */
     final override var minSizePolicy: MinSizePolicy
         get() = super.minSizePolicy
-        set(value) { super.minSizePolicy = value }
+        set(value) {
+            super.minSizePolicy = value
+        }
 
     /**
      * Returns the sequence number that will be assigned to the next mail.
@@ -300,9 +299,9 @@ abstract class PostOffice(
     }
 
     private class Default(
-            override val destinationPublicKey: PublicKey,
-            senderPrivateKey: PrivateKey,
-            topic: String
+        override val destinationPublicKey: PublicKey,
+        senderPrivateKey: PrivateKey,
+        topic: String
     ) : PostOffice(senderPrivateKey, topic) {
         init {
             // This is a runtime check so we can switch to JDK11+ types later without breaking our own API.
@@ -310,6 +309,7 @@ abstract class PostOffice(
                 "At this time only Conclave originated Curve25519 public keys may be used."
             }
         }
+
         override val keyDerivation: ByteArray? get() = null
     }
 }

@@ -29,7 +29,12 @@ abstract class DJVMBase {
         val TEST_WHITELIST = Whitelist.MINIMAL + setOf("^com/r3/conclave/djvm/util/Utilities(\\..*)?\$".toRegex())
 
         @JvmStatic
-        fun setupClassLoader(userSource: UserSource, bootstrapSource: ApiSource, testingLibraries: List<Path>, sandboxConfiguration: SandboxConfiguration) {
+        fun setupClassLoader(
+            userSource: UserSource,
+            bootstrapSource: ApiSource,
+            testingLibraries: List<Path>,
+            sandboxConfiguration: SandboxConfiguration
+        ) {
             Companion.bootstrapSource = bootstrapSource
             Companion.userSource = userSource
             Companion.sandboxConfiguration = sandboxConfiguration
@@ -43,20 +48,22 @@ abstract class DJVMBase {
         }
     }
 
-    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: SandboxRuntimeContext.() -> Unit)
-            = sandbox(WARNING, visibleAnnotations, emptySet(), action)
-
-    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, sandboxOnlyAnnotations: Set<String>, action: SandboxRuntimeContext.() -> Unit)
-            = sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, action)
-
-    fun sandbox(action: SandboxRuntimeContext.() -> Unit)
-            = sandbox(WARNING, emptySet(), emptySet(), action)
+    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: SandboxRuntimeContext.() -> Unit) =
+        sandbox(WARNING, visibleAnnotations, emptySet(), action)
 
     fun sandbox(
-            minimumSeverityLevel: Severity,
-            visibleAnnotations: Set<Class<out Annotation>>,
-            sandboxOnlyAnnotations: Set<String>,
-            action: SandboxRuntimeContext.() -> Unit
+        visibleAnnotations: Set<Class<out Annotation>>,
+        sandboxOnlyAnnotations: Set<String>,
+        action: SandboxRuntimeContext.() -> Unit
+    ) = sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, action)
+
+    fun sandbox(action: SandboxRuntimeContext.() -> Unit) = sandbox(WARNING, emptySet(), emptySet(), action)
+
+    fun sandbox(
+        minimumSeverityLevel: Severity,
+        visibleAnnotations: Set<Class<out Annotation>>,
+        sandboxOnlyAnnotations: Set<String>,
+        action: SandboxRuntimeContext.() -> Unit
     ) {
         var thrownException: Throwable? = null
         thread {
@@ -66,7 +73,7 @@ abstract class DJVMBase {
                         builder.setMinimumSeverityLevel(minimumSeverityLevel)
                         builder.setSandboxOnlyAnnotations(sandboxOnlyAnnotations)
                         builder.setVisibleAnnotations(visibleAnnotations)
-                    })).use(Consumer {ctx ->
+                    })).use(Consumer { ctx ->
                         ctx.action()
                     })
                 }

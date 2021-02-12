@@ -21,8 +21,8 @@ class RootHandler : Handler<RootHandler.Connection> {
     }
 
     class Connection(
-            val errorConnection: ErrorHandler.Connection,
-            val muxConnection: SimpleMuxingHandler.Connection
+        val errorConnection: ErrorHandler.Connection,
+        val muxConnection: SimpleMuxingHandler.Connection
     ) {
         fun <CONNECTION> addDownstream(downstream: Handler<CONNECTION>): CONNECTION {
             return muxConnection.addDownstream(downstream)

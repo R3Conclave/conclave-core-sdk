@@ -1,4 +1,5 @@
 @file:JvmName("Channels")
+
 package com.r3.conclave.common.internal.handler
 
 import com.r3.conclave.common.internal.handler.ChannelInitiatingHandler.Connection
@@ -72,7 +73,7 @@ class ChannelInitiatingHandler : Handler<ChannelInitiatingHandler.Connection> {
 
         internal fun complete(requestId: Int, channelId: MuxId) {
             val (handler, future) = requestMap.remove(requestId)
-                    ?: throw IllegalStateException("Invalid channel connection request=$requestId")
+                ?: throw IllegalStateException("Invalid channel connection request=$requestId")
             val connection = muxConnection.addDownstream(channelId, handler)
             future.complete(Channel(channelId, connection))
         }

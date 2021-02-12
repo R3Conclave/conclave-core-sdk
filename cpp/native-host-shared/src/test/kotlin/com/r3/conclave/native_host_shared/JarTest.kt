@@ -2,20 +2,22 @@ package com.r3.conclave.native_host
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.nio.file.Paths
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.jar.JarInputStream
 
 class JarTest {
 
     companion object {
-        private val jarPath = Paths.get(System.getProperty("jar.path")
-                ?: throw AssertionError("System property 'jar.path' not set."))
+        private val jarPath = Paths.get(
+            System.getProperty("jar.path")
+                ?: throw AssertionError("System property 'jar.path' not set.")
+        )
 
         private fun expectedLibraries(): List<String> {
             val prefix = "com/r3/conclave/host-libraries/shared"
             val libraries = mutableListOf(
-                    "$prefix/libsgx_capable.so"
+                "$prefix/libsgx_capable.so"
             )
             return libraries
         }

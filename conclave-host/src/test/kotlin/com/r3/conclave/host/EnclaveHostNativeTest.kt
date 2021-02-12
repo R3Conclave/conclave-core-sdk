@@ -42,10 +42,10 @@ class EnclaveHostNativeTest {
     @Test
     fun `simple stateful enclave`() {
         val lookup = mapOf(
-                0.toByte() to "Hello",
-                1.toByte() to "World",
-                2.toByte() to "foo",
-                3.toByte() to "bar"
+            0.toByte() to "Hello",
+            1.toByte() to "World",
+            2.toByte() to "foo",
+            3.toByte() to "bar"
         )
         start<StatefulEnclave>()
 
@@ -99,11 +99,11 @@ class EnclaveHostNativeTest {
         start<AddingEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(20)))
         host.callEnclave(n.toByteArray())
         val sum = IntStream.rangeClosed(1, n)
-                .parallel()
-                .mapToObj { host.callEnclave(it.toByteArray())?.toInt() }
-                .toList()
-                .mapNotNull { it }
-                .single()
+            .parallel()
+            .mapToObj { host.callEnclave(it.toByteArray())?.toInt() }
+            .toList()
+            .mapNotNull { it }
+            .single()
         assertThat(sum).isEqualTo((n * (n + 1)) / 2)
     }
 
@@ -112,16 +112,16 @@ class EnclaveHostNativeTest {
         val n = 100
         start<RepeatedOcallEnclave>(EnclaveBuilder(config = EnclaveConfig().withTCSNum(20)))
         val sums = IntStream.rangeClosed(1, n)
-                .parallel()
-                .map { i ->
-                    var sum = 0
-                    host.callEnclave(i.toByteArray()) {
-                        sum += it.toInt() + 1
-                        null
-                    }
-                    sum
+            .parallel()
+            .map { i ->
+                var sum = 0
+                host.callEnclave(i.toByteArray()) {
+                    sum += it.toInt() + 1
+                    null
                 }
-                .toList()
+                sum
+            }
+            .toList()
         assertThat(sums).isEqualTo((1..n).map { (it * (it + 1)) / 2 })
     }
 
@@ -156,7 +156,7 @@ class EnclaveHostNativeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [ "PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()" ])
+    @ValueSource(strings = ["PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()"])
     fun `cannot create PostOffice directly when inside enclave`(source: String) {
         class CreatePostOfficeEnclave : Enclave() {
             override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
@@ -171,8 +171,8 @@ class EnclaveHostNativeTest {
         start<CreatePostOfficeEnclave>()
 
         assertThatIllegalStateException()
-                .isThrownBy { host.callEnclave(source.toByteArray()) }
-                .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
+            .isThrownBy { host.callEnclave(source.toByteArray()) }
+            .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
     }
 
     private inline fun <reified T : Enclave> start(enclaveBuilder: EnclaveBuilder = EnclaveBuilder()) {

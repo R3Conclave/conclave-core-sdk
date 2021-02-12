@@ -52,7 +52,8 @@ object SerializeException {
             null
         }
 
-        val throwable = throwableClass?.create(message, cause) ?: RuntimeException("$exceptionClassName: $message", cause)
+        val throwable =
+            throwableClass?.create(message, cause) ?: RuntimeException("$exceptionClassName: $message", cause)
         throwable.stackTrace = stackTrace
         return throwable
     }
@@ -64,15 +65,18 @@ object SerializeException {
         val ctors = constructors
 
         // First try using a c'tor that takes in both a message and a cause.
-        ctors.findByParamTypes { it.size == 2 && (it[0].isString && it[1].isParamFor(cause)) }?.tryNew(message, cause)?.let { return it }
-        ctors.findByParamTypes { it.size == 2 && (it[0].isParamFor(cause) && it[1].isString) }?.tryNew(cause, message)?.let { return it }
+        ctors.findByParamTypes { it.size == 2 && (it[0].isString && it[1].isParamFor(cause)) }?.tryNew(message, cause)
+            ?.let { return it }
+        ctors.findByParamTypes { it.size == 2 && (it[0].isParamFor(cause) && it[1].isString) }?.tryNew(cause, message)
+            ?.let { return it }
         // Then try using the c'tor that only takes in a message and use initCause to set the cause.
-        ctors.findByParamTypes { it.size == 1 && it[0].isString }?.tryNew(message)?.trySetCause(cause)?.let { return it }
+        ctors.findByParamTypes { it.size == 1 && it[0].isString }?.tryNew(message)?.trySetCause(cause)
+            ?.let { return it }
 
         // At this point we've not found a c'tor that takes in a message. We try to create the throwable using a c'tor
         // that only takes in a cause or the empty c'tor.
         val t = ctors.findByParamTypes { it.size == 1 && it[0].isParamFor(cause) }?.tryNew(cause)
-                ?: ctors.findByParamTypes { it.isEmpty() }?.tryNew()?.trySetCause(cause)
+            ?: ctors.findByParamTypes { it.isEmpty() }?.tryNew()?.trySetCause(cause)
         // If we have no message then we're good to go, otherwise we check the throwable's message in case the c'tor
         // constructed the message for us.
         return t?.takeIf { message == null || message == t.message }

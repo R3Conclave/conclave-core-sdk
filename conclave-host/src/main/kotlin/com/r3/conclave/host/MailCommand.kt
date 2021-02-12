@@ -28,6 +28,7 @@ sealed class MailCommand {
             if (other !is PostMail) return false
             return this.encryptedBytes.contentEquals(other.encryptedBytes) && this.routingHint == other.routingHint
         }
+
         override fun hashCode(): Int = 31 * encryptedBytes.contentHashCode() + (routingHint?.hashCode() ?: 0)
     }
 
@@ -44,6 +45,7 @@ sealed class MailCommand {
         override fun equals(other: Any?): Boolean {
             return this === other || other is AcknowledgeMail && this.mailID == other.mailID
         }
+
         override fun hashCode(): Int = mailID.hashCode()
     }
 }

@@ -146,8 +146,10 @@ object SgxKey128Bit : FixedBytes(16)
 
 // The sdk has two versions
 object SgxQuoteType32 : Enum32() {
-    @JvmField val UNLINKABLE: Int = SgxQuoteType.UNLINKABLE.value
-    @JvmField val LINKABLE: Int = SgxQuoteType.LINKABLE.value
+    @JvmField
+    val UNLINKABLE: Int = SgxQuoteType.UNLINKABLE.value
+    @JvmField
+    val LINKABLE: Int = SgxQuoteType.LINKABLE.value
 }
 
 /**
@@ -157,13 +159,17 @@ object SgxQuoteType32 : Enum32() {
  * @see `sgx_ql_attestation_algorithm_id_t`
  */
 object SgxQuoteSignType : Enum16() {
-    @JvmField val EPID_UNLINKABLE: Int = SgxQuoteType.UNLINKABLE.value
-    @JvmField val EPID_LINKABLE: Int = SgxQuoteType.LINKABLE.value
+    @JvmField
+    val EPID_UNLINKABLE: Int = SgxQuoteType.UNLINKABLE.value
+    @JvmField
+    val EPID_LINKABLE: Int = SgxQuoteType.LINKABLE.value
+
     /**
      * ECDSA-256-with-P-256 curve
      * @see SgxEcdsa256BitQuoteAuthData
      */
     const val ECDSA_P256 = 2
+
     /** CDSA-384-with-P-384 curve (Note: currently not supported) */
     const val ECDSA_P384 = 3
 }
@@ -182,17 +188,22 @@ object SgxQuoteSignType : Enum16() {
  * );
  */
 object SgxGetQuote : Struct() {
-    @JvmField val report = field(SgxReport)
-    @JvmField val quoteType = field(SgxQuoteType32)
-    @JvmField val spid = field(SgxSpid)
+    @JvmField
+    val report = field(SgxReport)
+    @JvmField
+    val quoteType = field(SgxQuoteType32)
+    @JvmField
+    val spid = field(SgxSpid)
 }
 
 /**
  * sgx_status_t sgx_init_quote(sgx_target_info_t *p_target_info, sgx_epid_group_id_t *p_gid)
  */
 object SgxInitQuoteResponse : Struct() {
-    @JvmField val quotingEnclaveTargetInfo = field(SgxTargetInfo)
-    @JvmField val epidGroupId = field(SgxEpidGroupId)
+    @JvmField
+    val quotingEnclaveTargetInfo = field(SgxTargetInfo)
+    @JvmField
+    val epidGroupId = field(SgxEpidGroupId)
 }
 
 /**
@@ -202,20 +213,34 @@ object SgxInitQuoteResponse : Struct() {
  */
 object SgxQuote : Struct() {
     /** The version of the quote structure. */
-    @JvmField val version = field(UInt16())
+    @JvmField
+    val version = field(UInt16())
+
     /** The indicator of the [SgxSignedQuote.signature] type. */
-    @JvmField val signType = field(SgxQuoteSignType)
+    @JvmField
+    val signType = field(SgxQuoteSignType)
+
     /** The Intel® EPID group id of the platform belongs to. */
-    @JvmField val epidGroupId = field(SgxEpidGroupId)
+    @JvmField
+    val epidGroupId = field(SgxEpidGroupId)
+
     /** The svn of the QE. */
-    @JvmField val qeIsvSvn = field(SgxIsvSvn)
+    @JvmField
+    val qeIsvSvn = field(SgxIsvSvn)
+
     /** The svn of the PCE. */
-    @JvmField val pceIsvSvn = field(SgxIsvSvn)
-    @JvmField val extendedEpidGroupId = field(UInt32())
+    @JvmField
+    val pceIsvSvn = field(SgxIsvSvn)
+    @JvmField
+    val extendedEpidGroupId = field(UInt32())
+
     /** The base name used in sgx_quote. */
-    @JvmField val basename = field(SgxBasename)
+    @JvmField
+    val basename = field(SgxBasename)
+
     /** The report body of the application enclave. */
-    @JvmField val reportBody = field(SgxReportBody)
+    @JvmField
+    val reportBody = field(SgxReportBody)
 }
 
 /**
@@ -225,12 +250,15 @@ object SgxQuote : Struct() {
  */
 object SgxSignedQuote : VariableStruct() {
     /** This has been split out into its own because it some circumstances the signature isn't used. */
-    @JvmField val quote = field(SgxQuote)
+    @JvmField
+    val quote = field(SgxQuote)
+
     /**
      * Variable-length data containing the signature and supporting data.
      * @see [SgxQuote.signType]
      */
-    @JvmField val signature = field(UInt32VariableBytes())
+    @JvmField
+    val signature = field(UInt32VariableBytes())
 }
 
 fun ByteCursor<SgxSignedQuote>.toEcdsaP256AuthData(): ByteCursor<SgxEcdsa256BitQuoteAuthData> {
@@ -249,8 +277,10 @@ fun ByteCursor<SgxSignedQuote>.toEcdsaP256AuthData(): ByteCursor<SgxEcdsa256BitQ
  * @see `sgx_attributes_t`
  */
 object SgxAttributes : Struct() {
-    @JvmField val flags = field(SgxEnclaveFlags)
-    @JvmField val xfrm = field(SgxXfrmFlags)
+    @JvmField
+    val flags = field(SgxEnclaveFlags)
+    @JvmField
+    val xfrm = field(SgxXfrmFlags)
 }
 
 /**
@@ -262,24 +292,39 @@ object SgxAttributes : Struct() {
  */
 object SgxTargetInfo : Struct() {
     /** Enclave hash of the target enclave. */
-    @JvmField val measurement = field(SgxMeasurement)
+    @JvmField
+    val measurement = field(SgxMeasurement)
+
     /** Attributes of the target enclave. */
-    @JvmField val attributes = field(SgxAttributes)
+    @JvmField
+    val attributes = field(SgxAttributes)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved1 = field(ReservedBytes(2))
+    @JvmField
+    val reserved1 = field(ReservedBytes(2))
+
     /** Enclave CONFIGSVN. */
-    @JvmField val configSvn = field(SgxConfigSvn)
+    @JvmField
+    val configSvn = field(SgxConfigSvn)
+
     /** Misc select bits for the target enclave. Reserved for future function extension. */
-    @JvmField val miscSelect = field(SgxMiscSelect)
+    @JvmField
+    val miscSelect = field(SgxMiscSelect)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved2 = field(ReservedBytes(8))
+    @JvmField
+    val reserved2 = field(ReservedBytes(8))
+
     /** Enclave CONFIGID. */
-    @JvmField val configId = field(SgxConfigId)
+    @JvmField
+    val configId = field(SgxConfigId)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved3 = field(ReservedBytes(384))
+    @JvmField
+    val reserved3 = field(ReservedBytes(384))
 }
 
 /**
@@ -290,26 +335,40 @@ object SgxTargetInfo : Struct() {
  */
 object SgxReportBody : Struct() {
     /** Security version number of the host system TCB (CPU). */
-    @JvmField val cpuSvn = field(SgxCpuSvn)
+    @JvmField
+    val cpuSvn = field(SgxCpuSvn)
+
     /** Misc select bits for the target enclave. Reserved for future function extension. */
-    @JvmField val miscSelect = field(SgxMiscSelect)
+    @JvmField
+    val miscSelect = field(SgxMiscSelect)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved1 = field(ReservedBytes(12))
+    @JvmField
+    val reserved1 = field(ReservedBytes(12))
+
     /** ISV assigned Extended Product ID. */
-    @JvmField val isvExtProdId = field(SgxIsvExtProdId)
+    @JvmField
+    val isvExtProdId = field(SgxIsvExtProdId)
+
     /** Attributes for the enclave. */
-    @JvmField val attributes = field(SgxAttributes)
+    @JvmField
+    val attributes = field(SgxAttributes)
+
     /**
      * Measurement value of the enclave.
      *
      * MRENCLAVE is a unique 256 bit value that identifies the code and data that was loaded into the enclave during the
      * initial launch.
      */
-    @JvmField val mrenclave = field(SgxMeasurement)
+    @JvmField
+    val mrenclave = field(SgxMeasurement)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved2 = field(ReservedBytes(32))
+    @JvmField
+    val reserved2 = field(ReservedBytes(32))
+
     /**
      * SHA-256 hash value of the public key that signed the enclave.
      *
@@ -321,25 +380,42 @@ object SgxReportBody : Struct() {
      *
      * @see [KeyPolicy.MRSIGNER]
      */
-    @JvmField val mrsigner = field(SgxMeasurement)
+    @JvmField
+    val mrsigner = field(SgxMeasurement)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved3 = field(ReservedBytes(32))
+    @JvmField
+    val reserved3 = field(ReservedBytes(32))
+
     /** The enclave CONFIGID. */
-    @JvmField val configId = field(SgxConfigId)
+    @JvmField
+    val configId = field(SgxConfigId)
+
     /** ISV Product ID of the enclave. */
-    @JvmField val isvProdId = field(SgxProdId)
+    @JvmField
+    val isvProdId = field(SgxProdId)
+
     /** ISV security version number of the enclave. */
-    @JvmField val isvSvn = field(SgxIsvSvn)
+    @JvmField
+    val isvSvn = field(SgxIsvSvn)
+
     /** CONFIGSVN field. */
-    @JvmField val configSvn = field(SgxConfigSvn)
+    @JvmField
+    val configSvn = field(SgxConfigSvn)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved4 = field(ReservedBytes(42))
+    @JvmField
+    val reserved4 = field(ReservedBytes(42))
+
     /** ISV assigned Family ID. */
-    @JvmField val isvFamilyId = field(SgxIsvFamilyId)
+    @JvmField
+    val isvFamilyId = field(SgxIsvFamilyId)
+
     /** Set of data used for communication between the enclave and the target enclave.*/
-    @JvmField val reportData = field(SgxReportData)
+    @JvmField
+    val reportData = field(SgxReportData)
 }
 
 /**
@@ -350,11 +426,16 @@ object SgxReportBody : Struct() {
  */
 object SgxReport : Struct() {
     /** The data structure containing information about the enclave. */
-    @JvmField val body = field(SgxReportBody)
+    @JvmField
+    val body = field(SgxReportBody)
+
     /** Value for key wear-out protection. */
-    @JvmField val keyId = field(SgxKeyId)
+    @JvmField
+    val keyId = field(SgxKeyId)
+
     /** The CMAC value of the report data using report key. */
-    @JvmField val mac = field(SgxMac)
+    @JvmField
+    val mac = field(SgxMac)
 }
 
 /**
@@ -362,17 +443,22 @@ object SgxReport : Struct() {
  */
 object SgxEnclaveFlags : Flags64() {
     /** The enclave is initialized. */
-    const val INITTED        = 0x0000000000000001L
+    const val INITTED = 0x0000000000000001L
+
     /** The enclave is a debug enclave. */
-    const val DEBUG          = 0x0000000000000002L
+    const val DEBUG = 0x0000000000000002L
+
     /** The enclave runs in 64 bit mode. */
-    const val MODE64BIT      = 0x0000000000000004L
+    const val MODE64BIT = 0x0000000000000004L
+
     /** The enclave has access to a provision key. */
-    const val PROVISION_KEY  = 0x0000000000000010L
+    const val PROVISION_KEY = 0x0000000000000010L
+
     /** The enclave has access to a launch key */
     const val EINITTOKEN_KEY = 0x0000000000000020L
+
     /** The enclave requires the KSS feature. */
-    const val KSS            = 0x0000000000000080L
+    const val KSS = 0x0000000000000080L
 }
 
 /**
@@ -381,8 +467,9 @@ object SgxEnclaveFlags : Flags64() {
 object SgxXfrmFlags : Flags64() {
     /** FPU and Intel® Streaming SIMD Extensions states are saved. */
     const val LEGACY = 0x0000000000000003L
+
     /** Intel® Advanced Vector Extensions state is saved. */
-    const val AVX    = 0x0000000000000006L
+    const val AVX = 0x0000000000000006L
 }
 
 /**
@@ -393,33 +480,52 @@ object SgxXfrmFlags : Flags64() {
  */
 object SgxKeyRequest : Struct() {
     /** The key name requested. */
-    @JvmField val keyName = field(KeyName)
+    @JvmField
+    val keyName = field(KeyName)
+
     /** Identify which inputs are required for the key derivation. */
-    @JvmField val keyPolicy = field(KeyPolicy)
+    @JvmField
+    val keyPolicy = field(KeyPolicy)
+
     /** The ISV security version number that should be used in the key derivation. */
-    @JvmField val isvSvn = field(SgxIsvSvn)
+    @JvmField
+    val isvSvn = field(SgxIsvSvn)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved1 = field(ReservedBytes(2))
+    @JvmField
+    val reserved1 = field(ReservedBytes(2))
+
     /** The TCB security version number that should be used in the key derivation. */
-    @JvmField val cpuSvn = field(SgxCpuSvn)
+    @JvmField
+    val cpuSvn = field(SgxCpuSvn)
+
     /**
      * Attributes mask used to determine which enclave attributes must be included in the key. It only impacts the
      * derivation of a seal key, a provisioning key, and a provisioning seal key.
      */
-    @JvmField val attributeMask = field(SgxAttributes)
+    @JvmField
+    val attributeMask = field(SgxAttributes)
+
     /** Value for key wear-out protection. Generally initialized with a random number. */
-    @JvmField val keyId = field(SgxKeyId)
+    @JvmField
+    val keyId = field(SgxKeyId)
+
     /**
      * The misc mask used to determine which enclave misc select must be included in the key. Reserved for future
      * function extension.
      */
-    @JvmField val miscMask = field(SgxMiscSelect)
+    @JvmField
+    val miscMask = field(SgxMiscSelect)
+
     /** The enclave CONFIGSVN field. */
-    @JvmField val configSvn = field(SgxConfigSvn)
+    @JvmField
+    val configSvn = field(SgxConfigSvn)
+
     /** Reserved for future use. Must be set to zero. */
     @Suppress("unused")
-    @JvmField val reserved2 = field(ReservedBytes(434))
+    @JvmField
+    val reserved2 = field(ReservedBytes(434))
 }
 
 /**
@@ -430,9 +536,13 @@ object SgxKeyRequest : Struct() {
  */
 object SgxEcdsa256BitQuoteAuthData : VariableStruct() {
     /** ECDSA signature over [SgxQuote] calculated using [ecdsaAttestationKey]. */
-    @JvmField val ecdsa256BitSignature = field(SgxEcdsa256BitSignature)
+    @JvmField
+    val ecdsa256BitSignature = field(SgxEcdsa256BitSignature)
+
     /** Public part of the ECDSA Attestation Key generated by the Quoting Enclave. */
-    @JvmField val ecdsaAttestationKey = field(SgxEcdsa256BitPubkey)
+    @JvmField
+    val ecdsaAttestationKey = field(SgxEcdsa256BitPubkey)
+
     /**
      * Report of the Quoting Enclave that generated the ECDSA Attestation Key.
      *
@@ -441,9 +551,13 @@ object SgxEcdsa256BitQuoteAuthData : VariableStruct() {
      * Note: The QE Report is a report when the QE Report is certified. The CPUSVN and ISVSVN in this report may be
      * older than the currently loaded QE.
      */
-    @JvmField val qeReport = field(SgxReportBody)
+    @JvmField
+    val qeReport = field(SgxReportBody)
+
     /** ECDSA signature over [qeReport] calculated using the Provisioning Certification Key */
-    @JvmField val qeReportSignature = field(SgxEcdsa256BitSignature)
+    @JvmField
+    val qeReportSignature = field(SgxEcdsa256BitSignature)
+
     /**
      * Variable-length data chosen by the Quoting Enclave and signed by the Provisioning Certification Key (as a part of
      * the Report Data in the QE Report). It can be used by the QE to add additional context to the ECDSA Attestation Key
@@ -452,9 +566,12 @@ object SgxEcdsa256BitQuoteAuthData : VariableStruct() {
      *
      * Size should be set to 0 if there is no additional data.
      */
-    @JvmField val qeAuthData = field(UInt16VariableBytes())
+    @JvmField
+    val qeAuthData = field(UInt16VariableBytes())
+
     /** Data required to verify the QE Report Signature. */
-    @JvmField val qeCertData = field(SgxQeCertData)
+    @JvmField
+    val qeCertData = field(SgxQeCertData)
 }
 
 /**
@@ -491,9 +608,12 @@ object SgxQeCertData : VariableStruct() {
      *  - 5 Concatenated PCK Cert Chain
      *  - 7 (PLATFORM_MANIFEST, currently not supported)
      */
-    @JvmField val type = field(UInt16())
+    @JvmField
+    val type = field(UInt16())
+
     /** Data required to verify the QE Report Signature depending on the value of [type]. */
-    @JvmField val data = field(UInt32VariableBytes())
+    @JvmField
+    val data = field(UInt32VariableBytes())
 }
 
 fun ByteCursor<SgxQeCertData>.toPckCertPath(): CertPath {

@@ -1,9 +1,9 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.CpuFeature
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class CpuFeatureTest {
     @Test
@@ -17,7 +17,7 @@ class CpuFeatureTest {
         val featuresBase = NativeApi.cpuFeatures
         repeat(100) {
             val features = NativeApi.cpuFeatures
-            assertEquals(featuresBase,features)
+            assertEquals(featuresBase, features)
         }
     }
 

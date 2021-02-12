@@ -17,11 +17,11 @@ import kotlin.system.exitProcess
 
 fun createSandboxConfiguration(analysisConfiguration: AnalysisConfiguration): SandboxConfiguration {
     return SandboxConfiguration.of(
-            ExecutionProfile.UNLIMITED,
-            SandboxConfiguration.ALL_RULES,
-            SandboxConfiguration.ALL_EMITTERS,
-            SandboxConfiguration.ALL_DEFINITION_PROVIDERS,
-            analysisConfiguration
+        ExecutionProfile.UNLIMITED,
+        SandboxConfiguration.ALL_RULES,
+        SandboxConfiguration.ALL_EMITTERS,
+        SandboxConfiguration.ALL_DEFINITION_PROVIDERS,
+        analysisConfiguration
     )
 }
 
@@ -29,9 +29,9 @@ private fun setup(bootstrapJars: Array<URL>, userSourcesJars: List<Path>) {
     val userSource = object : UserSource, URLClassLoader(userSourcesJars.map { it.toUri().toURL() }.toTypedArray()) {}
     val djvmMemoryClassLoader = object : ApiSource, URLClassLoader(bootstrapJars) {}
     val rootConfiguration = AnalysisConfiguration.createRoot(
-            userSource = UserPathSource(emptyList()),
-            whitelist = TEST_WHITELIST,
-            bootstrapSource = djvmMemoryClassLoader
+        userSource = UserPathSource(emptyList()),
+        whitelist = TEST_WHITELIST,
+        bootstrapSource = djvmMemoryClassLoader
     )
     val sandboxConfiguration = createSandboxConfiguration(rootConfiguration)
     DJVMBase.setupClassLoader(userSource, djvmMemoryClassLoader, emptyList(), sandboxConfiguration)

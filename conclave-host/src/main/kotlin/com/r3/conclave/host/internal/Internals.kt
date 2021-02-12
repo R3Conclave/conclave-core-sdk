@@ -7,7 +7,8 @@ import com.r3.conclave.host.EnclaveHost
 import java.nio.file.Path
 
 fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {
-    val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ThrowingErrorHandler())
+    val enclaveHandle =
+        NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ThrowingErrorHandler())
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 

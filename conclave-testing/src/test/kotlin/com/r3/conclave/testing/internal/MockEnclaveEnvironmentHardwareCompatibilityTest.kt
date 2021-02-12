@@ -35,23 +35,28 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
         // key request parameters we're interested in.
         private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
-                // Create keys across two different enclaves, ...
-                setOf(EnclaveClass(SecretKeyEnclave1::class.java), EnclaveClass(SecretKeyEnclave2::class.java)),
-                // ... which have one of two IsvProdId values
-                setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
-                // ... and one of two IsvSvn values.
-                setOf(EnclaveIsvSvn(2), EnclaveIsvSvn(3)),
-                // Create either REPORT or SEAL keys. The other key types are not relevant.
-                setOf(KeyNameField(KeyName.REPORT), KeyNameField(KeyName.SEAL)),
-                // Create keys with all 8 possible policy combinations by using MRENCLAVE, MRSIGNER and NOISVPRODID.
-                // The other key policies are not relevant as we don't enable KSS.
-                Sets.powerSet(setOf(KeyPolicy.MRENCLAVE, KeyPolicy.MRSIGNER, KeyPolicy.NOISVPRODID)).map(::KeyPolicyField).toSet(),
-                // Create keys with no ISVSVN, ISVSVN set to the enclave's and with values on either side.
-                setOf(BlankField(SgxKeyRequest::isvSvn), IsvSvnFieldDelta(-1), IsvSvnFieldDelta(0), IsvSvnFieldDelta(1)),
-                // Create keys with no CPUSVN, CPUSVN set to the current value and a random one.
-                setOf(BlankField(SgxKeyRequest::cpuSvn), CpuSvnField(null), CpuSvnField(OpaqueBytes(Random.nextBytes(SgxCpuSvn.size)))),
-                // Create keys with no key ID and with a random one.
-                setOf(BlankField(SgxKeyRequest::keyId), KeyIdField(OpaqueBytes(Random.nextBytes(SgxKeyId.size))))
+            // Create keys across two different enclaves, ...
+            setOf(EnclaveClass(SecretKeyEnclave1::class.java), EnclaveClass(SecretKeyEnclave2::class.java)),
+            // ... which have one of two IsvProdId values
+            setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
+            // ... and one of two IsvSvn values.
+            setOf(EnclaveIsvSvn(2), EnclaveIsvSvn(3)),
+            // Create either REPORT or SEAL keys. The other key types are not relevant.
+            setOf(KeyNameField(KeyName.REPORT), KeyNameField(KeyName.SEAL)),
+            // Create keys with all 8 possible policy combinations by using MRENCLAVE, MRSIGNER and NOISVPRODID.
+            // The other key policies are not relevant as we don't enable KSS.
+            Sets.powerSet(setOf(KeyPolicy.MRENCLAVE, KeyPolicy.MRSIGNER, KeyPolicy.NOISVPRODID)).map(::KeyPolicyField)
+                .toSet(),
+            // Create keys with no ISVSVN, ISVSVN set to the enclave's and with values on either side.
+            setOf(BlankField(SgxKeyRequest::isvSvn), IsvSvnFieldDelta(-1), IsvSvnFieldDelta(0), IsvSvnFieldDelta(1)),
+            // Create keys with no CPUSVN, CPUSVN set to the current value and a random one.
+            setOf(
+                BlankField(SgxKeyRequest::cpuSvn),
+                CpuSvnField(null),
+                CpuSvnField(OpaqueBytes(Random.nextBytes(SgxCpuSvn.size)))
+            ),
+            // Create keys with no key ID and with a random one.
+            setOf(BlankField(SgxKeyRequest::keyId), KeyIdField(OpaqueBytes(Random.nextBytes(SgxKeyId.size))))
         ).map(::SecretKeySpec)
     }
 
@@ -109,7 +114,8 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val config = EnclaveConfig().withProdID(enclaveSpec.isvProdId).withISVSVN(enclaveSpec.isvSvn)
-            val host = testEnclaves.hostTo(enclaveSpec.enclaveClass, EnclaveBuilder(type = EnclaveType.Debug, config = config))
+            val host =
+                testEnclaves.hostTo(enclaveSpec.enclaveClass, EnclaveBuilder(type = EnclaveType.Debug, config = config))
             host.start(attestationParams, null)
             check(host.enclaveMode == EnclaveMode.DEBUG)
             host

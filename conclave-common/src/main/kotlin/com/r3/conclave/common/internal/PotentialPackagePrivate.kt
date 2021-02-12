@@ -1,6 +1,6 @@
 package com.r3.conclave.common.internal
 
-import kotlin.annotation.AnnotationRetention.*
+import kotlin.annotation.AnnotationRetention.SOURCE
 import kotlin.annotation.AnnotationTarget.*
 
 /**

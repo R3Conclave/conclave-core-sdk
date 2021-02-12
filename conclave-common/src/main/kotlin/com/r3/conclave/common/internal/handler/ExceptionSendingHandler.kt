@@ -12,18 +12,18 @@ import java.util.function.Consumer
  * @param exposeErrors if true the sent errors will be exposed, if false they will be replaced with an opaque one,
  *     hiding the original error condition.
  */
-class ExceptionSendingHandler(private val exposeErrors: Boolean): Handler<ExceptionSendingHandler.Connection> {
+class ExceptionSendingHandler(private val exposeErrors: Boolean) : Handler<ExceptionSendingHandler.Connection> {
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
         try {
             val downstream = connection.getDownstream()
-                    ?: throw IllegalStateException("No downstream specified")
+                ?: throw IllegalStateException("No downstream specified")
             downstream.onReceive(input)
         } catch (throwable: Throwable) {
             val exceptionToSerialize = if (!exposeErrors) {
                 Exception(
-                        "Opaque error. If this error is coming from a Release enclave you can use a Simulation or " +
-                                "Debug enclave to reveal the full error."
+                    "Opaque error. If this error is coming from a Release enclave you can use a Simulation or " +
+                            "Debug enclave to reveal the full error."
                 )
             } else {
                 throwable
@@ -66,9 +66,9 @@ class ExceptionSendingHandler(private val exposeErrors: Boolean): Handler<Except
     }
 
     private inner class ErrorReportingSender(
-            val discriminator: SerializeException.Discriminator,
-            val upstream: Sender
-    ): Sender {
+        val discriminator: SerializeException.Discriminator,
+        val upstream: Sender
+    ) : Sender {
         override fun send(needBytes: Int, serializers: MutableList<Consumer<ByteBuffer>>) {
             serializers.add(Consumer { buffer ->
                 buffer.put(discriminator.value)

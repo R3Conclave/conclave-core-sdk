@@ -33,7 +33,12 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
          *
          * @throws IllegalArgumentException If [length] is not the size of [type].
          */
-        fun <T : Encoder<R>, R> wrap(type: T, bytes: ByteArray, offset: Int = 0, length: Int = bytes.size): Cursor<T, R> {
+        fun <T : Encoder<R>, R> wrap(
+            type: T,
+            bytes: ByteArray,
+            offset: Int = 0,
+            length: Int = bytes.size
+        ): Cursor<T, R> {
             val buffer = ByteBuffer.wrap(bytes, offset, length).order(ByteOrder.LITTLE_ENDIAN)
             val size = type.size(buffer)
             require(length == size) { "Size of ${type.javaClass.simpleName} is $size whereas the length provided is $length." }

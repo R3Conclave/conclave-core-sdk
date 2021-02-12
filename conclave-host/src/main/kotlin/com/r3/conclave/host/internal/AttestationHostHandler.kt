@@ -11,7 +11,7 @@ import com.r3.conclave.host.internal.AttestationHostHandler.State.ReportRetrieve
 import java.nio.ByteBuffer
 
 class AttestationHostHandler(
-        private val attestationParameters: AttestationParameters?
+    private val attestationParameters: AttestationParameters?
 ) : Handler<AttestationHostHandler.Connection> {
     companion object {
         private val log = loggerFor<AttestationHostHandler>()
@@ -88,12 +88,12 @@ class AttestationHostHandler(
                     getQuote[SgxGetQuote.quoteType] = SgxQuoteType.LINKABLE.value
                     getQuote[SgxGetQuote.spid] = attestationParameters.spid.buffer()
                     Native.getQuote(
-                            getQuote.buffer.array(),
-                            signatureRevocationListIn = null,
-                            // TODO Do we need to use the nonce?
-                            quotingEnclaveReportNonceIn = null,
-                            quotingEnclaveReportOut = null,
-                            quoteOut = quoteBytes
+                        getQuote.buffer.array(),
+                        signatureRevocationListIn = null,
+                        // TODO Do we need to use the nonce?
+                        quotingEnclaveReportNonceIn = null,
+                        quotingEnclaveReportOut = null,
+                        quoteOut = quoteBytes
                     )
                     Cursor.wrap(SgxSignedQuote, quoteBytes)
                 }

@@ -17,7 +17,8 @@ class SerializeExceptionTest {
     @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
     @ArgumentsSource(BooleanPermutations::class)
     fun `message and cause c'tor`(withMessage: Boolean, withCause: Boolean) {
-        val original = MessageAndCauseException("message here".takeIf { withMessage }, Exception("da cause").takeIf { withCause })
+        val original =
+            MessageAndCauseException("message here".takeIf { withMessage }, Exception("da cause").takeIf { withCause })
         val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
@@ -25,7 +26,8 @@ class SerializeExceptionTest {
     @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
     @ArgumentsSource(BooleanPermutations::class)
     fun `cause and message c'tor`(withMessage: Boolean, withCause: Boolean) {
-        val original = CauseAndMessageException(Exception("da cause").takeIf { withCause }, "message here".takeIf { withMessage })
+        val original =
+            CauseAndMessageException(Exception("da cause").takeIf { withCause }, "message here".takeIf { withMessage })
         val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
@@ -33,7 +35,8 @@ class SerializeExceptionTest {
     @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
     @ArgumentsSource(BooleanPermutations::class)
     fun `message only c'tor`(withMessage: Boolean, withCause: Boolean) {
-        val original = MessageOnlyException("message here".takeIf { withMessage }).initCause(Exception("da cause").takeIf { withCause })
+        val original =
+            MessageOnlyException("message here".takeIf { withMessage }).initCause(Exception("da cause").takeIf { withCause })
         val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
@@ -119,10 +122,10 @@ class SerializeExceptionTest {
     class BooleanPermutations : ArgumentsProvider {
         override fun provideArguments(context: ExtensionContext): Stream<out Arguments> {
             return Stream.of(
-                    Arguments.of(true, true),
-                    Arguments.of(true, false),
-                    Arguments.of(false, true),
-                    Arguments.of(false, false)
+                Arguments.of(true, true),
+                Arguments.of(true, false),
+                Arguments.of(false, true),
+                Arguments.of(false, false)
             )
         }
     }

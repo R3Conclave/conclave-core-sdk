@@ -52,6 +52,7 @@ interface MinSizePolicy {
         init {
             require(minSize >= 0) { "Min size cannot be negative" }
         }
+
         override fun getMinSize(bodySize: Int): Int = minSize
     }
 
@@ -85,6 +86,6 @@ interface MinSizePolicy {
             }
             count++
             return (sum / count).toInt()
-         }
+        }
     }
 }

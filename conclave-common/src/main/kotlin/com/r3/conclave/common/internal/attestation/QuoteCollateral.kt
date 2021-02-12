@@ -5,14 +5,14 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509CRL
 
 data class QuoteCollateral(
-        val version: String,
-        val pckCrlIssuerChain: String,
-        val rawRootCaCrl: String,
-        val rawPckCrl: String,
-        val rawTcbInfoIssuerChain: String,
-        val rawSignedTcbInfo: String,
-        val rawQeIdentityIssuerChain: String,
-        val rawSignedQeIdentity: String
+    val version: String,
+    val pckCrlIssuerChain: String,
+    val rawRootCaCrl: String,
+    val rawPckCrl: String,
+    val rawTcbInfoIssuerChain: String,
+    val rawSignedTcbInfo: String,
+    val rawQeIdentityIssuerChain: String,
+    val rawSignedQeIdentity: String
 ) {
     val rootCaCrl: X509CRL by lazy { parseCRL(rawRootCaCrl) }
 

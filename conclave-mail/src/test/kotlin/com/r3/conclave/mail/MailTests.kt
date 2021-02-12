@@ -70,7 +70,7 @@ class MailTests {
 
     @ParameterizedTest
     // Disallow dots as they are often meaningful in queue names.
-    @ValueSource(strings = [ "no whitespace allowed", "!!!", "😂", "1234.5678"])
+    @ValueSource(strings = ["no whitespace allowed", "!!!", "😂", "1234.5678"])
     fun `invalid topics`(topic: String) {
         assertThatIllegalArgumentException().isThrownBy { PostOffice.create(bob.publicKey, alice, topic) }
     }

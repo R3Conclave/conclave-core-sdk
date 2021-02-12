@@ -196,7 +196,8 @@ abstract class Enclave {
      * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
      * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
      */
-    private class AdminHandler(private val enclave: Enclave, private val env: EnclaveEnvironment) : Handler<AdminHandler> {
+    private class AdminHandler(private val enclave: Enclave, private val env: EnclaveEnvironment) :
+        Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
@@ -225,9 +226,9 @@ Received: $attestationReportBody"""
                 "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
             }
             _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-                    enclave.signatureKey,
-                    enclave.encryptionKeyPair.public as Curve25519PublicKey,
-                    attestation
+                enclave.signatureKey,
+                enclave.encryptionKeyPair.public as Curve25519PublicKey,
+                attestation
             )
         }
 
@@ -247,12 +248,13 @@ Received: $attestationReportBody"""
          * info object. By making this lazy we avoid slowing down the enclave startup process if it's never used.
          */
         @get:Synchronized
-        val enclaveInstanceInfo: EnclaveInstanceInfoImpl get() {
-            if (_enclaveInstanceInfo == null) {
-                sendAttestationRequest()
+        val enclaveInstanceInfo: EnclaveInstanceInfoImpl
+            get() {
+                if (_enclaveInstanceInfo == null) {
+                    sendAttestationRequest()
+                }
+                return _enclaveInstanceInfo!!
             }
-            return _enclaveInstanceInfo!!
-        }
 
         /**
          * Send a request to the host for the [Attestation] object. The enclave has the other properties needed
@@ -271,6 +273,7 @@ Received: $attestationReportBody"""
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
+
         // Maps sender + topic pairs to the highest sequence number seen so far. Seqnos must start from zero and can only
         // increment by one for each delivered mail.
         private val sequenceWatermarks = HashMap<DestinationAndTopic, Watermark>()
@@ -466,7 +469,9 @@ Received: $attestationReportBody"""
     }
 
     private sealed class CallState {
-        class Receive(val callback: HostCallback?, @Suppress("unused") val receiveFromUntrustedHost: Boolean) : CallState()
+        class Receive(val callback: HostCallback?, @Suppress("unused") val receiveFromUntrustedHost: Boolean) :
+            CallState()
+
         class Response(val bytes: ByteArray) : CallState()
     }
 
@@ -610,12 +615,15 @@ Received: $attestationReportBody"""
         enclaveMessageHandler.postMail(encryptedMail, routingHint)
     }
 
-    private inner class EnclavePostOfficeImpl(destinationPublicKey: PublicKey,
-                                              topic: String,
-                                              override val keyDerivation: ByteArray?) : EnclavePostOffice(destinationPublicKey, topic) {
+    private inner class EnclavePostOfficeImpl(
+        destinationPublicKey: PublicKey,
+        topic: String,
+        override val keyDerivation: ByteArray?
+    ) : EnclavePostOffice(destinationPublicKey, topic) {
         init {
             minSizePolicy = defaultMinSizePolicy
         }
+
         override val senderPrivateKey: PrivateKey get() = encryptionKeyPair.private
     }
 

@@ -19,16 +19,19 @@ object SignEnclave {
     }
 
     fun signEnclave(inputKey: Cached<File>, inputEnclave: Cached<File>, enclaveConfig: Cached<File>): Cached<File> {
-        return Cached.combineFile(listOf(extractSignTool(), inputKey, inputEnclave, enclaveConfig), "enclave.signed.so") { output, (signTool, key, enclave, config) ->
+        return Cached.combineFile(
+            listOf(extractSignTool(), inputKey, inputEnclave, enclaveConfig),
+            "enclave.signed.so"
+        ) { output, (signTool, key, enclave, config) ->
             ProcessRunner.runProcess(
-                    commandLine = listOf(
-                            signTool.absolutePath, "sign",
-                            "-key", key.absolutePath,
-                            "-enclave", enclave.absolutePath,
-                            "-out", output.absolutePath,
-                            "-config", config.absolutePath
-                    ),
-                    directory = output.parentFile
+                commandLine = listOf(
+                    signTool.absolutePath, "sign",
+                    "-key", key.absolutePath,
+                    "-enclave", enclave.absolutePath,
+                    "-out", output.absolutePath,
+                    "-config", config.absolutePath
+                ),
+                directory = output.parentFile
             )
         }
     }
@@ -45,10 +48,20 @@ object SignEnclave {
     }
 
     fun enclaveMetadata(inputEnclave: Cached<File>): Cached<File> {
-        return Cached.combineFile(listOf(extractSignTool(), inputEnclave), "metadata.txt") { output, (signTool, enclave) ->
+        return Cached.combineFile(
+            listOf(extractSignTool(), inputEnclave),
+            "metadata.txt"
+        ) { output, (signTool, enclave) ->
             ProcessRunner.runProcess(
-                    listOf(signTool.absolutePath, "dump", "-enclave", enclave.absolutePath, "-dumpfile", output.absolutePath),
-                    output.parentFile
+                listOf(
+                    signTool.absolutePath,
+                    "dump",
+                    "-enclave",
+                    enclave.absolutePath,
+                    "-dumpfile",
+                    output.absolutePath
+                ),
+                output.parentFile
             )
         }
     }

@@ -1,7 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.PlaintextAndEnvelope
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.utilities.internal.getBoolean
@@ -31,10 +31,13 @@ abstract class SealUnsealHandler : Handler<SealUnsealSender> {
             val plaintext = OpaqueBytes(plainTextSize)
             val authenticatedDataSize = input.int
             val authenticatedData =
-                    if (authenticatedDataSize > 0) OpaqueBytes(input.getRemainingBytes()) else null
-            onReceiveUnsealedData(connection, PlaintextAndEnvelope(
+                if (authenticatedDataSize > 0) OpaqueBytes(input.getRemainingBytes()) else null
+            onReceiveUnsealedData(
+                connection, PlaintextAndEnvelope(
                     plaintext,
-                    authenticatedData))
+                    authenticatedData
+                )
+            )
         } else {
             onReceiveSealedData(connection, input.getRemainingBytes())
         }
@@ -46,13 +49,13 @@ abstract class SealUnsealHandler : Handler<SealUnsealSender> {
 class SealUnsealSender(private val upstream: Sender) {
     fun sendUnsealedData(plaintextAndEnvelope: PlaintextAndEnvelope) {
         upstream.send(9 + plaintextAndEnvelope.plaintext.size + (plaintextAndEnvelope.authenticatedData?.size ?: 0),
-                Consumer { buffer ->
-                    buffer.putBoolean(true)
-                            .putInt(plaintextAndEnvelope.plaintext.size)
-                            .put(plaintextAndEnvelope.plaintext.bytes)
-                            .putInt(plaintextAndEnvelope.authenticatedData?.size ?: 0)
-                    plaintextAndEnvelope.authenticatedData?.let { buffer.put(it.bytes) }
-                })
+            Consumer { buffer ->
+                buffer.putBoolean(true)
+                    .putInt(plaintextAndEnvelope.plaintext.size)
+                    .put(plaintextAndEnvelope.plaintext.bytes)
+                    .putInt(plaintextAndEnvelope.authenticatedData?.size ?: 0)
+                plaintextAndEnvelope.authenticatedData?.let { buffer.put(it.bytes) }
+            })
     }
 
     fun sendSealedData(sealedData: ByteArray) {

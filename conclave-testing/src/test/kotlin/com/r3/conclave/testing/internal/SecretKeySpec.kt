@@ -150,6 +150,7 @@ sealed class Result {
     data class Key(val bytes: OpaqueBytes) : Result() {
         override fun toString(): String = "Key($bytes)"
     }
+
     data class Error(val message: String) : Result() {
         override fun toString(): String = "Error($message)"
     }

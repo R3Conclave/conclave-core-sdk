@@ -21,7 +21,8 @@ import java.util.*
  * Implementation of Intel's HTTPS attestation service. The API specification is described in
  * https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf.
  */
-class EpidAttestationService(override val isRelease: Boolean, private val subscriptionKey: String) : HardwareAttestationService() {
+class EpidAttestationService(override val isRelease: Boolean, private val subscriptionKey: String) :
+    HardwareAttestationService() {
     companion object {
         private val logger = loggerFor<EpidAttestationService>()
     }
@@ -41,16 +42,19 @@ class EpidAttestationService(override val isRelease: Boolean, private val subscr
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Ocp-Apim-Subscription-Key", subscriptionKey)
             connection.outputStream.use {
-                attestationObjectMapper.writeValue(it, ReportRequest(isvEnclaveQuote = signedQuote.buffer.getRemainingBytes(avoidCopying = true)))
+                attestationObjectMapper.writeValue(
+                    it,
+                    ReportRequest(isvEnclaveQuote = signedQuote.buffer.getRemainingBytes(avoidCopying = true))
+                )
             }
             if (connection.responseCode != HTTP_OK) {
                 throw IOException("Error response from Intel Attestation Service (${connection.responseCode}): " +
                         connection.errorStream?.readFully()?.let { String(it) })
             }
             val attestation = EpidAttestation(
-                    reportBytes = OpaqueBytes(connection.inputStream.readFully()),
-                    signature = OpaqueBytes(Base64.getDecoder().decode(connection.getHeaderField("X-IASReport-Signature"))),
-                    certPath = connection.parseResponseCertPath(),
+                reportBytes = OpaqueBytes(connection.inputStream.readFully()),
+                signature = OpaqueBytes(Base64.getDecoder().decode(connection.getHeaderField("X-IASReport-Signature"))),
+                certPath = connection.parseResponseCertPath(),
             )
             check(attestation.report.isvEnclaveQuoteBody == signedQuote[quote]) {
                 "The quote in the EPID attestation report is not the one that was provided to the attestation service."
@@ -72,8 +76,8 @@ class EpidAttestationService(override val isRelease: Boolean, private val subscr
     }
 
     private class ReportRequest(
-            val isvEnclaveQuote: ByteArray,
-            val pseManifest: ByteArray? = null,
-            val nonce: String? = null
+        val isvEnclaveQuote: ByteArray,
+        val pseManifest: ByteArray? = null,
+        val nonce: String? = null
     )
 }

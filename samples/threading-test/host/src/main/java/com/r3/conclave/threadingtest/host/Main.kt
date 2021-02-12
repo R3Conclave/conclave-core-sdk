@@ -10,8 +10,8 @@ fun main(args: Array<String>) {
 
 @Command(
     subcommands = [
-    FibonacciHost::class,
-    BusyHost::class
+        FibonacciHost::class,
+        BusyHost::class
     ]
 )
 

@@ -29,7 +29,8 @@ class EnclaveInstanceInfoImplTest {
         this[SgxReportBody.mrsigner] = mrsigner.buffer()
         this[SgxReportBody.isvProdId] = isvProdId
         this[SgxReportBody.isvSvn] = isvSvn
-        this[SgxReportBody.reportData] = SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
+        this[SgxReportBody.reportData] =
+            SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
     }
 
     private val timestamp = Instant.now()
@@ -73,9 +74,9 @@ class EnclaveInstanceInfoImplTest {
 
     private fun newInstance(): EnclaveInstanceInfoImpl {
         return EnclaveInstanceInfoImpl(
-                signingKeyPair.public,
-                encryptionPrivateKey.publicKey,
-                MockAttestation(timestamp, reportBody.asReadOnly(), false)
+            signingKeyPair.public,
+            encryptionPrivateKey.publicKey,
+            MockAttestation(timestamp, reportBody.asReadOnly(), false)
         )
     }
 }

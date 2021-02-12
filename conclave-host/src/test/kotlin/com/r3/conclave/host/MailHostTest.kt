@@ -90,18 +90,18 @@ class MailHostTest {
         // Cannot deliver message 2 twice even with different IDs.
         noop.deliverMail(100, encrypted1, "test")
         assertThatIllegalStateException()
-                .isThrownBy { noop.deliverMail(100, encrypted1, "test") }
-                .withMessageContaining("Mail with sequence number 1 on topic topic-123 has already been seen, was expecting 2.")
+            .isThrownBy { noop.deliverMail(100, encrypted1, "test") }
+            .withMessageContaining("Mail with sequence number 1 on topic topic-123 has already been seen, was expecting 2.")
         // Cannot now re-deliver message 1 because the sequence number would be going backwards.
         assertThatIllegalStateException()
-                .isThrownBy { noop.deliverMail(100, encrypted0, "test") }
-                .withMessageContaining("Mail with sequence number 0 on topic topic-123 has already been seen, was expecting 2.")
+            .isThrownBy { noop.deliverMail(100, encrypted0, "test") }
+            .withMessageContaining("Mail with sequence number 0 on topic topic-123 has already been seen, was expecting 2.")
         // Can deliver message 3
         noop.deliverMail(101, encrypted2, "test")
         // Seq nums may not have gaps.
         assertThatIllegalStateException()
-                .isThrownBy { noop.deliverMail(102, encrypted50, "test") }
-                .withMessageContaining("Next sequence number on topic topic-123 should be 3 but is instead 50.")
+            .isThrownBy { noop.deliverMail(102, encrypted50, "test") }
+            .withMessageContaining("Next sequence number on topic topic-123 should be 3 but is instead 50.")
 
         // Seq nums of different topics are independent
         val secondTopic = buildMail(noop, topic = "another-topic", sequenceNumber = 0)
@@ -117,8 +117,8 @@ class MailHostTest {
         noop.start(null, null)
         val encrypted1 = buildMail(noop, sequenceNumber = 1)
         assertThatIllegalStateException()
-                .isThrownBy { noop.deliverMail(100, encrypted1, "test") }
-                .withMessageContaining("First time seeing mail with topic topic-123 so the sequence number must be zero but is instead 1.")
+            .isThrownBy { noop.deliverMail(100, encrypted1, "test") }
+            .withMessageContaining("First time seeing mail with topic topic-123 so the sequence number must be zero but is instead 1.")
     }
 
     @Test
@@ -146,6 +146,7 @@ class MailHostTest {
                 acknowledgeMail(id)
             }
         }
+
         val host = MockHost.loadMock<Enclave1>()
         var postCommand: MailCommand.PostMail? = null
         host.start(null) { commands ->
@@ -168,6 +169,7 @@ class MailHostTest {
                 postMail(postOffice(mail).encryptMail("world".toByteArray()), null)
                 acknowledgeMail(id)
             }
+
             override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
                 postMail(postOffice(previousSender!!).encryptMail("123".toByteArray()), null)
                 postMail(postOffice(previousSender!!).encryptMail("456".toByteArray()), null)
@@ -280,7 +282,7 @@ class MailHostTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [ "destination+topic", "destination", "mail", "topic+eii", "eii" ])
+    @ValueSource(strings = ["destination+topic", "destination", "mail", "topic+eii", "eii"])
     fun `postOffice() methods return cached instances`(overload: String) {
         class PostOfficeEnclave : Enclave() {
             override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
@@ -330,15 +332,17 @@ class MailHostTest {
         }.withMessageContaining("Make sure EnclaveInstanceInfo.createPostOffice is used.")
     }
 
-    private fun buildMail(host: MockHost<*>,
-                          topic: String = "topic-123",
-                          sequenceNumber: Long? = null,
-                          senderPrivateKey: PrivateKey = privateKey,
-                          body: ByteArray = messageBytes): ByteArray {
+    private fun buildMail(
+        host: MockHost<*>,
+        topic: String = "topic-123",
+        sequenceNumber: Long? = null,
+        senderPrivateKey: PrivateKey = privateKey,
+        body: ByteArray = messageBytes
+    ): ByteArray {
         val postOffice = if (sequenceNumber != null) {
             host.enclaveInstanceInfo.createPostOffice(senderPrivateKey, topic).setNextSequenceNumber(sequenceNumber)
         } else {
-             postOffices.computeIfAbsent(Pair(host.enclaveInstanceInfo, topic)) {
+            postOffices.computeIfAbsent(Pair(host.enclaveInstanceInfo, topic)) {
                 host.enclaveInstanceInfo.createPostOffice(senderPrivateKey, topic)
             }
         }
@@ -364,7 +368,10 @@ class MailHostTest {
             when (val str = answer?.let { String(it) }) {
                 "acknowledge" -> acknowledgeMail(id)
                 "an answer" -> return
-                "post" -> postMail(postOffice(Curve25519PublicKey(mail.bodyAsBytes)).encryptMail( "sent to second enclave".toByteArray()), routingHint)
+                "post" -> postMail(
+                    postOffice(Curve25519PublicKey(mail.bodyAsBytes)).encryptMail("sent to second enclave".toByteArray()),
+                    routingHint
+                )
                 null -> return
                 else -> throw IllegalStateException(str)
             }

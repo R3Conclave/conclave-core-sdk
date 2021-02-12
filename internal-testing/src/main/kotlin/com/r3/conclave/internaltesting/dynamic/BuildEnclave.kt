@@ -26,34 +26,39 @@ object BuildEnclave {
     }
 
     fun buildEnclave(type: EnclaveType, enclaveJar: Cached<File>): Cached<File> {
-        val extractPartialEnclave = ExtractResource.extractResource(javaClass, getPartialEnclaveResourcePath(type), "r--r--r--")
+        val extractPartialEnclave =
+            ExtractResource.extractResource(javaClass, getPartialEnclaveResourcePath(type), "r--r--r--")
         val buildJarObject = buildJarObject(enclaveJar)
         return extractPartialEnclave.combineFile(buildJarObject, "enclave.so") { output, partialEnclave, jarObject ->
-            ProcessRunner.runProcess(linkEnclaveCommandLine(
+            ProcessRunner.runProcess(
+                linkEnclaveCommandLine(
                     jarObject,
                     partialEnclave,
                     output
-            ), output.parentFile)
+                ), output.parentFile
+            )
         }
     }
 
     fun buildJarObjectCommandLine(output: File): List<String> {
-        return listOf("/usr/bin/env", "objcopy",
-                "-I", "binary",
-                "-O", "elf64-x86-64",
-                "-B", "i386",
-                "app.jar", output.absolutePath
+        return listOf(
+            "/usr/bin/env", "objcopy",
+            "-I", "binary",
+            "-O", "elf64-x86-64",
+            "-B", "i386",
+            "app.jar", output.absolutePath
         )
     }
 
     fun linkEnclaveCommandLine(enclaveJarO: File, partialEnclave: File, outputEnclave: File): List<String> {
-        return listOf("/usr/bin/env", "ld",
-                "-pie", "--entry=enclave_entry",
-                "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic", "--defsym=__ImageBase=0",
-                "--defsym=__DeadlockTimeout=10", 
-                "-o", outputEnclave.absolutePath,
-                partialEnclave.absolutePath,
-                enclaveJarO.absolutePath
+        return listOf(
+            "/usr/bin/env", "ld",
+            "-pie", "--entry=enclave_entry",
+            "-Bstatic", "-Bsymbolic", "--no-undefined", "--export-dynamic", "--defsym=__ImageBase=0",
+            "--defsym=__DeadlockTimeout=10",
+            "-o", outputEnclave.absolutePath,
+            partialEnclave.absolutePath,
+            enclaveJarO.absolutePath
         )
     }
 }

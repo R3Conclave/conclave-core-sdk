@@ -16,8 +16,8 @@ class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestat
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
         val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
         val col = Native.getQuoteCollateral(
-                fmspc = pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes(),
-                pck = if ("Processor" in pckCert.issuerDN.name) 0 else 1
+            fmspc = pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes(),
+            pck = if ("Processor" in pckCert.issuerDN.name) 0 else 1
         )
         // TODO There's no reason why the JNI can't create the QuoteCollateral directly. Doing so allows the properties
         //      to have better types, such as int for the version. The other fields can also just be byte arrays as

@@ -194,14 +194,14 @@ class EnclaveConstraint {
         @JvmStatic
         fun parse(descriptor: String): EnclaveConstraint {
             val keyValues = descriptor
-                    .splitToSequence(' ')
-                    .map {
-                        require(it.isNotEmpty()) { "Consecutive spaces not allowed" }
-                        val parts = it.split(':')
-                        require(parts.size == 2) { "Invalid token: $it" }
-                        parts
-                    }
-                    .groupBy({ it[0] }, { it[1] })
+                .splitToSequence(' ')
+                .map {
+                    require(it.isNotEmpty()) { "Consecutive spaces not allowed" }
+                    val parts = it.split(':')
+                    require(parts.size == 2) { "Invalid token: $it" }
+                    parts
+                }
+                .groupBy({ it[0] }, { it[1] })
 
             (keyValues.keys - keys).let { require(it.isEmpty()) { "Unknown keys $it" } }
 

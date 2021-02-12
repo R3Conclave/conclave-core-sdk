@@ -18,8 +18,9 @@ class SimpleMuxingHandler : Handler<SimpleMuxingHandler.Connection> {
     }
 
     private val muxIdCounter = AtomicInteger(0)
+
     inner class Connection(
-            val muxConnection: MuxingHandler.Connection
+        val muxConnection: MuxingHandler.Connection
     ) {
         fun <CONNECTION> addDownstream(downstream: Handler<CONNECTION>): CONNECTION {
             val muxId = muxIdCounter.getAndIncrement()

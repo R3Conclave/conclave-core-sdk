@@ -113,8 +113,8 @@ class MockEnclaveEnvironmentTest {
     private val ByteCursor<SgxReport>.cpuSvn: ByteCursor<SgxCpuSvn> get() = this[SgxReport.body][SgxReportBody.cpuSvn]
 
     private inline fun <reified E : Enclave> createMockEnclaveEnvironment(
-            isvProdId: Int = 1,
-            isvSvn: Int = 1
+        isvProdId: Int = 1,
+        isvSvn: Int = 1
     ): MockEnclaveEnvironment {
         return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance(), isvProdId, isvSvn)
     }

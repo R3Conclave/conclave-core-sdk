@@ -30,7 +30,8 @@ object DigestTools {
     fun sha256InputStream(inputStream: InputStream): String {
         val uselessBuffer = ByteArray(64 * 1024)
         val digest = DigestInputStream(inputStream, sha256Digest).use { digestStream ->
-            while (digestStream.read(uselessBuffer) > -1) {}
+            while (digestStream.read(uselessBuffer) > -1) {
+            }
             digestStream.messageDigest
         }
         return bytesToHex(digest.digest())

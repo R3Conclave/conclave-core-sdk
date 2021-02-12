@@ -3,7 +3,8 @@ package com.r3.conclave.mail
 import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.utilities.internal.toHexString
-import java.security.*
+import java.security.PrivateKey
+import java.security.PublicKey
 
 // Note: we don't implement ECPrivateKey here because in Java 11+ there is a different interface
 // for modern EC keys anyway.

@@ -24,7 +24,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
-import kotlin.collections.LinkedHashSet
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -57,7 +56,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * debugging, logging. Don't try to parse the output.
          */
         @JvmStatic
-        val capabilitiesDiagnostics: String get() = Native.getCpuCapabilitiesSummary()
+        val capabilitiesDiagnostics: String
+            get() = Native.getCpuCapabilitiesSummary()
 
         // The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
         // thus effectively converting them into Java classes. Making it synthetic hides it from the compiler.
@@ -126,7 +126,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             when (found.size) {
                 1 -> return Pair(found[0].first.openStream(), found[0].second)
                 0 -> throw IllegalArgumentException(
-                        """Enclave file for $className does not exist on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
+                    """Enclave file for $className does not exist on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
                     |    runtimeOnly project(path: ":enclave project", configuration: mode)
                     |    
                     |    where:
@@ -179,8 +179,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     // Improve the error message, listing all available features.
                     val sb = StringBuilder()
                     sb.append(e.message)
-                    sb.append(features.joinToString(prefix = "\nCPU features: ", separator = ", ",
-                    postfix = "\nReason: SSE4.1 is required but was not found."))
+                    sb.append(
+                        features.joinToString(
+                            prefix = "\nCPU features: ", separator = ", ",
+                            postfix = "\nReason: SSE4.1 is required but was not found."
+                        )
+                    )
                     throw MockOnlySupportedException(sb.toString())
                 } else {
                     throw e
@@ -200,6 +204,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
     private val hostStateManager = StateManager<HostState>(New)
     private lateinit var adminHandler: AdminHandler
+
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
@@ -258,8 +263,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // The attestation handler manages the process of generating remote attestations that are then
             // placed into the EnclaveInstanceInfo.
             val attestationConnection = mux.addDownstream(AttestationHostHandler(
-                    // Ignore the attestation parameters if the enclave mode is non-hardware and switch to mock attestation.
-                    attestationParameters?.takeIf { enclaveMode.isHardware }
+                // Ignore the attestation parameters if the enclave mode is non-hardware and switch to mock attestation.
+                attestationParameters?.takeIf { enclaveMode.isHardware }
             ))
 
             // We request an attestation at every startup. This is because in early releases the keys were ephemeral
@@ -273,9 +278,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             val signedQuote = attestationConnection.getSignedQuote()
             val attestation = attestationService.attestQuote(signedQuote)
             _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-                    adminHandler.enclaveInfo.signatureKey,
-                    adminHandler.enclaveInfo.encryptionKey,
-                    attestation
+                adminHandler.enclaveInfo.signatureKey,
+                adminHandler.enclaveInfo.encryptionKey,
+                attestation
             )
             // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
@@ -442,7 +447,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         deliverMailInternal(id, mail, routingHint, null)
     }
 
-    private fun deliverMailInternal(id: Long, mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>?) {
+    private fun deliverMailInternal(
+        id: Long,
+        mail: ByteArray,
+        routingHint: String?,
+        callback: Function<ByteArray, ByteArray?>?
+    ) {
         return checkStateFirst { enclaveMessageHandler.deliverMail(id, mail, callback, routingHint) }
     }
 
@@ -563,14 +573,22 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             }
         }
 
-        fun deliverMail(mailID: Long, mailBytes: ByteArray, callback: Function<ByteArray, ByteArray?>?, routingHint: String?) {
+        fun deliverMail(
+            mailID: Long,
+            mailBytes: ByteArray,
+            callback: Function<ByteArray, ByteArray?>?,
+            routingHint: String?
+        ) {
             callEnclaveInternal(callback) { threadID ->
                 sendMailToEnclave(threadID, mailID, mailBytes, routingHint)
             }
         }
 
         // Sets up the state tracking and handle re-entrancy. "id" is either a call ID or a mail ID.
-        private fun callEnclaveInternal(callback: Function<ByteArray, ByteArray?>?, body: (id: Long) -> Unit): ByteArray? {
+        private fun callEnclaveInternal(
+            callback: Function<ByteArray, ByteArray?>?,
+            body: (id: Long) -> Unit
+        ): ByteArray? {
             val threadID = Thread.currentThread().id
             val transaction = threadIDToTransaction.computeIfAbsent(threadID) { Transaction() }
             val callStateManager = transaction.stateManager
@@ -623,7 +641,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
         private fun sendMailToEnclave(threadID: Long, mailID: Long, mailBytes: ByteArray, routingHint: String?) {
             val routingHintBytes = routingHint?.toByteArray()
-            sender.send(Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + mailBytes.size + 4 + (routingHintBytes?.size ?: 0)) { buffer ->
+            sender.send(
+                Long.SIZE_BYTES + Long.SIZE_BYTES + 1 + mailBytes.size + 4 + (routingHintBytes?.size ?: 0)
+            ) { buffer ->
                 buffer.putLong(threadID)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
                 buffer.putLong(mailID)

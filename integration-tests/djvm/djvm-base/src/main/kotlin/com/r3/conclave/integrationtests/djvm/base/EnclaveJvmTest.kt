@@ -11,5 +11,5 @@ interface EnclaveJvmTest : Function<Any?, Any?>, TestAsserter {
      * @param output Test output to be serialized
      * @return A serialized representation of the test output
      */
-    fun serializeTestOutput(output: Any?) : ByteArray
+    fun serializeTestOutput(output: Any?): ByteArray
 }

@@ -13,7 +13,7 @@ import java.security.spec.X509EncodedKeySpec
  * A wrapper of EdEDSA signature scheme library to run EdDSA in enclave
  */
 class SignatureSchemeEdDSA(
-        private val randomnessSource: SecureRandom = SecureRandom()
+    private val randomnessSource: SecureRandom = SecureRandom()
 ) : SignatureScheme {
     companion object {
         private val securityProvider = EdDSASecurityProvider()
@@ -22,11 +22,12 @@ class SignatureSchemeEdDSA(
     }
 
     override val spec = SignatureSchemeSpec(
-            "EDDSA_ED25519_SHA512",
-            EdDSASecurityProvider.PROVIDER_NAME,
-            EdDSAEngine.SIGNATURE_ALGORITHM,
-            EdDSANamedCurveTable.getByName("ED25519"),
-            256)
+        "EDDSA_ED25519_SHA512",
+        EdDSASecurityProvider.PROVIDER_NAME,
+        EdDSAEngine.SIGNATURE_ALGORITHM,
+        EdDSANamedCurveTable.getByName("ED25519"),
+        256
+    )
     private val params: EdDSANamedCurveSpec
 
     init {
@@ -58,13 +59,13 @@ class SignatureSchemeEdDSA(
     override fun generateKeyPair(seed: ByteArray?): KeyPair {
         val seedSize = params.curve.field.getb() / 8
         val privateKeySpec = EdDSAPrivateKeySpec(
-                if (seed != null) {
-                    require(seed.size == seedSize)
-                    seed
-                } else {
-                    ByteArray(seedSize).also(randomnessSource::nextBytes)
-                },
-                params
+            if (seed != null) {
+                require(seed.size == seedSize)
+                seed
+            } else {
+                ByteArray(seedSize).also(randomnessSource::nextBytes)
+            },
+            params
         )
         val publicKeySpec = EdDSAPublicKeySpec(privateKeySpec.a, params)
         return KeyPair(EdDSAPublicKey(publicKeySpec), EdDSAPrivateKey(privateKeySpec))

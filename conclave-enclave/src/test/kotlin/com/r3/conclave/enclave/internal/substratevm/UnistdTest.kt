@@ -41,7 +41,8 @@ class UnistdTest {
             val fileSystemsMock = Mockito.mockStatic(FileSystems::class.java)
             fileSystemsMock.`when`<FileSystem> {
                 FileSystems.getDefault()
-            }.thenReturn(SystemJimfsFileSystemProvider.fileSystems[URI.create("file:${JimfsFileSystemProvider.DEFAULT_FILE_SYSTEM_PATH}")])
+            }
+                .thenReturn(SystemJimfsFileSystemProvider.fileSystems[URI.create("file:${JimfsFileSystemProvider.DEFAULT_FILE_SYSTEM_PATH}")])
 
             val cTypeConversionMock = Mockito.mockStatic(CTypeConversion::class.java)
             cTypeConversionMock.`when`<String> {
@@ -155,7 +156,12 @@ class UnistdTest {
         val offset = 2L
         val pread = Unistd.pread(null, fd, buf, count, offset, mockCIntPointer)
         assertThat(pread).isEqualTo(count)
-        assertThat(buf.byteArray.copyOfRange(0, count)).isEqualTo(data.copyOfRange(offset.toInt(), (offset + count).toInt()))
+        assertThat(buf.byteArray.copyOfRange(0, count)).isEqualTo(
+            data.copyOfRange(
+                offset.toInt(),
+                (offset + count).toInt()
+            )
+        )
 
         val secondRead = Unistd.read(null, fd, buf, count, mockCIntPointer)
         assertThat(secondRead).isEqualTo(count)
@@ -377,7 +383,12 @@ class UnistdTest {
         val buf = MockCCharPointer(count)
         var read = Unistd.read(null, fd, buf, count, mockCIntPointer)
         assertThat(read).isEqualTo(count)
-        assertThat(buf.byteArray.copyOfRange(0, count)).isEqualTo(data.copyOfRange(position.toInt(), (position + count).toInt()))
+        assertThat(buf.byteArray.copyOfRange(0, count)).isEqualTo(
+            data.copyOfRange(
+                position.toInt(),
+                (position + count).toInt()
+            )
+        )
 
         val currentPosition = Unistd.lseek64(null, fd, 0, Unistd.Whence.SEEK_CUR.ordinal, mockCIntPointer)
         assertThat(currentPosition).isEqualTo(position + count)

@@ -20,12 +20,12 @@ data class EnclaveMetadata(val mrenclave: SHA256Hash, val mrsigner: SHA256Hash) 
         // 0xe3 0xc9 0x99 0x19 0x61 0x63 0xf3 0xb5 0xda 0x3e 0x46 0xa8 0xa4 0x97 0xad 0x0d
         private fun parseSha256Value(metadataFile: List<String>, key: String): SHA256Hash {
             return metadataFile.asSequence()
-                    .dropWhile { line -> line != key }
-                    .drop(1)
-                    .take(2)
-                    .flatMap { line -> line.splitToSequence(' ').map { it.removePrefix("0x") } }
-                    .joinToString("")
-                    .let(SHA256Hash::parse)
+                .dropWhile { line -> line != key }
+                .drop(1)
+                .take(2)
+                .flatMap { line -> line.splitToSequence(' ').map { it.removePrefix("0x") } }
+                .joinToString("")
+                .let(SHA256Hash::parse)
         }
     }
 }

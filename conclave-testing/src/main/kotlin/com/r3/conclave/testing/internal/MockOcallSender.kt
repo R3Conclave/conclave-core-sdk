@@ -5,7 +5,7 @@ import com.r3.conclave.common.internal.handler.LeafSender
 import com.r3.conclave.utilities.internal.EnclaveContext
 import java.nio.ByteBuffer
 
-class MockOcallSender<CONNECTION>(private val handlerConnected: HandlerConnected<CONNECTION>): LeafSender() {
+class MockOcallSender<CONNECTION>(private val handlerConnected: HandlerConnected<CONNECTION>) : LeafSender() {
     override fun sendSerialized(serializedBuffer: ByteBuffer) {
         check(EnclaveContext.isInsideEnclave())
         ThreadLocalEnclaveContext.set(false)

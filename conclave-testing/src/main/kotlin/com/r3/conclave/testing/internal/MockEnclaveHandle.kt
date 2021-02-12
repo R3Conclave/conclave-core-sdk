@@ -13,17 +13,20 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 
 class MockEnclaveHandle<CONNECTION>(
-        private val enclave: Enclave,
-        private val isvProdId: Int,
-        private val isvSvn: Int,
-        hostHandler: Handler<CONNECTION>
+    private val enclave: Enclave,
+    private val isvProdId: Int,
+    private val isvSvn: Int,
+    hostHandler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
     companion object {
         // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
-        private val initialiseMethod = Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java).apply { isAccessible = true }
+        private val initialiseMethod =
+            Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
+                .apply { isAccessible = true }
 
         init {
-            EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }.set(null, ThreadLocalEnclaveContext)
+            EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
+                .set(null, ThreadLocalEnclaveContext)
         }
     }
 
@@ -36,7 +39,11 @@ class MockEnclaveHandle<CONNECTION>(
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
         try {
-            initialiseMethod.invoke(enclave, MockEnclaveEnvironment(enclave, isvProdId, isvSvn), sender) as HandlerConnected<*>
+            initialiseMethod.invoke(
+                enclave,
+                MockEnclaveEnvironment(enclave, isvProdId, isvSvn),
+                sender
+            ) as HandlerConnected<*>
         } catch (e: InvocationTargetException) {
             throw e.cause ?: e
         }

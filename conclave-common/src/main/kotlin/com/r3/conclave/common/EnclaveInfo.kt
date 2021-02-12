@@ -29,11 +29,11 @@ package com.r3.conclave.common
  * provides enclave security. The other two are only for testing and development purposes.
  */
 class EnclaveInfo(
-        val codeHash: SecureHash,
-        val codeSigningKeyHash: SecureHash,
-        val productID: Int,
-        val revocationLevel: Int,
-        val enclaveMode: EnclaveMode
+    val codeHash: SecureHash,
+    val codeSigningKeyHash: SecureHash,
+    val productID: Int,
+    val revocationLevel: Int,
+    val enclaveMode: EnclaveMode
 ) {
     init {
         require(productID >= 0 && productID <= 65535) { "Product ID not an unsigned 16 bit number: $productID" }

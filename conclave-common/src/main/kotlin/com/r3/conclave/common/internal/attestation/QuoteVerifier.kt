@@ -90,7 +90,7 @@ object QuoteVerifier {
     }
 
     private fun trustedRootCert(version: String): X509Certificate {
-        return when(version) {
+        return when (version) {
             "1" -> trustedRootCertV1
             "3" -> trustedRootCertV3
             else -> throw IllegalArgumentException("Invalid collateral version $version")
@@ -98,7 +98,10 @@ object QuoteVerifier {
     }
 
     // QuoteVerification/QvE/Enclave/qve.cpp:sgx_qve_verify_quote
-    fun verify(signedQuote: ByteCursor<SgxSignedQuote>, collateral: QuoteCollateral): Pair<VerificationStatus, Instant> {
+    fun verify(
+        signedQuote: ByteCursor<SgxSignedQuote>,
+        collateral: QuoteCollateral
+    ): Pair<VerificationStatus, Instant> {
         val authData = signedQuote.toEcdsaP256AuthData()
         val pckCertPath = authData[qeCertData].toPckCertPath()
 
@@ -107,12 +110,12 @@ object QuoteVerifier {
             verifyTcbInfo(collateral)
             verifyQeIdentity(collateral)
             verifyQuote(
-                    signedQuote[quote],
-                    authData,
-                    pckCertPath.x509Certs[0],
-                    collateral.pckCrl,
-                    collateral.signedTcbInfo.tcbInfo,
-                    collateral.signedQeIdentity.enclaveIdentity
+                signedQuote[quote],
+                authData,
+                pckCertPath.x509Certs[0],
+                collateral.pckCrl,
+                collateral.signedTcbInfo.tcbInfo,
+                collateral.signedQeIdentity.enclaveIdentity
             )
         } catch (e: VerificationException) {
             e.status
@@ -144,17 +147,20 @@ object QuoteVerifier {
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/QuoteVerifier.cpp:176
     private fun verifyQuote(
-            quote: ByteCursor<SgxQuote>,
-            authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>,
-            pckCert: X509Certificate,
-            pckCrl: X509CRL,
-            tcbInfo: TcbInfo,
-            qeIdentity: EnclaveIdentity
+        quote: ByteCursor<SgxQuote>,
+        authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>,
+        pckCert: X509Certificate,
+        pckCrl: X509CRL,
+        tcbInfo: TcbInfo,
+        qeIdentity: EnclaveIdentity
     ): TcbStatus {
         verify(quote[version].read() == QUOTE_VERSION, UNSUPPORTED_QUOTE_FORMAT)
 
         verify(SGX_PCK_DN == pckCert.subjectX500Principal, INVALID_PCK_CERT)
-        verify(listOf(SGX_INTERMEDIATE_DN_PLATFORM, SGX_INTERMEDIATE_DN_PROCESSOR).contains(pckCrl.issuerX500Principal), INVALID_PCK_CRL)
+        verify(
+            listOf(SGX_INTERMEDIATE_DN_PLATFORM, SGX_INTERMEDIATE_DN_PROCESSOR).contains(pckCrl.issuerX500Principal),
+            INVALID_PCK_CRL
+        )
 
         verify(pckCrl.issuerX500Principal == pckCert.issuerX500Principal, INVALID_PCK_CRL)
         verify(!pckCrl.isRevoked(pckCert), PCK_REVOKED)
@@ -173,7 +179,8 @@ object QuoteVerifier {
             MRSIGNER_MISMATCH,
             ISVPRODID_MISMATCH -> throw VerificationException(QE_IDENTITY_MISMATCH)
 
-            else -> {}
+            else -> {
+            }
         }
 
         verifyIsvReportSignature(authData, quote)
@@ -182,7 +189,10 @@ object QuoteVerifier {
         return convergeTcbStatus(tcbLevelStatus, qeIdentityStatus)
     }
 
-    private fun verifyIsvReportSignature(authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>, quote: ByteCursor<SgxQuote>) {
+    private fun verifyIsvReportSignature(
+        authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>,
+        quote: ByteCursor<SgxQuote>
+    ) {
         Signature.getInstance("SHA256withECDSA").apply {
             initVerify(authData[ecdsaAttestationKey].toPublicKey())
             update(quote.buffer)
@@ -209,7 +219,12 @@ object QuoteVerifier {
         // expected Intel's certs
         val (pckCert, intermediateCert, rootCert) = pckCertPath.x509Certs
         verify(SGX_ROOT_CA_DN == rootCert.subjectX500Principal, SGX_ROOT_CA_MISSING)
-        verify(listOf(SGX_INTERMEDIATE_DN_PLATFORM,SGX_INTERMEDIATE_DN_PROCESSOR).contains(intermediateCert.subjectX500Principal), SGX_INTERMEDIATE_CA_MISSING)
+        verify(
+            listOf(
+                SGX_INTERMEDIATE_DN_PLATFORM,
+                SGX_INTERMEDIATE_DN_PROCESSOR
+            ).contains(intermediateCert.subjectX500Principal), SGX_INTERMEDIATE_CA_MISSING
+        )
         verify(SGX_PCK_DN == pckCert.subjectX500Principal, SGX_PCK_MISSING)
 
         // CRLs are coming from collateral
@@ -226,11 +241,11 @@ object QuoteVerifier {
     private fun verifyTcbInfo(collateral: QuoteCollateral) {
         verifyTcbChain(collateral.tcbInfoIssuerChain, collateral.rootCaCrl, collateral.version)
         verifyJsonSignature(
-                collateral.rawSignedTcbInfo,
-                """{"tcbInfo":""",
-                collateral.signedTcbInfo.signature,
-                collateral.tcbInfoIssuerChain.x509Certs[0],
-                TCB_INFO_INVALID_SIGNATURE
+            collateral.rawSignedTcbInfo,
+            """{"tcbInfo":""",
+            collateral.signedTcbInfo.signature,
+            collateral.tcbInfoIssuerChain.x509Certs[0],
+            TCB_INFO_INVALID_SIGNATURE
         )
     }
 
@@ -240,23 +255,29 @@ object QuoteVerifier {
         // yes, verifyTcbChain is used to verify qeIdentityIssuerChain
         verifyTcbChain(collateral.qeIdentityIssuerChain, collateral.rootCaCrl, collateral.version)
         verifyJsonSignature(
-                collateral.rawSignedQeIdentity,
-                """{"enclaveIdentity":""",
-                collateral.signedQeIdentity.signature,
-                collateral.qeIdentityIssuerChain.x509Certs[0],
-                SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE
+            collateral.rawSignedQeIdentity,
+            """{"enclaveIdentity":""",
+            collateral.signedQeIdentity.signature,
+            collateral.qeIdentityIssuerChain.x509Certs[0],
+            SGX_ENCLAVE_IDENTITY_INVALID_SIGNATURE
         )
     }
 
-    private fun verifyJsonSignature(rawJson: String, prefix: String, rawSignature: OpaqueBytes, cert: X509Certificate, errorStatus: ErrorStatus) {
+    private fun verifyJsonSignature(
+        rawJson: String,
+        prefix: String,
+        rawSignature: OpaqueBytes,
+        cert: X509Certificate,
+        errorStatus: ErrorStatus
+    ) {
         // The documentation at https://api.portal.trustedservices.intel.com/documentation would have you believe that
         // simply removing the whitespace from the body is all that's needed to verify with the signature. However
         // JSON objects are *unordered* key/value pairs, and the encoding for any hex fields for this API accepts both
         // upper and lower case chars. So for these reasons we play it safe and verify over the body as it appears in the
         // raw JSON string.
         val body = rawJson
-                .take(rawJson.lastIndexOf("""},"signature":"""") + 1)
-                .drop(prefix.length)
+            .take(rawJson.lastIndexOf("""},"signature":"""") + 1)
+            .drop(prefix.length)
         val verifier = Signature.getInstance("SHA256withECDSA")
         verifier.initVerify(cert)
         verifier.update(body.toByteArray())
@@ -327,7 +348,10 @@ object QuoteVerifier {
     }
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/EnclaveReportVerifier.cpp:47
-    private fun verifyEnclaveReport(enclaveReportBody: ByteCursor<SgxReportBody>, enclaveIdentity: EnclaveIdentity): EnclaveReportStatus? {
+    private fun verifyEnclaveReport(
+        enclaveReportBody: ByteCursor<SgxReportBody>,
+        enclaveIdentity: EnclaveIdentity
+    ): EnclaveReportStatus? {
         // enclave report vs enclave identify json
         // (only used with QE and QE Identity, actually)
 
@@ -376,11 +400,13 @@ object QuoteVerifier {
     private fun convergeTcbStatus(tcbLevelStatus: TcbStatus, qeStatus: EnclaveReportStatus?): TcbStatus {
         if (qeStatus === ISVSVN_OUT_OF_DATE) {
             if (tcbLevelStatus === TcbStatus.UpToDate ||
-                    tcbLevelStatus === TcbStatus.SWHardeningNeeded) {
+                tcbLevelStatus === TcbStatus.SWHardeningNeeded
+            ) {
                 return TcbStatus.OutOfDate
             }
             if (tcbLevelStatus === TcbStatus.ConfigurationNeeded ||
-                    tcbLevelStatus === TcbStatus.ConfigurationAndSWHardeningNeeded) {
+                tcbLevelStatus === TcbStatus.ConfigurationAndSWHardeningNeeded
+            ) {
                 return TcbStatus.OutOfDateConfigurationNeeded
             }
         }

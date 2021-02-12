@@ -38,8 +38,8 @@ class QuoteVerifierTest {
         invalidSignedQuote[quote][version] = 99
 
         val (verificationStatus) = QuoteVerifier.verify(
-                signedQuote = invalidSignedQuote,
-                collateral = collateral
+            signedQuote = invalidSignedQuote,
+            collateral = collateral
         )
         assertThat(verificationStatus).isEqualTo(QuoteVerifier.ErrorStatus.UNSUPPORTED_QUOTE_FORMAT)
     }
@@ -53,8 +53,8 @@ class QuoteVerifierTest {
 
         val message = assertThrows<IllegalStateException> {
             QuoteVerifier.verify(
-                    signedQuote = invalidSignedQuote,
-                    collateral = collateral
+                signedQuote = invalidSignedQuote,
+                collateral = collateral
             )
         }.message
         assertThat(message).contains("Not a ECDSA-256-with-P-256 auth data.")
@@ -63,11 +63,12 @@ class QuoteVerifierTest {
     @Test
     fun `bad pck crl issuer`() {
         val (signedQuote, collateral) = loadSampleDcapAttestation()
-        val badPckCrlCollateral = collateral.copy(rawPckCrl = String(javaClass.getResourceAsStream("sample.root.crl.pem").readFully()))
+        val badPckCrlCollateral =
+            collateral.copy(rawPckCrl = String(javaClass.getResourceAsStream("sample.root.crl.pem").readFully()))
 
         val (status) = QuoteVerifier.verify(
-                signedQuote,
-                badPckCrlCollateral
+            signedQuote,
+            badPckCrlCollateral
         )
 
         assertEquals(QuoteVerifier.ErrorStatus.SGX_CRL_UNKNOWN_ISSUER, status)
@@ -77,11 +78,12 @@ class QuoteVerifierTest {
     fun `tcbinfo bad signature`() {
         val (signedQuote, collateral) = loadSampleDcapAttestation()
         val badSignedTcbInfo = collateral.signedTcbInfo.copy(signature = OpaqueBytes(Random.nextBytes(128)))
-        val badTcbInfoCollateral = collateral.copy(rawSignedTcbInfo = attestationObjectMapper.writeValueAsString(badSignedTcbInfo))
+        val badTcbInfoCollateral =
+            collateral.copy(rawSignedTcbInfo = attestationObjectMapper.writeValueAsString(badSignedTcbInfo))
 
         val (status) = QuoteVerifier.verify(
-                signedQuote,
-                badTcbInfoCollateral
+            signedQuote,
+            badTcbInfoCollateral
         )
 
         assertEquals(QuoteVerifier.ErrorStatus.TCB_INFO_INVALID_SIGNATURE, status)
@@ -95,8 +97,8 @@ class QuoteVerifierTest {
         val badTcbInfoCollateral = collateral.copy(rawSignedTcbInfo = attestationObjectMapper.writeValueAsString(bad))
 
         val (status) = QuoteVerifier.verify(
-                signedQuote,
-                badTcbInfoCollateral
+            signedQuote,
+            badTcbInfoCollateral
         )
 
         assertEquals(QuoteVerifier.ErrorStatus.TCB_INFO_INVALID_SIGNATURE, status)

@@ -50,10 +50,10 @@ object EnclaveRecycler {
  * @return a [CONNECTION] for the handler.
  */
 fun <CONNECTION> TestEnclaves.createOrGetEnclaveConnection(
-        handler: Handler<CONNECTION>,
-        enclaveClass: Class<out Enclave>,
-        enclaveBuilder: EnclaveBuilder = EnclaveBuilder(),
-        keyGenInput: String? = null
+    handler: Handler<CONNECTION>,
+    enclaveClass: Class<out Enclave>,
+    enclaveBuilder: EnclaveBuilder = EnclaveBuilder(),
+    keyGenInput: String? = null
 ): CONNECTION {
     val key = "$handler$enclaveClass${keyGenInput ?: ""}"
     var handlerConnected = EnclaveRecycler.enclaveCache[key]
@@ -61,19 +61,19 @@ fun <CONNECTION> TestEnclaves.createOrGetEnclaveConnection(
         (handlerConnected.handler as? Closeable)?.close()
     } else { // Create enclave if not.
         val enclaveFile = this.getSignedEnclaveFile(
-                entryClass = enclaveClass,
-                builder = enclaveBuilder,
-                keyGenInput = keyGenInput
+            entryClass = enclaveClass,
+            builder = enclaveBuilder,
+            keyGenInput = keyGenInput
         ).toPath()
         handlerConnected = HandlerConnected(
-                handler = handler,
-                connection = NativeEnclaveHandle(
-                        EnclaveMode.SIMULATION,
-                        enclaveFile,
-                        false,
-                        enclaveClass.name,
-                        handler
-                ).connection
+            handler = handler,
+            connection = NativeEnclaveHandle(
+                EnclaveMode.SIMULATION,
+                enclaveFile,
+                false,
+                enclaveClass.name,
+                handler
+            ).connection
         )
         EnclaveRecycler.enclaveCache[key] = handlerConnected
     }

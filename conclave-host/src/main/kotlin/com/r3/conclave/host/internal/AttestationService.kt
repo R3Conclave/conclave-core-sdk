@@ -3,7 +3,8 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxSignedQuote
-import com.r3.conclave.common.internal.attestation.*
+import com.r3.conclave.common.internal.attestation.Attestation
+import com.r3.conclave.common.internal.attestation.HardwareAttestation
 
 /**
  * A service which asserts the validity of an enclave by attesting to its [SgxSignedQuote]. The result is a [Attestation]

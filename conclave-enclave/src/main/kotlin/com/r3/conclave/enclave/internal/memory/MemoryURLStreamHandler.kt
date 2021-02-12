@@ -4,7 +4,10 @@ import com.r3.conclave.common.internal.ByteBufferInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
-import java.net.*
+import java.net.MalformedURLException
+import java.net.URL
+import java.net.URLConnection
+import java.net.URLStreamHandler
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.zip.ZipInputStream
@@ -123,7 +126,8 @@ class MemoryURLStreamHandler(val scheme: String) : URLStreamHandler() {
         }
 
         override fun setDoOutput(doOutput: Boolean) = throw UnsupportedOperationException("Output not supported")
-        override fun setAllowUserInteraction(allowUserInterfaction: Boolean) = throw UnsupportedOperationException("User interaction not supported")
+        override fun setAllowUserInteraction(allowUserInterfaction: Boolean) =
+            throw UnsupportedOperationException("User interaction not supported")
 
         private inner class ConnectionHandler : InputStream() {
             @Volatile

@@ -3,7 +3,6 @@ package com.r3.conclave.common.internal.handler
 import com.r3.conclave.common.internal.SerializeException
 import com.r3.conclave.utilities.internal.getBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
-import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 
 /**
@@ -11,7 +10,7 @@ import java.nio.ByteBuffer
  *
  * If an exception is received [onError] is called.
  */
-abstract class ErrorHandler: Handler<ErrorHandler.Connection> {
+abstract class ErrorHandler : Handler<ErrorHandler.Connection> {
     /** Handle an error raised and sent from the other side */
     abstract fun onError(throwable: Throwable)
 

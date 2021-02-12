@@ -26,7 +26,7 @@ interface HardwareTest {
                     AttestationParameters.DCAP()
                 }
                 else -> throw UnsupportedOperationException(
-                        "SGX does not appear to be available on this machine. Check kernel drivers."
+                    "SGX does not appear to be available on this machine. Check kernel drivers."
                 )
             }
         }

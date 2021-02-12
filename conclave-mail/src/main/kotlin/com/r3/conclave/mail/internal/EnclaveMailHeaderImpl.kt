@@ -12,10 +12,10 @@ import java.util.*
  * required, if the destination is an enclave.
  */
 data class EnclaveMailHeaderImpl(
-        override val sequenceNumber: Long,
-        override val topic: String,
-        override val envelope: ByteArray?,
-        val keyDerivation: ByteArray?
+    override val sequenceNumber: Long,
+    override val topic: String,
+    override val envelope: ByteArray?,
+    val keyDerivation: ByteArray?
 ) : EnclaveMailHeader {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

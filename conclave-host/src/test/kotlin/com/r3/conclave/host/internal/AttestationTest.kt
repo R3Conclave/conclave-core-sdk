@@ -38,7 +38,9 @@ abstract class AttestationTest {
     fun start() {
         enclaveHost.start(attestationParameters, null)
         assertThat(enclaveHost.enclaveMode).isEqualTo(expectedEnclaveMode)
-        assertThat((enclaveHost.enclaveInstanceInfo as EnclaveInstanceInfoImpl).attestation).isInstanceOf(expectedAttestationType)
+        assertThat((enclaveHost.enclaveInstanceInfo as EnclaveInstanceInfoImpl).attestation).isInstanceOf(
+            expectedAttestationType
+        )
     }
 
     @AfterEach
@@ -57,9 +59,10 @@ abstract class AttestationTest {
         val serialised = enclaveHost.enclaveInstanceInfo.serialize()
         for (truncatedSize in serialised.indices) {
             val truncated = serialised.copyOf(truncatedSize)
-            val thrownBy = assertThatIllegalArgumentException().describedAs("Truncated size $truncatedSize").isThrownBy {
-                EnclaveInstanceInfo.deserialize(truncated)
-            }
+            val thrownBy =
+                assertThatIllegalArgumentException().describedAs("Truncated size $truncatedSize").isThrownBy {
+                    EnclaveInstanceInfo.deserialize(truncated)
+                }
             if (truncatedSize > 3) {
                 thrownBy.withMessage("Truncated EnclaveInstanceInfo bytes")
             } else {
@@ -96,7 +99,8 @@ class HardwareAttestationTest : HardwareTest, AttestationTest() {
     override val expectedAttestationType: Class<out Attestation>
         get() = if (attestationParameters is AttestationParameters.EPID) EpidAttestation::class.java else DcapAttestation::class.java
 
-    override val enclaveHost: EnclaveHost = testEnclaves.hostTo(EnclaveInstanceInfoEnclave::class.java, EnclaveBuilder(type = EnclaveType.Debug))
+    override val enclaveHost: EnclaveHost =
+        testEnclaves.hostTo(EnclaveInstanceInfoEnclave::class.java, EnclaveBuilder(type = EnclaveType.Debug))
 }
 
 abstract class MockAttestationTest : AttestationTest() {

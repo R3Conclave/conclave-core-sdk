@@ -21,6 +21,7 @@ class EnclaveHostMockTest {
     fun `make sure the host is not leaking any callbacks`() {
         if (checkLeakedCallbacks && ::host.isInitialized) {
             val enclaveCallHandler = host.field("enclaveMessageHandler", EnclaveHost::class.java)
+
             @Suppress("UNCHECKED_CAST")
             val enclaveCalls = (enclaveCallHandler.field("threadIDToTransaction") as Map<Long, Any>).values.map {
                 it.javaClass.getDeclaredField("stateManager").also { it.isAccessible = true }.get(it) as StateManager<*>
@@ -33,6 +34,7 @@ class EnclaveHostMockTest {
     fun `make sure the enclave is not leaking any callbacks`() {
         if (checkLeakedCallbacks && ::host.isInitialized) {
             val enclaveCallHandler = host.enclave.field("enclaveMessageHandler", Enclave::class.java)
+
             @Suppress("UNCHECKED_CAST")
             val enclaveCalls = enclaveCallHandler.field("enclaveCalls") as Map<Long, StateManager<*>>
             // Check the only callbacks remaining are the ones to the enclave's receiveFromUntrustedHost, which is the
@@ -196,7 +198,8 @@ class EnclaveHostMockTest {
         host.start(null, null)
         assertThatIllegalStateException().isThrownBy {
             host.callEnclave(byteArrayOf(1)) { fromEnclave -> host.callEnclave(fromEnclave + 3) }
-        }.withMessage("The enclave has not provided a callback to callUntrustedHost to receive the host's call back in.")
+        }
+            .withMessage("The enclave has not provided a callback to callUntrustedHost to receive the host's call back in.")
     }
 
     @Test
@@ -371,7 +374,7 @@ class EnclaveHostMockTest {
     class PrivateCtorEnclave private constructor() : Enclave()
 
     @ParameterizedTest
-    @ValueSource(strings = [ "PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()" ])
+    @ValueSource(strings = ["PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()"])
     fun `cannot create PostOffice directly when inside enclave`(source: String) {
         class CreatePostOfficeEnclave : Enclave() {
             override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
@@ -391,8 +394,8 @@ class EnclaveHostMockTest {
 
         // But not while inside
         assertThatIllegalStateException()
-                .isThrownBy { host.callEnclave(source.toByteArray()) }
-                .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
+            .isThrownBy { host.callEnclave(source.toByteArray()) }
+            .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
 
         host.enclaveInstanceInfo.createPostOffice()
     }

@@ -25,7 +25,7 @@ object Native {
      *     uint32_t sig_rl_size,
      *     uint32_t* p_quote_size
      * );
-    */
+     */
     external fun calcQuoteSize(signatureRevocationListIn: ByteArray?): Int
 
     /**
@@ -42,32 +42,32 @@ object Native {
      * );
      */
     external fun getQuote(
-            getQuoteRequestIn: ByteArray,
-            signatureRevocationListIn: ByteArray?,
-            quotingEnclaveReportNonceIn: ByteArray?,
-            quotingEnclaveReportOut: ByteArray?,
-            quoteOut: ByteArray
+        getQuoteRequestIn: ByteArray,
+        signatureRevocationListIn: ByteArray?,
+        quotingEnclaveReportNonceIn: ByteArray?,
+        quotingEnclaveReportOut: ByteArray?,
+        quoteOut: ByteArray
     )
 
 
-/*
-    // these are only used internally for quote verification
-    enum class PckCaType {
-        Processor,
-        Platform
-    }
+    /*
+        // these are only used internally for quote verification
+        enum class PckCaType {
+            Processor,
+            Platform
+        }
 
-    enum class CollateralType {
-        Version,
-        PckCrlIssuerChain,
-        RootCaCrl,
-        PckCrl,
-        TcbInfoIssuerChain,
-        TcbInfo,
-        QeIdentityIssuerChain,
-        QeIdentity
-    }
-*/
+        enum class CollateralType {
+            Version,
+            PckCrlIssuerChain,
+            RootCaCrl,
+            PckCrl,
+            TcbInfoIssuerChain,
+            TcbInfo,
+            QeIdentityIssuerChain,
+            QeIdentity
+        }
+    */
     external fun initQuoteDCAP(bundlePath: String, initQuoteResponseOut: ByteArray): Int // 0 --> OK
     external fun calcQuoteSizeDCAP(): Int  // > 0 --> OK
     external fun getQuoteDCAP(quoteRequestIn: ByteArray, quoteOut: ByteArray): Int // 0 --> OK
@@ -75,8 +75,8 @@ object Native {
 
     // SgxMetadata
     external fun getMetadata(
-            enclavePath: String,
-            metadataOut: ByteArray
+        enclavePath: String,
+        metadataOut: ByteArray
     )
 
     external fun getCpuCapabilitiesSummary(): String

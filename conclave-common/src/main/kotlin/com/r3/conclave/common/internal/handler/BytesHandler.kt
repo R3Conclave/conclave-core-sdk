@@ -11,6 +11,7 @@ abstract class BytesHandler : Handler<BytesHandler.Connection> {
     final override fun connect(upstream: Sender): Connection {
         return Connection(upstream)
     }
+
     class Connection(val upstream: Sender) {
         fun send(bytes: ByteBuffer) {
             upstream.send(bytes.remaining(), Consumer { buffer ->

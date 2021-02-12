@@ -15,8 +15,8 @@ object BuildEnclaveJar {
         }
 
         val classLocations = (includeClasses + entryClass)
-                .mapNotNull { it.protectionDomain.codeSource?.location?.let { Paths.get(it.toURI()) } }
-                .toSet()
+            .mapNotNull { it.protectionDomain.codeSource?.location?.let { Paths.get(it.toURI()) } }
+            .toSet()
 
         // Add the additional classes without extracting the contents by opening it as a zip "file system".
         val jarUri = URI.create("jar:${outputJarFile.toUri()}")

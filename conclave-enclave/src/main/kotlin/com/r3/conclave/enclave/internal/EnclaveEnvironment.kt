@@ -12,7 +12,10 @@ interface EnclaveEnvironment {
      * attestation. An example is during quoting when the report is sent to the Quoting Enclave for signing.
      * @param reportData Optional data to be included in the report. If null the data area of the report will be 0.
      */
-    fun createReport(targetInfo: ByteCursor<SgxTargetInfo>?, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport>
+    fun createReport(
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxReport>
 
     /**
      * Fill [output] with indices in ([offset], [offset] + [length]) with random bytes.

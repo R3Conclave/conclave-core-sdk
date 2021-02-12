@@ -20,9 +20,9 @@ import java.security.PublicKey
 import java.security.Signature
 
 class EnclaveInstanceInfoImpl(
-        override val dataSigningKey: PublicKey,
-        override val encryptionKey: Curve25519PublicKey,
-        val attestation: Attestation
+    override val dataSigningKey: PublicKey,
+    override val encryptionKey: Curve25519PublicKey,
+    val attestation: Attestation
 ) : EnclaveInstanceInfo {
     override val enclaveInfo: EnclaveInfo
     override val securityInfo: SGXEnclaveSecurityInfo
@@ -37,18 +37,18 @@ class EnclaveInstanceInfoImpl(
         }
 
         enclaveInfo = EnclaveInfo(
-                codeHash = SHA256Hash.get(reportBody[mrenclave].read()),
-                codeSigningKeyHash = SHA256Hash.get(reportBody[mrsigner].read()),
-                productID = reportBody[isvProdId].read(),
-                revocationLevel = reportBody[isvSvn].read() - 1,
-                enclaveMode = attestation.enclaveMode
+            codeHash = SHA256Hash.get(reportBody[mrenclave].read()),
+            codeSigningKeyHash = SHA256Hash.get(reportBody[mrsigner].read()),
+            productID = reportBody[isvProdId].read(),
+            revocationLevel = reportBody[isvSvn].read() - 1,
+            enclaveMode = attestation.enclaveMode
         )
 
         securityInfo = SGXEnclaveSecurityInfo(
-                summary = attestation.securitySummary,
-                reason = attestation.securityReason,
-                timestamp = attestation.timestamp,
-                cpuSVN = OpaqueBytes(reportBody[cpuSvn].bytes)
+            summary = attestation.securitySummary,
+            reason = attestation.securityReason,
+            timestamp = attestation.timestamp,
+            cpuSVN = OpaqueBytes(reportBody[cpuSvn].bytes)
         )
     }
 
@@ -109,7 +109,8 @@ class EnclaveInstanceInfoImpl(
           - ${securityInfo.reason}
     """.trimIndent()
 
-    private inner class EIIPostOffice(senderPrivateKey: PrivateKey, topic: String) : PostOffice(senderPrivateKey, topic) {
+    private inner class EIIPostOffice(senderPrivateKey: PrivateKey, topic: String) :
+        PostOffice(senderPrivateKey, topic) {
         override val destinationPublicKey: PublicKey get() = this@EnclaveInstanceInfoImpl.encryptionKey
         override val keyDerivation: ByteArray get() = this@EnclaveInstanceInfoImpl.keyDerivation
     }

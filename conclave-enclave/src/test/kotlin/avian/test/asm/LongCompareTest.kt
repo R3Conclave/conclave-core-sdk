@@ -138,10 +138,13 @@ class LongCompareTest {
         }
     }
 
-    private class ClassVisitorImpl(apiVersion: Int, classVisitor: ClassVisitor) : ClassVisitor(apiVersion, classVisitor) {
+    private class ClassVisitorImpl(apiVersion: Int, classVisitor: ClassVisitor) :
+        ClassVisitor(apiVersion, classVisitor) {
 
-        override fun visitMethod(access: Int, name: String, desc: String,
-                                 signature: String?, exceptions: Array<out String>?): MethodVisitor? {
+        override fun visitMethod(
+            access: Int, name: String, desc: String,
+            signature: String?, exceptions: Array<out String>?
+        ): MethodVisitor? {
             return if (name == "compare") {
                 val methodVisitor = cv.visitMethod(access, name, desc, signature, exceptions)
                 MethodVisitorImpl(API_VERSION, methodVisitor)
@@ -151,8 +154,8 @@ class LongCompareTest {
         }
     }
 
-    private class MethodVisitorImpl(apiVersion: Int, private val methodVisitor: MethodVisitor)
-        : MethodVisitor(apiVersion, null) {
+    private class MethodVisitorImpl(apiVersion: Int, private val methodVisitor: MethodVisitor) :
+        MethodVisitor(apiVersion, null) {
 
         override fun visitCode() {
             methodVisitor.visitCode()

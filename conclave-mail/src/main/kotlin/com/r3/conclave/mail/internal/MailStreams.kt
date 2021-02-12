@@ -3,7 +3,10 @@ package com.r3.conclave.mail.internal
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
-import com.r3.conclave.mail.internal.noise.protocol.*
+import com.r3.conclave.mail.internal.noise.protocol.CipherState
+import com.r3.conclave.mail.internal.noise.protocol.CipherStatePair
+import com.r3.conclave.mail.internal.noise.protocol.HandshakeState
+import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readExactlyNBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -58,14 +61,15 @@ private fun ByteArray.readShort(offset: Int): Int {
  * @param minSize              Pad the end of the stream to make sure the number of encrypted bytes is at least this amount.
  */
 class MailEncryptingStream(
-        out: OutputStream,
-        private val destinationPublicKey: PublicKey,
-        private val header: EnclaveMailHeaderImpl,
-        private val senderPrivateKey: PrivateKey,
-        private val minSize: Int
+    out: OutputStream,
+    private val destinationPublicKey: PublicKey,
+    private val header: EnclaveMailHeaderImpl,
+    private val senderPrivateKey: PrivateKey,
+    private val minSize: Int
 ) : FilterOutputStream(out) {
     companion object {
         internal const val MAX_PACKET_PLAINTEXT_LENGTH = Noise.MAX_PACKET_LEN - 16
+
         // The payload defined as the user bytes plus any padding of zeros. It does not include the length of the user
         // bytes, even though that is encrypted with the payload.
         internal const val MAX_PACKET_PAYLOAD_LENGTH = MAX_PACKET_PLAINTEXT_LENGTH - 2
@@ -241,8 +245,8 @@ class MailEncryptingStream(
  * Marks are not supported by this stream.
  */
 class MailDecryptingStream(
-        input: InputStream,
-        private var privateKey: PrivateKey? = null
+    input: InputStream,
+    private var privateKey: PrivateKey? = null
 ) : FilterInputStream(input) {
     private var cipherState: CipherState? = null
 
@@ -256,10 +260,11 @@ class MailDecryptingStream(
      * Returns the authenticated public key of the sender. This may be useful to understand who sent you the
      * data, if you know the sender's possible public keys in advance.
      */
-    val senderPublicKey: ByteArray get() {
-        maybeHandshake()
-        return _senderPublicKey
-    }
+    val senderPublicKey: ByteArray
+        get() {
+            maybeHandshake()
+            return _senderPublicKey
+        }
 
     // We have a separate flag to track whether the private key has been provided or not because we want to be able to
     // clear the key as soon as it's not needed.
@@ -295,40 +300,42 @@ class MailDecryptingStream(
     private class Prologue(val protocol: MailProtocol, val header: EnclaveMailHeaderImpl, val raw: ByteArray)
 
     private var _prologue: Prologue? = null
+
     /**
      * Access to the prologue data, without performing any authentication checks. To verify the prologue wasn't
      * tampered with you must complete the Noise handshake.
      */
-    private val prologue: Prologue get() {
-        _prologue?.let { return it }
-        // The prologue is accessed on first read() (if not before) and so this will always be reading from the beginning
-        // of the stream.
-        //
-        // See computePrologue for the format.
-        val prologueBytes = try {
-            readLengthPrefixBytes()
-        } catch (e: EOFException) {
-            error("Premature end of stream whilst reading the prologue", e)
-        }
-        val prologueStream = prologueBytes.dataStream()
-        val prologue = try {
-            val protocolId = prologueStream.readUnsignedByte()
-            if (protocolId >= protocolValues.size) {
-                error("Invalid protocol ID $protocolId")
+    private val prologue: Prologue
+        get() {
+            _prologue?.let { return it }
+            // The prologue is accessed on first read() (if not before) and so this will always be reading from the beginning
+            // of the stream.
+            //
+            // See computePrologue for the format.
+            val prologueBytes = try {
+                readLengthPrefixBytes()
+            } catch (e: EOFException) {
+                error("Premature end of stream whilst reading the prologue", e)
             }
-            val protocol: MailProtocol = protocolValues[protocolId]
-            val sequenceNumber = prologueStream.readLong()
-            val topic = prologueStream.readUTF()
-            val envelope = prologueStream.readLengthPrefixBytes()
-            val keyDerivation = prologueStream.readLengthPrefixBytes()
-            val header = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation)
-            Prologue(protocol, header, prologueBytes)
-        } catch (e: EOFException) {
-            error("Truncated prologue", e)
+            val prologueStream = prologueBytes.dataStream()
+            val prologue = try {
+                val protocolId = prologueStream.readUnsignedByte()
+                if (protocolId >= protocolValues.size) {
+                    error("Invalid protocol ID $protocolId")
+                }
+                val protocol: MailProtocol = protocolValues[protocolId]
+                val sequenceNumber = prologueStream.readLong()
+                val topic = prologueStream.readUTF()
+                val envelope = prologueStream.readLengthPrefixBytes()
+                val keyDerivation = prologueStream.readLengthPrefixBytes()
+                val header = EnclaveMailHeaderImpl(sequenceNumber, topic, envelope, keyDerivation)
+                Prologue(protocol, header, prologueBytes)
+            } catch (e: EOFException) {
+                error("Truncated prologue", e)
+            }
+            _prologue = prologue
+            return prologue
         }
-        _prologue = prologue
-        return prologue
-    }
 
     private fun DataInputStream.readLengthPrefixBytes(): ByteArray? {
         val size = readUnsignedShort()
@@ -471,7 +478,8 @@ class MailDecryptingStream(
     }
 
     private fun setupHandshake(prologue: Prologue): HandshakeState {
-        val privateKey = this.privateKey ?: throw IOException("Private key has not been provided to decrypt the stream.")
+        val privateKey =
+            this.privateKey ?: throw IOException("Private key has not been provided to decrypt the stream.")
         val handshake = HandshakeState(prologue.protocol.noiseProtocolName, HandshakeState.RESPONDER)
         val localKeyPair = handshake.localKeyPair
         localKeyPair.setPrivateKey(privateKey.encoded, 0)
@@ -515,20 +523,20 @@ class MailDecryptingStream(
         setPrivateKey(privateKey)
         val mailBody = readBytes()
         return DecryptedEnclaveMail(
-                header.sequenceNumber,
-                header.topic,
-                Curve25519PublicKey(senderPublicKey),
-                header.envelope,
-                mailBody
+            header.sequenceNumber,
+            header.topic,
+            Curve25519PublicKey(senderPublicKey),
+            header.envelope,
+            mailBody
         )
     }
 
     private class DecryptedEnclaveMail(
-            override val sequenceNumber: Long,
-            override val topic: String,
-            override val authenticatedSender: PublicKey,
-            private val _envelope: ByteArray?,
-            private val _bodyAsBytes: ByteArray
+        override val sequenceNumber: Long,
+        override val topic: String,
+        override val authenticatedSender: PublicKey,
+        private val _envelope: ByteArray?,
+        private val _bodyAsBytes: ByteArray
     ) : EnclaveMail {
         override val envelope: ByteArray? get() = _envelope?.clone()
         override val bodyAsBytes: ByteArray get() = _bodyAsBytes.clone()
@@ -554,17 +562,17 @@ class MailDecryptingStream(
 // winning algorithms at that time, rather than attempt to second guess and end up with (relatively speaking)
 // not well reviewed algorithms baked into the protocol.
 enum class MailProtocol(
-        val noiseProtocolName: String,
-        /**
-         * Returns how many bytes a Noise handshake for the given protocol name requires. These numbers come from the sizes
-         * needed for the ephemeral Curve25519 public keys, AES/GCM MAC tags and encrypted static keys.
-         *
-         * For example: 48 == 32 (pubkey) + 16 (mac of an empty encrypted block)
-         *
-         * When no payload is specified Noise uses encryptions of the empty block (i.e. only the authentication hash tag is
-         * emitted) as a way to authenticate the handshake so far.
-         */
-        val handshakeLength: Int
+    val noiseProtocolName: String,
+    /**
+     * Returns how many bytes a Noise handshake for the given protocol name requires. These numbers come from the sizes
+     * needed for the ephemeral Curve25519 public keys, AES/GCM MAC tags and encrypted static keys.
+     *
+     * For example: 48 == 32 (pubkey) + 16 (mac of an empty encrypted block)
+     *
+     * When no payload is specified Noise uses encryptions of the empty block (i.e. only the authentication hash tag is
+     * emitted) as a way to authenticate the handshake so far.
+     */
+    val handshakeLength: Int
 ) {
     SENDER_KEY_TRANSMITTED("Noise_X_25519_AESGCM_SHA256", 96),
 }

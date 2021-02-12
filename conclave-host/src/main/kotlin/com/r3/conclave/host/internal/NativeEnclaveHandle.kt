@@ -11,11 +11,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 class NativeEnclaveHandle<CONNECTION>(
-        override val enclaveMode: EnclaveMode,
-        private val enclaveFile: Path,
-        private val tempFile: Boolean,
-        override val enclaveClassName: String,
-        handler: Handler<CONNECTION>
+    override val enclaveMode: EnclaveMode,
+    private val enclaveFile: Path,
+    private val tempFile: Boolean,
+    override val enclaveClassName: String,
+    handler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
     private val enclaveId: Long
     override val connection: CONNECTION = handler.connect(this)

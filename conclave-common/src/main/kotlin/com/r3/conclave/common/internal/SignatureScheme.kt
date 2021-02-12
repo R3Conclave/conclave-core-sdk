@@ -7,11 +7,11 @@ import java.security.spec.AlgorithmParameterSpec
  * Specify some attributes of a signature algorithms
  */
 data class SignatureSchemeSpec(
-        val schemeCodeName: String,
-        val providerName: String,
-        val algorithmName: String,
-        val algSpec: AlgorithmParameterSpec?,
-        val keySize: Int?
+    val schemeCodeName: String,
+    val providerName: String,
+    val algorithmName: String,
+    val algSpec: AlgorithmParameterSpec?,
+    val keySize: Int?
 )
 
 /**

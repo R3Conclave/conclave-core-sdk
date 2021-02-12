@@ -24,9 +24,9 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
-        private val enclave: Enclave,
-        private val isvProdId: Int = 1,
-        private val isvSvn: Int = 1
+    private val enclave: Enclave,
+    private val isvProdId: Int = 1,
+    private val isvSvn: Int = 1
 ) : EnclaveEnvironment {
     companion object {
         private const val IV_SIZE = 12
@@ -73,11 +73,12 @@ class MockEnclaveEnvironment(
         }
 
         // All enclaves share the same CPUSVN.
-        private val currentCpuSvn: ByteArray get() {
-            return synchronized(platformCpuSvnHistory) {
-                platformCpuSvnHistory.last
+        private val currentCpuSvn: ByteArray
+            get() {
+                return synchronized(platformCpuSvnHistory) {
+                    platformCpuSvnHistory.last
+                }
             }
-        }
     }
 
     private val mrenclave = digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
@@ -89,7 +90,10 @@ class MockEnclaveEnvironment(
     override val enclaveMode: EnclaveMode
         get() = EnclaveMode.MOCK
 
-    override fun createReport(targetInfo: ByteCursor<SgxTargetInfo>?, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport> {
+    override fun createReport(
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxReport> {
         val report = Cursor.allocate(SgxReport)
         val body = report[body]
         if (reportData != null) {
@@ -118,7 +122,9 @@ class MockEnclaveEnvironment(
         val iv = ByteArray(IV_SIZE).also(secureRandom::nextBytes)
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(TAG_SIZE * 8, iv))
         val authenticatedData = toBeSealed.authenticatedData
-        val sealedBlob = ByteBuffer.allocate(IV_SIZE + Int.SIZE_BYTES + (authenticatedData?.size ?: 0) + toBeSealed.plaintext.size + TAG_SIZE)
+        val sealedBlob = ByteBuffer.allocate(
+            IV_SIZE + Int.SIZE_BYTES + (authenticatedData?.size ?: 0) + toBeSealed.plaintext.size + TAG_SIZE
+        )
         sealedBlob.put(iv)
         if (authenticatedData != null) {
             cipher.updateAAD(authenticatedData.buffer())

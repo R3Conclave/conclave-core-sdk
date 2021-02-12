@@ -24,23 +24,28 @@ class MailStreamsTest {
         private val senderPrivateKey = Curve25519PrivateKey.random()
         private val receivingPrivateKey = Curve25519PrivateKey.random()
 
-        private val header = EnclaveMailHeaderImpl(sequenceNumber = 1, topic = "topic", envelope = Random.nextBytes(10), keyDerivation = null)
+        private val header = EnclaveMailHeaderImpl(
+            sequenceNumber = 1,
+            topic = "topic",
+            envelope = Random.nextBytes(10),
+            keyDerivation = null
+        )
         private val msg = "Hello, can you hear me?".toByteArray()
 
         @JvmStatic
         val dataSizes = intArrayOf(
-                0,
-                1,
-                MAX_PACKET_PAYLOAD_LENGTH - 1,
-                MAX_PACKET_PAYLOAD_LENGTH + 0,
-                MAX_PACKET_PAYLOAD_LENGTH + 1,
-                MAX_PACKET_PLAINTEXT_LENGTH + 0,
-                MAX_PACKET_PLAINTEXT_LENGTH + 1,
-                Noise.MAX_PACKET_LEN - 1,
-                Noise.MAX_PACKET_LEN + 0,
-                Noise.MAX_PACKET_LEN + 1,
-                2 * MAX_PACKET_PAYLOAD_LENGTH,
-                50 * 1024 * 1024,
+            0,
+            1,
+            MAX_PACKET_PAYLOAD_LENGTH - 1,
+            MAX_PACKET_PAYLOAD_LENGTH + 0,
+            MAX_PACKET_PAYLOAD_LENGTH + 1,
+            MAX_PACKET_PLAINTEXT_LENGTH + 0,
+            MAX_PACKET_PLAINTEXT_LENGTH + 1,
+            Noise.MAX_PACKET_LEN - 1,
+            Noise.MAX_PACKET_LEN + 0,
+            Noise.MAX_PACKET_LEN + 1,
+            2 * MAX_PACKET_PAYLOAD_LENGTH,
+            50 * 1024 * 1024,
         )
     }
 
@@ -152,9 +157,9 @@ class MailStreamsTest {
         for (truncatedSize in bytes.indices) {
             val truncated = bytes.copyOf(truncatedSize)
             assertThatIOException()
-                    .describedAs("Truncated size $truncatedSize")
-                    .isThrownBy { decrypt(truncated) }
-                    .withMessageContaining("Corrupt stream or not Conclave Mail.")
+                .describedAs("Truncated size $truncatedSize")
+                .isThrownBy { decrypt(truncated) }
+                .withMessageContaining("Corrupt stream or not Conclave Mail.")
         }
     }
 
@@ -181,8 +186,10 @@ class MailStreamsTest {
     @Test
     fun headers() {
         val encrypted = encryptMessage()
-        assertNotEquals(-1, String(encrypted).indexOf(header.topic),
-                "Could not locate the unencrypted header data in the output bytes.")
+        assertNotEquals(
+            -1, String(encrypted).indexOf(header.topic),
+            "Could not locate the unencrypted header data in the output bytes."
+        )
         val stream = decrypt(encrypted)
         assertThat(stream.header).isEqualTo(header)
     }
@@ -235,10 +242,12 @@ class MailStreamsTest {
         assertThat(stream.header).isEqualTo(header)
     }
 
-    private fun encryptMessage(senderPrivateKey: PrivateKey = Companion.senderPrivateKey,
-                               header: EnclaveMailHeaderImpl = Companion.header,
-                               minSize: Int = 0,
-                               message: ByteArray = msg): ByteArray {
+    private fun encryptMessage(
+        senderPrivateKey: PrivateKey = Companion.senderPrivateKey,
+        header: EnclaveMailHeaderImpl = Companion.header,
+        minSize: Int = 0,
+        message: ByteArray = msg
+    ): ByteArray {
         val baos = ByteArrayOutputStream()
         val encrypt = MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, senderPrivateKey, minSize)
         encrypt.write(message)

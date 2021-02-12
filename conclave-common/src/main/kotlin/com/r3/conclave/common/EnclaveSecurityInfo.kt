@@ -28,6 +28,7 @@ sealed class EnclaveSecurityInfo(val summary: Summary, val reason: String, val t
          *    this version of the technology.
          */
         INSECURE,
+
         /**
          * There is a software/firmware/microcode update available for the
          * platform that improves security in some way. The client may wish
@@ -35,6 +36,7 @@ sealed class EnclaveSecurityInfo(val summary: Summary, val reason: String, val t
          * in which the remote enclave operator must upgrade.
          */
         STALE,
+
         /**
          * The remote platform is up to date and considered secure against
          * known attacks.
@@ -52,10 +54,10 @@ sealed class EnclaveSecurityInfo(val summary: Summary, val reason: String, val t
  * they are of equal security, but not order them relative to each other.
  */
 class SGXEnclaveSecurityInfo(
-        summary: Summary,
-        reason: String,
-        timestamp: Instant,
-        val cpuSVN: OpaqueBytes
+    summary: Summary,
+    reason: String,
+    timestamp: Instant,
+    val cpuSVN: OpaqueBytes
 ) : EnclaveSecurityInfo(summary, reason, timestamp) {
     override fun toString(): String {
         return "SGXEnclaveSecurityInfo(summary=$summary, reason=$reason, timestamp=$timestamp, cpuSVM=$cpuSVN)"

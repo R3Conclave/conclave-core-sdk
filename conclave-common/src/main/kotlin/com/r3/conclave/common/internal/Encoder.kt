@@ -95,9 +95,11 @@ abstract class Struct : AbstractStruct, ByteBufferEncoder() {
 
     private inner class Field<in S : Struct, T : FixedEncoder<*>>(override val type: T) : AbstractStruct.Field<S, T> {
         private val offset = structSize
+
         init {
             structSize += type.size
         }
+
         override fun align(buffer: ByteBuffer) {
             buffer.addPosition(offset)
         }
@@ -114,7 +116,8 @@ abstract class VariableStruct : AbstractStruct, VariableEncoder<ByteBuffer>() {
     private var fieldEncoders: MutableList<Encoder<*>>? = null
     private var structMinSize = 0
 
-    private inner class Field<in S : VariableStruct, T : Encoder<*>>(override val type: T) : AbstractStruct.Field<S, T> {
+    private inner class Field<in S : VariableStruct, T : Encoder<*>>(override val type: T) :
+        AbstractStruct.Field<S, T> {
         private val fixedOffset = startingFixedSize
         private val encodersIndex = fieldEncoders?.size ?: -1
 
@@ -172,10 +175,12 @@ abstract class VariableBytes : VariableEncoder<ByteBuffer>() {
         val size = getSizeRelative(buffer)
         buffer.addPosition(size)
     }
+
     final override fun read(buffer: ByteBuffer): ByteBuffer {
         val size = getSizeRelative(buffer)
         return buffer.getSlice(size).asReadOnlyBuffer()
     }
+
     protected abstract fun getSizeRelative(buffer: ByteBuffer): Int
     protected abstract fun getSizeAbsolute(buffer: ByteBuffer): Int
 }
@@ -234,6 +239,7 @@ class ReservedBytes(override val size: Int) : FixedEncoder<ByteBuffer>() {
     init {
         require(size >= 0) { size }
     }
+
     override fun read(buffer: ByteBuffer): ByteBuffer = buffer.getSlice(size).asReadOnlyBuffer()
     override fun write(buffer: ByteBuffer, value: ByteBuffer): ByteBuffer {
         throw UnsupportedOperationException("Cannot write to reserved area")
@@ -247,6 +253,7 @@ interface EnumEncoder<R> {
 abstract class Enum32 : Int32(), EnumEncoder<Int> {
     final override val values: Map<String, Int> by lazy { values(this) }
 }
+
 abstract class Enum16 : UInt16(), EnumEncoder<Int> {
     final override val values: Map<String, Int> by lazy { values(this) }
 }

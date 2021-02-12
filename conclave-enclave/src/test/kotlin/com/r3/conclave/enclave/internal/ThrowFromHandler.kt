@@ -1,12 +1,16 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.common.internal.handler.ErrorHandler
+import com.r3.conclave.common.internal.handler.Handler
+import com.r3.conclave.common.internal.handler.Sender
+import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
 import java.nio.ByteBuffer
 
 /**
  * A [Handler] that throws errors if they happen in downstream handlers.
  */
-class ThrowFromHandler<CONNECTION>(private val handler: Handler<CONNECTION>) : Handler<ThrowFromHandler<CONNECTION>.Connection> {
+class ThrowFromHandler<CONNECTION>(private val handler: Handler<CONNECTION>) :
+    Handler<ThrowFromHandler<CONNECTION>.Connection> {
     private val errorHandler = ThrowingErrorHandler()
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
@@ -20,7 +24,7 @@ class ThrowFromHandler<CONNECTION>(private val handler: Handler<CONNECTION>) : H
     }
 
     inner class Connection(
-            val errorConnection: ErrorHandler.Connection,
-            val downstream: CONNECTION
+        val errorConnection: ErrorHandler.Connection,
+        val downstream: CONNECTION
     )
 }

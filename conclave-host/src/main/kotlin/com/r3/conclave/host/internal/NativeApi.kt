@@ -3,9 +3,8 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.CpuFeature
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import java.nio.ByteBuffer
-import java.util.concurrent.ConcurrentHashMap
-import java.lang.IllegalStateException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 object NativeApi {
     private val connectedOcallHandlers = ConcurrentHashMap<Long, HandlerConnected<*>>()
@@ -23,8 +22,8 @@ object NativeApi {
     @JvmStatic
     @Suppress("UNUSED")
     fun enclaveToHost(enclaveId: Long, data: ByteArray) {
-        val ocallHandler = connectedOcallHandlers[enclaveId] ?:
-                throw IllegalStateException("Unknown enclave id $enclaveId")
+        val ocallHandler =
+            connectedOcallHandlers[enclaveId] ?: throw IllegalStateException("Unknown enclave id $enclaveId")
         ocallHandler.onReceive(ByteBuffer.wrap(data).asReadOnlyBuffer())
     }
 
@@ -37,13 +36,14 @@ object NativeApi {
      * Retrieve a list of all current CPU features.
      */
     @JvmStatic
-    val cpuFeatures: Set<CpuFeature> get() {
-        val values = EnumSet.noneOf(CpuFeature::class.java)
-        val existingFeatures = NativeShared.getCpuFeatures()
-        CpuFeature.values().forEach{ v ->
-            if (existingFeatures and v.feature != 0L)
-                values.add(v)
+    val cpuFeatures: Set<CpuFeature>
+        get() {
+            val values = EnumSet.noneOf(CpuFeature::class.java)
+            val existingFeatures = NativeShared.getCpuFeatures()
+            CpuFeature.values().forEach { v ->
+                if (existingFeatures and v.feature != 0L)
+                    values.add(v)
+            }
+            return values
         }
-        return values
-    }
 }

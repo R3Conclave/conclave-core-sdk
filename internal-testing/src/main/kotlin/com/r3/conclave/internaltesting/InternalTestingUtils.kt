@@ -29,26 +29,27 @@ fun <T> threadWithFuture(block: () -> T): CompletableFuture<T> {
 }
 
 private val mailCorruptionErrors = listOf(
-        "Unknown Noise DH algorithm",
-        "Unknown Noise cipher algorithm",
-        "Unknown Noise hash algorithm",
-        "Corrupt stream or not Conclave Mail",
-        "Premature end of stream",
-        "Protocol name must have 5 components",
-        "Tag mismatch!",
-        "SGX_ERROR_INVALID_CPUSVN",
-        "SGX_ERROR_INVALID_ISVSVN",
+    "Unknown Noise DH algorithm",
+    "Unknown Noise cipher algorithm",
+    "Unknown Noise hash algorithm",
+    "Corrupt stream or not Conclave Mail",
+    "Premature end of stream",
+    "Protocol name must have 5 components",
+    "Tag mismatch!",
+    "SGX_ERROR_INVALID_CPUSVN",
+    "SGX_ERROR_INVALID_ISVSVN",
 )
 
-val throwableWithMailCorruptionErrorMessage = object : Condition<Throwable>("a throwable containing a corruption error message") {
-    override fun matches(value: Throwable?): Boolean {
-        val match = generateSequence(value, Throwable::cause).any {
-            val message = it.message
-            message != null && mailCorruptionErrors.any { it in message }
+val throwableWithMailCorruptionErrorMessage =
+    object : Condition<Throwable>("a throwable containing a corruption error message") {
+        override fun matches(value: Throwable?): Boolean {
+            val match = generateSequence(value, Throwable::cause).any {
+                val message = it.message
+                message != null && mailCorruptionErrors.any { it in message }
+            }
+            if (!match) {
+                value?.printStackTrace()
+            }
+            return match
         }
-        if (!match) {
-            value?.printStackTrace()
-        }
-        return match
     }
-}

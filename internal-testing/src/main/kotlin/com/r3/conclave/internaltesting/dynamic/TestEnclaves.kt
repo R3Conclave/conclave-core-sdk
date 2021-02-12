@@ -5,14 +5,11 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand
 import com.r3.conclave.host.internal.createHost
-import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.toHexString
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.File
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -43,11 +40,12 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         _cache = null
     }
 
-    private val cache: Cache get() {
-        return checkNotNull(_cache) {
-            "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
+    private val cache: Cache
+        get() {
+            return checkNotNull(_cache) {
+                "Add @RegisterExtension to your ${TestEnclaves::class.java.simpleName} field"
+            }
         }
-    }
 
     private fun createEnclaveJar(entryClass: Class<out Enclave>, builder: EnclaveBuilder): Cached<File> {
         return Cached.singleFile("${entryClass.name}-$entropy", "${entryClass.simpleName}.jar") { output ->
@@ -59,20 +57,28 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         return cache[createEnclaveJar(enclaveClass, enclaveBuilder)]
     }
 
-    fun getSignedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder = EnclaveBuilder(), keyGenInput: String? = null): File {
+    fun getSignedEnclaveFile(
+        entryClass: Class<out Enclave>,
+        builder: EnclaveBuilder = EnclaveBuilder(),
+        keyGenInput: String? = null
+    ): File {
         val cachedSignedEnclave = signedEnclaveFile(entryClass, builder, keyGenInput)
         return cache[cachedSignedEnclave]
     }
 
-    private fun signedEnclaveFile(entryClass: Class<out Enclave>, builder: EnclaveBuilder, keyGenInput: String? = null): Cached<File> {
+    private fun signedEnclaveFile(
+        entryClass: Class<out Enclave>,
+        builder: EnclaveBuilder,
+        keyGenInput: String? = null
+    ): Cached<File> {
         val cachedJar = createEnclaveJar(entryClass, builder)
         val cachedEnclave = BuildEnclave.buildEnclave(builder.type, cachedJar)
         val cachedKey = builder.key?.let { Cached.Pure(it) } ?: SignEnclave.createDummyKey()
         val cachedConfig = SignEnclave.createConfig(builder.config)
         return SignEnclave.signEnclave(
-                inputKey = if (keyGenInput == null) cachedKey else SignEnclave.createDummyKey(keyGenInput),
-                inputEnclave = cachedEnclave,
-                enclaveConfig = cachedConfig
+            inputKey = if (keyGenInput == null) cachedKey else SignEnclave.createDummyKey(keyGenInput),
+            inputEnclave = cachedEnclave,
+            enclaveConfig = cachedConfig
         )
     }
 
@@ -98,9 +104,9 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
 }
 
 data class EnclaveBuilder(
-        val config: EnclaveConfig = EnclaveConfig(),
-        val type: EnclaveType = EnclaveType.Simulation,
-        val key: File? = null,
-        val includeClasses: List<Class<*>> = emptyList(),
-        val mailCallback: Consumer<List<MailCommand>>? = null
+    val config: EnclaveConfig = EnclaveConfig(),
+    val type: EnclaveType = EnclaveType.Simulation,
+    val key: File? = null,
+    val includeClasses: List<Class<*>> = emptyList(),
+    val mailCallback: Consumer<List<MailCommand>>? = null
 )

@@ -5,7 +5,7 @@ import net.corda.djvm.source.ClassSource
 
 class SandboxRunner : DJVMBase() {
     fun run(className: String, input: Any?): Any? {
-        var result : Any? = null
+        var result: Any? = null
         sandbox(emptySet(), emptySet()) {
             val classSource = ClassSource.fromClassName(className)
             val output = SandboxExecutor<Any?, Any?>(configuration, false).run(classSource, input).result
