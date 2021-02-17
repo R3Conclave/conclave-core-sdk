@@ -30,17 +30,42 @@ comes with the necessary libraries bundled, you don't need to do any further set
 
 ## Machine setup
 
-You need to create an Ubuntu 18.04 LTS Gen2 VM from the confidential compute line (named like this: DC?s_v2) where the
+You need to create an Ubuntu 18.04 LTS Gen2 VM from the [confidential
+compute](https://azure.microsoft.com/en-gb/solutions/confidential-compute/) line (named like this: DC?s_v2) where the
 question mark is the size. Other distributions should work as long as they are on these VMs, but we haven't tested them.
 
-![](images/create_vm_1_1.png)
+=== "Azure CLI"
 
-You might have to click "Browse all public and private images" to find `Gen2` image type.
-Pick a size that's got plenty of RAM, for example, you might want to click "Select size" to find `DC4s_v2` type.  
- 
-![](images/create_vm_2_1.png)
+    The VM must be created inside a resource group. You may use an existing resource group or create one with the
+    following command:
+    ```
+    az group create -l <LOCATION> -n <GROUP-NAME>
+    ```
 
-Just in case:
+    Now create the VM.
+    ```bash
+    az vm create \
+    --size Standard_DC4s_v2 \
+    --image Canonical:UbuntuServer:18_04-lts-gen2:latest \
+    --name <VM-NAME> \
+    --resource-group <GROUP-NAME>
+    ```
+
+    `VM-NAME` is the name you choose for the VM and `GROUP-NAME` is the name of the chosen resource group.
+
+=== "Azure Portal"
+
+    Make sure you do the following when creating your Azure Confidential Computing VM:
+
+    * Use the `Ubuntu Server 18.04 (Gen2)` image
+    * Pick a size that's got plenty of RAM. For example, you might want to click "Change size" to find `DC4s_v2` type
+    * Ensure that the public inbound ports are open for SSH access
+
+    ![](images/create_vm_1_1.png)
+
+    ![](images/create_vm_2_1.png)
+
+Just in case, once you have logged onto the VM:
 
 * Check that the `enclave` device is present in the `/dev/sgx/` directory
 * Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+
