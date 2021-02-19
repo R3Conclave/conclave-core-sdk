@@ -30,7 +30,7 @@ dependencies {
     // (in an internal package) for use by our tests. Technically we could have this in a separate module but then we'd
     // have to publish it in the SDK for what is just internal code.
     implementation project(":conclave-testing")
-    implementation "com.github.jengelman.gradle.plugins:shadow:5.2.0"
+    implementation "com.github.jengelman.gradle.plugins:shadow:6.1.0"
     implementation "io.github.classgraph:classgraph:$classgraph_version"
     implementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
 
