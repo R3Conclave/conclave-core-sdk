@@ -63,7 +63,7 @@ add_library(jvm_enclave_common
 )
 add_dependencies(jvm_enclave_common linux-sgx-ext)
 
-target_include_directories(jvm_enclave_common PUBLIC include PRIVATE src)
+target_include_directories(jvm_enclave_common PUBLIC include include/public PRIVATE src)
 target_compile_options(jvm_enclave_common PUBLIC -nostdinc -fPIC)
 target_link_libraries(jvm_enclave_common
         jvm_enclave_edl

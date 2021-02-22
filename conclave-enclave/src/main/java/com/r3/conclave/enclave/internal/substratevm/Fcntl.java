@@ -21,11 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Fcntl {
 
     // Flags in octal
-    static final int O_RDONLY = 00;
-    static final int O_WRONLY = 01;
-    static final int O_CREAT = 0100;
-    static final int O_TRUNC = 01000;
-    static final int O_APPEND = 02000;
+    public static final int O_RDONLY = 00;
+    public static final int O_WRONLY = 01;
+    public static final int O_CREAT = 0100;
+    public static final int O_TRUNC = 01000;
+    public static final int O_APPEND = 02000;
 
     public static final ConcurrentHashMap<Integer, JimfsStream> fileDescriptors = new ConcurrentHashMap<>();
 

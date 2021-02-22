@@ -1,12 +1,10 @@
-package com.r3.conclave.enclave.internal.substratevm
+package com.r3.conclave.enclave.internal.substratevm.mock
 
-import org.graalvm.nativeimage.c.type.CCharPointer
+import org.graalvm.nativeimage.c.type.CIntPointer
 import org.graalvm.word.ComparableWord
 import org.graalvm.word.SignedWord
 
-class MockCCharPointer(size: Int) : CCharPointer {
-    val byteArray = ByteArray(size)
-
+class MockCIntPointer(var value: Int = 0) : CIntPointer {
     override fun rawValue(): Long {
         TODO("Not yet implemented")
     }
@@ -27,36 +25,35 @@ class MockCCharPointer(size: Int) : CCharPointer {
         TODO("Not yet implemented")
     }
 
-    override fun read(): Byte {
+    override fun read(): Int {
         TODO("Not yet implemented")
     }
 
-    override fun read(index: Int): Byte {
+    override fun read(index: Int): Int {
         TODO("Not yet implemented")
     }
 
-    override fun read(index: SignedWord?): Byte {
+    override fun read(index: SignedWord?): Int {
         TODO("Not yet implemented")
     }
 
-    override fun write(value: Byte) {
+    override fun write(value: Int) {
+        this.value = value
+    }
+
+    override fun write(index: Int, value: Int) {
         TODO("Not yet implemented")
     }
 
-    override fun write(index: Int, value: Byte) {
-        byteArray[index] = value
-    }
-
-    override fun write(index: SignedWord?, value: Byte) {
+    override fun write(index: SignedWord?, value: Int) {
         TODO("Not yet implemented")
     }
 
-    override fun addressOf(index: Int): CCharPointer {
+    override fun addressOf(index: Int): CIntPointer {
         TODO("Not yet implemented")
     }
 
-    override fun addressOf(index: SignedWord?): CCharPointer {
+    override fun addressOf(index: SignedWord?): CIntPointer {
         TODO("Not yet implemented")
     }
-
 }

@@ -25,6 +25,7 @@ dependencies {
     implementation project(":filesystem")
 
     testImplementation project(":internal-testing")
+    testImplementation project(":cpp:jvm-enclave-common")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     // ASM: byte code manipulation library
@@ -46,6 +47,7 @@ task fatJar(type: ShadowJar) {
 }
 
 test {
+    def jvmEnclaveCommonJarTask = tasks.getByPath(":cpp:jvm-enclave-common:jar")
     dependsOn(configurations.testConf)
     systemProperty 'conclave-enclave.test-jar', configurations.testConf.asPath
     doFirst {
@@ -53,5 +55,6 @@ test {
             throw new GradleException("${configurations.testConf.asPath} is now on the test classpath. Choose a dependency " +
                     "which is not and update the c.r.c.e.internal.memory tests accordingly.")
         }
+        systemProperty 'jvmEnclaveCommonJarPath', jvmEnclaveCommonJarTask.outputs.files.asPath
     }
 }

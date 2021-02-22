@@ -1,6 +1,7 @@
 #include "enclave_shared_data.h"
 #include "vm_enclave_layer.h"
 #include <jvm_t.h>
+#include "conclave-timespec.h"
 
 namespace r3 { namespace conclave {
 

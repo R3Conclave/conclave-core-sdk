@@ -1,0 +1,12 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+dependencies {
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
+    implementation "org.graalvm.sdk:graal-sdk:$graal_version"
+    implementation "com.r3.conclave:jvm-enclave-common:$conclave_version"
+    implementation "com.r3.conclave:conclave-enclave:$conclave_version"
+}

@@ -4,6 +4,7 @@
 #include "vm_enclave_layer.h"
 #include "file_manager.h"
 #include "sys_stat.h"
+#include "conclave-stat.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
@@ -41,7 +42,7 @@ int __fxstat64(int ver, int fildes, struct stat64 * stat_buf) {
 
 int __xstat64(int ver, const char * path, struct stat64 * stat_buf) {
     enclave_trace("__xstat64\n");
-    return -1;
+    return __xstat64_impl(ver, path, stat_buf);
 }
 
 int __xstat(int, const char*, struct stat*) {

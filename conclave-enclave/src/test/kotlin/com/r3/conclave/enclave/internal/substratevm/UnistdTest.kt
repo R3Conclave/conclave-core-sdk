@@ -1,68 +1,28 @@
 package com.r3.conclave.enclave.internal.substratevm
 
-import com.r3.conclave.filesystem.jimfs.JimfsFileSystemProvider
-import com.r3.conclave.filesystem.jimfs.SystemJimfsFileSystemProvider
+import com.r3.conclave.enclave.internal.substratevm.mock.MockCCharPointer
+import com.r3.conclave.enclave.internal.substratevm.mock.MockCIntPointer
 import org.assertj.core.api.Assertions.assertThat
-import org.graalvm.nativeimage.c.type.CCharPointer
-import org.graalvm.nativeimage.c.type.CTypeConversion
-import org.graalvm.word.PointerBase
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
-import org.mockito.ScopedMock
-import java.net.URI
-import java.nio.ByteBuffer
-import java.nio.file.FileSystem
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.stream.Stream
 
-class UnistdTest {
+class UnistdTest : JimfsTest() {
 
     companion object {
-        private val data = byteArrayOf(1, 2, 3, 4)
-        const val file = "/file.data"
-        const val expectedFd = 16
-        private val byteBuffer: ByteBuffer = ByteBuffer.allocate(data.size).put(data)
-        private val mocks = mutableListOf<ScopedMock>()
-
-        @BeforeAll
-        @JvmStatic
-        fun setup() {
-            assertThat(JimfsFileSystemProvider.instance()).isNotNull
-
-            val fileSystemsMock = Mockito.mockStatic(FileSystems::class.java)
-            fileSystemsMock.`when`<FileSystem> {
-                FileSystems.getDefault()
-            }
-                .thenReturn(SystemJimfsFileSystemProvider.fileSystems[URI.create("file:${JimfsFileSystemProvider.DEFAULT_FILE_SYSTEM_PATH}")])
-
-            val cTypeConversionMock = Mockito.mockStatic(CTypeConversion::class.java)
-            cTypeConversionMock.`when`<String> {
-                CTypeConversion.toJavaString(any(CCharPointer::class.java))
-            }.thenReturn(file)
-
-            cTypeConversionMock.`when`<ByteBuffer> {
-                CTypeConversion.asByteBuffer(any(PointerBase::class.java), any(Int::class.java))
-            }.thenReturn(byteBuffer)
-
-            mocks.add(fileSystemsMock)
-            mocks.add(cTypeConversionMock)
-        }
-
         @AfterAll
         @JvmStatic
         fun destroy() {
-            mocks.forEach {
-                it.close()
-            }
             assertThat(Fcntl.fileDescriptors).isEmpty()
         }
     }
@@ -75,7 +35,7 @@ class UnistdTest {
     @AfterEach
     fun closeFile() {
         if (Fcntl.isOpen(null, expectedFd)) {
-            val errno = MockCIntPointer(0)
+            val errno = MockCIntPointer()
             Unistd.close(null, expectedFd, errno)
             assertThat(errno.value).isEqualTo(0)
         }
@@ -90,21 +50,21 @@ class UnistdTest {
 
     @Test
     fun read() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
         val buf = MockCCharPointer(data.size)
-        val read = Unistd.read(null, fd, buf, data.size, MockCIntPointer(0))
+        val read = Unistd.read(null, fd, buf, data.size, MockCIntPointer())
         assertThat(read).isEqualTo(data.size)
         assertThat(buf.byteArray).isEqualTo(data)
     }
 
     @Test
     fun readPastEndOfFile() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        val mockCIntPointer = MockCIntPointer(0)
+        val mockCIntPointer = MockCIntPointer()
         val offset: Long = 1
         val position = Unistd.lseek64(null, fd, offset, Unistd.Whence.SEEK_END.ordinal, mockCIntPointer)
         assertThat(position).isEqualTo(data.size + offset)
@@ -121,8 +81,8 @@ class UnistdTest {
     fun readNonOpenFileDescriptor() {
         val fd = 0
         val count = 0
-        val errno = MockCIntPointer(0)
-        val ret = Unistd.read(null, fd, MockCCharPointer(0), count, errno)
+        val errno = MockCIntPointer()
+        val ret = Unistd.read(null, fd, MockCCharPointer(file), count, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EBADF)
     }
@@ -130,12 +90,12 @@ class UnistdTest {
     @ParameterizedTest
     @ArgumentsSource(FileOffsetProvider::class)
     fun pread(offset: Long) {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
         val buf = MockCCharPointer(data.size)
         val count = data.size - offset
-        val read = Unistd.pread(null, fd, buf, count.toInt(), offset, MockCIntPointer(0))
+        val read = Unistd.pread(null, fd, buf, count.toInt(), offset, MockCIntPointer())
         assertThat(read).isEqualTo(count)
         val expectedData = data.copyOfRange(offset.toInt(), data.size) + ByteArray((data.size - count).toInt())
         assertThat(buf.byteArray).isEqualTo(expectedData)
@@ -143,12 +103,12 @@ class UnistdTest {
 
     @Test
     fun preadDoesNotModifyStreamOffset() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
         val buf = MockCCharPointer(data.size)
         val count = 1
-        val mockCIntPointer = MockCIntPointer(0)
+        val mockCIntPointer = MockCIntPointer()
         val firstRead = Unistd.read(null, fd, buf, count, mockCIntPointer)
         assertThat(firstRead).isEqualTo(count)
         assertThat(buf.byteArray.copyOfRange(0, count)).isEqualTo(data.copyOfRange(0, count))
@@ -170,12 +130,12 @@ class UnistdTest {
 
     @Test
     fun preadNegativeOffset() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
         val count = 0
         val offset = -2L
-        val errno = MockCIntPointer(0)
-        val ret = Unistd.pread(null, fd, MockCCharPointer(0), count, offset, errno)
+        val errno = MockCIntPointer()
+        val ret = Unistd.pread(null, fd, MockCCharPointer(file), count, offset, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EINVAL)
     }
@@ -185,22 +145,19 @@ class UnistdTest {
         val fd = 0
         val count = 0
         val offset = 0L
-        val errno = MockCIntPointer(0)
-        val ret = Unistd.pread(null, fd, MockCCharPointer(0), count, offset, errno)
+        val errno = MockCIntPointer()
+        val ret = Unistd.pread(null, fd, MockCCharPointer(file), count, offset, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EBADF)
     }
 
     @Test
     fun pwriteAllData() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(11, 12, 13, 14)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(0), data.size, 0, MockCIntPointer(0))
+        val newValues = upcomingValues()
+        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), data.size, 0, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
         val readBytes = Files.readAllBytes(Paths.get(file))
@@ -212,36 +169,32 @@ class UnistdTest {
         val fd = 0
         val count = 0
         val offset = 0L
-        val errno = MockCIntPointer(0)
-        val ret = Unistd.pwrite(null, fd, MockCCharPointer(0), count, offset, errno)
+        val errno = MockCIntPointer()
+        val ret = Unistd.pwrite(null, fd, MockCCharPointer(file), count, offset, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EBADF)
     }
 
     @Test
     fun pwriteNegativeOffset() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
         val offset = -2L
-        val errno = MockCIntPointer(0)
-        val ret = Unistd.pwrite(null, fd, MockCCharPointer(0), 0, offset, errno)
+        val errno = MockCIntPointer()
+        val ret = Unistd.pwrite(null, fd, MockCCharPointer(file), 0, offset, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EINVAL)
     }
 
     @Test
     fun pwriteOffset() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(21, 22, 23, 24)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-
+        val newValues = upcomingValues()
         val offset = 1L
-        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(0), newValues.size, offset, MockCIntPointer(0))
+        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), newValues.size, offset, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
         val readBytes = Files.readAllBytes(Paths.get(file))
@@ -250,15 +203,11 @@ class UnistdTest {
 
     @Test
     fun pwriteAppend() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY).or(Fcntl.O_APPEND), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY).or(Fcntl.O_APPEND), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(31, 32, 33, 34)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-
+        val newValues = upcomingValues()
         val offset = 0L
-        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(0), newValues.size, offset, MockCIntPointer(0))
+        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), newValues.size, offset, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
         val readBytes = Files.readAllBytes(Paths.get(file))
@@ -267,15 +216,12 @@ class UnistdTest {
 
     @Test
     fun pwriteAppendOffset() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY).or(Fcntl.O_APPEND), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY).or(Fcntl.O_APPEND), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(41, 42, 43, 44)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
 
+        val newValues = upcomingValues()
         val offset = 2L
-        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(0), newValues.size, offset, MockCIntPointer(0))
+        val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), newValues.size, offset, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
         val readBytes = Files.readAllBytes(Paths.get(file))
@@ -284,15 +230,11 @@ class UnistdTest {
 
     @Test
     fun write() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(51, 52, 53, 54)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-
-        val written = Unistd.write(null, fd, MockCCharPointer(0), newValues.size, MockCIntPointer(0))
+        val newValues = upcomingValues()
+        val written = Unistd.write(null, fd, MockCCharPointer(file), newValues.size, MockCIntPointer())
         assertThat(written).isEqualTo(newValues.size)
 
         val readBytes = Files.readAllBytes(Paths.get(file))
@@ -301,15 +243,11 @@ class UnistdTest {
 
     @Test
     fun writeAppend() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY).or(Fcntl.O_APPEND), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY).or(Fcntl.O_APPEND), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(51, 52, 53, 54)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-
-        val written = Unistd.write(null, fd, MockCCharPointer(0), newValues.size, MockCIntPointer(0))
+        val newValues = upcomingValues()
+        val written = Unistd.write(null, fd, MockCCharPointer(file), newValues.size, MockCIntPointer())
         assertThat(written).isEqualTo(newValues.size)
 
         val readBytes = Files.readAllBytes(Paths.get(file))
@@ -318,20 +256,16 @@ class UnistdTest {
 
     @Test
     fun writePastEndOfFile() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        val mockCIntPointer = MockCIntPointer(0)
+        val mockCIntPointer = MockCIntPointer()
         val offset: Long = 2
         val position = Unistd.lseek64(null, fd, offset, Unistd.Whence.SEEK_END.ordinal, mockCIntPointer)
         assertThat(position).isEqualTo(data.size + offset)
 
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(61, 62, 63, 64)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-
-        val written = Unistd.write(null, fd, MockCCharPointer(0), newValues.size, MockCIntPointer(0))
+        val newValues = upcomingValues()
+        val written = Unistd.write(null, fd, MockCCharPointer(file), newValues.size, MockCIntPointer())
         assertThat(written).isEqualTo(newValues.size)
 
         val readAllBytes = Files.readAllBytes(Paths.get(file))
@@ -342,8 +276,8 @@ class UnistdTest {
     fun writeNonOpenFileDescriptor() {
         val fd = 0
         val count = 0
-        val errno = MockCIntPointer(0)
-        val ret = Unistd.write(null, fd, MockCCharPointer(0), count, errno)
+        val errno = MockCIntPointer()
+        val ret = Unistd.write(null, fd, MockCCharPointer(file), count, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EBADF)
     }
@@ -351,10 +285,10 @@ class UnistdTest {
     @ParameterizedTest
     @ValueSource(ints = [Fcntl.O_RDONLY, Fcntl.O_CREAT.or(Fcntl.O_WRONLY)])
     fun lseekStreams(whence: Int) {
-        val fd = Fcntl.open(null, MockCCharPointer(0), whence, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), whence, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        val mockCIntPointer = MockCIntPointer(0)
+        val mockCIntPointer = MockCIntPointer()
         val offset: Long = 1
         val position = Unistd.lseek64(null, fd, offset, Unistd.Whence.SEEK_SET.ordinal, mockCIntPointer)
         assertThat(position).isEqualTo(offset)
@@ -371,10 +305,10 @@ class UnistdTest {
 
     @Test
     fun lseekRead() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        val mockCIntPointer = MockCIntPointer(0)
+        val mockCIntPointer = MockCIntPointer()
         val offset: Long = 1
         val position = Unistd.lseek64(null, fd, offset, Unistd.Whence.SEEK_SET.ordinal, mockCIntPointer)
         assertThat(position)
@@ -408,23 +342,19 @@ class UnistdTest {
 
     @Test
     fun lseekWrite() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_CREAT.or(Fcntl.O_WRONLY), expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
-        val readFd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd + 1)
+        val readFd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd + 1)
         assertThat(readFd).isEqualTo(expectedFd + 1)
 
-        byteBuffer.rewind()
-        val newValues = byteArrayOf(71, 72, 73, 74)
-        byteBuffer.put(newValues)
-        byteBuffer.rewind()
-
+        val newValues = upcomingValues()
         val count = 1
         val buf = MockCCharPointer(count)
-        val written = Unistd.write(null, fd, buf, count, MockCIntPointer(0))
+        val written = Unistd.write(null, fd, buf, count, MockCIntPointer())
         assertThat(written).isEqualTo(count)
 
-        val errno = MockCIntPointer(0)
+        val errno = MockCIntPointer()
         val position = Unistd.lseek64(null, fd, 0, Unistd.Whence.SEEK_CUR.ordinal, errno)
         assertThat(position).isEqualTo(count.toLong())
 
@@ -442,11 +372,11 @@ class UnistdTest {
 
     @Test
     fun lseekNegativeOffset() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
 
         val offset: Long = -2
-        val errno = MockCIntPointer(0)
+        val errno = MockCIntPointer()
         val ret = Unistd.lseek64(null, fd, offset, Unistd.Whence.SEEK_CUR.ordinal, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EINVAL)
@@ -457,7 +387,7 @@ class UnistdTest {
     fun lseekNonOpenFileDescriptor(whence: Int) {
         val fd = 0
         val offset: Long = 0
-        val errno = MockCIntPointer(0)
+        val errno = MockCIntPointer()
         val ret = Unistd.lseek64(null, fd, offset, whence, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EBADF)
@@ -466,7 +396,7 @@ class UnistdTest {
     @Test
     fun closeNonOpenFileDescriptor() {
         val fd = 0
-        val errno = MockCIntPointer(0)
+        val errno = MockCIntPointer()
         val ret = Unistd.close(null, fd, errno)
         assertThat(ret).isEqualTo(-1)
         assertThat(errno.value).isEqualTo(ErrnoBase.EBADF)
@@ -474,9 +404,9 @@ class UnistdTest {
 
     @Test
     fun closeDeletesFileDescriptorEntry() {
-        val fd = Fcntl.open(null, MockCCharPointer(0), Fcntl.O_RDONLY, expectedFd)
+        val fd = Fcntl.open(null, MockCCharPointer(file), Fcntl.O_RDONLY, expectedFd)
         assertThat(fd).isEqualTo(expectedFd)
-        val errno = MockCIntPointer(0)
+        val errno = MockCIntPointer()
         Unistd.close(null, expectedFd, errno)
         assertThat(errno.value).isEqualTo(0)
         assertThat(Fcntl.fileDescriptors).doesNotContainKey(fd)

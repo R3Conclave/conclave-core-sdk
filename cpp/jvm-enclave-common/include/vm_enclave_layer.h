@@ -16,6 +16,7 @@
 #include <sgx_errors.h>
 #include "jvm_t.h"
 #include "jni_utils.h"
+#include "conclave-timespec.h"
 
 // Define STUB macros for functions that are needed to satisfy the linker but
 // throw an exception or are just ignored if called. Each stub function is 
@@ -56,50 +57,11 @@ struct timeval {
 };
 typedef int clockid_t;
 
-struct timespec {
-    time_t tv_sec;
-    long   tv_nsec;
-};
 
 struct timezone {
    int tz_minuteswest;
    int tz_dsttime;
 };
-
-// From <sys/stat.h>
-struct stat64 {
-	unsigned long long	st_dev;
-	unsigned char	__pad0[4];
-
-	unsigned long	__st_ino;
-
-	unsigned int	st_mode;
-	unsigned int	st_nlink;
-
-	unsigned long	st_uid;
-	unsigned long	st_gid;
-
-	unsigned long long	st_rdev;
-	unsigned char	__pad3[4];
-
-	long long	st_size;
-	unsigned long	st_blksize;
-
-	/* Number 512-byte blocks allocated. */
-	unsigned long long	st_blocks;
-
-	unsigned long	st_atime;
-	unsigned long	st_atime_nsec;
-
-	unsigned long	st_mtime;
-	unsigned int	st_mtime_nsec;
-
-	unsigned long	st_ctime;
-	unsigned long	st_ctime_nsec;
-
-	unsigned long long	st_ino;
-};
-#define	S_IFMT	0170000
 
 // From <sys/socket.h>
 typedef unsigned int socklen_t;

@@ -3,7 +3,7 @@ pluginManagement {
 
     resolutionStrategy {
         eachPlugin {
-            if (requested.id.id == 'org.jetbrains.kotlin.jvm') {
+            if (requested.id.id == 'org.jetbrains.kotlin.jvm' || requested.id.id == 'org.jetbrains.kotlin.plugin.serialization') {
                 useVersion kotlin_version
             }
         }
@@ -22,6 +22,7 @@ try {
 
 if (includeNative) {
     include 'cpp'
+    include 'cpp:jvm-enclave-common'
     include 'cpp:native-host'
     include 'cpp:native-host:native-host-simulation'
     include 'cpp:native-host:native-host-debug'

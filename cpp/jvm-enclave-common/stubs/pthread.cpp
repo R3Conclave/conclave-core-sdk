@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <map>
 #include <mutex>
+#include "conclave-timespec.h"
 
 // Internal to the Linux SGX SDK but we need information on the current thread.
 #include <internal/thread_data.h>

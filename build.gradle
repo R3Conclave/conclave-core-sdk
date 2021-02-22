@@ -246,6 +246,10 @@ class PublishedProject {
 }
 List<PublishedProject> publishedProjects = [
         new PublishedProject(
+                projectPath: ':cpp:jvm-enclave-common',
+                description: 'libc common headers',
+        ),
+        new PublishedProject(
                 projectPath: ':cpp:native-enclave:native-enclave-simulation',
                 description: 'Partially linked Conclave enclave linked with simulation libraries',
         ),

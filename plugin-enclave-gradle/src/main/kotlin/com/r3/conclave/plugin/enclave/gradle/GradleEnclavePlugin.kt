@@ -82,6 +82,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val osDependentTools = getOSDependentTools(conclaveDependenciesDirectory)
 
+        val copyEnclaveCommonHeaders = target.createTask<Copy>("copyEnclaveCommonHeaders") { task ->
+            task.group = CONCLAVE_GROUP
+            task.fromDependencies("com.r3.conclave:jvm-enclave-common:$sdkVersion")
+            task.into(baseDirectory)
+        }
+
         val copySgxToolsTask = target.createTask<Copy>("copySgxTools") { task ->
             task.fromDependencies(*osDependentTools.getToolsDependenciesIDs(sdkVersion).toTypedArray())
             task.into(baseDirectory)
@@ -188,12 +194,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
 
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile, linuxExec) { task ->
-                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask, linuxExec)
+                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask, linuxExec, copyEnclaveCommonHeaders)
                 task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath, nativeImageLinkerToolFile)
                 task.nativeImagePath.set(target.file(graalVMDistributionPath))
                 task.jarFile.set(shadowJarTask.archiveFile)
-                task.cLibraryPaths.from("$sgxDirectory/tlibc",
-                        "$sgxDirectory/libcxx")
+                task.includePaths.from(
+                        "$conclaveDependenciesDirectory/include"
+// There can be conflicts between the host system headers and the ones provided by Intel's SDK.
+// The lines bellow should be reintroduced as part of CON-284.
+//                        "$sgxDirectory/tlibc",
+//                        "$sgxDirectory/libcxx"
+                )
                 task.libraryPath.set(target.file(sgxDirectory))
                 task.libraries.from(
                         "$substrateDependenciesPath/libsubstratevm.a",

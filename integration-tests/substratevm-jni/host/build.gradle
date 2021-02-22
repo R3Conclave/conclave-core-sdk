@@ -1,0 +1,16 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    testImplementation project(":substratevm-jni:common")
+
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "com.r3.conclave:jvm-enclave-common:$conclave_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testRuntimeOnly project(path: ":substratevm-jni:enclave", configuration: enclaveMode)
+}

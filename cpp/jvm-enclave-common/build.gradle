@@ -1,0 +1,17 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+// TODO move the mock data structures to a more appropriate module
+dependencies {
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
+}
+
+jar {
+    into "com/r3/conclave/include", {
+        from("$projectDir/include/public") {
+            include "**/*.h"
+        }
+    }
+}

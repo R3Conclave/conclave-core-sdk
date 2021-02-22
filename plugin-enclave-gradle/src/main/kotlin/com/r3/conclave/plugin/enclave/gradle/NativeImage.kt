@@ -6,9 +6,6 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.api.GradleException
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.ListProperty
-import org.gradle.internal.os.OperatingSystem
 import java.io.File
 import java.nio.file.Path
 import javax.inject.Inject
@@ -71,7 +68,7 @@ open class NativeImage @Inject constructor(
     val jarFile: RegularFileProperty = objects.fileProperty()
 
     @get:InputFiles
-    val cLibraryPaths: ConfigurableFileCollection = objects.fileCollection()
+    val includePaths: ConfigurableFileCollection = objects.fileCollection()
 
     @get:InputDirectory
     val libraryPath: RegularFileProperty = objects.fileProperty()
@@ -171,8 +168,8 @@ open class NativeImage @Inject constructor(
         return stackSize - zoneSize
     }
 
-    private fun cLibraryPathsOption(): String {
-        return "-H:CLibraryPath=" + cLibraryPaths.files.joinToString(",")
+    private fun includePathsOptions(): List<String> {
+        return includePaths.files.map { "-H:CCompilerOption=-I$it" }.toList()
     }
 
     private fun libraryPathOption(): String {
@@ -420,7 +417,7 @@ open class NativeImage @Inject constructor(
             + defaultOptions()
             + compilerOptions
             + placeholderLibPathOption()
-            + cLibraryPathsOption()
+            + includePathsOptions()
             + libraryPathOption()
             + "-H:NativeLinkerOption=-Wl,--whole-archive"
             + librariesWholeArchiveOptions()
