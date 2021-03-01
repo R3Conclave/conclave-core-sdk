@@ -1,5 +1,5 @@
 diff --git a/buildenv.mk b/buildenv.mk
-index fd91672..ca9ab63 100644
+index 6291804..548c38c 100644
 --- a/buildenv.mk
 +++ b/buildenv.mk
 @@ -116,7 +116,17 @@ COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
@@ -52,8 +52,34 @@ index 433386e..0057647 100644
              goto error;
      }
  #undef BUF_SIZE
+diff --git a/common/inc/internal/se_trace.h b/common/inc/internal/se_trace.h
+index 412cf23..c6316b6 100644
+--- a/common/inc/internal/se_trace.h
++++ b/common/inc/internal/se_trace.h
+@@ -55,7 +55,7 @@ typedef enum
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+-void se_trace_internal(int debug_level, const char *fmt, ...);
++void se_trace_internal(se_trace_t debug_level, const char *fmt, ...);
+ void sgx_proc_log_report_default(int channel, int debug_level, const char* fmt, ...);
+ void  __attribute__((weak)) sgx_proc_log_report(int level, const char* format, ...);
+ #ifdef __cplusplus
+diff --git a/common/src/se_trace.c b/common/src/se_trace.c
+index dfe83e6..d37a273 100644
+--- a/common/src/se_trace.c
++++ b/common/src/se_trace.c
+@@ -47,7 +47,7 @@ void sgx_proc_log_report_default(int channel, int debug_level, const char *fmt,
+     return;
+ }
+ 
+-void se_trace_internal(int debug_level, const char *fmt, ...)
++void se_trace_internal(se_trace_t debug_level, const char *fmt, ...)
+ {
+     va_list args;
+ 
 diff --git a/download_prebuilt.sh b/download_prebuilt.sh
-index b5f7330..6f48005 100755
+index 75aaa1d..5b62ae7 100755
 --- a/download_prebuilt.sh
 +++ b/download_prebuilt.sh
 @@ -44,28 +44,28 @@ server_binutils_url=$server_url_path/$binutils_file_name
@@ -102,8 +128,8 @@ diff --git a/external/dcap_source b/external/dcap_source
 --- a/external/dcap_source
 +++ b/external/dcap_source
 @@ -1 +1 @@
--Subproject commit 98976322e8b58e23256355f5cf90b9e30e37d8c1
-+Subproject commit 98976322e8b58e23256355f5cf90b9e30e37d8c1-dirty
+-Subproject commit 30fac05232e13eab72c425a7788fafa5a46b3247
++Subproject commit 30fac05232e13eab72c425a7788fafa5a46b3247-dirty
 diff --git a/external/openmp/openmp_code b/external/openmp/openmp_code
 --- a/external/openmp/openmp_code
 +++ b/external/openmp/openmp_code
@@ -146,10 +172,10 @@ index 007dfd8..62ff1ab 100644
  #define SGX_MAGIC 0xA4
  
 diff --git a/psw/urts/parser/Makefile b/psw/urts/parser/Makefile
-index 88efdd2..53b2b78 100644
+index b8ebe9e..ec9d84a 100644
 --- a/psw/urts/parser/Makefile
 +++ b/psw/urts/parser/Makefile
-@@ -45,7 +45,8 @@ TARGET := libenclaveparser.a
+@@ -49,7 +49,8 @@ TARGET := libenclaveparser.a
  
  CXXFLAGS += -fPIC
  
@@ -160,7 +186,7 @@ index 88efdd2..53b2b78 100644
  endif
  
 diff --git a/psw/urts/parser/elfparser.cpp b/psw/urts/parser/elfparser.cpp
-index e603060..097b210 100644
+index 6e42925..2a80db0 100644
 --- a/psw/urts/parser/elfparser.cpp
 +++ b/psw/urts/parser/elfparser.cpp
 @@ -438,7 +438,7 @@ bool validate_segment(const ElfW(Ehdr) *elf_hdr, uint64_t len)
@@ -182,7 +208,7 @@ index e603060..097b210 100644
                  if (is_overlap(load_seg[k], load_seg[j]))
                  {
 diff --git a/sdk/sign_tool/SignTool/Makefile b/sdk/sign_tool/SignTool/Makefile
-index 981b799..a50f8d0 100644
+index 8610f85..a61f682 100644
 --- a/sdk/sign_tool/SignTool/Makefile
 +++ b/sdk/sign_tool/SignTool/Makefile
 @@ -31,12 +31,18 @@

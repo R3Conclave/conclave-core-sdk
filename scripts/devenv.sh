@@ -103,8 +103,14 @@ if [[ -z ${CONTAINER_ID} ]]; then
   if [ -e /dev/isgx ] && [ -d /var/run/aesmd ]; then
       SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
   elif [ -e /dev/sgx/enclave ] && [ -d /var/run/aesmd ]; then
-      # dcap driver
-      SGX_HARDWARE_FLAGS="--device=/dev/sgx/enclave --device=/dev/sgx/provision -v /var/run/aesmd:/var/run/aesmd"
+      # DCAP driver.
+      # If the sgx device is a symlink, then map the whole device folder.
+      if [ -L /dev/sgx/enclave ]; then # New DCAP driver 1.41.
+        SGX_HARDWARE_FLAGS="--device=/dev/sgx_enclave --device=/dev/sgx_provision -v /dev/sgx:/dev/sgx"
+      else # For legacy dcap drivers...
+        SGX_HARDWARE_FLAGS="--device=/dev/sgx/enclave --device=/dev/sgx/provision"
+      fi
+      SGX_HARDWARE_FLAGS=${SGX_HARDWARE_FLAGS}" -v /var/run/aesmd:/var/run/aesmd"
   fi
 
   if [ ${CONCLAVE_DOCKER_IDE:-""} = "1" ]; then
@@ -186,6 +192,12 @@ fi
   else
     docker exec -it $@ -u root $CONTAINER_ID bash -c "groupadd -g ${docker_gid} docker_ext || true"
   fi
+
+  # DCAP 1.41+ driver access permissions.
+  if [ -e /dev/sgx_provision ]; then
+    docker exec -u root $CONTAINER_ID chgrp $(id -g) /dev/sgx_provision
+  fi
+
   # Add entry to container's hostname in /etc/hosts, if it's not there, due to different behaviour in macOS.
   docker exec -u root $CONTAINER_ID sh -c 'grep "\$\(hostname\)" /etc/hosts || printf "%s\t%s\n" $(ip address show docker0 2> /dev/null | sed -n "s/^.*inet \(addr:[ ]*\)*\([^ ]*\).*/\2/p" | cut -d/ -f1) $(hostname) >> /etc/hosts'
 
