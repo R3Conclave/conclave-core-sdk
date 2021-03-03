@@ -1,0 +1,23 @@
+diff --git a/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c b/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c
+index 20e590f..e6d84b3 100644
+--- a/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c
++++ b/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c
+@@ -67,7 +67,8 @@ int msync(void *addr, size_t length, int flags)
+ }
+ #endif
+ 
+-#ifndef NDEBUG
++// conclave modification to enable release-only builds even for debug.
++// #ifndef NDEBUG
+ /* FIXME: remove __assert_fail()
+  * Currently libunwind is built with glibc headers, to improve it
+  * we need to build it with SE tlibc headers.
+@@ -77,7 +78,7 @@ void __assert_fail (const char *__assertion, const char *__file,
+ {
+     abort();
+ }
+-#endif
++// #endif
+ 
+ #endif
+ /* vim: set ts=4 sw=4 cin et: */

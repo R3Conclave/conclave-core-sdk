@@ -1,5 +1,6 @@
 plugins {
     id 'application'
+    id 'org.jetbrains.kotlin.jvm'
     id 'com.github.johnrengelman.shadow'
 }
 
@@ -18,6 +19,11 @@ dependencies {
     runtimeOnly project(path: ":jvm-perf:graalvm-enclave-simulation", configuration: "simulation")
     runtimeOnly project(path: ":jvm-perf:avian-enclave-debug", configuration: "debug")
     runtimeOnly project(path: ":jvm-perf:graalvm-enclave-debug", configuration: "debug")
+
+    runtimeOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    runtimeOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    runtimeOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+
     runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
 }
 

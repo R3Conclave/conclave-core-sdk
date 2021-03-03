@@ -36,29 +36,37 @@ static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
 static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
+String symlinkTaskName(from, to) { return "symlink${from}To$to" }
+String cmakeBuildType(type) { return "-DCMAKE_BUILD_TYPE=$type" }
 
+def symlinks = [[from: "Release", to: "Simulation"], [from: "Release", to: "Debug"], [from: "Debug", to: "Simulation"]]
 
-tasks.create("symlinkDebugToSimulation") {
-    dependsOn(createCmakeTaskName("Debug"))
-    doFirst {
-        mkdir buildDirectory("Simulation")
-        try {
-            Files.createSymbolicLink(Paths.get("${buildDirectory("Simulation")}/linux-sgx"), Paths.get("${buildDirectory("Debug")}/linux-sgx"))
-        } catch (FileAlreadyExistsException) {
+for (symlink in symlinks) {
+    // These variables below are needed because if we reference "symlink" inside the execution of "doFirst" process yields
+    // the last "symlink" used, and not those used during the task creation.
+    def from = symlink.from
+    def to = symlink.to
+
+    // Create symlinks to reduce linux-sgx sdk build time.
+    tasks.create(symlinkTaskName(from, to)) {
+        dependsOn(compileTaskNameLinuxSgx(from))
+        doFirst {
+            mkdir buildDirectory(to)
+            try {
+                Files.createSymbolicLink(Paths.get("${buildDirectory(to)}/linux-sgx"), Paths.get("${buildDirectory(from)}/linux-sgx"))
+            } catch (ignored) {
+            }
         }
+        outputs.dir(buildDirectory(to))
     }
-    outputs.dir(buildDirectory("Simulation"))
 }
 
 for (type in types) {
     // Use Cmake to create build
     tasks.create(createCmakeTaskName(type), Exec) {
-        if (type == "Simulation") {
-            dependsOn("symlinkDebugToSimulation")
-        }
         workingDir(buildDirectory(type))
 
-        commandLine("/usr/bin/env", "cmake", "-DCMAKE_BUILD_TYPE=$type", projectDir)
+        commandLine("/usr/bin/env", "cmake", cmakeBuildType(type), projectDir)
 
         inputs.files(
                 "$projectDir/CMakeLists.txt",
@@ -107,16 +115,20 @@ for (type in types) {
     }
 
     tasks.create(compileTaskNameLinuxSgx(type), Exec) {
-        dependsOn(createCmakeTaskName(type))
-        if(type == "Simulation") {
-            dependsOn(compileTaskNameLinuxSgx("Debug"))
-            commandLine("echo", "Linux SGX Simulation is a symlink from DEBUG.")
+        def buildSgxDebug = project.hasProperty("linux-sgx-debug")
+        if (buildSgxDebug && type == "Simulation") {
+            dependsOn(symlinkTaskName("Debug", type))
+            commandLine("echo", "Linux SGX $type is a symlink from Debug.")
+        } else if (!buildSgxDebug && (type == "Simulation" || type == "Debug")) {
+            dependsOn(symlinkTaskName("Release", type))
+            commandLine("echo", "Linux SGX $type is a symlink from Release.")
         } else {
+            dependsOn(createCmakeTaskName(type))
+            workingDir(buildDirectory(type))
             commandLine("/usr/bin/env", "cmake",
                     "--build", buildDirectory(type),
                     "--target", "linux-sgx-ext"
             )
-            workingDir(buildDirectory(type))
         }
     }
 

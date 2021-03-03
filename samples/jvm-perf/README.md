@@ -13,7 +13,7 @@ The benchmark app is built as one of the sample projects in the source tree.
 
 ```
 cd samples
-./gradlew build :jvm-perf:jvm-perf:build
+./gradlew jvm-perf:jvm-perf:build
 ```
 
 ## Running the benchmarks

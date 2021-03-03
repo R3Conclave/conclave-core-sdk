@@ -40,12 +40,7 @@ public class EnclaveBenchmark {
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
 
         if (enclave != null) {
-            OpaqueBytes spid;
-            if (platform.spid.length() != 0)
-                spid = OpaqueBytes.parse(platform.spid);
-            else
-                spid = new OpaqueBytes(new byte[16]);
-            enclave.start(new AttestationParameters.EPID(spid, null), null);
+            enclave.start(new AttestationParameters.DCAP(), null);
         }
     }
 
