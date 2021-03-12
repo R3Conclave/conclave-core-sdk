@@ -31,7 +31,6 @@ ExternalProject_Add(linux-sgx-ext
 	     && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
-             && patch ${BUILD_SRC_DIR}/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c ${CMAKE_CURRENT_SOURCE_DIR}/ndebug.diff
 
         UPDATE_COMMAND ""
 
@@ -67,7 +66,6 @@ ExternalProject_Add(macos-sign-tool
 	     && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
-             && patch ${BUILD_SRC_DIR}/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c ${CMAKE_CURRENT_SOURCE_DIR}/ndebug.diff
 
     UPDATE_COMMAND ""
 
