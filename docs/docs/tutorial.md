@@ -26,14 +26,14 @@ Only release mode locks out the host and provides the standard SGX security mode
 
 ## Setting up your machine
 
-For this tutorial you will need Java 8 or 11 (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
+For this tutorial you will need [Java 8 or 11](system-requirements.md#supported-jdks) (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
 and the Gradle build system for you, so you don't need anything to get started except the IDE itself (the free 
 Community Edition works fine).
 
-Currently, we support developing enclaves on Windows, macOS and Linux. However, there are a few platform specific
+Currently, we support developing enclaves on [Windows, macOS and Linux](system-requirements.md#operating-systems). However, there are a few platform specific
 differences to be aware of.
 
-Firstly, you need a Linux environment to build and execute enclaves, including for native testing. This is because
+Firstly, you need a [Linux](system-requirements.md#linux-distros-and-versions) environment to build and execute enclaves, including for native testing. This is because
 enclaves are Linux shared libraries with special extensions. If you are not using Linux you will need to install Docker.
 On Windows and macOS, Conclave uses Docker to build the enclave in a Linux environment.
 [Instructions are provided below](#running-the-host) to show you how to use Docker on Windows and macOS to run your

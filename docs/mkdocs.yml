@@ -30,6 +30,7 @@ nav:
         - Migration notes: api-changes.md
   - Operations:
     - Server deployment:
+      - System requirements: system-requirements.md
       - Machine setup: machine-setup.md
       - IAS: ias.md
       - Deploying to Azure: azure.md
