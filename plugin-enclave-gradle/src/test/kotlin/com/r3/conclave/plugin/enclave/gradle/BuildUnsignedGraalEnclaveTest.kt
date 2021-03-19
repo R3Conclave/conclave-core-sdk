@@ -35,6 +35,34 @@ class BuildUnsignedGraalEnclaveTest {
                 fos.write(newConfiguration.toByteArray())
             }
         }
+
+        private fun configurationFilesIncrementalBuild(buildType: BuildType, configurationFilePrefix: String) {
+            val originalConfigurations = mutableListOf<String>()
+            for (i in 0..1) {
+                val file = "$projectDirectory/$configurationFilePrefix$i.json"
+                val className = "Class${i}"
+                val configuration = String(Files.readAllBytes(Paths.get(file)))
+                originalConfigurations.add(configuration)
+
+                val newConfiguration = configuration.replace(className, "Another$className")
+                writeConfigurationToFile(file, newConfiguration)
+                var task = runTask(buildType)
+                assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+                task = runTask(buildType)
+                assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+            }
+
+            // Restore configurations
+            for (i in 0..1) {
+                val file = "$projectDirectory/$configurationFilePrefix$i.json"
+                writeConfigurationToFile(file, originalConfigurations[i])
+
+                var task = runTask(buildType)
+                assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+                task = runTask(buildType)
+                assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+            }
+        }
     }
 
     @BeforeEach
@@ -92,30 +120,12 @@ class BuildUnsignedGraalEnclaveTest {
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun reflectionConfigurationFilesIncrementalBuild(buildType: BuildType) {
-        val originalConfigurations = mutableListOf<String>()
-        for (i in 0..1) {
-            val file = "$projectDirectory/reflectionconfig$i.json"
-            val className = "Class${i}"
-            val configuration = String(Files.readAllBytes(Paths.get(file)))
-            originalConfigurations.add(configuration)
+        configurationFilesIncrementalBuild(buildType, "reflectionconfig")
+    }
 
-            val newConfiguration = configuration.replace(className, "Another$className")
-            writeConfigurationToFile(file, newConfiguration)
-            var task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-            task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
-        }
-
-        // Restore configurations
-        for (i in 0..1) {
-            val file = "$projectDirectory/reflectionconfig$i.json"
-            writeConfigurationToFile(file, originalConfigurations[i])
-
-            var task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-            task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
-        }
+    @EnumSource(BuildType::class)
+    @ParameterizedTest(name = "{index} => {0}")
+    fun serializationConfigurationFilesIncrementalBuild(buildType: BuildType) {
+        configurationFilesIncrementalBuild(buildType, "serializationconfig")
     }
 }

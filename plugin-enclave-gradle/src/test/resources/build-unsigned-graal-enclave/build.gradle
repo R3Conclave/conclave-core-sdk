@@ -12,4 +12,5 @@ conclave {
     maxHeapSize = "268435456"
     maxStackSize = "2097152"
     reflectionConfigurationFiles.from("reflectionconfig0.json", "reflectionconfig1.json")
+    serializationConfigurationFiles.from("serializationconfig0.json", "serializationconfig1.json")
 }

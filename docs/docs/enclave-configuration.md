@@ -45,6 +45,7 @@ conclave {
     maxThreads = 10
     supportLanguages = ""
     reflectionConfigurationFiles.from("config.json")
+    serializationConfigurationFiles.from("serialization.json")
 
     simulation {
     }
@@ -229,6 +230,18 @@ of Graal's reference manual.
 
 This allows for code which rely on reflection to specify which classes, methods, fields and their properties
 will be available at run time.
+
+!!! tip
+    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
+
+### serializationConfigurationFiles
+_Default:_ empty list
+
+A list of serialization configuration files as specified in Graal's
+[Serialization](https://github.com/oracle/graal/blob/vm-21.0.0/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/configure/doc-files/SerializationConfigurationFilesHelp.txt)
+documentation file.
+
+This allows to specify classes which are expected to be serialized using Java serialization.
 
 !!! tip
     This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.

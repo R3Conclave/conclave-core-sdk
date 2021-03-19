@@ -85,6 +85,9 @@ open class NativeImage @Inject constructor(
     @get:InputFiles
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
+    @get:InputFiles
+    val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
+
     @get:Input
     val maxStackSize: Property<String> = objects.property(String::class.java)
 
@@ -380,21 +383,23 @@ open class NativeImage @Inject constructor(
     }
 
     private fun reflectConfigurationOption(): String {
-        val fileList = StringBuilder(reflectionConfiguration.get().asFile.absolutePath)
-        reflectionConfigurationFiles.forEach {
-            fileList.append(",${it.absolutePath}")
-        }
-        return "-H:ReflectionConfigurationFiles=$fileList"
+        val fileList = reflectionConfigurationFiles.joinToString(separator = ",") { it.absolutePath }
+        return "-H:ReflectionConfigurationFiles=${reflectionConfiguration.get().asFile.absolutePath},$fileList"
+    }
+
+    private fun serializationConfigurationOption(): String {
+        return if (serializationConfigurationFiles.isEmpty) ""
+        else "-H:SerializationConfigurationFiles=${serializationConfigurationFiles.joinToString(separator = ",") { it.absolutePath }}"
     }
 
     private fun getLanguages(): List<String> {
-        if (supportLanguages.get().length > 0) {
+        if (supportLanguages.get().isNotEmpty()) {
             val languages = supportLanguages.get().split(",")
             return languages.map {
-                "--language:" + it
+                "--language:$it"
             }
         }
-        return emptyList<String>()
+        return emptyList()
     }
 
     override fun action() {
@@ -413,7 +418,7 @@ open class NativeImage @Inject constructor(
                     "-H:Name=enclave",
                     "-H:Path=" + outputs.files.first().parent
             )
-            + (if (buildType != BuildType.Release) debugOptions else emptyList<String>())
+            + (if (buildType != BuildType.Release) debugOptions else emptyList())
             + defaultOptions()
             + compilerOptions
             + placeholderLibPathOption()
@@ -426,6 +431,7 @@ open class NativeImage @Inject constructor(
             + sgxLibrariesOptions()
             + linkerScriptOption()
             + reflectConfigurationOption()
+            + serializationConfigurationOption()
             + getLanguages()
         )
         if (errorOut?.any { "Image generator watchdog is aborting image generation" in it } == true) {
