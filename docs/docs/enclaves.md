@@ -145,7 +145,7 @@ It's always been good design to minimise the amount of code that handles potenti
 you an even greater incentive to do so. That's because enclaves don't magically make the software inside them
 un-hackable. They protect the code and its memory from outside interference by the owner of the computer (and any
 hackers that gained access to the operating system) but if the code running inside the enclave has a bug that can
-be used to get in those protections are of no use. Thus it's important for an enclave to be written securely.
+be used to get in, those protections are of no use. Thus it's important for an enclave to be written securely.
 
 Conclave helps with this dramatically because it lets you write enclave logic in memory-safe, type-safe languages like
 Java or Kotlin. These languages eliminate by construction huge swathes of bugs. All buffer bounds are checked,
