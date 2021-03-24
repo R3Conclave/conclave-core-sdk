@@ -29,18 +29,18 @@ class EnclaveInstanceInfoImplTest {
         this[SgxReportBody.mrsigner] = mrsigner.buffer()
         this[SgxReportBody.isvProdId] = isvProdId
         this[SgxReportBody.isvSvn] = isvSvn
-        this[SgxReportBody.reportData] =
-            SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
+        this[SgxReportBody.reportData] = SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
     }
 
     private val timestamp = Instant.now()
 
     @Test
     fun `report data is not the signing key hash`() {
-        reportBody[SgxReportBody.reportData] = ByteBuffer.wrap(Random.nextBytes(64))
+        val reportData = Random.nextBytes(64)
+        reportBody[SgxReportBody.reportData] = ByteBuffer.wrap(reportData)
         assertThatIllegalArgumentException().isThrownBy {
             newInstance()
-        }.withMessage("The report data of the quote does not match the hash in the remote attestation.")
+        }.withMessageStartingWith("The report data provided by the enclave (${SHA512Hash.wrap(reportData)}) does not match the data in the serialized EnclaveInstanceInfo ")
     }
 
     @Test

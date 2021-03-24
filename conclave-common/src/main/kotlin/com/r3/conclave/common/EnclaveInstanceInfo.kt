@@ -121,7 +121,7 @@ interface EnclaveInstanceInfo {
             } catch (e: BufferUnderflowException) {
                 throw IllegalArgumentException("Truncated EnclaveInstanceInfo bytes", e)
             } catch (e: Exception) {
-                throw IllegalArgumentException("Corrupted EnclaveInstanceInfo bytes", e)
+                throw IllegalArgumentException("Corrupted EnclaveInstanceInfo bytes: ${e.message}", e)
             }
         }
     }

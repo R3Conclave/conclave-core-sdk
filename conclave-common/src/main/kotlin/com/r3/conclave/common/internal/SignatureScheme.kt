@@ -37,11 +37,6 @@ interface SignatureScheme {
     fun verify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray)
 
     /**
-     * Decode private key from its encoding as byte sequence
-     */
-    fun decodePrivateKey(encodedKey: ByteArray): PrivateKey
-
-    /**
      * Decode public key from its encoding as byte sequence
      */
     fun decodePublicKey(encodedKey: ByteArray): PublicKey

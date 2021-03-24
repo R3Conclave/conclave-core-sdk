@@ -33,7 +33,7 @@ class EnclaveInstanceInfoImpl(
         val expectedReportDataHash = SHA512Hash.hash(dataSigningKey.encoded + encryptionKey.encoded)
         val reportDataHash = SHA512Hash.get(reportBody[reportData].read())
         require(expectedReportDataHash == reportDataHash) {
-            "The report data of the quote does not match the hash in the remote attestation."
+            "The report data provided by the enclave ($reportDataHash) does not match the data in the serialized EnclaveInstanceInfo ($expectedReportDataHash)."
         }
 
         enclaveInfo = EnclaveInfo(
