@@ -1,0 +1,19 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    testImplementation project(":general:common")
+
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    testRuntimeOnly project(path: ":general:enclave_threadsafe_true", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:enclave_threadsafe_false", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:enclave_with_mail", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:enclave_with_postoffice", configuration: enclaveMode)
+}

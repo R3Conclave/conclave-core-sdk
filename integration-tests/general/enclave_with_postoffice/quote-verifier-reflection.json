@@ -1,0 +1,134 @@
+[
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.SignedTcbInfo",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.TcbInfo",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.TcbLevel",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.Tcb",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.SignedEnclaveIdentity",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EnclaveIdentity",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EnclaveTcbLevel",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EnclaveTcb",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EpidVerificationReport",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EpidVerificationReport$SgxQuoteDeserializer",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EpidVerificationReport$Sha256Deserializer",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.r3.conclave.common.internal.attestation.EpidVerificationReport$Base64Deserializer",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredClasses" : true,
+    "allPublicClasses" : true,
+    "allPublicFields" : true,
+    "allDeclaredFields" : true
+  }
+]

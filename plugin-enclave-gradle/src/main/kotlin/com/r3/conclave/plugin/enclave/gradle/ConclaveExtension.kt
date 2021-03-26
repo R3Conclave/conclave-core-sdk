@@ -20,6 +20,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     val graalVMSDKVersion: Property<String> = objects.property(String::class.java).convention("21.0.0")
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
+    val resourcesConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     val avian = RuntimeType.Avian

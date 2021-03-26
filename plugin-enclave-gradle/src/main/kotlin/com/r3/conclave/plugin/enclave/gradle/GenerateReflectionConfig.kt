@@ -16,7 +16,7 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
                 "com.r3.conclave.filesystem.jimfs.SystemJimfsFileSystemProvider"
         )
 
-        val DEFAULT_CLASSES = JIMFS_CLASSES
+        val DEFAULT_CLASSES = JIMFS_CLASSES + "net.i2p.crypto.eddsa.EdDSAEngine"
 
         @JvmStatic
         fun generateContent(classNames: List<String>): String {
@@ -49,7 +49,7 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
     val reflectionConfig: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val content = generateContent(JIMFS_CLASSES + enclaveClass.get())
+        val content = generateContent(DEFAULT_CLASSES + enclaveClass.get())
         Files.write(reflectionConfig.get().asFile.toPath(), content.toByteArray())
     }
 

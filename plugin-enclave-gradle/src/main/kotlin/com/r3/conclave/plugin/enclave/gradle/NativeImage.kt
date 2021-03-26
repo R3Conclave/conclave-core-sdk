@@ -86,6 +86,9 @@ open class NativeImage @Inject constructor(
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     @get:InputFiles
+    val resourcesConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
+
+    @get:InputFiles
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     @get:Input
@@ -383,8 +386,9 @@ open class NativeImage @Inject constructor(
     }
 
     private fun reflectConfigurationOption(): String {
-        val fileList = reflectionConfigurationFiles.joinToString(separator = ",") { it.absolutePath }
-        return "-H:ReflectionConfigurationFiles=${reflectionConfiguration.get().asFile.absolutePath},$fileList"
+        val fileList = if (reflectionConfigurationFiles.isEmpty) ""
+            else ("," + reflectionConfigurationFiles.joinToString(separator = ",") { it.absolutePath })
+        return "-H:ReflectionConfigurationFiles=${reflectionConfiguration.get().asFile.absolutePath}$fileList"
     }
 
     private fun serializationConfigurationOption(): String {
@@ -400,6 +404,15 @@ open class NativeImage @Inject constructor(
             }
         }
         return emptyList()
+    }
+
+    private fun includeResourcesOption(): List<String> {
+        if (resourcesConfigurationFiles.isEmpty)
+            return emptyList()
+
+        val files = resourcesConfigurationFiles.joinToString { it.absolutePath }
+        return listOf("-H:ResourceConfigurationFiles=$files",
+            "-H:Log=registerResource:verbose")
     }
 
     override fun action() {
@@ -431,6 +444,7 @@ open class NativeImage @Inject constructor(
             + sgxLibrariesOptions()
             + linkerScriptOption()
             + reflectConfigurationOption()
+            + includeResourcesOption()
             + serializationConfigurationOption()
             + getLanguages()
         )
