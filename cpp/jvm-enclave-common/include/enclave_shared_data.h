@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shared_data.h"
+#include <atomic>
 
 struct timespec;
 struct timeval;
@@ -56,9 +57,15 @@ private:
     explicit EnclaveSharedData();
     virtual ~EnclaveSharedData();
 
-    void getSharedData(SharedData* sd);
+    void getSharedData(SharedData& sd);
 
-    SharedData* shared_data_;
+    // The contents of them memory pointed to by shared_data_ can change at any time
+    // out of the enclave's control so we need to decare the pointer volatile.
+    volatile SharedData* shared_data_;
+
+    // Keep track of the last time returned by the enclave to ensure the clock
+    // only runs forward.
+    std::atomic_uint64_t last_time_;
 };
 
 }}

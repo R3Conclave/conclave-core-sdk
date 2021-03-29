@@ -9,9 +9,13 @@ malicious, and defended against using encryption and authentication.
 This has implications for reading the system clock. The current time is maintained by a battery powered real-time clock chip
 outside the CPU, which can be tampered with by the untrusted machine owner at any time. For this reason inside the
 enclave the current time should only be used with care, e.g. when errors in it aren't security critical. Trying to read
-it will yield a time from the host that may not map to real time, could go backwards, be invalid, or have other problems. 
-Additionally, the enclave may be paused at any moment for an arbitrary duration without the enclave code being aware of 
-that, so if you were to read a timestamp it might be very old at the moment you actually used it.
+it will yield a time from the host that may not map to real time, may be invalid, or have other problems. Inside an
+instance of an enclave, Conclave will always return a time value that is greater than or equal to any previously
+presented time. If the host rewinds the clock then the enclave time will pause until the host time again catches up
+with the latest time in the enclave. However, if the enclave is restarted then the time inside the enclave could
+be earlier than in a previous instance of the enclave. Additionally, the host may pause execution of an enclave at 
+any moment for an arbitrary duration without the enclave code being aware of that, so if you were to read a timestamp 
+it might be very old at the moment you actually used it.
 
 However the protocol for accessing the timestamp doesn't involve doing any calls out of the enclave, so, the host can't
 observe the program's progress by watching OCALLs (which would otherwise be a side channel).

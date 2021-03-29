@@ -36,7 +36,7 @@ static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
 static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
-
+static String runCppUnitTestsTaskName(type) { return "runCppUnitTests$type" }
 
 tasks.create("symlinkDebugToSimulation") {
     dependsOn(createCmakeTaskName("Debug"))
@@ -128,6 +128,18 @@ for (type in types) {
         commandLine("/usr/bin/env", "cmake",
                 "--build", buildDirectory(type),
                 "--target", "substratevm"
+        )
+    }
+
+    // Run the cpp unit tests
+    tasks.create(runCppUnitTestsTaskName(type), Exec) {
+        dependsOn(createCmakeTaskName(type))
+
+        workingDir(buildDirectory(type))
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", buildDirectory(type),
+                "--target", "build_tests_and_run"
         )
     }
 }

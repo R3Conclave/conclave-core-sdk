@@ -82,4 +82,8 @@ target_test(PROJ                  ${PROJECT_NAME}
             TEST_SRC_PATH         "${CMAKE_CURRENT_SOURCE_DIR}/test"
             TEST_OUT_PATH         "${CMAKE_CURRENT_BINARY_DIR}/test_bin"
             CMAKE_BINARY_DIR      "${CMAKE_BINARY_DIR}"
-            INCLUDE               "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/src")
+            INCLUDE               "${CMAKE_CURRENT_SOURCE_DIR}/include" 
+                                  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+                                  "${CMAKE_CURRENT_SOURCE_DIR}/../jvm-host-enclave-common/include"
+                                  "${CMAKE_CURRENT_SOURCE_DIR}/../jvm-enclave-common/include/public"
+                                  )
