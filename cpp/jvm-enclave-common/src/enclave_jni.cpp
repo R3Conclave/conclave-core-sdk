@@ -229,7 +229,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sealData
     const auto sealedDataSize = sgx_calc_sealed_data_size(authenticatedDataSize, plaintextSize);
 
     // Check if the output can fit the provided data.
-    if (static_cast<decltype(sealedDataSize)>(outputSize) < sealedDataSize) {
+    if (static_cast<std::remove_const<decltype(sealedDataSize)>::type>(outputSize) < sealedDataSize) {
         std::string msg = "output (size " + std::to_string(outputSize) + ") can't fit sealed data (size " +
                           std::to_string(sealedDataSize) + ")";
         raiseException(jniEnv, msg.c_str());

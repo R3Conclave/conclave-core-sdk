@@ -36,10 +36,10 @@ class JarTest {
                 "$prefix/libsgx_uae_service${simulationSuffix}.so",
                 "$prefix/libsgx_urts${simulationSuffix}.so",
                 "$prefix/libsgx_capable.so",
-                "$prefix/libcrypto.so.1.0.0"
+                "$prefix/libcrypto.so"
             )
             if (simulationSuffix.isEmpty()) {
-                libraries.add("$prefix/libprotobuf.so.10")
+                libraries.add("$prefix/libprotobuf.so")
             }
             return libraries
         }

@@ -136,39 +136,3 @@ add_executable(sign_enclave IMPORTED GLOBAL)
 set_property(TARGET sign_enclave PROPERTY IMPORTED_LOCATION ${LINUX_SGX_LIB_PREFIX}/sgx_sign)
 add_dependencies(sign_enclave linux-sgx-ext)
 
-# The below hasn't been working for a while, it makes CMake v3.18 crash. may be worth revisiting in the future.
-# Disabling it for now.
-message("linux-sgx_clion currently disabled!")
-set(ENABLE_CLION OFF)
-if (ENABLE_CLION)
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-# This is here for IDE support
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-file(GLOB_RECURSE CLION_SOURCES ${BUILD_SRC_DIR}/*.c ${BUILD_SRC_DIR}/*.cpp ${BUILD_SRC_DIR}/*.h)
-message("MGS {BUILD_SRC_DIR} ${BUILD_SRC_DIR}")
-message("MGS {CLION_SOURCES} ${CLION_SOURCES}")
-add_library(linux-sgx_clion ${CLION_SOURCES})
-add_dependencies(linux-sgx_clion linux-sgx_headers linux-sgx-ext)
-set_target_properties(linux-sgx_clion PROPERTIES LINKER_LANGUAGE CXX)
-target_include_directories(linux-sgx_clion PUBLIC
-        ${BUILD_SRC_DIR}/common/inc
-        ${BUILD_SRC_DIR}/common/inc/internal
-        ${BUILD_SRC_DIR}/common/inc/tlibc
-        ${BUILD_SRC_DIR}/sdk/simulation/tinst
-        ${BUILD_SRC_DIR}/sdk/simulation/urtssim
-        ${BUILD_SRC_DIR}/psw/urts
-        ${BUILD_SRC_DIR}/psw/urts/parser
-        ${BUILD_SRC_DIR}/psw/urts/linux
-        ${BUILD_SRC_DIR}/psw/ae/data/constants/linux
-        ${BUILD_SRC_DIR}/psw/ae/inc
-        ${BUILD_SRC_DIR}/psw/ae/inc/internal
-        ${BUILD_SRC_DIR}/psw/ae/common/inc
-        ${BUILD_SRC_DIR}/psw/uae_service/uae_wrapper/inc
-        ${BUILD_SRC_DIR}/psw/uae_service/linux
-        ${BUILD_SRC_DIR}/external/tinyxml2
-        ${BUILD_SRC_DIR}/external/vtune/linux/include
-        ${BUILD_SRC_DIR}/external/vtune/linux/sdk/src/ittnotify
-        ${BUILD_SRC_DIR}/external/epid-sdk)
-target_link_libraries(linux-sgx_clion linux-sgx_headers)
-endif()
-endif()

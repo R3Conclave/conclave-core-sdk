@@ -54,7 +54,7 @@ subprojects { Project project ->
                 include "libjvm_host_shared.so"
             }
             from (libDir) {
-                include "libcrypto.so.1.0.0"
+                include "libcrypto.so"
             }
             from (linuxSgxQuoteGenBuildDir) {
                 include "libsgx_qe3_logic.so"
@@ -68,7 +68,7 @@ subprojects { Project project ->
             }
             if (type != "Simulation") {
                 from (libDir) {
-                    include "libprotobuf.so.10"
+                    include "libprotobuf.so"
                 }
             }
         }
