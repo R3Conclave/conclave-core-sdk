@@ -24,10 +24,11 @@ nav:
         - Threads: threads.md
         - JavaScript: javascript.md
         - File system: filesystem.md
-        - Configuration options for enclaves: enclave-configuration.md
     - API:
         - JavaDocs: api/index.html
+        - Configuration options for enclaves: enclave-configuration.md
         - Migration notes: api-changes.md
+        - Known issues: known-issues.md
   - Operations:
     - Server deployment:
       - System requirements: system-requirements.md
