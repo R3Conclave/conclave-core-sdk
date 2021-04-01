@@ -13,6 +13,7 @@ class NonThreadSafeEnclaveWithPostOffice : Enclave() {
         when (String(bytes)) {
             "PostOffice.create()" -> PostOffice.create(enclaveInstanceInfo.encryptionKey)
             "EnclaveInstanceInfo.createPostOffice()" -> enclaveInstanceInfo.createPostOffice()
+            "EnclaveInstanceInfo.serialize()" -> return enclaveInstanceInfo.serialize()
         }
         return null
     }

@@ -16,7 +16,22 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
                 "com.r3.conclave.filesystem.jimfs.SystemJimfsFileSystemProvider"
         )
 
-        val DEFAULT_CLASSES = JIMFS_CLASSES + "net.i2p.crypto.eddsa.EdDSAEngine"
+        private val ATTESTATION_CLASSES = listOf(
+            "com.r3.conclave.common.internal.attestation.SignedTcbInfo",
+            "com.r3.conclave.common.internal.attestation.TcbInfo",
+            "com.r3.conclave.common.internal.attestation.TcbLevel",
+            "com.r3.conclave.common.internal.attestation.Tcb",
+            "com.r3.conclave.common.internal.attestation.SignedEnclaveIdentity",
+            "com.r3.conclave.common.internal.attestation.EnclaveIdentity",
+            "com.r3.conclave.common.internal.attestation.EnclaveTcbLevel",
+            "com.r3.conclave.common.internal.attestation.EnclaveTcb",
+            "com.r3.conclave.common.internal.attestation.EpidVerificationReport",
+            "com.r3.conclave.common.internal.attestation.EpidVerificationReport\$SgxQuoteDeserializer",
+            "com.r3.conclave.common.internal.attestation.EpidVerificationReport\$Sha256Deserializer",
+            "com.r3.conclave.common.internal.attestation.EpidVerificationReport\$Base64Deserializer"
+        )
+
+        val DEFAULT_CLASSES = JIMFS_CLASSES + ATTESTATION_CLASSES + "net.i2p.crypto.eddsa.EdDSAEngine"
 
         @JvmStatic
         fun generateContent(classNames: List<String>): String {

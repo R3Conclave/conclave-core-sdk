@@ -13,11 +13,9 @@ teardownAESM
 buildAESMImage $SCRIPT_DIR/../containers/aesmd/src/docker
 startAESMContainer
 
-# Run just the DCAP attestation tests.
-# TODO This should be better handled using tags to discover unit tests that must be run on DCAP.
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE -PhardwareTests conclave-host:test -i --tests com.r3.conclave.host.internal.HardwareAttestationTest"
-
+# Run the DCAP attestation tests in Debug and Simulation modes using integration tests.
 # Note, the DCAP run doesn't test the samples as they can be run on the EPID machines which are cheaper.
+runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./integration-tests-dcap.sh"
 
 # Run SDK tests in hardware using DCAP.
 runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && ./test-sdk.sh hardware"

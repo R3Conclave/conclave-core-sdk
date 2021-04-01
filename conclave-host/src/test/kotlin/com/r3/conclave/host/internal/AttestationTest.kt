@@ -6,15 +6,10 @@ import com.r3.conclave.common.EnclaveSecurityInfo
 import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.attestation.DcapAttestation
-import com.r3.conclave.common.internal.attestation.EpidAttestation
 import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.internaltesting.HardwareTest
-import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
-import com.r3.conclave.internaltesting.dynamic.EnclaveType
-import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.testing.MockHost
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -22,8 +17,10 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.RegisterExtension
 
+// TODO exact copies of these tests are used for DCAP in Simulation and Debug modes
+//  at integration-tests/general/tests/src/test/kotlin/com/r3/conclave/integrationtests/general/tests/AttestationTests.kt .
+//  We want to eventually get rid of this duplication.
 abstract class AttestationTest {
     abstract val attestationParameters: AttestationParameters?
     abstract val expectedEnclaveMode: EnclaveMode
@@ -47,7 +44,6 @@ abstract class AttestationTest {
     fun cleanUp() {
         enclaveHost.close()
     }
-
     @Test
     fun `EnclaveInstanceInfo serialisation round-trip`() {
         val roundTrip = EnclaveInstanceInfo.deserialize(enclaveHost.enclaveInstanceInfo.serialize())
@@ -83,26 +79,6 @@ abstract class AttestationTest {
     }
 }
 
-class HardwareAttestationTest : HardwareTest, AttestationTest() {
-    companion object {
-        @JvmField
-        @RegisterExtension
-        val testEnclaves = TestEnclaves()
-    }
-
-    override val attestationParameters: AttestationParameters
-        get() = HardwareTest.attestationParams
-
-    override val expectedEnclaveMode: EnclaveMode
-        get() = EnclaveMode.DEBUG
-
-    override val expectedAttestationType: Class<out Attestation>
-        get() = if (attestationParameters is AttestationParameters.EPID) EpidAttestation::class.java else DcapAttestation::class.java
-
-    override val enclaveHost: EnclaveHost =
-        testEnclaves.hostTo(EnclaveInstanceInfoEnclave::class.java, EnclaveBuilder(type = EnclaveType.Debug))
-}
-
 abstract class MockAttestationTest : AttestationTest() {
     override val attestationParameters: AttestationParameters?
         get() = null
@@ -114,19 +90,6 @@ abstract class MockAttestationTest : AttestationTest() {
     fun `mock is always insecure`() {
         assertThat(enclaveHost.enclaveInstanceInfo.securityInfo.summary).isEqualTo(EnclaveSecurityInfo.Summary.INSECURE)
     }
-}
-
-class SimulationModeAttestationTest : MockAttestationTest() {
-    companion object {
-        @JvmField
-        @RegisterExtension
-        val testEnclaves = TestEnclaves()
-    }
-
-    override val expectedEnclaveMode: EnclaveMode
-        get() = EnclaveMode.SIMULATION
-
-    override val enclaveHost: EnclaveHost = testEnclaves.hostTo(EnclaveInstanceInfoEnclave::class.java)
 }
 
 class MockModeAttestationTest : MockAttestationTest() {

@@ -406,17 +406,19 @@ open class NativeImage @Inject constructor(
         return emptyList()
     }
 
-    private fun includeResourcesOption(): List<String> {
-        if (resourcesConfigurationFiles.isEmpty)
-            return emptyList()
-
-        val files = resourcesConfigurationFiles.joinToString { it.absolutePath }
+    private fun includeResourcesOption(defaultResourcesConfig: Path): List<String> {
+        val configs = resourcesConfigurationFiles.map { it.absolutePath } + defaultResourcesConfig.toAbsolutePath().toString()
+        val files = configs.joinToString(separator = ",")
         return listOf("-H:ResourceConfigurationFiles=$files",
             "-H:Log=registerResource:verbose")
     }
 
     override fun action() {
         GenerateLinkerScript.writeToFile(linkerScript)
+
+        val defaultResourcesConfig = linkerScript.parent.resolve("default-resources-config.json")
+        GenerateDefaultResourcesConfig.writeToFile(defaultResourcesConfig)
+
         var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
         if (!nativeImageFile.exists()) {
             nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/bin/native-image")
@@ -444,7 +446,7 @@ open class NativeImage @Inject constructor(
             + sgxLibrariesOptions()
             + linkerScriptOption()
             + reflectConfigurationOption()
-            + includeResourcesOption()
+            + includeResourcesOption(defaultResourcesConfig)
             + serializationConfigurationOption()
             + getLanguages()
         )

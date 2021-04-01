@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class NonThreadSafeEnclaveWithMailTests : JvmTest("com.r3.conclave.integrationtests.general.enclave.NonThreadSafeEnclaveWithMail") {
-    @Disabled("broken in HW mode: https://r3-cev.atlassian.net/browse/CON-303")
+
     @Test
     fun notMultiThreadedByDefault() {
         // Run a bunch of threads through the enclave. They will check that only one thread is inside
