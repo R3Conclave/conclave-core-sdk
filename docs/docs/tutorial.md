@@ -115,6 +115,12 @@ openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_p
     The only mode we cannot access using the `-PenclaveMode` flag is **mock mode**. Mock mode must be accessed via the
     Mock API. More on this [later](writing-hello-world.md#testing).
 
+## Got this far? Join the community!
+
+There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
+is available where you can find the development team during UK office hours (GMT 0900-1700).
+
+[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
 
 ## Running the host
 === "Linux"
@@ -260,4 +266,4 @@ Try this:
 !!! tip
     Aibohphobia is the fear of palindromes.
 
-If you get stuck please contact [conclave-discuss@groups.io](mailto:conclave-discuss@groups.io) and ask for help!  
+If you get stuck join the [mailing list](https://groups.io/g/conclave-discuss) and ask for help! 
