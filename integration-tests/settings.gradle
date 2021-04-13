@@ -2,13 +2,25 @@ pluginManagement {
     apply from: '../versions.gradle'
 
     repositories {
-        maven {
-            url = "../build/sdk/repo"
-        }
-        // Add standard repositories back.
         gradlePluginPortal()
         jcenter()
         mavenCentral()
+        switch (System.getenv('USE_MAVEN_REPO')?.toLowerCase()) {
+            case "artifactory":
+                maven {
+                    url = "https://software.r3.com/artifactory/sgxjvm"
+                    credentials {
+                        username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                        password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+                    }
+                }
+                break
+            default:
+                maven {
+                    url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
+                }
+            break
+        }
     }
 
     plugins {

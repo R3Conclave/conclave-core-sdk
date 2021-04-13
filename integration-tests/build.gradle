@@ -5,23 +5,28 @@ plugins {
 apply from: '../versions.gradle'
 apply from: '../common.gradle'
 
-ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
-
-task sdkRepo(type: GradleBuild) {
-    dir = ".."
-    tasks = ["sdkRepo"]
-}
-
 subprojects {
+    ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
     repositories {
-        maven {
-            url = "${rootProject.projectDir}/../build/sdk/repo"
+        switch (System.getenv('USE_MAVEN_REPO')?.toLowerCase()) {
+            case "artifactory":
+                maven {
+                    url = "https://software.r3.com/artifactory/sgxjvm"
+                    credentials {
+                        username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                        password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+                    }
+                }
+                break
+            default:
+                maven {
+                    url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
+                }
         }
         mavenCentral()
     }
 
     tasks.withType(Test) {
-        dependsOn(":sdkRepo")
         useJUnitPlatform {
             if (findProperty("slowTests") == null) {
                 excludeTags("slow")

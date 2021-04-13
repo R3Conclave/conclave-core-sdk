@@ -25,36 +25,36 @@ def modulesToSubstitute = [
         'com.r3.conclave:internal-testing'
 ]
 
-def sgxModeProperty = project.property('sgx_mode')
 subprojects {
-    ext {
-        sgxMode = sgxModeProperty
-    }
+    def enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 
     repositories {
         mavenCentral()
         jcenter()
-        maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
-            }
+        switch (System.getenv('USE_MAVEN_REPO')?.toLowerCase()) {
+            case "artifactory":
+                maven {
+                    url = "https://software.r3.com/artifactory/sgxjvm"
+                    credentials {
+                        username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                        password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+                    }
+                }
+                break
+            case "sdk":
+                maven {
+                    url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
+                }
         }
     }
 
     tasks.withType(Test) {
-        systemProperty 'sgx.mode', sgxModeProperty
-        reports.junitXml.destination = file("$buildDir/$sgxModeProperty/test-results/test")
-        reports.html.destination = file("$buildDir/$sgxModeProperty/test-results/html")
+        reports.junitXml.destination = file("$buildDir/$enclaveMode/test-results/test")
+        reports.html.destination = file("$buildDir/$enclaveMode/test-results/html")
     }
 
     configurations {
-        def version = System.getenv('PROJECT_VERSION')
-        if (version != null) {
-            if (version.empty) {
-                version = default_conclave_version
-            }
+        if (System.getenv('USE_MAVEN_REPO') != null) {
             all {
                 for (submodule in modulesToSubstitute) {
                     resolutionStrategy.dependencySubstitution {

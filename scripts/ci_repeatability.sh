@@ -2,42 +2,40 @@
 set -xeuo pipefail
 shopt -s extglob
 
-SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
-source ${SCRIPT_DIR}/ci_build_common.sh
+script_dir=$(dirname ${BASH_SOURCE[0]})
+source ${script_dir}/ci_build_common.sh
 
 # Kill any lingering Gradle workers
 ps auxwww | grep Gradle | grep -v grep | awk '{ print $2; }' | xargs -r kill || true
 
-DOCKER_IMAGE=com.r3.sgx/sgxjvm-build
+docker_image=com.r3.sgx/sgxjvm-build
 
-# Login and pull the current build image
-docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
-docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/$DOCKER_IMAGE
+loadBuildImage
 
 # Build the build-image and the enclave Release artifacts.
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"
+runDocker $docker_image "./gradlew containers:sgxjvm-build:buildImagePublish"
+runDocker $docker_image "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
-mkdir FIRST && for SO in samples/*/build/conclave/release/*.so; do
-    mv $SO FIRST
+mkdir FIRST && for so in samples/*/build/conclave/release/*.so; do
+    mv $so FIRST
 done
 cd FIRST && sha256sum !(*.signed).so > SHA256SUM && cd -
 
 # Clean the image completely.
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR && \$GRADLE clean && \$GRADLE --stop"
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/samples && \$GRADLE clean && \$GRADLE --stop"
+runDocker $docker_image "./gradlew clean && ./gradlew --stop"
+runDocker $docker_image "cd samples && ./gradlew clean && ./gradlew --stop"
 
 # Change the name of the container's mount-point.
 # Any lingering references to the mount-point inside the enclave
 # will therefore change its SHA256 hash.
-export CODE_DOCKER_DIR="/code"
+code_docker_dir="/code"
 
 # Rebuild the build-image and enclave Release artifacts.
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
-runDocker $DOCKER_IMAGE "cd $CODE_DOCKER_DIR/samples && \$GRADLE buildSignedEnclaveRelease -i"
+runDocker $docker_image "./gradlew containers:sgxjvm-build:buildImagePublish"
+runDocker $docker_image "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
-mkdir SECOND && for SO in samples/*/build/conclave/release/*.so; do
-    mv $SO SECOND
+mkdir SECOND && for so in samples/*/build/conclave/release/*.so; do
+    mv $so SECOND
 done
 cd SECOND && sha256sum !(*.signed).so > SHA256SUM && cd -
 

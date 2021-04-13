@@ -2,90 +2,130 @@
 set -xeuo pipefail
 # Sets up common build script parameters and functions
 
-SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
+code_host_dir=$PWD
+code_docker_dir=${code_host_dir}
 
-HOST_CORE_DUMP_DIR=/var/crash
-CODE_HOST_DIR=$PWD
-export CONTAINER_NAME=$(echo "code${CODE_HOST_DIR}" | sed -e 's/[^a-zA-Z0-9_.-]/_/g')
-CODE_DOCKER_DIR=${CODE_HOST_DIR}
+mkdir -p $HOME/.gradle
+mkdir -p $HOME/.m2
+mkdir -p $HOME/.ccache
+mkdir -p $HOME/.mx
+mkdir -p $HOME/.container
 
-if [[ ${OBLIVIUM_BUILD_BRANCH:-} =~ .*/exclude-native$ ]]
-then
-    export EXCLUDE_NATIVE="-PexcludeNative=true"
-else
-    export EXCLUDE_NATIVE=""
-fi
-export GRADLE_OPTS="-Dorg.gradle.workers.max=$(nproc) --stacktrace"
-
-mkdir -p /home/$(id -un)/.gradle
-mkdir -p /home/$(id -un)/.m2
-mkdir -p /home/$(id -un)/.ccache
-mkdir -p /home/$(id -un)/.mx
-
-SGX_HARDWARE_FLAGS=""
+# If running on a Linux host with SGX properly installed and configured,
+# tunnel through the SGX driver and AES daemon socket. This means you can
+# still run the devenv on a non-SGX host or a Mac without it breaking.
+sgx_hardware_flags=""
 if [ -e /dev/isgx ] && [ -d /var/run/aesmd ]; then
-    SGX_HARDWARE_FLAGS="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
-elif [ -e /dev/sgx/enclave ] && [ -e /dev/sgx/provision ]; then
-    if [ -d /var/run/aesmd ]; then
-        SGX_HARDWARE_FLAGS="--device=/dev/sgx/enclave --device=/dev/sgx/provision -v /var/run/aesmd:/var/run/aesmd"
-    else
-        SGX_HARDWARE_FLAGS="--device=/dev/sgx/enclave --device=/dev/sgx/provision"
+    sgx_hardware_flags="--device=/dev/isgx -v /var/run/aesmd:/var/run/aesmd"
+elif [ -e /dev/sgx/enclave ] && [ -d /var/run/aesmd ]; then
+    # DCAP driver.
+    # If the sgx device is a symlink, then map the whole device folder.
+    if [ -L /dev/sgx/enclave ]; then # New DCAP driver 1.41.
+    sgx_hardware_flags="--device=/dev/sgx_enclave --device=/dev/sgx_provision -v /dev/sgx:/dev/sgx"
+    else # For legacy dcap drivers...
+    sgx_hardware_flags="--device=/dev/sgx/enclave --device=/dev/sgx/provision"
     fi
+    sgx_hardware_flags=${sgx_hardware_flags}" -v /var/run/aesmd:/var/run/aesmd"
 fi
 
 # Part of Graal build process involves cloning and running git commands.
 # TeamCity is configured to use mirrors (https://www.jetbrains.com/help/teamcity/git.html#Git-AgentSettings),
 # and for the git commands to work properly, the container needs access
 # the agent home directory.
-AGENT_HOME_DIR_FLAGS=""
-if [ -d ${AGENT_HOME_DIR:-} ]; then
-    AGENT_HOME_DIR_FLAGS="-v ${AGENT_HOME_DIR}:/${AGENT_HOME_DIR}"
+agent_home_dir_flags=""
+if [ -d "${AGENT_HOME_DIR:-}" ]; then
+    agent_home_dir_flags="-v ${AGENT_HOME_DIR}:/${AGENT_HOME_DIR}"
 fi
 
-# `PROJECT_VERSION` unset means that the composite build will be used by the samples.
-# `PROJECT_VERSION` set to empty will make samples use published artifacts with hardcoded default version,
-#  e.g. 0.3-SNAPSHOT, as used by the `master` builds and the Java 11 PR build.
-# `PROJECT_VERSION` set to non-empty will make the samples use the artifacts published with said version,
-#  as used by the PR hardware builds.
-# `PROJECT_VERSION` should only be passed to the container if set, even if empty, otherwise leave it unset.
-# This should be in tune with the CI configurations.
-PROJECT_VERSION_FLAGS=""
-if [ -n "${PROJECT_VERSION-}" ] || [ -n "${PROJECT_VERSION+empty}" = "empty" ]; then
-    PROJECT_VERSION_FLAGS="-e PROJECT_VERSION=${PROJECT_VERSION}"
+# USE_MAVEN_REPO can be set to "artifactory" or "sdk" and will affect
+# which artifacts the samples will use.
+# When unset, samples will use the composite build.
+use_maven_repo_flags=""
+if [ -n "${USE_MAVEN_REPO-}" ]; then
+    use_maven_repo_flags="-e USE_MAVEN_REPO=${USE_MAVEN_REPO}"
 fi
 
-function runDocker() {
-    IMAGE_NAME=$1
-    docker run --rm \
-       -u $(id -u):$(id -g) \
-       --network host \
-       --group-add $(cut -d: -f3 < <(getent group docker)) \
-       --ulimit core=512000000 \
-       -v /home/$(id -un)/.gradle:/gradle \
-       -v /home/$(id -un)/.m2:/home/.m2 \
-       -v /home/$(id -un)/.mx:/home/.mx \
-       -v /home/$(id -un)/.ccache:/home/.ccache \
-       -v ${CODE_HOST_DIR}:${CODE_DOCKER_DIR} \
-       -v /var/run/docker.sock:/var/run/docker.sock \
-       -v ${HOST_CORE_DUMP_DIR}:${HOST_CORE_DUMP_DIR} \
-       $AGENT_HOME_DIR_FLAGS \
-       ${SGX_HARDWARE_FLAGS} \
-       ${PROJECT_VERSION_FLAGS} \
-       -e GRADLE_USER_HOME=/gradle \
-       $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
-       ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${IMAGE_NAME} \
-       bash -c "GRADLE='./gradlew $EXCLUDE_NATIVE'; $2"
+# OS specific settings
+if [ "$(uname)" == "Darwin" ]; then
+    docker_group_add=""
+    cardreader_gid=""
+    num_cpus=$( sysctl -n hw.ncpu )
+    docker_ip="192.168.65.2"
+    network_cmd="-p 8000:8000 -p 8001:8001"
+    host_core_dump_dir="/cores/"
+else
+    docker_gid=$(cut -d: -f3 < <(getent group docker))
+    if [[ "$docker_gid" == "" ]]; then
+        echo "You don't appear to have a docker UNIX group configured. This script requires one."
+        echo
+        echo "Follow the post-install instructions at https://docs.docker.com/install/linux/linux-postinstall/"
+        echo "to finish the Docker setup process."
+        exit 1
+    fi
+    docker_group_add="--group-add ${docker_gid}"
+    cardreader_gid=$(cut -d: -f3 < <(getent group cardreader) || echo "")
+    num_cpus=$( nproc )
+    network_cmd="--network=host"
+    host_core_dump_dir="/var/crash/"
+
+    if [[ $(uname -r) == *microsoft* ]]; then
+        docker_ip="172.17.0.2"
+    else
+        docker_ip=$(ip address show docker0 2> /dev/null | sed -n 's/^.*inet \(addr:[ ]*\)*\([^ ]*\).*/\2/p' | cut -d/ -f1)
+        if [ -z "$docker_ip" ]; then
+        docker_ip="172.17.0.2"
+        fi
+    fi
+fi
+
+volume_usb=""
+if [[ -d /dev/bus/usb ]]; then
+    volume_usb="-v /dev/bus/usb:/dev/bus/usb"
+fi
+
+group_cardreader=""
+if [[ ! -z ${cardreader_gid} ]]; then
+    group_cardreader="--group-add ${cardreader_gid}"
+fi
+
+GRADLE_OPTS="-Dorg.gradle.workers.max=$num_cpus --stacktrace"
+docker_opts="\
+    --rm \
+    --privileged \
+    -u $(id -u):$(id -g) \
+    --ulimit core=512000000 \
+    --label sgxjvm \
+    ${docker_group_add} \
+    ${network_cmd:-} \
+    ${group_cardreader} \
+    -v $HOME/.gradle:/gradle \
+    -v $HOME/.m2:/home/.m2 \
+    -v $HOME/.mx:/home/.mx \
+    -v $HOME/.ccache:/home/.ccache \
+    -v $HOME/.container:/home \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v $host_core_dump_dir:/var/crash/ \
+    -v ${code_host_dir}:${code_docker_dir} \
+    ${volume_usb} \
+    ${sgx_hardware_flags} \
+    -e GRADLE_USER_HOME=/gradle \
+    -e GRADLE_OPTS \
+    ${use_maven_repo_flags} \
+    $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
+    -w $code_docker_dir \
+"
+
+function loadBuildImage() {
+    if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
+        docker load -i $code_host_dir/containers/sgxjvm-build/build/sgxjvm-build-docker-image.tar
+    fi
 }
 
-# Prune docker images
-docker image prune -af
-
-# Login and pull the current build image
-docker login ${OBLIVIUM_CONTAINER_REGISTRY_URL} -u ${OBLIVIUM_CONTAINER_REGISTRY_USERNAME} -p ${OBLIVIUM_CONTAINER_REGISTRY_PASSWORD}
-docker pull ${OBLIVIUM_CONTAINER_REGISTRY_URL}/com.r3.sgx/sgxjvm-build
-
-# Refresh dependencies
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE --refresh-dependencies -i"
-
-# First we build the build-image itself in case this build changes it
-runDocker com.r3.sgx/sgxjvm-build "cd $CODE_DOCKER_DIR && \$GRADLE containers:sgxjvm-build:buildImagePublish"
+function runDocker() {
+    image_name=$1
+    docker run \
+        $docker_opts \
+        $agent_home_dir_flags \
+        ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${image_name} \
+        bash -c "$2"
+}

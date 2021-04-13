@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-SCRIPT_DIR=$(dirname ${BASH_SOURCE[0]})
+script_dir=$(dirname ${BASH_SOURCE[0]})
+source $script_dir/devenv.sh
 
-source $SCRIPT_DIR/devenv.sh
-
-docker exec ${CONTAINER_ID} /opt/idea-$IDEA_VERSION/bin/idea.sh
+docker exec ${container_id} /opt/idea-$idea_version/bin/idea.sh

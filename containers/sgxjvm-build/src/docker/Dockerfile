@@ -38,6 +38,8 @@ RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/1
 
 RUN apt-get update -y && apt-get install -y \
     autoconf \
+    az-dcap-client \
+    bc \
     ccache \
     cmake \
     cpio \
@@ -45,22 +47,28 @@ RUN apt-get update -y && apt-get install -y \
     exuberant-ctags \
     g++ \
     gcc \
+    gdb \
+    gdbserver \
     git \
     libcurl4-openssl-dev \
     libprotobuf-dev \
+    libsgx-dcap-ql \
+    libsgx-dcap-ql-dev \
+    libsgx-quote-ex \
+    libsgx-urts \
     libssl-dev \
     libtool \
     libunwind8 \
     make \
+    nano \
     ocaml \
     ocamlbuild \
-    openjdk-8-jdk \
     openjdk-11-jdk \
+    openjdk-8-jdk \
     openssl \
     patch \
     protobuf-compiler \
     python \
-    python3-venv \
     python3-dev \
     python3-pip \
     python3-venv \
@@ -69,15 +77,10 @@ RUN apt-get update -y && apt-get install -y \
     sudo \
     texinfo \
     unzip \
+    vim \
     virtualenv \
     zip \
-    zlib1g-dev \
-    docker-ce \
-    libsgx-quote-ex \
-    libsgx-urts \
-    libsgx-dcap-ql \
-    libsgx-dcap-ql-dev \
-    az-dcap-client
+    zlib1g-dev
 
 # MX and JVMCI versions should be aligned with Graal's build instructions,
 # which can be found at https://github.com/oracle/graal/blob/vm-20.0.0/vm/README.md,
@@ -140,3 +143,9 @@ COPY root/etc/sysctl.d/10-ptrace.conf /etc/sysctl.d/10-ptrace.conf
 # Set up a fake user. Without this System.getProperty("user.home") returns '?' which confuses Corda.
 COPY root/scripts/setup-users.sh /scripts/setup-users.sh
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && /scripts/setup-users.sh
+
+# Configure a nicer/more useful prompt that doesn't show the (bogus/artificial) username, but does show git branch.
+RUN echo "export PS1=\"conclave \[\e[32m\]\$(git branch | awk '/^\* / { print \$2 }')\[\e[0m\] \w> \"" >>/etc/bash.bashrc
+
+# Make ls use colors.
+RUN echo "alias ls='ls --color'" >>/etc/bash.bashrc
