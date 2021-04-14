@@ -2,6 +2,7 @@ package com.r3.conclave.integrationtests.jni
 
 import com.r3.conclave.enclave.internal.substratevm.ErrnoBase
 import com.r3.conclave.enclave.internal.substratevm.Fcntl
+import com.r3.conclave.integrationtests.jni.tasks.Time
 import com.r3.conclave.integrationtests.jni.tasks.XStat64
 import com.r3.conclave.jvm.enclave.common.internal.testing.MockStat64Data
 import org.assertj.core.api.Assertions.assertThat
@@ -36,12 +37,12 @@ class StatTest : JniTest() {
     @Test
     fun modifiedTime() {
         val path = "/stat.data"
-        val openTime = Instant.now()
+        val enclaveCurrentTimeInSeconds = sendMessage(Time())
         val fd = FcntlTest.openFileForWriting(path, Fcntl.O_WRONLY.or(Fcntl.O_CREAT))
         val xstat64Message = XStat64(VERSION, path, MockStat64Data())
         var response = sendMessage(xstat64Message)
         assertThat(response.ret).isZero
-        assertThat(response.buf.timespec.sec).isGreaterThanOrEqualTo(openTime.epochSecond)
+        assertThat(response.buf.timespec.sec).isGreaterThanOrEqualTo(enclaveCurrentTimeInSeconds)
         assertThat(response.buf.timespec.nsec).isLessThan(1_000_000_000)
 
         Thread.sleep(WRITE_TIME_GAP_IN_MILLISECONDS)
@@ -52,7 +53,7 @@ class StatTest : JniTest() {
         assertThat(response.ret).isZero
         assertThat(response.buf.timespec.sec)
                 .isGreaterThanOrEqualTo(writeTime.epochSecond)
-                .isGreaterThan(openTime.epochSecond)
+                .isGreaterThan(enclaveCurrentTimeInSeconds)
         assertThat(response.buf.timespec.nsec).isLessThan(1_000_000_000)
         UnistdTest.close(fd)
     }

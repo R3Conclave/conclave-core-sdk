@@ -18,6 +18,7 @@ val messageModule = SerializersModule {
         subclass(Close::class, Close.serializer())
         subclass(Write::class, Write.serializer())
         subclass(XStat64::class, XStat64.serializer())
+        subclass(Time::class, Time.serializer())
     }
 }
 
