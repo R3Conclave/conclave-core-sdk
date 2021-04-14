@@ -63,7 +63,7 @@ platforms.
 By sending mail to itself an enclave can store chunks of data that will be fed back to it at startup. It can then
 delete these chunks by acknowledging the mails. Utilising mail this way has a variety of advantages:
 
-* The same encryption, authentication and TCB management features are available for stored data as well as messaging.
+* The same encryption, authentication and trusted computing base (TCB) management features are available for stored data as well as messaging.
 * The API is simple and used the same way for both use cases.
 * Mail acknowledgement can be used to control data lifetime, by having enclaves signal to the host that it's safe to
   delete data which is no longer needed.
@@ -140,7 +140,7 @@ Like all symmetric ciphers, for AES/GCM to work both sides must know the same ke
 messages to a target for which we only know a public key, and have never had a chance to securely generate a joint AES
 key with. This is the problem solved by the [Elliptic Curve Diffie-Hellman algorithm](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman).
 To use it we first select a large random number (256 bits) and then convert that to a coordinate on an elliptic
-curve - in our case, we use Curve25519, which is a modern and highly robust elliptic curve. The point is our public
+curve - in our case, we use Curve25519, which is a modern and highly robust elliptic curve. The point on the elliptic curve is our public
 key and can be encoded in another 256 bits (32 bytes). We write this public key after the unencrypted envelope. This
 key is an *ephemeral* key - we picked it just for the purposes of creating this mail. 
 
@@ -184,7 +184,7 @@ Let's look at why Conclave provides Mail, instead of having clients connect into
 
 We provide the mail paradigm for these reasons:
 
-1. HTTPS requires a relatively large and complex infrastructure, increasing the size of the trusted computing base (TCB).
+1. HTTPS requires a relatively large and complex infrastructure, increasing the size of the TCB.
    It can go wrong in ways that aren't intuitive. Mail attempts to solve some common security problems before they start.
 1. SSL/TLS is not well adapted to enclaves, for example certificates don't make sense, but the protocol requires them.
 1. Web servers require the backing of a database to ensure session persistence and atomicity, but this interacts 
@@ -333,7 +333,7 @@ load balancing, require databases for stored state and so on.
 
 With a stream or RPC oriented approach the enclave would be expected to respond to bytes from a client more or less
 immediately, meaning it has to be always running and would have to persist uploaded data itself. Unfortunately
-persistence in enclaves is tricky due to the existence of [Memento attacks](security.md#memento-attacks)").
+persistence in enclaves is tricky due to the existence of [Memento attacks](security.md#memento-attacks).
 
 RPCs (including REST) can be hard to integrate with fully reliable systems that can tolerate restarts at any moment.
 Because server restarts break connections, in a loosely coupled multi-party system connection-oriented protocols

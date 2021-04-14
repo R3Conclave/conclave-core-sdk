@@ -13,7 +13,7 @@ When using Azure everything is fully automatic.
 ## The harder way
 
 To deploy an enclave using real SGX hardware you need to configure the host system, and if your hardware
-does not support DCAP attestation also get access to the [Intel Attestation Service](ias.md). At this time 
+does not support DCAP attestation also get access to the [Intel Attestation Service (IAS)](ias.md). At this time
 the host must be [Linux](system-requirements.md#linux-distros-and-versions) and requires the following steps:
 
 1. Installing the SGX kernel driver, which isn't yet included in upstream kernels.
