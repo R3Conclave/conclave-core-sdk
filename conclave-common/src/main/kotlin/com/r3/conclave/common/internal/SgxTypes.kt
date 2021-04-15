@@ -620,3 +620,126 @@ fun ByteCursor<SgxQeCertData>.toPckCertPath(): CertPath {
     check(this[type].read() == 5) { "Not a PCK cert path" }
     return AttestationUtils.parsePemCertPath(this[data].read())
 }
+
+/**
+ * SgxMetadata structs are sourced from
+ * https://github.com/intel/linux-sgx/blob/master/common/inc/internal/metadata.h
+ * https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/common/inc/internal/linux/arch.h
+ */
+private const val SE_KEY_SIZE = 384
+private const val SE_EXPONENT_SIZE = 4
+
+object SgxMetadataDirectory : Struct() {
+    @JvmField
+    val directory_offset = field(UInt32())
+    @JvmField
+    val directory_size = field(UInt32())
+}
+
+object SgxMetadataCssHeader : Struct() {
+    @JvmField
+    val header = field(FixedBytes(12))
+    @JvmField
+    val type = field(UInt32())
+    @JvmField
+    val moduleVendor = field(UInt32())
+    @JvmField
+    val date = field(UInt32())
+    @JvmField
+    val  header2 = field(FixedBytes(16))
+    @JvmField
+    val hwVersion = field(UInt32())
+    @Suppress("unused")
+    @JvmField
+    val  reserved = field(ReservedBytes(84))
+}
+
+object SgxMetadataCssKey : Struct() {
+    @JvmField
+    val modulus = field(FixedBytes(SE_KEY_SIZE))
+    @JvmField
+    val exponent = field(FixedBytes(SE_EXPONENT_SIZE))
+    @JvmField
+    val signature = field(FixedBytes(SE_KEY_SIZE))
+}
+
+object SgxMetadataCssBody : Struct() {
+    @JvmField
+    val miscSelect = field(SgxMiscSelect)
+    @JvmField
+    val miscMask = field(SgxMiscSelect)
+    @Suppress("unused")
+    @JvmField
+    val  reserved1 = field(ReservedBytes(4))
+    @JvmField
+    val isvFamilyId = field(SgxIsvFamilyId)
+    @JvmField
+    val attributes = field(SgxAttributes)
+    @JvmField
+    val attributesMask = field(SgxAttributes)
+    @JvmField
+    val enclaveHash = field(SgxMeasurement)
+    @Suppress("unused")
+    @JvmField
+    val reserved2 = field(ReservedBytes(16))
+    @JvmField
+    val IsvExtProdId = field(SgxIsvExtProdId)
+    @JvmField
+    val IsvProdId = field(SgxProdId)
+    @JvmField
+    val IsvSvn = field(SgxIsvSvn)
+}
+
+object SgxMetadataCssBuffer : Struct() {
+    @Suppress("unused")
+    @JvmField
+    val reserved = field(ReservedBytes(12))
+    @JvmField
+    val q1 = field(FixedBytes(SE_KEY_SIZE))
+    @JvmField
+    val q2 = field(FixedBytes(SE_KEY_SIZE))
+}
+
+object SgxMetadataEnclaveCss : Struct() {
+    @JvmField
+    val header = field(SgxMetadataCssHeader)
+    @JvmField
+    val key = field(SgxMetadataCssKey)
+    @JvmField
+    val body = field(SgxMetadataCssBody)
+    @JvmField
+    val buffer = field(SgxMetadataCssBuffer)
+}
+
+object SgxEnclaveMetadata: Struct() {
+    private const val DATA_SIZE = 18592
+
+    @JvmField
+    val magic = field(Int64()) // uint64
+    @JvmField
+    val version = field(Int64()) // uint64
+    @JvmField
+    val metadataSize = field(UInt32())
+    @JvmField
+    val tcsPolicy = field(UInt32())
+    @JvmField
+    val ssaFrameSize = field(UInt32())
+    @JvmField
+    val maxSaveBufferSize = field(UInt32())
+    @JvmField
+    val desiredMiscSelect = field(UInt32())
+    @JvmField
+    val tcsMinPool = field(UInt32())
+    @JvmField
+    val enclaveSize = field(Int64()) // uint64
+    @JvmField
+    val attributes = field(SgxAttributes)
+    @JvmField
+    val enclaveCss = field(SgxMetadataEnclaveCss)
+    @JvmField
+    val dataDirectory = field(SgxMetadataDirectory)
+    @JvmField
+    val dataDirectory2 = field(SgxMetadataDirectory)
+    @JvmField
+    val data = field(FixedBytes(DATA_SIZE))
+}

@@ -23,6 +23,7 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
          *
          * The new [Cursor] will be backed by a byte array which can be accessed by calling `buffer.array()`.
          */
+        @JvmStatic
         fun <T : FixedEncoder<R>, R> allocate(type: T): Cursor<T, R> = Cursor(type, ByteBuffer.allocate(type.size))
 
         /**
@@ -33,6 +34,7 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
          *
          * @throws IllegalArgumentException If [length] is not the size of [type].
          */
+        @JvmStatic
         fun <T : Encoder<R>, R> wrap(
             type: T,
             bytes: ByteArray,

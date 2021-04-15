@@ -225,7 +225,7 @@ open class UInt32 : FixedEncoder<Long>() {
 
 open class Int64 : FixedEncoder<Long>() {
     final override val size get() = Long.SIZE_BYTES
-    final override fun read(buffer: ByteBuffer) = buffer.getLong()
+    final override fun read(buffer: ByteBuffer) = buffer.long
     final override fun write(buffer: ByteBuffer, value: Long): ByteBuffer = buffer.putLong(value)
 }
 

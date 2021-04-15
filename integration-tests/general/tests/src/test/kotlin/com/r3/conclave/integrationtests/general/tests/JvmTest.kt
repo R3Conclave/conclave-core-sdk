@@ -5,17 +5,14 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand
+import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.Deserializer
 import com.r3.conclave.integrationtests.general.common.tasks.JvmTestTask
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.concurrent.CompletableFuture
-import java.util.function.Consumer
-import kotlin.concurrent.thread
 
 open class JvmTest(private val enclaveClassName: String) {
     constructor(threadSafe: Boolean) : this(
@@ -47,7 +44,7 @@ open class JvmTest(private val enclaveClassName: String) {
     lateinit var enclaveHost : EnclaveHost
     var closeHost = true
 
-    var mailCommands = mutableListOf<MailCommand>()
+    val mailCommands = mutableListOf<MailCommand>()
 
     @BeforeEach
     fun beforeEach() {
@@ -56,7 +53,7 @@ open class JvmTest(private val enclaveClassName: String) {
             EnclaveMode.RELEASE, EnclaveMode.DEBUG -> getHardwareAttestationParams()
             else -> null
         }
-        enclaveHost.start(attestationParameters){
+        enclaveHost.start(attestationParameters) {
             mailCommands.addAll(it)
         }
         closeHost = true
@@ -83,5 +80,4 @@ open class JvmTest(private val enclaveClassName: String) {
     fun <T> sendMessageNoReply(message: T) where T : JvmTestTask {
         enclaveHost.callEnclave(message.encode())
     }
-
 }
