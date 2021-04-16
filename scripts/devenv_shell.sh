@@ -4,6 +4,9 @@ set -euo pipefail
 script_dir=$(dirname ${BASH_SOURCE[0]})
 source $script_dir/devenv.sh
 
+# Disable the "x" flag possibly set in other scripts.
+set +x
+
 echo
 echo -e '\x1B[1m\x1B[34mWelcome to the Conclave development environment.\x1B[0m'
 echo

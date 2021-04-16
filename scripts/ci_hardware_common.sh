@@ -15,5 +15,5 @@ function loadAESMImage() {
 }
 
 function startAESMContainer() {
-    docker run -d --rm --name aesmd ${sgx_hardware_flags} ${OBLIVIUM_CONTAINER_REGISTRY_URL}/com.r3.sgx/aesmd:latest
+    docker run -d --rm --name aesmd ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} ${OBLIVIUM_CONTAINER_REGISTRY_URL}/com.r3.sgx/aesmd:latest
 }

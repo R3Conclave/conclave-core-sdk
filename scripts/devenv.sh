@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 script_dir=$(dirname ${BASH_SOURCE[0]})
+if [ -f ~/.oblivium_credentials.sh ]
+then
+  source ~/.oblivium_credentials.sh
+fi
 source ${script_dir}/ci_build_common.sh
 # You can set this variable to mount the IDEs from the host
-host_ide_dir=${host_ide_dir:-"${HOME}/.opt"}
-idea_version=${idea_version:-"IC-203.6682.168"}
+host_ide_dir=${HOST_IDE_DIR:-"${HOME}/.opt"}
+idea_version=${IDEA_VERSION:-"IC-203.6682.168"}
 idea_download_file=ideaIC-2020.3.1.tar.gz
 idea_download_address=https://download-cf.jetbrains.com/idea/$idea_download_file
 clion_version=${clion_version:-"2020.2.4"}
 clion_download_file=CLion-2020.2.4.tar.gz
 clion_download_address=https://download-cf.jetbrains.com/cpp/$clion_download_file
-
-if [ -f ~/.oblivium_credentials.sh ]
-then
-  source ~/.oblivium_credentials.sh
-fi
 
 source ${script_dir}/devenv_envs.sh
 
@@ -84,7 +83,7 @@ fi
 
   container_id=$(docker run \
        --name=$container_name \
-       $docker_opts \
+       ${docker_opts[@]+"${docker_opts[@]}"} \
        --privileged \
        --add-host="$(hostname):${docker_ip}" \
        -v /tmp/.X11-unix:/tmp/.X11-unix \
@@ -104,7 +103,7 @@ fi
 
   # DCAP 1.41+ driver access permissions.
   if [ -e /dev/sgx_provision ]; then
-    docker exec -u root $CONTAINER_ID chgrp $(id -g) /dev/sgx_provision
+    docker exec -u root $container_id chgrp $(id -g) /dev/sgx_provision
   fi
 
   # Add entry to container's hostname in /etc/hosts, if it's not there, due to different behaviour in macOS.
