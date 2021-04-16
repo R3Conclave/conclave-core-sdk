@@ -7,7 +7,6 @@ import com.r3.conclave.integrationtests.jni.tasks.XStat64
 import com.r3.conclave.jvm.enclave.common.internal.testing.MockStat64Data
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.time.Instant
 
 class StatTest : JniTest() {
 
@@ -47,12 +46,12 @@ class StatTest : JniTest() {
 
         Thread.sleep(WRITE_TIME_GAP_IN_MILLISECONDS)
         val data = byteArrayOf(1, 2, 3, 4)
-        val writeTime = Instant.now()
+        val writeTimeInSeconds = sendMessage(Time())
         UnistdTest.write(fd, data, data.size)
         response = sendMessage(xstat64Message)
         assertThat(response.ret).isZero
         assertThat(response.buf.timespec.sec)
-                .isGreaterThanOrEqualTo(writeTime.epochSecond)
+                .isGreaterThanOrEqualTo(writeTimeInSeconds)
                 .isGreaterThan(enclaveCurrentTimeInSeconds)
         assertThat(response.buf.timespec.nsec).isLessThan(1_000_000_000)
         UnistdTest.close(fd)
