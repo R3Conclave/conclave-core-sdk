@@ -30,10 +30,12 @@ class BuildUnsignedAvianEnclaveTest {
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementalBuild(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        if (buildType != BuildType.Mock) {
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
 
-        task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+        }
     }
 }

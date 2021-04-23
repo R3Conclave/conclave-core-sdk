@@ -78,6 +78,11 @@ is available where you can find the development team during UK office hours (GMT
 
 ## Release notes
 
+### 1.1
+1. :jigsaw: **New feature!** Mock mode has been extended so you can now specify 'mock' as an enclave mode and use 
+   your regular host rather than having to modify your code to use a special build of your host.
+   [Learn more about enclave configurations](architecture.md#testing_and_debugging).
+
 ### 1.0
 
 1. :jigsaw: **New feature!** A new `PostOffice` API makes using mail easier and also automatically applies a reasonable 

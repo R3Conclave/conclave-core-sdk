@@ -1,34 +1,20 @@
-package com.r3.conclave.testing.internal
+package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.LeafSender
 import com.r3.conclave.common.internal.handler.Sender
-import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.utilities.internal.EnclaveContext
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 
 class MockEnclaveHandle<CONNECTION>(
-    private val enclave: Enclave,
+    private val enclave: Any,
     private val isvProdId: Int,
     private val isvSvn: Int,
     hostHandler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
-    companion object {
-        // The use of reflection is not ideal but it means we don't expose something that shouldn't be in the public API.
-        private val initialiseMethod =
-            Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
-                .apply { isAccessible = true }
-
-        init {
-            EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
-                .set(null, ThreadLocalEnclaveContext)
-        }
-    }
 
     override val enclaveMode: EnclaveMode get() = EnclaveMode.MOCK
 
@@ -39,10 +25,19 @@ class MockEnclaveHandle<CONNECTION>(
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
         try {
+            // The Enclave class will only be on the class path for Mock enclaves and we do not want to add
+            // a dependency to the Enclave package on the host so we must lookup the class from its name.
+            val enclaveClazz = Class.forName("com.r3.conclave.enclave.Enclave", true, enclave.javaClass.classLoader)
+
+            val initialiseMethod =
+                    enclaveClazz.getDeclaredMethod("initialiseMock", Sender::class.java, Int::class.java, Int::class.java)
+                            .apply { isAccessible = true }
+
+            EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
+                    .set(null, ThreadLocalEnclaveContext)
+
             initialiseMethod.invoke(
-                enclave,
-                MockEnclaveEnvironment(enclave, isvProdId, isvSvn),
-                sender
+                    enclave, sender, isvProdId, isvSvn
             ) as HandlerConnected<*>
         } catch (e: InvocationTargetException) {
             throw e.cause ?: e
@@ -63,7 +58,3 @@ class MockEnclaveHandle<CONNECTION>(
     }
 }
 
-object ThreadLocalEnclaveContext : EnclaveContext, ThreadLocal<Boolean>() {
-    override fun initialValue(): Boolean = false
-    override fun isInsideEnclave(): Boolean = get()
-}

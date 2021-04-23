@@ -1,4 +1,4 @@
-package com.r3.conclave.testing.internal
+package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.OpaqueBytes
@@ -11,8 +11,6 @@ import com.r3.conclave.common.internal.KeyPolicy.NOISVPRODID
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
-import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getBytes
 import java.nio.ByteBuffer
@@ -24,7 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
-    private val enclave: Enclave,
+    private val enclave: Any,
     private val isvProdId: Int = 1,
     private val isvSvn: Int = 1
 ) : EnclaveEnvironment {

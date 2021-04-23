@@ -56,37 +56,41 @@ class CopySubstrateDependenciesTest {
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementalBuild(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        val expectedDependenciesFiles = dependenciesFiles(buildType)
-        val actualDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
-        assertThat(actualDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
+        if (buildType != BuildType.Mock) {
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            val expectedDependenciesFiles = dependenciesFiles(buildType)
+            val actualDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
+            assertThat(actualDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
 
-        val firstBuildChecksums = ChecksumUtils.sha512Directory(conclaveDependenciesPath)
+            val firstBuildChecksums = ChecksumUtils.sha512Directory(conclaveDependenciesPath)
 
-        task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
-        val actualRebuildDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
-        assertThat(actualRebuildDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+            val actualRebuildDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
+            assertThat(actualRebuildDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
 
-        val rebuildChecksums = ChecksumUtils.sha512Directory(conclaveDependenciesPath)
-        assertThat(firstBuildChecksums).containsExactlyInAnyOrder(*rebuildChecksums.toTypedArray())
+            val rebuildChecksums = ChecksumUtils.sha512Directory(conclaveDependenciesPath)
+            assertThat(firstBuildChecksums).containsExactlyInAnyOrder(*rebuildChecksums.toTypedArray())
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun deletingRandomOutputForcesTaskToRun(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        val expectedDependenciesFiles = dependenciesFiles(buildType)
-        val actualDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
-        assertThat(actualDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
+        if (buildType != BuildType.Mock) {
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            val expectedDependenciesFiles = dependenciesFiles(buildType)
+            val actualDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
+            assertThat(actualDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
 
-        assertTrue(actualDependenciesFiles.random().deleteRecursively())
+            assertTrue(actualDependenciesFiles.random().deleteRecursively())
 
-        task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        val actualRebuildDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
-        assertThat(actualRebuildDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            val actualRebuildDependenciesFiles = File("$substrateDependenciesPath/$buildType").listFiles()!! + File("$sgxDependenciesPath/$buildType").listFiles()!!
+            assertThat(actualRebuildDependenciesFiles).containsExactlyInAnyOrder(*expectedDependenciesFiles)
+        }
     }
 }

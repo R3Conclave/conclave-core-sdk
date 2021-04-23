@@ -88,52 +88,89 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(EnclaveLoadException::class)
         fun load(enclaveClassName: String): EnclaveHost {
-            val (stream, enclaveMode) = findEnclaveFile(enclaveClassName)
-            val enclaveFile = try {
-                Files.createTempFile(enclaveClassName, "signed.so")
-            } catch (e: Exception) {
-                throw EnclaveLoadException("Unable to load enclave", e)
-            }
-            try {
-                stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
-                return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
-            } catch (e: UnsatisfiedLinkError) {
-                // We get an unsatisifed link error if the native library could not be loaded on
-                // the current platform - this will happen if the user tries to load an enclave
-                // on a platform other than Linux.
-                enclaveFile.deleteQuietly()
-                throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts: ${e.message}")
-            } catch (e: Exception) {
-                enclaveFile.deleteQuietly()
-                throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
+            val (stream, enclaveMode) = findEnclave(enclaveClassName)
+
+            // If this is a mock enclave then we create the host differently.
+            if (enclaveMode == EnclaveMode.MOCK) {
+                try {
+                    val clazz = Class.forName(enclaveClassName)
+                    return createHost(clazz)
+                } catch (e: Exception) {
+                    throw EnclaveLoadException("Unable to load enclave", e)
+                }
+            } else {
+                val enclaveFile = try {
+                    Files.createTempFile(enclaveClassName, "signed.so")
+                } catch (e: Exception) {
+                    throw EnclaveLoadException("Unable to load enclave", e)
+                }
+                try {
+                    stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
+                    return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
+                } catch (e: UnsatisfiedLinkError) {
+                    // We get an unsatisfied link error if the native library could not be loaded on
+                    // the current platform - this will happen if the user tries to load an enclave
+                    // on a platform other than Linux.
+                    enclaveFile.deleteQuietly()
+                    throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts: ${e.message}")
+                } catch (e: Exception) {
+                    enclaveFile.deleteQuietly()
+                    throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
+                }
             }
         }
 
         /**
-         * Searches for the single enclave file in the classpath at /package/namespace/classname-mode.signed.so. For
-         * example it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
-         * If more than one file is found (i.e. multiple modes) then an exception is thrown.
+         * Searches for an enclave. There are two places where an enclave can be found.
+         * 1) In an SGX signed enclave file (.so)
+         * 2) For mock enclaves, an existing class named 'className' in the classpath
          *
-         * The mode is derived from the filename but is not taken at face value. The construction of the EnclaveInstanceInfoImpl
-         * in `start` makes sure the mode is correct it terms of the remote attestation.
+         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
+         * For example it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
+         *
+         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
+         *
+         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
+         *
+         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
+         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
          */
-        private fun findEnclaveFile(className: String): Pair<InputStream, EnclaveMode> {
+        private fun findEnclave(className: String): Pair<InputStream?, EnclaveMode> {
+            // Look for an SGX enclave image.
             val found = EnclaveMode.values().mapNotNull { mode ->
                 val resourceName = "/${className.replace('.', '/')}-${mode.name.toLowerCase()}.signed.so"
                 val url = EnclaveHost::class.java.getResource(resourceName)
                 url?.let { Pair(it, mode) }
             }
-            when (found.size) {
-                1 -> return Pair(found[0].first.openStream(), found[0].second)
-                0 -> throw IllegalArgumentException(
-                    """Enclave file for $className does not exist on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
+            // Also look to see if a Mock enclave object is present
+            val mockEnclaveExists = try {
+                Class.forName(className)
+                true;
+            } catch (e: ClassNotFoundException) {
+                false
+            }
+
+            // Make sure we only have a single enclave image.
+            if (found.isEmpty() && !mockEnclaveExists) {
+                throw IllegalArgumentException(
+                        """Enclave file for $className does not exist on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
                     |    runtimeOnly project(path: ":enclave project", configuration: mode)
                     |    
                     |    where:
-                    |      mode is either "release", "debug" or "simulation"
-                """.trimMargin()
+                    |      mode is either "release", "debug", "simulation" or "mock"
+                    """.trimMargin()
                 )
-                else -> throw IllegalStateException("Multiple enclave files were found: $found")
+            } else if (found.isNotEmpty() && mockEnclaveExists) {
+                throw IllegalStateException("Multiple enclave files were found: $found and mock enclave: $className")
+            } else if (found.size > 1) {
+                throw IllegalStateException("Multiple enclave files were found: $found")
+            }
+
+            // At this point we know we only have a single enclave present.
+            if (mockEnclaveExists) {
+                return Pair(null, EnclaveMode.MOCK)
+            } else {
+                return Pair(found[0].first.openStream(), found[0].second)
             }
         }
 
@@ -190,7 +227,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     throw e
                 }
             } catch (e: UnsatisfiedLinkError) {
-                // We get an unsatisifed link error if the native library could not be loaded on
+                // We get an unsatisfied link error if the native library could not be loaded on
                 // the current platform - this will happen if the user tries to load an enclave
                 // on a platform other than Linux.
                 throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts.")

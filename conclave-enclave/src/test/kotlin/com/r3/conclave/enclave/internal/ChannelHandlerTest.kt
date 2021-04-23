@@ -6,7 +6,7 @@ import com.r3.conclave.internaltesting.RootHandler
 import com.r3.conclave.internaltesting.StringHandler
 import com.r3.conclave.internaltesting.StringRecordingHandler
 import com.r3.conclave.internaltesting.StringSender
-import com.r3.conclave.testing.internal.MockEnclaveHandle
+import com.r3.conclave.host.internal.MockEnclaveHandle
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.*

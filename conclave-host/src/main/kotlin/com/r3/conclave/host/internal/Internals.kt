@@ -12,6 +12,11 @@ fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: St
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 
+fun createHost(enclaveClass: Class<*>): EnclaveHost {
+    val enclaveHandle = MockEnclaveHandle(enclaveClass.getConstructor().newInstance(), 1, 1, ThrowingErrorHandler())
+    return EnclaveHost.__internal_create(enclaveHandle)
+}
+
 fun initHost(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
     EnclaveHost.__internal_init(host, enclaveHandle)
 }

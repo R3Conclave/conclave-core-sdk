@@ -110,8 +110,7 @@ dependencies {
 
 This says that at runtime (but not compile time) the `:enclave` module must be on the classpath, and configures 
 dependencies to respect the three different variants of the enclave. That is, the enclave module will expose tasks
-to compile and use either simulation, debug or release mode (in mock mode you're just using regular Java, so no
-special compilation is necessary). Which task to use is actually selected by the host build. 
+to compile and use either mock, simulation, debug or release mode. Which task to use is actually selected by the host build. 
 
 !!! tip
     Don't worry if you see the error `Could not resolve project :enclave`. This will be resolved when
@@ -345,9 +344,9 @@ public class Host {
 At first we will be building and running our enclave in simulation mode. This does not require the platform 
 hardware to support SGX. However simulation mode does require us to be using Linux. If we are not using 
 Linux as our host OS then we can use a Linux container or virtual machine as described in
-[Running the host](tutorial.md#running-the-host). Alternatively we could
-use [mock mode](writing-hello-world.md#mock) instead of simulation mode. When we want to switch to loading
-either a debug or release build of the enclave we need to ensure the platform supports SGX.
+[Running the host](tutorial.md#running-the-host). Alternatively we could use [mock mode](writing-hello-world.md#mock)
+instead of simulation mode. When we want to switch to loading either a debug or release build of the enclave we need
+to ensure the platform supports SGX.
 
 By adding the code below to the main method we can determine whether the platform can load debug and release 
 enclaves. This method reports the actual hardware status even if you are currently working with simulation 
@@ -859,6 +858,16 @@ real `ReverseEnclave` we wrote earlier.
     EnclaveConstraint.parse("S:5124CA3A9C8241A3C0A51A1909197786401D2B79FA9FF849F2AA798A942165D3 "
             + "S:01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B PROD:1 SEC:INSECURE").check(attestation);
     ```
+    If you are building an enclave in mock mode then the enclave reports it is using a signing key hash
+    consisting of all zeros. If you want to allow a mock enclave to pass the constraint check then you need to include
+    this dummy signing key in your constraint:
+    ```java
+    // Below, two distinct signing key hashes or the zero dummy hash can be accepted.
+    EnclaveConstraint.parse("S:5124CA3A9C8241A3C0A51A1909197786401D2B79FA9FF849F2AA798A942165D3 "
+            + "S:01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C77475F445897E3B"
+            + "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE").check(attestation);
+    ```
+
 
 ### Keys and mail
 
@@ -938,10 +947,15 @@ There are two ways you can test the enclave: as a mock or natively.
 
 ### Mock
 
-The `conclave-testing` library has a `MockHost` class which lets you whitebox test your enclave by running the enclave
-fully in-memory. There is no need for SGX hardware or a specific OS and thus ideal for cross-platform unit testing. The
-underlying enclave object is also exposed enabling you to make assertions on the enclave's state, something that
-cannot be done on real hardware or even in simulation mode.
+Conclave supports two forms of mock. Both allow you to whitebox test your enclave by running the enclave fully 
+in-memory. There is no need for SGX hardware or a specific OS and thus ideal for cross-platform unit testing.
+
+Firstly, you can build your enclave in mock mode, much like you can with simulation, debug and release mode.
+The instructions for testing using a mock enclave exactly follow that for [native testing](#native).
+
+Secondly, the `conclave-testing` library has a `MockHost` class which lets you whitebox test your enclave in a
+mock host enviroment. In this environment the underlying enclave object is also exposed enabling you to make 
+assertions on the enclave's state, something that cannot be done on real hardware or even in simulation mode.
 
 In your **enclave** module build.gradle file add the following test dependency
 
@@ -963,8 +977,9 @@ enclave object instance with `mockHost.getEnclave()`.
 ### Native
 
 Testing the enclave natively is relatively straightforward: the enclave needs to be loaded with `EnclaveHost.load`. By
-default this will run the tests in a simulated environment and will require the Linux OS. Native tests are ideal for 
-integration testing.
+default this will run the tests in a simulated environment and will require the Linux OS. However, if you configure
+your tests to depend on a mock mode enclave instead of simulation, debug or release then you can run the tests on
+a non-Linux OS. Native tests on real SGX hardware are ideal for integration testing.
 
 ```java
 @EnabledOnOs(OS.LINUX)
@@ -981,7 +996,7 @@ public class NativeTest {
 
 You'll notice that we annotated the test class with `@EnabledOnOs(OS.LINUX)`. This is from
 [JUnit 5](https://junit.org/junit5/docs/current/user-guide/#writing-tests-conditional-execution-os) and it will make sure
-the native test isn't run on non-Linux environments.
+the native test isn't run on non-Linux environments. Leave this annotation off if you are using mock mode.
 
 Running
 
@@ -992,6 +1007,11 @@ and test on real secure hardware by using the `-PenclaveMode` flag:
 
 ```gradlew -PenclaveMode=debug host:test```
 
+Or you can use a mock enclave and test on a non-Linux platform by removing `@EnabledOnOs(OS.LINUX)` and by running this
+command:
+
+```gradlew -PenclaveMode=mock host:test```
+
 !!! tip
-    To run the native tests on a non-Linux machine you can use Docker, which manages Linux VMs for you. See the instructions
-    for [compiling and running the host](tutorial.md#running-the-host) for more information.
+    To run the simulation, debug or release native tests on a non-Linux machine you can use Docker, which manages Linux 
+    VMs for you. See the instructions for [compiling and running the host](tutorial.md#running-the-host) for more information.

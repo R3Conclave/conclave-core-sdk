@@ -3,13 +3,13 @@ package com.r3.conclave.host
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
+import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.testing.MockHost
-import com.r3.conclave.testing.internal.MockEnclaveEnvironment
 import com.r3.conclave.testing.internal.MockInternals
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes

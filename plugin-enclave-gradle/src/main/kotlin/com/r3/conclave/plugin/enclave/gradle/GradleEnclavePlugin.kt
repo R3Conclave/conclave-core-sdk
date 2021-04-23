@@ -77,6 +77,30 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.archiveClassifier.set("shadow")
         }
 
+        // Create configurations for each of the build types.
+        for (type in BuildType.values()) {
+            // https://docs.gradle.org/current/userguide/cross_project_publications.html
+            target.configurations.create(type.name.toLowerCase()) {
+                it.isCanBeConsumed = true
+                it.isCanBeResolved = false
+            }
+        }
+
+        // Create the tasks that are required to build the Mock build type artifact.
+        createMockArtifact(target, shadowJarTask)
+
+        // Create the tasks that are required build the Release, Debug and Simulation artifacts.
+        createEnclaveArtifacts(target, sdkVersion, conclaveExtension, shadowJarTask)
+    }
+
+    private fun createMockArtifact(target: Project, shadowJarTask: ShadowJar) {
+        // Mock mode does not require all the enclave building tasks. The enclave Jar file is just packaged
+        // as an artifact.
+        target.artifacts.add("mock", shadowJarTask.archiveFile)
+
+    }
+
+    private fun createEnclaveArtifacts(target: Project, sdkVersion: String, conclaveExtension: ConclaveExtension, shadowJarTask: ShadowJar) {
         val baseDirectory = target.buildDir.toPath().resolve("conclave")
         val conclaveDependenciesDirectory = "$baseDirectory/com/r3/conclave"
 
@@ -153,21 +177,22 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.commandLine("tar", "xf", graalVMTarPath)
         }
 
-        for (type in BuildType.values()) {
+        for (type in BuildType.values().filter { it != BuildType.Mock }) {
             val typeLowerCase = type.name.toLowerCase()
 
             val enclaveExtension = when (type) {
                 BuildType.Release -> conclaveExtension.release
                 BuildType.Debug -> conclaveExtension.debug
                 BuildType.Simulation -> conclaveExtension.simulation
+                else -> throw GradleException("Internal Conclave plugin error. Please contact R3 for help.");
             }
 
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
             // Simulation and debug default to using a dummy key. Release defaults to external key
             val keyType = when (type) {
-                BuildType.Release   -> SigningType.ExternalKey
-                else                -> SigningType.DummyKey
+                BuildType.Release -> SigningType.ExternalKey
+                else -> SigningType.DummyKey
             }
             enclaveExtension.signingType.set(keyType)
 
@@ -314,9 +339,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type") { task ->
                 val signingTask = enclaveExtension.signingType.map {
                     when (it) {
-                        SigningType.DummyKey    -> signEnclaveWithKeyTask
-                        SigningType.PrivateKey  -> signEnclaveWithKeyTask
-                        else                    -> addEnclaveSignatureTask
+                        SigningType.DummyKey -> signEnclaveWithKeyTask
+                        SigningType.PrivateKey -> signEnclaveWithKeyTask
+                        else -> addEnclaveSignatureTask
                     }
                 }
                 task.dependsOn(signingTask)
@@ -356,13 +381,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             }
 
-            // https://docs.gradle.org/current/userguide/cross_project_publications.html
-            target.configurations.create(typeLowerCase) {
-                it.isCanBeConsumed = true
-                it.isCanBeResolved = false
-            }
-
-            target.artifacts.add(typeLowerCase, signedEnclaveJarTask)
+            target.artifacts.add(typeLowerCase, signedEnclaveJarTask.archiveFile)
         }
     }
 

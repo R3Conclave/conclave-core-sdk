@@ -11,6 +11,7 @@ import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.internal.AttestationEnclaveHandler
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.InternalEnclave
+import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.utilities.internal.*
@@ -151,6 +152,15 @@ abstract class Enclave {
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             connected
         }
+    }
+
+    /**
+     * Initialise an enclave class using a Mock environment.
+     */
+    @Suppress("unused")  // Accessed via reflection
+    @PotentialPackagePrivate
+    private fun initialiseMock(upstream: Sender, isvProdId: Int, isvSvn: Int): HandlerConnected<*> {
+        return initialise(MockEnclaveEnvironment(this, isvProdId, isvSvn), upstream)
     }
 
     /**

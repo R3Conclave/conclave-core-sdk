@@ -32,7 +32,8 @@ pluginManagement {
 }
 
 include 'shading-tests'
-include 'kotlin-enclave'
+include ':kotlin-enclave:enclave'
+include ':kotlin-enclave:host'
 include ':djvm:djvm-enclave'
 include ':djvm:djvm-host'
 include ':djvm:djvm-base'

@@ -56,69 +56,77 @@ class GenerateEnclaveConfigTest {
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementProductID(buildType: BuildType) {
-        runAndAssertTask(buildType)
+        if (buildType != BuildType.Mock) {
+            runAndAssertTask(buildType)
 
-        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
 
-        val initialProductID = enclaveConfiguration.productID!!
-        val expectedProductId = initialProductID + 1
+            val initialProductID = enclaveConfiguration.productID!!
+            val expectedProductId = initialProductID + 1
 
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory,
-                "productID = $initialProductID",
-                "productID = $expectedProductId")
-        runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
-        assertThat(updatedEnclaveConfiguration.productID).isEqualTo(expectedProductId)
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory,
+                    "productID = $initialProductID",
+                    "productID = $expectedProductId")
+            runAndAssertTask(buildType)
+            val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            assertThat(updatedEnclaveConfiguration.productID).isEqualTo(expectedProductId)
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementRevocationLevel(buildType: BuildType) {
-        runAndAssertTask(buildType)
+        if (buildType != BuildType.Mock) {
+            runAndAssertTask(buildType)
 
-        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
 
-        // The value on the file has been incremented by the task
-        val initialRevocationLevel = enclaveConfiguration.revocationLevel!! - 1
-        val expectedRevocationLevel = initialRevocationLevel + 1
+            // The value on the file has been incremented by the task
+            val initialRevocationLevel = enclaveConfiguration.revocationLevel!! - 1
+            val expectedRevocationLevel = initialRevocationLevel + 1
 
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "revocationLevel = $initialRevocationLevel", "revocationLevel = $expectedRevocationLevel")
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "revocationLevel = $initialRevocationLevel", "revocationLevel = $expectedRevocationLevel")
 
-        runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
-        // The expected value on the file is the incremented value from the closure
-        assertThat(updatedEnclaveConfiguration.revocationLevel).isEqualTo(expectedRevocationLevel + 1)
+            runAndAssertTask(buildType)
+            val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            // The expected value on the file is the incremented value from the closure
+            assertThat(updatedEnclaveConfiguration.revocationLevel).isEqualTo(expectedRevocationLevel + 1)
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementHeapMaxSize(buildType: BuildType) {
-        runAndAssertTask(buildType)
+        if (buildType != BuildType.Mock) {
+            runAndAssertTask(buildType)
 
-        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
-        val initialMaxHeapSize = enclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)
-        val expectedMaxHeapSize = initialMaxHeapSize + 1
+            val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            val initialMaxHeapSize = enclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)
+            val expectedMaxHeapSize = initialMaxHeapSize + 1
 
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$initialMaxHeapSize\"", "maxHeapSize = \"$expectedMaxHeapSize\"")
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$initialMaxHeapSize\"", "maxHeapSize = \"$expectedMaxHeapSize\"")
 
-        runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
-        assertThat(updatedEnclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxHeapSize)
+            runAndAssertTask(buildType)
+            val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            assertThat(updatedEnclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxHeapSize)
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementStackMaxSize(buildType: BuildType) {
-        runAndAssertTask(buildType)
+        if (buildType != BuildType.Mock) {
+            runAndAssertTask(buildType)
 
-        val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
-        val initialMaxStackSize = enclaveConfiguration.maxStackSize!!.drop(2).toLong(16)
-        val expectedMaxStackSize = initialMaxStackSize + 1
+            val enclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            val initialMaxStackSize = enclaveConfiguration.maxStackSize!!.drop(2).toLong(16)
+            val expectedMaxStackSize = initialMaxStackSize + 1
 
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$initialMaxStackSize\"", "maxStackSize = \"$expectedMaxStackSize\"")
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$initialMaxStackSize\"", "maxStackSize = \"$expectedMaxStackSize\"")
 
-        runAndAssertTask(buildType)
-        val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
-        assertThat(updatedEnclaveConfiguration.maxStackSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxStackSize)
+            runAndAssertTask(buildType)
+            val updatedEnclaveConfiguration = ProjectUtils.loadEnclaveConfigurationFromFile(projectDirectory, buildType)
+            assertThat(updatedEnclaveConfiguration.maxStackSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxStackSize)
+        }
     }
 }

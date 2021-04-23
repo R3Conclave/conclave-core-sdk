@@ -4,6 +4,7 @@ import com.r3.conclave.plugin.enclave.gradle.util.GradleRunnerUtils
 import com.r3.conclave.plugin.enclave.gradle.util.GradleRunnerUtils.Companion.gradleRunner
 import com.r3.conclave.plugin.enclave.gradle.util.ProjectUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.gradle.execution.TaskSelectionException
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.BeforeEach
@@ -73,59 +74,69 @@ class BuildUnsignedGraalEnclaveTest {
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementalBuild(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertLinkerScriptContent()
-        task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
-        assertLinkerScriptContent()
+        if (buildType != BuildType.Mock) {
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertLinkerScriptContent()
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+            assertLinkerScriptContent()
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementMaxHeapSize(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertLinkerScriptContent()
+        if (buildType != BuildType.Mock) {
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertLinkerScriptContent()
 
-        val initialMaxHeapSize = "268435456"
-        val expectedMaxHeapSize = initialMaxHeapSize + 1
+            val initialMaxHeapSize = "268435456"
+            val expectedMaxHeapSize = initialMaxHeapSize + 1
 
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$initialMaxHeapSize\"", "maxHeapSize = \"$expectedMaxHeapSize\"")
-        task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertLinkerScriptContent()
-        // Revert changes for the next test
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$expectedMaxHeapSize\"", "maxHeapSize = \"$initialMaxHeapSize\"")
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$initialMaxHeapSize\"", "maxHeapSize = \"$expectedMaxHeapSize\"")
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertLinkerScriptContent()
+            // Revert changes for the next test
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxHeapSize = \"$expectedMaxHeapSize\"", "maxHeapSize = \"$initialMaxHeapSize\"")
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun incrementMaxStackSize(buildType: BuildType) {
-        var task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertLinkerScriptContent()
+        if (buildType != BuildType.Mock) {
+            var task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertLinkerScriptContent()
 
-        val initialMaxStackSize = "2097152"
-        val expectedMaxStackSize = initialMaxStackSize + 1
+            val initialMaxStackSize = "2097152"
+            val expectedMaxStackSize = initialMaxStackSize + 1
 
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$initialMaxStackSize\"", "maxStackSize = \"$expectedMaxStackSize\"")
-        task = runTask(buildType)
-        assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertLinkerScriptContent()
-        // Revert changes for the next test
-        ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$expectedMaxStackSize\"", "maxStackSize = \"$initialMaxStackSize\"")
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$initialMaxStackSize\"", "maxStackSize = \"$expectedMaxStackSize\"")
+            task = runTask(buildType)
+            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
+            assertLinkerScriptContent()
+            // Revert changes for the next test
+            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory, "maxStackSize = \"$expectedMaxStackSize\"", "maxStackSize = \"$initialMaxStackSize\"")
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun reflectionConfigurationFilesIncrementalBuild(buildType: BuildType) {
-        configurationFilesIncrementalBuild(buildType, "reflectionconfig")
+        if (buildType != BuildType.Mock) {
+            configurationFilesIncrementalBuild(buildType, "reflectionconfig")
+        }
     }
 
     @EnumSource(BuildType::class)
     @ParameterizedTest(name = "{index} => {0}")
     fun serializationConfigurationFilesIncrementalBuild(buildType: BuildType) {
-        configurationFilesIncrementalBuild(buildType, "serializationconfig")
+        if (buildType != BuildType.Mock) {
+            configurationFilesIncrementalBuild(buildType, "serializationconfig")
+        }
     }
 }

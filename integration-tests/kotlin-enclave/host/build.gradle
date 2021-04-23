@@ -4,9 +4,6 @@ plugins {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.r3.conclave:conclave-enclave"
-
     // The test will act as the host and client.
 
     testImplementation "com.r3.conclave:conclave-host"
@@ -14,10 +11,12 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
-    testRuntimeOnly project(path: ":kotlin-enclave", configuration: "simulation")
+    testRuntimeOnly project(path: ":kotlin-enclave:enclave", configuration: "simulation")
 }
 
-conclave {
-    productID = 100
-    revocationLevel = 2
+test {
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+    }
 }

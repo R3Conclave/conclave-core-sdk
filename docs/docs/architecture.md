@@ -133,23 +133,26 @@ clients easy, as well as solving common problems faced with doing application de
 
 ## Testing and debugging
 
-Conclave provides full unit testing support for enclaves. Enclaves themselves can be compiled for one of three modes:
+Conclave provides full unit testing support for enclaves. Enclaves themselves can be compiled for one of four modes:
 
 * **Production/release**: fully encrypted and protected memory.
 * **Debug**: the same as production, but special instructions are provided that allow enclave memory to be read and modified.
   This mode provides no protection but is otherwise a faithful recreation of the standard environment.
 * **Simulation**: SGX hardware isn't actually used at all. This is helpful during development when SGX capable hardware
-  may not be available.
+  may not be available but does still require a Linux environment or a Linux Docker container to run.
+* **Mock**: In mock mode the enclave class runs in the same JVM as the host, so interactions between the enclave
+  and host are all just regular function calls. You can step through using a debugger and enjoy the regular Java development
+  experience. 
 
 The modes must match between how the enclave was compiled and how it's loaded. This is handled for you automatically.
 
-You can also load an enclave in "mock mode". This is not only suitable for unit testing but also for fast, iterative
-development. In mock mode the enclave class runs in the same JVM as the host, so message passing is just regular
-function calls. You can step through in a debugger and enjoy the regular Java development experience. 
+"Mock" mode can be used in two different ways. Firstly, you can compile your enclave in "mock" mode for fast, iterative
+development. Secondly, Conclave provides a special "mock" host which you can use for unit testing without having
+to explicitly configure a "mock" enclave.
 
 Inside the enclave `System.out` and `System.err` are wired up to the host console, but there's no filesystem access.
-Printing is disabled in release mode, so you can log to `stdout` and `stderr` without worrying that it may leak 
-information outside the enclave when in production.
+In release mode any output to `stdout` and `stderr` is suppressed inside the enclave so you can log to `stdout` and 
+`stderr` without worrying that it may leak information outside the enclave when in production.
 
 !!! notice
 

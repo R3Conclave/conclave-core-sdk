@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.File
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -76,9 +77,9 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         val cachedKey = builder.key?.let { Cached.Pure(it) } ?: SignEnclave.createDummyKey()
         val cachedConfig = SignEnclave.createConfig(builder.config)
         return SignEnclave.signEnclave(
-            inputKey = if (keyGenInput == null) cachedKey else SignEnclave.createDummyKey(keyGenInput),
-            inputEnclave = cachedEnclave,
-            enclaveConfig = cachedConfig
+                inputKey = if (keyGenInput == null) cachedKey else SignEnclave.createDummyKey(keyGenInput),
+                inputEnclave = cachedEnclave,
+                enclaveConfig = cachedConfig
         )
     }
 
@@ -88,12 +89,20 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
 
     fun hostTo(entryClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {
         val mode = when (enclaveBuilder.type) {
+            EnclaveType.Mock -> EnclaveMode.MOCK
             EnclaveType.Simulation -> EnclaveMode.SIMULATION
             EnclaveType.Debug -> EnclaveMode.DEBUG
             EnclaveType.Release -> EnclaveMode.RELEASE
         }
-        val enclaveFile = getSignedEnclaveFile(entryClass, enclaveBuilder).toPath()
-        return createHost(mode, enclaveFile, entryClass.name, tempFile = false)
+        if (enclaveBuilder.type != EnclaveType.Mock) {
+            val enclaveFile = getSignedEnclaveFile(entryClass, enclaveBuilder).toPath()
+            return createHost(mode, enclaveFile, entryClass.name, tempFile = false)
+        } else {
+            val cachedJar = createEnclaveJar(entryClass, enclaveBuilder)
+            val cl = URLClassLoader(arrayOf(cache[cachedJar].toURI().toURL()), javaClass.classLoader)
+            val clazz = Class.forName(entryClass.name, true, cl)
+            return createHost(clazz)
+        }
     }
 
     fun getEnclaveMetadata(enclaveClass: Class<out Enclave>, builder: EnclaveBuilder): Path {
@@ -108,5 +117,5 @@ data class EnclaveBuilder(
     val type: EnclaveType = EnclaveType.Simulation,
     val key: File? = null,
     val includeClasses: List<Class<*>> = emptyList(),
-    val mailCallback: Consumer<List<MailCommand>>? = null
+    val mailCallback: Consumer<List<MailCommand>>? = null,
 )

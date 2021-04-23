@@ -37,9 +37,9 @@ Firstly, you need a [Linux](system-requirements.md#linux-distros-and-versions) e
 enclaves are Linux shared libraries with special extensions. If you are not using Linux you will need to install Docker.
 On Windows and macOS, Conclave uses Docker to build the enclave in a Linux environment.
 [Instructions are provided below](#running-the-host) to show you how to use Docker on Windows and macOS to run your
-entire application in "simulation mode". Alternatively, for day to day development the mock API is plenty sufficient
-and allows you to debug into enclave calls as well. Compiling a real enclave is only needed for integration testing
-against the embedded JVM, or real deployment.
+entire application in "simulation mode". Alternatively, for day to day development building an enclave in mock mode
+or using the mock API is plenty sufficient and allows you to debug into enclave calls as well. Compiling a real enclave
+is only needed for integration testing against the embedded JVM, or real deployment.
 
 Secondly, when building enclaves using the `graalvm_native_image` runtime, Conclave internally uses the C++ compiler
 gcc. This is automatically installed when building on Windows and macOS but on Linux you need to make sure you have
@@ -94,6 +94,13 @@ If you are using SGX hardware, you can build the app for **debug mode** with the
 If working from inside IntelliJ, start the assemble task for the host project from the tree on the right hand side,
 and then edit the created run config. Add the `-PenclaveMode=debug` flag to the arguments section of the run config.
 
+If you want to debug into the enclave, or you are running on an OS other than Linux then you can build the app 
+for **mock mode** with the command:
+
+```
+./gradlew host:assemble -PenclaveMode=mock
+```
+
 For **release mode**, the sample app has been configured (in the `build.gradle` of the `enclave` subproject) to use external
 signing. This means it must be built in multiple stages:
 
@@ -110,10 +117,6 @@ openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_p
 // Finally build the signed enclave:
 ./gradlew build -PenclaveMode="release"
 ```
-
-!!! note
-    The only mode we cannot access using the `-PenclaveMode` flag is **mock mode**. Mock mode must be accessed via the
-    Mock API. More on this [later](writing-hello-world.md#testing).
 
 ## Got this far? Join the community!
 
