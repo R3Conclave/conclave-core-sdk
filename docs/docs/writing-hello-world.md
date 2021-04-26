@@ -88,12 +88,28 @@ subprojects {
 }
 ```
 
-### Configure the host module
+### Configure the _host_ module
 Add this bit of code to your host `build.gradle` file to let the [mode](tutorial.md#enclave-modes) be chosen from the command line:
 
 ```groovy
 // Override the default (simulation) with -PenclaveMode=
 def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+```
+
+We can apply the Gradle `application` plugin and set the `mainClassName` property
+[in the usual manner](https://docs.gradle.org/current/userguide/application_plugin.html#application_plugin) to let us run
+the host from the command line:
+
+```groovy hl_lines="3 6-8"
+plugins {
+    id 'java'
+    id 'application'
+}
+
+application {
+    mainClassName = "com.superfirm.host.Host" // CHANGE THIS 
+}
+
 ```
 
 Then add the following dependencies, also to the host's `build.gradle`:
@@ -128,15 +144,15 @@ the Gradle file:
 // Create a task that can be used for generating signing materials
 tasks.register("prepareForSigning") {
     it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
-}    
+}
 ```
 
 This creates a new task that can be invoked using Gradle to halt the build after generating materials that need to
 be signed by an external signing process. After the material has been signed the build can be resumed.
 
-### Configure the enclave module
+### Configure the _enclave_ module
 
-Add the Conclave Gradle plugin:
+Add the Conclave Gradle plugin to your enclave `build.gradle` file:
 
 ```groovy hl_lines="2"
 plugins {
@@ -149,7 +165,6 @@ and a dependency on the Conclave enclave library:
 ```groovy hl_lines="2"
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
-    testImplementation "com.r3.conclave:conclave-testing"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```
@@ -248,12 +263,12 @@ Alternatively you can provide or [generate your own](signing.md#generating-keys-
     These keys aren't whitelisted by Intel so you can't use them for real release builds.
     Only use these sample keys for the tutorial. Don't use them for signing your own enclaves!
 
-### Configure the client build
+### Configure the _client_ module
 
-The client build is the simplest of all. This is literally a bog-standard hello world command line app Gradle build,
+The client module is the simplest of all. This is literally a bog-standard hello world command line app Gradle build,
 with a single dependency on the Conclave client library:
 
-```groovy
+```groovy hl_lines="3 6-12"
 plugins {
     id 'java'
     id 'application'
@@ -268,7 +283,7 @@ dependencies {
 }
 ```
 
-And with that, we're done configuring the build.
+And with that, we're done configuring the module.
 
 ## Create a new subclass of `Enclave`
 
@@ -379,7 +394,7 @@ the system in order to successfully enable SGX. The exception message will descr
 To load the enclave we'll put this after the platform check:
 
 ```java
-String className = "com.superfirm.enclave.ReverseEnclave") // CHANGE THIS
+String className = "com.superfirm.enclave.ReverseEnclave" // CHANGE THIS
 try (EnclaveHost enclave = EnclaveHost.load(className)) {
     enclave.start(null, null);
 
@@ -437,7 +452,7 @@ sense please review the [Architecture overview](architecture.md) and the [Enclav
 Before we can set up communication with a client, we must therefore get remote attestation working.
     
 Using remote attestation is easy! Just obtain an `EnclaveInstanceInfo` and serialize/deserialize it using the
-provided methods. Add these lines to the end of the `main` function:
+provided methods. Add these lines to the end of the `main` function of your `Host` class:
     
 ```java
 final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();
@@ -516,11 +531,9 @@ enclave.start(new AttestationParameters.DCAP(), null);
 
 ## Run what we've got so far
 
-We can apply the Gradle `application` plugin and set the `mainClassName` property
-[in the usual manner](https://docs.gradle.org/current/userguide/application_plugin.html#application_plugin) to let us run
-the host from the command line.
+Now everything should be ready to run the host from the command line.
 
-Now run `gradlew host:run` and it should print "Hello World!" backwards along with the security info as shown above.
+Run `gradlew host:run` and it should print "Hello World!" backwards along with the security info as shown above.
 
 !!! note
     If you are using Windows or macOS then please follow the instructions for your operating system, which you can find in the [Running the host](tutorial.md#running-the-host) section.
@@ -595,13 +608,13 @@ to tell the host the enclave is done processing the mail if it doesn't want to r
 more in future tutorials. In this simple tutorial we reply immediately so don't need to use this feature, and thus we
 ignore the ID.
 
-The second parameter is a routing hint string. It's also provided by the host and it helps the host route replies when
+The third parameter is a routing hint string. It's also provided by the host and it helps the host route replies when
 dealing with multiple clients. It's passed into `postMail` when the enclave posts a reply. In our example the host only
 deals with one client and so it's not used.
 
 #### Mail headers
 
-The third parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
+The second parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
 also exposes some other header fields:
 
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
@@ -643,7 +656,7 @@ It will emerge in a callback we're about to configure.
 Mail posted by an enclave appears in a callback we pass to `EnclaveHost.start`. Let's use a really simple 
 implementation: we'll just store the encrypted bytes in a variable, so we can pick it up later.
 
-Replace the call to `EnclaveHost.start` with this snippet:
+Replace the call to `EnclaveHost.start` in the `main` function of your `Host` class with this snippet:
 
 ```java
 // Start it up.
@@ -674,7 +687,7 @@ bogus recipient can't do anything with the mail. In this simple hello world tuto
 at once so we're going to ignore the routing hint here. In a more sophisticated server your callback implementation can
 have access to your connected clients, a database, a durable queue, a `ThreadLocal` containing a servlet connection and so on. 
 
-At the bottom of our main method let's add some code to accept TCP connections and send the `EnclaveInstanceInfo` to 
+At the bottom of our `main` method let's add some code to accept TCP connections and send the `EnclaveInstanceInfo` to 
 whomever connects. You will also need to add `throws IOException` to the method signature of `main`. Then we'll accept a
 mail uploaded by the client, send it to the enclave, and deliver the response back. We'll write the client code in a moment.
 
@@ -718,7 +731,7 @@ signal that it's done with that message and the work it represents can be atomic
 The *routing hint* is an arbitrary string that can be used to identify the sender of the mail from the host's
 perspective, e.g. a connection ID, username, identity - it's up to you. The enclave can use this string to 
 signal to the host that a mail should go to that location. It's called a "hint" to remind you that the host code may
-be modified or writter by an attacker, so the enclave can't trust it. However, the encryption on the mail makes it 
+be modified or written by an attacker, so the enclave can't trust it. However, the encryption on the mail makes it 
 useless for the host to mis-direct mail.
 
 !!! todo
@@ -957,7 +970,7 @@ Secondly, the `conclave-testing` library has a `MockHost` class which lets you w
 mock host enviroment. In this environment the underlying enclave object is also exposed enabling you to make 
 assertions on the enclave's state, something that cannot be done on real hardware or even in simulation mode.
 
-In your **enclave** module build.gradle file add the following test dependency
+In your **enclave** module `build.gradle` file add the following test dependency
 
 ```groovy hl_lines="2"
 testImplementation "com.r3.conclave:conclave-testing"
@@ -971,7 +984,7 @@ mockHost.start(null, null);
 ReverseEnclave reverseEnclave = mockHost.getEnclave();
 ```
 
-`MockHost` is a `EnclaveHost` so you call the enclave as normal with `callEnclave`. You have direct assess to the
+`MockHost` is an `EnclaveHost` so you call the enclave as normal with `callEnclave`. You have direct assess to the
 enclave object instance with `mockHost.getEnclave()`.
 
 ### Native
@@ -1015,3 +1028,4 @@ command:
 !!! tip
     To run the simulation, debug or release native tests on a non-Linux machine you can use Docker, which manages Linux 
     VMs for you. See the instructions for [compiling and running the host](tutorial.md#running-the-host) for more information.
+
