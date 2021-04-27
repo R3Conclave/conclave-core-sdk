@@ -331,8 +331,24 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
                 task.inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                task.inputMrsignerPublicKey.set(enclaveExtension.mrsignerPublicKey)
-                task.inputMrsignerSignature.set(enclaveExtension.mrsignerSignature)
+                task.inputMrsignerPublicKey.set(enclaveExtension.mrsignerPublicKey.map {
+                    if (!it.asFile.exists()) {
+                        throw GradleException("Your enclave is configured to be signed with an external key but the file specified by 'mrsignerPublicKey' in your "
+                                              + "build.gradle does not exist. "
+                                              + "Refer to https://docs.conclave.net/signing.html#generating-keys-for-signing-an-enclave for instructions "
+                                              + "on how to sign your enclave.")
+                    }
+                    it
+                })
+                task.inputMrsignerSignature.set(enclaveExtension.mrsignerSignature.map {
+                    if (!it.asFile.exists()) {
+                        throw GradleException("Your enclave is configured to be signed with an external key but the file specified by 'mrsignerSignature' in your "
+                                              + "build.gradle does not exist. "
+                                              + "Refer to https://docs.conclave.net/signing.html#generating-keys-for-signing-an-enclave for instructions "
+                                              + "on how to sign your enclave.")
+                    }
+                    it
+                })
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
