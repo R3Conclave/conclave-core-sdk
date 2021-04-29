@@ -18,12 +18,13 @@ plugins {
 }
 ```
 
-Then add a dependency on the Conclave enclave library. The Conclave version is configured for you automatically:
+Then add a dependency on the Conclave enclave library. The Conclave version is configured for you automatically.
+Also, add a test dependency on the Conclave host library so you can use mock mode for testing.
 
-```groovy hl_lines="2"
+```groovy hl_lines="2-3"
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
-    testImplementation "com.r3.conclave:conclave-testing"
+    testImplementation "com.r3.conclave:conclave-host"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```

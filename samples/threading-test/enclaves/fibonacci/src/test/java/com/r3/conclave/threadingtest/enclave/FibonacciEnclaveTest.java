@@ -16,7 +16,7 @@ public class FibonacciEnclaveTest {
     void testFibonacci(int term, long expected) throws EnclaveLoadException {
         MockHost<FibonacciEnclave> mockHost = MockHost.loadMock(FibonacciEnclave.class);
         mockHost.start(null, null, null, null);
-        mockHost.getEnclave();
+        mockHost.getMockEnclave();
 
         byte[] response = mockHost.callEnclave(ByteBuffer.allocate(4).putInt(term).array());
         assertNotNull(response);

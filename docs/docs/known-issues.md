@@ -1,8 +1,7 @@
 # Known issues
 
-The Conclave API is by now mostly stable, but small changes may still occur. In particular we may change the mock
-enclave API in future, and adjust mail to support streaming access. You should expect to spend a few minutes updating
-your code between releases, but not more.
+The Conclave API is by now mostly stable, but small changes may still occur. In particular we may adjust mail to support streaming access. 
+You should expect to spend a few minutes updating your code between releases, but not more.
 
 This release ships with the following known issues that we plan to address in future versions:
 

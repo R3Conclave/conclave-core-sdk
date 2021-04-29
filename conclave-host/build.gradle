@@ -32,4 +32,5 @@ dependencies {
     testImplementation project(":internal-testing")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "com.google.guava:guava:$guava_version"
 }

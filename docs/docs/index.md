@@ -80,8 +80,11 @@ is available where you can find the development team during UK office hours (GMT
 
 ### 1.1
 1. :jigsaw: **New feature!** Mock mode has been extended so you can now specify 'mock' as an enclave mode and use 
-   your regular host rather than having to modify your code to use a special build of your host.
+   your regular host rather than having to modify your code to use a special build of your host. A new `mockEnclave` 
+   property has been added to `EnclaveHost` that can be used in mock mode to allow access to the enclave instance
+   for probing internal state during development and testing.
    [Learn more about enclave configurations](architecture.md#testing_and_debugging).
+   [See more information about how the API has changed](api-changes.md#1.0-to-1.1)
 
 ### 1.0
 

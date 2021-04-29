@@ -1,7 +1,7 @@
 package com.r3.conclave.sample.enclave;
 
 import com.r3.conclave.host.EnclaveLoadException;
-import com.r3.conclave.testing.MockHost;
+import com.r3.conclave.host.EnclaveHost;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -12,9 +12,9 @@ import static org.junit.jupiter.api.Assertions.*;
 public class MockTest {
     @Test
     void reverseNumber() throws EnclaveLoadException {
-        MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
+        EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
         mockHost.start(null, null);
-        ReverseEnclave reverseEnclave = mockHost.getEnclave();
+        ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
 
         assertNull(reverseEnclave.previousResult);
 

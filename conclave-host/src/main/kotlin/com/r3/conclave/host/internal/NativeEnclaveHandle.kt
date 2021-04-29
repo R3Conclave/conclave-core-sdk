@@ -57,4 +57,8 @@ class NativeEnclaveHandle<CONNECTION>(
             // Ignore
         }
     }
+
+    override val mockEnclave: Any get() {
+        throw IllegalStateException("The enclave instance can only be accessed in mock mode.")
+    }
 }

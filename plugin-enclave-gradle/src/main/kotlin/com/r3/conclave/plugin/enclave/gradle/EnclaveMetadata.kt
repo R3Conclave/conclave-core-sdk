@@ -1,4 +1,4 @@
-package com.r3.conclave.testing.internal
+package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.SHA256Hash
 import java.nio.file.Files
@@ -25,7 +25,7 @@ data class EnclaveMetadata(val mrenclave: SHA256Hash, val mrsigner: SHA256Hash) 
                 .take(2)
                 .flatMap { line -> line.splitToSequence(' ').map { it.removePrefix("0x") } }
                 .joinToString("")
-                .let(SHA256Hash::parse)
+                .let { SHA256Hash.parse(it) }
         }
     }
 }

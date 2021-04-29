@@ -1,4 +1,4 @@
-package com.r3.conclave.testing.internal
+package com.r3.conclave.host
 
 import com.google.common.collect.Sets
 import com.r3.conclave.common.EnclaveMode
@@ -6,14 +6,13 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.HardwareTest
 import com.r3.conclave.internaltesting.HardwareTest.Companion.attestationParams
 import com.r3.conclave.internaltesting.dynamic.EnclaveBuilder
 import com.r3.conclave.internaltesting.dynamic.EnclaveConfig
 import com.r3.conclave.internaltesting.dynamic.EnclaveType
 import com.r3.conclave.internaltesting.dynamic.TestEnclaves
-import com.r3.conclave.testing.MockHost
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -61,7 +60,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
     }
 
     private val nativeEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
-    private val mockEnclaves = HashMap<EnclaveSpec, MockHost<*>>()
+    private val mockEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
 
     @AfterEach
     fun cleanUp() {
@@ -122,9 +121,9 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
         }
     }
 
-    private fun getMockHost(enclaveSpec: EnclaveSpec): MockHost<*> {
+    private fun getMockHost(enclaveSpec: EnclaveSpec): EnclaveHost {
         return mockEnclaves.computeIfAbsent(enclaveSpec) {
-            val host = MockInternals.createMock(enclaveSpec.enclaveClass, enclaveSpec.isvProdId, enclaveSpec.isvSvn)
+            val host = createMockHost(enclaveSpec.enclaveClass, enclaveSpec.isvProdId, enclaveSpec.isvSvn)
             host.start(null, null)
             host
         }

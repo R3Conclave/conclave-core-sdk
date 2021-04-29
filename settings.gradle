@@ -51,7 +51,6 @@ include 'conclave-common'
 include 'conclave-enclave'
 include 'conclave-host'
 include 'conclave-client'
-include 'conclave-testing'
 
 include 'internal-testing'
 

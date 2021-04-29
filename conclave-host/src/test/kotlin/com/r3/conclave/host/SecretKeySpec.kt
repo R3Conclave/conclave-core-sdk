@@ -1,4 +1,4 @@
-package com.r3.conclave.testing.internal
+package com.r3.conclave.host
 
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*

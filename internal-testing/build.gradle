@@ -3,7 +3,8 @@ plugins {
 }
 
 dependencies {
-    api project(":conclave-testing")
+    api project(":conclave-enclave")
+    api project(":conclave-host")
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"

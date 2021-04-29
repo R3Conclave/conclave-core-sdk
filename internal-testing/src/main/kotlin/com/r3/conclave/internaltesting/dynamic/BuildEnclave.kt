@@ -3,7 +3,6 @@ package com.r3.conclave.internaltesting.dynamic
 import java.io.File
 
 enum class EnclaveType {
-    Mock,
     Simulation,
     Debug,
     Release

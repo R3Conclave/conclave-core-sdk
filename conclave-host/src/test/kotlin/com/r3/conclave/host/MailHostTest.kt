@@ -4,13 +4,12 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
+import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.testing.MockHost
-import com.r3.conclave.testing.internal.MockInternals
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -31,8 +30,8 @@ class MailHostTest {
     }
 
     private val privateKey = Curve25519PrivateKey.random()
-    private val echo by lazy { MockHost.loadMock<MailEchoEnclave>() }
-    private val noop by lazy { MockHost.loadMock<NoopEnclave>() }
+    private val echo by lazy { createMockHost(MailEchoEnclave::class.java) }
+    private val noop by lazy { createMockHost(NoopEnclave::class.java) }
     private val postOffices = HashMap<Pair<EnclaveInstanceInfo, String>, PostOffice>()
 
     @AfterEach
@@ -147,7 +146,7 @@ class MailHostTest {
             }
         }
 
-        val host = MockHost.loadMock<Enclave1>()
+        val host = createMockHost(Enclave1::class.java)
         var postCommand: MailCommand.PostMail? = null
         host.start(null) { commands ->
             postCommand = commands.filterIsInstance<MailCommand.PostMail>().single()
@@ -177,7 +176,7 @@ class MailHostTest {
             }
         }
 
-        val host = MockHost.loadMock<Enclave1>()
+        val host = createMockHost(Enclave1::class.java)
         var previousCommands: List<MailCommand>? = null
         host.start(null) { commands -> previousCommands = commands }
 
@@ -207,7 +206,7 @@ class MailHostTest {
     @ParameterizedTest
     @EnumSource
     fun `enclave can read mail targeted for older platform version`(context: CreateMailContext) {
-        val enclave1 = MockHost.loadMock<CreateMailEnclave>()
+        val enclave1 = createMockHost(CreateMailEnclave::class.java)
         enclave1.start(null, null)
         val oldEncryptedMail = context.createMail("secret".toByteArray(), enclave1)
         enclave1.close()
@@ -216,7 +215,7 @@ class MailHostTest {
         // encryption key will be different from its old one, but we still expect the enclave to be able to decrypt it.
         MockEnclaveEnvironment.platformUpdate()
 
-        val enclave2 = MockHost.loadMock<CreateMailEnclave>()
+        val enclave2 = createMockHost(CreateMailEnclave::class.java)
         enclave2.start(null, null)
         var decryptedByEnclave: String? = null
         enclave2.deliverMail(1, oldEncryptedMail, "test") { bytes ->
@@ -232,7 +231,7 @@ class MailHostTest {
     fun `enclave cannot read mail targeted for newer platform version`(context: CreateMailContext) {
         // Imagine the current platform version has a bug in it and so we update and the client creates mail from that.
         MockEnclaveEnvironment.platformUpdate()
-        val enclave1 = MockHost.loadMock<CreateMailEnclave>()
+        val enclave1 = createMockHost(CreateMailEnclave::class.java)
         enclave1.start(null, null)
         val newEncryptedMail = context.createMail("secret".toByteArray(), enclave1)
         enclave1.close()
@@ -240,7 +239,7 @@ class MailHostTest {
         // Let's revert the update and return the platform to its insecure version.
         MockEnclaveEnvironment.platformDowngrade()
 
-        val enclave2 = MockHost.loadMock<CreateMailEnclave>()
+        val enclave2 = createMockHost(CreateMailEnclave::class.java)
         enclave2.start(null, null)
         assertThatThrownBy {
             enclave2.deliverMail(1, newEncryptedMail, null) { null }
@@ -250,12 +249,12 @@ class MailHostTest {
     @ParameterizedTest
     @EnumSource
     fun `enclave with higher revocation level can read older mail`(context: CreateMailContext) {
-        val oldEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
+        val oldEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
         oldEnclave.start(null, null)
         val oldEncryptedMail = context.createMail("secret!".toByteArray(), oldEnclave)
         oldEnclave.close()
 
-        val newEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
+        val newEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
         newEnclave.start(null, null)
         var decryptedByEnclave: String? = null
         newEnclave.deliverMail(1, oldEncryptedMail, null) { bytes ->
@@ -269,12 +268,12 @@ class MailHostTest {
     @ParameterizedTest
     @EnumSource
     fun `enclave with lower revocation level cannot read newer mail`(context: CreateMailContext) {
-        val newEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
+        val newEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
         newEnclave.start(null, null)
         val newEncryptedMail = context.createMail("secret!".toByteArray(), newEnclave)
         newEnclave.close()
 
-        val oldEnclave = MockInternals.createMock(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
+        val oldEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
         oldEnclave.start(null, null)
         assertThatThrownBy {
             oldEnclave.deliverMail(1, newEncryptedMail, null) { null }
@@ -318,7 +317,7 @@ class MailHostTest {
             }
         }
 
-        val host = MockHost.loadMock<PostOfficeEnclave>()
+        val host = createMockHost(PostOfficeEnclave::class.java)
         host.start(null, null)
         host.deliverMail(1, buildMail(host, body = overload.toByteArray()), null)
     }
@@ -333,7 +332,7 @@ class MailHostTest {
     }
 
     private fun buildMail(
-        host: MockHost<*>,
+        host: EnclaveHost,
         topic: String = "topic-123",
         sequenceNumber: Long? = null,
         senderPrivateKey: PrivateKey = privateKey,

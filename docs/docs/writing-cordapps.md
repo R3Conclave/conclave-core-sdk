@@ -173,5 +173,5 @@ check it against the constraint. If no exception is thrown we can then use `send
 byte arrays.
 
 The unit tests are completely normal for Corda. However, as the code above will load a real or simulated Linux enclave,
-they won't run on Windows or macOS. You can build your enclave in mock mode or change the `EnclaveHostService` class to 
-use the mock loading API to fix this or on macOS, you can use the `container-gradle` script to run the tests inside a Linux VM.
+they won't run on Windows or macOS. You can build your enclave in mock mode to fix this or on macOS, you can use the 
+`container-gradle` script to run the tests inside a Linux VM.

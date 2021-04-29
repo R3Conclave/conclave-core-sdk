@@ -111,4 +111,13 @@ class EnclaveHostNativeTest : JvmTest(threadSafe = false) {
         println(text)
         assertThat(text).contains("SGX available:")
     }
+
+    @Test
+    fun `throw if mockEnclave property accessed`() {
+        assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
+            enclaveHost.mockEnclave
+        }
+    }
+
+
 }

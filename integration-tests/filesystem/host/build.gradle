@@ -7,7 +7,7 @@ dependencies {
     implementation "com.google.protobuf:protobuf-java:$protobuf_version"
     runtimeOnly project(path: ":filesystem:enclave", configuration: enclaveMode)
 
-    testImplementation "com.r3.conclave:conclave-testing:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 }

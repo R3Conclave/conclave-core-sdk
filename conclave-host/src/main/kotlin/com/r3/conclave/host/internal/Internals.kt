@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
 import com.r3.conclave.host.EnclaveHost
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {
@@ -12,8 +13,11 @@ fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: St
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 
-fun createHost(enclaveClass: Class<*>): EnclaveHost {
-    val enclaveHandle = MockEnclaveHandle(enclaveClass.getConstructor().newInstance(), 1, 1, ThrowingErrorHandler())
+fun createMockHost(enclaveClass: Class<*>, isvProdId: Int = 1, isvSvn: Int = 1): EnclaveHost {
+    // For mock mode ensure the host can access the enclave constructor. It may have been set as private.
+    val constructor = enclaveClass.getDeclaredConstructor()
+    constructor.isAccessible = true
+    val enclaveHandle = MockEnclaveHandle(constructor.newInstance(), isvProdId, isvSvn, ThrowingErrorHandler())
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 

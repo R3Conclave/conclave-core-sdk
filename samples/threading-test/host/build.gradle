@@ -27,7 +27,7 @@ dependencies {
     // in the host JVM instead of a sub-JVM.
     testImplementation project(":fibonacci")
     testImplementation project(":busy")
-    testImplementation "com.r3.conclave:conclave-testing:$conclaveVersion"
+    testImplementation "com.r3.conclave:conclave-host:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }

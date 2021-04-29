@@ -26,10 +26,9 @@ dependencies {
     // This plugin will use Gradle's own built-in Kotlin library at runtime.
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72"
 
-    // We need conclave-testing to able to parse the enclave metadata file. This utility resides in conclave-testing
-    // (in an internal package) for use by our tests. Technically we could have this in a separate module but then we'd
-    // have to publish it in the SDK for what is just internal code.
-    implementation project(":conclave-testing")
+    // We need conclave-common to get the hash implementations in order to be able to parse the enclave
+    // metadata file.
+    implementation project(":conclave-common")
     implementation "com.github.jengelman.gradle.plugins:shadow:5.2.0"
     implementation "io.github.classgraph:classgraph:$classgraph_version"
     implementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"

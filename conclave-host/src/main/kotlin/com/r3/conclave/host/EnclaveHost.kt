@@ -94,7 +94,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             if (enclaveMode == EnclaveMode.MOCK) {
                 try {
                     val clazz = Class.forName(enclaveClassName)
-                    return createHost(clazz)
+                    return createMockHost(clazz)
                 } catch (e: Exception) {
                     throw EnclaveLoadException("Unable to load enclave", e)
                 }
@@ -257,6 +257,16 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * The mode the enclave is running in.
      */
     val enclaveMode: EnclaveMode get() = enclaveHandle.enclaveMode
+
+    /**
+     * For mock mode, the instance of the Enclave that is loaded by the host. This should be cast
+     * to the type of Enclave that has been loaded and can be used to examine the state of the
+     * enclave.
+     *
+     * For anything other than mock mode attempting to access this property will result
+     * in an IllegalStateException being thrown.
+     */
+    val mockEnclave: Any get() = enclaveHandle.mockEnclave
 
     /**
      * Causes the enclave to be loaded and the `Enclave` object constructed inside.

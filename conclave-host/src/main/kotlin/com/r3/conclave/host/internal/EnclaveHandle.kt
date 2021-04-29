@@ -20,6 +20,12 @@ interface EnclaveHandle<CONNECTION> {
     val enclaveClassName: String
 
     /**
+     * For Mock mode, returns the instance of the enclave.
+     * For Release, Simulation and Debug modes, throws IllegalStateException.
+     */
+    val mockEnclave: Any
+
+    /**
      * Destroy the enclave.
      *
      * Do not call this whilst there are non-terminated enclave threads.

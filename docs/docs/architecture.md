@@ -146,9 +146,21 @@ Conclave provides full unit testing support for enclaves. Enclaves themselves ca
 
 The modes must match between how the enclave was compiled and how it's loaded. This is handled for you automatically.
 
-"Mock" mode can be used in two different ways. Firstly, you can compile your enclave in "mock" mode for fast, iterative
-development. Secondly, Conclave provides a special "mock" host which you can use for unit testing without having
-to explicitly configure a "mock" enclave.
+"Mock" mode can be used in two different ways. Firstly, you can compile your enclave in "mock" mode using the
+[`-PenclaveMode` flag](tutorial.md#selecting-your-mode) for fast, iterative development. 
+Secondly, when creating an `EnclaveHost` inside the enclave module, Conclave will automatically create it in mock mode.
+This means any tests you define in the enclave module will automatically use mock mode - you can write your tests to load 
+and call the enclave without having to explicitly configure a "mock" enclave. 
+
+In both cases, the host provides access to the enclave instance via the `EnclaveHost.mockEnclave` property. When 
+using mock enclaves, if you want to look at the internal state of your enclave you can cast this property to your 
+actual enclave class type.
+
+!!! notice
+
+    The `EnclaveHost.mockEnclave` property can only be used with mock enclaves. The host does not have access to internal
+    enclave state for any other enclave type. If you attempt to access the property on a non-mock enclave then
+    `IllegalStateException` will be thrown.
 
 Inside the enclave `System.out` and `System.err` are wired up to the host console, but there's no filesystem access.
 In release mode any output to `stdout` and `stderr` is suppressed inside the enclave so you can log to `stdout` and 

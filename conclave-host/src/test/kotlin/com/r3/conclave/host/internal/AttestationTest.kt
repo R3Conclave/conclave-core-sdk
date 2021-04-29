@@ -10,7 +10,6 @@ import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.testing.MockHost
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.AfterEach
@@ -96,5 +95,5 @@ class MockModeAttestationTest : MockAttestationTest() {
     override val expectedEnclaveMode: EnclaveMode
         get() = EnclaveMode.MOCK
 
-    override val enclaveHost: EnclaveHost = MockHost.loadMock<EnclaveInstanceInfoEnclave>()
+    override val enclaveHost: EnclaveHost = createMockHost(EnclaveInstanceInfoEnclave::class.java)
 }

@@ -160,11 +160,12 @@ plugins {
 }
 ```
 
-and a dependency on the Conclave enclave library:
+and a dependency on the Conclave enclave library and a test dependency on the Conclave host library:
 
-```groovy hl_lines="2"
+```groovy hl_lines="2-3"
 dependencies {
     implementation "com.r3.conclave:conclave-enclave"
+    testImplementation "com.r3.conclave:conclave-host"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```
@@ -956,43 +957,50 @@ Finally we close the socket, and we're done. Phew! 😅
 
 ## Testing
 
-There are two ways you can test the enclave: as a mock or natively.
+There are two ways you can test the enclave: using a mock build of the enclave in tests defined as part of
+your enclave project, or integrating enclave tests in your host project.
 
-### Mock
+### Mock tests within the enclave project
 
-Conclave supports two forms of mock. Both allow you to whitebox test your enclave by running the enclave fully 
-in-memory. There is no need for SGX hardware or a specific OS and thus ideal for cross-platform unit testing.
+Conclave supports building and running tests within the enclave project itself. When you define tests as part
+of your enclave project, the enclave classes are loaded along with the tests. Conclave detects this
+configuration and automatically enables mock mode for the enclave and test host. You do not need to explicitly 
+specify [mock mode](architecture.md#testing-and-debugging) for your project.
 
-Firstly, you can build your enclave in mock mode, much like you can with simulation, debug and release mode.
-The instructions for testing using a mock enclave exactly follow that for [native testing](#native).
+This allows you to whitebox test your enclave by running it fully in-memory. There is no need for SGX hardware 
+or a specific OS and thus it is ideal for cross-platform unit testing.
 
-Secondly, the `conclave-testing` library has a `MockHost` class which lets you whitebox test your enclave in a
-mock host enviroment. In this environment the underlying enclave object is also exposed enabling you to make 
-assertions on the enclave's state, something that cannot be done on real hardware or even in simulation mode.
-
-In your **enclave** module `build.gradle` file add the following test dependency
+To enable mock mode in your enclave project tests you need to include the following test dependency in your
+**enclave** module `build.gradle` file.
 
 ```groovy hl_lines="2"
-testImplementation "com.r3.conclave:conclave-testing"
+testImplementation "com.r3.conclave:conclave-host"
 ```
 
-You create your mock enclave by calling `MockHost.loadMock`.
+You can then create an instance of the enclave as normal by calling `EnclaveHost.load`.
 
 ```java
-MockHost<ReverseEnclave> mockHost = MockHost.loadMock(ReverseEnclave.class);
+EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
 mockHost.start(null, null);
-ReverseEnclave reverseEnclave = mockHost.getEnclave();
 ```
 
-`MockHost` is an `EnclaveHost` so you call the enclave as normal with `callEnclave`. You have direct assess to the
-enclave object instance with `mockHost.getEnclave()`.
+Conclave will detect that the enclave class is on the classpath and will start the enclave in mock mode. You
+can obtain the enclave instance using the `EnclaveHost.mockEnclave` property.
 
-### Native
+```java
+ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
+```
 
-Testing the enclave natively is relatively straightforward: the enclave needs to be loaded with `EnclaveHost.load`. By
-default this will run the tests in a simulated environment and will require the Linux OS. However, if you configure
-your tests to depend on a mock mode enclave instead of simulation, debug or release then you can run the tests on
-a non-Linux OS. Native tests on real SGX hardware are ideal for integration testing.
+### Integrating enclave tests in your host project
+
+When you want to test your enclave on real SGX hardware or in a simulated SGX environment you need to define your tests
+in a project separate from the the enclave project. A suitable place for your tests would be to define them as part of
+the host project tests.
+
+Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs 
+to be loaded with `EnclaveHost.load`. By default this will run the tests in a simulated SGX environment and will require
+the tests to be executed within Linux. In addition, testing on real hardware will require the tests to be executed within
+Linux on a system that supports SGX.
 
 ```java
 @EnabledOnOs(OS.LINUX)
@@ -1009,7 +1017,17 @@ public class NativeTest {
 
 You'll notice that we annotated the test class with `@EnabledOnOs(OS.LINUX)`. This is from
 [JUnit 5](https://junit.org/junit5/docs/current/user-guide/#writing-tests-conditional-execution-os) and it will make sure
-the native test isn't run on non-Linux environments. Leave this annotation off if you are using mock mode.
+the native test isn't run on non-Linux environments.
+
+The tests can use any enclave mode: release, debug, simulation or mock. Therefore if you want to run your tests on
+a non-Linux system then you can configure your tests to depend on a mock mode enclave instead. In this case, remove the
+`@EnabledOnOs(OS.LINUX)` annotation from the above code.
+
+!!! note
+    Running your integration tests in mock mode is very similar to 
+    [Integrating enclave tests in your host project](#integrating-enclave-tests-in-your-host-project). In both cases
+    the enclave code is loaded and run fully in memory. However for integration tests, you can also choose to run
+    the tests in modes other than mock, which is not possible for enclave project tests.
 
 Running
 
@@ -1026,6 +1044,6 @@ command:
 ```gradlew -PenclaveMode=mock host:test```
 
 !!! tip
-    To run the simulation, debug or release native tests on a non-Linux machine you can use Docker, which manages Linux 
+    To run the tests in a simulated SGX environment on a non-Linux machine you can use Docker, which manages Linux 
     VMs for you. See the instructions for [compiling and running the host](tutorial.md#running-the-host) for more information.
 

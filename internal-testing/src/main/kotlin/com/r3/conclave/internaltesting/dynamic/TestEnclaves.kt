@@ -8,6 +8,7 @@ import com.r3.conclave.host.internal.createHost
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.Assertions.*
 import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Path
@@ -89,20 +90,12 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
 
     fun hostTo(entryClass: Class<out Enclave>, enclaveBuilder: EnclaveBuilder = EnclaveBuilder()): EnclaveHost {
         val mode = when (enclaveBuilder.type) {
-            EnclaveType.Mock -> EnclaveMode.MOCK
             EnclaveType.Simulation -> EnclaveMode.SIMULATION
             EnclaveType.Debug -> EnclaveMode.DEBUG
             EnclaveType.Release -> EnclaveMode.RELEASE
         }
-        if (enclaveBuilder.type != EnclaveType.Mock) {
-            val enclaveFile = getSignedEnclaveFile(entryClass, enclaveBuilder).toPath()
-            return createHost(mode, enclaveFile, entryClass.name, tempFile = false)
-        } else {
-            val cachedJar = createEnclaveJar(entryClass, enclaveBuilder)
-            val cl = URLClassLoader(arrayOf(cache[cachedJar].toURI().toURL()), javaClass.classLoader)
-            val clazz = Class.forName(entryClass.name, true, cl)
-            return createHost(clazz)
-        }
+        val enclaveFile = getSignedEnclaveFile(entryClass, enclaveBuilder).toPath()
+        return createHost(mode, enclaveFile, entryClass.name, tempFile = false)        
     }
 
     fun getEnclaveMetadata(enclaveClass: Class<out Enclave>, builder: EnclaveBuilder): Path {

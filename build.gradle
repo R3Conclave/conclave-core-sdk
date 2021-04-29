@@ -150,7 +150,6 @@ dokka {
             "conclave-enclave",
             "conclave-host",
             "conclave-client",
-            "conclave-testing",
             "conclave-mail"
     ]
     def apiDirectories = files(subProjects.collect { "$it/src/main/kotlin" })
@@ -340,10 +339,6 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-mail',
                 description: 'Conclave mail API',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-testing',
-                description: 'Conclave testing API',
         ),
         new PublishedProject(
                 projectPath: ':plugin-enclave-gradle',
