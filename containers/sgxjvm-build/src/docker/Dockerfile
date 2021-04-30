@@ -129,6 +129,13 @@ RUN echo "1dd78393a9bf9084d3508e911476ae4c28932627  /opt/$LABSJDK_CE_11_FILE" | 
 RUN tar -xaf /opt/$LABSJDK_CE_11_FILE -C /opt
 RUN rm -v /opt/$LABSJDK_CE_11_FILE
 
+# Our custom version of dokka
+RUN curl -sSL -o /opt/dokka.zip https://github.com/R3Conclave/dokka/releases/download/r3-1.4.32/dokka.zip
+RUN echo "92169d1ae9374a3c716f01d16da1f9e3b8767a839e82eaa06347177d688c7138  /opt/dokka.zip" | sha256sum -c -
+RUN mkdir -p /opt/dokka/repository/org/jetbrains/dokka/
+RUN unzip /opt/dokka.zip -d /opt/dokka/repository/org/jetbrains/dokka/
+RUN rm -v /opt/dokka.zip
+
 # Some incantation that's necessary to get rid of some Python errors that appear when building docs.
 # https://stackoverflow.com/a/59596814/2248578
 RUN pip3 install wheel

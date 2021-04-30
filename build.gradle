@@ -4,7 +4,7 @@ plugins {
     id "com.github.ben-manes.versions" version "0.27.0"
     id 'base'
     id 'idea'
-    id 'org.jetbrains.dokka' version '0.10.1'
+    id 'org.jetbrains.dokka' version '1.4.32-SNAPSHOT'
     id 'com.github.jk1.dependency-license-report' version '1.16'
 }
 
@@ -15,6 +15,13 @@ repositories {
     maven {
         url "https://plugins.gradle.org/m2/"
     }
+    maven {
+        url "file://opt/dokka/repository"
+    }
+}
+
+dependencies {
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.4.32-SNAPSHOT")
 }
 
 static Map<String, String> createEnvironment(String... names) {
@@ -134,51 +141,43 @@ subprojects {
 // at this time: run `mkdocs serve` in the internal-docs directory yourself to view it.
 
 // Dokka is the tool that reads KDoc comments from Kotlin and produces an API website.
-dokka {
-    // We will use the JavaDoc styling for now, to make Conclave more appealing to Java developers. We may do what
-    // Corda does and offer a "Kotlin theme" site later.
-    outputFormat = 'javadoc'
 
-    // We output into the site source directory to avoid warnings (and associated warning blindness) caused when mkdocs
-    // tries to check links to the JavaDocs and finds they're missing. This causes a bit of disk space bloat when
-    // the files are copied to the docs/build directory but the cost is small and worth it.
-    outputDirectory = "docs/docs/api"
+import org.jetbrains.dokka.gradle.DokkaTask
+tasks.withType(DokkaTask).configureEach {
+    outputDirectory.set(file("$projectDir/docs/docs/api"))
+    moduleName.set("Conclave $conclave_version")
+    dokkaSourceSets {
+        register("conclave") {
+            displayName.set("Conclave")
+            jdkVersion.set(8)
+            reportUndocumented.set(false)
+            skipDeprecated.set(true)
+            includeNonPublic.set(false)
+            pluginsMapConfiguration.put("org.jetbrains.dokka.base.DokkaBase",
+                        "{\"customAssets\":[\"${file("$projectDir/docs/assets/docs_logo.svg")}\", \"${file("$projectDir/docs/assets/arrow_down.svg")}\"], "
+                      + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
 
-    // These modules/directories contain source code defining the exported API.
-    subProjects = [
-            "conclave-common",
-            "conclave-enclave",
-            "conclave-host",
-            "conclave-client",
-            "conclave-mail"
-    ]
-    def apiDirectories = files(subProjects.collect { "$it/src/main/kotlin" })
+            // Don't want users seeing deprecated stuff, they can call it up in their IDE if they need it.
+            def subProjects = [
+                    "conclave-common",
+                    "conclave-enclave",
+                    "conclave-host",
+                    "conclave-client",
+                    "conclave-mail"
+            ]
 
-    // Find a list of packages that shouldn't appear in the API documentation.
-    def internalPackagePrefixes = {
-        def prefixes = []
-        // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
-        apiDirectories.collect { sourceDir ->
-            sourceDir.traverse(type: FileType.DIRECTORIES) {
-                if ((it.name == 'internal') || (it.name == 'kotlin')) {
-                    prefixes.add sourceDir.toPath().relativize(it.toPath()).toString().replace(File.separator, '.')
-                }
+            subProjects.forEach() {
+                sourceRoots.from(file("$projectDir/$it/src/main/kotlin"))
             }
-        }
-        prefixes
-    }()
 
-    configuration {
-        moduleName = "Conclave"
-        jdkVersion = 8
-        reportUndocumented = false
-        skipDeprecated = true  // Don't want users seeing deprecated stuff, they can call it up in their IDE if they need it.
-
-        // Suppress each internal package.
-        internalPackagePrefixes.collect { packagePrefix ->
+            // Filter out our internal and kotlin-specific classes
             perPackageOption {
-                prefix = packagePrefix
-                suppress = true
+                matchingRegex.set(".*\\.internal.*")
+                suppress.set(true)
+            }
+            perPackageOption {
+                matchingRegex.set(".*\\.kotlin.*")
+                suppress.set(true)
             }
         }
     }
@@ -191,29 +190,25 @@ dokka {
 // production builds.
 def excludeDokka = findProperty('excludeDokka')
 if (excludeDokka == null) {
-    // This is here so we can add other Dokka formats in future (e.g. Kotlin's own API docs theme)
-    task apidocs(dependsOn: ['dokka'])
-
-    task packageJavadoc(type: Jar, dependsOn: ['dokka']) {
-        from dokka
+    // Dokka does not always translate kotlin code into pure java documentation. We can use this
+    // task to perform some pre-processing between generating the HTML and making the documentation site.
+    task preprocessdocs(type: Exec, dependsOn: ['dokkaHtml']) {
+        description = "Performs processing on the documentation generated using the apidocs task prior to running mkdocs."
+        commandLine("./preprocess-docsite.sh")
+        workingDir("docs")
+        inputs.files(["./preprocess-docsite.sh", fileTree("docs/docs/api")])
+        outputs.dir("docs/docs/api")
+    }
+    task packageHtml(type: Jar, dependsOn: ['preprocessdocs']) {
+        from dokkaHtml
         archiveClassifier.set('javadoc')
     }
 } else {
     // Dummy tasks to exclude dokka
-    task apidocs()
-    task packageJavadoc(type: Jar) {
+    task preprocessdocs()
+    task packageHtml(type: Jar) {
         archiveClassifier.set('javadoc')
     }
-}
-
-// Dokka does not always translate kotlin code into pure java documentation. We can use this
-// task to perform some pre-processing between generating the HTML and making the documentation site.
-task preprocessdocs(type: Exec, dependsOn: ['apidocs']) {
-    description = "Performs processing on the documentation generated using the apidocs task prior to running mkdocs."
-    commandLine("./preprocess-docsite.sh")
-    workingDir("docs")
-    inputs.files(fileTree("docs/docs/api"))
-    outputs.dir("docs/docs/api")
 }
 
 task mkdocs(type: Exec, dependsOn: ['preprocessdocs']) {
@@ -235,7 +230,7 @@ tasks['clean'].dependsOn(cleanDocs)
 // This task has to be called "buildDocs" because it's invoked by the
 // https://github.com/corda/corda-docs-builder tool from CI.
 task buildDocs(dependsOn: ['mkdocs'])
-dokka.shouldRunAfter mkdocs
+dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
 //region Publishing
@@ -424,9 +419,9 @@ if (includeNative) {
                 maven(MavenPublication) {
                     from project.components.java
                     pom.description = description
-                    // Only publish JavaDocs for the Conclave modules, as the others aren't meant to be used.
+                    // Only publish docs for the Conclave modules, as the others aren't meant to be used.
                     if (published.projectPath.startsWith(":conclave-"))
-                        artifact packageJavadoc
+                        artifact packageHtml
                 }
             }
             repositories {

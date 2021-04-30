@@ -1,6 +1,14 @@
 pluginManagement {
     apply from: 'versions.gradle'
 
+    repositories {
+        maven {
+            url "file://opt/dokka/repository"
+        }
+        gradlePluginPortal()
+    }
+
+
     resolutionStrategy {
         eachPlugin {
             if (requested.id.id == 'org.jetbrains.kotlin.jvm' || requested.id.id == 'org.jetbrains.kotlin.plugin.serialization') {

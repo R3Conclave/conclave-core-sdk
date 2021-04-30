@@ -21,35 +21,30 @@ import com.r3.conclave.common.SecureHash
  * satisfying any one of them is sufficient:
  *
  * (hash OR hash OR key) AND minRevocationLevel AND productID AND minSecurityLevel
- *
- * @property acceptableCodeHashes The set of measurement hashes that will be accepted. A match against any hash satisfies
- * this criteria and [acceptableSigners].
- *
- * At least one code hash or signer must be provided.
- *
- * @property acceptableSigners The set of code signers that will be accepted. A match against any signer satisfies this
- * criteria and [acceptableCodeHashes]. A [productID] must also be specified since a single signing key can sign multiple unrelated enclaves.
- *
- * At least one code hash or signer must be provided.
- *
- * @property productID The Product ID is a number between 0 and 65535 that differentiates products signed by the same
- * signing key. Enclaves with different product IDs cannot access each other's sealed data. You need to specify this to
- * prevent confusions between two products that speak the same protocol and which a malicious host has swapped. This must
- * be specified if there is at least one [acceptableSigners].
- *
- * @property minRevocationLevel [EnclaveInfo.revocationLevel] must be greater or equal to this. That corresponds to the
- * SGX notion of an enclave security version level. Null means accept all revocation levels (i.e. there were no revocations
- * yet). This value comes from the signed enclave metadata and cannot be forged by a hacked enclave: only if the enclave
- * developer's signing key has been compromised. The remote enclave must have a revocation level (SVN) greater than this
- * value, i.e. 1 means the enclave must have an SVN of 2 or above.
- *
- * @property minSecurityLevel Whether to accept debug/insecure enclaves, or enclaves running on hosts that have fallen
- * behind on their security patches. By default stale machines (running old software/microcode) are accepted, to avoid
- * outages in case of operator laxness, but you can tighten this if wanted.
  */
 class EnclaveConstraint {
+    /**
+     * The set of measurement hashes that will be accepted. A match against any hash satisfies
+     * this criteria and [acceptableSigners].
+     *
+     * At least one code hash or signer must be provided.
+     */
     var acceptableCodeHashes: MutableSet<SecureHash> = HashSet()
+
+    /**
+     * The set of code signers that will be accepted. A match against any signer satisfies this
+     * criteria and [acceptableCodeHashes]. A [productID] must also be specified since a single signing key can sign multiple unrelated enclaves.
+     *
+     * At least one code hash or signer must be provided.
+     */
     var acceptableSigners: MutableSet<SecureHash> = HashSet()
+
+    /**
+     * The Product ID is a number between 0 and 65535 that differentiates products signed by the same
+     * signing key. Enclaves with different product IDs cannot access each other's sealed data. You need to specify this to
+     * prevent confusions between two products that speak the same protocol and which a malicious host has swapped. This must
+     * be specified if there is at least one [acceptableSigners].
+     */
     var productID: Int? = null
         set(value) {
             if (value != null) {
@@ -58,6 +53,14 @@ class EnclaveConstraint {
             }
             field = value
         }
+
+    /**
+     * [EnclaveInfo.revocationLevel] must be greater or equal to this. That corresponds to the
+     * SGX notion of an enclave security version level. Null means accept all revocation levels (i.e. there were no revocations
+     * yet). This value comes from the signed enclave metadata and cannot be forged by a hacked enclave: only if the enclave
+     * developer's signing key has been compromised. The remote enclave must have a revocation level (SVN) greater than this
+     * value, i.e. 1 means the enclave must have an SVN of 2 or above.
+     */
     var minRevocationLevel: Int? = null
         set(value) {
             if (value != null) {
@@ -65,6 +68,12 @@ class EnclaveConstraint {
             }
             field = value
         }
+
+    /**
+     * Whether to accept debug/insecure enclaves, or enclaves running on hosts that have fallen
+     * behind on their security patches. By default stale machines (running old software/microcode) are accepted, to avoid
+     * outages in case of operator laxness, but you can tighten this if wanted.
+     */
     var minSecurityLevel: EnclaveSecurityInfo.Summary = EnclaveSecurityInfo.Summary.STALE
 
     /**

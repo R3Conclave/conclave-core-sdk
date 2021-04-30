@@ -578,7 +578,7 @@ Received: $attestationReportBody"""
      *
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
-     * // TODO Add in docs how to do mail-to-self
+     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo, topic: String): EnclavePostOffice {
         enclaveInstanceInfo as EnclaveInstanceInfoImpl
@@ -600,7 +600,7 @@ Received: $attestationReportBody"""
      *
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
-     * // TODO Add in docs how to do mail-to-self
+     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo): EnclavePostOffice {
         return postOffice(enclaveInstanceInfo, "default")
