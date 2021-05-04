@@ -1,0 +1,12 @@
+diff --git a/sdk/tlibc/string/memset.c b/sdk/tlibc/string/memset.c
+index fcdca89..39d3566 100644
+--- a/sdk/tlibc/string/memset.c
++++ b/sdk/tlibc/string/memset.c
+@@ -40,6 +40,7 @@ extern void *__memset(void *dst, int c, size_t n);
+ #endif
+ 
+ void *
++__attribute__((optimize("O0")))
+ memset(void *dst, int c, size_t n)
+ {
+ #ifdef _TLIBC_USE_INTEL_FAST_STRING_

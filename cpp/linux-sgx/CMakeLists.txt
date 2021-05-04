@@ -24,13 +24,14 @@ ExternalProject_Add(linux-sgx-ext
 
         SOURCE_DIR ${BUILD_SRC_DIR}
 
-        PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff
+        PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff ${CMAKE_CURRENT_SOURCE_DIR}/memset.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quoteverify_cpp.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/dcap_sgx_urts_wrapper_h.patch
 	     && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
 	     && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
+             && patch ${BUILD_SRC_DIR}/sdk/cpprt/linux/libunwind/src/se-libc-stubs.c ${CMAKE_CURRENT_SOURCE_DIR}/ndebug.patch
 
         UPDATE_COMMAND ""
 

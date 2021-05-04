@@ -9,6 +9,9 @@
 .gradle/
 **/*.retry
 **/*.iml
+**/.settings/
+**/.project
+**/.classpath
 ?/
 internal-docs/site
 docs/docs/api

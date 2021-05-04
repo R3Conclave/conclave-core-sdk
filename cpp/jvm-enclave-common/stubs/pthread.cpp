@@ -47,63 +47,75 @@ public:
 
     /**
      * Creates a new mapping between a pthread_attr_t and a thread_data_t.
-     * @param attr The thread attribute pointer to create mapping for.
-     * @return The thread data object or nullptr if out of handles.
+     * @param attr The thread attribute reference to create mapping for.
+     * @return true on success, false if out of handles.
      */
-    thread_data_t* create(const pthread_attr_t* attr) {
-        thread_data_t* retval = nullptr;
-        
-        if (attr) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            // Find an unused handle.
-            int handle;
-            for (handle = 0; handle < MAX_HANDLES; ++handle) {
-                if (!thread_data_[handle]) {
-                    retval = new thread_data_t;
-                    memset(retval, 0, sizeof(thread_data_t));
-                    thread_data_[handle].reset(retval);
-                    // Store the handle in the thread attribute.
-                    *(uint32_t*)attr = handle;
-                    break;
-                }
+    bool create(pthread_attr_t& attr) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        // Find an unused handle.
+        for (uint32_t handle = 0; handle < MAX_HANDLES; ++handle) {
+            if (!thread_data_[handle]) {
+                thread_data_[handle].reset(new thread_data_t);
+                memset(thread_data_[handle].get(), 0, sizeof(thread_data_t));
+                memcpy(&attr,&handle, sizeof(uint32_t));
+                return true;
             }
         }
-        return retval;
+        return false;
     }
 
     /**
      * Gets an existing mapping between a pthread_attr_t and a thread_data_t.
-     * @param attr The thread attribute to get the mapping for.
-     * @return The thread data associated with the attribute or nullptr if
-     *         the mapping does not exist.
+     * @param attr The thread reference to get the mapping for.
+     * @param td a reference to thread_data_t to receive the information.
+     * @return true on success, false if the mapping does not exist.
      */
-    thread_data_t* get(const pthread_attr_t* attr) {
-        thread_data_t* retval = nullptr;
-
-        if (attr) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            // The index into our array is stored as a 32 bit value in attr.
-            uint32_t handle = *(uint32_t*)attr;
-            if (handle < MAX_HANDLES) {
-                retval = thread_data_[handle].get();
+    bool get(const pthread_attr_t& attr, thread_data_t& td) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        // The index into our array is stored as a 32 bit value in attr.
+        uint32_t handle;
+        memcpy(&handle, &attr, sizeof(uint32_t));
+        if (handle < MAX_HANDLES) {
+            if (thread_data_[handle].get()) {
+                memcpy(&td, thread_data_[handle].get(), sizeof(thread_data_t));
+                return true;
             }
         }
-        return retval;
+        return false;
+    }
+
+    /**
+     * Sets an existing mapping between a pthread_attr_t and a thread_data_t.
+     * @param attr (key) The thread reference to get the mapping for.
+     * @param td (value) thread_data_t object data to be copied into the map.
+     * @return true on success, false if the mapping does not exist.
+     */
+    bool set(const pthread_attr_t& attr, const thread_data_t& td) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        // The index into our array is stored as a 32 bit value in attr.
+        uint32_t handle;
+        memcpy(&handle, &attr, sizeof(uint32_t));
+        if (handle < MAX_HANDLES) {
+            if (thread_data_[handle].get()) {
+                memcpy(thread_data_[handle].get(), &td, sizeof(thread_data_t));
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Destroys the mapping between the pthread_attr_t and thread_data_t, releasing
      * the memory for the thread_data_t.
-     * @param attr The thread attribute to free the mapping for.
+     * @param attr A const reference attribute to free the mapping for.
      */
-    void free(const pthread_attr_t* attr) {
-        if (attr) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            // The index into our array is stored as a 32 bit value in attr.
-            uint32_t handle = *(uint32_t*)attr;
-            if (handle < MAX_HANDLES) {
-                thread_data_[handle] = nullptr;
-            }
+    void free(const pthread_attr_t& attr) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        // The index into our array is stored as a 32 bit value in attr.
+        uint32_t handle;
+        memcpy(&handle, &attr, sizeof(uint32_t));
+        if (handle < MAX_HANDLES) {
+            thread_data_[handle] = nullptr;
         }
     }
 
@@ -111,7 +123,7 @@ public:
 private:
     PthreadData() {}
 
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
     static constexpr int MAX_HANDLES = 256;
     std::unique_ptr<thread_data_t> thread_data_[MAX_HANDLES];
 };
@@ -130,7 +142,7 @@ int pthread_attr_init(pthread_attr_t *attr) {
     }
 
     // Create a new mapping to a thread_data_t.
-    if (!PthreadData::instance().create(attr)) {
+    if (!PthreadData::instance().create(*attr)) {
         return ENOMEM;
     }
     return 0;
@@ -141,14 +153,14 @@ int pthread_attr_destroy(pthread_attr_t *attr) {
         enclave_trace("pthread_attr_destroy(invalid))\n");
         return EINVAL;
     }
-    PthreadData::instance().free(attr);
+    PthreadData::instance().free(*attr);
     enclave_trace("pthread_attr_destroy(success)\n");
     return 0;
 }
 
 int pthread_attr_getguardsize (const pthread_attr_t *attr, size_t *guardsize) {
-    thread_data_t* td = PthreadData::instance().get(attr);
-    if (!td) {
+    thread_data_t dummy;
+    if (!PthreadData::instance().get(*attr, dummy)) {
         enclave_trace("pthread_attr_getguardsize(invalid))\n");
         return EINVAL;
     }
@@ -158,12 +170,12 @@ int pthread_attr_getguardsize (const pthread_attr_t *attr, size_t *guardsize) {
 }
 
 int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize) {
-    thread_data_t* td = PthreadData::instance().get(attr);
-    if (!td) {
+    thread_data_t td;
+    if (!attr || !PthreadData::instance().get(*attr, td)) {
         enclave_trace("pthread_attr_getstack(invalid))\n");
         return EINVAL;
     }
-    *stacksize = (size_t)(td->stack_base_addr - td->stack_limit_addr);
+    *stacksize = td.stack_base_addr - td.stack_limit_addr;
     enclave_trace("pthread_attr_getstack -> *stacksize=0x%lX\n", *stacksize);
     return 0;
 }
@@ -182,11 +194,13 @@ int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr) {
     if (result != 0) {
         return result;
     }
-    thread_data_t* td = PthreadData::instance().get(attr);
-    if (!td) {
+    thread_data_t* tdata = get_thread_data();
+    if (!tdata) {
+        return EPERM;
+    }
+    if (!attr || !PthreadData::instance().set(*attr, *tdata)) {
         return EINVAL;
     }
-    memcpy(td, get_thread_data(), sizeof(thread_data_t));
     return 0;
 }
 
