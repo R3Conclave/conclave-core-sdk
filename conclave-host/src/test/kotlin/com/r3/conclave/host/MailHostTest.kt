@@ -328,7 +328,7 @@ class MailHostTest {
         val mailBytes = PostOffice.create(noop.enclaveInstanceInfo.encryptionKey).encryptMail("message".toByteArray())
         assertThatIllegalArgumentException().isThrownBy {
             noop.deliverMail(1, mailBytes, null)
-        }.withMessageContaining("Make sure EnclaveInstanceInfo.createPostOffice is used.")
+        }.withMessageStartingWith("Missing metadata to decrypt mail.")
     }
 
     private fun buildMail(

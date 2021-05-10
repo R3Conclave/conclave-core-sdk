@@ -320,7 +320,10 @@ Received: $attestationReportBody"""
                 val decryptingStream = MailDecryptingStream(input.inputStream())
                 val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
                     requireNotNull(keyDerivation) {
-                        "Key derivation header is required for decrypting enclave mail. Make sure EnclaveInstanceInfo.createPostOffice is used."
+                        "Missing metadata to decrypt mail. Mail destined for an enclave must be created using a PostOffice " +
+                                "from the enclave's EnclaveInstanceInfo object (i.e. EnclaveInstanceInfo.createPostOfffice()). " +
+                                "If the sender of this mail is another enclave then Enclave.postOffice(EnclaveInstanceInfo) " +
+                                "must be used instead."
                     }
                     // Ignore any extra bytes in the keyDerivation.
                     require(keyDerivation.size >= SgxCpuSvn.size + SgxIsvSvn.size) { "Invalid key derivation header size" }
@@ -564,6 +567,10 @@ Received: $attestationReportBody"""
     /**
      * Returns a post office for responding back to the sender of the given mail. This is a convenience method which calls
      * `postOffice(PublicKey, String)` with the mail's authenticated sender key and topic.
+     *
+     * Note: Do not use this overload if the sender of the mail is another enclave. `postOffice(EnclaveInstanceInfo)` must
+     * still be used when responding back to an enclave. This may mean having to ingest the sender's [EnclaveInstanceInfo]
+     * object beforehand.
      */
     protected fun postOffice(mail: EnclaveMail): EnclavePostOffice = postOffice(mail.authenticatedSender, mail.topic)
 
