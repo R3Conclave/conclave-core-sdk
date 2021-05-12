@@ -20,7 +20,7 @@ extern "C" {
 
 int gettimeofday(struct timeval *tv, struct timezone *tz) {
     if (tv) {
-        r3::conclave::EnclaveSharedData::instance().real_time(tv);
+        r3::conclave::EnclaveSharedData::instance().real_time(*tv);
     }
     if (tz) {
         tz->tz_dsttime = 0;

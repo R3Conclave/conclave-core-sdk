@@ -1,7 +1,8 @@
 #pragma once
 
 #include "shared_data.h"
-#include <atomic>
+#include "conclave_tools.h"
+#include "sgx_scoped_lock.h"
 
 struct timespec;
 struct timeval;
@@ -37,7 +38,7 @@ public:
      * @param t The timespec to populate.
      *
      */
-    void real_time(struct timespec* t);
+    void real_time(timespec& t);
 
     /**
      * Get the real (current) time from the host via the shared object as
@@ -46,7 +47,7 @@ public:
      * @param t The timeval to populate.
      *
      */
-    void real_time(struct timeval* t);
+    void real_time(timeval& t);
 
     /**
      * Initialise the shared data if not done already.
@@ -57,15 +58,17 @@ private:
     explicit EnclaveSharedData();
     virtual ~EnclaveSharedData();
 
-    void getSharedData(SharedData& sd);
+    void getSharedData(SharedData& sd) const;
 
     // The contents of them memory pointed to by shared_data_ can change at any time
     // out of the enclave's control so we need to decare the pointer volatile.
-    volatile SharedData* shared_data_;
+    // The "atomic" wrapper is to try to avoid locking the object when that's not necessary.
+    std::atomic<volatile SharedData*> shared_data_;
 
     // Keep track of the last time returned by the enclave to ensure the clock
     // only runs forward.
-    std::atomic_uint64_t last_time_;
-};
+    std::atomic<uint64_t> last_time_;
 
+    mutable sgx_spinlock_t spinlock_;
+};
 }}

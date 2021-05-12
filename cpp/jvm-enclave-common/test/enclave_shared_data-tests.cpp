@@ -55,7 +55,7 @@ TEST(enclave_shared_data, real_time) {
     sd.real_time = 1234;
 
     EnclaveSharedData& esd = EnclaveSharedData::instance();
-    EXPECT_TRUE(esd.real_time() == 1234);
+    EXPECT_EQ(esd.real_time(), 1234);
 }
 
 TEST(enclave_shared_data, real_time_forwards) {
@@ -64,7 +64,7 @@ TEST(enclave_shared_data, real_time_forwards) {
     // Just set a time, check it then move it forwards and check the time is updated
     for (uint64_t tm = 2000; tm < 2100; ++tm) {
         sd.real_time = tm;
-        EXPECT_TRUE(esd.real_time() == tm);
+        EXPECT_EQ(esd.real_time(), tm);
     }
 }
 
@@ -73,11 +73,11 @@ TEST(enclave_shared_data, real_time_backwards) {
     
     // Check that if the time goes backwards, the latest time is returned
     sd.real_time = 500;
-    EXPECT_TRUE(esd.real_time() == 500);
+    EXPECT_EQ(esd.real_time(), 500);
     sd.real_time = 450;
-    EXPECT_TRUE(esd.real_time() == 500);
+    EXPECT_EQ(esd.real_time(), 500);
     sd.real_time = 510;
-    EXPECT_TRUE(esd.real_time() == 510);
+    EXPECT_EQ(esd.real_time(), 510);
     
 }
 

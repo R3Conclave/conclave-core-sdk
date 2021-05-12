@@ -30,7 +30,7 @@ void tzset() {
 int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     enclave_trace("clock_gettime\n");
     if (tp) {
-        r3::conclave::EnclaveSharedData::instance().real_time(tp);
+        r3::conclave::EnclaveSharedData::instance().real_time(*tp);
     }
     return 0;
 }
