@@ -36,6 +36,12 @@ RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_r
 RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/18.04/prod bionic main"
 
+# Nexus-IQ CLI
+RUN wget -qO- https://repo.sonatype.com/repository/sonatype-hosted/pki/deb-gpg/GPG-KEY-sonatype-apt-hosted.asc | \
+   gpg --dearmor | \
+   tee /usr/share/keyrings/sonatype-apt-hosted.gpg >/dev/null
+RUN wget -P /etc/apt/sources.list.d/ https://repo.sonatype.com/repository/sonatype-hosted/deb/sonatype-hosted.list
+
 RUN apt-get update -y && apt-get install -y \
     autoconf \
     az-dcap-client \
@@ -61,6 +67,7 @@ RUN apt-get update -y && apt-get install -y \
     libunwind8 \
     make \
     nano \
+    nexus-iq-cli \
     ocaml \
     ocamlbuild \
     openjdk-11-jdk \
