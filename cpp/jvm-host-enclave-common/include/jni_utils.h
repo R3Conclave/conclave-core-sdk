@@ -27,7 +27,7 @@ struct JniPtr {
             jniEnv->ReleaseByteArrayElements(array, rawPtr, releaseMode);
         }
     }
-    int size() {
+    int size() const {
         return array == nullptr ? 0 : jniEnv->GetArrayLength(array);
     }
 };

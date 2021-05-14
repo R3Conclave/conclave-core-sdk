@@ -183,11 +183,10 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_calcSealedBl
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_authenticatedDataSize
         (JNIEnv* jniEnv, jobject, jbyteArray sealedBlob) {
+    JniPtr<uint8_t> jpSealedBlob(jniEnv, sealedBlob);
 
-    jbyte* jbSealedBlob = sealedBlob ? jniEnv->GetByteArrayElements(sealedBlob, nullptr) : nullptr;
-
-    if (jbSealedBlob) {
-        auto ret = sgx_get_add_mac_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jbSealedBlob));
+    if (jpSealedBlob.ptr) {
+        auto ret = sgx_get_add_mac_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jpSealedBlob.ptr));
 
         if (ret != UINT32_MAX) {
             return static_cast<jint>(ret);
@@ -200,10 +199,10 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_authenticate
 JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_plaintextSizeFromSealedData
         (JNIEnv* jniEnv, jobject, jbyteArray sealedBlob) {
 
-    jbyte* jbSealedBlob = sealedBlob ? jniEnv->GetByteArrayElements(sealedBlob, nullptr) : nullptr;
+    JniPtr<uint8_t> jpSealedBlob(jniEnv, sealedBlob);
 
-    if (jbSealedBlob) {
-        auto ret = sgx_get_encrypt_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jbSealedBlob));
+    if (jpSealedBlob.ptr) {
+        auto ret = sgx_get_encrypt_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jpSealedBlob.ptr));
 
         if (ret != UINT32_MAX) {
             return static_cast<jint>(ret);
@@ -239,23 +238,21 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sealData
     try {
         std::vector <uint8_t> buffer(sealedDataSize);
 
-        jbyte* jbDataToEncrypt = plaintext ?
-                               jniEnv->GetByteArrayElements(plaintext, nullptr) : nullptr;
-        jbyte* jbAuthenticatedData = authenticatedData ?
-                                   jniEnv->GetByteArrayElements(authenticatedData, nullptr) : nullptr;
+        JniPtr<uint8_t> jpDataToEncrypt(jniEnv, plaintext);
+        JniPtr<uint8_t> jpAuthenticatedData(jniEnv, authenticatedData);
 
-        sgx_status_t ret = jbDataToEncrypt ? sgx_seal_data(authenticatedDataSize,
-                                                         reinterpret_cast<const uint8_t*>(jbAuthenticatedData),
+        sgx_status_t ret = jpDataToEncrypt.ptr ? sgx_seal_data(authenticatedDataSize,
+                                                         reinterpret_cast<const uint8_t*>(jpAuthenticatedData.ptr),
                                                          plaintextSize,
-                                                         reinterpret_cast<const uint8_t*>(jbDataToEncrypt),
+                                                         reinterpret_cast<const uint8_t*>(jpDataToEncrypt.ptr),
                                                          sealedDataSize,
                                                          reinterpret_cast<sgx_sealed_data_t*>(&buffer[0]))
                                          : SGX_ERROR_UNEXPECTED;
 
         if (ret == SGX_SUCCESS) {
-            JniPtr<uint8_t> sealedOutput(jniEnv, output);
-            memcpy_s(sealedOutput.ptr + outputOffset, outputSize, &buffer[0], buffer.size());
-            sealedOutput.releaseMode = 0; // to write back to the jvm
+            JniPtr<uint8_t> jpSealedOutput(jniEnv, output);
+            memcpy_s(jpSealedOutput.ptr + outputOffset, outputSize, &buffer[0], buffer.size());
+            jpSealedOutput.releaseMode = 0; // to write back to the jvm
         } else {
             raiseException(jniEnv, getErrorMessage(ret));
         }
@@ -270,47 +267,66 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
          jbyteArray dataOut, jint dataOutOffset, jint dataOutLength,
          jbyteArray authenticatedDataOut, jint authenticatedDataOutOffset, jint authenticatedDataOutLength) {
 
-    jbyte* jbSealedBlob = sealedBlob ? jniEnv->GetByteArrayElements(sealedBlob, nullptr) : nullptr;
+    JniPtr<uint8_t> jpSealedBlob(jniEnv, sealedBlob);
+    JniPtr<uint8_t> jpDataOut(jniEnv, dataOut);
 
-    auto authenticatedDataOutDataLen = sgx_get_add_mac_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jbSealedBlob));
-    auto decryptDataLen = sgx_get_encrypt_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jbSealedBlob));
+    auto authenticatedDataOutDataLen = sgx_get_add_mac_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jpSealedBlob.ptr));
+    auto decryptDataLen = sgx_get_encrypt_txt_len(reinterpret_cast<sgx_sealed_data_t*>(jpSealedBlob.ptr));
 
     if (authenticatedDataOutDataLen == UINT32_MAX || decryptDataLen == UINT32_MAX) {
         raiseException(jniEnv, getErrorMessage(SGX_ERROR_UNEXPECTED));
         return;
     }
 
-    auto uiSealedBlobLength = static_cast<uint32_t>(sealedBlobLength);
+    auto uiSealedBlobLength = static_cast<uint64_t>(sealedBlobLength);
 
-    if ((authenticatedDataOutDataLen + decryptDataLen) > uiSealedBlobLength) {
+    // Lambda helper to validate parameters. Returns true in case something is invalid.
+    auto validateParameter = [](const JniPtr<uint8_t>& jniPtr, int offset, int length) {
+        return jniPtr.ptr == nullptr
+            || offset < 0 
+            || length <= 0
+            || offset >= length
+            || (static_cast<uint64_t>(offset) + static_cast<uint64_t>(length)) > static_cast<uint64_t>(jniPtr.size()); 
+            };
+
+    if (validateParameter(jpSealedBlob, sealedBlobOffset, sealedBlobLength)
+     || validateParameter(jpDataOut, dataOutOffset, dataOutLength) 
+     || (static_cast<uint64_t>(authenticatedDataOutDataLen) + static_cast<uint64_t>(decryptDataLen)) > uiSealedBlobLength) {
         raiseException(jniEnv, getErrorMessage(SGX_ERROR_INVALID_PARAMETER));
         return;
     }
 
     try {
-        std::vector <uint8_t> deAuthenticatedData(authenticatedDataOutDataLen);
-        std::vector <uint8_t> deData(decryptDataLen);
+        std::vector<uint8_t> deAuthenticatedData(authenticatedDataOutDataLen);
+        std::vector<uint8_t> deData(decryptDataLen);
 
-        auto res = sgx_unseal_data(reinterpret_cast<sgx_sealed_data_t*>(jbSealedBlob + sealedBlobOffset),
-                                   authenticatedDataOutDataLen ? &deAuthenticatedData[0] : nullptr, authenticatedDataOutDataLen ? &authenticatedDataOutDataLen : nullptr, &deData[0], &decryptDataLen);
+        auto res = sgx_unseal_data(reinterpret_cast<sgx_sealed_data_t*>(jpSealedBlob.ptr + sealedBlobOffset),
+                                   authenticatedDataOutDataLen ? &deAuthenticatedData[0] : nullptr, 
+                                   authenticatedDataOutDataLen ? &authenticatedDataOutDataLen : nullptr, 
+                                   &deData[0], &decryptDataLen);
         if (res != SGX_SUCCESS) {
             raiseException(jniEnv, getErrorMessage(res));
             return;
         }
 
         if (authenticatedDataOutLength) {
+            auto len = std::min<int>(authenticatedDataOutLength, authenticatedDataOutDataLen);
             JniPtr<uint8_t> jpAuthenticatedDataOut(jniEnv, authenticatedDataOut);
-            memcpy_s(jpAuthenticatedDataOut.ptr + authenticatedDataOutOffset, authenticatedDataOutLength,
+            if (validateParameter(jpAuthenticatedDataOut, authenticatedDataOutOffset, len)) {
+                raiseException(jniEnv, getErrorMessage(SGX_ERROR_INVALID_PARAMETER));
+                return;
+            }
+            memcpy_s(jpAuthenticatedDataOut.ptr + authenticatedDataOutOffset, 
+                     len,
                      &deAuthenticatedData[0], deAuthenticatedData.size());
             // to write back to the jvm
             jpAuthenticatedDataOut.releaseMode = 0;
         }
 
-        JniPtr<uint8_t> jpDataOut(jniEnv, dataOut);
         memcpy_s(jpDataOut.ptr + dataOutOffset, dataOutLength, &deData[0], deData.size());
 
         // to write back to the jvm
-        jpDataOut.releaseMode              = 0;
+        jpDataOut.releaseMode = 0;
     } catch (std::exception &e) {
         raiseException(jniEnv, e.what());
     }
