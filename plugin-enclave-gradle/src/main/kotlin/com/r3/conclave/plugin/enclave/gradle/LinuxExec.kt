@@ -30,7 +30,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         if (!OperatingSystem.current().isLinux) {
             try {
                 commandLine(
-                        CommandLineConfig(),
                         "docker",
                         "build",
                         "--tag", tag.get(),
