@@ -29,15 +29,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // up a Linux environment (currently using Docker) in which the commands will be executed.
         if (!OperatingSystem.current().isLinux) {
             try {
-                project.exec { spec ->
-                    spec.commandLine(
+                commandLine(
+                        CommandLineConfig(),
                         "docker",
                         "build",
                         "--tag", tag.get(),
                         "--tag", tagLatest.get(),
                         dockerFile.asFile.get().parentFile.absolutePath
-                    )
-                }
+                )
             } catch (e: Exception) {
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves on non-Linux platforms. "
@@ -69,11 +68,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
         }
         val errorOut = ByteArrayOutputStream()
-        val result = project.exec { spec ->
-            spec.commandLine(args)
-            spec.isIgnoreExitValue = true   // We'll handle it in a moment.
-            spec.errorOutput = errorOut
-        }
+        val result = commandLine(args, commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut))
+
         if (result.exitValue == 137) {
             // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
             throwOutOfMemoryException()

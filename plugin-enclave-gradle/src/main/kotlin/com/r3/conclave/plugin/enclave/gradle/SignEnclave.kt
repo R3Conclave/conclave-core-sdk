@@ -38,14 +38,14 @@ open class SignEnclave @Inject constructor(
                     "The resulting enclave will not be loadable on any SGX platform. See Conclave documentation for details")
         }
 
-        project.exec { spec ->
-            spec.commandLine(signTool.get(), "sign",
+        commandLine(
+                signTool.get(), "sign",
                 "-key", inputKey.asFile.get(),
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSignedEnclave.asFile.get(),
                 "-config", inputEnclaveConfig.asFile.get()
             )
-        }
+
         project.logger.lifecycle("Signed enclave binary: $signedEnclavePath")
     }
 }

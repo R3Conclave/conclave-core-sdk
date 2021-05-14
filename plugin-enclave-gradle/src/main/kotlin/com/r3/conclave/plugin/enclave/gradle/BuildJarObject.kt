@@ -36,16 +36,14 @@ open class BuildJarObject @Inject constructor(objects: ObjectFactory) : Conclave
             spec.rename { embeddedJarName }
         }
 
-        project.exec { spec ->
-            spec.workingDir(workingDirectory)
-            spec.commandLine(
-                    inputLd.get(),
-                    "-r",
-                    "-b", "binary",
-                    "-m", "elf_x86_64",
-                    embeddedJarName,
-                    "-o", outputJarObject.get().asFile
-            )
-        }
+        commandLine(
+                inputLd.get(),
+                "-r",
+                "-b", "binary",
+                "-m", "elf_x86_64",
+                embeddedJarName,
+                "-o", outputJarObject.get().asFile,
+                commandLineConfig = CommandLineConfig(workingDirectory)
+        )
     }
 }

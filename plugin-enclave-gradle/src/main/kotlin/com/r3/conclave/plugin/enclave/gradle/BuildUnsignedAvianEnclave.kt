@@ -36,8 +36,7 @@ open class BuildUnsignedAvianEnclave @Inject constructor(objects: ObjectFactory)
     }
 
     override fun action() {
-        project.exec { spec ->
-            spec.commandLine(listOf(
+            commandLine(listOf(
                 inputLd.get(),
                 "-pie", "--entry=enclave_entry",
                 "-m", "elf_x86_64",
@@ -53,6 +52,5 @@ open class BuildUnsignedAvianEnclave @Inject constructor(objects: ObjectFactory)
                 + optionsForStripped
                 + listOf(inputEnclaveObject.asFile.get(), inputJarObject.asFile.get())
             )
-        }
     }
 }

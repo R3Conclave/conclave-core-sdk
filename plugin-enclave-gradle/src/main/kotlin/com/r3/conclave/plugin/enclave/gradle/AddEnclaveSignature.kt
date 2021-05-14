@@ -33,15 +33,13 @@ open class AddEnclaveSignature @Inject constructor(objects: ObjectFactory) : Con
     val signedEnclavePath: String get() = outputSignedEnclave.asFile.get().absolutePath
 
     override fun action() {
-        project.exec { spec ->
-            spec.commandLine(signTool.asFile.get(), "catsig",
+        commandLine(signTool.asFile.get(), "catsig",
                     "-key", inputMrsignerPublicKey.asFile.get(),
                     "-enclave", inputEnclave.asFile.get(),
                     "-out", outputSignedEnclave.asFile.get(),
                     "-config", inputEnclaveConfig.asFile.get(),
                     "-sig", inputMrsignerSignature.asFile.get(),
                     "-unsigned", inputSigningMaterial.asFile.get()
-            )
-        }
+        )
     }
 }
