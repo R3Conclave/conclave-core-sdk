@@ -7,6 +7,7 @@ apply from: '../common.gradle'
 
 subprojects {
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+    ext.attestationMode = findProperty("attestationMode") ?: "epid"
     repositories {
         switch (System.getenv('USE_MAVEN_REPO')?.toLowerCase()) {
             case "artifactory":

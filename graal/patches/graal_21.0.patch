@@ -219,6 +219,19 @@ index 8fcbce1..305b9ec 100644
              for (String specialRootModule : specialRootModules) {
                  if (moduleName.equals(specialRootModule)) {
                      for (Path srcRoot : specialSrcRoots.get(specialRootModule)) {
+diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java
+index dd43417..0ae578e 100644
+--- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java
++++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java
+@@ -42,7 +42,7 @@ import org.graalvm.nativeimage.impl.InternalPlatform;
+ import java.awt.GraphicsEnvironment;
+ 
+ @Platforms({InternalPlatform.PLATFORM_JNI.class})
+-@AutomaticFeature
++//@AutomaticFeature
+ @SuppressWarnings({"unused"})
+ public class JNIRegistrationAwt extends JNIRegistrationUtil implements Feature {
+ 
 diff --git a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
 index 2e01394..7630aed 100644
 --- a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java

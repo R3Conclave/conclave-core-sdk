@@ -1,0 +1,34 @@
+plugins {
+    id 'application'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.johnrengelman.shadow'
+}
+
+mainClassName = "com.r3.conclave.integrationtests.tribuo.host.Host"
+
+// Create a task that can be used for generating signing materials
+tasks.register("prepareForSigning") {
+    it.dependsOn(":tribuo:enclave:generateEnclaveSigningMaterial" + enclaveMode.capitalize())
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-host:$conclave_version"
+
+    runtimeOnly project(path: ":tribuo:enclave", configuration: enclaveMode)
+    runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
+}
+
+jar {
+    manifest {
+        attributes('Main-Class': mainClassName)
+    }
+}
+
+application {
+    def jvmArgs = [
+            "-DattestationMode=$attestationMode",
+            "-Dconclave.spid=$conclave_spid",
+            "-Dconclave.attestation-key=$attestation_key"
+    ]
+    applicationDefaultJvmArgs = jvmArgs
+}

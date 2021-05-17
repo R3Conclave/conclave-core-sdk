@@ -1,0 +1,40 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'application'
+}
+
+mainClassName = "com.r3.conclave.integrationtests.tribuo.client.Client"
+
+dependencies {
+    implementation project(":tribuo:common")
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
+    implementation "com.r3.conclave:conclave-client:$conclave_version"
+    implementation "org.slf4j:slf4j-simple:$slf4j_version"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation project(":tribuo:host")
+}
+
+jar {
+    manifest {
+        attributes('Main-Class': mainClassName)
+    }
+}
+
+application {
+    applicationDefaultJvmArgs = [
+            "-DenclaveMode=$enclaveMode",
+            "-Dconclave.spid=$conclave_spid",
+            "-Dconclave.attestation-key=$attestation_key",
+            "-DdataDir=${projectDir.toPath().resolve("data")}"
+    ]
+}
+
+test {
+    maxHeapSize "4g"
+    systemProperty 'enclaveMode', enclaveMode
+    systemProperty 'attestationMode', attestationMode
+    systemProperty 'dataDir', projectDir.toPath().resolve("data").toAbsolutePath().toString()
+}
