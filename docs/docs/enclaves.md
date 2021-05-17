@@ -27,8 +27,12 @@ trust that an enclave will operate correctly even if the owner of the computer i
 
 In Conclave, an enclave is a subclass of the [`Enclave`](api/com/r3/conclave/enclave/Enclave.html) class, combined
 with an embedded JVM and compiled into a native shared library (ending in .so), which is then itself bundled into
-the module JAR. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
-load the enclave class.
+the module JAR<sup>\*</sup>. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
+load the enclave class.  
+!!! note
+    <sup>\*</sup>Conclave compiles the enclave into a .so file because that's how the Intel SGX SDK expects the enclave to be built.
+    Conclave hides this detail during the build phase by wrapping this file inside a Jar artifact, and during execution phase
+    automatically loads the .so file from the classpath.
 
 ## Local messaging and operating system access
 
@@ -86,8 +90,7 @@ but rather a more complex hash that must be calculated with special tools. It co
 dependencies loaded into an enclave (a fat JAR).
 
 A measurement hash is pretty unhelpful by itself. It's just a large number. To be meaningful you must _reproduce_ the
-measurement from the source code of the enclave. With Conclave this is easy as we've fixed everything that might cause
-two different builds of the same source code to yield a different file. When you compile your enclave the measurement
+measurement from the source code of the enclave. When you compile your enclave the measurement
 hash is calculated and printed. By comparing it to what you find inside a remote attestation, you can know the source
 code of the remote enclave matches what you have locally.
 

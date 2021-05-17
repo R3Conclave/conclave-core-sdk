@@ -69,8 +69,8 @@ of course get no hardware protections. To run against real SGX hardware you must
 ![Import Gradle script](./images/gradle-import.png) 
  
 **Step 4:** Double-click on `:host:assemble`. This is the second
-highlighted `assemble` in the screenshot below. Voila! :smile: You have just built your first enclave.
-  
+highlighted `assemble` in the screenshot of Intellij's Gradle window below. Voila! :smile: You have just built your first enclave.
+
 ![Double-click on `:host:assemble`](./images/gradle-tasks.png)
   
 Now explore the `build` folder. 
@@ -79,6 +79,8 @@ Now explore the `build` folder.
 
 As normal with Gradle, the `assemble` task has bundled the program into a zip, with startup scripts. These scripts are
 nothing special - they just set up the classpath. You could also e.g. make a fat JAR if you want. 
+
+Alternatively you can build you application from the command line as described in the next section.
 
 ### Selecting your mode
 
@@ -124,6 +126,61 @@ There's a public mailing list for discussion of using Conclave and we also welco
 is available where you can find the development team during UK office hours (GMT 0900-1700).
 
 [:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
+
+## Confused about various Gradle commands (`build`/`assemble`/`installDist`/`run`)? Here is an explanation.
+
+`build` will build a client, an enclave and a host. This command will also run unit tests (if there are any) for the corresponding components.
+The build results will go to `client/build/distribution/client.tar` (or .zip) for the client,
+and to `host/build/distribution/host.tar` (or .zip) for the host (an enclave is bundled with the host).
+These archives contain everything required to run your app (except the JRE) and can be shipped to the customer as-is.
+```bash
+./gradlew build
+```
+
+`assemble` will do the same job as `build` except that it won't run unit tests. You can _assemble_ all at once or do it separately for the client and for the host.
+```bash
+./gradlew assemble
+```
+or
+```bash
+./gradlew :host:assemble
+./gradlew :client:assemble
+```
+
+`installDist` will behave similarly to _assemble_ except that it won't produce those archives as _build_ or _assemble_.
+Instead, it will create a `host/build/install` and `client/build/install` directories, whose contents are effectively an unpacked _host.tar_ and/or _client.tar_ files.
+```bash
+./gradlew installDist
+```
+or
+```bash
+./gradlew :host:installDist
+./gradlew :client:installDist
+```
+
+On Linux you can _run_ your app in two slightly different ways - standalone or using Gradle:
+
+- standalone
+```bash
+./gradlew host:installDist
+cd host/build/install
+./host/bin/host
+```
+```bash
+./gradlew client:installDist
+cd client/build/install
+./client/bin/client
+```
+
+- using Gradle
+```bash
+./gradlew :host:run
+```
+```bash
+./gradlew :client:run --args="Reverse me"
+```
+!!! note
+    `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
 
 ## Running the host
 === "Linux"
@@ -235,7 +292,8 @@ Assessed security level at 2021-01-26T10:31:02.974Z is INSECURE
 Reversing Hello World!: !dlroW olleH
 ``` 
 
-The client will connect to the host, download the `EnclaveInstanceInfo`, check it, print it out, and then send an encrypted string to reverse. The host will deliver this encrypted string to the enclave, and the enclave will send back to the client the encrypted reversed response. You should see the following output from the client:
+The client will connect to the host, download the `EnclaveInstanceInfo`, check it, print it out, and then send an encrypted string to reverse. The host will deliver this encrypted string to the enclave, 
+and the enclave will send back an encrypted response as a `PostMail` command. The host will extract an encrypted data from the `PostMail` command and send it to the client. You should see the following output from the client:
 
 ```text
 Attempting to connect to localhost:9999

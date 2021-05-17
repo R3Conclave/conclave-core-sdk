@@ -1,6 +1,10 @@
 # Deploying to Azure
 
-## Introduction
+!!! important
+    Azure does not guarantee access to the same machine on reboot, secrets that are encrypted for a particular enclave may be lost.
+    Consider using the Azure Key Vault to prevent this. At time of writing, access to Azure Key Vault is not a part of the Conclave SDK (v1.1).
+
+## Attestation
 
 Microsoft Azure provides ready-made VMs that support the latest attestation protocols. This document explains the
 background and provides a walkthrough showing how to get such a VM.

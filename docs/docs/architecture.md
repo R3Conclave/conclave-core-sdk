@@ -73,7 +73,7 @@ security of the host machine may degrade without the clients realising.
 
 For instance if host's SGX software stack is out of date and has known vulnerabilities, or if the BIOS configuration is
 not correct, this will be reported to the client by Intel's servers as part of verifying and processing the data inside
-the remote attestation provided by the client.
+the remote attestation provided by the host.
 
 **Cloud provider.** A cloud provider needs to support SGX for Conclave to be usable. They may operate their own
 provisioning servers that take over from Intel's.
