@@ -2,19 +2,18 @@ package com.r3.conclave.enclave
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
-import com.r3.conclave.enclave.internal.AttestationEnclaveHandler
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import com.r3.conclave.enclave.internal.InternalEnclave
-import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
+import com.r3.conclave.enclave.internal.*
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.utilities.internal.*
+import java.io.DataInputStream
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -278,15 +277,68 @@ Received: $attestationReportBody"""
         }
     }
 
-    private class Watermark(var value: Long)
-
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
 
-        // Maps sender + topic pairs to the highest sequence number seen so far. Seqnos must start from zero and can only
-        // increment by one for each delivered mail.
-        private val sequenceWatermarks = HashMap<DestinationAndTopic, Watermark>()
+        /**
+         * Mail acknowledgement and expected sequence number(s).
+         *
+         * - mail messages get a sequence number assigned by the sender's PostOffice.
+         * - mail acknowledgement receipt (MAC) contains acknowledged sequence numbers (per topic, as ranges (to save the memory))
+         *   - it gets updated everytime an enclave calls `acknowledge()` and emitted as [MailCommand.AcknowledgementReceipt].
+         *
+         * - in absence of MAC:
+         *   - mail sequence numbers are expected to start from zero
+         *   - and increment by 1 for every *new* message.
+         *   - on receiving end those sequence numbers are expected to form a contiguous sequence.
+         *
+         * - conclave does not require you to acknowledge received mail
+         * - nor does it impose any restrictions on order in which mail has to be acknowledged or which mail has to be acknowledged.
+         *
+         * - if all mail had been acknowledged:
+         *   - the receipt will contain a single range (again, per topic) - {start:0, count:N},
+         *     where N is number of messages acknowledged for this topic.
+         *   - the next mail received is expected to have a sequence number N (start+count)
+         *
+         * - there are two collections tracking mail sequence numbers at the code below: `materialisedAckReceipt` and `nextExpectedSequences`
+         *   - they look identical and, in fact, contain very same data (cloned) at the start
+         *   - they are separate because: you still under no obligation to acknowledge received mail,
+         *     so the received mail sequence number might (will) naturally be ahead of those acknowledged.
+         *   - `materialisedAckReceipt` get updated on `acknowledge`,
+         *      whereas `nextExpectedSequences` get updated at `checkMailOrdering` for incoming mail.
+         *
+         * Here is how it works (using a single topic example):
+         * - initially, there is no MAC, so sequence numbers start with zero
+         * - let's send three mails (seqnums: 0,1,2), but only acknowledge one with seq# 1
+         * - the MAC received and kept by the host will have acknowledged range `(start:1,count:1)`
+         * - let's now restart an enclave, but this time using MAC
+         *   - `materialisedAckReceipt` = `[(start:1,count:1)]`
+         *   - `nextExpectedSequences` = `[(start:1,count:1)]`
+         *   - that is we are definitely missing seq# 0,
+         *     on restart we have to replay all missing mail (seq# 0),
+         *     the mail with seq#2 is at the tail and won't be distinguishable from new mail with same seq#.
+         * - let's now replay the mail with seq# 2
+         *   - it will be rejected as we expected seq# is 0
+         *   - materialisedAckReceipt and nextExpectedSequences are staying intact
+         * - let's now replay the mail with seq# 0
+         *   - it will be accepted and `nextExpectedSequences` will now be `[(start:0,count:2)]`
+         *   - if we now acknowledge this mail (seq# 0), the `materialisedAckReceipt` will also be `[(start:0,count:2)]`
+         * - we can now safely send mail with seq#2
+         *   - it will be accepted, nextExpectedSequences` will now be `[(start:0,count:3)]`
+         *   - materialisedAckReceipt are still intact
+         *   - if we now acknowledge this mail (seq# 2), the `materialisedAckReceipt` will also be `[(start:0,count:3)]`
+         *
+         */
+        private val lockObject = Object()
+        private var hasAcknowledgementReceipt = false
+        // this map keeps track of acknowledged mail (note: we keep sequence numbers (ranges), not mail ids)
+        private val materialisedAckReceipt = HashMap<DestinationAndTopic,RangeSequence>()
+        // this map says what sequence number to expect next
+        private val nextExpectedSequences = HashMap<DestinationAndTopic,RangeSequence>()
+        // this map shares instances of RangeSequence (via TargetRangeSequence) with materialisedAckReceipt
+        private val mailIdToTargetRangeSequence = HashMap<Long, TargetRangeSequence>()
+
         private lateinit var sender: Sender
 
         override fun connect(upstream: Sender): EnclaveMessageHandler {
@@ -321,7 +373,7 @@ Received: $attestationReportBody"""
                 val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
                     requireNotNull(keyDerivation) {
                         "Missing metadata to decrypt mail. Mail destined for an enclave must be created using a PostOffice " +
-                                "from the enclave's EnclaveInstanceInfo object (i.e. EnclaveInstanceInfo.createPostOfffice()). " +
+                                "from the enclave's EnclaveInstanceInfo object (i.e. EnclaveInstanceInfo.createPostOffice()). " +
                                 "If the sender of this mail is another enclave then Enclave.postOffice(EnclaveInstanceInfo) " +
                                 "must be used instead."
                     }
@@ -334,7 +386,7 @@ Received: $attestationReportBody"""
                     // We now have the private key to decrypt the mail body and authenticate the header.
                     Curve25519PrivateKey(entropy)
                 }
-                checkMailOrdering(mail)
+                checkMailOrdering(id, mail)
                 // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
                 // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
                 // require spotting the absence of something rather than the presence of something, which is hard.
@@ -345,6 +397,8 @@ Received: $attestationReportBody"""
                 } else {
                     this@Enclave.receiveMail(id, mail, routingHint)
                 }
+            } else if (type == InternalCallType.ACKNOWLEDGEMENT_RECEIPT) {
+                populateAcknowledgedRanges(input.getIntLengthPrefixBytes())
             } else {
                 val state = stateManager.checkStateIs<Receive>()
                 checkNotNull(state.callback) {
@@ -374,19 +428,26 @@ Received: $attestationReportBody"""
             }
         }
 
-        private fun checkMailOrdering(mail: EnclaveMail) {
-            synchronized(sequenceWatermarks) {
+        private fun checkMailOrdering(mailID: Long, mail: EnclaveMail) {
+            synchronized(lockObject) {
                 val key = DestinationAndTopic(mail.authenticatedSender, mail.topic)
-                val highestSeen = sequenceWatermarks.computeIfAbsent(key) { Watermark(-1) }
-                // The -1 allows us to check the first mail in this sequence is zero.
-                val expected = highestSeen.value + 1
-                check(mail.sequenceNumber == expected) {
+
+                // link mailID with acknowledged ranges
+                mailIdToTargetRangeSequence[mailID] = TargetRangeSequence(
+                    materialisedAckReceipt.computeIfAbsent(key) { RangeSequence() },
+                    mail.sequenceNumber
+                )
+
+                val range = nextExpectedSequences.computeIfAbsent(key) { RangeSequence() }
+                val expected = range.expected()
+                val actual = mail.sequenceNumber
+                check(actual == expected) {
                     when {
-                        highestSeen.value == -1L -> {
+                        range.isEmpty() -> {
                             "First time seeing mail with topic ${mail.topic} so the sequence number must be zero but is " +
-                                    "instead ${mail.sequenceNumber}. It may be the host is delivering mail out of order."
+                                "instead ${mail.sequenceNumber}. It may be the host is delivering mail out of order."
                         }
-                        mail.sequenceNumber < expected -> {
+                        actual < expected -> {
                             "Mail with sequence number ${mail.sequenceNumber} on topic ${mail.topic} has already been seen, " +
                                     "was expecting $expected. Make sure the same PostOffice instance is used for the same " +
                                     "sender key and topic, or if the sender key is long-term then a per-process topic is used. " +
@@ -394,11 +455,11 @@ Received: $attestationReportBody"""
                         }
                         else -> {
                             "Next sequence number on topic ${mail.topic} should be $expected but is instead " +
-                                    "${mail.sequenceNumber}. It may be the host is delivering mail out of order."
+                                    "${actual}. It may be the host is delivering mail out of order."
                         }
                     }
                 }
-                highestSeen.value++
+                range.add(mail.sequenceNumber)
             }
         }
 
@@ -451,7 +512,7 @@ Received: $attestationReportBody"""
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
             val routingHintBytes = routingHint?.toByteArray()
             val size = Int.SIZE_BYTES + (routingHintBytes?.size ?: 0) + encryptedBytes.size
-            sendMailCommandToHost(size, mailType = 0) { buffer ->
+            sendMailCommandToHost(size, mailType = MailCommandType.POST.ordinal.toByte()) { buffer ->
                 if (routingHintBytes != null) {
                     buffer.putIntLengthPrefixBytes(routingHintBytes)
                 } else {
@@ -462,8 +523,81 @@ Received: $attestationReportBody"""
         }
 
         fun acknowledgeMail(mailID: Long) {
-            sendMailCommandToHost(Long.SIZE_BYTES, mailType = 1) { buffer ->
-                buffer.putLong(mailID)
+            synchronized(lockObject) {
+                updateAcknowledgementReceipt(mailID)
+                sendMailCommandToHost(Long.SIZE_BYTES, mailType = MailCommandType.ACKNOWLEDGE.ordinal.toByte()) { buffer ->
+                    buffer.putLong(mailID)
+                }
+                emitAcknowledgementReceipt()
+            }
+        }
+
+        private fun updateAcknowledgementReceipt(mailID: Long) {
+            val target = mailIdToTargetRangeSequence.remove(mailID)
+            requireNotNull(target){ "Trying to acknowledge mail with unknown ID $mailID, or mail has already been acknowledged." }
+            target.range.add(target.sequenceNumber)
+        }
+
+        /**
+         * This data must not be seen unsealed outside of the enclave.
+         *
+         * Receipt format:
+         * (0) version: Int
+         * (1) number_of_topics: Int
+         * for each topic:
+         *   (2) public_key: 32 bytes
+         *   (3) topic: 2 + UTF(text)
+         *   (5) number_of_ranges: Int
+         *   for each range:
+         *      (6) start seq# (Long)
+         *      (7) count (Long)
+         */
+        private fun emitAcknowledgementReceipt() {
+            val plainText = writeData {
+                writeInt(AcknowledgementReceiptVersion.value)
+                writeInt(materialisedAckReceipt.size)
+                materialisedAckReceipt.forEach { (key, ranges) ->
+                    writeIntLengthPrefixBytes(key.destination.encoded)
+                    writeUTF(key.topic)
+                    ranges.write(this)
+                }
+            }
+
+            val sealed = env.sealData(PlaintextAndEnvelope(OpaqueBytes(plainText)))
+            sendMailCommandToHost(
+                sealed.intLengthPrefixSize,
+                mailType = MailCommandType.RECEIPT.ordinal.toByte()
+            ) { buffer ->
+                buffer.putIntLengthPrefixBytes(sealed)
+            }
+        }
+
+        private fun populateAcknowledgedRanges(ackReceipt: ByteArray) {
+            synchronized(lockObject) {
+                check(!hasAcknowledgementReceipt) { "Already received AcknowledgementReceipt." }
+                hasAcknowledgementReceipt = true
+
+                materialisedAckReceipt.clear()
+                nextExpectedSequences.clear()
+
+                val bis = env.unsealData(ackReceipt).plaintext.inputStream()
+                val dis = DataInputStream(bis)
+
+                val version = dis.readInt()
+                check(version == AcknowledgementReceiptVersion.value) {
+                    "Receipt version($version) does not match to expected(${AcknowledgementReceiptVersion.value})"
+                }
+                val numberOfTopics = dis.readInt() // number of key+topic
+                repeat(numberOfTopics) {
+                    val pk = Curve25519PublicKey(dis.readIntLengthPrefixBytes())
+                    val topic = dis.readUTF()
+                    val key = DestinationAndTopic(pk, topic)
+
+                    val ranges = RangeSequence()
+                    ranges.read(dis)
+                    materialisedAckReceipt[key] = ranges
+                    nextExpectedSequences[key] = ranges.clone()
+                }
             }
         }
 
@@ -475,7 +609,7 @@ Received: $attestationReportBody"""
             sender.send(Long.SIZE_BYTES + 2 + size) { buffer ->
                 buffer.putLong(threadID)
                 buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
-                buffer.put(mailType)
+                buffer.put(mailType) /* MailCommandType */
                 block(buffer)
             }
         }
@@ -649,6 +783,7 @@ Received: $attestationReportBody"""
     private val defaultMinSizePolicy = MinSizePolicy.movingAverage()
 
     private data class DestinationAndTopic(val destination: PublicKey, val topic: String)
+    private data class TargetRangeSequence(val range: RangeSequence, val sequenceNumber: Long)
     //endregion
 }
 

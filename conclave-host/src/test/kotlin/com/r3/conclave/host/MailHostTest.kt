@@ -6,14 +6,8 @@ import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
-import com.r3.conclave.mail.Curve25519PrivateKey
-import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.utilities.internal.deserialise
-import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.writeData
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import com.r3.conclave.mail.*
+import com.r3.conclave.utilities.internal.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -67,7 +61,7 @@ class MailHostTest {
     fun `mail acknowledgement`() {
         var acknowledgementID: Long? = null
         echo.start(null) { commands ->
-            acknowledgementID = (commands.single() as MailCommand.AcknowledgeMail).mailID
+            acknowledgementID = (commands.filterIsInstance<MailCommand.AcknowledgeMail>().single()).mailID
         }
         // First delivery doesn't acknowledge because we don't tell it to.
         echo.deliverMail(1, buildMail(echo), "test") { null }
@@ -109,6 +103,139 @@ class MailHostTest {
         // Seq nums from different senders are independent
         val secondSender = buildMail(noop, senderPrivateKey = Curve25519PrivateKey.random(), sequenceNumber = 0)
         noop.deliverMail(100, secondSender, "test")
+    }
+
+    @Test
+    fun `restoring previous mail on enclave restart where some mail where ackd`() {
+        class AckMailEnclave : Enclave() {
+            var count: Int = 0
+            override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+                if ((count % 3) != 0) { // will not ack 0,3,6,9...
+                    acknowledgeMail(id)
+                }
+                count++
+            }
+        }
+
+        var message = byteArrayOf(0,0,0,0, 0,0,0,0)
+        val topic = "topic-123"
+
+        val sentMailIDs = mutableListOf<Long>()
+        val sentMailData = mutableMapOf<Long,ByteArray>()
+        var receipt: ByteArray? = null
+
+        fun createHost(): EnclaveHost {
+            val host = createMockHost(AckMailEnclave::class.java)
+            host.start(null, receipt) { commands ->
+                commands.forEach { cmd ->
+                    when (cmd) {
+                        is MailCommand.PostMail -> {
+                        }
+                        is MailCommand.AcknowledgeMail -> {
+                            sentMailData.remove(cmd.mailID)
+                            sentMailIDs.remove(cmd.mailID)
+                        }
+                        is MailCommand.AcknowledgementReceipt -> {
+                            receipt = cmd.sealedData
+                        }
+                    }
+                }
+            }
+            return host
+        }
+
+        // initial batch of mails
+        val host = createHost()
+        val postOffice = host.enclaveInstanceInfo.createPostOffice(privateKey, topic)
+        repeat(10) {
+            val id = 100L + it
+            val encrypted = postOffice.encryptMail(message)
+            sentMailData[id] = encrypted
+            sentMailIDs.add(id)
+            host.deliverMail(id, encrypted, null)
+        }
+        host.close()
+
+        // out of order re-delivery
+        val host1 = createHost()
+        assertThatThrownBy {
+            var i = 0
+            sentMailIDs.toList().forEach { id ->
+                if (i == 1) // second item on the queue
+                    host1.deliverMail(id, sentMailData[id]!!, null)
+                i++
+            }
+        }.hasMessageContaining("Next sequence number on topic topic-123 should be 0 but is instead 3.")
+        host1.close()
+
+        // in order re-delivery
+        val host2 = createHost()
+        sentMailIDs.toList().forEach { id ->
+            host2.deliverMail(id, sentMailData[id]!!, null)
+        }
+        host2.close()
+    }
+
+    @Test
+    fun `expected non zero mail seqnum when using ack receipt with #0 ack'd`() {
+        class AckMailEnclave : Enclave() {
+            var ack = true
+            override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+                if (ack) {
+                    acknowledgeMail(id)
+                    ack = false
+                }
+            }
+        }
+
+        var message = byteArrayOf(0,0,0,0, 0,0,0,0)
+        val topic = "topic-123"
+
+        val sentMailIDs = mutableListOf<Long>()
+        val sentMailData = mutableMapOf<Long,ByteArray>()
+        var receipt: ByteArray? = null
+
+        fun createHost(): EnclaveHost {
+            val host = createMockHost(AckMailEnclave::class.java)
+            host.start(null, receipt) { commands ->
+                commands.forEach { cmd ->
+                    when (cmd) {
+                        is MailCommand.PostMail -> {
+                        }
+                        is MailCommand.AcknowledgeMail -> {
+                            sentMailData.remove(cmd.mailID)
+                            sentMailIDs.remove(cmd.mailID)
+                        }
+                        is MailCommand.AcknowledgementReceipt -> {
+                            receipt = cmd.sealedData
+                        }
+                    }
+                }
+            }
+            return host
+        }
+
+        val host = createHost()
+        val postOffice = host.enclaveInstanceInfo.createPostOffice(privateKey, topic)
+        repeat(10) {
+            val id = 100L + it
+            val encrypted = postOffice.encryptMail(message)
+            sentMailData[id] = encrypted
+            sentMailIDs.add(id)
+            host.deliverMail(id, encrypted, null)
+        }
+        host.close()
+
+        // out of order re-delivery
+        // outstanding mails and seq# are
+        // (101,1),(101,2),(103,3)...(109,9)
+        val host1 = createHost()
+        assertThatThrownBy {
+            val id = sentMailIDs[2]
+            val data = sentMailData[id]!!
+            host1.deliverMail(id, data, null)
+        }.hasMessageContaining("Next sequence number on topic topic-123 should be 1 but is instead 3.")
+        host1.close()
     }
 
     @Test
@@ -183,7 +310,7 @@ class MailHostTest {
         val messageFromBob = buildMail(host)
         host.deliverMail(123, messageFromBob, "test")
 
-        assertThat(previousCommands).hasSize(3)
+        assertThat(previousCommands).hasSize(4) // 3 expected + 1 receipt
         with(previousCommands!![0] as MailCommand.PostMail) {
             assertEquals("hello", String(decryptMail(host, bytes = encryptedBytes).bodyAsBytes))
         }

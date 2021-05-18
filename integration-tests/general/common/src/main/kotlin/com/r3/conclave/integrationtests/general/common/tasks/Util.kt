@@ -17,8 +17,7 @@ fun <T> threadWithFuture(block: () -> T): CompletableFuture<T> {
     return future
 }
 
-fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()
-
+fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(Int.SIZE_BYTES).putInt(this).array()
 fun ByteArray.toInt(): Int = ByteBuffer.wrap(this).getInt()
 
 inline fun writeData(block: DataOutputStream.() -> Unit): ByteArray {

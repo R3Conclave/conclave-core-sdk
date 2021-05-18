@@ -48,4 +48,23 @@ sealed class MailCommand {
 
         override fun hashCode(): Int = mailID.hashCode()
     }
+
+    /**
+     * A [MailCommand] which is emitted along with [AcknowledgeMail] when the enclave wants to mark
+     * certain mail as acknowledged. To ensure the host can restart an enclave it's important that
+     * the last generated receipt be provided to [EnclaveHost.start].
+     *
+     * @property sealedData Sealed bytes representing the acknowledgement receipt.
+     * Only the enclave which emitted this receipt can read it.
+     * The host can treat this as opaque bytes which is passed into [EnclaveHost.start] if the enclave is restarted.
+     */
+    class AcknowledgementReceipt(val sealedData: ByteArray) : MailCommand() {
+        override fun equals(other: Any?): Boolean {
+            return this === other || (other is AcknowledgementReceipt && this.sealedData.contentEquals(other.sealedData))
+        }
+
+        override fun hashCode(): Int {
+            return sealedData.contentHashCode()
+        }
+    }
 }

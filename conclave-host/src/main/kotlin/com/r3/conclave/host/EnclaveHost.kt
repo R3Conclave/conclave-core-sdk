@@ -279,7 +279,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * in mock or simulation mode and a mock attestation is used instead. Likewise, null can also be used for development
      * purposes.
      *
-     *
      * @param mailCallback A callback that will be invoked when the enclave requires the host to carry mail-related
      * actions, such as requesting delivery to the client or acknowledgement of mail. These actions, or [MailCommand]s, are
      * grouped together within the scape of a [deliverMail] or [callEnclave] call. This enables the host to action these
@@ -294,6 +293,38 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     @Throws(EnclaveLoadException::class)
     @Synchronized
     fun start(attestationParameters: AttestationParameters?, mailCallback: Consumer<List<MailCommand>>?) {
+        start(attestationParameters, null, mailCallback)
+    }
+
+    /**
+     * Causes the enclave to be loaded and the `Enclave` object constructed inside.
+     * This method must be called before sending is possible. Remember to call
+     * [close] to free the associated enclave resources when you're done with it.
+     *
+     * @param attestationParameters Either an [AttestationParameters.EPID] object initialised with the required API keys,
+     * or an [AttestationParameters.DCAP] object (which requires no extra parameters) when the host operating system is
+     * pre-configured for DCAP attestation, typically by a cloud provider. This parameter is ignored if the enclave is
+     * in mock or simulation mode and a mock attestation is used instead. Likewise, null can also be used for development
+     * purposes.
+     *
+     * @param mailReceipt A sealed data containing mail receipts. If the enclave is being restarted
+     * and during the previous run it emitted acknowledgement receipts via [MailCommand.AcknowledgementReceipt]
+     * then pass in the last receipt bytes here.
+     *
+     * @param mailCallback A callback that will be invoked when the enclave requires the host to carry mail-related
+     * actions, such as requesting delivery to the client or acknowledgement of mail. These actions, or [MailCommand]s, are
+     * grouped together within the scape of a [deliverMail] or [callEnclave] call. This enables the host to action these
+     * commands within the same transaction.
+     *
+     * If null then the enclave cannot send or acknowledge mail, although you can still deliver it.
+     *
+     * @throws IllegalArgumentException If the [enclaveMode] is either release or debug and no attestation parameters
+     * are provided.
+     * @throws IllegalStateException If the host has been closed.
+     */
+    @Throws(EnclaveLoadException::class)
+    @Synchronized
+    fun start(attestationParameters: AttestationParameters?, mailReceipt: ByteArray?, mailCallback: Consumer<List<MailCommand>>?) {
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
@@ -333,6 +364,10 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
             hostStateManager.state = Started
+
+            if (mailReceipt != null)
+                enclaveMessageHandler.deliverAcknowledgementReceipt(mailReceipt)
+
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
         }
@@ -572,6 +607,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         override fun connect(upstream: Sender): EnclaveMessageHandler = this.also { sender = upstream }
 
         private val callTypeValues = InternalCallType.values()
+        private val mailCommandTypeValues = MailCommandType.values()
 
         @PotentialPackagePrivate("Access for EnclaveHostMockTest")
         private val threadIDToTransaction = ConcurrentHashMap<Long, Transaction>()
@@ -595,20 +631,25 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     }
                 }
                 InternalCallType.MAIL_DELIVERY -> {
-                    val cmdType = input.get().toInt()
-                    val cmd = when (cmdType) {
-                        0 -> {
+                    val cmd = when (mailCommandTypeValues[input.get().toInt()]) {
+                        MailCommandType.POST -> {
                             // routingHint can be null/missing.
                             val routingHint = String(input.getIntLengthPrefixBytes()).takeIf { it.isNotBlank() }
                             // rest of the body to deliver (should be encrypted).
                             val encryptedBytes = input.getRemainingBytes()
                             MailCommand.PostMail(encryptedBytes, routingHint)
                         }
-                        1 -> MailCommand.AcknowledgeMail(input.getLong())
-                        else -> throw IllegalStateException("Unknown type $callType")
+                        MailCommandType.ACKNOWLEDGE -> {
+                            MailCommand.AcknowledgeMail(input.getLong())
+                        }
+                        MailCommandType.RECEIPT -> {
+                            val sealed = input.getIntLengthPrefixBytes()
+                            MailCommand.AcknowledgementReceipt(sealed)
+                        }
                     }
                     transaction.mailCommands.add(cmd)
                 }
+                else -> {}
             }
         }
 
@@ -629,6 +670,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             callEnclaveInternal(callback) { threadID ->
                 sendMailToEnclave(threadID, mailID, mailBytes, routingHint)
             }
+        }
+
+        fun deliverAcknowledgementReceipt(
+            receipts: ByteArray
+        ) {
+            sendReceiptToEnclave(receipts)
         }
 
         // Sets up the state tracking and handle re-entrancy. "id" is either a call ID or a mail ID.
@@ -699,6 +746,16 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 } else
                     buffer.putInt(0)
                 buffer.put(mailBytes)
+            }
+        }
+
+        private fun sendReceiptToEnclave(receipt: ByteArray) {
+            sender.send(
+                Long.SIZE_BYTES + 1 + Int.SIZE_BYTES + receipt.size
+            ) { buffer ->
+                buffer.putLong(Thread.currentThread().id) // not really used, but is expected on Enclave side
+                buffer.put(InternalCallType.ACKNOWLEDGEMENT_RECEIPT.ordinal.toByte())
+                buffer.putIntLengthPrefixBytes(receipt)
             }
         }
     }
