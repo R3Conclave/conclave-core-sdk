@@ -2,6 +2,7 @@ package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
@@ -79,6 +80,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         /**
          * Load the signed enclave for the given enclave class name.
          *
+         * @param enclaveClassName The name of the enclave class to load.
+         *
          * @throws IllegalArgumentException if there is no enclave file for the given class name.
          * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
          *                              not support hardware enclaves or if enclave support is disabled.
@@ -88,13 +91,34 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(EnclaveLoadException::class)
         fun load(enclaveClassName: String): EnclaveHost {
+            return load(enclaveClassName, null)
+        }
+
+        /**
+         * Load the signed enclave for the given enclave class name.
+         *
+         * @param enclaveClassName The name of the enclave class to load.
+         * @param mockConfiguration Defines the configuration to use when loading the enclave in mock mode.
+         *                          If no configuration is provided when using mock mode then a default set
+         *                          of configuration parameters are used. This parameter is ignored when
+         *                          not using mock mode.
+         *
+         * @throws IllegalArgumentException if there is no enclave file for the given class name.
+         * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
+         *                              not support hardware enclaves or if enclave support is disabled.
+         * @throws MockOnlySupportedException if the host OS is not Linux or if the CPU doesn't support even SIMULATION
+         *                                    enclaves.
+         */
+        @JvmStatic
+        @Throws(EnclaveLoadException::class)
+        fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
             val (stream, enclaveMode) = findEnclave(enclaveClassName)
 
             // If this is a mock enclave then we create the host differently.
             if (enclaveMode == EnclaveMode.MOCK) {
                 try {
                     val clazz = Class.forName(enclaveClassName)
-                    return createMockHost(clazz)
+                    return createMockHost(clazz, mockConfiguration)
                 } catch (e: Exception) {
                     throw EnclaveLoadException("Unable to load enclave", e)
                 }

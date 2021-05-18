@@ -2,6 +2,7 @@ package com.r3.conclave.enclave
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxReport.body
@@ -158,8 +159,8 @@ abstract class Enclave {
      */
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
-    private fun initialiseMock(upstream: Sender, isvProdId: Int, isvSvn: Int): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, isvProdId, isvSvn), upstream)
+    private fun initialiseMock(upstream: Sender, mockConfiguration: MockConfiguration?): HandlerConnected<*> {
+        return initialise(MockEnclaveEnvironment(this, mockConfiguration), upstream)
     }
 
     /**

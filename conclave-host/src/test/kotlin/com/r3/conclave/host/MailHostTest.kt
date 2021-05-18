@@ -1,15 +1,14 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
-import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.*
 import com.r3.conclave.utilities.internal.*
 import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -27,11 +26,6 @@ class MailHostTest {
     private val echo by lazy { createMockHost(MailEchoEnclave::class.java) }
     private val noop by lazy { createMockHost(NoopEnclave::class.java) }
     private val postOffices = HashMap<Pair<EnclaveInstanceInfo, String>, PostOffice>()
-
-    @AfterEach
-    fun reset() {
-        MockEnclaveEnvironment.platformReset()
-    }
 
     @Test
     fun `encrypt and deliver mail`() {
@@ -340,9 +334,9 @@ class MailHostTest {
 
         // Shutdown the enclave and "update" the platform so that we have a new CPUSVN. The new enclave's (default)
         // encryption key will be different from its old one, but we still expect the enclave to be able to decrypt it.
-        MockEnclaveEnvironment.platformUpdate()
-
-        val enclave2 = createMockHost(CreateMailEnclave::class.java)
+        val mockConfiguration = MockConfiguration()
+        mockConfiguration.tcbLevel = 2
+        val enclave2 = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         enclave2.start(null, null)
         var decryptedByEnclave: String? = null
         enclave2.deliverMail(1, oldEncryptedMail, "test") { bytes ->
@@ -357,16 +351,16 @@ class MailHostTest {
     @EnumSource
     fun `enclave cannot read mail targeted for newer platform version`(context: CreateMailContext) {
         // Imagine the current platform version has a bug in it and so we update and the client creates mail from that.
-        MockEnclaveEnvironment.platformUpdate()
-        val enclave1 = createMockHost(CreateMailEnclave::class.java)
+        val mockConfiguration = MockConfiguration()
+        mockConfiguration.tcbLevel = 2
+        val enclave1 = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         enclave1.start(null, null)
         val newEncryptedMail = context.createMail("secret".toByteArray(), enclave1)
         enclave1.close()
 
         // Let's revert the update and return the platform to its insecure version.
-        MockEnclaveEnvironment.platformDowngrade()
-
-        val enclave2 = createMockHost(CreateMailEnclave::class.java)
+        mockConfiguration.tcbLevel = 1
+        val enclave2 = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         enclave2.start(null, null)
         assertThatThrownBy {
             enclave2.deliverMail(1, newEncryptedMail, null) { null }
@@ -376,12 +370,16 @@ class MailHostTest {
     @ParameterizedTest
     @EnumSource
     fun `enclave with higher revocation level can read older mail`(context: CreateMailContext) {
-        val oldEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
+        val mockConfiguration = MockConfiguration()
+        mockConfiguration.productID = 1
+        mockConfiguration.revocationLevel = 1
+        val oldEnclave = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         oldEnclave.start(null, null)
         val oldEncryptedMail = context.createMail("secret!".toByteArray(), oldEnclave)
         oldEnclave.close()
 
-        val newEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
+        mockConfiguration.revocationLevel = 2
+        val newEnclave = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         newEnclave.start(null, null)
         var decryptedByEnclave: String? = null
         newEnclave.deliverMail(1, oldEncryptedMail, null) { bytes ->
@@ -395,12 +393,16 @@ class MailHostTest {
     @ParameterizedTest
     @EnumSource
     fun `enclave with lower revocation level cannot read newer mail`(context: CreateMailContext) {
-        val newEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 2)
+        val mockConfiguration = MockConfiguration()
+        mockConfiguration.productID = 1
+        mockConfiguration.revocationLevel = 2
+        val newEnclave = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         newEnclave.start(null, null)
         val newEncryptedMail = context.createMail("secret!".toByteArray(), newEnclave)
         newEnclave.close()
 
-        val oldEnclave = createMockHost(CreateMailEnclave::class.java, isvProdId = 1, isvSvn = 1)
+        mockConfiguration.revocationLevel = 1
+        val oldEnclave = createMockHost(CreateMailEnclave::class.java, mockConfiguration)
         oldEnclave.start(null, null)
         assertThatThrownBy {
             oldEnclave.deliverMail(1, newEncryptedMail, null) { null }

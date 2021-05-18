@@ -264,7 +264,7 @@ We use the GraalVM native image technology. Builds can fail if you are trying to
 work yet), if you use a feature not supported by our version of Native Image, or if you're on Windows/macOS and you 
 don't allocate enough RAM to Docker. The build is memory intensive, so please allocate at least 6GB of RAM to Docker
 and possibly more. However you don't need to do builds all the time when working on an enclave. You always have the
-option of using mock mode to directly load the enclave code into the host JVM, which gives a regular Java development
+option of using [mock mode](mockmode.md) to directly load the enclave code into the host JVM, which gives a regular Java development
 experience.
 
 ### Java object serialization doesn't work?

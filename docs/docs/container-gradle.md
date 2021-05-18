@@ -47,7 +47,7 @@ If you change `LINUX_JAVA_HOME` then any existing container will be unusable and
 Changes made inside the container will *not* propagate to disk on macOS. This is deliberate and intended to avoid the
 extremely slow Docker Linux/Mac filesystem interop layer. Instead build results are redirected to a ramdisk layered on
 top of the Mac filesystem. This means if you delete the container or restart Docker you'll lose your build contents. 
-Keep what you build and run inside the container small! Use mock mode the rest of the time except when testing the enclave.
+Keep what you build and run inside the container small! Use [mock mode](mockmode.md) the rest of the time except when testing the enclave.
 
 There are times when you need to copy files out of the container. Although this isn't needed for
 actually compiling the enclave JARs, because containers and copying are handled for you in that case, when using 

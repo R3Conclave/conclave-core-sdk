@@ -139,6 +139,6 @@ class ChannelHandlerTest {
     }
 
     private inline fun <reified E : Enclave> createEnclave(): RootHandler.Connection {
-        return MockEnclaveHandle(E::class.java.getConstructor().newInstance(), 1, 1, RootHandler()).connection
+        return MockEnclaveHandle(E::class.java.getConstructor().newInstance(), null, RootHandler()).connection
     }
 }

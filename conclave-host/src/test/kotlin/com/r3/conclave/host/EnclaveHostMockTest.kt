@@ -1,15 +1,21 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockConfiguration
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.RecordingCallback
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.utilities.internal.deserialise
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.parseHex
 import com.r3.conclave.utilities.internal.writeData
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
@@ -18,6 +24,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.stream.Stream
+import kotlin.random.Random
 
 class EnclaveHostMockTest {
     private lateinit var host: EnclaveHost
@@ -427,7 +434,30 @@ class EnclaveHostMockTest {
         val host = createMockHost(PreviousValueEnclave::class.java)
         host.start(null, null)
         assertThat(host.enclaveInstanceInfo.enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.MOCK)
+        assertThat(host.enclaveInstanceInfo.enclaveInfo.codeHash.bytes.contentEquals(digest("SHA-256") { update(PreviousValueEnclave::class.java.name.toByteArray()) }))
         assertThat(host.enclaveInstanceInfo.enclaveInfo.codeSigningKeyHash.bytes).containsOnly(0)
+    }
+
+    @Test
+    fun `enclaveInfo values custom MRENCLAVE`() {
+        val mockConfiguration = MockConfiguration()
+        val hash = SHA256Hash.wrap(Random.nextBytes(32))
+        mockConfiguration.codeHash = hash
+        val host = createMockHost(PreviousValueEnclave::class.java, mockConfiguration)
+        host.start(null, null)
+        assertThat(host.enclaveInstanceInfo.enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.MOCK)
+        assertThat(host.enclaveInstanceInfo.enclaveInfo.codeHash).isEqualTo(hash)
+    }
+
+    @Test
+    fun `enclaveInfo values custom MRSIGNER`() {
+        val mockConfiguration = MockConfiguration()
+        val hash = SHA256Hash.wrap(Random.nextBytes(32))
+        mockConfiguration.codeSigningKeyHash = hash
+        val host = createMockHost(PreviousValueEnclave::class.java, mockConfiguration)
+        host.start(null, null)
+        assertThat(host.enclaveInstanceInfo.enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.MOCK)
+        assertThat(host.enclaveInstanceInfo.enclaveInfo.codeSigningKeyHash).isEqualTo(hash)
     }
 
     class PreviousValueEnclave : Enclave() {

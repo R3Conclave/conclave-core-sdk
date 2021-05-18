@@ -37,7 +37,7 @@ Firstly, you need a [Linux](system-requirements.md#linux-distros-and-versions) e
 enclaves are Linux shared libraries with special extensions. If you are not using Linux you will need to install Docker.
 On Windows and macOS, Conclave uses Docker to build the enclave in a Linux environment.
 [Instructions are provided below](#running-the-host) to show you how to use Docker on Windows and macOS to run your
-entire application in "simulation mode". Alternatively, for day to day development building an enclave in mock mode
+entire application in "simulation mode". Alternatively, for day to day development building an enclave in [mock mode](mockmode.md)
 is plenty sufficient and allows you to debug into enclave calls as well. Compiling a real enclave
 is only needed for integration testing against the embedded JVM, or real deployment.
 

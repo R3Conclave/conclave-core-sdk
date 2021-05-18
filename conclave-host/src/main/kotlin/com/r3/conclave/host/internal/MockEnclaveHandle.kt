@@ -1,6 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.LeafSender
@@ -10,10 +11,9 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 
 class MockEnclaveHandle<CONNECTION>(
-    override val mockEnclave: Any,
-    private val isvProdId: Int,
-    private val isvSvn: Int,
-    hostHandler: Handler<CONNECTION>
+        override val mockEnclave: Any,
+        private val mockConfiguration: MockConfiguration?,
+        hostHandler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
 
     override val enclaveMode: EnclaveMode get() = EnclaveMode.MOCK
@@ -30,14 +30,14 @@ class MockEnclaveHandle<CONNECTION>(
             val enclaveClazz = Class.forName("com.r3.conclave.enclave.Enclave", true, mockEnclave.javaClass.classLoader)
 
             val initialiseMethod =
-                    enclaveClazz.getDeclaredMethod("initialiseMock", Sender::class.java, Int::class.java, Int::class.java)
+                    enclaveClazz.getDeclaredMethod("initialiseMock", Sender::class.java, MockConfiguration::class.java)
                             .apply { isAccessible = true }
 
             EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
                     .set(null, ThreadLocalEnclaveContext)
 
             initialiseMethod.invoke(
-                    mockEnclave, sender, isvProdId, isvSvn
+                    mockEnclave, sender, mockConfiguration
             ) as HandlerConnected<*>
         } catch (e: InvocationTargetException) {
             throw e.cause ?: e

@@ -142,25 +142,9 @@ Conclave provides full unit testing support for enclaves. Enclaves themselves ca
   may not be available but does still require a Linux environment or a Linux Docker container to run.
 * **Mock**: In mock mode the enclave class runs in the same JVM as the host, so interactions between the enclave
   and host are all just regular function calls. You can step through using a debugger and enjoy the regular Java development
-  experience. 
+  experience. See [here for more information on using and configuring mock mode](mockmode.md).
 
 The modes must match between how the enclave was compiled and how it's loaded. This is handled for you automatically.
-
-"Mock" mode can be used in two different ways. Firstly, you can compile your enclave in "mock" mode using the
-[`-PenclaveMode` flag](tutorial.md#selecting-your-mode) for fast, iterative development. 
-Secondly, when creating an `EnclaveHost` inside the enclave module, Conclave will automatically create it in mock mode.
-This means any tests you define in the enclave module will automatically use mock mode - you can write your tests to load 
-and call the enclave without having to explicitly configure a "mock" enclave. 
-
-In both cases, the host provides access to the enclave instance via the `EnclaveHost.mockEnclave` property. When 
-using mock enclaves, if you want to look at the internal state of your enclave you can cast this property to your 
-actual enclave class type.
-
-!!! notice
-
-    The `EnclaveHost.mockEnclave` property can only be used with mock enclaves. The host does not have access to internal
-    enclave state for any other enclave type. If you attempt to access the property on a non-mock enclave then
-    `IllegalStateException` will be thrown.
 
 Inside the enclave `System.out` and `System.err` are wired up to the host console, but there's no filesystem access.
 In release mode any output to `stdout` and `stderr` is suppressed inside the enclave so you can log to `stdout` and 

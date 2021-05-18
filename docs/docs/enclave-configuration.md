@@ -19,7 +19,7 @@ plugins {
 ```
 
 Then add a dependency on the Conclave enclave library. The Conclave version is configured for you automatically.
-Also, add a test dependency on the Conclave host library so you can use mock mode for testing.
+Also, add a test dependency on the Conclave host library so you can use [mock mode](mockmode.md) for testing.
 
 ```groovy hl_lines="2-3"
 dependencies {

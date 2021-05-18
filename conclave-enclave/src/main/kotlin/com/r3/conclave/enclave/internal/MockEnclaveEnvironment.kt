@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.KeyName.REPORT
@@ -15,7 +16,6 @@ import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getBytes
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -23,8 +23,7 @@ import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
     private val enclave: Any,
-    private val isvProdId: Int = 1,
-    private val isvSvn: Int = 1
+    mockConfiguration: MockConfiguration?
 ) : EnclaveEnvironment {
     companion object {
         private const val IV_SIZE = 12
@@ -32,54 +31,41 @@ class MockEnclaveEnvironment(
 
         private val secureRandom = SecureRandom()
 
-        private val platformCpuSvnHistory = LinkedList<ByteArray>()
-
-        init {
-            platformUpdate()
+        private fun versionToCpuSvn(num: Int): ByteArray { 
+            return digest("SHA-256") { 
+                update(ByteBuffer.allocate(2).putShort(num.toShort()).array()) 
+            }.copyOf(SgxCpuSvn.size)
         }
 
-        /**
-         * Simulate a platform update which changes the CPUSVN.
-         */
-        fun platformUpdate() {
-            synchronized(platformCpuSvnHistory) {
-                platformCpuSvnHistory += ByteArray(SgxCpuSvn.size).also(secureRandom::nextBytes)
-            }
-        }
-
-        /**
-         * Simulate a platform downgrade to the previous version.
-         */
-        fun platformDowngrade() {
-            synchronized(platformCpuSvnHistory) {
-                check(platformCpuSvnHistory.size >= 2) { "There isn't a previous platform version to downgrade to." }
-                platformCpuSvnHistory.removeLast()
-            }
-        }
-
-        fun platformReset() {
-            synchronized(platformCpuSvnHistory) {
-                platformCpuSvnHistory.clear()
-                platformUpdate()
-            }
-        }
-
-        fun isValidCpuSvn(cpuSvn: ByteArray): Boolean {
-            return synchronized(platformCpuSvnHistory) {
-                platformCpuSvnHistory.any { it.contentEquals(cpuSvn) }
-            }
-        }
-
-        // All enclaves share the same CPUSVN.
-        private val currentCpuSvn: ByteArray
-            get() {
-                return synchronized(platformCpuSvnHistory) {
-                    platformCpuSvnHistory.last
+        fun isValidCpuSvn(currentCpuSvnNumber: Int, cpuSvn: ByteArray): Boolean {
+            // Any ISVSVN from 1 to the given number is valid
+            for (version in currentCpuSvnNumber downTo 1) {
+                if (versionToCpuSvn(version).contentEquals(cpuSvn)) {
+                    return true
                 }
             }
+            return false;
+        }
     }
 
-    private val mrenclave = digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
+    // Use the configuration provided by the caller, or a default configuration
+    private val configuration = mockConfiguration ?: MockConfiguration()
+
+    // Our configuration stores the CPUSVN as an integer for simplicity. Hash this to a byte array.
+    private val currentCpuSvn: ByteArray by lazy {
+        versionToCpuSvn(configuration.tcbLevel)
+    }
+
+    private val mrenclave: ByteArray by lazy {
+            // Use the value form the mock configuration if provided,  otherwise hardcode it
+            // to a hash of the java class name.
+            configuration.codeHash?.bytes ?: digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
+    }
+
+    private val mrsigner: ByteArray by lazy {
+        configuration.codeSigningKeyHash?.bytes ?: ByteArray(32)
+    }
+
     private val cipher by lazy(NONE) { Cipher.getInstance("AES/GCM/NoPadding") }
     private val keySpec by lazy(NONE) {
         SecretKeySpec(digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }, "AES")
@@ -99,8 +85,10 @@ class MockEnclaveEnvironment(
         }
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
-        body[SgxReportBody.isvProdId] = isvProdId
-        body[SgxReportBody.isvSvn] = isvSvn
+        body[SgxReportBody.mrsigner] = ByteBuffer.wrap(mrsigner)
+        body[SgxReportBody.isvProdId] = configuration.productID
+        // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
+        body[SgxReportBody.isvSvn] = configuration.revocationLevel + 1
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
         return report
     }
@@ -161,6 +149,7 @@ class MockEnclaveEnvironment(
         val keyName = keyRequest[SgxKeyRequest.keyName].read()
         if (keyName == REPORT) {
             return digest("SHA-256") {
+                update(mrsigner)
                 update(mrenclave)
                 update(keyRequest[SgxKeyRequest.keyId].buffer)
             }.copyOf(16)
@@ -168,12 +157,12 @@ class MockEnclaveEnvironment(
 
         require(keyName == SEAL) { "Unsupported KeyName $keyName" }
 
-        require(keyRequest[SgxKeyRequest.isvSvn].read() <= isvSvn) {
+        require(keyRequest[SgxKeyRequest.isvSvn].read() <= (configuration.revocationLevel + 1)) {
             "SGX_ERROR_INVALID_ISVSVN: The isv svn is greater than the enclave's isv svn"
         }
 
         val cpuSvn = keyRequest[SgxKeyRequest.cpuSvn].bytes
-        require(cpuSvn.all { it.toInt() == 0 } || isValidCpuSvn(cpuSvn)) {
+        require(cpuSvn.all { it.toInt() == 0 } || isValidCpuSvn(configuration.tcbLevel, cpuSvn)) {
             "SGX_ERROR_INVALID_CPUSVN: The cpu svn is beyond platform's cpu svn value"
         }
 
@@ -182,9 +171,9 @@ class MockEnclaveEnvironment(
                 update(mrenclave)
             }
             if (keyPolicy.isSet(MRSIGNER)) {
-                update(0)  // Mock enclaves don't have a code signer so this is sufficient for deriving a MRSIGNER key.
+                update(mrsigner)
             }
-            update(ByteBuffer.allocate(2).putShort(isvProdId.toShort()).array())  // Product Id is an unsigned short.
+            update(ByteBuffer.allocate(2).putShort(configuration.productID.toShort()).array())  // Product Id is an unsigned short.
             update(keyRequest[SgxKeyRequest.isvSvn].buffer)
             update(cpuSvn)
             update(keyRequest[SgxKeyRequest.keyId].buffer)

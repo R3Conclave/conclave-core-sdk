@@ -20,6 +20,7 @@ nav:
         - Conclave architecture: architecture.md
         - Mail: mail.md
         - Security discussion: security.md
+        - Mock mode: mockmode.md
     - Reference:
         - Threads: threads.md
         - JavaScript: javascript.md

@@ -2,6 +2,7 @@ package com.r3.conclave.host
 
 import com.google.common.collect.Sets
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
@@ -123,7 +124,10 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
 
     private fun getMockHost(enclaveSpec: EnclaveSpec): EnclaveHost {
         return mockEnclaves.computeIfAbsent(enclaveSpec) {
-            val host = createMockHost(enclaveSpec.enclaveClass, enclaveSpec.isvProdId, enclaveSpec.isvSvn)
+            val mockConfiguration = MockConfiguration()
+            mockConfiguration.productID = enclaveSpec.isvProdId
+            mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
+            val host = createMockHost(enclaveSpec.enclaveClass, mockConfiguration)
             host.start(null, null)
             host
         }

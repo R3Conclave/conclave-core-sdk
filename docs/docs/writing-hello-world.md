@@ -360,7 +360,7 @@ public class Host {
 At first we will be building and running our enclave in simulation mode. This does not require the platform 
 hardware to support SGX. However simulation mode does require us to be using Linux. If we are not using 
 Linux as our host OS then we can use a Linux container or virtual machine as described in
-[Running the host](tutorial.md#running-the-host). Alternatively we could use [mock mode](writing-hello-world.md#mock)
+[Running the host](tutorial.md#running-the-host). Alternatively we could use [mock mode](mockmode.md)
 instead of simulation mode. When we want to switch to loading either a debug or release build of the enclave we need
 to ensure the platform supports SGX.
 
@@ -965,7 +965,7 @@ your enclave project, or integrating enclave tests in your host project.
 Conclave supports building and running tests within the enclave project itself. When you define tests as part
 of your enclave project, the enclave classes are loaded along with the tests. Conclave detects this
 configuration and automatically enables mock mode for the enclave and test host. You do not need to explicitly 
-specify [mock mode](architecture.md#testing-and-debugging) for your project.
+specify [mock mode](mockmode.md) for your project.
 
 This allows you to whitebox test your enclave by running it fully in-memory. There is no need for SGX hardware 
 or a specific OS and thus it is ideal for cross-platform unit testing.
