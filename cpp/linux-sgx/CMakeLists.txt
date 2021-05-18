@@ -11,11 +11,13 @@ else()
     set(DEBUG_FLAG DEBUG=1)
 endif()
 
+set(SGX_GIT_LABEL "sgx_2.13.3")
+
 ExternalProject_Add(linux-sgx-ext
 # Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
 
         DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
-            && git clone -b sgx_2.13 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+            && git clone -b ${SGX_GIT_LABEL} --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
             && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
             && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
@@ -38,7 +40,7 @@ ExternalProject_Add(linux-sgx-ext
         CONFIGURE_COMMAND ""
 
         BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} sdk_install_pkg
-             && yes yes | ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk_2.13.100.4.bin
+             && bash -c "yes yes | $(ls ${BUILD_SRC_DIR}/linux/installer/bin/sgx_linux_x64_sdk*.bin)"
              && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR} psw_install_pkg
              && SGX_SDK=${CMAKE_CURRENT_BINARY_DIR}/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk make ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/external/dcap_source QuoteGeneration QuoteVerification
 
@@ -50,7 +52,7 @@ ExternalProject_Add(linux-sgx-ext
 ExternalProject_Add(macos-sign-tool
 # Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
     DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
-        && git clone -b sgx_2.13 --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+        && git clone -b ${SGX_GIT_LABEL} --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
         && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
         && bash -c "cd ${BUILD_SRC_DIR}/external/dcap_source && git apply ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source_macos.diff"
         && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
