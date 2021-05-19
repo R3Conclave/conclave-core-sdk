@@ -16,16 +16,15 @@ pushd build/distributions/conclave-sdk-*/hello-world
 ./gradlew --stacktrace -q client:run --args "abc"
 popd
 
-# TODO: Fix the integration tests for the CorDapp and remove this line. The issue is a Docker build-env container versioning
-# issue meaning /home/$user isn't created.
-exit 0
+export USER=`whoami`
+export HOME=/home/$USER
 
 if [ -e $JAVA_HOME/jre/lib/rt.jar ]; then
   echo
   echo Testing the CorDapp sample
   echo
 
-  pushd build/distributions/conclave-sdk-*/hello-world
+  pushd build/distributions/conclave-sdk-*/cordapp
   ./gradlew workflows:test
   popd
 else

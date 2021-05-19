@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xeuo pipefail
 
-user_ids=1000
+user_ids="1000 1007"
 
 echo "Setting up user accounts..."
 for i in $user_ids; do
