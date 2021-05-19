@@ -158,7 +158,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.dependsOn(copyGraalVM)
             task.inputs.file("$conclaveDependenciesDirectory/docker/Dockerfile")
             task.dockerFile.set(target.file("$conclaveDependenciesDirectory/docker/Dockerfile"))
-            task.baseDirectory.set(target.buildDir.toPath().toString())
+            task.baseDirectory.set(target.projectDir.toPath().toString())
             task.tag.set("conclave-build:$sdkVersion")
             // Create a 'latest' tag too so users can follow our tutorial documentation using the
             // tag 'conclave-build:latest' rather than looking up the conclave version.
