@@ -218,7 +218,7 @@ index 8610f85..a61f682 100644
 -CXXFLAGS += -Werror
 +UNAME := $(shell uname -s)
 +ifeq ($(UNAME),Darwin)
-+        CXXFLAGS += -mmacosx-version-min=10.14
++        CXXFLAGS += -mmacosx-version-min=10.15
 +else
 +        CXXFLAGS += -Werror
 +        LDFLAGS := -pie

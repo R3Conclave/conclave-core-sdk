@@ -15,7 +15,7 @@ ExternalProject_Add(macos-binutils
 
     UPDATE_COMMAND ""
 
-    CONFIGURE_COMMAND CFLAGS=-mmacosx-version-min=10.14 CXXFLAGS=-mmacosx-version-min=10.14 ../configure --target=x86_64-unknown-linux-gnu
+    CONFIGURE_COMMAND CFLAGS=-mmacosx-version-min=10.15 CXXFLAGS=-mmacosx-version-min=10.15 ../configure --target=x86_64-unknown-linux-gnu
 
     BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL)
 
