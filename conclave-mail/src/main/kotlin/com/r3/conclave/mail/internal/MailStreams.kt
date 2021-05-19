@@ -160,6 +160,10 @@ class MailEncryptingStream(
      * @throws IOException if an I/O error occurs.
      */
     override fun write(b: ByteArray, off: Int, len: Int) {
+        if ((off < 0) || (off > b.size) || (len < 0) ||
+                ((off + len) > b.size) || ((off + len) < 0)) {
+            throw IndexOutOfBoundsException("$off + $len >= ${b.size}")
+        }
         val endOffset = off + len
         var currentOffset = off
         while (true) {
@@ -367,15 +371,14 @@ class MailDecryptingStream(
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
-        val limit = off + len
-
-        if (limit > b.size || off < 0 || len < 0) {
+        if ((len > (b.size - off)) || off < 0 || len < 0) {
             throw IndexOutOfBoundsException("$off + $len >= ${b.size}")
         }
         if (len == 0) {
             return 0
         }
 
+        val limit = off + len
         var index = off
 
         while (ensureAvailablePacket()) {
