@@ -11,6 +11,7 @@ else()
     set(DEBUG_FLAG DEBUG=1)
 endif()
 
+# Beware that SGX_GIT_LABEL is used in ../cygwin/cygwin-build-signtool.sh
 set(SGX_GIT_LABEL "sgx_2.13.3")
 
 ExternalProject_Add(linux-sgx-ext

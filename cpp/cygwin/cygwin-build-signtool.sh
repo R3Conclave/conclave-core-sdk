@@ -5,8 +5,9 @@ set -xeuo pipefail
 dest=$(pwd)
 temp=$(mktemp -d)
 
+sgx_git_label=$(grep "SGX_GIT_LABEL" ../linux-sgx/CMakeLists.txt | head -1 | awk -F'"' '{print $2}' )
 cd "$temp"
-git clone -b sgx_2.13 --depth 1 https://github.com/intel/linux-sgx.git
+git clone -b ${sgx_git_label} --depth 1 https://github.com/intel/linux-sgx.git
 cd linux-sgx
 # For some reason, Cygwin's git is not "happy" with a patch being applied from an external folder.
 # So we copy it locally...
