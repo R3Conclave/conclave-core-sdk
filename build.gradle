@@ -28,6 +28,20 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
+String getConclaveRevision()  {
+    String conclave_revision
+
+    try {
+        // Get the id of the last commit from the current branch
+        conclave_revision = "git rev-parse HEAD".execute().text.trim()
+    } catch (Exception ignored) {
+        project.logger.warn("Unable to get conclave revision. Git is unavailable in build environment")
+        conclave_revision = "unknown"
+    }
+
+    return conclave_revision
+}
+
 ext {
     environment = createEnvironment(
             'OBLIVIUM_MAVEN_URL',
@@ -36,6 +50,9 @@ ext {
             'OBLIVIUM_MAVEN_PASSWORD',
             'OBLIVIUM_CONTAINER_REGISTRY_URL'
     )
+
+    conclave_revision = getConclaveRevision()
+    project.logger.info("Conclave revision: $conclave_revision")
 }
 
 import groovy.io.FileType
@@ -67,6 +84,19 @@ if (buildDirLocationOverride != null) {
     println("Storing build output in $buildDirLocationOverride")
     allprojects {
         buildDir = "$buildDirLocationOverride/${topDir.relativePath(project.buildDir)}"
+    }
+}
+
+def addAttributeToManifest(Manifest manifest, String name, String value) {
+    project.logger.info("Setting $name=$value")
+    manifest.attributes[name] = value
+}
+
+allprojects{
+    tasks.withType(Jar).configureEach { task ->
+        project.logger.info("Setting extra attributes that will be added to the manifest file for jars created from project ${task.project.name}")
+        addAttributeToManifest(manifest, 'Conclave-Release-Version', conclave_version)
+        addAttributeToManifest(manifest, 'Conclave-Revision', conclave_revision)
     }
 }
 
