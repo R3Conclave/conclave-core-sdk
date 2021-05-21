@@ -233,6 +233,42 @@ class MailHostTest {
     }
 
     @Test
+    fun `multiple acknowledgement single receipt`() {
+        class Enclave1 : Enclave() {
+            private var count: Int = 0
+            private var prevMailId: Long = 0L
+            override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+                count++
+                if (count < 2) {
+                    prevMailId = id
+                } else {
+                    acknowledgeMail(prevMailId)
+                    acknowledgeMail(id)
+                }
+            }
+        }
+
+        val host = createMockHost(Enclave1::class.java)
+        var previousCommands: List<MailCommand>? = null
+        host.start(null) { commands -> previousCommands = commands }
+        val postOffice = host.enclaveInstanceInfo.createPostOffice(privateKey, "test")
+
+        host.deliverMail(1, postOffice.encryptMail(messageBytes), null)
+        assertThat(previousCommands).isNullOrEmpty() // no ack expected
+
+        host.deliverMail(2, postOffice.encryptMail(messageBytes), null)
+        assertThat(previousCommands).isNotNull
+        //  expect 2 acks and 1 receipt
+        assertThat(previousCommands!![0]).isExactlyInstanceOf(MailCommand.AcknowledgeMail::class.java)
+        assertThat((previousCommands!![0] as MailCommand.AcknowledgeMail).mailID).isEqualTo(1)
+        assertThat(previousCommands!![1]).isExactlyInstanceOf(MailCommand.AcknowledgeMail::class.java)
+        assertThat((previousCommands!![1] as MailCommand.AcknowledgeMail).mailID).isEqualTo(2)
+        assertThat(previousCommands!![2]).isExactlyInstanceOf(MailCommand.AcknowledgementReceipt::class.java)
+
+        host.close()
+    }
+
+    @Test
     fun `sequence numbers must start from zero`() {
         noop.start(null, null)
         val encrypted1 = buildMail(noop, sequenceNumber = 1)

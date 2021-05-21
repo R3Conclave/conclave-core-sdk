@@ -333,6 +333,7 @@ Received: $attestationReportBody"""
          */
         private val lockObject = Object()
         private var hasAcknowledgementReceipt = false
+        private var mustSendReceipt = false
         // this map keeps track of acknowledged mail (note: we keep sequence numbers (ranges), not mail ids)
         private val materialisedAckReceipt = HashMap<DestinationAndTopic,RangeSequence>()
         // this map says what sequence number to expect next
@@ -398,6 +399,11 @@ Received: $attestationReportBody"""
                 } else {
                     this@Enclave.receiveMail(id, mail, routingHint)
                 }
+                /**
+                 * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
+                 * hence why we do it here and not in acknowledgeMail
+                 */
+                emitAcknowledgementReceipt()
             } else if (type == InternalCallType.ACKNOWLEDGEMENT_RECEIPT) {
                 populateAcknowledgedRanges(input.getIntLengthPrefixBytes())
             } else {
@@ -529,7 +535,6 @@ Received: $attestationReportBody"""
                 sendMailCommandToHost(Long.SIZE_BYTES, mailType = MailCommandType.ACKNOWLEDGE.ordinal.toByte()) { buffer ->
                     buffer.putLong(mailID)
                 }
-                emitAcknowledgementReceipt()
             }
         }
 
@@ -537,6 +542,7 @@ Received: $attestationReportBody"""
             val target = mailIdToTargetRangeSequence.remove(mailID)
             requireNotNull(target){ "Trying to acknowledge mail with unknown ID $mailID, or mail has already been acknowledged." }
             target.range.add(target.sequenceNumber)
+            mustSendReceipt = true
         }
 
         /**
@@ -554,22 +560,29 @@ Received: $attestationReportBody"""
          *      (7) count (Long)
          */
         private fun emitAcknowledgementReceipt() {
-            val plainText = writeData {
-                writeInt(AcknowledgementReceiptVersion.value)
-                writeInt(materialisedAckReceipt.size)
-                materialisedAckReceipt.forEach { (key, ranges) ->
-                    writeIntLengthPrefixBytes(key.destination.encoded)
-                    writeUTF(key.topic)
-                    ranges.write(this)
-                }
-            }
+            synchronized(lockObject) {
+                if (!mustSendReceipt)
+                    return
 
-            val sealed = env.sealData(PlaintextAndEnvelope(OpaqueBytes(plainText)))
-            sendMailCommandToHost(
-                sealed.intLengthPrefixSize,
-                mailType = MailCommandType.RECEIPT.ordinal.toByte()
-            ) { buffer ->
-                buffer.putIntLengthPrefixBytes(sealed)
+                val plainText = writeData {
+                    writeInt(AcknowledgementReceiptVersion.value)
+                    writeInt(materialisedAckReceipt.size)
+                    materialisedAckReceipt.forEach { (key, ranges) ->
+                        writeIntLengthPrefixBytes(key.destination.encoded)
+                        writeUTF(key.topic)
+                        ranges.write(this)
+                    }
+                }
+
+                val sealed = env.sealData(PlaintextAndEnvelope(OpaqueBytes(plainText)))
+                sendMailCommandToHost(
+                    sealed.intLengthPrefixSize,
+                    mailType = MailCommandType.RECEIPT.ordinal.toByte()
+                ) { buffer ->
+                    buffer.putIntLengthPrefixBytes(sealed)
+                }
+
+                mustSendReceipt = false
             }
         }
 

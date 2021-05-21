@@ -16,9 +16,6 @@ pushd build/distributions/conclave-sdk-*/hello-world
 ./gradlew --stacktrace -q client:run --args "abc"
 popd
 
-export USER=`whoami`
-export HOME=/home/$USER
-
 if [ -e $JAVA_HOME/jre/lib/rt.jar ]; then
   echo
   echo Testing the CorDapp sample
