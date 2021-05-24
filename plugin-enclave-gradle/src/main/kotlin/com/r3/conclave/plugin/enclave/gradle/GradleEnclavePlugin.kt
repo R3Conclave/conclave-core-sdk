@@ -366,7 +366,21 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     when (it) {
                         SigningType.DummyKey -> signEnclaveWithKeyTask.outputSignedEnclave
                         SigningType.PrivateKey -> signEnclaveWithKeyTask.outputSignedEnclave
-                        else -> addEnclaveSignatureTask.outputSignedEnclave
+                        else -> {
+                            if (!enclaveExtension.mrsignerPublicKey.isPresent) {
+                                throw GradleException("Your enclave is configured to be signed with an external key but the configuration 'mrsignerPublicKey' in your "
+                                        + "build.gradle does not exist. "
+                                        + "Refer to https://docs.conclave.net/signing.html#how-to-configure-signing-for-your-enclaves for instructions "
+                                        + "on how to configure signing your enclave.")
+                            }
+                            if (!enclaveExtension.mrsignerSignature.isPresent) {
+                                throw GradleException("Your enclave is configured to be signed with an external key but the configuration 'mrsignerSignature' in your "
+                                        + "build.gradle does not exist. "
+                                        + "Refer to https://docs.conclave.net/signing.html#how-to-configure-signing-for-your-enclaves for instructions "
+                                        + "on how to configure signing your enclave.")
+                            }
+                            addEnclaveSignatureTask.outputSignedEnclave
+                        }
                     }
                 }
                 task.inputSignedEnclave.set(signedEnclaveFile)
