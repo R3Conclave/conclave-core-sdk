@@ -23,6 +23,7 @@ Each fix is a separate commit in the 'conclave-changes' branch of https://github
    generated.
 5. Added translation for some basic JVM types that were left as Kotlin types during the conversion to Java documentation, 
    including `void`, `int`, `long` and `byte[]`.
+6. Update class template for javadoc to include a missing marker that is required for IDE integration.
 
 ## Using the R3 dokka version
 Our SGXJVM root gradle project refers to the dokka plugin, therefore the plugin itself cannot be built as part of our build 

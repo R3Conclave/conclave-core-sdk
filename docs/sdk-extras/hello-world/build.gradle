@@ -1,6 +1,13 @@
 plugins {
     id 'java'
     id 'idea'
+    id 'eclipse'
+}
+
+eclipse {
+    classpath {
+        downloadJavadoc = true
+    }
 }
 
 idea {
@@ -11,8 +18,14 @@ idea {
 
 subprojects {
     apply plugin: 'idea'
+    apply plugin: 'eclipse'
     idea {
         module {
+            downloadJavadoc = true
+        }
+    }
+    eclipse {
+        classpath {
             downloadJavadoc = true
         }
     }

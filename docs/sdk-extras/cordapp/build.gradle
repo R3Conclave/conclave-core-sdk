@@ -44,7 +44,20 @@ plugins {
 allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
+    apply plugin: 'eclipse'
     apply plugin: 'com.adarshr.test-logger'
+
+    // Make sure the javadoc artifacts for Conclave are downloaded by IDEs.
+    idea {
+        module {
+            downloadJavadoc = true
+        }
+    }
+    eclipse {
+        classpath {
+            downloadJavadoc = true
+        }
+    }
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-parameters" // Required by Corda's serialisation framework.

@@ -174,7 +174,6 @@ subprojects {
 
 import org.jetbrains.dokka.gradle.DokkaTask
 tasks.withType(DokkaTask).configureEach {
-    outputDirectory.set(file("$projectDir/docs/docs/api"))
     moduleName.set("Conclave $conclave_version")
     dokkaSourceSets {
         register("conclave") {
@@ -213,6 +212,11 @@ tasks.withType(DokkaTask).configureEach {
     }
 }
 
+// Output HTML into the API directory for the docsite and Javadoc into a different
+// directory for packaging in the documentation jar for IDEs.
+tasks['dokkaHtml'].outputDirectory.set(file("$projectDir/docs/docs/api"))
+tasks['dokkaJavadoc'].outputDirectory.set(file("$projectDir/docs/docs/javadoc"))
+
 // Allow the option to exclude dokka from the SDK build.
 // Important: This should only be used when building with a Java version that does not work
 // with Dokka (currently anything greater than 8) to allow the SDK build to continue. It will
@@ -229,14 +233,14 @@ if (excludeDokka == null) {
         inputs.files(["./preprocess-docsite.sh", fileTree("docs/docs/api")])
         outputs.dir("docs/docs/api")
     }
-    task packageHtml(type: Jar, dependsOn: ['preprocessdocs']) {
-        from dokkaHtml
+    task packageJavadoc(type: Jar, dependsOn: ['dokkaJavadoc']) {
+        from dokkaJavadoc
         archiveClassifier.set('javadoc')
     }
 } else {
     // Dummy tasks to exclude dokka
     task preprocessdocs()
-    task packageHtml(type: Jar) {
+    task packageJavadoc(type: Jar) {
         archiveClassifier.set('javadoc')
     }
 }
@@ -451,7 +455,7 @@ if (includeNative) {
                     pom.description = description
                     // Only publish docs for the Conclave modules, as the others aren't meant to be used.
                     if (published.projectPath.startsWith(":conclave-"))
-                        artifact packageHtml
+                        artifact packageJavadoc
                 }
             }
             repositories {
