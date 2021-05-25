@@ -1,6 +1,8 @@
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 // This is based on the standard CorDapp Gradle template.
 buildscript {
     Properties constants = new Properties()
@@ -28,6 +30,7 @@ buildscript {
     }
 
     dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$corda_gradle_plugins_version"
@@ -61,6 +64,19 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-parameters" // Required by Corda's serialisation framework.
+    }
+
+    tasks.withType(AbstractCompile) {
+        // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
+        // as it does the built-in JavaCompile task.
+        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
+            kotlinOptions {
+                jvmTarget = VERSION_1_8
+                apiVersion = '1.2'
+                languageVersion = '1.2'
+                javaParameters = true   // Useful for reflection.
+            }
+        }
     }
 
     repositories {
@@ -101,7 +117,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 dependencies {
     // Corda dependencies built in to the node.
     cordaCompile "$corda_core_release_group:corda-core:$corda_core_release_version"
-    cordaCompile "$corda_release_group:corda-node-api:$corda_release_version"
+    cordaRuntime "$corda_release_group:corda-node-api:$corda_release_version"
     cordaRuntime "$corda_release_group:corda:$corda_release_version"
 
     // Depend on the main module.

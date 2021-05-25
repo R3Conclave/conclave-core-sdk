@@ -26,5 +26,6 @@ pluginManagement {
     }
 }
 
+include 'common'
 include 'enclave'
 include 'workflows'

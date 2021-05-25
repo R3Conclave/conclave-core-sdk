@@ -1,8 +1,12 @@
 package com.r3.conclave.cordapp.sample.host;
 
 import co.paralleluniverse.fibers.Suspendable;
-import com.r3.conclave.cordapp.host.EnclaveHostService;
-import net.corda.core.flows.*;
+import com.r3.conclave.cordapp.sample.client.EnclaveClientHelper;
+import com.r3.conclave.cordapp.sample.client.EnclaveFlowResponder;
+import net.corda.core.flows.FlowException;
+import net.corda.core.flows.FlowLogic;
+import net.corda.core.flows.FlowSession;
+import net.corda.core.flows.InitiatedBy;
 
 @InitiatedBy(ReverseFlow.class)
 public class ReverseFlowResponder extends FlowLogic<Void> {
@@ -15,25 +19,11 @@ public class ReverseFlowResponder extends FlowLogic<Void> {
     @Suspendable
     @Override
     public Void call() throws FlowException {
-        final EnclaveHostService enclave = this.getServiceHub().cordaService(ReverseEnclaveService.class);
+        EnclaveFlowResponder session =
+                EnclaveClientHelper.initiateResponderFlow(this, counterpartySession, ReverseEnclaveService.class);
 
-        // Send the other party the enclave identity (remote attestation) for verification.
-        counterpartySession.send(enclave.getAttestationBytes());
-
-        // Receive a mail, send it to the enclave, receive a reply and send it back to the peer.
-        relayMessageToFromEnclave(enclave);
+        session.relayMessageToFromEnclave();
 
         return null;
-    }
-
-    @Suspendable
-    private void relayMessageToFromEnclave(EnclaveHostService host) throws FlowException {
-        // Other party sends us an encrypted mail.
-        byte[] encryptedMail = counterpartySession.receive(byte[].class).unwrap(it -> it);
-        // Deliver and wait for the enclave to reply. The flow will suspend until the enclave chooses to deliver a mail
-        // to this flow, which might not be immediately.
-        byte[] encryptedReply = await(host.deliverAndPickUpMail(this, encryptedMail));
-        // Send back to the other party the encrypted enclave's reply
-        counterpartySession.send(encryptedReply);
     }
 }
