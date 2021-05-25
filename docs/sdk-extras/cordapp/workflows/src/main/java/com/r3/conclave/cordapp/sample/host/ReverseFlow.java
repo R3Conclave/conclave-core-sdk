@@ -1,8 +1,12 @@
 package com.r3.conclave.cordapp.sample.host;
 
 import co.paralleluniverse.fibers.Suspendable;
-import com.r3.conclave.cordapp.client.EnclaveClientHelper;
-import net.corda.core.flows.*;
+import com.r3.conclave.cordapp.sample.client.EnclaveClientHelper;
+import com.r3.conclave.cordapp.sample.client.EnclaveFlowInitiator;
+import net.corda.core.flows.FlowException;
+import net.corda.core.flows.FlowLogic;
+import net.corda.core.flows.InitiatingFlow;
+import net.corda.core.flows.StartableByRPC;
 import net.corda.core.identity.Party;
 
 import java.nio.charset.StandardCharsets;
@@ -26,13 +30,10 @@ public class ReverseFlow extends FlowLogic<String> {
     @Override
     @Suspendable
     public String call() throws FlowException {
-        FlowSession session = initiateFlow(receiver);
-        // Creating and starting the helper will receive the remote attestation from the receiver party, and verify it
-        // against this constraint.
-        EnclaveClientHelper enclave = new EnclaveClientHelper(session, constraint).start();
+        EnclaveFlowInitiator session = EnclaveClientHelper.initiateFlow(this, receiver, constraint);
 
-        // We can now send and receive messages. They'll be encrypted automatically.
-        enclave.sendToEnclave(message.getBytes(StandardCharsets.UTF_8));
-        return new String(enclave.receiveFromEnclave());
+        byte[] response = session.sendAndReceive(message.getBytes(StandardCharsets.UTF_8));
+
+        return new String(response);
     }
 }

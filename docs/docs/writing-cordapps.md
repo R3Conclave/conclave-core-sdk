@@ -61,30 +61,38 @@ public class ReverseEnclaveService extends EnclaveHostService {
 ```
 
 This will make a best effort to enable SGX support on the host if necessary, then it loads the sample `ReverseEnclave` 
-class (which is exactly the same as in the hello world tutorial). The `EnclaveHostService` class exposes methods to
+class (which expands on the one already seen in the hello world tutorial). The `EnclaveHostService` class exposes methods to
 send and receive mail with the enclave, in a way that lets flows suspend waiting for the enclave to deliver mail.
 
-## Relaying mail from a flow to the enclave
+In the next section about [relaying a mail from a flow to the Enclave](writing-cordapps.md#relaying-mail-from-a-flow-to-the-enclave),
+the above class is used as a parameter to initiate the responder flow that ensures the host service is started.
+
+## Relaying mail from a flow to the Enclave
 
 We've already seen how to [create a new subclass of Enclave](writing-hello-world.md#create-a-new-subclass-of-enclave) and how to
 [receive and post mail in the enclave](writing-hello-world.md#receiving-and-post-mail-in-the-enclave) in the 
-[hello-world](writing-hello-world.md) tutorial.
+[hello-world](writing-hello-world.md) tutorial, and in the coming sections we'll see how some of this boilerplate has been
+wrapped into an API to simplify setting up secure flows and exchange secure messages between parties.
 
 In this tutorial, reversing a string involves two parties: one is the initiator that sends the secret string to reverse, 
 the other is the responder that reverses the string inside the enclave.
 
 To implement this we will need a flow used by clients, and a 'responder' flow used by the host node.
 
-Here's the responder flow to get the host service, get the enclave attestation and send it to the other party for
-verification, get the other party's encrypted mail with the string to reverse, deliver it to the enclave, and retrieve
-the enclave encrypted mail to send to the other party for decryption.
+Here's the responder flow to get the enclave host service up and running, get the enclave attestation and send it to the other
+party for verification, get, verify and acknowledge the other party's encrypted identity, get the other party's encrypted mail
+with the string to reverse, deliver it to the enclave, and retrieve the enclave encrypted mail to send to the other party for 
+decryption.
 
 ```java
 // We start with a few lines of boilerplate: read the Corda tutorials if you aren't sure what these are about.
 @InitiatedBy(ReverseFlow.class)
 public class ReverseFlowResponder extends FlowLogic<Void> {
+
+    // private variable
     private final FlowSession counterpartySession;
 
+    // Constructor
     public ReverseFlowResponder(FlowSession counterpartySession) {
         this.counterpartySession = counterpartySession;
     }
@@ -92,45 +100,65 @@ public class ReverseFlowResponder extends FlowLogic<Void> {
     @Suspendable
     @Override
     public Void call() throws FlowException {
-        // We get the service and thus, a handle to the enclave.
-        final ReverseEnclaveService enclave = this.getServiceHub().cordaService(ReverseEnclaveService.class);
 
-        // Send the other party the enclave identity (remote attestation) for verification.
-        counterpartySession.send(enclave.getAttestationBytes());
+        EnclaveFlowResponder session =
+                EnclaveClientHelper.initiateResponderFlow(this, counterpartySession, ReverseEnclaveService.class);
 
-        // Receive a mail, send it to the enclave, get a reply and send it back to the peer.
-        relayMessageToFromEnclave(enclave);
+        session.relayMessageToFromEnclave();
 
         return null;
-    }
-
-    @Suspendable
-    private void relayMessageToFromEnclave(EnclaveHostService host) throws FlowException {
-        // Other party sends us an encrypted mail.
-        byte[] encryptedMail = counterpartySession.receive(byte[].class).unwrap(it -> it);
-        // Deliver and wait for the enclave to reply. The flow will suspend until the enclave chooses to deliver a mail
-        // to this flow, which might not be immediately.
-        byte[] encryptedReply = await(host.deliverAndPickUpMail(this, encryptedMail));
-        // Send back to the other party the encrypted enclave's reply
-        counterpartySession.send(encryptedReply);
     }
 }
 ```
 
-This flow starts by sending the remote attestation. Typically, an interaction with the enclave should start this way,
-although the attestation can be cached if you wish to add such logic.
+Looking into the responder's flow initiation, we see that this side of the flow starts by ensuring a specific instance of the 
+`EnclaveHostService` is started and sending the remote attestation. Typically, an interaction with the enclave should start 
+this way, although the attestation may be cached if such logic is required.
 
-We then implement a simple request/response type protocol by receiving a byte array and then using the 
-`deliverAndPickUpMail` method of the sample's `EnclaveHostService` class. This returns an operation that can be passed
+```java
+@Suspendable
+public static <T extends EnclaveHostService> EnclaveFlowResponder initiateResponderFlow(@NotNull FlowLogic<?> flow,
+                                                            @NotNull FlowSession counterPartySession,
+                                                            @NotNull Class<T> serviceType) {
+    // Starts an instance of the EnclaveHostService specified by serviceType
+    EnclaveHostService host = (EnclaveHostService) flow.getServiceHub().cordaService(serviceType);
+
+    // Send the other party the enclave identity (remote attestation) for verification.
+    counterPartySession.send(host.getAttestationBytes());
+
+    return new EnclaveFlowResponder(flow, counterPartySession, host);
+}
+```
+
+The `EnclaveFlowResponder` implements a simple request/response type protocol that receives an encrypted byte array
+and uses the `deliverAndPickUpMail` method of the `EnclaveHostService` class. This returns an operation that can be passed
 to `await`. The flow will suspend (thus freeing up its thread), potentially for a long period. There is no requirement
 that the enclave reply immediately. It can return from processing the delivered mail without replying. When it does
 choose to reply, the flow will be re-awakened and the encrypted mail returned to the other side.
 
+```java
+@Suspendable
+public void relayMessageToFromEnclave() throws FlowException {
+    // Other party sends us an encrypted mail.
+    byte[] encryptedMail = session.receive(byte[].class).unwrap(it -> it);
+    // Deliver and wait for the enclave to reply. The flow will suspend until the enclave chooses to deliver a mail
+    // to this flow, which might not be immediately.
+    byte[] encryptedReply = flow.await(host.deliverAndPickUpMail(flow, encryptedMail));
+    // Send back to the other party the encrypted enclave's reply
+    session.send(encryptedReply);
+}
+```
+
 !!! important
     Although the Corda flow framework has built in support for it, this sample code does not handle node restarts.
 
-And here's the initiator code. It makes use of a helper class you can find in the sample called `EnclaveClientHelper`. 
-Again, you can copy this into your own projects. 
+And here's the initiator flow that initiates a session with the responder party, get the enclave attestation, validate it, 
+build and send a verifiable identity for the enclave to validate, send the encrypted mail with the string to reverse and 
+read and decrypt the enclave's response.
+
+!!! important
+    **DO NOT BLINDLY COPY THE `SEC:INSECURE` PART INTO PRODUCTION CODE.** IT DOES NOT TAKE SHERLOCK HOLMES TO DEDUCE THAT YOUR APP WILL BE
+    INSECURE IF YOU KEEP THAT BIT. :face_with_monocle:
 
 ```java
 @InitiatingFlow
@@ -138,39 +166,163 @@ Again, you can copy this into your own projects.
 public class ReverseFlow extends FlowLogic<String> {
     private final Party receiver;
     private final String message;
+    private final String constraint;
 
     public ReverseFlow(Party receiver, String message) {
         this.receiver = receiver;
         this.message = message;
+        this.constraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE";
+    }
+
+    public ReverseFlow(Party receiver, String message, String constraint) {
+        this.receiver = receiver;
+        this.message = message;
+        this.constraint = constraint;
     }
 
     @Override
     @Suspendable
     public String call() throws FlowException {
-        FlowSession session = initiateFlow(receiver);
-        // Creating and starting the helper will receive the remote attestation from the receiver party, and verify it
-        // against this constraint. Obviously in a real app you'd not use SEC:INSECURE, however this makes the sample
-        // work in simulation mode.
-        EnclaveClientHelper enclave = new EnclaveClientHelper(
-                session,
-                "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE"
-        ).start();
+        EnclaveFlowInitiator session = EnclaveClientHelper.initiateFlow(this, receiver, constraint);
 
-        // We can now send and receive messages. They'll be encrypted automatically.
-        enclave.sendToEnclave(message.getBytes(StandardCharsets.UTF_8));
-        return new String(enclave.receiveFromEnclave());
+        byte[] response = session.sendAndReceive(message.getBytes(StandardCharsets.UTF_8));
+
+        return new String(response);
     }
 }
 ```
 
-!!! important
-    **DO NOT BLINDLY COPY THE `SEC:INSECURE` PART INTO PRODUCTION CODE.** IT DOES NOT TAKE SHERLOCK HOLMES TO DEDUCE THAT YOUR APP WILL BE
-    INSECURE IF YOU KEEP THAT BIT. :face_with_monocle:
+The flow initiation starts in the usual manner for a Corda flow. Once a session with the hosting node is established, the
+flow waits for an `EnclaveInstanceInfo` to verify it against the constraint passed. If the enclave verifies successfullly
+and doesn't throw an exception, the flow can continue by sending the initiator party identity to the enclave for
+[authentication](writing-cordapps.md#authenticating-senders-identity).
 
-We start in the usual manner for a Corda flow. Once we've established a session with the hosting node, we instantiate
-the helper class giving it the session and a constraint. Then we call `start` to receive the `EnclaveInstanceInfo` and
-check it against the constraint. If no exception is thrown we can then use `sendToEnclave` and `receiveFromEnclave` with
-byte arrays.
+
+```java
+@Suspendable
+public static EnclaveFlowInitiator initiateFlow(FlowLogic<?> flow, Party receiver, String constraint) throws FlowException {
+    FlowSession session = flow.initiateFlow(receiver);
+
+    // Read the enclave attestation from the peer.
+    EnclaveInstanceInfo attestation = session.receive(byte[].class).unwrap(EnclaveInstanceInfo::deserialize);
+
+    // The key hash below (the hex string after 'S') is the public key version of sample_private_key.pem
+    // In a real app you should remove the SEC:INSECURE part, of course.
+    try {
+        EnclaveConstraint.parse(constraint).check(attestation);
+    } catch (InvalidEnclaveException e) {
+        throw new FlowException(e);
+    }
+
+    EnclaveFlowInitiator instance = new EnclaveFlowInitiator(flow, session, attestation);
+
+    instance.sendIdentityToEnclave();
+
+    return instance;
+}
+```
+
+Once the enclave is successfully verified and our identity is authenticated by the enclave, the flow can start
+securely exchanging encrypted messages with the enclave through the `EnclaveFlowInitiator` instance returned,
+which implements a simple send/receive API that encrypts and decrypts the outgoing and incoming data in the
+form of byte arrays.
+The send and receive methods use the the PostOffice API and the `EnclaveFlowInitiator` class holds a map
+of PostOffice instances per topic, where the default topic is the session's flow id and, so far, one extra 
+topic is used for the authentication message that is sent via `sendIdentityToEnclave()`.
+
+```java
+@Suspendable
+@NotNull
+private byte[] sendAndReceive(String topic, byte[] messageBytes) throws FlowException {
+    sendToEnclave(topic, messageBytes);
+    return receiveFromEnclave();
+}
+
+@Suspendable
+private void sendToEnclave(String topic, byte[] messageBytes) throws FlowException {
+    PostOffice postOffice = getOrCreatePostOffice(topic);
+    byte[] encryptedMail = postOffice.encryptMail(messageBytes);
+    session.send(encryptedMail);
+}
+
+@Suspendable
+@NotNull
+public byte[] receiveFromEnclave() throws FlowException {
+    PostOffice postOffice = postOffices.get(flowTopic);
+    EnclaveMail reply = session.receive(byte[].class).unwrap((mail) -> {
+        try {
+            return postOffice.decryptMail(mail);
+        } catch (IOException e) {
+            throw new FlowException("Unable to decrypt mail from Enclave", e);
+        }
+    });
+    return reply.getBodyAsBytes();
+}
+```
+
+# Authenticating sender's identity
+
+The enclave can authenticate a sender's identity that belongs to a network where nodes are identified by a X.509
+certificate and the network is controlled by a certificate authority like in a Corda network.
+
+The network CA root certificate's public key must be stored in the enclave's resource folder (in this example the 
+path is enclave/src/main/resources/) in a file named trustedroot.cer, so that the enclave can validate the sender
+identity.
+
+!!! important
+    If you don't need to identify sending parties and plan to use anonymous mode messaging instead, you can ignore or remove the trustedroot.cer certificate file. In this case, do not forget to initiate flows in anonymous mode to avoid a flow exception.
+
+The identity is set up by the `EnclaveFlowInitiator` class during authentication and sent to the enclave who 
+verifies it.
+
+```java
+@Suspendable
+private SenderIdentity buildSenderIdentity() {
+    byte[] sharedSecret = encryptionKey.getPublicKey().getEncoded();
+    PublicKey signerPublicKey = flow.getOurIdentity().getOwningKey();
+    DigitalSignature signature = flow.getServiceHub().getKeyManagementService().sign(
+            sharedSecret, signerPublicKey).withoutKey();
+
+    CertPath signerCertPath = flow.getOurIdentityAndCert().getCertPath();
+    return  SenderIdentity.create(signerCertPath, signerPublicKey, signature.getBytes());
+}
+
+@Suspendable
+private void sendIdentityToEnclave() throws FlowException {
+    if(!authenticated) {
+        SenderIdentity identity = buildSenderIdentity();
+        sendAndReceive(authTopic, identity.serialize());
+        authenticated = true;        
+    }
+}
+```
+
+When the enclave successfully validates the identity, it stores it in a key based cache. Subsequent messages
+from the same sender in the same session are paired with the cached identity which is then available from
+within the `receiveCordaMail` method, accessible via the `getAuthenticatedSenderIdentity` method.
+
+The SenderIdentity interface has methods to query the identity verification status, X.509 name, and public
+key.
+
+```java
+@Override
+protected void receiveCordaMail(long id, CordaEnclaveMail mail, String routingHint) {
+    String reversedString = reverse(new String(mail.getBodyAsBytes()));
+    SenderIdentity identity = mail.getSenderIdentity();
+
+    String responseString = String.format("Reversed string: %s; Sender anonymous: %b; Sender name: %s",
+            reversedString,
+            identity.isAnonymous(),
+            identity.getName());
+
+    // Get the PostOffice instance for responding back to this mail. Our response will use the same topic.
+    final EnclavePostOffice postOffice = postOffice(mail);
+    // Create the encrypted response and send it back to the sender.
+    final byte[] reply = postOffice.encryptMail(responseString.getBytes(StandardCharsets.UTF_8));
+    postMail(reply, routingHint);
+}
+```
+## Unit testing
 
 The unit tests are completely normal for Corda. However, as the code above will load a real or simulated Linux enclave,
 they won't run on Windows or macOS. You can build your enclave in [mock mode](mockmode.md) to fix this or on macOS, you can use the 
