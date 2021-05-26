@@ -22,7 +22,7 @@ if [ -e $JAVA_HOME/jre/lib/rt.jar ]; then
   echo
 
   pushd build/distributions/conclave-sdk-*/cordapp
-  ./gradlew workflows:test
+  ./gradlew $gradle_args workflows:test
   popd
 else
   echo
