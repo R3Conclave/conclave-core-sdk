@@ -94,4 +94,26 @@ class SGXExtensionASN1ParserTest {
         val exception = assertThrows<IllegalArgumentException> { parser.getInt("0.1") }
         assertThat(exception.message).contains("is not an integer or an enum")
     }
+
+    @Test
+    fun `get boolean from int fails`() {
+        val data = parseHex("04083006060101040130")
+        val parser = SGXExtensionASN1Parser(data)
+        val exception = assertThrows<IllegalArgumentException> { parser.getBoolean("0.1") }
+        assertThat(exception.message).contains("is not boolean")
+    }
+
+    @Test
+    fun `get boolean FALSE`() {
+        val data = parseHex("04083006060101010100")
+        val parser = SGXExtensionASN1Parser(data)
+        assertThat(parser.getBoolean("0.1")).isFalse
+    }
+
+    @Test
+    fun `get boolean TRUE`() {
+        val data = parseHex("04083006060101010101")
+        val parser = SGXExtensionASN1Parser(data)
+        assertThat(parser.getBoolean("0.1")).isTrue
+    }
 }

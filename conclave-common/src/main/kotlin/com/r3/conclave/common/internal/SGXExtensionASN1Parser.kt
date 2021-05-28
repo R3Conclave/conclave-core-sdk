@@ -41,6 +41,16 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
         return result
     }
 
+    fun getBoolean(id: String): Boolean {
+        val type = type(id)
+        if (type != BOOL_TAG)
+            throw IllegalArgumentException("value[$id] is not boolean: type=$type")
+
+        val position = _values.getValue(id)
+        require(position.length == 1)
+        return data[position.offset] != 0.toByte()
+    }
+
     internal fun type(id: String?): Int {
         val i = _types[id]
         return i ?: 0
@@ -74,7 +84,7 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
                 OID_TAG -> {
                     key = readObjectIDString()
                 }
-                OCTSTR_TAG, INT_TAG, ENUM_TAG -> {
+                OCTSTR_TAG, INT_TAG, ENUM_TAG, BOOL_TAG -> {
                     value = valuePos()
                     type = tag
                 }
@@ -147,5 +157,6 @@ class SGXExtensionASN1Parser(private val data: ByteArray) {
         private const val OCTSTR_TAG = 0x04
         private const val INT_TAG = 0x02
         private const val ENUM_TAG = 0x0A
+        private const val BOOL_TAG = 0x01
     }
 }
