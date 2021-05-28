@@ -688,6 +688,8 @@ Received: $attestationReportBody"""
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
+     *
+     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(destinationPublicKey: PublicKey, topic: String): EnclavePostOffice {
         synchronized(postOffices) {
@@ -707,6 +709,8 @@ Received: $attestationReportBody"""
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
+     *
+     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(destinationPublicKey: PublicKey): EnclavePostOffice {
         return postOffice(destinationPublicKey, "default")
@@ -719,6 +723,8 @@ Received: $attestationReportBody"""
      * Note: Do not use this overload if the sender of the mail is another enclave. `postOffice(EnclaveInstanceInfo)` must
      * still be used when responding back to an enclave. This may mean having to ingest the sender's [EnclaveInstanceInfo]
      * object beforehand.
+     *
+     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(mail: EnclaveMail): EnclavePostOffice = postOffice(mail.authenticatedSender, mail.topic)
 

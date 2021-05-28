@@ -147,8 +147,8 @@ or
 ./gradlew :client:assemble
 ```
 
-`installDist` will behave similarly to _assemble_ except that it won't produce those archives as _build_ or _assemble_.
-Instead, it will create a `host/build/install` and `client/build/install` directories, whose contents are effectively an unpacked _host.tar_ and/or _client.tar_ files.
+`installDist` will behave similarly to _assemble_ except that unlike _build_ or _assemble_, it won't produce the archive files.
+Instead, it will create a `host/build/install` and `client/build/install` directories, whose contents are effectively unpacked _host.tar_ and/or _client.tar_ files.
 ```bash
 ./gradlew installDist
 ```
@@ -160,7 +160,7 @@ or
 
 On Linux you can _run_ your app in two slightly different ways - standalone or using Gradle:
 
-- standalone
+- Standalone
 ```bash
 ./gradlew host:installDist
 cd host/build/install
@@ -172,15 +172,16 @@ cd client/build/install
 ./client/bin/client
 ```
 
-- using Gradle
+- Using Gradle
 ```bash
 ./gradlew :host:run
 ```
 ```bash
 ./gradlew :client:run --args="Reverse me"
 ```
+
 !!! note
-    `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
+    The `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
 
 ## Running the host
 === "Linux"

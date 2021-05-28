@@ -1,6 +1,9 @@
-# API changes
+# Breaking changes in Conclave 1.1
 
-## 1.0 to 1.1
+If you are upgrading your project from a previous version of Conclave then you may have to make some
+changes in order to get your project to build with Conclave 1.1.
+
+## Mock mode changes
 
 There have been a number of changes in the way that you use mock mode in your Conclave projects. You will
 need to make some changes to your build files in order to build you earlier projects with Conclave 1.1.
@@ -47,18 +50,3 @@ if (mode == "mock") {
 }
 ```
 
-[Learn more about the changes to mock mode](mockmode.md).
-
-## Beta 4 to 1.0
-Between beta 4 and 1.0 the API for creating mail has changed. `MutableMail` has been replaced by `PostOffice` which is a
-factory for creating encrypted mail. There's no longer any need to manually increment the sequence number as that's done
-for you. Instead make sure to only have one instance per sender key and topic. This allows the enclave to check for
-dropped or reordered mail. `Mail.decrypt` and `EnclaveInstanceInfo.decryptMail` have been replaced by `PostOffice.decryptMail`.
-Decrypt any response mail using the same post office instance that created the request.
-
-Inside the enclave `Enclave.createMail` has been replaced by `Enclave.postOffice` which returns a cached post office for
-the destination and topic. This means you don't need to manage post office instances inside the enclave as you do in the
-client.
-
-The routing hint parameter in `Enclave.receiveMail` has been moved to the end to make the method signature consistent
-with `EnclaveHost.deliverMail`.

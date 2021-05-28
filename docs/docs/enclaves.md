@@ -27,10 +27,11 @@ trust that an enclave will operate correctly even if the owner of the computer i
 
 In Conclave, an enclave is a subclass of the [`Enclave`](api/com/r3/conclave/enclave/Enclave.html) class, combined
 with an embedded JVM and compiled into a native shared library (ending in .so), which is then itself bundled into
-the module JAR<sup>\*</sup>. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
-load the enclave class.  
+the module JAR. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
+load the enclave class.
+
 !!! note
-    <sup>\*</sup>Conclave compiles the enclave into a .so file because that's how the Intel SGX SDK expects the enclave to be built.
+    Conclave compiles the enclave into a .so file because that's how the Intel SGX SDK expects the enclave to be built.
     Conclave hides this detail during the build phase by wrapping this file inside a Jar artifact, and during execution phase
     automatically loads the .so file from the classpath.
 

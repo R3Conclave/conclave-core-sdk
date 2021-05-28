@@ -19,6 +19,40 @@ Secondly, when creating an `EnclaveHost` inside the enclave module, Conclave wil
 This means any tests you define in the enclave module will automatically use mock mode - you can write your tests to load 
 and call the enclave without having to explicitly configure a mock enclave. 
 
+## Mock mode and the host classpath
+
+When loading an enclave in the host, Conclave looks in two places for the enclave class. Firstly, it looks on the
+current classpath. If the enclave class is present in the classpath then it will assume a mock configuration and
+load the enclave code directly. Secondly, it looks in the resources for a JAR file that contains a simulation, 
+debug or release enclave. If that is present, it is unpacked and loaded.
+
+If the enclave class is on the classpath _and_ the enclave JAR file is present then the host will throw an exception
+stating that multiple enclave classes have been found. In order to avoid this you need to carefully configure the
+dependencies in your host project to ensure only a single enclave is present.
+
+In most cases you do not require the enclave classes within the host project so all you need to do is set the
+enclave project as a `runtimeOnly` dependency. This will then work for all enclave configurations:
+
+```groovy
+runtimeOnly project(path: ":enclave", configuration: mode)
+```
+
+If however you do need to access the enclave class in your host project in mock mode via the the `EnclaveHost.mockEnclave`
+property then you will need to conditionally depend on the enclave project at compile or implementation time by
+including this in your host `build.gradle`:
+
+```groovy
+if (mode == "mock") {
+    implementation project(path: ":enclave", configuration: "mock")
+} else {
+    runtimeOnly project(path: ":enclave", configuration: mode)
+}
+```
+
+!!! info
+    Note that within the enclave project the enclave class is always present on the classpath. This means that
+    all tests defined within the enclave project always use mock mode.
+
 ## Accessing the enclave from the mock host
 
 When using mock mode, the host provides access to the enclave instance via the `EnclaveHost.mockEnclave` property. If you 

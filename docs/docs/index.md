@@ -79,12 +79,40 @@ is available where you can find the development team during UK office hours (GMT
 ## Release notes
 
 ### 1.1
+
+!!! important
+    There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
+    you might need to make to get your current project building with Conclave 1.1.
+
 1. :jigsaw: **New feature!** Mock mode has been extended so you can now specify 'mock' as an enclave mode and use 
    your regular host rather than having to modify your code to use a special build of your host. A new `mockEnclave` 
    property has been added to `EnclaveHost` that can be used in mock mode to allow access to the enclave instance
    for probing internal state during development and testing.
    [Learn more about enclave configurations](architecture.md#testing_and_debugging).
    [See more information about how the API has changed](api-changes.md#1.0-to-1.1)
+1. :jigsaw: **New feature!** When using mock mode you can now specify the configuration of the mock environment,
+   allowing parameters such as the `codeHash`, `codeSigningKeyHash` and `tcbLevel` to be modified programatically
+   in your unit tests. See [Mock mode configuration](mockmode.md#mock_mode_configuration) for more details.
+1. The Conclave documentation has been improved, fixing a number of errors and updating the format of the Javadocs
+   section of the documentation site. The Conclave SDK documentation is packaged along with the SDK so it is automatically 
+   displayed in IDEs that support this, including Eclipse and Visual Studio Code. See 
+   [Writing hello world](writing-hello-world.md#ide-documentation-in-the-root-buildgradle-file) for details of
+   how to configure your Gradle project to display documentation in the IDE.
+1. We've updated to version 21.0.0 of GraalVM which along with some performance improvements to the garbage collector,
+   also adds Java serialisation support. We've updated Conclave to take advantage of this. Find out more about how
+   to configure [serialization within the enclave](enclave-configuration.md#serializationconfigurationfiles).
+1. The SGX SDK that Conclave is built upon has been updated to version 2.13.3. This provides bug fixes and an update
+   to the Intel IPP cryptographic library. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.13.3-release)
+   for more details.
+1. We've improved the error messages in a number of places, including when there are problems signing the enclave
+   and when there are issues in sending and receiving Mail messages.
+1. The [container-gradle](container-gradle.md) script has been updated to correctly handle configuration files
+   that live outside the source tree.
+1. The output of the enclave gradle build has been tidied up, hiding the information that would only normally be
+   present on verbose builds. If you want to see the verbose output in your build then just add `--info` to your
+   gradle build command line.
+1. Security improvements and bug fixes: improved DCAP certificate validation, add additional bounds checks on some
+   internal methods, fixes to allow validation of enclave-to-enclave attestations inside an enclave.
 
 ### 1.0
 
