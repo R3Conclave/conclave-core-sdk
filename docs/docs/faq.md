@@ -267,10 +267,9 @@ and possibly more. However you don't need to do builds all the time when working
 option of using [mock mode](mockmode.md) to directly load the enclave code into the host JVM, which gives a regular Java development
 experience.
 
-### Java object serialization doesn't work?
+### Can you use Java object serialisation with Conclave?
 
-This will be addressed in the next release after 1.0 by upgrading GraalVM to the 21.0 release. Unfortunately this
-release came out too close to our 1.0 QA effort to be incorporated, but it will arrive soon!
+Yes, check our documentation on [serialization configuration files](enclave-configuration.md#serializationconfigurationfiles) on how to do so.
 
 ### How do I control the Native Image parameters?
 
