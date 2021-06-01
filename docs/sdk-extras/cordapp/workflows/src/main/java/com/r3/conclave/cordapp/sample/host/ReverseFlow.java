@@ -20,17 +20,23 @@ public class ReverseFlow extends FlowLogic<String> {
     private final Party receiver;
     private final String message;
     private final String constraint;
+    private final Boolean anonymous;
 
     public ReverseFlow(Party receiver, String message, String constraint) {
+        this(receiver, message, constraint, false);
+    }
+
+    public ReverseFlow(Party receiver, String message, String constraint, Boolean anonymous) {
         this.receiver = receiver;
         this.message = message;
         this.constraint = constraint;
+        this.anonymous = anonymous;
     }
 
     @Override
     @Suspendable
     public String call() throws FlowException {
-        EnclaveFlowInitiator session = EnclaveClientHelper.initiateFlow(this, receiver, constraint);
+        EnclaveFlowInitiator session = EnclaveClientHelper.initiateFlow(this, receiver, constraint, anonymous);
 
         byte[] response = session.sendAndReceive(message.getBytes(StandardCharsets.UTF_8));
 
