@@ -47,9 +47,8 @@ object EnclaveClientHelper {
             throw FlowException(e)
         }
         val instance = EnclaveFlowInitiator(flow, session, attestation)
-        if(!anonymous) {
-            instance.sendIdentityToEnclave()
-        }
+        instance.sendIdentityToEnclave(anonymous)
+
         return instance
     }
 
@@ -74,7 +73,7 @@ object EnclaveClientHelper {
         // Send the other party the enclave identity (remote attestation) for verification.
         counterPartySession.send(host.attestationBytes)
         val instance = EnclaveFlowResponder(flow, counterPartySession, host)
-        if(!anonymous) {
+        if (!anonymous) {
             // Relay the initial identity message to the enclave and relay the response back
             instance.relayMessageToFromEnclave()
         }

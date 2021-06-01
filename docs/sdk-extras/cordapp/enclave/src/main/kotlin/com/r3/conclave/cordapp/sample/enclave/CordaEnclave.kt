@@ -6,6 +6,8 @@ import com.r3.conclave.cordapp.common.internal.SenderIdentityImpl
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.mail.EnclaveMail
+import java.io.ByteArrayInputStream
+import java.io.DataInputStream
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -23,16 +25,35 @@ abstract class CordaEnclave : Enclave() {
     private fun tryAuthenticateAndStoreIdentity(
         mail: EnclaveMail
     ): Boolean {
-        val identity: SenderIdentityImpl = SenderIdentityImpl.deserialize(mail.bodyAsBytes)
-        val isTrusted = trustedRootCertificate != null && identity.isTrusted(trustedRootCertificate)
-        val didSign: Boolean = identity.didSign(mail.authenticatedSender.encoded)
-        val authenticated = isTrusted && didSign
+        val bais = ByteArrayInputStream(mail.bodyAsBytes)
+        val dis = DataInputStream(bais)
+        val isAnonymousSender = dis.readBoolean()
+        if (isAnonymousSender) {
+            val authenticated = true
+            return authenticated
+        }
+
+        val identity = SenderIdentityImpl.deserialize(dis)
+        val sharedSecret = mail.authenticatedSender.encoded
+        val authenticated = authenticateIdentity(sharedSecret, identity)
+
         if (authenticated) {
-            synchronized(identities) {
-                identities.put(mail.authenticatedSender, identity)
-            }
+            storeIdentity(mail.authenticatedSender, identity)
         }
         return authenticated
+    }
+
+    private fun authenticateIdentity(sharedSecret: ByteArray, identity: SenderIdentityImpl): Boolean {
+        val isTrusted = trustedRootCertificate != null && identity.isTrusted(trustedRootCertificate)
+        val didSign: Boolean = identity.didSign(sharedSecret)
+        val authenticated = isTrusted && didSign
+        return authenticated
+    }
+
+    private fun storeIdentity(authenticatedSender: PublicKey, identity: SenderIdentityImpl) {
+        synchronized(identities) {
+            identities.put(authenticatedSender, identity)
+        }
     }
 
     /**
@@ -51,7 +72,8 @@ abstract class CordaEnclave : Enclave() {
      * This class extends the EnclaveMail by adding Corda/CorDapp application concerns. Currently this is limited to
      * the sender identity.
      */
-    class CordaEnclaveMail private constructor(private val mail: EnclaveMail, val senderIdentity: SenderIdentity) : EnclaveMail {
+    class CordaEnclaveMail private constructor(private val mail: EnclaveMail, val senderIdentity: SenderIdentity) :
+        EnclaveMail {
         override fun getSequenceNumber(): Long = mail.sequenceNumber
         override fun getTopic(): String = mail.topic
         override fun getEnvelope(): ByteArray? = mail.envelope
@@ -70,12 +92,10 @@ abstract class CordaEnclave : Enclave() {
      * processed at this level, are forwarded to the [CordaEnclave.receiveCordaMail] callback.
      */
     final override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
-        if (mail.topic.startsWith("--conclave-")) {
+        if (isTopicFirstMessage(mail)) {
             // only login supported so far
-            val authenticated =
-                mail.topic == "--conclave-login" &&
-                tryAuthenticateAndStoreIdentity(mail)
-            val result = if(authenticated) "-ack" else "-nak"
+            val authenticated = tryAuthenticateAndStoreIdentity(mail)
+            val result = if (authenticated) "-ack" else "-nak"
             val postOffice: EnclavePostOffice = postOffice(mail.authenticatedSender, mail.topic + result)
             val reply: ByteArray = postOffice.encryptMail(emptyBytes)
             postMail(reply, routingHint)
@@ -102,6 +122,7 @@ abstract class CordaEnclave : Enclave() {
     protected abstract fun receiveCordaMail(id: Long, mail: CordaEnclaveMail, routingHint: String?)
 
     companion object {
+        private const val topicFirstMessageSequenceNumber = 0L
         private val emptyBytes = ByteArray(0)
         private val identities: HashMap<PublicKey, SenderIdentity> = HashMap()
         private val trustedRootCertificate: X509Certificate? =
@@ -113,5 +134,9 @@ abstract class CordaEnclave : Enclave() {
                     null
                 }
             }
+
+        private fun isTopicFirstMessage(mail: EnclaveMail): Boolean {
+            return mail.sequenceNumber == topicFirstMessageSequenceNumber
+        }
     }
 }

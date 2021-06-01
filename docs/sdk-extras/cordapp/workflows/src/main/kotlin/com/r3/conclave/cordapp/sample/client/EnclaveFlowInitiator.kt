@@ -10,8 +10,10 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.utilities.unwrap
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.io.IOException
-import java.util.*
+import java.security.SecureRandom
 
 /**
  * A helper class that wraps some boilerplate for flow initiators to communicate with enclaves.
@@ -22,24 +24,8 @@ class EnclaveFlowInitiator(
     private val attestation: EnclaveInstanceInfo
 ) {
     private val encryptionKey = Curve25519PrivateKey.random()
-    private val postOffices = HashMap<String, PostOffice>()
     private val flowTopic: String = flow.runId.uuid.toString()
-
-    init {
-        postOffices[flowTopic] = attestation.createPostOffice(encryptionKey, flowTopic)
-    }
-
-    /**
-     * Holds one [PostOffice] instance per topic
-     * @param topic the topic for which a PostOffice instance must be created and/or retrieved
-     * @return the PostOffice instance for the given topic
-     */
-    @Suspendable
-    private fun getOrCreatePostOffice(topic: String): PostOffice {
-        return postOffices.computeIfAbsent(topic) { t: String ->
-            attestation.createPostOffice(encryptionKey, t)
-        }
-    }
+    private val postOffice: PostOffice = attestation.createPostOffice(encryptionKey, flowTopic)
 
     /**
      * Builds a mailer identity based on the session encryption key pair, the node identity and certificates.
@@ -55,29 +41,26 @@ class EnclaveFlowInitiator(
 
     /**
      * Sends a message to the Enclave
-     * @param topic the message topic
      * @param messageBytes the serialized message body bytes
      * @throws FlowException
      */
     @Suspendable
     @Throws(FlowException::class)
-    private fun sendToEnclave(topic: String, messageBytes: ByteArray) {
-        val postOffice = getOrCreatePostOffice(topic)
+    private fun sendToEnclave(messageBytes: ByteArray) {
         val encryptedMail = postOffice.encryptMail(messageBytes)
         session.send(encryptedMail)
     }
 
     /**
      * Sends a message to the Enclave and waits for the response
-     * @param topic the message topic
      * @param messageBytes the serialized message body bytes
      * @return the serialized message body bytes of the Enclave response
      * @throws FlowException
      */
     @Suspendable
     @Throws(FlowException::class)
-    private fun sendAndReceive(topic: String, messageBytes: ByteArray): ByteArray {
-        sendToEnclave(topic, messageBytes)
+    fun sendAndReceive(messageBytes: ByteArray): ByteArray {
+        sendToEnclave(messageBytes)
         return receiveFromEnclave()
     }
 
@@ -87,32 +70,53 @@ class EnclaveFlowInitiator(
      */
     @Suspendable
     @Throws(FlowException::class)
-    fun sendIdentityToEnclave() {
-        val identity = buildMailerIdentity()
-        val topic = "--conclave-login"
-        sendToEnclave(topic, identity.serialize())
+    fun sendIdentityToEnclave(isAnonymous: Boolean) {
+
+        val serializedIdentity = getSerializedIdentity(isAnonymous)
+        sendToEnclave(serializedIdentity)
+
         val mail: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray? ->
             try {
-                postOffices[topic]!!.decryptMail(mail!!)
+                postOffice.decryptMail(mail!!)
             } catch (e: IOException) {
                 throw FlowException("Unable to decrypt mail from Enclave", e)
             }
         }
 
-        if(!mail.topic.contentEquals("$topic-ack"))
+        if (!mail.topic.contentEquals("$flowTopic-ack"))
             throw FlowException("The enclave could not validate the identity sent")
     }
 
-    /**
-     * Sends a message to the Enclave and reads the response
-     * @param messageBytes the serialized message body bytes
-     * @return the serialized message body bytes of the Enclave response
-     * @throws FlowException
-     */
     @Suspendable
-    @Throws(FlowException::class)
-    fun sendAndReceive(messageBytes: ByteArray): ByteArray {
-        return sendAndReceive(flowTopic, messageBytes)
+    private fun getSerializedIdentity(isAnonymous: Boolean): ByteArray {
+        val baos = ByteArrayOutputStream()
+        val dos = DataOutputStream(baos)
+
+        dos.writeBoolean(isAnonymous)
+        if (isAnonymous) {
+            // It is important to ensure the identity message has roughly the same size whether the user is anonymous or
+            // not. This prevents people from gaining insights while performing statistical analyses to the message sizes
+            // sent over the network. Failing to do so might leak information whether a user is anonymous or not.
+            // N.B. Although enclave PostOffice offers a feature which automatically pads all messages with a minimum
+            // fix size, we should not use such feature for this scenario to avoid wasting bandwidth.
+            // The identity message is only sent when a flow starts and occupies a few KBs. Padding all messages
+            // to have a few KBs in size would be a waste of resources.
+            addPadding(dos, identityAverageSize + generateRandomNumber(0, 128))
+        } else {
+            val identity = buildMailerIdentity()
+            identity.serialize(dos)
+        }
+
+        return baos.toByteArray()
+    }
+
+    private fun generateRandomNumber(min: Int, max: Int): Int {
+        return (SecureRandom.getInstanceStrong().nextInt(max - min + 1) + min)
+    }
+
+    private fun addPadding(dos: DataOutputStream, size: Int) {
+        val byteArray = ByteArray(size)
+        dos.write(byteArray)
     }
 
     /**
@@ -123,14 +127,21 @@ class EnclaveFlowInitiator(
     @Suspendable
     @Throws(FlowException::class)
     fun receiveFromEnclave(): ByteArray {
-        val postOffice = postOffices[flowTopic]
         val reply: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray? ->
             try {
-                postOffice!!.decryptMail(mail!!)
+                postOffice.decryptMail(mail!!)
             } catch (e: IOException) {
                 throw FlowException("Unable to decrypt mail from Enclave", e)
             }
         }
         return reply.bodyAsBytes
+    }
+
+    companion object {
+        // The value used here was determined by looking at the size of the byte array generated when the identity
+        // instance is serialized for a non-anonymous user in sendIdentityToEnclave(...).
+        // Maybe this value should be configurable via an environment variable in case the average size for a login message
+        // changes for other use cases.
+        private const val identityAverageSize = 2300
     }
 }

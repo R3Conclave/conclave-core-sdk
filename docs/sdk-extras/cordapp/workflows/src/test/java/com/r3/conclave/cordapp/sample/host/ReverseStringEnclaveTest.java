@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ReverseStringEnclaveTest {
@@ -49,11 +51,21 @@ class ReverseStringEnclaveTest {
     }
 
     @Test
-    public void reverseString() throws ExecutionException, InterruptedException {
+    public void reverseStringAsNonAnonymous() throws ExecutionException, InterruptedException {
         CordaFuture<String> flow = client.startFlow(new ReverseFlow(host.getInfo().getLegalIdentities().get(0), "zipzop",
                 constraint));
         network.runNetwork();
         assertEquals("Reversed string: pozpiz; Sender anonymous: false; Sender name: O=Mock Company 1,L=London,C=GB",
                 flow.get());
+    }
+
+    @Test
+    public void reverseStringAsAnonymous() throws ExecutionException, InterruptedException {
+        CordaFuture<String> flow = client.startFlow(new ReverseFlow(host.getInfo().getLegalIdentities().get(0), "hello",
+                constraint, true));
+        network.runNetwork();
+
+        String result = flow.get();
+        assertThat(result, containsString("Reversed string: olleh; Sender anonymous: true; Sender name: Anonymous (Curve25519PublicKey("));
     }
 }

@@ -83,10 +83,14 @@ class SenderIdentityImpl(
         val baos = ByteArrayOutputStream()
         val dos = DataOutputStream(baos)
 
-        dos.writeIntLengthPrefixBytes(signerCertPath.getEncoded("PkiPath"))
-        dos.writeIntLengthPrefixBytes(signatureData)
+        serialize(dos)
 
         return baos.toByteArray()
+    }
+
+    fun serialize(dos: DataOutputStream) {
+        dos.writeIntLengthPrefixBytes(signerCertPath.getEncoded("PkiPath"))
+        dos.writeIntLengthPrefixBytes(signatureData)
     }
 
     companion object {
@@ -110,6 +114,10 @@ class SenderIdentityImpl(
         fun deserialize(from: ByteArray): SenderIdentityImpl {
             val bais = ByteArrayInputStream(from)
             val dis = DataInputStream(bais)
+            return deserialize(dis)
+        }
+
+        fun deserialize(dis: DataInputStream): SenderIdentityImpl {
             try {
                 val signerCertPath = deserializeCertPath(dis)
                 val signedSecret = deserializeSignedSecret(dis)
