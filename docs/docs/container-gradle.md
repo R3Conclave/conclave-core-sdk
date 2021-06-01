@@ -1,7 +1,4 @@
-# Container Gradle
-
-!!! important
-    This script is currently only available for macOS.
+# Testing on macOS
 
 The Container Gradle script (see `scripts/container-gradle`) runs Gradle inside a Docker container configured to support
 enclaves in simulation mode. It can be useful for testing your enclave on macOS.

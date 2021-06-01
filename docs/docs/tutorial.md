@@ -1,9 +1,10 @@
-# First enclave
+# Compiling and Running your First Enclave
 
 !!! important
 
     * You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
-    * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md).
+    * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md) and 
+        [architecture overview](architecture.md).
 
 You can find a **sample app** in the `hello-world` directory of your SDK. You can use this app as a template 
 for your own if you want a quick start. We will cover:
