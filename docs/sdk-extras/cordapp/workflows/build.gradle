@@ -43,9 +43,8 @@ dependencies {
 test {
     useJUnitPlatform {
         includeEngines = ['junit-jupiter', 'junit-vintage']
-        systemProperties = [
-                'junit.jupiter.execution.parallel.enabled'             : 'true'
-        ]
+        systemProperty 'junit.jupiter.execution.parallel.enabled', 'true'
+        systemProperty 'enclaveMode', mode
     }
 }
 
