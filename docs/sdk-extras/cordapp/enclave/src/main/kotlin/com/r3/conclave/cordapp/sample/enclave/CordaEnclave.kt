@@ -8,9 +8,11 @@ import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.mail.EnclaveMail
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
+import java.lang.Exception
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.logging.Logger
 
 /**
  * The CordaEnclave class extends the [Enclave] class with CorDapp's application level concerns.
@@ -44,7 +46,7 @@ abstract class CordaEnclave : Enclave() {
     }
 
     private fun authenticateIdentity(sharedSecret: ByteArray, identity: SenderIdentityImpl): Boolean {
-        val isTrusted = trustedRootCertificate != null && identity.isTrusted(trustedRootCertificate)
+        val isTrusted = identity.isTrusted(trustedRootCertificate)
         val didSign: Boolean = identity.didSign(sharedSecret)
         val authenticated = isTrusted && didSign
         return authenticated
@@ -125,15 +127,22 @@ abstract class CordaEnclave : Enclave() {
         private const val topicFirstMessageSequenceNumber = 0L
         private val emptyBytes = ByteArray(0)
         private val identities: HashMap<PublicKey, SenderIdentity> = HashMap()
-        private val trustedRootCertificate: X509Certificate? =
-            CordaEnclave::class.java.getResourceAsStream("/trustedroot.cer").use {
-                if (it != null) {
+        private const val trustedRootCertificateResourcePath = "/trustedroot.cer"
+        private val trustedRootCertificate: X509Certificate = getTrustedRootCertificate(trustedRootCertificateResourcePath)
+
+        private fun getTrustedRootCertificate(trustedRootCertificateResourcePath: String): X509Certificate {
+            try {
+                CordaEnclave::class.java.getResourceAsStream(trustedRootCertificateResourcePath).use {
                     val certificateFactory: CertificateFactory = CertificateFactory.getInstance("X509")
-                    certificateFactory.generateCertificate(it) as X509Certificate
-                } else {
-                    null
+                    return certificateFactory.generateCertificate(it) as X509Certificate
                 }
+            } catch (exception: Exception) {
+                // Log an error message to let people know what went wrong and throw the exception again to ensure
+                // the behaviour related to exceptions remains the same
+                Logger.getGlobal().severe("Failed to load trusted root certificate. Please ensure the resource exists and it is not corrupted. Resource path: $trustedRootCertificateResourcePath")
+                throw exception
             }
+        }
 
         private fun isTopicFirstMessage(mail: EnclaveMail): Boolean {
             return mail.sequenceNumber == topicFirstMessageSequenceNumber
