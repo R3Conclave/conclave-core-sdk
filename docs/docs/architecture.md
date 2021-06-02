@@ -72,7 +72,10 @@ First, clients need to obtain an `EnclaveInstanceInfo` object. This could be dow
 or it could be published somewhere. This object encapsulates a _remote attestation_, which includes information
 such as the hash of the code inside the enclave, the hash of the key of any party who has signed that code, 
 the security status of the machine on which the enclave is running, and a public key whose private counterpart 
-is known only to the enclave.
+is known only to the enclave. The remote attestation encapsulated within the `EnclaveInstanceInfo` object
+is a signed data structure, with the CPU manufacturer (Intel in the case of SGX) as the root of trust. In this way,
+the client can have confidence about the nature of the enclave with which they are interacting even though the party
+from whom they obtain the `EnclaveInstanceInfo` is the untrusted host.
 
 The client tests the `EnclaveInstanceInfo` against a set of _constraints_, depending on how flexible they want to be 
 about software upgrades to the enclave. Constraints are represented by an
