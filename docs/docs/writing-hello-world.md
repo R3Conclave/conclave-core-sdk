@@ -679,7 +679,7 @@ also exposes some other header fields:
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
    can be thought of as equivalent to an email subject. Topics are scoped per-sender and are not global. The
    client can send multiple streams of related mail by using a different topic for each stream, and it can do this
-   concurrently. The topic is not parsed by Conclave and should be unique across time to avoid replay attacks: a good
+   concurrently. The topic is not parsed by Conclave and, to avoid replay attacks, should never be reused for an unrelated set of mails in the future. A good
    value might thus contain a random UUID. Topics may be logged and used by your software to route or split mail streams
    in useful ways.
 1. The _sequence number_. Starting from zero, this is incremented by one for every mail delivered on a topic. Conclave will

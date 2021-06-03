@@ -52,10 +52,10 @@ interface EnclaveMailHeader {
      * The topic can be used to distinguish different streams of mail from the same client.
      * It can be thought of as equivalent to an email subject. Topics are scoped per-sender.
      * The client can send multiple streams of related mail by using a different topic for
-     * each stream, and it can do this concurrently. The topic is not parsed by Conclave and
-     * should be unique across time to avoid replay attacks: a good value might thus contain
-     * a random UUID. Topics may be logged and used by your software to route or split mail
-     * streams in useful ways.
+     * each stream, and it can do this concurrently. The topic is not parsed by Conclave
+     * and, to avoid replay attacks, should never be reused for an unrelated set of mails
+     * in the future. A good value might thus contain a random UUID. Topics may be logged
+     * and used by your software to route or split mail streams in useful ways.
      *
      * There must be a topic and it cannot be empty, but if you don't need this
      * feature then the pre-filled value of "default" is fine. It has a maximum length
