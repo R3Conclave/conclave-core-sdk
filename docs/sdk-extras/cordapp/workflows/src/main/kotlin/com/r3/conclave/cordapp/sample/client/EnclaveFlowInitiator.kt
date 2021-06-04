@@ -75,9 +75,9 @@ class EnclaveFlowInitiator(
         val serializedIdentity = getSerializedIdentity(isAnonymous)
         sendToEnclave(serializedIdentity)
 
-        val mail: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray? ->
+        val mail: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray ->
             try {
-                postOffice.decryptMail(mail!!)
+                postOffice.decryptMail(mail)
             } catch (e: IOException) {
                 throw FlowException("Unable to decrypt mail from Enclave", e)
             }
@@ -127,9 +127,9 @@ class EnclaveFlowInitiator(
     @Suspendable
     @Throws(FlowException::class)
     fun receiveFromEnclave(): ByteArray {
-        val reply: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray? ->
+        val reply: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray ->
             try {
-                postOffice.decryptMail(mail!!)
+                postOffice.decryptMail(mail)
             } catch (e: IOException) {
                 throw FlowException("Unable to decrypt mail from Enclave", e)
             }
