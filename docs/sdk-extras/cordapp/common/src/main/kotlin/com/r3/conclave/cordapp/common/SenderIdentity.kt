@@ -3,27 +3,21 @@ package com.r3.conclave.cordapp.common
 import java.security.PublicKey
 
 /**
- * Defines the interface accessible to the sender and the Enclave to create the [SenderIdentity] instance and to
- * query the sender's identity properties. This can always be used by the Enclave to uniquely identify the sender,
- * even in the case the sender did not send its verifiable identity. In anonymous mode the identity can be used
- * to uniquely identify within an active Enclave encrypted session or between sessions while the encryption key
- * remains the same.
+ * Defines the interface for querying the sender's identity properties. The SenderIdentity is accessible to the
+ * the Enclave and it can be used to uniquely identify the sender if the sender decided to share
+ * its verifiable identity. Any identity shared by the sender goes through a verification process to ensure the identity
+ * is part of the same certificate chain as the root certificate hardcoded into the enclave.
  */
 interface SenderIdentity {
 
     /**
-     * The verified subject name of the sender or an anonymous identifier if the party did not send its identity
+     * The verified X.500 subject name of the sender
      */
     val name: String
 
     /**
-     * The verified public key of the sender's X509 subject, or the encrypted public key of the enclave session if
-     * the party did not send its identity
+     * The verified public key of the sender's identity. Specifically, this is the public key from the sender's X.509 certificate.
+     * Note, this public key is different to the encryption key used in Mail ([EnclaveMail.authenticatedSender])
      */
     val publicKey: PublicKey
-
-    /**
-     * A flag for the Enclave indicating whether this is a verified sender identity or an anonymous identity.
-     */
-    val isAnonymous: Boolean
 }

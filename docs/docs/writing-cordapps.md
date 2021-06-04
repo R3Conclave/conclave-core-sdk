@@ -113,20 +113,25 @@ public class ReverseFlowResponder extends FlowLogic<Void> {
 
 Looking into the responder's flow initiation, we see that this side of the flow starts by ensuring a specific instance of the 
 `EnclaveHostService` is started and sending the remote attestation. Typically, an interaction with the enclave should start 
-this way, although the attestation may be cached if such logic is required.
+this way, although the attestation may be cached if such logic is required. The flow responder expects to receive
+an identity during the initialization. An empty identity message can be sent if the party prefers to remain anonymous.
 
-```java
+```kotlin
 @Suspendable
-public static <T extends EnclaveHostService> EnclaveFlowResponder initiateResponderFlow(@NotNull FlowLogic<?> flow,
-                                                            @NotNull FlowSession counterPartySession,
-                                                            @NotNull Class<T> serviceType) {
-    // Starts an instance of the EnclaveHostService specified by serviceType
-    EnclaveHostService host = (EnclaveHostService) flow.getServiceHub().cordaService(serviceType);
-
+@Throws(FlowException::class)
+@JvmStatic
+@JvmOverloads
+fun <T : EnclaveHostService> initiateResponderFlow(flow: FlowLogic<*>, 
+                                                   counterPartySession: FlowSession,
+                                                   serviceType: Class<T>): EnclaveFlowResponder {
+    // Start an instance of the enclave hosting service
+    val host = flow.serviceHub.cordaService(serviceType)
     // Send the other party the enclave identity (remote attestation) for verification.
-    counterPartySession.send(host.getAttestationBytes());
-
-    return new EnclaveFlowResponder(flow, counterPartySession, host);
+    counterPartySession.send(host.attestationBytes)
+    val instance = EnclaveFlowResponder(flow, counterPartySession, host)
+    // Relay the initial identity message to the enclave and relay the response back
+    instance.relayMessageToFromEnclave()
+    return instance
 }
 ```
 
@@ -136,16 +141,17 @@ to `await`. The flow will suspend (thus freeing up its thread), potentially for 
 that the enclave reply immediately. It can return from processing the delivered mail without replying. When it does
 choose to reply, the flow will be re-awakened and the encrypted mail returned to the other side.
 
-```java
+```kotlin
 @Suspendable
-public void relayMessageToFromEnclave() throws FlowException {
+@Throws(FlowException::class)
+fun relayMessageToFromEnclave() {
     // Other party sends us an encrypted mail.
-    byte[] encryptedMail = session.receive(byte[].class).unwrap(it -> it);
+    val encryptedMail = session.receive(ByteArray::class.java).unwrap { it }
     // Deliver and wait for the enclave to reply. The flow will suspend until the enclave chooses to deliver a mail
     // to this flow, which might not be immediately.
-    byte[] encryptedReply = flow.await(host.deliverAndPickUpMail(flow, encryptedMail));
+    val encryptedReply: ByteArray = flow.await(host.deliverAndPickUpMail(flow, encryptedMail))
     // Send back to the other party the encrypted enclave's reply
-    session.send(encryptedReply);
+    session.send(encryptedReply)
 }
 ```
 
@@ -154,11 +160,8 @@ public void relayMessageToFromEnclave() throws FlowException {
 
 And here's the initiator flow that initiates a session with the responder party, get the enclave attestation, validate it, 
 build and send a verifiable identity for the enclave to validate, send the encrypted mail with the string to reverse and 
-read and decrypt the enclave's response.
-
-!!! important
-    **DO NOT BLINDLY COPY THE `SEC:INSECURE` PART INTO PRODUCTION CODE.** IT DOES NOT TAKE SHERLOCK HOLMES TO DEDUCE THAT YOUR APP WILL BE
-    INSECURE IF YOU KEEP THAT BIT. :face_with_monocle:
+read and decrypt the enclave's response. Keep in mind that a verifiable identity is only sent to the enclave if the `anonymous`
+property is set to false.
 
 ```java
 @InitiatingFlow
@@ -167,23 +170,23 @@ public class ReverseFlow extends FlowLogic<String> {
     private final Party receiver;
     private final String message;
     private final String constraint;
-
-    public ReverseFlow(Party receiver, String message) {
-        this.receiver = receiver;
-        this.message = message;
-        this.constraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE";
-    }
+    private final Boolean anonymous;
 
     public ReverseFlow(Party receiver, String message, String constraint) {
+        this(receiver, message, constraint, false);
+    }
+
+    public ReverseFlow(Party receiver, String message, String constraint, Boolean anonymous) {
         this.receiver = receiver;
         this.message = message;
         this.constraint = constraint;
+        this.anonymous = anonymous;
     }
 
     @Override
     @Suspendable
     public String call() throws FlowException {
-        EnclaveFlowInitiator session = EnclaveClientHelper.initiateFlow(this, receiver, constraint);
+        EnclaveFlowInitiator session = EnclaveClientHelper.initiateFlow(this, receiver, constraint, anonymous);
 
         byte[] response = session.sendAndReceive(message.getBytes(StandardCharsets.UTF_8));
 
@@ -193,127 +196,137 @@ public class ReverseFlow extends FlowLogic<String> {
 ```
 
 The flow initiation starts in the usual manner for a Corda flow. Once a session with the hosting node is established, the
-flow waits for an `EnclaveInstanceInfo` to verify it against the constraint passed. If the enclave verifies successfullly
+flow waits for an `EnclaveInstanceInfo` to verify it against the constraint passed. If the enclave verifies successfully
 and doesn't throw an exception, the flow can continue by sending the initiator party identity to the enclave for
-[authentication](writing-cordapps.md#authenticating-senders-identity).
+[authentication](writing-cordapps.md#authenticating-senders-identity). The last step is only applicable if the party wishes to
+share its identity. No party identity is not sent if the parameter `anonymous` is set to `true`.
 
 
-```java
+
+```kotlin
 @Suspendable
-public static EnclaveFlowInitiator initiateFlow(FlowLogic<?> flow, Party receiver, String constraint) throws FlowException {
-    FlowSession session = flow.initiateFlow(receiver);
+@Throws(FlowException::class)
+@JvmStatic
+@JvmOverloads
+fun initiateFlow(flow: FlowLogic<*>, receiver: Party, constraint: String,
+                 anonymous: Boolean = false): EnclaveFlowInitiator {
+    val session = flow.initiateFlow(receiver)
 
     // Read the enclave attestation from the peer.
-    EnclaveInstanceInfo attestation = session.receive(byte[].class).unwrap(EnclaveInstanceInfo::deserialize);
+    val attestation = session.receive(ByteArray::class.java).unwrap { from: ByteArray ->
+        EnclaveInstanceInfo.deserialize(from)
+    }
 
     // The key hash below (the hex string after 'S') is the public key version of sample_private_key.pem
     // In a real app you should remove the SEC:INSECURE part, of course.
     try {
-        EnclaveConstraint.parse(constraint).check(attestation);
-    } catch (InvalidEnclaveException e) {
-        throw new FlowException(e);
+        EnclaveConstraint.parse(constraint).check(attestation)
+    } catch (e: InvalidEnclaveException) {
+        throw FlowException(e)
     }
+    val instance = EnclaveFlowInitiator(flow, session, attestation)
+    instance.sendIdentityToEnclave(anonymous)
 
-    EnclaveFlowInitiator instance = new EnclaveFlowInitiator(flow, session, attestation);
-
-    instance.sendIdentityToEnclave();
-
-    return instance;
+    return instance
 }
 ```
 
-Once the enclave is successfully verified and our identity is authenticated by the enclave, the flow can start
-securely exchanging encrypted messages with the enclave through the `EnclaveFlowInitiator` instance returned,
-which implements a simple send/receive API that encrypts and decrypts the outgoing and incoming data in the
-form of byte arrays.
-The send and receive methods use the the PostOffice API and the `EnclaveFlowInitiator` class holds a map
-of PostOffice instances per topic, where the default topic is the session's flow id and, so far, one extra 
-topic is used for the authentication message that is sent via `sendIdentityToEnclave()`.
+Once the enclave is successfully verified, and our identity is authenticated by the enclave (if we decided to share our identity),
+the flow can start securely exchanging encrypted messages with the enclave through the `EnclaveFlowInitiator` instance returned,
+which implements a simple send/receive API that encrypts and decrypts the outgoing and incoming data in the form of byte arrays.
+The send and receive methods use the PostOffice API. The `EnclaveFlowInitiator` class holds one PostOffice instance which
+has the topic set to the session's flow id.
 
-```java
+```kotlin
 @Suspendable
-@NotNull
-private byte[] sendAndReceive(String topic, byte[] messageBytes) throws FlowException {
-    sendToEnclave(topic, messageBytes);
-    return receiveFromEnclave();
+@Throws(FlowException::class)
+fun sendAndReceive(messageBytes: ByteArray): ByteArray {
+    sendToEnclave(messageBytes)
+    return receiveFromEnclave()
 }
 
 @Suspendable
-private void sendToEnclave(String topic, byte[] messageBytes) throws FlowException {
-    PostOffice postOffice = getOrCreatePostOffice(topic);
-    byte[] encryptedMail = postOffice.encryptMail(messageBytes);
-    session.send(encryptedMail);
+@Throws(FlowException::class)
+private fun sendToEnclave(messageBytes: ByteArray) {
+    val encryptedMail = postOffice.encryptMail(messageBytes)
+    session.send(encryptedMail)
 }
 
 @Suspendable
-@NotNull
-public byte[] receiveFromEnclave() throws FlowException {
-    PostOffice postOffice = postOffices.get(flowTopic);
-    EnclaveMail reply = session.receive(byte[].class).unwrap((mail) -> {
+@Throws(FlowException::class)
+fun receiveFromEnclave(): ByteArray {
+    val reply: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray ->
         try {
-            return postOffice.decryptMail(mail);
-        } catch (IOException e) {
-            throw new FlowException("Unable to decrypt mail from Enclave", e);
+            postOffice.decryptMail(mail)
+        } catch (e: IOException) {
+            throw FlowException("Unable to decrypt mail from Enclave", e)
         }
-    });
-    return reply.getBodyAsBytes();
+    }
+    return reply.bodyAsBytes
 }
 ```
 
 # Authenticating sender's identity
 
 The enclave can authenticate a sender's identity that belongs to a network where nodes are identified by a X.509
-certificate and the network is controlled by a certificate authority like in a Corda network.
+certificate, and the network is controlled by a certificate authority like in a Corda network.
 
 The network CA root certificate's public key must be stored in the enclave's resource folder (in this example the 
 path is enclave/src/main/resources/) in a file named trustedroot.cer, so that the enclave can validate the sender
 identity.
 
-!!! important
-    If you don't need to identify sending parties and plan to use anonymous mode messaging instead, you can ignore or remove the trustedroot.cer certificate file. In this case, do not forget to initiate flows in anonymous mode to avoid a flow exception.
-
 The identity is set up by the `EnclaveFlowInitiator` class during authentication and sent to the enclave who 
-verifies it.
+verifies it. Please be aware that the first byte of the identity message indicates whether a party wants to remain
+anonymous or not. If a party decides to remain anonymous, the identity message is padded with zeros to prevent
+anyone in the middle from using statistical analysis to guess whether a party is anonymous or not. If a party decides to authenticate
+itself, the remaining bytes represent the party's identity.
 
-```java
+```kotlin
 @Suspendable
-private SenderIdentity buildSenderIdentity() {
-    byte[] sharedSecret = encryptionKey.getPublicKey().getEncoded();
-    PublicKey signerPublicKey = flow.getOurIdentity().getOwningKey();
-    DigitalSignature signature = flow.getServiceHub().getKeyManagementService().sign(
-            sharedSecret, signerPublicKey).withoutKey();
-
-    CertPath signerCertPath = flow.getOurIdentityAndCert().getCertPath();
-    return  SenderIdentity.create(signerCertPath, signerPublicKey, signature.getBytes());
+private fun buildMailerIdentity(): SenderIdentityImpl {
+    val sharedSecret = encryptionKey.publicKey.encoded
+    val signerPublicKey = flow.ourIdentity.owningKey
+    val signature = flow.serviceHub.keyManagementService.sign(sharedSecret, signerPublicKey).withoutKey()
+    val signerCertPath = flow.ourIdentityAndCert.certPath
+    return SenderIdentityImpl(signerCertPath, signature.bytes)
 }
 
 @Suspendable
-private void sendIdentityToEnclave() throws FlowException {
-    if(!authenticated) {
-        SenderIdentity identity = buildSenderIdentity();
-        sendAndReceive(authTopic, identity.serialize());
-        authenticated = true;        
+@Throws(FlowException::class)
+fun sendIdentityToEnclave(isAnonymous: Boolean) {
+
+    val serializedIdentity = getSerializedIdentity(isAnonymous)
+    sendToEnclave(serializedIdentity)
+
+    val mail: EnclaveMail = session.receive(ByteArray::class.java).unwrap { mail: ByteArray ->
+        try {
+            postOffice.decryptMail(mail)
+        } catch (e: IOException) {
+            throw FlowException("Unable to decrypt mail from Enclave", e)
+        }
     }
+
+    if (!mail.topic.contentEquals("$flowTopic-ack"))
+        throw FlowException("The enclave could not validate the identity sent")
 }
 ```
 
 When the enclave successfully validates the identity, it stores it in a key based cache. Subsequent messages
 from the same sender in the same session are paired with the cached identity which is then available from
-within the `receiveCordaMail` method, accessible via the `getAuthenticatedSenderIdentity` method.
-
-The SenderIdentity interface has methods to query the identity verification status, X.509 name, and public
-key.
+within the `receiveMail` method through the extra parameter called `identity`. This identity can be used to uniquely 
+identify a sender but be aware that the parameter might be null if the user decides to remain anonymous.
 
 ```java
 @Override
-protected void receiveCordaMail(long id, CordaEnclaveMail mail, String routingHint) {
+protected void receiveMail(long id, EnclaveMail mail, String routingHint, SenderIdentity identity) {
     String reversedString = reverse(new String(mail.getBodyAsBytes()));
-    SenderIdentity identity = mail.getSenderIdentity();
 
-    String responseString = String.format("Reversed string: %s; Sender anonymous: %b; Sender name: %s",
-            reversedString,
-            identity.isAnonymous(),
-            identity.getName());
+    String responseString;
+    if (identity == null) {
+        responseString = String.format("Reversed string: %s; Sender name: <Anonymous>", reversedString);
+    } else {
+        responseString = String.format("Reversed string: %s; Sender name: %s", reversedString, identity.getName());
+    }
 
     // Get the PostOffice instance for responding back to this mail. Our response will use the same topic.
     final EnclavePostOffice postOffice = postOffice(mail);
@@ -322,6 +335,17 @@ protected void receiveCordaMail(long id, CordaEnclaveMail mail, String routingHi
     postMail(reply, routingHint);
 }
 ```
+
+The method `receiveMail` contains the enclave logic and therefore can contain any logic necessary to meet the business requirements.
+For the example above, the enclave simply reverses a string and returns the result back with the sender name if the party
+decided not to be anonymous. The mail parameter contains some metadata, and the data which is going to be processed by the enclave.
+The call `mail.getBodyAsBytes()` returns the data that is going to be processed by the enclave. As mention previously, the `identity`
+parameter object contains the identity of the sender or is set to null if the sender decided to remain anonymous.
+
+!!! important
+    Contrary to the 'hello world' project, the method `receiveMail` contains an extra parameter called identity. Even though
+    technically this is an overload, the original is final and can't be used.
+
 ## Unit testing
 
 The unit tests are completely normal for Corda. However, as the code above will load a real or simulated Linux enclave,

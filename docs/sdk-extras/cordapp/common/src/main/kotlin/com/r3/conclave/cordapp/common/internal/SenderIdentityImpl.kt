@@ -69,11 +69,6 @@ class SenderIdentityImpl(
     override val publicKey: PublicKey get() = signerCertificate.publicKey
 
     /**
-     * A flag for the receiver of the mail indicating that this is a verified sender identity
-     */
-    override val isAnonymous: Boolean = false
-
-    /**
      * Serializes the [SenderIdentity] instance into a byte array.
      *
      * Used by the mail sender to serialize the [SenderIdentity] instance and privately send it to the Enclave message

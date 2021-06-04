@@ -2,6 +2,7 @@ package com.r3.conclave.cordapp.sample.enclave;
 
 import com.r3.conclave.enclave.EnclavePostOffice;
 import com.r3.conclave.cordapp.common.SenderIdentity;
+import com.r3.conclave.mail.EnclaveMail;
 
 import java.nio.charset.StandardCharsets;
 
@@ -17,15 +18,15 @@ public class ReverseEnclave extends CordaEnclave {
     }
 
     @Override
-    protected void receiveCordaMail(long id, CordaEnclaveMail mail, String routingHint) {
+    protected void receiveMail(long id, EnclaveMail mail, String routingHint, SenderIdentity identity) {
         String reversedString = reverse(new String(mail.getBodyAsBytes()));
-        SenderIdentity identity = mail.getSenderIdentity();
 
-        String responseString = String.format("Reversed string: %s; Sender anonymous: %b; Sender name: %s",
-                reversedString,
-                identity.isAnonymous(),
-                identity.getName()
-        );
+        String responseString;
+        if (identity == null) {
+            responseString = String.format("Reversed string: %s; Sender name: <Anonymous>", reversedString);
+        } else {
+            responseString = String.format("Reversed string: %s; Sender name: %s", reversedString, identity.getName());
+        }
 
         // Get the PostOffice instance for responding back to this mail. Our response will use the same topic.
         final EnclavePostOffice postOffice = postOffice(mail);

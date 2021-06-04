@@ -66,17 +66,14 @@ object EnclaveClientHelper {
     @JvmStatic
     @JvmOverloads
     fun <T : EnclaveHostService> initiateResponderFlow(flow: FlowLogic<*>, counterPartySession: FlowSession,
-                                                       serviceType: Class<T>,
-                                                       anonymous: Boolean = false): EnclaveFlowResponder {
+                                                       serviceType: Class<T>): EnclaveFlowResponder {
         // Start an instance of the enclave hosting service
         val host = flow.serviceHub.cordaService(serviceType)
         // Send the other party the enclave identity (remote attestation) for verification.
         counterPartySession.send(host.attestationBytes)
         val instance = EnclaveFlowResponder(flow, counterPartySession, host)
-        if (!anonymous) {
-            // Relay the initial identity message to the enclave and relay the response back
-            instance.relayMessageToFromEnclave()
-        }
+        // Relay the initial identity message to the enclave and relay the response back
+        instance.relayMessageToFromEnclave()
         return instance
     }
 }

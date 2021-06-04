@@ -1,6 +1,5 @@
 package com.r3.conclave.cordapp.sample.enclave
 
-import com.r3.conclave.cordapp.common.AnonymousSender
 import com.r3.conclave.cordapp.common.SenderIdentity
 import com.r3.conclave.cordapp.common.internal.SenderIdentityImpl
 import com.r3.conclave.enclave.Enclave
@@ -60,38 +59,19 @@ abstract class CordaEnclave : Enclave() {
 
     /**
      * Retrieve a cached identity based on encrypted public key of the sender.
-     * @return the sender's identity if the sender sent it, an anonymous identity otherwise.
+     * @return the sender's identity if the sender sent it, null otherwise.
      */
-    private fun getSenderIdentity(authenticatedSenderKey: PublicKey): SenderIdentity {
+    private fun getSenderIdentity(authenticatedSenderKey: PublicKey): SenderIdentity? {
         synchronized(identities) {
-            return identities.computeIfAbsent(authenticatedSenderKey) { key: PublicKey? ->
-                AnonymousSender(key!!)
-            }
-        }
-    }
-
-    /**
-     * This class extends the EnclaveMail by adding Corda/CorDapp application concerns. Currently this is limited to
-     * the sender identity.
-     */
-    class CordaEnclaveMail private constructor(private val mail: EnclaveMail, val senderIdentity: SenderIdentity) :
-        EnclaveMail {
-        override fun getSequenceNumber(): Long = mail.sequenceNumber
-        override fun getTopic(): String = mail.topic
-        override fun getEnvelope(): ByteArray? = mail.envelope
-        override fun getAuthenticatedSender(): PublicKey = mail.authenticatedSender
-        override fun getBodyAsBytes(): ByteArray = mail.bodyAsBytes
-
-        companion object {
-            internal fun create(mail: EnclaveMail, senderIdentity: SenderIdentity) =
-                CordaEnclaveMail(mail, senderIdentity)
+            return identities[authenticatedSenderKey]
         }
     }
 
     /**
      * The default Enclave's message callback that is invoked when a mail has been delivered by the host
      * is overridden here to handle Corda/CorDapp application level concerns. Messages that are not meant to be
-     * processed at this level, are forwarded to the [CordaEnclave.receiveCordaMail] callback.
+     * processed at this level, are forwarded to the abstract [CordaEnclave.receiveMail] callback which is defined
+     * by the derived class.
      */
     final override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
         if (isTopicFirstMessage(mail)) {
@@ -103,13 +83,14 @@ abstract class CordaEnclave : Enclave() {
             postMail(reply, routingHint)
         } else {
             val identity = getSenderIdentity(mail.authenticatedSender)
-            val cordaMail = CordaEnclaveMail.create(mail, identity)
-            receiveCordaMail(id, cordaMail, routingHint)
+            receiveMail(id, mail, routingHint, identity)
         }
     }
 
     /**
-     * Invoked when a [CordaEnclave.receiveMail] forwards the message ahead for further processing.
+     * Invoked when a mail has been delivered by the host (via [EnclaveHost.deliverMail]), successfully decrypted and authenticated.
+     * This method is similar to the same overload in [Enclave] but with an additional optional parameter which is the verified [SenderIdentity]
+     * of the sender, verified against the root certificate hardcoded into this enclave ([trustedRootCertificate]).
      *
      * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.deliverMail`. In Java, checked
      * exceptions can be made to propagate by rethrowing them in an unchecked one.
@@ -120,15 +101,22 @@ abstract class CordaEnclave : Enclave() {
      * host that you wish to reply to whoever provided it with this mail (e.g. connection ID). Note that this may
      * not be the same as the logical sender of the mail if advanced anonymity techniques are being used, like
      * users passing mail around between themselves before it's delivered.
+     * @param identity The identity of the sender validated by the enclave. This can be used to uniquely identify the sender.
+     * Please be aware that this parameter is null if the sender decides to keep its anonymity.
      */
-    protected abstract fun receiveCordaMail(id: Long, mail: CordaEnclaveMail, routingHint: String?)
+    protected abstract fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?, identity: SenderIdentity?)
 
     companion object {
         private const val topicFirstMessageSequenceNumber = 0L
         private val emptyBytes = ByteArray(0)
         private val identities: HashMap<PublicKey, SenderIdentity> = HashMap()
         private const val trustedRootCertificateResourcePath = "/trustedroot.cer"
-        private val trustedRootCertificate: X509Certificate = getTrustedRootCertificate(trustedRootCertificateResourcePath)
+
+        /**
+         * The network CA root certificate used to validate the identity shared by the sender
+         */
+        @JvmStatic
+        val trustedRootCertificate: X509Certificate = getTrustedRootCertificate(trustedRootCertificateResourcePath)
 
         private fun getTrustedRootCertificate(trustedRootCertificateResourcePath: String): X509Certificate {
             try {
