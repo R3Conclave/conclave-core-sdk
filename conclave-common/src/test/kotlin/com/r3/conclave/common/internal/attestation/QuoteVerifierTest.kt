@@ -18,8 +18,13 @@ import kotlin.random.Random
 
 class QuoteVerifierTest {
     companion object {
-        fun loadSampleDcapAttestation(): DcapAttestation {
-            val input = QuoteVerifierTest::class.java.getResourceAsStream("EnclaveInstanceInfo-DCAP.ser").readFully()
+        fun loadSampleDcapAttestation(iceLake: Boolean = false): DcapAttestation {
+            val input = QuoteVerifierTest::class.java.getResourceAsStream(
+                if (iceLake)
+                    "EnclaveInstanceInfo-DCAP-IceLake.ser"
+                else
+                    "EnclaveInstanceInfo-DCAP.ser"
+            ).readFully()
             return (EnclaveInstanceInfo.deserialize(input) as EnclaveInstanceInfoImpl).attestation as DcapAttestation
         }
     }
@@ -27,7 +32,13 @@ class QuoteVerifierTest {
     @Test
     fun `perfect quote does not fail`() {
         // EnclaveInstanceInfo.deserialize calls QuoteValidator.validate internally
-        assertDoesNotThrow { loadSampleDcapAttestation() }
+        assertDoesNotThrow { loadSampleDcapAttestation(iceLake = false) }
+    }
+
+    @Test
+    fun `perfect quote does not fail for IceLake`() {
+        // EnclaveInstanceInfo.deserialize calls QuoteValidator.validate internally
+        assertDoesNotThrow { loadSampleDcapAttestation(iceLake = true) }
     }
 
     @Test
