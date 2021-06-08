@@ -571,7 +571,8 @@ service. There are three kinds of attestation service:
 1. EPID. This older protocol is supported by some desktop/laptop class Intel CPUs. The EPID protocol includes some
    consumer privacy cryptography, and involves talking directly to Intel's IAS service to generate an attestation.
    For that you need to obtain an API key and service provider ID from Intel. You can sign-up easily and for free. 
-   [Learn more about IAS](ias.md).
+   [Learn more about IAS](ias.md). Please note that Intel does not provide EPID attestation support for Xeon scalable CPUs
+   including Ice Lake and future generations. You need to use DCAP attestation on these platforms.
 2. Azure DCAP. The _datacenter attestation primitives_ protocol is newer and designed for servers. When running on a
    Microsoft Azure Confidential Compute VM or Kubernetes pod, you don't need any parameters. It's all configured out of 
    the box.

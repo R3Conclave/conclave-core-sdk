@@ -98,6 +98,11 @@ is available where you can find the development team during UK office hours (GMT
     There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
     you might need to make to get your current project building with Conclave 1.1.
 
+1. **Conclave 1.1 has been tested on the latest 3rd Gen Intel Xeon Scalable processors, also known as Ice Lake Xeon CPUs.**
+   These CPUs bring a number of enhancements for Conclave applications, especially in the amount of memory available
+   for use inside enclaves where the limit has been increased from typically around 95MB up to 512GB per CPU depending
+   on the platform. You do not need to make any changes to your application to support these new CPUs except
+   to ensure you are using DCAP attestation as Xeon Scalable processors do not support EPID.
 1. :jigsaw: **New feature!** Mock mode has been extended so you can now specify 'mock' as an enclave mode and use 
    your regular host rather than having to modify your code to use a special build of your host. A new `mockEnclave` 
    property has been added to `EnclaveHost` that can be used in mock mode to allow access to the enclave instance

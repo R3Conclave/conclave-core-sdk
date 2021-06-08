@@ -20,6 +20,11 @@ where the IP address doesn't need to be hidden (because it's public in DNS to be
 aren't helpful and thus there is DCAP (_datacenter attestation primitives_). DCAP requires more modern hardware 
 but is otherwise simpler and more robust. You may also see DCAP referred to as "ECDSA attestation".
 
+!!! important
+    Intel does not provide EPID attestation support on any Xeon Scalable processors. This includes Ice Lake Xeon CPUs and any future
+    generations. Please ensure you are using DCAP attestation on these platforms.
+
+
 In DCAP repeating attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed 
 machine obtains a machine certificate from Intel via the cache which may then be persisted to disk. All this is
 automated for you.
@@ -101,6 +106,13 @@ The runtime will use the first `.so` it encounters in the search order below:
 ```
 Should you decide to use a bundled version (recommended), ensure the files listed above don't exist (delete or rename
 them if necessary) and skip the rest of this section.
+
+!!! important
+    The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs as well as existing
+    CPUs. However, if Azure extends their offerings to include new platforms, or if you attempt to use a new generation
+    system such as a multi-CPU Ice Lake platform then the bundled Azure client plugin may not work and you might see an error
+    when attempting to load your enclave. In this case [follow the instructions below](#azure-client-plugin) to 
+    build/install an updated version of the Azure client plugin that supports the platform.
 
 You may want to set the Azure DCAP client logging level to FATAL as the default setting is fairly verbose:
 ```sh
