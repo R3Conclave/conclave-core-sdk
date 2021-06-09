@@ -1,8 +1,0 @@
-.gradle
-run/
-build/
-bin/
-lib/
-output/
-gradle.properties
-nohup.out
