@@ -236,23 +236,17 @@ Specify the enclave's runtime environment, product ID and revocation level:
 conclave {
     productID = 1
     revocationLevel = 0
-    runtime = graalvm_native_image
 }
 ```
 
 These settings are described in detail in the page on [enclave configuration](enclave-configuration.md). A summary
 of these settings follows:
 
-The **runtime** setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
-`graalvm_native_image`. If the setting is omitted then it defaults to `graalvm_native_image`. See
-[Architecture overview](architecture.md) for details on the differences between the two supported runtime
-environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. 
-
-Conclave needs access to a Linux build environment in order to build enclaves with the `graalvm_native_image` runtime. 
-On MacOS and Windows this is automatically created during the build process using Docker. If you do not have Docker
-installed then the build will generate an error prompting you to switch to using either the `avian` runtime or to
-install Docker on your system. Once Docker is installed and added to your `PATH` environment variable you can proceed
-to build `graalvm_native_image` enclaves. Docker is not required for enclaves using the `avian` runtime.
+Conclave needs access to a Linux build environment in order to build enclaves. 
+On MacOS and Windows this is automatically created during the build process using Docker. If you do not have Docker 
+installed then the build will generate an error prompting you to install Docker on your system. Once Docker is installed 
+and added to your `PATH` environment variable you can proceed to build Simulation, Debug or Release mode enclaves.
+Docker is not required if you are using a Linux system.
 
 The **product ID** is an arbitrary number that can be used to distinguish between different enclaves produced by the same
 organisation (which may for internal reasons wish to use a single signing key). This value should not change once you
@@ -295,8 +289,6 @@ conclave {
         mrsignerSignature = file("../signing/signature.bin")
         mrsignerPublicKey = file("../signing/external_signing_public.pem")
     }
-
-    runtime = graalvm_native_image
 }
 ```
 

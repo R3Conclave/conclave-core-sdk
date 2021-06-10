@@ -98,6 +98,13 @@ is available where you can find the development team during UK office hours (GMT
     There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
     you might need to make to get your current project building with Conclave 1.1.
 
+!!! Deprecation
+    The Avian runtime is deprecated as of Conclave 1.1. Previously Conclave gave you the choice of whether to use Avian 
+    or GraalVM native image as the runtime environment inside your enclave. Enclaves built with GraalVM native image
+    have many benefits over Avian enclaves, including enhanced security, performance and capabilities. Therefore 
+    new projects should not use the Avian runtime. References to using Avian have been removed from the documentation
+    for Conclave 1.1, and the next release of SDK will not include the capability to build enclaves that use the Avian runtime.
+
 1. **Conclave 1.1 has been tested on the latest 3rd Gen Intel Xeon Scalable processors, also known as Ice Lake Xeon CPUs.**
    These CPUs bring a number of enhancements for Conclave applications, especially in the amount of memory available
    for use inside enclaves where the limit has been increased from typically around 95MB up to 512GB per CPU depending

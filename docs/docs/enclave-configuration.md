@@ -38,7 +38,6 @@ from your configuration.
 
 ```groovy
 conclave {
-    runtime = graalvm_native_image
     productID = 1                       // Mandatory
     revocationLevel = 0                 // Mandatory
     maxHeapSize = "256m"
@@ -58,20 +57,6 @@ conclave {
 ```
 
 Each option is described below:
-
-### runtime
-_Default:_ `graalvm_native_image`
-
-The runtime setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
-`graalvm_native_image`. If the setting is omitted then it defaults to `graalvm_native_image`. See
-[Architecture overview](architecture.md) for details on the differences between the two supported runtime
-environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. 
-
-Conclave needs access to a Linux build environment in order to build enclaves with the `graalvm_native_image` runtime. 
-On macOS and Windows this is automatically created during the build process using Docker. If you do not have Docker
-installed then the build will generate an error prompting you to switch to using either the `avian` runtime or to
-install Docker on your system. Once Docker is installed and added to your `PATH` environment variable you can proceed
-to build `graalvm_native_image` enclaves. Docker is not required for enclaves using the `avian` runtime.
 
 ### productID
 _Default: None. You must provide a value_ 
@@ -203,8 +188,7 @@ thread that runs inside the enclave.
 ### supportLanguages
 _Default:_ `""`
 
-A comma separated list of languages to support though the polyglot context capability provided by GraalVM that
-is available when using `graalvm_native_image` enclaves.
+A comma separated list of languages to support using the polyglot context capability provided by GraalVM.
 
 This allows for code in the supported languages to be parsed and invoked by the enclave giving the ability 
 to deploy dynamic code, or to develop part of your enclave logic in a different language.
@@ -213,9 +197,6 @@ The current version of conclave only supports JavaScript so the value for this s
 default empty string or `"js"` indicating the enclave should provide support for JavaScript polyglot contexts.
 
 See [this page on running JavaScript in your enclave](javascript.md) for details on how to use this setting.
-
-!!! tip
-    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
 
 ### simulation, debug and release
 
@@ -232,9 +213,6 @@ of Graal's reference manual.
 This allows for code which rely on reflection to specify which classes, methods, fields and their properties
 will be available at run time.
 
-!!! tip
-    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
-
 ### serializationConfigurationFiles
 _Default:_ empty list
 
@@ -244,5 +222,3 @@ documentation file.
 
 This allows to specify classes which are expected to be serialized using Java serialization.
 
-!!! tip
-    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.

@@ -42,7 +42,7 @@ entire application in "simulation mode". Alternatively, for day to day developme
 is plenty sufficient and allows you to debug into enclave calls as well. Compiling a real enclave
 is only needed for integration testing against the embedded JVM, or real deployment.
 
-Secondly, when building enclaves using the `graalvm_native_image` runtime, Conclave internally uses the C++ compiler
+Secondly, when building enclaves Conclave internally uses the C++ compiler
 gcc. This is automatically installed when building on Windows and macOS but on Linux you need to make sure you have
 installed gcc yourself. If your build system uses the aptitude package manager then you can install everything you need with
 this command:
