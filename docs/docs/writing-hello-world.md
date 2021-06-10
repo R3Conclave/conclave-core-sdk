@@ -415,8 +415,7 @@ instead of simulation mode. When we want to switch to loading either a debug or 
 to ensure the platform supports SGX.
 
 By adding the code below to the main method we can determine whether the platform can load debug and release 
-enclaves. This method reports the actual hardware status even if you are currently working with simulation 
-enclaves.
+enclaves. This method reports the actual hardware status even if you are currently working with mock or simulation enclaves.
 
 ```java hl_lines="2-7"
 public static void main(String[] args) throws EnclaveLoadException {
