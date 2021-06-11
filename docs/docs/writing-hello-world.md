@@ -1045,14 +1045,16 @@ ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
 
 ### Integrating enclave tests in your host project
 
-When you want to test your enclave on real SGX hardware or in a simulated SGX environment you need to define your tests
-in a project separate from the the enclave project. A suitable place for your tests would be to define them as part of
+When you want to test your enclave on real SGX hardware or in a simulated SGX environment **you need to define your tests
+in a project separate from the enclave project.** A suitable place for your tests would be to define them as part of
 the host project tests.
 
 Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs 
 to be loaded with `EnclaveHost.load`. By default this will run the tests in a simulated SGX environment and will require
 the tests to be executed within Linux. In addition, testing on real hardware will require the tests to be executed within
 Linux on a system that supports SGX.
+
+
 
 ```java
 @EnabledOnOs(OS.LINUX)
