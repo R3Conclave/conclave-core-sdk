@@ -105,7 +105,7 @@ The runtime will use the first `.so` it encounters in the search order below:
 /usr/lib/libdcap_quoteprov.so
 ```
 Should you decide to use a bundled version (recommended), ensure the files listed above don't exist (delete or rename
-them if necessary) and skip the rest of this section.
+them if necessary).
 
 !!! important
     The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs as well as existing
@@ -119,7 +119,7 @@ You may want to set the Azure DCAP client logging level to FATAL as the default 
 export AZDCAP_DEBUG_LOG_LEVEL=FATAL
 ```
 
-If you would like to configure the DCAP plugin yourself, keep reading.
+If you would like to configure the DCAP plugin yourself, keep reading. If you are using bundled version, you can skip the rest of this section.
 
 #### Azure client plugin
 
