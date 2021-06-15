@@ -10,10 +10,10 @@ the performance difference and how they vary between variety of benchmarks taken
 [Computer Language Benchmarks Game](https://salsa.debian.org/benchmarksgame-team/benchmarksgame/).
 
 !!! note
-The "empty" benchmark is measuring the overhead of entering and exiting the enclave, without doing any
-work. As entering/exiting triggers a variety of hardware mechanisms designed to block side channel attacks this is
-naturally expensive relative to the cost of a regular function call, however, once the enclave is doing real work
-this transition cost becomes less relevant.
+	The "empty" benchmark is measuring the overhead of entering and exiting the enclave, without doing any
+	work. As entering/exiting triggers a variety of hardware mechanisms designed to block side channel attacks this is
+	naturally expensive relative to the cost of a regular function call, however, once the enclave is doing real work
+	this transition cost becomes less relevant.
 
 | Benchmark     | Environment|        Score |          Error |  Units |
 |---------------|------------|--------------|----------------|--------|
