@@ -553,7 +553,7 @@ An attestation doesn't inherently expire but because the SGX ecosystem is always
 some frequency with which it expects the host code to refresh the `EnclaveInstanceInfo`. At present this is done by
 stopping/closing and then restarting the enclave.
 
-## Configurating attestation
+## Configure attestation
 
 To use SGX remote attestation for real we need to do some additional work. Remember how we wrote 
 `enclave.start(null, null);` above? The first parameter contains configuration data required to use an attestation
@@ -793,7 +793,7 @@ useless for the host to mis-direct mail.
 ### Mail commands
 
 The second parameter to `EnclaveHost.start` is a callback which returns a list of `MailCommand` objects from the enclave.
-There are two commands the host can receive:
+There are three commands the host can receive:
 
 1. **Post mail**. This is when the enclave wants to send mail over the network to a client. The enclave may provide a
    routing hint with the mail to help the host route the message. The host is also expected to safely store the message
@@ -804,6 +804,10 @@ There are two commands the host can receive:
    For example, the conversation with the client has reached its end and so it acknowledges all the mail in that thread;
    or the enclave can checkpoint in the middle by creating a mail to itself which condenses all the previous mail, which
    are then all acknowledged.
+1. **AcknowledgementReceipt**. The enclave will also send this when acknowledging mail. When the host deletes acknowledged mails,
+   the remaining mails will not be in the default sequence (consecutive integers starting from 0).  In addition to deleting
+   acknowledged mail, the host has to keep the receipt data and present it to `host.start()` at the next enclave restart,
+   so the enclave knows what sequence to expect.
 
 The host receives these commands grouped together within the scope of a single `EnclaveHost.deliverMail` or `EnclaveHost.callEnclave`
 call. This allows the host to add transactionality when processing the commands. So for example, the delivery of the mail
