@@ -229,11 +229,6 @@ One way of generating the reflection and serialization configuration files is by
 The agent will track usage of dynamic features and generate the configuration files when run
 against a regular Java VM.
 
-It can be enabled on the command line of the GraalVM `java` command:
-```bash
-$JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/ ...
-```
-
 To ensure all of the necessary classes/resources are included in the configuration files you should ensure
 all enclave code paths are executed, for example by writing extensive tests and running them in `mock` mode.
 
@@ -257,11 +252,7 @@ Conclave ships with a Linux [GraalVM](https://github.com/graalvm/graalvm-ce-buil
 containing the `native-image-agent`, which can also be used via
 [container-gradle](container-gradle.md). As an alternative to [container-gradle](container-gradle.md)
 you can download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.0.0)
-for your operating system and ensure `native-image` is installed:
-
-```bash
-$ $GRAALVM_HOME/bin/gu install native-image
-```
+for your operating system. See both options below.
 
 ### Example using Conclave's GraalVM
 
@@ -299,13 +290,17 @@ which are not part of the `enclave` code:
 }
 ```
 
-1. Run the `host`:
+1. Run the host:
 
     === "Linux"
-        `$ ./gradlew -PgenerateConfigFiles -PenclaveMode=mock host:run`
+		```bash
+		./gradlew -PgenerateConfigFiles -PenclaveMode=mock host:run
+		```
 
     === "macOS"
-        `$ <path to Conclave SDK>/scripts/container-gradle -PgenerateConfigFiles -PenclaveMode=mock host:run`
+		```
+		../scripts/container-gradle -PgenerateConfigFiles -PenclaveMode=mock host:run
+		```
 
     !!! tip
         This process works best when the JDK used to generate the configuration files is the same version that will
@@ -313,14 +308,24 @@ which are not part of the `enclave` code:
         Check [Alternative JDKs](container-gradle.md#alternative-jdks) for details on how to ensure this is the case.
 
 1. Trigger `enclave` logic by running `client` requests:
+	```
+	./gradlew client:run
+	```
 
-    === "Linux"
-        `$ ./gradlew -PenclaveMode=mock client:run`
-
-    === "macOS"
-        `$ <path to Conclave SDK>/scripts/container-gradle -PenclaveMode=mock client:run`
+!!! tip
+	If using MacOS, configuration files will be stored in a docker container. See how to [copy files out of the container](container-gradle.md#copying-files-out-of-the-container).
 
 ### Example using the executable JAR
+
+1. To avoid container-gradle, download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.0.0) for your operating system and [install](https://www.graalvm.org/docs/getting-started/) it. Once you setup your GraalVM, ensure `native-image` is installed:
+	```bash
+	$JAVA_HOME/bin/gu install native-image
+	```
+
+	Also enable [native-image-agent](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#assisted-configuration-of-native-image-builds) on the command line of the GraalVM `java` command:
+	```bash
+	$JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/ ...
+	```
 
 1. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow)
 to the `plugins` section of the `host`'s `build.gradle`:
@@ -331,13 +336,16 @@ plugins {
 ```
 1. Generate the shadow jar:
 ```bash
-$ ./gradlew -PenclaveMode=mock host:shadowJar
+./gradlew -PenclaveMode=mock host:shadowJar
 ```
 Default location should be `host/build/libs/host-all.jar`.
 
 1. Run the host with the agent enabled to generate the configuration files:
 ```bash
-$ $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
+$JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
 ```
 
 1. Trigger `enclave` logic by sending `client` requests.
+```bash
+./gradlew client:run
+```

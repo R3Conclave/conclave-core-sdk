@@ -610,7 +610,9 @@ by debuggers to read/write the enclave's memory.
 
 You will need to run this on an [Azure Confidential VM](https://docs.microsoft.com/en-us/azure/confidential-computing/).
 
-`gradlew -PenclaveMode=debug host:run`
+```bash
+./gradlew -PenclaveMode=debug host:run
+```
 
 ## Encrypted messaging
 
@@ -1089,17 +1091,23 @@ a non-Linux system then you can configure your tests to depend on a mock mode en
 
 Running
 
-```gradlew host:test```
+```
+./gradlew host:test
+```
 
 will execute the test using a simulation enclave, or not at all if the OS is not Linux. You can switch to a debug enclave
 and test on real secure hardware by using the `-PenclaveMode` flag:
 
-```gradlew -PenclaveMode=debug host:test```
+```
+./gradlew -PenclaveMode=debug host:test
+```
 
 Or you can use a mock enclave and test on a non-Linux platform by removing `@EnabledOnOs(OS.LINUX)` and by running this
 command:
 
-```gradlew -PenclaveMode=mock host:test```
+```
+./gradlew -PenclaveMode=mock host:test
+```
 
 !!! tip
     To run the tests in a simulated SGX environment on a non-Linux machine you can use Docker, which manages Linux 
