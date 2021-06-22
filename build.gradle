@@ -4,7 +4,7 @@ plugins {
     id "com.github.ben-manes.versions" version "0.27.0"
     id 'base'
     id 'idea'
-    id 'org.jetbrains.dokka' version '1.4.32-SNAPSHOT'
+    id 'org.jetbrains.dokka' version '1.5.0-SNAPSHOT'
     id 'com.github.jk1.dependency-license-report' version '1.16'
 }
 
@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.4.32-SNAPSHOT")
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.0-SNAPSHOT")
 }
 
 static Map<String, String> createEnvironment(String... names) {
