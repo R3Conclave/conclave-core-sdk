@@ -114,11 +114,18 @@ is available where you can find the development team during UK office hours (GMT
    your regular host rather than having to modify your code to use a special build of your host. A new `mockEnclave` 
    property has been added to `EnclaveHost` that can be used in mock mode to allow access to the enclave instance
    for probing internal state during development and testing.
-   [Learn more about enclave configurations](architecture.md#testing_and_debugging).
+   [Learn more about enclave configurations](architecture.md#testing-and-debugging).
    [See more information about how the API has changed](api-changes.md#1.0-to-1.1)
 1. :jigsaw: **New feature!** When using mock mode you can now specify the configuration of the mock environment,
    allowing parameters such as the `codeHash`, `codeSigningKeyHash` and `tcbLevel` to be modified programatically
-   in your unit tests. See [Mock mode configuration](mockmode.md#mock_mode_configuration) for more details.
+   in your unit tests. See [Mock mode configuration](mockmode.md#mock-mode-configuration) for more details.
+1. :jigsaw: **New feature!** We've updated the bundled [CorDapp sample](writing-cordapps.md) to show how to integrate
+   Corda network identities with Conclave. The node can now log in to the enclave and identify itself by presenting its
+   verified X.509 certificate. The enclave can use this to map the mail sender key to a meaningful X.500 name.
+1. :jigsaw: **New feature!** To better showcase Conclave we've created a [separate repository](https://github.com/R3Conclave/conclave-samples)
+   of enclave samples for you to look and try out. We plan to update this on a more regular basis. In particular we have
+   a [sample](https://github.com/R3Conclave/conclave-samples/tree/master/tribuo-tutorials) running the [Tribuo](https://tribuo.org/)
+   machine learning library inside an enclave.
 1. The Conclave documentation has been improved, fixing a number of errors and updating the format of the Javadocs
    section of the documentation site. The Conclave SDK documentation is packaged along with the SDK so it is automatically 
    displayed in IDEs that support this, including Eclipse and Visual Studio Code. See 
@@ -137,7 +144,7 @@ is available where you can find the development team during UK office hours (GMT
 1. The output of the enclave gradle build has been tidied up, hiding the information that would only normally be
    present on verbose builds. If you want to see the verbose output in your build then just add `--info` to your
    gradle build command line.
-1. Security improvements and bug fixes: improved DCAP certificate validation, add additional bounds checks on some
+1. Security improvements and bug fixes: improved DCAP certificate validation, added additional bounds checks on some
    internal methods, fixes to allow validation of enclave-to-enclave attestations inside an enclave.
 
 ### 1.0
