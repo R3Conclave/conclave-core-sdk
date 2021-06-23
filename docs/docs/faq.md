@@ -225,7 +225,7 @@ Please see the discussion of [side channel attacks](security.md#side-channel-att
 
 ## Development and deployment
 
-### What Kotlin/Java versions are usable?
+### What Java versions are usable?
 
 Please see [System Requirements](system-requirements.md#jdks) for documentation on supported JDKs.
 
