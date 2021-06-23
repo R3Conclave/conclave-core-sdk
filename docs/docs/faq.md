@@ -284,6 +284,20 @@ Args = -H:Whatever
 !!! note
     This doesn't let you alter or override the flags we already specify in order to create a working enclave.
 
+### How do I add resource files to Native Image enclaves?
+
+You can add resource files to the Native Image enclaves by setting the flag `IncludeResources` in the file 
+`src/main/resources/META-INF/native-image/native-image.properties`. As an example, to add a file called `trustedroot.cer`
+to the enclave resources, one should add the following line to the file `native-image.properties`:
+
+```
+Args = -H:IncludeResources=trustedroot.cer
+```
+
+!!! note
+    To add multiple resource files please use a Java regular expression pattern that matches the resource files name to be
+    included in the image. More information can be found in the [GraalVM documentation](https://www.graalvm.org/reference-manual/native-image/Resources/).
+ 
 ## Competing technologies
 
 ### Do you have plans to support AMD SEV?
