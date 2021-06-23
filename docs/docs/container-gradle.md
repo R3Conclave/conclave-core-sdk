@@ -39,6 +39,8 @@ with Java 8, for example.
 If you change `LINUX_JAVA_HOME` then any existing container will be unusable and you'll get an error.
 [Delete the container](#troubleshooting) and re-run the script.
 
+Please go to [System Requirements](system-requirements.md#jdks) for more information on supported JDKs.
+
 ## Copying files out of the container
 
 Changes made inside the container will *not* propagate to disk on macOS. This is deliberate and intended to avoid the

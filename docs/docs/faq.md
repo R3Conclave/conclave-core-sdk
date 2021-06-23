@@ -227,7 +227,7 @@ Please see the discussion of [side channel attacks](security.md#side-channel-att
 
 ### What Kotlin/Java versions are usable?
 
-Inside the enclave you can use Java 8 or 11, and Kotlin 1.4.
+Please see [System Requirements](system-requirements.md#jdks) for documentation on supported JDKs.
 
 ### At which points in time is a connection with Intel needed?
 
