@@ -104,6 +104,8 @@ is available where you can find the development team during UK office hours (GMT
     have many benefits over Avian enclaves, including enhanced security, performance and capabilities. Therefore 
     new projects should not use the Avian runtime. References to using Avian have been removed from the documentation
     for Conclave 1.1, and the next release of SDK will not include the capability to build enclaves that use the Avian runtime.
+    Conclave 1.1 does still allow you to build Avian enclaves on Linux and macOS but you cannot build Avian enclaves
+    on Windows systems.
 
 1. **Conclave 1.1 has been tested on the latest 3rd Gen Intel Xeon Scalable processors, also known as Ice Lake Xeon CPUs.**
    These CPUs bring a number of enhancements for Conclave applications, especially in the amount of memory available
