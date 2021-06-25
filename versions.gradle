@@ -3,7 +3,7 @@ ext {
     // * docs/sdk-extras/hello-world/gradle.properties
     // * docs/sdk-extras/cordapp/gradle.properties
     // * docs/docs/writing-hello-world.md
-    conclave_version = '1.1-RC3'
+    conclave_version = '1.1'
     kotlin_version = '1.4.10'
     kotlinx_serialization_json_version = '1.0.1'
     asm_version = '7.3.1'
