@@ -2,7 +2,8 @@ ext {
     // Make sure to also update the following:
     // * docs/sdk-extras/hello-world/gradle.properties
     // * docs/sdk-extras/cordapp/gradle.properties
-    conclave_version = '1.1-SNAPSHOT'
+    // * docs/docs/writing-hello-world.md
+    conclave_version = '1.2-SNAPSHOT'
     kotlin_version = '1.4.10'
     kotlinx_serialization_json_version = '1.0.1'
     asm_version = '7.3.1'
