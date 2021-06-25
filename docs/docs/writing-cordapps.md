@@ -6,7 +6,7 @@ provide multi-party computation over the peer to peer network. Or look at it the
 communication and identity services to your enclave.
 
 The sample CorDapp builds on the [hello-world](writing-hello-world.md) sample allowing nodes to perform the 
-reverse string task between two nodes, one of which loads the enclave. Smart contracts and identity aren't used in this 
+reverse string task between two nodes, one of which loads the enclave. Smart contracts aren't used in this 
 sample, only flows are needed.
 
 The sample divides the code into several pieces. The packages that _don't_ have `samples` in the name are
