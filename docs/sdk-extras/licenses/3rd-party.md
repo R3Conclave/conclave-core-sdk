@@ -11,6 +11,7 @@ in the same directory as this file.
 
 **[JetBrains / Kotlin](https://github.com/JetBrains/kotlin/)**
 
+Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
 The Apache 2 license applies to all code which is copyright by JetBrains.
 Some portions of the Kotlin codebase contain third-party code, to which different 
 licenses may apply, and are enumerated at: https://github.com/JetBrains/kotlin/blob/master/license/README.md
@@ -115,10 +116,12 @@ http://www.slf4j.org/license.html
 
 **[Google / Guava](https://github.com/google/guava)**  
 
+Copyright Google LLC 
 Apache 2: https://github.com/google/guava/blob/master/COPYING
 
 **[Google / Auto](https://github.com/google/auto)** 
 
+Copyright 2013 Google LLC
 Apache 2: https://github.com/google/auto/blob/master/LICENSE
 
 **[Google / FindBugs JSR305](https://code.google.com/archive/p/jsr-305/)** 
@@ -217,10 +220,14 @@ be found in the supplied sources.zip file.
 
 **[Jimfs](https://github.com/google/jimfs)**
 
+Copyright 2013 Google Inc.
 Apache 2: https://github.com/google/jimfs/blob/master/LICENSE
 
 **[OpenSSL](https://github.com/openssl/openssl)** 
 
+Copyright (c) 1998-2021 The OpenSSL Project
+Copyright (c) 1995-1998 Eric A. Young, Tim J. Hudson
+All rights reserved.
 Apache 2: https://github.com/openssl/openssl/blob/master/LICENSE.txt
 
 **[Azure DCAP client](https://github.com/microsoft/Azure-DCAP-Client)**
@@ -316,8 +323,10 @@ https://zlib.net/zlib_license.html
 
 **[Intel(R) Software Guard Extensions for Linux* OS](https://github.com/intel/linux-sgx)** - 
 
-Conclave incorporates components from the Intel Linux SGX SDK. The set of 
-license terms covering the Intel Linux SGX SDK can be found in linux-sgx-license.txt or at
+BSD License
+Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
+
+The set of license terms covering the Intel Linux SGX SDK can be found in linux-sgx-license.txt or at
 https://github.com/intel/linux-sgx/blob/master/License.txt
 
 **[Noise-Java Library](https://github.com/rweather/noise-java)**
