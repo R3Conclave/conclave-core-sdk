@@ -35,7 +35,6 @@ public class Host {
             System.out.println("This platform supports enclaves in simulation, debug and release mode.");
         } catch (MockOnlySupportedException e) {
             System.out.println("This platform only supports mock enclaves: " + e.getMessage());
-            System.exit(1);
         } catch (EnclaveLoadException e) {
             System.out.println("This platform does not support hardware enclaves: " + e.getMessage());
         }

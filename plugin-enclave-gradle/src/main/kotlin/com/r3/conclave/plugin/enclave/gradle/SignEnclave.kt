@@ -5,12 +5,14 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
+import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 
 open class SignEnclave @Inject constructor(
     objects: ObjectFactory,
     private val enclaveExtension: EnclaveExtension,
-    private val buildType: BuildType
+    private val buildType: BuildType,
+    private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
@@ -38,13 +40,33 @@ open class SignEnclave @Inject constructor(
                     "The resulting enclave will not be loadable on any SGX platform. See Conclave documentation for details")
         }
 
-        commandLine(
-                signTool.get(), "sign",
-                "-key", inputKey.asFile.get(),
-                "-enclave", inputEnclave.asFile.get(),
-                "-out", outputSignedEnclave.asFile.get(),
-                "-config", inputEnclaveConfig.asFile.get()
-            )
+        if (OperatingSystem.current().isWindows) {
+            try {
+                // The input key file may not live in a directory accessible by docker on non-linux
+                // systems. Prepare the file so docker can access it if necessary.
+                val keyFile = linuxExec.prepareFile(inputKey.asFile.get())
+
+                linuxExec.exec(
+                        listOf<String>(
+                                signTool.asFile.get().absolutePath, "sign",
+                                "-key", keyFile.absolutePath,
+                                "-enclave", inputEnclave.asFile.get().absolutePath,
+                                "-out", outputSignedEnclave.asFile.get().absolutePath,
+                                "-config", inputEnclaveConfig.asFile.get().absolutePath
+                        )
+                )
+            } finally {
+                linuxExec.cleanPreparedFiles()
+            }
+        } else {
+            commandLine(
+                    signTool.get(), "sign",
+                    "-key", inputKey.asFile.get(),
+                    "-enclave", inputEnclave.asFile.get(),
+                    "-out", outputSignedEnclave.asFile.get(),
+                    "-config", inputEnclaveConfig.asFile.get()
+                )
+        }
 
         project.logger.lifecycle("Signed enclave binary: $signedEnclavePath")
     }

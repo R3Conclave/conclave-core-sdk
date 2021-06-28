@@ -38,7 +38,6 @@ from your configuration.
 
 ```groovy
 conclave {
-    runtime = graalvm_native_image
     productID = 1                       // Mandatory
     revocationLevel = 0                 // Mandatory
     maxHeapSize = "256m"
@@ -58,20 +57,6 @@ conclave {
 ```
 
 Each option is described below:
-
-### runtime
-_Default:_ `graalvm_native_image`
-
-The runtime setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
-`graalvm_native_image`. If the setting is omitted then it defaults to `graalvm_native_image`. See
-[Architecture overview](architecture.md) for details on the differences between the two supported runtime
-environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. 
-
-Conclave needs access to a Linux build environment in order to build enclaves with the `graalvm_native_image` runtime. 
-On macOS and Windows this is automatically created during the build process using Docker. If you do not have Docker
-installed then the build will generate an error prompting you to switch to using either the `avian` runtime or to
-install Docker on your system. Once Docker is installed and added to your `PATH` environment variable you can proceed
-to build `graalvm_native_image` enclaves. Docker is not required for enclaves using the `avian` runtime.
 
 ### productID
 _Default: None. You must provide a value_ 
@@ -203,8 +188,7 @@ thread that runs inside the enclave.
 ### supportLanguages
 _Default:_ `""`
 
-A comma separated list of languages to support though the polyglot context capability provided by GraalVM that
-is available when using `graalvm_native_image` enclaves.
+A comma separated list of languages to support using the polyglot context capability provided by GraalVM.
 
 This allows for code in the supported languages to be parsed and invoked by the enclave giving the ability 
 to deploy dynamic code, or to develop part of your enclave logic in a different language.
@@ -213,9 +197,6 @@ The current version of conclave only supports JavaScript so the value for this s
 default empty string or `"js"` indicating the enclave should provide support for JavaScript polyglot contexts.
 
 See [this page on running JavaScript in your enclave](javascript.md) for details on how to use this setting.
-
-!!! tip
-    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
 
 ### simulation, debug and release
 
@@ -232,9 +213,6 @@ of Graal's reference manual.
 This allows for code which rely on reflection to specify which classes, methods, fields and their properties
 will be available at run time.
 
-!!! tip
-    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
-
 ### serializationConfigurationFiles
 _Default:_ empty list
 
@@ -244,5 +222,130 @@ documentation file.
 
 This allows to specify classes which are expected to be serialized using Java serialization.
 
+## Assisted Configuration of Native Image Builds
+
+One way of generating the reflection and serialization configuration files is by using
+[native-image-agent](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#assisted-configuration-of-native-image-builds).
+The agent will track usage of dynamic features and generate the configuration files when run
+against a regular Java VM.
+
+To ensure all of the necessary classes/resources are included in the configuration files you should ensure
+all enclave code paths are executed, for example by writing extensive tests and running them in `mock` mode.
+
+When placed under `enclave/src/main/resources/META-INF/native-image` the configuration files will be picked up
+by Gradle when building the `enclave` in `simulation`, `debug` or `release` modes.
+
+Running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause Gradle, JUnit
+or host classes to be present in the configuration files. To avoid this you can configure
+[filters](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#agent-advanced-usage)
+to ensure host code is excluded or you can run the host as an executable JAR and trigger enclave logic
+by running it normally, like you would if you were to deploy it, for example, by sending requests from the
+host and/or client triggering as much of the enclave logic as possible.
+You can use the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow)
+to create an executable JAR which contains all the host's and enclave's dependencies.
+
+It is possible the generated configuration files aren't always correct, meaning you may need to adjust filters
+and/or edit and maintain them throughout the development process. We recommend keeping these files
+version controlled to make maintenance easier.
+
+Conclave ships with a Linux [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.0.0)
+containing the `native-image-agent`, which can also be used via
+[container-gradle](container-gradle.md). As an alternative to [container-gradle](container-gradle.md)
+you can download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.0.0)
+for your operating system. See both options below.
+
+### Example using Conclave's GraalVM
+
+1. Configure the [application](https://docs.gradle.org/6.6.1/userguide/application_plugin.html)
+    plugin on the `host`'s `build.gradle`:
+    ```groovy
+    plugins {
+        id 'application'
+    }
+
+    def graalVMDir = tasks.getByPath(":enclave:untarGraalVM").outputs.files.first()
+    def configurationDir = project(":enclave").projectDir.toPath().resolve("src/main/resources/META-INF/native-image")
+    def filterFile = configurationDir.resolve("filter.json")
+    application {
+        run.dependsOn(":enclave:untarGraalVM")
+        if (project.hasProperty("generateConfigFiles") && properties.get("enclaveMode").toString().toLowerCase() == "mock" != null) {
+            applicationDefaultJvmArgs = [
+                    "-agentpath:$graalVMDir/jre/lib/amd64/libnative-image-agent.so=config-output-dir=$configurationDir," +
+                    "caller-filter-file=$filterFile"
+            ]
+        }
+    }
+    ```
+    Conclave's GraalVM path is obtained from the `untarGraalVM` task of the `enclave` project.
+    The `filter.json` and the configuration files generated by `native-image-agent` will be placed on the `enclave`'s resource directory.
+    The Gradle properties `generateConfigFiles` and `enclaveMode` are used to control when the files should be generated.
+
+1. Create the `enclave/src/main/resources/META-INF/native-image/filter.json` excluding classes expected to be captured by `native-image-agent`
+which are not part of the `enclave` code:
+```json
+{ "rules": [
+    {"excludeClasses": "nonapi.**"},
+    {"excludeClasses": "com.r3.conclave.host.**"}
+]
+}
+```
+
+1. Run the host:
+
+    === "Linux"
+		```bash
+		./gradlew -PgenerateConfigFiles -PenclaveMode=mock host:run
+		```
+
+    === "macOS"
+		```
+		../scripts/container-gradle -PgenerateConfigFiles -PenclaveMode=mock host:run
+		```
+
+    !!! tip
+        This process works best when the JDK used to generate the configuration files is the same version that will
+        subsequently be used to create the enclave's native image.
+        Check [Alternative JDKs](container-gradle.md#alternative-jdks) for details on how to ensure this is the case.
+
+1. Trigger `enclave` logic by running `client` requests:
+	```
+	./gradlew client:run
+	```
+
 !!! tip
-    This setting only applies to enclaves that are built using the `graalvm_native_image` runtime.
+	If using MacOS, configuration files will be stored in a docker container. See how to [copy files out of the container](container-gradle.md#copying-files-out-of-the-container).
+
+### Example using the executable JAR
+
+1. To avoid container-gradle, download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.0.0) for your operating system and [install](https://www.graalvm.org/docs/getting-started/) it. Once you setup your GraalVM, ensure `native-image` is installed:
+	```bash
+	$JAVA_HOME/bin/gu install native-image
+	```
+
+	Also enable [native-image-agent](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#assisted-configuration-of-native-image-builds) on the command line of the GraalVM `java` command:
+	```bash
+	$JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/ ...
+	```
+
+1. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow)
+to the `plugins` section of the `host`'s `build.gradle`:
+```groovy
+plugins {
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+}
+```
+1. Generate the shadow jar:
+```bash
+./gradlew -PenclaveMode=mock host:shadowJar
+```
+Default location should be `host/build/libs/host-all.jar`.
+
+1. Run the host with the agent enabled to generate the configuration files:
+```bash
+$JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
+```
+
+1. Trigger `enclave` logic by sending `client` requests.
+```bash
+./gradlew client:run
+```

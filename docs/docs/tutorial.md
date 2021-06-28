@@ -1,9 +1,10 @@
-# First enclave
+# Compiling and Running your First Enclave
 
 !!! important
 
     * You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
-    * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md).
+    * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md) and 
+        [architecture overview](architecture.md).
 
 You can find a **sample app** in the `hello-world` directory of your SDK. You can use this app as a template 
 for your own if you want a quick start. We will cover:
@@ -41,7 +42,7 @@ entire application in "simulation mode". Alternatively, for day to day developme
 is plenty sufficient and allows you to debug into enclave calls as well. Compiling a real enclave
 is only needed for integration testing against the embedded JVM, or real deployment.
 
-Secondly, when building enclaves using the `graalvm_native_image` runtime, Conclave internally uses the C++ compiler
+Secondly, when building enclaves Conclave internally uses the C++ compiler
 gcc. This is automatically installed when building on Windows and macOS but on Linux you need to make sure you have
 installed gcc yourself. If your build system uses the aptitude package manager then you can install everything you need with
 this command:
@@ -147,8 +148,8 @@ or
 ./gradlew :client:assemble
 ```
 
-`installDist` will behave similarly to _assemble_ except that it won't produce those archives as _build_ or _assemble_.
-Instead, it will create a `host/build/install` and `client/build/install` directories, whose contents are effectively an unpacked _host.tar_ and/or _client.tar_ files.
+`installDist` will behave similarly to _assemble_ except that unlike _build_ or _assemble_, it won't produce the archive files.
+Instead, it will create a `host/build/install` and `client/build/install` directories, whose contents are effectively unpacked _host.tar_ and/or _client.tar_ files.
 ```bash
 ./gradlew installDist
 ```
@@ -160,7 +161,7 @@ or
 
 On Linux you can _run_ your app in two slightly different ways - standalone or using Gradle:
 
-- standalone
+- Standalone
 ```bash
 ./gradlew host:installDist
 cd host/build/install
@@ -172,15 +173,16 @@ cd client/build/install
 ./client/bin/client
 ```
 
-- using Gradle
+- Using Gradle
 ```bash
 ./gradlew :host:run
 ```
 ```bash
 ./gradlew :client:run --args="Reverse me"
 ```
+
 !!! note
-    `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
+    The `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
 
 ## Running the host
 === "Linux"

@@ -51,7 +51,7 @@ class OSDependentToolsTest {
     @Test
     fun getLdFileWindows() {
         val ldFile = windows.getLdFile()
-        assertThat(ldFile).isEqualTo("$conclaveDependenciesDirectory/binutils/ld.exe")
+        assertThat(ldFile).isEqualTo("$conclaveDependenciesDirectory/binutils/ld")
     }
 
     @Test
@@ -69,6 +69,6 @@ class OSDependentToolsTest {
     @Test
     fun getSgxSignWindows() {
         val sgxSign = windows.getSgxSign()
-        assertThat(sgxSign).isEqualTo("$conclaveDependenciesDirectory/sign-tool/sgx_sign.exe")
+        assertThat(sgxSign).isEqualTo("$conclaveDependenciesDirectory/sign-tool/sgx_sign")
     }
 }

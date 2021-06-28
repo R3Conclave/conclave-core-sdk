@@ -8,6 +8,11 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.IOException
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
@@ -39,11 +44,44 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             } catch (e: Exception) {
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves on non-Linux platforms. "
-                            + "Try installing Docker or setting 'runtime = avian' in your enclave build.gradle file instead. "
+                            + "Please install Docker and rerun your build. "
                             + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
                             + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
                 )
             }
+        }
+    }
+
+    /**
+     * Prepare a file for use by a Docker invocation by copying it into a temporary directory
+     * that lives in the project folder. The temporary directory and all files contained within
+     * are deleted when cleanPreparedFiles() is called.
+     */
+    fun prepareFile(file: File) : File {
+        return when (OperatingSystem.current().isLinux) {
+            true -> file
+            false -> {
+                val tmp = File("${baseDirectory.get()}/.linuxexec")
+                tmp.mkdir()
+                val newFile = File.createTempFile(file.nameWithoutExtension, file.extension, tmp)
+                // The source file may not exist if this is an output file. Let the actual command being
+                // invoked handle any problems with missing/incorrect files
+                try {
+                    Files.copy(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                } catch (e: IOException) {
+                }
+                newFile
+            }
+        }
+    }
+
+    /**
+     * Remove any temporary files created by the invocation, including all files prepared
+     * by a call to prepareFile().
+     */
+    fun cleanPreparedFiles() {
+        if (!OperatingSystem.current().isLinux) {
+            this.project.delete(File("${baseDirectory.get()}/.linuxexec"))
         }
     }
 
