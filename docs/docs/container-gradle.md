@@ -1,7 +1,4 @@
-# Container Gradle
-
-!!! important
-    This script is currently only available for macOS.
+# Testing on macOS
 
 The Container Gradle script (see `scripts/container-gradle`) runs Gradle inside a Docker container configured to support
 enclaves in simulation mode. It can be useful for testing your enclave on macOS.
@@ -41,6 +38,8 @@ with Java 8, for example.
 
 If you change `LINUX_JAVA_HOME` then any existing container will be unusable and you'll get an error.
 [Delete the container](#troubleshooting) and re-run the script.
+
+Please go to [System Requirements](system-requirements.md#jdks) for more information on supported JDKs.
 
 ## Copying files out of the container
 

@@ -20,6 +20,11 @@ where the IP address doesn't need to be hidden (because it's public in DNS to be
 aren't helpful and thus there is DCAP (_datacenter attestation primitives_). DCAP requires more modern hardware 
 but is otherwise simpler and more robust. You may also see DCAP referred to as "ECDSA attestation".
 
+!!! important
+    Intel does not provide EPID attestation support on any Xeon Scalable processors. This includes Ice Lake Xeon CPUs and any future
+    generations. Please ensure you are using DCAP attestation on these platforms.
+
+
 In DCAP repeating attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed 
 machine obtains a machine certificate from Intel via the cache which may then be persisted to disk. All this is
 automated for you.
@@ -74,8 +79,8 @@ Just in case, once you have logged onto the VM:
 * Check that the `enclave` device is present in the `/dev/sgx/` directory
 * Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+
 * If either check fails:
-    * Download the [driver](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-dcap-1.8-release)
-    * Follow the [install instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
+    * Download the [driver](https://download.01.org/intel-sgx/latest/dcap-latest/linux/distro/ubuntu18.04-server/)
+    * Follow the [install instructions](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
 
 You may need to add your user into `sgx_prv` group to give it access to SGX.
 
@@ -86,7 +91,7 @@ sudo usermod -aG sgx_prv $USER
 ### DCAP Plugin
 In order to perform attestation using DCAP Conclave needs a way to gather information about the platform the enclave is hosted on. This information provides proof from Intel that a system supports SGX and that it is patched and up to date.
 
-DCAP is designed to work on many different server topologies, therefore rather than directly connecting to Intel services to retrieve this information, the cloud vendor or owner of the SGX system must provide a DCAP client plugin that will provide the required information. Intel provide a generic DCAP client plugin as part of the DCAP runtime. In order to use this you also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provide an example and some instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md).
+DCAP is designed to work on many different server topologies, therefore rather than directly connecting to Intel services to retrieve this information, the cloud vendor or owner of the SGX system must provide a DCAP client plugin that will provide the required information. Intel provide a generic DCAP client plugin as part of the DCAP runtime. In order to use this you also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provide an example and some instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). If you would like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs) then there may be additional work required to provide data in the correct format for Conclave. Please contact R3 support if you need help in getting this setup.
 
 Microsoft has written a DCAP client plugin that works with its Azure Confidential Compute virtual machines. In fact, it also works outside of Azure for single CPU systems but this may not always be the case.
 
@@ -100,14 +105,21 @@ The runtime will use the first `.so` it encounters in the search order below:
 /usr/lib/libdcap_quoteprov.so
 ```
 Should you decide to use a bundled version (recommended), ensure the files listed above don't exist (delete or rename
-them if necessary) and skip the rest of this section.
+them if necessary).
+
+!!! important
+    The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs as well as existing
+    CPUs. However, if Azure extends their offerings to include new platforms, or if you attempt to use a new generation
+    system such as a multi-CPU Ice Lake platform then the bundled Azure client plugin may not work and you might see an error
+    when attempting to load your enclave. In this case [follow the instructions below](#azure-client-plugin) to 
+    build/install an updated version of the Azure client plugin that supports the platform.
 
 You may want to set the Azure DCAP client logging level to FATAL as the default setting is fairly verbose:
 ```sh
 export AZDCAP_DEBUG_LOG_LEVEL=FATAL
 ```
 
-If you would like to configure the DCAP plugin yourself, keep reading.
+If you would like to configure the DCAP plugin yourself, keep reading. If you are using bundled version, you can skip the rest of this section.
 
 #### Azure client plugin
 
@@ -126,7 +138,7 @@ grep AZDCAP /usr/lib/libdcap_quoteprov.so*
     * You can build it from [source](github.com/microsoft/Azure-DCAP-Client).
     * Or extract from a pre-built package provided by Microsoft. E.g. for Ubuntu 18.04 via the command below (only libdcap_quoteprov.so is required).
 ```sh
-wget https://packages.microsoft.com/ubuntu/18.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.6_amd64.deb && ar x az-dcap-client_1.6_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.6_amd64.deb data.tar.xz
+wget https://packages.microsoft.com/ubuntu/18.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.8_amd64.deb && ar x az-dcap-client_1.8_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.8_amd64.deb data.tar.xz
 ```
 * The preferred name and location of the DCAP client plugin is `/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1`.
 ```sh

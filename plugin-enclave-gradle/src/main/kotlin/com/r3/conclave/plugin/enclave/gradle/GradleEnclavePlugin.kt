@@ -274,7 +274,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 // selected at build time causing a dependency
                 task.inputEnclave.set(conclaveExtension.runtime.flatMap {
                     when (it) {
-                        RuntimeType.Avian -> buildUnsignedAvianEnclaveTask.outputEnclave
+                        RuntimeType.Avian -> {
+                            if (OperatingSystem.current().isWindows) {
+                                throw GradleException("Your enclave is configured to use the Avian runtime but Windows does not support building "
+                                        + "enclaves using the Avian runtime. Please switch to the graalvm_native_image runtime or build your "
+                                        + "enclave in a Linux environment, such as the Windows Subsystem for Linux. ")
+                            } else {
+                                buildUnsignedAvianEnclaveTask.outputEnclave
+                            }
+                        }
                         else -> buildUnsignedGraalEnclaveTask.outputEnclave
                     }
                 })
@@ -290,7 +298,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
             }
 
-            val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type) { task ->
+            val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type, linuxExec) { task ->
                 task.dependsOn(copySgxToolsTask)
                 task.inputs.files(signToolFile.parent, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile)
                 task.signTool.set(signToolFile)
@@ -306,7 +314,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
-            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type") { task ->
+            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type", linuxExec) { task ->
                 task.group = CONCLAVE_GROUP
                 task.description = "Generate standalone signing material for a ${type} mode enclave that can be used with a HSM."
                 task.dependsOn(copySgxToolsTask)
@@ -318,7 +326,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
             }
 
-            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type") { task ->
+            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type", linuxExec) { task ->
                 task.dependsOn(copySgxToolsTask)
                 /**
                  * Setting a dependency on a task (at least a `Copy` task) doesn't mean we'll be depending on the task's output.
@@ -352,7 +360,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
-            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type") { task ->
+            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type", linuxExec) { task ->
                 val signingTask = enclaveExtension.signingType.map {
                     when (it) {
                         SigningType.DummyKey -> signEnclaveWithKeyTask

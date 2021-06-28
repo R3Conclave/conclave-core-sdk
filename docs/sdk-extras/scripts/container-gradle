@@ -61,7 +61,7 @@ function setup_overlay() {
 }
 
 function exec_gradle() {
-  exec docker exec -it -w /overlay $CONTAINER_ID ./gradlew -PconclaveRepo=/repo $@
+  exec docker exec -it -w /overlay $CONTAINER_ID ./gradlew -PconclaveRepo=/repo "$@"
 }
 
 # Is the container currently running?

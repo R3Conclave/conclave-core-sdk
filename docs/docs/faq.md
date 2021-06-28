@@ -225,9 +225,9 @@ Please see the discussion of [side channel attacks](security.md#side-channel-att
 
 ## Development and deployment
 
-### What Kotlin/Java versions are usable?
+### What Java versions are usable?
 
-Inside the enclave you can use Java 8 or 11, and Kotlin 1.4.
+Please see [System Requirements](system-requirements.md#jdks) for documentation on supported JDKs.
 
 ### At which points in time is a connection with Intel needed?
 
@@ -267,10 +267,9 @@ and possibly more. However you don't need to do builds all the time when working
 option of using [mock mode](mockmode.md) to directly load the enclave code into the host JVM, which gives a regular Java development
 experience.
 
-### Java object serialization doesn't work?
+### Can you use Java object serialisation with Conclave?
 
-This will be addressed in the next release after 1.0 by upgrading GraalVM to the 21.0 release. Unfortunately this
-release came out too close to our 1.0 QA effort to be incorporated, but it will arrive soon!
+Yes, check our documentation on [serialization configuration files](enclave-configuration.md#serializationconfigurationfiles) on how to do so.
 
 ### How do I control the Native Image parameters?
 
@@ -285,6 +284,20 @@ Args = -H:Whatever
 !!! note
     This doesn't let you alter or override the flags we already specify in order to create a working enclave.
 
+### How do I add resource files to Native Image enclaves?
+
+You can add resource files to the Native Image enclaves by setting the flag `IncludeResources` in the file 
+`src/main/resources/META-INF/native-image/native-image.properties`. As an example, to add a file called `trustedroot.cer`
+to the enclave resources, one should add the following line to the file `native-image.properties`:
+
+```
+Args = -H:IncludeResources=trustedroot.cer
+```
+
+!!! note
+    To add multiple resource files please use a Java regular expression pattern that matches the resource files name to be
+    included in the image. More information can be found in the [GraalVM documentation](https://www.graalvm.org/reference-manual/native-image/Resources/).
+ 
 ## Competing technologies
 
 ### Do you have plans to support AMD SEV?

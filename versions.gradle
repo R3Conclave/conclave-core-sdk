@@ -1,5 +1,5 @@
 ext {
-    // Make sure to also update the following:
+    // When updating the Conclave version make sure to also update the following:
     // * docs/sdk-extras/hello-world/gradle.properties
     // * docs/sdk-extras/cordapp/gradle.properties
     // * docs/docs/writing-hello-world.md

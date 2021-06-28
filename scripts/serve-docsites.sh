@@ -14,5 +14,6 @@ source setup-virtualenv.sh
 # We must use the weird IP address to make the dev server bind to all IP addresses, not
 # just localhost (which in the container is different to the host).
 mkdocs serve -a 0.0.0.0:8000 &
+trap "kill $(jobs -p)" SIGINT SIGTERM
 cd ../internal-docs
 mkdocs serve -a 0.0.0.0:8001

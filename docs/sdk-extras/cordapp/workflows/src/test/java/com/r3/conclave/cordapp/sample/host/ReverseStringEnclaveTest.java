@@ -24,7 +24,7 @@ class ReverseStringEnclaveTest {
     //
     // Obviously in a real app you'd not use SEC:INSECURE, however this makes the sample work in simulation mode.
     private final String constraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE";
-    private final String invalidConstraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:SECURE";
+    private final String mock_constraint = "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE";
 
     @BeforeAll
     static void setup() {
@@ -51,7 +51,7 @@ class ReverseStringEnclaveTest {
     @Test
     public void reverseStringAsNonAnonymous() throws ExecutionException, InterruptedException {
         CordaFuture<String> flow = client.startFlow(new ReverseFlow(host.getInfo().getLegalIdentities().get(0), "zipzop",
-                constraint));
+                getConstraint()));
         network.runNetwork();
         assertEquals("Reversed string: pozpiz; Sender name: O=Mock Company 1,L=London,C=GB",
                 flow.get());
@@ -60,8 +60,15 @@ class ReverseStringEnclaveTest {
     @Test
     public void reverseStringAsAnonymous() throws ExecutionException, InterruptedException {
         CordaFuture<String> flow = client.startFlow(new ReverseFlow(host.getInfo().getLegalIdentities().get(0), "hello",
-                constraint, true));
+                getConstraint(), true));
         network.runNetwork();
         assertEquals("Reversed string: olleh; Sender name: <Anonymous>", flow.get());
+    }
+
+    private String getConstraint() {
+        String mode = System.getProperty("enclaveMode");
+        if (mode == null || !mode.toLowerCase().equals("mock"))
+            return constraint;
+        return mock_constraint;
     }
 }

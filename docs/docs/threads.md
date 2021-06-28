@@ -5,13 +5,13 @@
 Writing a thread safe enclave is no different to writing any other thread safe code in Java, with one exception.
 Whilst all the same concurrency tools and utilities are available, you must opt-in to multi-threading. If you
 don't then all threads that enter the enclave will synchronize on the enclave object lock and execute serially. To opt in,
-override the `isThreadSafe` method and return true.
+override the `getThreadSafe` method and return true.
 
 This is a safety mechanism. It would be easy to write an enclave that isn't thread safe without thinking about it, 
 perhaps because the additional performance isn't important. That would be hard to notice as anyone reading the code
 would be looking for the absence of something rather than its presence. The host could then multi-thread the enclave
 without it being prepared for that and corrupt your application-level data structures in ways that might be exploitable.
-When you return true from `isThreadSafe` you're asserting to Conclave that you've taken care to ensure your 
+When you return true from `getThreadSafe` you're asserting to Conclave that you've taken care to ensure your 
 `receiveFromUntrustedHost` and `receiveMail` methods can handle concurrent execution, so it's safe for Conclave to stop
 locking the enclave itself. By requiring an opt-in it becomes visible to other developers and code reviewers, thus 
 reminding them that the code needs to be thread safe.
@@ -19,7 +19,7 @@ reminding them that the code needs to be thread safe.
 ## The enclave current context
 
 When your code is running inside an enclave the CPU maintains a lot of state about your code and potentially
-your private data. This information is all security contained within the boundary of the SGX enclave: Code
+your private data. This information is all securely contained within the boundary of the SGX enclave: Code
 outside the enclave cannot peek into the enclave CPU state to try to see these secrets.
 
 This state information along with other private information such as the current stack contents is called
@@ -137,7 +137,7 @@ Conclave will detect this deadlock situation and will abort the enclave to alert
 that the TCS slot count needs to be increased, or that the design of the enclave should be
 modified to prevent the deadlock.
 
-The deadlock detection is acheived by seeing that all threads are waiting for a fixed amount
+The deadlock detection is achieved by seeing that all threads are waiting for a fixed amount
 of time. This time defaults to 10 seconds but can be 
 [configured when the enclave is built](enclave-configuration.md#deadlockTimeout).
 

@@ -39,8 +39,8 @@ abstract class ConclaveTask : DefaultTask() {
         // The content of the stream will then be printed to the console but using
         // the project logger. This will allow the user to suppress any output using
         // Gradle log flag like --quiet
-        val execOutputStream = commandLineConfig.errorOutputStream ?: ByteArrayOutputStream()
-        val execErrorStream = ByteArrayOutputStream()
+        val execOutputStream = ByteArrayOutputStream()
+        val execErrorStream = commandLineConfig.errorOutputStream ?: ByteArrayOutputStream()
 
         try {
             val result = project.exec { spec ->

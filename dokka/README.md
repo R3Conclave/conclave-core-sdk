@@ -24,6 +24,16 @@ Each fix is a separate commit in the 'conclave-changes' branch of https://github
 5. Added translation for some basic JVM types that were left as Kotlin types during the conversion to Java documentation, 
    including `void`, `int`, `long` and `byte[]`.
 6. Update class template for javadoc to include a missing marker that is required for IDE integration.
+7. On "See also" sections, don't try to show the FQN. Instead, use the link name. This is because the 'hack' to get the
+   FQN in docker misses off the target if it is a method or property.
+8. Fix "See also" links to companion objects that were unresolved.
+9. Workaround issue where the @JvmStatic annotation was not being resolved by the compiler. This should really be investigated
+   and fixed properly by resolving the reference but the workaround works for now.
+10. Modify 'isObvious' logic to allow FAKE_OVERRIDE methods to be documented otherwise inherited non-obvious methods are hidden.
+11. In class summary page, always show full documentation rather than just first sentence.
+12. Rename "Functions" to "Methods".
+13. Hide 'final' modifier from functions.
+
 
 ## Using the R3 dokka version
 Our SGXJVM root gradle project refers to the dokka plugin, therefore the plugin itself cannot be built as part of our build 
