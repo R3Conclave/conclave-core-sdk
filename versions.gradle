@@ -3,6 +3,8 @@ ext {
     // * docs/sdk-extras/hello-world/gradle.properties
     // * docs/sdk-extras/cordapp/gradle.properties
     // * docs/docs/writing-hello-world.md
+    // * containers/aesmd/src/docker/Dockerfile
+    // * containers/sgxjvm-build/src/docker/Dockerfile
     conclave_version = '1.2-SNAPSHOT'
     kotlin_version = '1.4.10'
     kotlinx_serialization_json_version = '1.0.1'
