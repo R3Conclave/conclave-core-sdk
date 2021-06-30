@@ -121,7 +121,7 @@ for (type in types) {
     }
 
     tasks.create(compileTaskNameSubstrateVMLib(type), Exec) {
-        dependsOn(createCmakeTaskName(type))
+        dependsOn(createCmakeTaskName(type), generateEnclaveJniHeaders)
 
         workingDir(buildDirectory(type))
 
