@@ -62,7 +62,7 @@ However, others will probably still work.
 ## Install the kernel driver and system software
 
 Installers for the system software can be [obtained from Intel](https://01.org/intel-software-guard-extensions/downloads).
-We recommend reading the [installation user guide](https://download.01.org/intel-sgx/sgx-linux/2.12/docs/Intel_SGX_Installation_Guide_Linux_2.12_Open_Source.pdf).
+We recommend reading the [installation user guide](https://download.01.org/intel-sgx/sgx-linux/2.13.3/docs/Intel_SGX_Installation_Guide_Linux_2.13.3_Open_Source.pdf).
 The installation process is simple. Intel provides:
 
 * APT repositories for Ubuntu
@@ -72,8 +72,8 @@ The installation process is simple. Intel provides:
 
     The installer will need to be re-run when the kernel is upgraded.
 
-Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.12) yourself.
-The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).  
+Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.13.3) yourself.
+The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).
 
 For SGX remote attestation to operate and machine provisioning to succeed, a small daemon called `aesmd` is used. This
 comes as part of the SGX platform services software and will be set up during the install process.
@@ -84,6 +84,7 @@ The quick summary looks like this:
 2. For Ubuntu users, as root run:
    * For Ubuntu 16 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu xenial main' > /etc/apt/sources.list.d/intelsgx.list`
    * For Ubuntu 18 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' > /etc/apt/sources.list.d/intelsgx.list`
+   * For Ubuntu 20 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intelsgx.list`
    * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`
    * Then run `apt-get update`
    * And finally `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`

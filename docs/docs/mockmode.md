@@ -1,6 +1,6 @@
 # Building enclaves in Mock Mode
 
-Conclave provides a number of different modes when building your enclave, supporting different stages of the development
+Conclave provides a number of different [modes](tutorial.html#enclave-modes) when building your enclave, supporting different stages of the development
 cycle. Release, debug and simulation modes all require a Linux environment in order to run. This does not prevent
 running a simulation enclave on MacOS or Windows if you load and run you project in a Docker container, but for
 convenience it is useful to be able to run your enclave code directly within the host environment. In addition, 
@@ -10,6 +10,9 @@ With mock mode, the enclave class runs in the same JVM as the host, so interacti
 and host are all just regular function calls. You can expect very short build times, step through using a debugger 
 and enjoy the regular Java development experience.
 
+!!!tip
+    To debug your host application in mock mode from IntelliJ, find the `:host:run` task in the gradle menu, add the `-PenclaveMode=mock` argument to the run configuration, and then run the task in debug mode.
+
 ## Using mock mode
 
 Mock mode can be used in two different ways. Firstly, you can compile your enclave in mock mode using the
@@ -17,11 +20,46 @@ Mock mode can be used in two different ways. Firstly, you can compile your encla
 
 Secondly, when creating an `EnclaveHost` inside the enclave module, Conclave will automatically create it in mock mode.
 This means any tests you define in the enclave module will automatically use mock mode - you can write your tests to load 
-and call the enclave without having to explicitly configure a mock enclave. 
+and call the enclave without having to explicitly configure a mock enclave.
+For tests to use any other mode, they must be defined outside the enclave module, for example in the host.
+
+## Mock mode and the host classpath
+
+When loading an enclave from the host, Conclave looks in two places for the enclave class. Firstly, it looks on the
+current classpath. If the enclave class is present in the classpath then it will assume a mock configuration and
+load the enclave code directly. Secondly, it looks in the resources for a JAR file that contains a simulation, 
+debug or release enclave. If that is present, it is unpacked and loaded.
+
+If the enclave class is on the classpath _and_ the enclave JAR file is present then the host will throw an exception
+stating that multiple enclave classes have been found. In order to avoid this you need to carefully configure the
+dependencies in your host project to ensure only a single enclave is present.
+
+In most cases you do not require the enclave classes within the host project so all you need to do is set the
+enclave project as a `runtimeOnly` dependency. This will then work for all enclave configurations:
+
+```groovy
+runtimeOnly project(path: ":enclave", configuration: mode)
+```
+
+If, however, you do need to [access the enclave class](#accessing-the-enclave-from-the-mock-host) in your host project in mock mode via the the `EnclaveHost.mockEnclave`
+property then you will need to conditionally depend on the enclave project at compile or implementation time by
+including this in your host `build.gradle`:
+
+```groovy
+if (mode == "mock") {
+    implementation project(path: ":enclave", configuration: "mock")
+} else {
+    runtimeOnly project(path: ":enclave", configuration: mode)
+}
+```
+
+!!! info
+    Note that within the enclave project the enclave class is always present on the classpath. This means that
+    all tests defined within the enclave project always use mock mode.
 
 ## Accessing the enclave from the mock host
 
-When using mock mode, the host provides access to the enclave instance via the `EnclaveHost.mockEnclave` property. If you 
+When using mock mode, the host provides access to the enclave instance via the `EnclaveHost.mockEnclave` property. If you
 want to look at the internal state of your enclave you can cast this property to your actual enclave class type.
 
 ```java
@@ -34,13 +72,12 @@ ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
     enclave state for any other enclave type. If you attempt to access the property on a non-mock enclave then
     `IllegalStateException` will be thrown.
 
-
 ## Mock mode configuration
 
 When you build an enclave in release, debug mode or simulation mode, there are certain environmental parameters
 that are defined by the trusted computing base and the Conclave configuration.
 
-In mock mode, instead of being defined by the platform, these parameters are instead defined using the `MockConfiguration` 
+In mock mode, instead of being defined by the platform, these parameters are defined using the `MockConfiguration`
 class which is subsequently passed to `EnclaveHost.load()`. This class can be used to configure these parameters for use 
 when the mock enclave is loaded. This is useful to allow test cases to be written for checking correct enclave operation around
 version increments and rollbacks.

@@ -58,7 +58,8 @@ class MacOSDependentTools(private val conclaveDependenciesDirectory: String) : O
 
 class WindowsDependentTools(private val conclaveDependenciesDirectory: String) : OSDependentTools {
     override fun getLdFile(): String {
-        return "$conclaveDependenciesDirectory/binutils/${getExecutable("ld")}"
+        // The Windows build uses the Linux linker through LinuxExec
+        return "$conclaveDependenciesDirectory/binutils/ld"
     }
 
     override fun getNativeImageLdFile(): String {
@@ -66,7 +67,8 @@ class WindowsDependentTools(private val conclaveDependenciesDirectory: String) :
     }
 
     override fun getSgxSign(): String {
-        return "$conclaveDependenciesDirectory/sign-tool/${getExecutable("sgx_sign")}"
+        // The Windows build uses the Linux sign tool through LinuxExec
+        return "$conclaveDependenciesDirectory/sign-tool/sgx_sign"
     }
 
     override fun getExecutable(name: String): String {

@@ -1,20 +1,22 @@
----
-hide:
-- navigation
----
+# Confidential Computing
 
-# Enclave oriented computing
+When you send data to somebody else's computer they can ordinarily do whatever they like with it. Confidential
+Computing describes a set of hardware techniques that fix this problem. Confidential Computing makes it possible 
+to know what algorithm will process your information before you send it to a third party, and to be assured that
+the third party cannot subvert the integrity of the algorithm or observe it while it works.
 
-Conclave implements the latest iteration of a simple idea: we can make computing more secure and private by
-isolating a small piece of code from the rest of the computer on which it runs (an _enclave_). Remote users can
-be shown what code is running in the isolated world and then upload secrets to it, where they can be processed
-without the owner of the computer in question getting access to them. Enclaves can be used to protect private data
+Conclave makes it easy to write applications that utilise these capabilities. Conclave makes it possible to 
+isolate a small piece of code from the rest of the computer on which it runs (an _enclave_). Remote users can
+be shown what code is running in the isolated world and then upload their secret data to it, where it can be processed
+without the owner of the computer in question getting access. Enclaves can be used to protect private data
 from the cloud, do multi-party computations on shared datasets and make networks more secure.
 
 Intel SGX is an implementation of enclave-oriented computing. Conclave builds on SGX by making it easier to develop
-enclaves in high level languages like Java or Kotlin.
+enclaves in high level languages like Java, Kotlin or JavaScript.
 
-In this document we'll introduce the key concepts.
+In this document we'll introduce the key concepts of Confidential Computing and map them to the equivalent
+concepts in Conclave. The [architecture](architecture.md) document then pulls these concepts together to describe
+the end-to-end architecture of Conclave itself.
 
 ## What is an enclave?
 
@@ -25,34 +27,47 @@ abilities. Enclave memory is protected both from the rest of the code in that pr
 kernel or BIOS, and because the RAM itself is encrypted even physical attackers. This means a remote computer can
 trust that an enclave will operate correctly even if the owner of the computer is malicious.
 
-In Conclave, an enclave is a subclass of the [`Enclave`](api/com/r3/conclave/enclave/Enclave.html) class, combined
-with an embedded JVM and compiled into a native shared library (ending in .so), which is then itself bundled into
-the module JAR<sup>\*</sup>. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
-load the enclave class.  
+In Conclave, an enclave is a subclass of the [`Enclave`](api/com/r3/conclave/enclave/Enclave.html) class, which is 
+automatically combined by Conclave with an embedded JVM and compiled into a native shared library (ending in .so), and
+bundled into a JAR. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
+load the enclave class from this JAR and automatically instantiate the enclave.
+
 !!! note
-    <sup>\*</sup>Conclave compiles the enclave into a .so file because that's how the Intel SGX SDK expects the enclave to be built.
+    Conclave compiles the enclave into a .so file because that's how the Intel SGX SDK expects the enclave to be built.
     Conclave hides this detail during the build phase by wrapping this file inside a Jar artifact, and during execution phase
     automatically loads the .so file from the classpath.
 
-## Local messaging and operating system access
+### Enclaves and Hosts
 
-Once an enclave is loaded, the host and enclave can exchange byte buffers back and forth. The format of these byte
-arrays isn't defined by Conclave and is up to the application developer. The actual call operation is efficient:
-the buffers are copied from the host into the enclave using a direct memory copy. There are no sockets or other
-operating system constructs involved.
+As described above, an enclave is loaded into an ordinary operating system process, which is known as the 'host'. All of 
+the enclave's communicates with the outside world is via the host. To facilitate this, once an enclave is loaded, the host and 
+enclave can exchange byte buffers back and forth. This is an efficient operation: the buffers are copied from the host 
+into the enclave using a direct memory copy. Conclave provides convenient APIs to facilitate this data passing between 
+enclave and host. 
 
-Enclaves can't directly access the operating system. However, they can request the host process to do the access on
-the enclave's behalf. In practice due to the untrusted nature of the host operating system, it is much safer to
-make explicit requests to the host than try to run existing code inside the enclave. [Most existing software is
-built on the assumption that the operating system is not a threat](https://hovav.net/ucsd/dist/iago.pdf), 
-because the OS normally has complete control so it doesn't make sense to defend yourself from it.
+However, it is important to note that, unlike the enclave, neither this 'host' process nor the underlying
+operating system are trusted by the users of the enclave. Yet the enclave depends on them. The following sections 
+explain how message encryption, remote attestation, and the Conclave-specific 'Mail' API combine to solve this problem.
 
-## Encrypted messages
+!!! note
+    In many ways, enclaves turn pre-existing security assumptions on their heads. In traditional programming,
+    it is generally assumed that the operating system is trusted and that the primary threat is applications
+    attacking the operating system, or each other. However, when using enclaves, this presumption is reversed: 
+    the user of the application, who is remote, does _not_ trust the operator or operating system of the computer. 
+    Instead, they only trust the code running inside the enclave. Therefore, it is useful to imagine the operating system
+    and the process that hosts the enclave as potential adversaries. Unfortunately, [most existing software is 
+    built on the assumption that the operating system is not a threat](https://hovav.net/ucsd/dist/iago.pdf). For
+    this reason, it is usually best to avoid relying inside the enclave on code that was not explicitly written with 
+    this deployment mode in mind.
+
+### Encrypted messages
 
 Enclaves are only useful if some other computer is interacting with them over the network. An enclave _by itself_
 doesn't gain you anything, because enclaves are defending against the owner of a computer. If you just run an enclave
 locally then the owner of the computer is you, and it doesn't make sense for software to try and protect your
-own data from yourself.
+own data from yourself. 
+
+So these remote users need to be able to encrypt messages with a key that is known only to the enclave.
 
 Enclaves can generate random numbers and thus encryption keys available only to themselves, which nothing else on
 the host machine can access. Using these keys remote computers can encrypt messages to the enclave. These messages can
@@ -68,8 +83,8 @@ Encrypting a message requires a public key, which raises the question of where t
 the enclave have to be convinced that the key really belongs to an enclave they want to work with and not, say, an
 unencrypted non-enclave program that's impersonating the intended destination.
 
-Enclave host programs can generate a small data structure called a **remote attestation** (RA). This structure
-states the following facts:
+Enclave host programs can generate a small data structure called a **remote attestation** (RA). This structure,
+which is signed by a key controlled by the underlying hardware, states the following facts:
 
 1. A genuine, un-revoked Intel CPU is running ...
 2. ... an enclave into which a code module with a specific hash (measurement) was loaded ...
@@ -78,38 +93,12 @@ states the following facts:
 
 The host generates a remote attestation and sends it to clients in some way. Those clients can then send encrypted
 messages to the enclave using the public key P after checking what kind of enclave it really is. By recognising a
-list of known code hashes clients can effectively whitelist particular enclaves and treat them as trustworthy
-servers.
+list of known code hashes, or verifying that the enclave was signed by a party whom they trust, 
+clients can effectively whitelist particular enclaves and treat them as trustworthy servers.
 
 In Conclave, a remote attestation is an instance of the [`EnclaveInstanceInfo`](api/com/r3/conclave/common/EnclaveInstanceInfo.html) class.
 
-## Measurements vs signers
-
-The code hash included in a remote attestation is called a **measurement**. It's not the hash of any particular file
-but rather a more complex hash that must be calculated with special tools. It covers the entire module and all of its
-dependencies loaded into an enclave (a fat JAR).
-
-A measurement hash is pretty unhelpful by itself. It's just a large number. To be meaningful you must _reproduce_ the
-measurement from the source code of the enclave. When you compile your enclave the measurement
-hash is calculated and printed. By comparing it to what you find inside a remote attestation, you can know the source
-code of the remote enclave matches what you have locally.
-
-Whitelisting measurements is strong but brittle. Any upgrade to the enclave will cause your app to reject the new
-remote attestation and stop working until you re-read the enclave's source code, reproduce the build again and whitelist
-the new measurement. An alternative is to whitelist a _signing key_ instead.
-
-Enclave files can be signed, and the SGX infrastructure understands and verifies these signatures. This is useful
-for two reasons:
-
-1. You can choose to accept any enclave produced by a particular organisation, rather than reviewing the source code
-   and reproducing the enclave yourself.
-2. Each SGX capable computer has a root key that must whitelist enclaves to be executed. This is so cloud providers can
-   retain visibility and control into what programs are actually running on their hardware.
-
-The public part of the key that signed an enclave is included in remote attestations, so you can choose to
-communicate with any enclave signed by a given key.
-
-## Small is beautiful
+## Applications of Enclaves
 
 Enclaves are a very general capability and can be used in a variety of ways. You can:
 
@@ -122,17 +111,19 @@ Enclaves are a very general capability and can be used in a variety of ways. You
 * Make your service auditable only by users who want high assurance - those who don't care can simply ignore the
   infrastructure entirely.
 
+## Limitations of Enclaves
+
 It's important to understand the limitations of enclaves. They aren't meant to be a general protection for
 arbitrary programs. Although technically possible to just relay operating system calls in and out of an enclave, this
 approach [suffers from various security pitfalls](https://hovav.net/ucsd/dist/iago.pdf) and more importantly is a
 mis-understanding of the benefits enclaves give you.
 
-Enclave-oriented computing is based on two key insights:
+Confidential computing is based on two key insights:
 
 1. The more code that processes attacker-supplied data the more likely the program is to be hackable.
 2. A large chunk of most programs is actually just moving data around and managing it in various ways, not processing it.
 
-The software and hardware that must be uncompromised for a system to work correctly is called the 
+The software and hardware that must be uncompromised for a system to work correctly is called the
 *trusted computing base*, or TCB. In Conclave the TCB includes the CPU itself, the patchable microcode of the CPU,
 and all software running inside the enclave - both your code and the Conclave runtime.
 
@@ -204,7 +195,48 @@ You've only changed *how* data is processed. But if you change *what* you do wit
 on this and want to know about it. Remote attestation lets them see that the core business logic has changed, and in
 what way.
 
-## Enclaves vs alternative approaches
+## Summary
+
+In summary, an enclave is a small program which can run on an untrusted computer, where the operator of that computer
+cannot affect the integrity of the code nor observe the data that passes in or out. Through a process of 'remote attestation',
+remote clients can gain confidence that a specific program - or a program signed by a particular entity - is running, and that
+it is running in this secure mode on a fully patched machine. This makes it possible to deliver services that operate on third
+parties' data, where those third parties can be assured that their data cannot be used for any other purpose.
+
+Enclaves run inside untrusted host processes, and the combination of encryption, remote attestation and Conclave's
+purpose-designed APIs work together to make it as simple as possible for developers to write applications that work in this way.
+
+## Additional Comments
+
+### A note on measurements vs signers
+
+The code hash included in a remote attestation is called a **measurement**. It's not the hash of any particular file
+but rather a more complex hash that must be calculated with special tools. It covers the entire module and all of its
+dependencies loaded into an enclave (a fat JAR).
+
+A measurement hash is pretty unhelpful by itself. It's just a large number. To be meaningful you must _reproduce_ the
+measurement from the source code of the enclave. When you compile your enclave the measurement
+hash is calculated and printed. By comparing it to what you find inside a remote attestation, you can know the source
+code of the remote enclave matches what you have locally.
+
+Whitelisting measurements is strong but brittle. Any upgrade to the enclave will cause your app to reject the new
+remote attestation and stop working until you re-read the enclave's source code, reproduce the build again and whitelist
+the new measurement. An alternative is to whitelist a _signing key_ instead.
+
+Enclave files must be signed, and the SGX infrastructure understands and verifies these signatures. This is useful
+for two reasons:
+
+1. You can choose to accept any enclave signed by a particular organisation, rather than reviewing the source code
+   and reproducing the enclave yourself.
+2. Some SGX capable computers have a root key that must whitelist enclaves to be executed. This can be used by the
+   owners of SGX-capable machines to retain visibility and control into what programs are actually running on their 
+   hardware. Whilst this capability could therefore be leveraged by cloud vendors to restrict which SGX workloads
+   their servers will allow to run, we are not aware of any that operate in this way in practice.
+
+The hash of the public part of the key that signed an enclave is included in remote attestations, so you can choose to
+communicate with any enclave signed by a given key.
+
+### Enclaves vs alternative approaches
 
 The enclave architecture is the result of many years of evolution. Enclaves are good at minimising TCB size because that
 was their entire design goal: an enclave is intended to be the smallest piece of application logic that needs to be 

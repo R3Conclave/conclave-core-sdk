@@ -11,6 +11,9 @@ sealed class AttestationParameters {
      * Holds the "service provider ID" and "attestation key" values needed to use Intel Attestation Services (IAS).
      * You can get these parameters from the Intel website; please see the Conclave documentation for more details.
      *
+     * Note that Intel does not provide EPID attestation support for Xeon scalable CPUs including Ice Lake and future 
+     * generations. You need to use DCAP attestation on these platforms.
+     *
      * @param spid The EPID Service Provider ID (or SPID) needed for creating the enclave quote for attesting. Please see
      * https://api.portal.trustedservices.intel.com/EPID-attestation for further details on how to obtain one. The EPID
      * signature mode must be Linkable Quotes.

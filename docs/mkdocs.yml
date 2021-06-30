@@ -9,22 +9,24 @@ use_directory_urls: false
 
 nav:
   - Welcome: index.md
-  - Enclaves: enclaves.md
+  - Concepts:
+    - Confidential Computing: enclaves.md
+    - Conclave Architecture: architecture.md
   - Development:
     - Tutorials:
-        - Compiling and running: tutorial.md
-        - Writing hello world: writing-hello-world.md
-        - Writing a CorDapp: writing-cordapps.md
-        - Container Gradle: container-gradle.md
+        - Running your first enclave: tutorial.md
+        - Writing your first enclave: writing-hello-world.md
+        - Integrating an enclave with Corda: writing-cordapps.md
     - Design topics:
-        - Conclave architecture: architecture.md
-        - Mail: mail.md
-        - Security discussion: security.md
-        - Mock mode: mockmode.md
+        - Communicating with an enclave using Mail: mail.md
+        - Rapid testing and development with Mock Mode: mockmode.md
+        - Maximising the security of your enclave: security.md
     - Reference:
         - Threads: threads.md
         - JavaScript: javascript.md
         - File system: filesystem.md
+        - Performance: performance.md
+        - Testing on macOS: container-gradle.md
     - API:
         - JavaDocs: api/index.html
         - Configuration options for enclaves: enclave-configuration.md
@@ -33,9 +35,10 @@ nav:
   - Operations:
     - Server deployment:
       - System requirements: system-requirements.md
-      - Machine setup: machine-setup.md
-      - IAS: ias.md
-      - Deploying to Azure: azure.md
+      - Machine setup:
+         - Overview: machine-setup.md
+         - Cloud Deployment: azure.md
+         - Self-Hosting: ias.md
     - Upgrades:
       - Enclave signing: signing.md
       - Renewability: renewability.md

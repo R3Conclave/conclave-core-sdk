@@ -265,7 +265,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     when (it) {
                         RuntimeType.GraalVMNativeImage -> buildUnsignedGraalEnclaveTask.outputEnclave
                         else -> throw GradleException("Only GraalVM is supported since Conclave 1.1")
-
                     }
                 })
                 task.outputEnclave.set(task.inputEnclave.get())
@@ -280,7 +279,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
             }
 
-            val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type) { task ->
+            val signEnclaveWithKeyTask = target.createTask<SignEnclave>("signEnclaveWithKey$type", enclaveExtension, type, linuxExec) { task ->
                 task.dependsOn(copySgxToolsTask)
                 task.inputs.files(signToolFile.parent, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile)
                 task.signTool.set(signToolFile)
@@ -296,7 +295,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
-            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type") { task ->
+            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type", linuxExec) { task ->
                 task.group = CONCLAVE_GROUP
                 task.description = "Generate standalone signing material for a ${type} mode enclave that can be used with a HSM."
                 task.dependsOn(copySgxToolsTask)
@@ -308,7 +307,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
             }
 
-            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type") { task ->
+            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>("addEnclaveSignature$type", linuxExec) { task ->
                 task.dependsOn(copySgxToolsTask)
                 /**
                  * Setting a dependency on a task (at least a `Copy` task) doesn't mean we'll be depending on the task's output.
@@ -342,7 +341,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
-            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type") { task ->
+            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type", linuxExec) { task ->
                 val signingTask = enclaveExtension.signingType.map {
                     when (it) {
                         SigningType.DummyKey -> signEnclaveWithKeyTask

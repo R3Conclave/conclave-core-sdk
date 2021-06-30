@@ -65,7 +65,7 @@ like this:
 
 ```text
 conclaveRepo=/path/to/sdk/repo
-conclaveVersion=1.0
+conclaveVersion=1.2-SNAPSHOT
 ```
 
 Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory.
@@ -87,6 +87,64 @@ subprojects {
     }
 }
 ```
+
+### IDE Documentation in the root `build.gradle` file
+Some IDEs are able to automatically display Conclave SDK documentation whilst editing code. In order for this to
+work you may need to add some configuration to the root `build.gradle` depending on your IDE.
+
+Start by adding the Gradle plugin required to support your IDE. Note that Visual Studio Code shares the configuration
+provided by the `eclipse` plugin.
+
+```groovy hl_lines="3 4"
+plugins {
+    id 'java'
+    id 'idea'
+    id 'eclipse'
+}
+
+```
+
+Then add sections to tell the IDEs to download Javadoc for dependencies.
+
+```groovy
+eclipse {
+    classpath {
+        downloadJavadoc = true
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+    }
+}
+```
+
+Finally apply the same configuration to all subprojects.
+
+```groovy hl_lines="2-13"
+subprojects {
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'
+    idea {
+        module {
+            downloadJavadoc = true
+        }
+    }
+    eclipse {
+        classpath {
+            downloadJavadoc = true
+        }
+    }
+
+    repositories {
+```
+
+!!! info
+    At the moment, IntelliJ IDEA has an issue that means it does not correctly display the documentation for Conclave, 
+    even if you provide this configuration. Instead, please refer to the [online Javadocs](https://docs.conclave.net/api/index.html)
+    for Conclave.
+
 
 ### Configure the _host_ module
 Add this bit of code to your host `build.gradle` file to let the [mode](tutorial.md#enclave-modes) be chosen from the command line:
@@ -178,23 +236,17 @@ Specify the enclave's runtime environment, product ID and revocation level:
 conclave {
     productID = 1
     revocationLevel = 0
-    runtime = graalvm_native_image
 }
 ```
 
 These settings are described in detail in the page on [enclave configuration](enclave-configuration.md). A summary
 of these settings follows:
 
-The **runtime** setting tells Conclave which runtime environment to use inside the enclave and can either be `avian` or
-`graalvm_native_image`. If the setting is omitted then it defaults to `graalvm_native_image`. See
-[Architecture overview](architecture.md) for details on the differences between the two supported runtime
-environments. The `graalvm_native_image` value is new and has a few limitations, but runs much faster. 
-
-Conclave needs access to a Linux build environment in order to build enclaves with the `graalvm_native_image` runtime. 
-On MacOS and Windows this is automatically created during the build process using Docker. If you do not have Docker
-installed then the build will generate an error prompting you to switch to using either the `avian` runtime or to
-install Docker on your system. Once Docker is installed and added to your `PATH` environment variable you can proceed
-to build `graalvm_native_image` enclaves. Docker is not required for enclaves using the `avian` runtime.
+Conclave needs access to a Linux build environment in order to build enclaves. 
+On MacOS and Windows this is automatically created during the build process using Docker. If you do not have Docker 
+installed then the build will generate an error prompting you to install Docker on your system. Once Docker is installed 
+and added to your `PATH` environment variable you can proceed to build Simulation, Debug or Release mode enclaves.
+Docker is not required if you are using a Linux system.
 
 The **product ID** is an arbitrary number that can be used to distinguish between different enclaves produced by the same
 organisation (which may for internal reasons wish to use a single signing key). This value should not change once you
@@ -237,8 +289,6 @@ conclave {
         mrsignerSignature = file("../signing/signature.bin")
         mrsignerPublicKey = file("../signing/external_signing_public.pem")
     }
-
-    runtime = graalvm_native_image
 }
 ```
 
@@ -365,8 +415,7 @@ instead of simulation mode. When we want to switch to loading either a debug or 
 to ensure the platform supports SGX.
 
 By adding the code below to the main method we can determine whether the platform can load debug and release 
-enclaves. This method reports the actual hardware status even if you are currently working with simulation 
-enclaves.
+enclaves. This method reports the actual hardware status even if you are currently working with mock or simulation enclaves.
 
 ```java hl_lines="2-7"
 public static void main(String[] args) throws EnclaveLoadException {
@@ -504,7 +553,7 @@ An attestation doesn't inherently expire but because the SGX ecosystem is always
 some frequency with which it expects the host code to refresh the `EnclaveInstanceInfo`. At present this is done by
 stopping/closing and then restarting the enclave.
 
-## Configurating attestation
+## Configure attestation
 
 To use SGX remote attestation for real we need to do some additional work. Remember how we wrote 
 `enclave.start(null, null);` above? The first parameter contains configuration data required to use an attestation
@@ -513,7 +562,8 @@ service. There are three kinds of attestation service:
 1. EPID. This older protocol is supported by some desktop/laptop class Intel CPUs. The EPID protocol includes some
    consumer privacy cryptography, and involves talking directly to Intel's IAS service to generate an attestation.
    For that you need to obtain an API key and service provider ID from Intel. You can sign-up easily and for free. 
-   [Learn more about IAS](ias.md).
+   [Learn more about IAS](ias.md). Please note that Intel does not provide EPID attestation support for Xeon scalable CPUs
+   including Ice Lake and future generations. You need to use DCAP attestation on these platforms.
 2. Azure DCAP. The _datacenter attestation primitives_ protocol is newer and designed for servers. When running on a
    Microsoft Azure Confidential Compute VM or Kubernetes pod, you don't need any parameters. It's all configured out of 
    the box.
@@ -560,7 +610,9 @@ by debuggers to read/write the enclave's memory.
 
 You will need to run this on an [Azure Confidential VM](https://docs.microsoft.com/en-us/azure/confidential-computing/).
 
-`gradlew -PenclaveMode=debug host:run`
+```bash
+./gradlew -PenclaveMode=debug host:run
+```
 
 ## Encrypted messaging
 
@@ -619,9 +671,11 @@ The second parameter is an `EnclaveMail`. This object gives us access to the bod
 also exposes some other header fields:
 
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
-   can be thought of as equivalent to a URL path or port number. Topics are scoped per-sender and are not global. The
+   can be thought of as equivalent to an email subject. Topics are scoped per-sender and are not global. The
    client can send multiple streams of related mail by using a different topic for each stream, and it can do this
-   concurrently.
+   concurrently. The topic is not parsed by Conclave and, to avoid replay attacks, should never be reused for an unrelated set of mails in the future. A good
+   value might thus contain a random UUID. Topics may be logged and used by your software to route or split mail streams
+   in useful ways.
 1. The _sequence number_. Starting from zero, this is incremented by one for every mail delivered on a topic. Conclave will
    automatically reject messages if this doesn't hold true, thus ensuring to the client that the stream of related
    mail is received by the enclave in the order they were sent, and that the host is unable to re-order or drop them.
@@ -741,7 +795,7 @@ useless for the host to mis-direct mail.
 ### Mail commands
 
 The second parameter to `EnclaveHost.start` is a callback which returns a list of `MailCommand` objects from the enclave.
-There are two commands the host can receive:
+There are three commands the host can receive:
 
 1. **Post mail**. This is when the enclave wants to send mail over the network to a client. The enclave may provide a
    routing hint with the mail to help the host route the message. The host is also expected to safely store the message
@@ -752,6 +806,10 @@ There are two commands the host can receive:
    For example, the conversation with the client has reached its end and so it acknowledges all the mail in that thread;
    or the enclave can checkpoint in the middle by creating a mail to itself which condenses all the previous mail, which
    are then all acknowledged.
+1. **AcknowledgementReceipt**. The enclave will also send this when acknowledging mail. When the host deletes acknowledged mails,
+   the remaining mails will not be in the default sequence (consecutive integers starting from 0).  In addition to deleting
+   acknowledged mail, the host has to keep the receipt data and present it to `host.start()` at the next enclave restart,
+   so the enclave knows what sequence to expect.
 
 The host receives these commands grouped together within the scope of a single `EnclaveHost.deliverMail` or `EnclaveHost.callEnclave`
 call. This allows the host to add transactionality when processing the commands. So for example, the delivery of the mail
@@ -993,14 +1051,16 @@ ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
 
 ### Integrating enclave tests in your host project
 
-When you want to test your enclave on real SGX hardware or in a simulated SGX environment you need to define your tests
-in a project separate from the the enclave project. A suitable place for your tests would be to define them as part of
+When you want to test your enclave on real SGX hardware or in a simulated SGX environment **you need to define your tests
+in a project separate from the enclave project.** A suitable place for your tests would be to define them as part of
 the host project tests.
 
 Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs 
 to be loaded with `EnclaveHost.load`. By default this will run the tests in a simulated SGX environment and will require
 the tests to be executed within Linux. In addition, testing on real hardware will require the tests to be executed within
 Linux on a system that supports SGX.
+
+
 
 ```java
 @EnabledOnOs(OS.LINUX)
@@ -1031,17 +1091,23 @@ a non-Linux system then you can configure your tests to depend on a mock mode en
 
 Running
 
-```gradlew host:test```
+```
+./gradlew host:test
+```
 
 will execute the test using a simulation enclave, or not at all if the OS is not Linux. You can switch to a debug enclave
 and test on real secure hardware by using the `-PenclaveMode` flag:
 
-```gradlew -PenclaveMode=debug host:test```
+```
+./gradlew -PenclaveMode=debug host:test
+```
 
 Or you can use a mock enclave and test on a non-Linux platform by removing `@EnabledOnOs(OS.LINUX)` and by running this
 command:
 
-```gradlew -PenclaveMode=mock host:test```
+```
+./gradlew -PenclaveMode=mock host:test
+```
 
 !!! tip
     To run the tests in a simulated SGX environment on a non-Linux machine you can use Docker, which manages Linux 

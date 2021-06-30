@@ -11,59 +11,73 @@ but can also be used to secure your infrastructure against attack.
 
 * **[Visit the Conclave website](https://www.conclave.net)**
 
-* **[Get Conclave](https://conclave.net/get-conclave/)** (SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`)
+* **[Get Conclave](https://conclave.net/get-conclave/)**
+    * Conclave 1.0 SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`
+    * Conclave 1.1 SHA2: `3d47ae8a9fb944d75fb4ee127cd9874c04343643c830e1fe68898c3c93891ca2`
 
 ## Why Conclave?
 
 - High level, simple API that is much easier to use than other enclave APIs.
 - Write your host app in any language that can run on a Java Virtual Machine like Java, Kotlin or even 
-  [JavaScript](javascript.md). Write your enclave using the GraalVM native image technology for incredibly tight memory 
+  [JavaScript](javascript.md). 
+- Write your enclave using the [GraalVM](https://www.graalvm.org/) native image technology for incredibly tight memory 
   usage, support for any GraalVM language and instant startup time. Eliminate all memory management errors that would 
   undermine the security of your enclave, thanks to the built-in compacting generational garbage collector.
 - Develop gracefully on all operating systems, not just Linux: Windows and macOS are fully supported as well.
-- Full support for auditing enclaves over the internet, including remote attestation and fully deterministic,
-  reproducible builds. A user can verify what the source code of the remotely running enclave is, to ensure it will
-  behave as they expect.
-- A message oriented communication and storage system that eliminates size-based side channel attacks and integrates with
-  the Intel SGX secure upgrade mechanisms. Roll forward through security upgrades without clients being aware of it.
+- Full support for auditing enclaves over the internet, including remote attestation. A user can verify what the 
+  source code of the remotely running enclave is, to ensure it will behave as they expect.
+- A [message oriented communication and storage](mail.md) system that eliminates size-based side channel attacks and 
+  integrates with the Intel SGX secure upgrade mechanisms. Roll forward through security upgrades without clients being aware of it.
 - A Gradle plugin to automate compiling, signing and calculating the code hash of your enclave. No need to use the Intel
   SDK - everything needed is included.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
-- Easily deploy to Microsoft Azure Gen2 VMs by just uploading your Java app and running it as normal. There is no setup!
+- Easily deploy to [Microsoft Azure](azure.md) by just uploading your Java host app and running it as normal. 
+  There is no setup!
 - A powerful unit testing framework to verify the operation of your enclave and remote attestation functionality, 
   using just JUnit.
 - Integrate and benefit from [Corda](https://www.corda.net), an open source peer-to-peer network for business uses with
   enterprise support.
-- Tutorials, guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our Slack 
+- [Tutorials](tutorial.md), guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our Slack 
   channel and mailing list, even if you don't have a proper support contract!
   
-Finally, **Conclave is free for non-commercial open source projects**, and there are easy licensing terms for individuals 
-and early stage startups.
+Finally, **Conclave is free for individuals and early-stage startups!**
 
 ## Documentation
 
 Click through the tabs above to see all our documentation. If you're not sure where to start, these pages are good:
 
-[**Enclaves.**](enclaves.md) If you're totally new to enclave development start with our introduction to enclave-oriented
+* **Concepts**
+
+    * [**Enclaves.**](enclaves.md) If you're totally new to enclave development start with our introduction to enclave-oriented
 design. This will explain the concepts referred to in the rest of the documentation.
 
-[**Architectural overview.**](architecture.md) This explains the core Conclave APIs and how it's structured.
+    * [**Architectural overview.**](architecture.md) This explains the core Conclave APIs and how it's structured.
 
-[**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
+* **Writing and Running your First Conclave Application**
+  
+    * [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
 
-[**Enclave Configuration.**](enclave-configuration.md) Now you've created your first enclave, take a deeper look at the configuration options
+    * [**Enclave Configuration.**](enclave-configuration.md) Now you've created your first enclave, take a deeper look at the configuration options
 available for creating enclaves.
 
-[**Using JavaScript.**](javascript.md) How to use JIT compiled JavaScript inside the enclave.
+* **Deploying and Operating Conclave Applications**
 
-[**Machine setup.**](machine-setup.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
+    * [**Machine setup.**](machine-setup.md) Learn how to obtain SGX capable hardware, set it up, deploy to production
 and then keep your machine trusted by applying updates.
 
-[**Writing CorDapps with Conclave**](writing-cordapps.md) You'll need a way for your users to get data to and from your
+* **Exploring more of Conclave's capabilities** 
+
+    * [**Using JavaScript.**](javascript.md) How to use JIT compiled JavaScript inside the enclave.
+
+    * [**Integrating Conclave with Blockchain Applications**](writing-cordapps.md) You'll need a way for your users to get data to and from your
 service that has integrated identity, workflow, firewall handling, database integration and more. Corda is an enterprise
 blockchain platform that offers many useful features when you progress beyond encrypting your business logic.
 
-[**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
+    * [**Reference guide.**](api/index.html) We provide detailed JavaDocs for the API.
+   
+    * [**Samples.**](https://github.com/R3Conclave/conclave-samples) The Conclave Developer Relations team maintains a library 
+   of samples here. 
+      Samples include machine learning within a Conclave enclave and an example of a lightweight host application.
 
 ## Get in touch
 
@@ -79,12 +93,61 @@ is available where you can find the development team during UK office hours (GMT
 ## Release notes
 
 ### 1.1
+
+!!! important
+    There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
+    you might need to make to get your current project building with Conclave 1.1.
+
+!!! Deprecation
+    The Avian runtime is deprecated as of Conclave 1.1. Previously Conclave gave you the choice of whether to use Avian 
+    or GraalVM native image as the runtime environment inside your enclave. Enclaves built with GraalVM native image
+    have many benefits over Avian enclaves, including enhanced security, performance and capabilities. Therefore 
+    new projects should not use the Avian runtime. References to using Avian have been removed from the documentation
+    for Conclave 1.1, and the next release of SDK will not include the capability to build enclaves that use the Avian runtime.
+    Conclave 1.1 does still allow you to build Avian enclaves on Linux and macOS but you cannot build Avian enclaves
+    on Windows systems.
+
+1. **Conclave 1.1 has been tested on the latest 3rd Gen Intel Xeon Scalable processors, also known as Ice Lake Xeon CPUs.**
+   These CPUs bring a number of enhancements for Conclave applications, especially in the amount of memory available
+   for use inside enclaves where the limit has been increased from typically around 95MB up to 512GB per CPU depending
+   on the platform. You do not need to make any changes to your application to support these new CPUs except
+   to ensure you are using DCAP attestation as Xeon Scalable processors do not support EPID.
 1. :jigsaw: **New feature!** Mock mode has been extended so you can now specify 'mock' as an enclave mode and use 
    your regular host rather than having to modify your code to use a special build of your host. A new `mockEnclave` 
    property has been added to `EnclaveHost` that can be used in mock mode to allow access to the enclave instance
    for probing internal state during development and testing.
-   [Learn more about enclave configurations](architecture.md#testing_and_debugging).
+   [Learn more about enclave configurations](architecture.md#testing-and-debugging).
    [See more information about how the API has changed](api-changes.md#1.0-to-1.1)
+1. :jigsaw: **New feature!** When using mock mode you can now specify the configuration of the mock environment,
+   allowing parameters such as the `codeHash`, `codeSigningKeyHash` and `tcbLevel` to be modified programatically
+   in your unit tests. See [Mock mode configuration](mockmode.md#mock-mode-configuration) for more details.
+1. :jigsaw: **New feature!** We've updated the bundled [CorDapp sample](writing-cordapps.md) to show how to integrate
+   Corda network identities with Conclave. The node can now log in to the enclave and identify itself by presenting its
+   verified X.509 certificate. The enclave can use this to map the mail sender key to a meaningful X.500 name.
+1. :jigsaw: **New feature!** To better showcase Conclave we've created a [separate repository](https://github.com/R3Conclave/conclave-samples)
+   of enclave samples for you to look and try out. We plan to update this on a more regular basis. In particular we have
+   a [sample](https://github.com/R3Conclave/conclave-samples/tree/master/tribuo-tutorials) running the [Tribuo](https://tribuo.org/)
+   machine learning library inside an enclave.
+1. The Conclave documentation has been improved, fixing a number of errors and updating the format of the Javadocs
+   section of the documentation site. The Conclave SDK documentation is packaged along with the SDK so it is automatically 
+   displayed in IDEs that support this, including Eclipse and Visual Studio Code. See 
+   [Writing hello world](writing-hello-world.md#ide-documentation-in-the-root-buildgradle-file) for details of
+   how to configure your Gradle project to display documentation in the IDE.
+1. We've updated to version 21.0.0 of GraalVM which along with some performance improvements to the garbage collector,
+   also adds Java serialisation support. We've updated Conclave to take advantage of this. Find out more about how
+   to configure [serialization within the enclave](enclave-configuration.md#serializationconfigurationfiles).
+1. The SGX SDK that Conclave is built upon has been updated to version 2.13.3. This provides bug fixes and an update
+   to the Intel IPP cryptographic library. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.13.3-release)
+   for more details.
+1. We've improved the error messages in a number of places, including when there are problems signing the enclave
+   and when there are issues in sending and receiving Mail messages.
+1. The [container-gradle](container-gradle.md) script has been updated to correctly handle configuration files
+   that live outside the source tree.
+1. The output of the enclave gradle build has been tidied up, hiding the information that would only normally be
+   present on verbose builds. If you want to see the verbose output in your build then just add `--info` to your
+   gradle build command line.
+1. Security improvements and bug fixes: improved DCAP certificate validation, added additional bounds checks on some
+   internal methods, fixes to allow validation of enclave-to-enclave attestations inside an enclave.
 
 ### 1.0
 
