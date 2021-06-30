@@ -31,7 +31,6 @@ task generateEnclaveJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.e
  */
 String buildDirectory(type) { return "$buildDir/$type" }
 static String createCmakeTaskName(type) { return "createCmakeBuild$type" }
-static String compileTaskNameEnclave(type) { return "compileEnclave$type" }
 static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
@@ -76,18 +75,6 @@ for (type in types) {
 
         outputs.files(
                 "${buildDirectory(type)}/Makefile"
-        )
-    }
-
-    // Build the enclave object
-    tasks.create(compileTaskNameEnclave(type), Exec) {
-        dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateEnclaveJniHeaders)
-
-        workingDir(buildDirectory(type))
-
-        commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
-                "--target", "jvm_enclave_avian"
         )
     }
 
