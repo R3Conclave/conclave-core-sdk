@@ -50,7 +50,6 @@ class DjvmEnclaveHost : AutoCloseable {
 
     override fun close() {
         callEnclave { clearJars = ClearJars.getDefaultInstance() }
-        // destroy can trigger an assertion failure in Avian
-//        enclaveHost.close()
+        enclaveHost.close()
     }
 }

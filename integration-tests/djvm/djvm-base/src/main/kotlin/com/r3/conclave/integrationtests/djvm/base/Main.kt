@@ -94,7 +94,7 @@ fun runSandboxedTest(clazz: Class<out EnclaveJvmTest>) {
 /**
  * Run tests on the host JVM, without invoking the enclave infrastructure.
  * Useful to verify the tests are behaving as expected before invoking them in the enclave.
- * This class can be used as an alternative to the JUnit runner, which does not work in Avian.
+ * This class can be used as an alternative to the JUnit runner
  */
 fun main(args: Array<String>) {
     if (args.size < 2) {

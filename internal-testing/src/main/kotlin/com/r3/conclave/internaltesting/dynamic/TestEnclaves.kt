@@ -97,12 +97,6 @@ class TestEnclaves : BeforeAllCallback, AfterAllCallback {
         val enclaveFile = getSignedEnclaveFile(entryClass, enclaveBuilder).toPath()
         return createHost(mode, enclaveFile, entryClass.name, tempFile = false)        
     }
-
-    fun getEnclaveMetadata(enclaveClass: Class<out Enclave>, builder: EnclaveBuilder): Path {
-        val cachedSignedEnclave = signedEnclaveFile(enclaveClass, builder)
-        val metadataFile = SignEnclave.enclaveMetadata(cachedSignedEnclave)
-        return cache[metadataFile].toPath()
-    }
 }
 
 data class EnclaveBuilder(
