@@ -144,12 +144,6 @@ for (type in types) {
     }
 }
 
-task cleanAvian(type: Delete) {
-    delete "$projectDir/avian/build"
-}
-
-clean.finalizedBy cleanAvian
-
 class Javah extends DefaultTask {
     final String nativeClass
 

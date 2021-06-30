@@ -30,7 +30,6 @@ target_include_directories(jvm_host_shared PUBLIC
         include
         ${JNI_INCLUDE_DIRS})
 target_link_libraries(jvm_host_shared
-        avian_headers
         linux-sgx_headers
         linux-sgx_urts_headers
         -L${LINUX_BUILD_ARTIFACT_DIR}
