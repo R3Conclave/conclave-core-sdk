@@ -23,7 +23,6 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val resourcesConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
-    val avian = RuntimeType.Avian
     val graalvm_native_image = RuntimeType.GraalVMNativeImage
 
     fun release(action: Action<EnclaveExtension>) {

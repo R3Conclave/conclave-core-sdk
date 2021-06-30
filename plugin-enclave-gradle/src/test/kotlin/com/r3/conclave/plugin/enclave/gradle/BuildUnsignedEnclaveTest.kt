@@ -39,23 +39,4 @@ class BuildUnsignedEnclaveTest {
             assertThat(task!!.outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
         }
     }
-
-    @EnumSource(BuildType::class)
-    @ParameterizedTest(name = "{index} => {0}")
-    fun modifyJVM(buildType: BuildType) {
-        if (buildType != BuildType.Mock) {
-            var task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-
-            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory,"runtime = avian", "runtime = graalvm_native_image")
-
-            task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-
-            ProjectUtils.replaceAndRewriteBuildFile(projectDirectory,"runtime = graalvm_native_image", "runtime = avian")
-
-            task = runTask(buildType)
-            assertThat(task!!.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        }
-    }
 }

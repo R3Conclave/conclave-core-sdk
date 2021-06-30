@@ -256,26 +256,16 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputEnclave.set(unsignedEnclaveFile)
             }
 
-            val buildUnsignedAvianEnclaveTask = target.createTask<BuildUnsignedAvianEnclave>("buildUnsignedAvianEnclave$type") { task ->
-                task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask, buildJarObjectTask)
-                val partialEnclavefile = "${copyPartialEnclaveTask.destinationDir}/com/r3/conclave/partial-enclave/$type/jvm_enclave_avian"
-                task.inputs.files(linkerToolFile.parent, partialEnclavefile, buildJarObjectTask.outputJarObject)
-                task.inputLd.set(linkerToolFile)
-                task.inputEnclaveObject.set(target.file(partialEnclavefile))
-                task.inputJarObject.set(buildJarObjectTask.outputJarObject)
-                task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
-                task.outputEnclave.set(unsignedEnclaveFile)
-                task.stripped.set(type == BuildType.Release)
-            }
-
             val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
-                // This task is used as a common target that selects between Avian and GraalVM based on
+                // This task was used as a common target that selects between Avian and GraalVM based on
                 // conclaveExtension.runtime. It sets inputEnclave to the output of the relevant task,
-                // selected at build time causing a dependency
+                // selected at build time causing a dependency.
+                // We leave this code here just in the remote case we want to move away from GraalVM
                 task.inputEnclave.set(conclaveExtension.runtime.flatMap {
                     when (it) {
-                        RuntimeType.Avian -> buildUnsignedAvianEnclaveTask.outputEnclave
-                        else -> buildUnsignedGraalEnclaveTask.outputEnclave
+                        RuntimeType.GraalVMNativeImage -> buildUnsignedGraalEnclaveTask.outputEnclave
+                        else -> throw GradleException("Only GraalVM is supported since Conclave 1.1")
+
                     }
                 })
                 task.outputEnclave.set(task.inputEnclave.get())
