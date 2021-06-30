@@ -106,12 +106,6 @@ ENV JVMCI_HOME          /opt/openjdk1.8.0_272-jvmci-$JVMCI_VERSION
 ENV MX_HOME             /opt/mx-$MX_VERSION
 ENV SGX_SDK_VERSION     2.12
 
-# The Avian build requires Java 8 regardless of what JAVA_HOME is set to above.
-# If this variable does not exists then it defaults to using JAVA_HOME but it is
-# set explicitely here so if JAVA_HOME above is changed then Avian is still built
-# with the correct version
-ENV JAVA_8_HOME         /usr/lib/jvm/java-8-openjdk-amd64
-
 # Linux SGX mitigation binaries
 RUN curl -sSL -o /opt/as.ld.objdump.gold.r3.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.gold.r3.tar.gz
 RUN echo "794963ca90fb0561caf3ed2bee1d9ba394226f355689cdda28161e6e0620a713  /opt/as.ld.objdump.gold.r3.tar.gz" | sha256sum -c -
