@@ -3,10 +3,8 @@
 This app provides benchmarks for various different computation loads and allows them to be run on 5 different targets:
 
 1. JVM on the host platform.
-2. Conclave using an Avian JVM runtime running inside a debug enclave.
-3. Conclave using an Avian JVM runtime running inside a simulation enclave.
-4. Conclave using a GraalVM native-image runtime (SubstrateVM) running inside a debug enclave.
-5. Conclave using a GraalVM native-image runtime (SubstrateVM) running inside a simulation enclave.
+2. Conclave using a GraalVM native-image runtime (SubstrateVM) running inside a debug enclave.
+3. Conclave using a GraalVM native-image runtime (SubstrateVM) running inside a simulation enclave.
 
 ## Building the benchmarks
 The benchmark app is built as one of the sample projects in the source tree.
@@ -33,7 +31,7 @@ cd jvm-perf/jvm-perf/build/libs
 java -jar jvm-perf-all.jar
 ```
 
-This will execute all benchmarks on all platforms; Avian-based enclaves, GraalVM native-image
+This will execute all benchmarks on all platforms; GraalVM native-image
 based enclaves and on the host JVM.
 
 It is possible to execute a subset of benchmarks by passing parameters to the app. You can get
@@ -45,25 +43,25 @@ To execute a single set of tests you can just provide the last part of the name 
 
 `java -jar jvm-perf-all.jar binary_trees`
 
-By default the benchmark will run all all supported runtimes. To run on a single runtime, 
-e.g. Avian debug:
+By default the benchmark will run all supported runtimes. To run on a single runtime, 
+e.g. GraalVM debug:
 
-`java -jar jvm-perf-all.jar -p runtime=avian-debug binary_trees`
+`java -jar jvm-perf-all.jar -p runtime=graalvm-debug binary_trees`
 
-Valid runtimes are `avian-debug`, `avian-simulation`, `graalvm-debug`, `graalvm-simulation` and `host`.
+Valid runtimes are `graalvm-debug`, `graalvm-simulation` and `host`.
 
 ### Running in SGX simulation mode
 On SGX hardware the full set of benchmarks can be executed. Whereas when running on non-SGX
 hardware, only the host and simulation runtimes can be used. For example to run all benchmarks
 available on non-sgx hardware:
 
-`java -jar jvm-perf-all.jar -p runtime="avian-simulation,graalvm-simulation,host"`
+`java -jar jvm-perf-all.jar -p runtime="graalvm-simulation,host"`
 
 To run the benchmarks on SGX hardware you need to specify an SPID and attestation key. This can be done via parameters to the benchmark app:
 
 `java -jar jvm-perf-all.jar -p spid=[hex bytes] -p attestationKey=[hex bytes]`. 
 
-An attestation is performed at the start of every benchmark and applies to each test on each runtime. So for 'mandelbrot' on Avian, the attestation will be performed on the Avian enclave
+An attestation is performed at the start of every benchmark and applies to each test on each runtime. So for 'mandelbrot' on GraalVM, the attestation will be performed on the GraalVM enclave
 before the warmup and the enclave is destroyed at the end of the 'mandelbrot' iterations. The
 time taken for attestation does not affect the results of the benchmarks.
 
@@ -99,8 +97,6 @@ When the tests are complete you get a summary of all tests:
 # Run complete. Total time: 00:00:17
 
 Benchmark                    (runtime)          Mode   Cnt  Score   Error  Units
-EnclaveBenchmark.mandelbrot  avian-debug        thrpt    5  1.815 ± 1.111  ops/s
-EnclaveBenchmark.mandelbrot  avian-simulation   thrpt    5  1.802 ± 0.796  ops/s
 EnclaveBenchmark.mandelbrot  graalvm-debug      thrpt    5  5.252 ± 0.365  ops/s
 EnclaveBenchmark.mandelbrot  graalvm-simulation thrpt    5  5.514 ± 0.326  ops/s
 EnclaveBenchmark.mandelbrot  host               thrpt    5  6.265 ± 0.287  ops/s
@@ -129,7 +125,7 @@ They have only been modified slightly in order to work in our benchmark harness 
 `java -jar jvm-perf-all.jar empty`
 
 This is a benchmark of an empty function. This does not make much sense for a host measurement
-but is useful to compare the entry/exit speed of Avian vs GraalVM native-image enclave calls.
+but is useful to compare the entry/exit speed of GraalVM native-image enclave calls.
 
 ### Fannkuch
 `java -jar jvm-perf-all.jar fannkuch`

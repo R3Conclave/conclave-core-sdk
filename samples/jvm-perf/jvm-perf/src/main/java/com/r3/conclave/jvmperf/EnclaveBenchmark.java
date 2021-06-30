@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * This class defines the benchmarks that will be run. It runs each benchmark three times.
- * Once for the host, once for an Avian enclave and once for a GraalVM native-image enclave.
+ * Once for the host, once for a GraalVM native-image enclave.
  */
 @State(Scope.Thread)
 @Fork(value = 1, warmups = 0)
@@ -30,11 +30,7 @@ public class EnclaveBenchmark {
      */
     @Setup(Level.Trial)
     public void prepare(ExecutionPlatforms platform) throws EnclaveLoadException {
-        if (platform.runtime.equals("avian-simulation"))
-            enclave = EnclaveHost.load("com.r3.conclave.avian.simulation.BenchmarkEnclave");
-        else if (platform.runtime.equals("avian-debug"))
-            enclave = EnclaveHost.load("com.r3.conclave.avian.debug.BenchmarkEnclave");
-        else if (platform.runtime.equals("graalvm-simulation"))
+        if (platform.runtime.equals("graalvm-simulation"))
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.simulation.BenchmarkEnclave");
         else if (platform.runtime.equals("graalvm-debug"))
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
@@ -63,9 +59,7 @@ public class EnclaveBenchmark {
      * @throws NoSuchMethodException
      */
     private void runBenchmark(ExecutionPlatforms platform, String cmdline) throws NoSuchMethodException {
-        if (platform.runtime.equals("avian-simulation") ||
-            platform.runtime.equals("avian-debug") ||
-            platform.runtime.equals("graalvm-simulation") ||
+        if (platform.runtime.equals("graalvm-simulation") ||
             platform.runtime.equals("graalvm-debug")) {
             enclave.callEnclave(cmdline.getBytes());
         }
