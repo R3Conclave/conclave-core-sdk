@@ -26,7 +26,6 @@ add_subdirectory(dummy)
 add_subdirectory(jvm-edl)
 add_subdirectory(jvm-host-enclave-common)
 add_subdirectory(jvm-enclave-common)
-add_subdirectory(jvm-enclave-avian)
 add_subdirectory(jvm-host)
 add_subdirectory(jvm-host-shared)
 
