@@ -121,14 +121,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val nativeImageLinkerToolFile = target.file(osDependentTools.getNativeImageLdFile())
         val signToolFile = target.file(osDependentTools.getSgxSign())
 
-        val buildJarObjectTask = target.createTask<BuildJarObject>("buildJarObject") { task ->
-            task.dependsOn(copySgxToolsTask)
-            task.inputs.files(linkerToolFile, signToolFile)
-            task.inputLd.set(linkerToolFile)
-            task.inputJar.set(shadowJarTask.archiveFile)
-            task.outputJarObject.set(baseDirectory.resolve("app-jar").resolve("app.jar.o").toFile())
-        }
-
         val enclaveClassNameTask = target.createTask<EnclaveClassName>("enclaveClassName") { task ->
             task.inputJar.set(shadowJarTask.archiveFile)
         }
@@ -200,11 +192,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // user overrides it they will use a project relative (rather than build directory
             // relative) path name.
             enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
-
-            val copyPartialEnclaveTask = target.createTask<Copy>("copyPartialEnclave$type") { task ->
-                task.fromDependencies("com.r3.conclave:native-enclave-$typeLowerCase:$sdkVersion")
-                task.into(baseDirectory)
-            }
 
             val substrateDependenciesPath = "$conclaveDependenciesDirectory/substratevm/$type"
             val sgxDirectory = "$conclaveDependenciesDirectory/sgx/$type"
