@@ -264,7 +264,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.inputEnclave.set(conclaveExtension.runtime.flatMap {
                     when (it) {
                         RuntimeType.GraalVMNativeImage -> buildUnsignedGraalEnclaveTask.outputEnclave
-                        else -> throw GradleException("Only GraalVM is supported since Conclave 1.1")
+                        else -> throw GradleException("Only GraalVM is supported since Conclave 1.2")
                     }
                 })
                 task.outputEnclave.set(task.inputEnclave.get())
