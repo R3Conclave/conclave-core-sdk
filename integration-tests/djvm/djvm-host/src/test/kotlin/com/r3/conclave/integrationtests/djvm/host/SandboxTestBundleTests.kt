@@ -6,6 +6,7 @@ import com.r3.conclave.integrationtests.djvm.base.enclave.proto.ExecuteTest
 import com.r3.conclave.integrationtests.djvm.base.loadTestClasses
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
@@ -16,6 +17,7 @@ import java.nio.file.Paths
 import java.util.stream.Stream
 
 @Tag("slow")
+@Disabled
 class SandboxTestBundleTests {
     companion object {
         private val sandboxTestBundleJar = Paths.get(System.getProperty("sandbox-test-bundle-jar"))

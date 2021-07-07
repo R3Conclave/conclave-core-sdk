@@ -6,6 +6,7 @@ import com.r3.conclave.integrationtests.djvm.base.enclave.proto.ExecuteTest
 import com.r3.conclave.integrationtests.djvm.base.loadTestClasses
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -14,6 +15,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource
 import java.nio.file.Paths
 import java.util.stream.Stream
 
+@Disabled
 class SimpleTestBundleTests {
     companion object {
         private val simpleTestBundleJar = Paths.get(System.getProperty("simple-test-bundle-jar"))
