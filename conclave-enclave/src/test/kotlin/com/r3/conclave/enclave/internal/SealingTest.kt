@@ -10,12 +10,10 @@ import com.r3.conclave.internaltesting.dynamic.TestEnclaves
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
 
-@Disabled
 class SealingTest {
     companion object {
         @JvmField

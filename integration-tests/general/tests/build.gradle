@@ -12,6 +12,9 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
+    testRuntimeOnly project(path: ":general:enclave_sealunseal", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:enclave_sealunseal_2", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:enclave_sealunseal_3", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_threadsafe_true", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_threadsafe_false", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_with_mail", configuration: enclaveMode)

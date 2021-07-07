@@ -224,14 +224,13 @@ sealed class Cached<out A : Any> {
         )
     }
 
-    fun <B : Any> combineFile(b: Cached<B>, outputName: String, produce: (output: File, A, B) -> Unit): Cached<File> {
+    fun <B : Any> combineFile(b: Cached<B>, outputName: String, produce: (output: File, B) -> Unit): Cached<File> {
         return Cached.FApplyCached(
             name = outputName,
-            produce = map { aValue ->
+            produce = map {
                 { outputDirectory: Directory, bValue: B ->
                     produce(
                         File(outputDirectory.asFile, outputName),
-                        aValue,
                         bValue
                     )
                 }

@@ -5,7 +5,6 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand
-import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.Deserializer
 import com.r3.conclave.integrationtests.general.common.tasks.JvmTestTask
 import org.assertj.core.api.Assertions.assertThat
@@ -44,11 +43,12 @@ open class JvmTest(private val enclaveClassName: String) {
     lateinit var enclaveHost : EnclaveHost
     var closeHost = true
 
-    val mailCommands = mutableListOf<MailCommand>()
+    private val mailCommands = mutableListOf<MailCommand>()
 
     @BeforeEach
     fun beforeEach() {
         enclaveHost = EnclaveHost.load(enclaveClassName)
+
         val attestationParameters = when(enclaveHost.enclaveMode){
             EnclaveMode.RELEASE, EnclaveMode.DEBUG -> getHardwareAttestationParams()
             else -> null
@@ -56,6 +56,7 @@ open class JvmTest(private val enclaveClassName: String) {
         enclaveHost.start(attestationParameters) {
             mailCommands.addAll(it)
         }
+
         closeHost = true
     }
 
