@@ -1,7 +1,6 @@
 package com.r3.conclave.integrationtests.general.enclave
 
 import com.r3.conclave.integrationtests.general.common.SealUnsealEnclave
-import com.r3.conclave.integrationtests.general.common.TestHelper
 
 class SealUnsealEnclave3 : SealUnsealEnclave() {
 

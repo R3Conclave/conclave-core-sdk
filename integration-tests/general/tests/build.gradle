@@ -7,10 +7,15 @@ dependencies {
 
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
-    testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
+    implementation "com.r3.conclave:conclave-common:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-common:$conclave_version"
     testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
+    implementation "com.r3.conclave:conclave-enclave:$conclave_version"
+
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "com.google.guava:guava:$guava_version"
 
     testRuntimeOnly project(path: ":general:enclave_sealunseal", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_sealunseal_2", configuration: enclaveMode)

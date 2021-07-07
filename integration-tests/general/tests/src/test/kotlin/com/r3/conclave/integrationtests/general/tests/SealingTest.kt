@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-private const val anotherInstanceOriginalEnclave = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclave1"
+private const val originalEnclave = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclave1"
+private const val anotherInstanceOriginalEnclave = originalEnclave
 private const val anotherEnclaveSameSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclave2"
 private const val anotherEnclaveDistinctSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclave3"
 
@@ -22,7 +23,7 @@ enum class MessageType {
     AUTHENTICATED
 }
 
-class SealingTest : JvmTest(anotherInstanceOriginalEnclave) {
+class SealingTest : JvmTest(originalEnclave) {
 
     @Test
     fun `seal and unseal data`() {
@@ -81,7 +82,6 @@ class SealingTest : JvmTest(anotherInstanceOriginalEnclave) {
 
     private fun initExtraEnclave(name : String): EnclaveHost {
         val newEnclave = EnclaveHost.load(name)
-
         val attestationParameters = when(newEnclave.enclaveMode){
             EnclaveMode.RELEASE, EnclaveMode.DEBUG -> getHardwareAttestationParams()
             else -> null
