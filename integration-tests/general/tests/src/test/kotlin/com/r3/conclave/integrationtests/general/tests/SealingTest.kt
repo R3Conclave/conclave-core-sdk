@@ -75,8 +75,6 @@ class SealingTest : JvmTest(anotherInstanceOriginalEnclave) {
         val exception = assertThrows<RuntimeException> {
              unsealMessageInEnclave(anotherEnclaveDistinctSigner, sealedMessage!!)
         }
-        //assertEquals(unsealedMessageAuthenticatedBefore.plaintext, unsealedMessageAfter.plaintext)
-        //assertEquals(unsealedMessageAuthenticatedBefore.authenticatedData, unsealedMessageAfter.authenticatedData)
 
         assertTrue(exception.message!!.contains("SGX_ERROR_MAC_MISMATCH"))
     }
