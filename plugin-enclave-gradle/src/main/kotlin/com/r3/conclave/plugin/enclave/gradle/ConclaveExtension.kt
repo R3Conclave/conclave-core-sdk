@@ -18,7 +18,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val simulation: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.GraalVMNativeImage)
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
-    val graalVMSDKVersion: Property<String> = objects.property(String::class.java).convention("21.0.0")
+    val graalVMSDKVersion: Property<String> = objects.property(String::class.java).convention("21.1.0")
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val resourcesConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
