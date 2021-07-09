@@ -168,21 +168,4 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             }
         }
     }
-
-    /*
-    class SecretKeyEnclave1 : SecretKeyEnclave1()
-    class SecretKeyEnclave2 : SecretKeyEnclave2()
-
-    abstract class AbstractSecretKeyEnclave : SealUnsealEnclave1() {
-        private val env : com.r3.conclave.enclave.internal.EnclaveEnvironment by lazy {
-            Enclave::class.java.getDeclaredField("env").apply { isAccessible = true }.get(this) as EnclaveEnvironment
-        }
-
-
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
-
-            return env.getSecretKey(Cursor.wrap(SgxKeyRequest.INSTANCE, bytes, 0, bytes.size))
-        }
-    }
- */
 }
