@@ -53,10 +53,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
             // If language support is enabled then automatically add the required dependency.
-            if (conclaveExtension.supportLanguages.get().length > 0) {
+            if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // Only the graalvm_native_image runtime is supported
                 if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
                     target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get())
+                    target.logger.warn("As Avian has been demised, GraalVM is the only supported runtime and the parameter \"runtime\" is now deprecated")
                 } else {
                     throw GradleException("The enclave is configured to support languages but the runtime is not set to graalvm_native_image. "
                                         + "Language support is only provided for graalvm_native_image enclaves. "
