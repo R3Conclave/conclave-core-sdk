@@ -28,19 +28,6 @@ index f1b5a9f..723e65c 100644
              ],
              "javaCompliance": "8+",
              "checkstyleVersion" : "8.8",
-diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/option/SubstrateOptionsParser.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/option/SubstrateOptionsParser.java
-index c972493..29a7794 100644
---- a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/option/SubstrateOptionsParser.java
-+++ b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/option/SubstrateOptionsParser.java
-@@ -320,6 +320,8 @@ public class SubstrateOptionsParser {
-             } else {
-                 return OptionParseResult.error("Boolean option " + option + " must have value 'true' or 'false'");
-             }
-+        } else if (optionType == String[].class) {
-+            value = valueString.split(",");
-         } else if (optionType.isEnum()) {
-             value = Enum.valueOf(optionType.asSubclass(Enum.class), valueString);
-         } else {
 diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
 index 37a4551..b155ed4 100644
 --- a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
@@ -56,7 +43,7 @@ index 37a4551..b155ed4 100644
 +    public static final HostedOptionKey<Boolean> ExportStaticSymbols = new HostedOptionKey<>(false);
 +
 +    @Option(help = "Default libraries to be excluded by the linker (list of comma-separated library names, i.e., dl,pthreads)", type = OptionType.Expert)
-+    public static final HostedOptionKey<String[]> ExcludeLibraries = new HostedOptionKey<>(new String[]{});
++    public static final HostedOptionKey<LocatableMultiOptionValue.Strings> ExcludeLibraries = new HostedOptionKey<>(new LocatableMultiOptionValue.Strings());
 +
 +    @Option(help = "Exclude loading net library", type = OptionType.Expert)
 +    public static final HostedOptionKey<Boolean> ExcludeLoadingNetwork = new HostedOptionKey<>(false);
@@ -271,7 +258,7 @@ index 2e01394..7630aed 100644
 +        if (SubstrateOptions.ExcludeLoadingNetwork.hasBeenSet() && SubstrateOptions.ExcludeLoadingNetwork.getValue()) {
 +            return;
 +        }
-+        
++
          String libName = lib.getCanonicalIdentifier();
          PointerBase onLoadFunction;
          if (lib.isBuiltin()) {
