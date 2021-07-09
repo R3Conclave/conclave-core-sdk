@@ -15,6 +15,7 @@ dependencies {
 
     testRuntimeOnly project(path: ":general:enclave_secret_key", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_secret_key_2", configuration: enclaveMode)
+    
     testRuntimeOnly project(path: ":general:enclave_sealunseal", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_sealunseal_2", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_sealunseal_3", configuration: enclaveMode)
@@ -22,4 +23,5 @@ dependencies {
     testRuntimeOnly project(path: ":general:enclave_threadsafe_false", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_with_mail", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_with_postoffice", configuration: enclaveMode)
+    
 }

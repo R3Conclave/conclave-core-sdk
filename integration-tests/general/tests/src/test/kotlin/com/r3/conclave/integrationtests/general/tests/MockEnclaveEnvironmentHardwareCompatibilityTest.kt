@@ -129,7 +129,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             }
 
             host.start(attestationParameters, null)
-            //check(host.enclaveMode == EnclaveMode.DEBUG)
+            check(host.enclaveMode == EnclaveMode.DEBUG)
             host
         }
     }
@@ -140,8 +140,6 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             mockConfiguration.productID = enclaveSpec.isvProdId
             mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
             val host = EnclaveHost.load(enclaveSpec.enclaveName, mockConfiguration)
-
-           // val host = createMockHost(enclaveSpec.enclaveName, mockConfiguration)
             host.start(null, null)
             host
         }
