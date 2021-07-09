@@ -10,7 +10,6 @@ import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
 import com.r3.conclave.integrationtests.general.common.*
-import com.r3.conclave.integrationtests.general.common.HardwareTest.Companion.attestationParams
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,6 +21,9 @@ import kotlin.random.Random
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
+private const val enclave1 = "com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1"
+private const val enclave2 = "com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2"
+
 class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
     companion object {
 
@@ -29,7 +31,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
         // key request parameters we're interested in.
         private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
             // Create keys across two different enclaves, ...
-            setOf(EnclaveClass(SecretKeyEnclave1::class.java), EnclaveClass(SecretKeyEnclave2::class.java)),
+            setOf(EnclaveName(enclave1), EnclaveName(enclave2)),
             // ... which have one of two IsvProdId values
             setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
             // ... and one of two IsvSvn values.
@@ -117,13 +119,17 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
         return newEnclave
     }
 
-
-
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
-            val host = EnclaveHost.load(enclaveSpec.enclaveClass.name)
-            host.start(attestationParams, null)
-            check(host.enclaveMode == EnclaveMode.DEBUG)
+            val host = EnclaveHost.load(enclaveSpec.enclaveName)
+
+            val attestationParameters = when(host.enclaveMode){
+                EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
+                else -> null
+            }
+
+            host.start(attestationParameters, null)
+            //check(host.enclaveMode == EnclaveMode.DEBUG)
             host
         }
     }
@@ -133,7 +139,9 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             val mockConfiguration = MockConfiguration()
             mockConfiguration.productID = enclaveSpec.isvProdId
             mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
-            val host = createMockHost(enclaveSpec.enclaveClass, mockConfiguration)
+            val host = EnclaveHost.load(enclaveSpec.enclaveName, mockConfiguration)
+
+           // val host = createMockHost(enclaveSpec.enclaveName, mockConfiguration)
             host.start(null, null)
             host
         }
@@ -161,17 +169,20 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
         }
     }
 
-    class SecretKeyEnclave1 : AbstractSecretKeyEnclave()
-    class SecretKeyEnclave2 : AbstractSecretKeyEnclave()
+    /*
+    class SecretKeyEnclave1 : SecretKeyEnclave1()
+    class SecretKeyEnclave2 : SecretKeyEnclave2()
 
-    abstract class AbstractSecretKeyEnclave : Enclave() {
+    abstract class AbstractSecretKeyEnclave : SealUnsealEnclave1() {
         private val env : com.r3.conclave.enclave.internal.EnclaveEnvironment by lazy {
             Enclave::class.java.getDeclaredField("env").apply { isAccessible = true }.get(this) as EnclaveEnvironment
         }
+
 
         override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
 
             return env.getSecretKey(Cursor.wrap(SgxKeyRequest.INSTANCE, bytes, 0, bytes.size))
         }
     }
+ */
 }

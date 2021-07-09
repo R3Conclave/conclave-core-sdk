@@ -13,4 +13,19 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
+
+    simulation {
+        signingType = privateKey
+        signingKey = file("signing/sample_private_key.pem")
+    }
+
+    debug {
+        signingType = privateKey
+        signingKey = file("signing/sample_private_key.pem")
+    }
+
+    release {
+        signingType = privateKey
+        signingKey = file("signing/sample_private_key.pem")
+    }
 }

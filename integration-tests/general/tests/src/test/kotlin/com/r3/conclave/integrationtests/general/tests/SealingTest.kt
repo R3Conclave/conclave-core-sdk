@@ -30,7 +30,6 @@ class SealingTest : JvmTest(originalEnclave) {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.PLAIN)
         val unsealedMessageAfterBytes = enclaveHost.callEnclave(unsealingRequest + sealedMessage!!)
         val unsealedMessageAfter = unsealedMessageAfterBytes!!.toPlaintextAndEnvelop()
-
         assertEquals(unsealedMessageAfter, unsealedMessageBefore)
     }
 

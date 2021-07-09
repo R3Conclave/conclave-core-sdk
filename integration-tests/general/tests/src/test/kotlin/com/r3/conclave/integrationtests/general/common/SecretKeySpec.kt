@@ -17,10 +17,10 @@ data class SecretKeySpec(val actions: List<SecretKeyAction>) {
      * Query for the secret key, using the given lookup function to provide the [EnclaveHost] for the enclave class.
      */
     fun querySecretKey(hostLookup: (EnclaveSpec) -> EnclaveHost): Result {
-        val enclaveClass = actions.filterIsInstance<EnclaveClass>().single().enclaveClass
+        val enclaveName = actions.filterIsInstance<EnclaveName>().single().enclaveName
         val isvProdId = actions.filterIsInstance<EnclaveIsvProdId>().single().isvProdId
         val isvSvn = actions.filterIsInstance<EnclaveIsvSvn>().single().isvSvn
-        val host = hostLookup(EnclaveSpec(enclaveClass, isvProdId, isvSvn))
+        val host = hostLookup(EnclaveSpec(enclaveName, isvProdId, isvSvn))
         val keyRequest = Cursor.allocate(SgxKeyRequest.INSTANCE)
         for (action in actions) {
             (action as? SetKeyRequestField)?.apply(keyRequest, host.enclaveInstanceInfo as EnclaveInstanceInfoImpl)
@@ -49,8 +49,8 @@ interface SecretKeyAction
 /**
  * Specify the class of the enclave to query the secret key from.
  */
-data class EnclaveClass(val enclaveClass: Class<out Enclave>) : SecretKeyAction {
-    override fun toString(): String = "EnclaveClass=${enclaveClass.simpleName}"
+data class EnclaveName(val enclaveName: String) : SecretKeyAction {
+    override fun toString(): String = "EnclaveClass=${enclaveName}"
 }
 
 /**
@@ -70,7 +70,7 @@ data class EnclaveIsvSvn(val isvSvn: Int) : SecretKeyAction {
     override fun toString(): String = "EnclaveIsvSvn=$isvSvn"
 }
 
-data class EnclaveSpec(val enclaveClass: Class<out Enclave>, val isvProdId: Int, val isvSvn: Int)
+data class EnclaveSpec(val enclaveName: String, val isvProdId: Int, val isvSvn: Int)
 
 /**
  * A [SecretKeyAction] which updates a particular field of a provided [SgxKeyRequest]. This key request object, once it's
@@ -79,6 +79,8 @@ data class EnclaveSpec(val enclaveClass: Class<out Enclave>, val isvProdId: Int,
 interface SetKeyRequestField : SecretKeyAction {
     fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl)
 }
+
+
 
 data class KeyNameField(val keyName: Int) : SetKeyRequestField {
     init {

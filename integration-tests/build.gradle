@@ -5,6 +5,7 @@ plugins {
 apply from: '../versions.gradle'
 apply from: '../common.gradle'
 
+
 subprojects {
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
     ext.attestationMode = findProperty("attestationMode") ?: "epid"
@@ -36,4 +37,7 @@ subprojects {
             }
         }
     }
+
 }
+
+
