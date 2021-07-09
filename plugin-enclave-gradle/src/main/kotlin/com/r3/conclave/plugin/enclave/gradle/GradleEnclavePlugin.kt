@@ -49,19 +49,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
         target.afterEvaluate {
-            // This is called before the build tasks are executed but after the build.gradle file
-            // has been parsed. This gives us an opportunity to perform actions based on the user configuration
-            // of the enclave.
-            // If language support is enabled then automatically add the required dependency.
-            if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
-                // Only the graalvm_native_image runtime is supported
+            val message = "As Avian has been demised, only GraalVM (graalvm_native_image) is supported and the " +
+                    "parameter \"runtime\" is now deprecated and can be removed."
+            if (conclaveExtension.runtime.isPresent) {
                 if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
-                    target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get())
-                    target.logger.warn("As Avian has been demised, GraalVM is the only supported runtime and the parameter \"runtime\" is now deprecated")
+                    target.logger.warn(message)
+                    target.dependencies.add(
+                        "implementation",
+                        "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get()
+                    )
                 } else {
-                    throw GradleException("The enclave is configured to support languages but the runtime is not set to graalvm_native_image. "
-                                        + "Language support is only provided for graalvm_native_image enclaves. "
-                                        + "See https://docs.conclave.net/enclave-configuration.html#supportlanguages.")
+                    throw GradleException(message)
                 }
             }
         }
@@ -245,16 +243,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
-                // This task was used as a common target that selects between Avian and GraalVM based on
-                // conclaveExtension.runtime. It sets inputEnclave to the output of the relevant task,
-                // selected at build time causing a dependency.
-                // We leave this code here just in the remote case we want to move away from GraalVM
-                task.inputEnclave.set(conclaveExtension.runtime.flatMap {
-                    when (it) {
-                        RuntimeType.GraalVMNativeImage -> buildUnsignedGraalEnclaveTask.outputEnclave
-                        else -> throw GradleException("Only GraalVM is supported since Conclave 1.2")
-                    }
-                })
+                task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
                 task.outputEnclave.set(task.inputEnclave.get())
             }
 
