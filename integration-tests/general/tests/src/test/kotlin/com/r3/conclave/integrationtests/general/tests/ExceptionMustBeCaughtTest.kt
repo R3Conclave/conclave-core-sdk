@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.lang.RuntimeException
 
 class ExceptionMustBeCaughtTest : JvmTest(threadSafe = false) {
+    @Disabled()
     @ParameterizedTest
     @ValueSource(strings = ["Finalizers", "DivideByZero", "NullPointer"])
     fun `exception is thrown, caught and processed successfully inside an enclave`(name: String) {
