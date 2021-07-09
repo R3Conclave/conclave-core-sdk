@@ -15,8 +15,6 @@ dependencies {
 }
 
 conclave {
-    runtime = graalvm_native_image
-
     productID = 1
     revocationLevel = 0
 
