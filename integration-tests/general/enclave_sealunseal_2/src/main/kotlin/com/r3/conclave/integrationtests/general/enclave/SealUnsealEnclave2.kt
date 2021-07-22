@@ -1,7 +1,5 @@
 package com.r3.conclave.integrationtests.general.enclave
 
-import com.r3.conclave.integrationtests.general.common.SealUnsealEnclave
-
 open class SealUnsealEnclave2 : SealUnsealEnclave() {
 
     override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {

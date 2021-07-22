@@ -1,8 +1,8 @@
-package com.r3.conclave.integrationtests.general.common
+package com.r3.conclave.integrationtests.general.enclave
 
-import com.r3.conclave.common.internal.PlaintextAndEnvelope
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
+import com.r3.conclave.common.internal.PlaintextAndEnvelope
 
 abstract class SealUnsealEnclave : Enclave() {
 
