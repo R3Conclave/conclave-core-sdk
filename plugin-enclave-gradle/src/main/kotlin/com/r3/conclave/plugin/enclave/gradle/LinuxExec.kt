@@ -44,7 +44,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             } catch (e: Exception) {
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves on non-Linux platforms. "
-                            + "Please install Docker and rerun your build."
+                            + "Please install Docker and rerun your build. "
                             + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
                             + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
                 )
