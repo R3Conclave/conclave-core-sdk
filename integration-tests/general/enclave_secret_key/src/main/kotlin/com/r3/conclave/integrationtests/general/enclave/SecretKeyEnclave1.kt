@@ -12,7 +12,6 @@ class SecretKeyEnclave1 : Enclave() {
     }
 
     override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
-
         return env.getSecretKey(Cursor.wrap(SgxKeyRequest.INSTANCE, bytes, 0, bytes.size))
     }
 
