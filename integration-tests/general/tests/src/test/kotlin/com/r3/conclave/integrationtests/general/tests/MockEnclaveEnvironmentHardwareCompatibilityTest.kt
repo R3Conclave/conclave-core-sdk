@@ -130,7 +130,6 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             }
 
             host.start(attestationParameters, null)
-            //check(host.enclaveMode == EnclaveMode.DEBUG)
             host
         }
     }
