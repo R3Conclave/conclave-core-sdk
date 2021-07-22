@@ -17,4 +17,3 @@ class SecretKeyEnclave1 : Enclave() {
     }
 
 }
-
