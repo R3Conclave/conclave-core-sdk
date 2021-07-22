@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
+import java.lang.IllegalStateException
 import kotlin.random.Random
 
 /**
@@ -111,7 +112,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
 
         val attestationParameters = when(newEnclave.enclaveMode){
             EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
-            else -> null
+            else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
         }
         newEnclave.start(attestationParameters) {
         }
@@ -125,7 +126,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
 
             val attestationParameters = when(host.enclaveMode) {
                 EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
-                else -> null
+                else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
             }
 
             host.start(attestationParameters, null)
