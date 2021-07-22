@@ -95,7 +95,7 @@ RUN apt-get update -y && apt-get install -y \
 ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
-ENV MX_VERSION          5.279.4
+ENV MX_VERSION          5.288.5
 ENV JAVA_HOME           /usr/lib/jvm/java-8-openjdk-amd64
 ENV JVMCI_VERSION       21.0-b03
 ENV LABSJDK_VERSION     11.0.9
@@ -113,7 +113,7 @@ RUN tar -zxf /opt/as.ld.objdump.gold.r3.tar.gz -C /usr/local/bin external/toolse
 
 # MX
 RUN curl -sSL -o /opt/$MX_VERSION.tar.gz https://github.com/graalvm/mx/archive/$MX_VERSION.tar.gz
-RUN echo "cc56f15d9a84352ee6a1379275850bb0050b7815c684e50c3692330e2de8b022 /opt/$MX_VERSION.tar.gz" | sha256sum -c -
+RUN echo "dfa236043196f25e72a74d702cf782c5cf7d8f4011046cbbd43da8e9c0c339af /opt/$MX_VERSION.tar.gz" | sha256sum -c -
 RUN tar -xaf /opt/$MX_VERSION.tar.gz -C /opt
 RUN rm -v /opt/$MX_VERSION.tar.gz
 RUN chmod a+wx /opt/mx-$MX_VERSION
