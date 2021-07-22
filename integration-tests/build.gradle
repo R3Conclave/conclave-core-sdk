@@ -21,7 +21,7 @@ subprojects {
                 break
             default:
                 maven {
-                    url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
+                    url = "/home/marco/conclave-sdk-$conclave_version/repo"
                 }
         }
         mavenCentral()
