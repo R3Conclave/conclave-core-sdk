@@ -123,7 +123,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val host = EnclaveHost.load(enclaveSpec.enclaveName)
 
-            val attestationParameters = when(host.enclaveMode){
+            val attestationParameters = when(host.enclaveMode) {
                 EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
                 else -> null
             }
