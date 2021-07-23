@@ -15,7 +15,7 @@ dependencies {
 
     testRuntimeOnly project(path: ":general:enclave_secret_key", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_secret_key_2", configuration: enclaveMode)
-    testRuntimeOnly project(path: ":general:enclave_sealunseal", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:enclave_sealunseal_1", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_sealunseal_same_signer", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_sealunseal_different_signer", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_threadsafe_true", configuration: enclaveMode)
