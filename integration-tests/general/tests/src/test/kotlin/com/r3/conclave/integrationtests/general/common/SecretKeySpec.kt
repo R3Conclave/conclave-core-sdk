@@ -1,10 +1,13 @@
-package com.r3.conclave.host
+package com.r3.conclave.integrationtests.general.common
 
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
+import java.nio.ByteBuffer
 import kotlin.reflect.KProperty0
+
+typealias ByteCursor<T> = Cursor<T, ByteBuffer>
 
 /**
  * A container of [SecretKeyAction]s which together make a specification for creating enclave secret keys.
@@ -14,11 +17,11 @@ data class SecretKeySpec(val actions: List<SecretKeyAction>) {
      * Query for the secret key, using the given lookup function to provide the [EnclaveHost] for the enclave class.
      */
     fun querySecretKey(hostLookup: (EnclaveSpec) -> EnclaveHost): Result {
-        val enclaveClass = actions.filterIsInstance<EnclaveClass>().single().enclaveClass
+        val enclaveName = actions.filterIsInstance<EnclaveName>().single().enclaveName
         val isvProdId = actions.filterIsInstance<EnclaveIsvProdId>().single().isvProdId
         val isvSvn = actions.filterIsInstance<EnclaveIsvSvn>().single().isvSvn
-        val host = hostLookup(EnclaveSpec(enclaveClass, isvProdId, isvSvn))
-        val keyRequest = Cursor.allocate(SgxKeyRequest)
+        val host = hostLookup(EnclaveSpec(enclaveName, isvProdId, isvSvn))
+        val keyRequest = Cursor.allocate(SgxKeyRequest.INSTANCE)
         for (action in actions) {
             (action as? SetKeyRequestField)?.apply(keyRequest, host.enclaveInstanceInfo as EnclaveInstanceInfoImpl)
         }
@@ -46,8 +49,8 @@ interface SecretKeyAction
 /**
  * Specify the class of the enclave to query the secret key from.
  */
-data class EnclaveClass(val enclaveClass: Class<out Enclave>) : SecretKeyAction {
-    override fun toString(): String = "EnclaveClass=${enclaveClass.simpleName}"
+data class EnclaveName(val enclaveName: String) : SecretKeyAction {
+    override fun toString(): String = "EnclaveClass=${enclaveName}"
 }
 
 /**
@@ -67,7 +70,7 @@ data class EnclaveIsvSvn(val isvSvn: Int) : SecretKeyAction {
     override fun toString(): String = "EnclaveIsvSvn=$isvSvn"
 }
 
-data class EnclaveSpec(val enclaveClass: Class<out Enclave>, val isvProdId: Int, val isvSvn: Int)
+data class EnclaveSpec(val enclaveName: String, val isvProdId: Int, val isvSvn: Int)
 
 /**
  * A [SecretKeyAction] which updates a particular field of a provided [SgxKeyRequest]. This key request object, once it's
@@ -77,21 +80,23 @@ interface SetKeyRequestField : SecretKeyAction {
     fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl)
 }
 
+
+
 data class KeyNameField(val keyName: Int) : SetKeyRequestField {
     init {
-        require(KeyName.values.containsValue(keyName))
+        require(KeyName.INSTANCE.values.containsValue(keyName))
     }
 
     override fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl) {
         keyRequest[SgxKeyRequest.keyName] = keyName
     }
 
-    override fun toString(): String = "keyName=${KeyName.values.entries.first { it.value == keyName }.key}"
+    override fun toString(): String = "keyName=${KeyName.INSTANCE.values.entries.first { it.value == keyName }.key}"
 }
 
 data class KeyPolicyField(val keyPolicyFlags: Set<Int>) : SetKeyRequestField {
     init {
-        require(keyPolicyFlags.all(KeyPolicy.values::containsValue))
+        require(keyPolicyFlags.all(KeyPolicy.INSTANCE.values::containsValue))
     }
 
     override fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl) {
@@ -100,7 +105,7 @@ data class KeyPolicyField(val keyPolicyFlags: Set<Int>) : SetKeyRequestField {
         }
     }
 
-    override fun toString(): String = "keyPolicy=${KeyPolicy.values.filterValues { it in keyPolicyFlags }.keys}"
+    override fun toString(): String = "keyPolicy=${KeyPolicy.INSTANCE.values.filterValues { it in keyPolicyFlags }.keys}"
 }
 
 data class IsvSvnFieldDelta(val isvSvnDelta: Int) : SetKeyRequestField {
@@ -114,7 +119,7 @@ data class IsvSvnFieldDelta(val isvSvnDelta: Int) : SetKeyRequestField {
 
 data class CpuSvnField(val cpuSvn: OpaqueBytes?) : SetKeyRequestField {
     init {
-        require(cpuSvn == null || cpuSvn.size == SgxCpuSvn.size)
+        require(cpuSvn == null || cpuSvn.size == SgxCpuSvn.INSTANCE.size)
     }
 
     override fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl) {
@@ -127,7 +132,7 @@ data class CpuSvnField(val cpuSvn: OpaqueBytes?) : SetKeyRequestField {
 
 data class KeyIdField(val keyId: OpaqueBytes) : SetKeyRequestField {
     init {
-        require(keyId.size == SgxKeyId.size)
+        require(keyId.size == SgxKeyId.INSTANCE.size)
     }
 
     override fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl) {
