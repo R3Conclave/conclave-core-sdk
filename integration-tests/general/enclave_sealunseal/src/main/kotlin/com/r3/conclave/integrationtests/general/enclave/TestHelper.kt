@@ -18,15 +18,14 @@ object TestHelper {
     }
 
     fun preparePlainTextAndEnvelope(plaintextAndEnvelope: PlaintextAndEnvelope): ByteArray {
-        var plainTextBytes = plaintextAndEnvelope.plaintext.bytes
-        var authenticatedDataBytes = plaintextAndEnvelope.authenticatedData?.bytes
-
-
-        return byteArrayOf(
+        val plainTextBytes = plaintextAndEnvelope.plaintext.bytes
+        val authenticatedDataBytes = plaintextAndEnvelope.authenticatedData?.bytes
+        val sizes = byteArrayOf(
             plainTextBytes.size.toByte(),
             authenticatedDataBytes?.size?.toByte() ?: 0
-        ) +
-                plainTextBytes +
+        )
+        val textAndAuthentication = plainTextBytes +
                 (authenticatedDataBytes ?: byteArrayOf())
+        return sizes + textAndAuthentication
     }
 }
