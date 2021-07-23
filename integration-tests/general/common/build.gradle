@@ -6,5 +6,4 @@ plugins {
 dependencies {
     api "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
     implementation "org.ow2.asm:asm:$asm_version"
-    implementation "com.r3.conclave:conclave-common"
 }
