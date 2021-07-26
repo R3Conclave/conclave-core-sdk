@@ -5,10 +5,12 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
+import com.r3.conclave.host.internal.MockEnclaveHandle
 import com.r3.conclave.integrationtests.general.common.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -126,7 +128,8 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             val mockConfiguration = MockConfiguration()
             mockConfiguration.productID = enclaveSpec.isvProdId
             mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
-            val host = EnclaveHost.load(enclaveSpec.enclaveName, mockConfiguration)
+            val host = createMockHost(Class.forName(enclaveSpec.enclaveName), mockConfiguration)
+
             host.start(null, null)
             host
         }
