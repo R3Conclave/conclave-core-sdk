@@ -54,10 +54,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             if (conclaveExtension.runtime.isPresent) {
                 if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
                     target.logger.warn(message)
-                    target.dependencies.add(
-                        "implementation",
-                        "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get()
-                    )
                 } else {
                     throw GradleException(message)
                 }
