@@ -129,7 +129,6 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
             mockConfiguration.productID = enclaveSpec.isvProdId
             mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
             val host = createMockHost(Class.forName(enclaveSpec.enclaveName), mockConfiguration)
-
             host.start(null, null)
             host
         }
