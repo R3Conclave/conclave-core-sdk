@@ -14,6 +14,8 @@ import kotlinx.serialization.modules.polymorphic
  */
 val messageModule = SerializersModule {
     polymorphic(JvmTestTask::class) {
+        subclass(AvianTestRunner::class, AvianTestRunner.serializer())
+
         subclass(Adder::class, Adder.serializer())
         subclass(Echo::class, Echo.serializer())
         subclass(EchoWithCallback::class, EchoWithCallback.serializer())
