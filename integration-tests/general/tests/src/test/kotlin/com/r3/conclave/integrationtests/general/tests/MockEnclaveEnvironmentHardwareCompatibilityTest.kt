@@ -27,7 +27,7 @@ import kotlin.random.Random
 private const val enclave1 = "com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1"
 private const val enclave2 = "com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2"
 
-class MockEnclaveEnvironmentHardwareCompatibilityTest : HardwareTest {
+class MockEnclaveEnvironmentHardwareCompatibilityTest {
     companion object {
 
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
