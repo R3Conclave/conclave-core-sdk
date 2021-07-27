@@ -1,4 +1,4 @@
-package com.r3.conclave.integrationtests.general.common
+package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
@@ -7,7 +7,7 @@ import com.r3.conclave.host.EnclaveHost
 import java.nio.ByteBuffer
 import kotlin.reflect.KProperty0
 
-typealias ByteCursor<T> = Cursor<T, ByteBuffer>
+typealias ByteCursor<T> = Cursor<T, java.nio.ByteBuffer>
 
 /**
  * A container of [SecretKeyAction]s which together make a specification for creating enclave secret keys.
@@ -17,10 +17,10 @@ data class SecretKeySpec(val actions: List<SecretKeyAction>) {
      * Query for the secret key, using the given lookup function to provide the [EnclaveHost] for the enclave class.
      */
     fun querySecretKey(hostLookup: (EnclaveSpec) -> EnclaveHost): Result {
-        val enclaveName = actions.filterIsInstance<EnclaveName>().single().enclaveName
+        val enclaveClass = actions.filterIsInstance<EnclaveClass>().single().enclaveClass
         val isvProdId = actions.filterIsInstance<EnclaveIsvProdId>().single().isvProdId
         val isvSvn = actions.filterIsInstance<EnclaveIsvSvn>().single().isvSvn
-        val host = hostLookup(EnclaveSpec(enclaveName, isvProdId, isvSvn))
+        val host = hostLookup(EnclaveSpec(enclaveClass, isvProdId, isvSvn))
         val keyRequest = Cursor.allocate(SgxKeyRequest.INSTANCE)
         for (action in actions) {
             (action as? SetKeyRequestField)?.apply(keyRequest, host.enclaveInstanceInfo as EnclaveInstanceInfoImpl)
@@ -49,8 +49,8 @@ interface SecretKeyAction
 /**
  * Specify the class of the enclave to query the secret key from.
  */
-data class EnclaveName(val enclaveName: String) : SecretKeyAction {
-    override fun toString(): String = "EnclaveClass=${enclaveName}"
+data class EnclaveClass(val enclaveClass: Class<out Enclave>) : SecretKeyAction {
+    override fun toString(): String = "EnclaveClass=${enclaveClass.simpleName}"
 }
 
 /**
@@ -70,7 +70,7 @@ data class EnclaveIsvSvn(val isvSvn: Int) : SecretKeyAction {
     override fun toString(): String = "EnclaveIsvSvn=$isvSvn"
 }
 
-data class EnclaveSpec(val enclaveName: String, val isvProdId: Int, val isvSvn: Int)
+data class EnclaveSpec(val enclaveClass: Class<out Enclave>, val isvProdId: Int, val isvSvn: Int)
 
 /**
  * A [SecretKeyAction] which updates a particular field of a provided [SgxKeyRequest]. This key request object, once it's
@@ -79,8 +79,6 @@ data class EnclaveSpec(val enclaveName: String, val isvProdId: Int, val isvSvn: 
 interface SetKeyRequestField : SecretKeyAction {
     fun apply(keyRequest: ByteCursor<SgxKeyRequest>, enclaveInstanceInfo: EnclaveInstanceInfoImpl)
 }
-
-
 
 data class KeyNameField(val keyName: Int) : SetKeyRequestField {
     init {

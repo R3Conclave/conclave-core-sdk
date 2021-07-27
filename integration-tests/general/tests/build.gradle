@@ -3,10 +3,7 @@ plugins {
 }
 
 dependencies {
-    testImplementation project( ":general:common")
-
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
     testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
     testImplementation "com.r3.conclave:conclave-host:$conclave_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"

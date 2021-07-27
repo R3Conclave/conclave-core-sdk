@@ -2,9 +2,12 @@ package com.r3.conclave.integrationtests.general.tests
 
 import com.google.common.collect.Sets
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1
+import com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.OpaqueBytes
+import kotlin.random.Random
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.host.internal.InternalsKt.createHost
@@ -19,23 +22,19 @@ import java.lang.IllegalStateException
 import java.nio.file.Files.copy
 import java.nio.file.StandardCopyOption
 import java.nio.file.Paths
-import kotlin.random.Random
 
 /**
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
-private const val enclave1 = "com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1"
-private const val enclave2 = "com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2"
-
 class MockEnclaveEnvironmentHardwareCompatibilityTest {
     companion object {
 
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
         // key request parameters we're interested in.
-        private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
+        private val secretKeySpecs: List<SecretKeySpec> = com.google.common.collect.Sets.cartesianProduct(
             // Create keys across two different enclaves, ...
-            setOf(EnclaveName(enclave1), EnclaveName(enclave2)),
+            setOf(EnclaveClass(com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1::class.java),EnclaveClass(com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2::class.java)),
             // ... which have one of two IsvProdId values
             setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
             // ... and one of two IsvSvn values.
@@ -111,7 +110,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     }
 
     private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec) : EnclaveHost {
-        val enclaveClassName = enclaveSpec.enclaveName
+        val enclaveClassName = enclaveSpec.enclaveClass.canonicalName
         // Look for an SGX enclave image.
         val found = EnclaveMode.values().mapNotNull { mode ->
             val resourceName = "/${enclaveClassName.replace('.', '/')}-${mode.name.toLowerCase()}.signed.so"
@@ -125,9 +124,10 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         } catch (e: Exception) {
             throw com.r3.conclave.host.EnclaveLoadException("Unable to load enclave", e)
         }
+        val enclaveMode = found[0].second
         try {
             stream.use { copy(it, enclaveFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
-            val host = createHost(EnclaveMode.DEBUG, enclaveFile.toPath(), enclaveClassName, true)
+            val host = createHost(enclaveMode, enclaveFile.toPath(), enclaveClassName, true)
             return host
         } catch (e: Exception) {
             enclaveFile.delete()
@@ -151,13 +151,13 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
             val mockConfiguration = MockConfiguration()
             mockConfiguration.productID = enclaveSpec.isvProdId
             mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
-            val host = createMockHost(Class.forName(enclaveSpec.enclaveName), mockConfiguration)
+            val host = createMockHost(enclaveSpec.enclaveClass, mockConfiguration)
             host.start(null, null)
             host
         }
     }
 
-    class KeyUniquenessContainer(private val hostLookup: (com.r3.conclave.integrationtests.general.common.EnclaveSpec) -> com.r3.conclave.host.EnclaveHost) {
+    class KeyUniquenessContainer(private val hostLookup: (EnclaveSpec) -> com.r3.conclave.host.EnclaveHost) {
         val keyToSameKeyGroup = LinkedHashMap<OpaqueBytes, MutableList<SecretKeySpec>>()
         val keyRequestToSameKeyGroup = HashMap<SecretKeySpec, List<SecretKeySpec>>()
         val errorKeyRequests = HashMap<SecretKeySpec, String>()
@@ -165,6 +165,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         fun queryAndDetermineKeyUniqueness(spec: SecretKeySpec) {
             val result = spec.querySecretKey(hostLookup)
             assertEquals(spec.querySecretKey(hostLookup), result, "Same key request must produce same key")
+
             when (result) {
                 is Result.Key -> {
                     assertThat(result.bytes.size).isEqualTo(SgxKey128Bit.INSTANCE.size)
