@@ -112,19 +112,17 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec) : EnclaveHost {
         val enclaveClassName = enclaveSpec.enclaveClass.canonicalName
         // Look for an SGX enclave image.
-        val found = EnclaveMode.values().mapNotNull { mode ->
-            val resourceName = "/${enclaveClassName.replace('.', '/')}-${mode.name.toLowerCase()}.signed.so"
-            val url = EnclaveHost::class.java.getResource(resourceName)
-            url?.let { Pair(it, mode) }
-        }
-        val stream = found[0].first.openStream()
+        val enclaveMode = EnclaveMode.DEBUG
+        val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.toLowerCase()}.signed.so"
+        val url = EnclaveHost::class.java.getResource(resourceName)
+        val found =  Pair(url, enclaveMode)
+        val stream = found.first.openStream()
 
         val enclaveFile = try {
             createTempFile(enclaveClassName, "signed.so")
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to load enclave", e)
         }
-        val enclaveMode = EnclaveMode.DEBUG
         try {
             stream.use { copy(it, enclaveFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
             return createHost(enclaveMode, enclaveFile.toPath(), enclaveClassName, true)
