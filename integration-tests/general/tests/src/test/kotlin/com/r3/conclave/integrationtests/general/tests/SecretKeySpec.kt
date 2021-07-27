@@ -25,6 +25,7 @@ data class SecretKeySpec(val actions: List<SecretKeyAction>) {
         for (action in actions) {
             (action as? SetKeyRequestField)?.apply(keyRequest, host.enclaveInstanceInfo as EnclaveInstanceInfoImpl)
         }
+
         val secretKey = try {
             host.callEnclave(keyRequest.buffer.array())
         } catch (e: Exception) {

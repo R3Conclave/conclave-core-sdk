@@ -136,14 +136,17 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     }
 
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
-        val host = loadNativeHostFromFile(enclaveSpec)
-        val attestationParameters = when(host.enclaveMode) {
-            EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
-            else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
-        }
+        return nativeEnclaves.computeIfAbsent(enclaveSpec) {
+            val host = nativeEnclaves.get(enclaveSpec)
 
-        host.start(attestationParameters, null)
-        return host
+            val attestationParameters = when (host!!.enclaveMode) {
+                EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
+                else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
+            }
+
+            host.start(attestationParameters, null)
+            host
+        }
     }
 
     private fun getMockHost(enclaveSpec: EnclaveSpec): EnclaveHost {
