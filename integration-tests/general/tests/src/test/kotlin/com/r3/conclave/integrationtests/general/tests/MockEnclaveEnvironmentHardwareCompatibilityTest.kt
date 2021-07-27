@@ -5,19 +5,18 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
-import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.EnclaveLoadException
+import com.r3.conclave.host.internal.InternalsKt.createHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
-import com.r3.conclave.host.internal.MockEnclaveHandle
 import com.r3.conclave.integrationtests.general.common.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import java.lang.IllegalStateException
+import java.io.File
+
 import kotlin.random.Random
 
 /**
@@ -110,16 +109,18 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     }
 
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
-        return nativeEnclaves.computeIfAbsent(enclaveSpec) {
-            val host = EnclaveHost.load(enclaveSpec.enclaveName)
+        val enclaveClassName = enclaveSpec.enclaveName
 
-            val attestationParameters = when(host.enclaveMode) {
-                EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
-                else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
-            }
-
-            host.start(attestationParameters, null)
-            host
+        val enclaveFile = try {
+            File.createTempFile(enclaveClassName, "signed.so")
+        } catch (e: Exception) {
+            throw com.r3.conclave.host.EnclaveLoadException("Unable to load enclave", e)
+        }
+        try {
+            return createHost(EnclaveMode.DEBUG, enclaveFile.toPath(), enclaveClassName, true)
+        } catch (e: Exception) {
+            enclaveFile.deleteOnExit()
+            throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
         }
     }
 
@@ -134,7 +135,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         }
     }
 
-    class KeyUniquenessContainer(private val hostLookup: (EnclaveSpec) -> EnclaveHost) {
+    class KeyUniquenessContainer(private val hostLookup: (com.r3.conclave.integrationtests.general.common.EnclaveSpec) -> com.r3.conclave.host.EnclaveHost) {
         val keyToSameKeyGroup = LinkedHashMap<OpaqueBytes, MutableList<SecretKeySpec>>()
         val keyRequestToSameKeyGroup = HashMap<SecretKeySpec, List<SecretKeySpec>>()
         val errorKeyRequests = HashMap<SecretKeySpec, String>()
