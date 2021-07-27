@@ -34,7 +34,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         // key request parameters we're interested in.
         private val secretKeySpecs: List<SecretKeySpec> = com.google.common.collect.Sets.cartesianProduct(
             // Create keys across two different enclaves, ...
-            setOf(EnclaveClass(com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1::class.java),EnclaveClass(com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2::class.java)),
+            setOf(EnclaveClass(SecretKeyEnclave1::class.java),EnclaveClass(SecretKeyEnclave2::class.java)),
             // ... which have one of two IsvProdId values
             setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
             // ... and one of two IsvSvn values.
@@ -122,7 +122,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         val enclaveFile = try {
             createTempFile(enclaveClassName, "signed.so")
         } catch (e: Exception) {
-            throw com.r3.conclave.host.EnclaveLoadException("Unable to load enclave", e)
+            throw EnclaveLoadException("Unable to load enclave", e)
         }
         val enclaveMode = found[0].second
         try {
@@ -157,7 +157,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         }
     }
 
-    class KeyUniquenessContainer(private val hostLookup: (EnclaveSpec) -> com.r3.conclave.host.EnclaveHost) {
+    class KeyUniquenessContainer(private val hostLookup: (EnclaveSpec) -> EnclaveHost) {
         val keyToSameKeyGroup = LinkedHashMap<OpaqueBytes, MutableList<SecretKeySpec>>()
         val keyRequestToSameKeyGroup = HashMap<SecretKeySpec, List<SecretKeySpec>>()
         val errorKeyRequests = HashMap<SecretKeySpec, String>()
