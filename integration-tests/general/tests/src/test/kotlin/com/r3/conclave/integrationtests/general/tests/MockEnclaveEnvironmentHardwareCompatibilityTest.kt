@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test
 import java.lang.IllegalStateException
 import java.nio.file.Files.copy
 import java.nio.file.StandardCopyOption
-import java.nio.file.Paths
 
 /**
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
@@ -67,7 +66,6 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         nativeEnclaves.values.forEach(EnclaveHost::close)
     }
 
-    @Disabled
     @Test
     fun `mock secret keys have the same uniqueness as hardware secret keys`() {
         val nativeUniqueness = KeyUniquenessContainer(::getNativeHost)
@@ -129,8 +127,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         val enclaveMode = EnclaveMode.DEBUG
         try {
             stream.use { copy(it, enclaveFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
-            val host = createHost(enclaveMode, enclaveFile.toPath(), enclaveClassName, true)
-            return host
+            return createHost(enclaveMode, enclaveFile.toPath(), enclaveClassName, true)
         } catch (e: Exception) {
             enclaveFile.delete()
             throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
