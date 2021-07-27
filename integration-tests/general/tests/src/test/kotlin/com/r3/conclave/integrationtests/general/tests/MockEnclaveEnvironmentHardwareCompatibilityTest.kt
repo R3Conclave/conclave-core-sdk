@@ -15,8 +15,10 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import java.io.File
-
+import java.lang.IllegalStateException
+import java.nio.file.Files.copy
+import java.nio.file.StandardCopyOption
+import java.nio.file.Paths
 import kotlin.random.Random
 
 /**
@@ -108,20 +110,40 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         }
     }
 
-    private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
+    private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec) : EnclaveHost {
         val enclaveClassName = enclaveSpec.enclaveName
+        // Look for an SGX enclave image.
+        val found = EnclaveMode.values().mapNotNull { mode ->
+            val resourceName = "/${enclaveClassName.replace('.', '/')}-${mode.name.toLowerCase()}.signed.so"
+            val url = EnclaveHost::class.java.getResource(resourceName)
+            url?.let { Pair(it, mode) }
+        }
+        val stream = found[0].first.openStream()
 
         val enclaveFile = try {
-            File.createTempFile(enclaveClassName, "signed.so")
+            createTempFile(enclaveClassName, "signed.so")
         } catch (e: Exception) {
             throw com.r3.conclave.host.EnclaveLoadException("Unable to load enclave", e)
         }
         try {
-            return createHost(EnclaveMode.DEBUG, enclaveFile.toPath(), enclaveClassName, true)
+            stream.use { copy(it, enclaveFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+            val host = createHost(EnclaveMode.DEBUG, enclaveFile.toPath(), enclaveClassName, true)
+            return host
         } catch (e: Exception) {
-            enclaveFile.deleteOnExit()
+            enclaveFile.delete()
             throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
         }
+    }
+
+    private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
+        val host = loadNativeHostFromFile(enclaveSpec)
+        val attestationParameters = when(host.enclaveMode) {
+            EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
+            else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
+        }
+
+        host.start(attestationParameters, null)
+        return host
     }
 
     private fun getMockHost(enclaveSpec: EnclaveSpec): EnclaveHost {
