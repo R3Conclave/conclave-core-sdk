@@ -17,6 +17,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.lang.IllegalStateException
 import java.nio.file.Files.copy
@@ -66,6 +67,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         nativeEnclaves.values.forEach(EnclaveHost::close)
     }
 
+    @Disabled
     @Test
     fun `mock secret keys have the same uniqueness as hardware secret keys`() {
         val nativeUniqueness = KeyUniquenessContainer(::getNativeHost)
@@ -124,7 +126,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to load enclave", e)
         }
-        val enclaveMode = found[0].second
+        val enclaveMode = EnclaveMode.DEBUG
         try {
             stream.use { copy(it, enclaveFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
             val host = createHost(enclaveMode, enclaveFile.toPath(), enclaveClassName, true)
