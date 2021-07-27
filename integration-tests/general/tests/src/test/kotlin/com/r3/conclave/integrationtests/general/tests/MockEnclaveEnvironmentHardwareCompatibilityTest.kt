@@ -137,7 +137,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
 
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
-            val host = nativeEnclaves.get(enclaveSpec)
+            val host = loadNativeHostFromFile(enclaveSpec)
 
             val attestationParameters = when (host!!.enclaveMode) {
                 EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
