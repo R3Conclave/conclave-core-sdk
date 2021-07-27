@@ -32,9 +32,9 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
 
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
         // key request parameters we're interested in.
-        private val secretKeySpecs: List<SecretKeySpec> = com.google.common.collect.Sets.cartesianProduct(
+        private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
             // Create keys across two different enclaves, ...
-            setOf(EnclaveClass(SecretKeyEnclave1::class.java),EnclaveClass(SecretKeyEnclave2::class.java)),
+            setOf(EnclaveClass(SecretKeyEnclave1::class.java), EnclaveClass(SecretKeyEnclave2::class.java)),
             // ... which have one of two IsvProdId values
             setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
             // ... and one of two IsvSvn values.
