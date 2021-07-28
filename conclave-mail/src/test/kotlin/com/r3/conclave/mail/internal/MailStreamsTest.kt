@@ -248,7 +248,7 @@ class MailStreamsTest {
         // security vulnerability recorded in https://r3-cev.atlassian.net/browse/CON-192 has
         // been addressed.
         // We need to check the exception message to ensure it is our check that catches the problem
-        // as a correctly operating JVM (i.e. not Avian) also throws IndexOutOfBoundsException by
+        // as a correctly operating JVM also throws IndexOutOfBoundsException by
         // default in this case when the actual underlying array is accessed.
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
             val plaintext = "This is my plaintext".encodeToByteArray()
@@ -265,7 +265,7 @@ class MailStreamsTest {
         // This test added for correct bounds check on MailStreams.read() to address the
         // security note in https://r3-cev.atlassian.net/browse/CON-194 has been addressed.
         // We need to check the exception message to ensure it is our check that catches the problem
-        // as a correctly operating JVM (i.e. not Avian) also throws IndexOutOfBoundsException by
+        // as a correctly operating JVM also throws IndexOutOfBoundsException by
         // default in this case when the actual underlying array is accessed.
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
             val data = ByteArray(16).also(Noise::random)

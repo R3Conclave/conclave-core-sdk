@@ -46,8 +46,6 @@ if (System.getenv('USE_MAVEN_REPO') == null) {
 }
 
 include ':jvm-perf:benchmarks'
-include ':jvm-perf:avian-enclave-simulation'
 include ':jvm-perf:graalvm-enclave-simulation'
-include ':jvm-perf:avian-enclave-debug'
 include ':jvm-perf:graalvm-enclave-debug'
 include ':jvm-perf:jvm-perf'

@@ -8,7 +8,7 @@ extern "C" {
 //
 // The utsname structure contains arrays that are of a size defined by the platform
 // and not by posix. We have to be careful that this structure matches the definition used
-// by the Avian and substratevm builds. The definition below was taken directly from 
+// by the substratevm builds. The definition below was taken directly from 
 // <sys/utsname.h> and <bits/utsname.h> from the devenv build container to ensure they
 // match.
 //

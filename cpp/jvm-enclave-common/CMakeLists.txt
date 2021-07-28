@@ -70,7 +70,9 @@ target_link_libraries(jvm_enclave_common
         jvm_host_enclave_common_enclave
         linux-sgx_headers
         linux-sgx_tstdc_headers
-        linux-sgx_pthread)
+        linux-sgx_pthread
+	zlib
+	)
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
     target_compile_definitions(jvm_enclave_common PRIVATE -DSGX_SIM)

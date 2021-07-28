@@ -43,7 +43,6 @@ endif()
 
 find_package(Threads)
 target_link_libraries(jvm_host
-        avian_headers
         linux-sgx_headers
         linux-sgx_urts_headers
         -L${LINUX_BUILD_ARTIFACT_DIR}

@@ -3,7 +3,6 @@ pluginManagement {
 
     repositories {
         gradlePluginPortal()
-        jcenter()
         mavenCentral()
         switch (System.getenv('USE_MAVEN_REPO')?.toLowerCase()) {
             case "artifactory":
@@ -19,7 +18,7 @@ pluginManagement {
                 maven {
                     url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
                 }
-            break
+                break
         }
     }
 
@@ -38,6 +37,12 @@ include ':filesystem:common'
 include ':filesystem:enclave'
 include ':filesystem:host'
 include ':general:common'
+include ':general:enclave_secret_key'
+include ':general:enclave_secret_key_2'
+include ':general:enclave_sealunseal_abstract'
+include ':general:enclave_sealunseal'
+include ':general:enclave_sealunseal_same_signer'
+include ':general:enclave_sealunseal_different_signer'
 include ':general:enclave_threadsafe_false'
 include ':general:enclave_threadsafe_true'
 include ':general:enclave_with_mail'

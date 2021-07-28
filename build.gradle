@@ -480,7 +480,6 @@ if (includeNative) {
 idea {
     module {
         excludeDirs = [
-                file("$projectDir/cpp/avian/build"),
                 file("$projectDir/cpp/openjdk8"),
                 file("$projectDir/cpp/.idea"),
                 file("$projectDir/scripts/build")
@@ -516,14 +515,6 @@ task zipGPL2Sources(type: Zip) {
     archiveFileName = "sources.zip"
     destinationDirectory = file("$buildDir/sdk")
     reproducibleFileOrder = true
-    from("cpp/avian") {
-        into "avian"
-        // Avian doesn't respect the default build location yet.
-        exclude "build/**"
-    }
-    from("cpp/jvm-enclave-avian") {
-        into "jvm-enclave-avian"
-    }
     from("cpp/jvm-enclave-common") {
         into "jvm-enclave-common"
     }

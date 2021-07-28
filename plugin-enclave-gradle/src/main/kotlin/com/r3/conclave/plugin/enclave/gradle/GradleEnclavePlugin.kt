@@ -49,18 +49,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
         target.afterEvaluate {
-            // This is called before the build tasks are executed but after the build.gradle file
-            // has been parsed. This gives us an opportunity to perform actions based on the user configuration
-            // of the enclave.
-            // If language support is enabled then automatically add the required dependency.
-            if (conclaveExtension.supportLanguages.get().length > 0) {
-                // Only the graalvm_native_image runtime is supported
+            val message = "As Avian has been demised, only GraalVM (graalvm_native_image) is supported and the " +
+                    "parameter \"runtime\" is now deprecated and can be removed."
+            if (conclaveExtension.runtime.isPresent) {
                 if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
-                    target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get())
+                    target.logger.warn(message)
                 } else {
-                    throw GradleException("The enclave is configured to support languages but the runtime is not set to graalvm_native_image. "
-                                        + "Language support is only provided for graalvm_native_image enclaves. "
-                                        + "See https://docs.conclave.net/enclave-configuration.html#supportlanguages.")
+                    throw GradleException(message)
                 }
             }
         }
@@ -120,14 +115,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val linkerToolFile = target.file(osDependentTools.getLdFile())
         val nativeImageLinkerToolFile = target.file(osDependentTools.getNativeImageLdFile())
         val signToolFile = target.file(osDependentTools.getSgxSign())
-
-        val buildJarObjectTask = target.createTask<BuildJarObject>("buildJarObject") { task ->
-            task.dependsOn(copySgxToolsTask)
-            task.inputs.files(linkerToolFile, signToolFile)
-            task.inputLd.set(linkerToolFile)
-            task.inputJar.set(shadowJarTask.archiveFile)
-            task.outputJarObject.set(baseDirectory.resolve("app-jar").resolve("app.jar.o").toFile())
-        }
 
         val enclaveClassNameTask = target.createTask<EnclaveClassName>("enclaveClassName") { task ->
             task.inputJar.set(shadowJarTask.archiveFile)
@@ -201,11 +188,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // relative) path name.
             enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
 
-            val copyPartialEnclaveTask = target.createTask<Copy>("copyPartialEnclave$type") { task ->
-                task.fromDependencies("com.r3.conclave:native-enclave-$typeLowerCase:$sdkVersion")
-                task.into(baseDirectory)
-            }
-
             val substrateDependenciesPath = "$conclaveDependenciesDirectory/substratevm/$type"
             val sgxDirectory = "$conclaveDependenciesDirectory/sgx/$type"
             val copySubstrateDependenciesTask = target.createTask<Copy>("copySubstrateDependencies$type") { task ->
@@ -256,36 +238,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputEnclave.set(unsignedEnclaveFile)
             }
 
-            val buildUnsignedAvianEnclaveTask = target.createTask<BuildUnsignedAvianEnclave>("buildUnsignedAvianEnclave$type") { task ->
-                task.dependsOn(copySgxToolsTask, copyPartialEnclaveTask, buildJarObjectTask)
-                val partialEnclavefile = "${copyPartialEnclaveTask.destinationDir}/com/r3/conclave/partial-enclave/$type/jvm_enclave_avian"
-                task.inputs.files(linkerToolFile.parent, partialEnclavefile, buildJarObjectTask.outputJarObject)
-                task.inputLd.set(linkerToolFile)
-                task.inputEnclaveObject.set(target.file(partialEnclavefile))
-                task.inputJarObject.set(buildJarObjectTask.outputJarObject)
-                task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
-                task.outputEnclave.set(unsignedEnclaveFile)
-                task.stripped.set(type == BuildType.Release)
-            }
-
             val buildUnsignedEnclaveTask = target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
-                // This task is used as a common target that selects between Avian and GraalVM based on
-                // conclaveExtension.runtime. It sets inputEnclave to the output of the relevant task,
-                // selected at build time causing a dependency
-                task.inputEnclave.set(conclaveExtension.runtime.flatMap {
-                    when (it) {
-                        RuntimeType.Avian -> {
-                            if (OperatingSystem.current().isWindows) {
-                                throw GradleException("Your enclave is configured to use the Avian runtime but Windows does not support building "
-                                        + "enclaves using the Avian runtime. Please switch to the graalvm_native_image runtime or build your "
-                                        + "enclave in a Linux environment, such as the Windows Subsystem for Linux. ")
-                            } else {
-                                buildUnsignedAvianEnclaveTask.outputEnclave
-                            }
-                        }
-                        else -> buildUnsignedGraalEnclaveTask.outputEnclave
-                    }
-                })
+                task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
                 task.outputEnclave.set(task.inputEnclave.get())
             }
 

@@ -6,7 +6,6 @@ plugins {
 apply from: '../common.gradle'
 
 conclave {
-    runtime = graalvm_native_image
     productID = 1
     revocationLevel = 0
     maxHeapSize = "268435456"

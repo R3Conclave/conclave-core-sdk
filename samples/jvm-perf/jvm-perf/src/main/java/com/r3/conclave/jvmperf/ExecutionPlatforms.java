@@ -17,7 +17,7 @@ public class ExecutionPlatforms {
      * runtime in the list unless overridden with the command line parameter:
      * '-p runtime=xxx'.
      */
-    @Param({"avian-debug", "avian-simulation", "graalvm-debug", "graalvm-simulation", "host"})
+    @Param({"graalvm-debug", "graalvm-simulation", "host"})
     public String runtime;
 
     @Param({""})

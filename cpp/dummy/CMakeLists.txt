@@ -19,10 +19,8 @@ add_custom_target(dummy-key DEPENDS ${DUMMY_KEY_PATH})
 
 # dummy
 add_executable(dummy src/dummy.cpp ${APP_JAR_O_PATH})
-target_link_libraries(dummy
-        $<TARGET_FILE:jvm_enclave_avian>)
+target_link_libraries(dummy)
 set_property(TARGET dummy PROPERTY POSITION_INDEPENDENT_CODE ON)
-add_dependencies(dummy jvm_enclave_avian)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
     -nostdlib \

@@ -36,7 +36,7 @@ char *realpath(const char *path, char *resolved_path) {
     if (!strcmp(path, "/.")) {
         resolved = "/";
     }
-    else if (!strncmp(path, "/[", 2) || !strcmp(path, "/avian-embedded/javahomeJar/lib/logging.properties") || !strcmp(path, "/avian-embedded/javahomeJar/lib")) {
+    else if (!strncmp(path, "/[", 2) ) {
         resolved = path + 1;
     }
     if (!resolved_path) {
