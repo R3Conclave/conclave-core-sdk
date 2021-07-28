@@ -43,12 +43,11 @@ open class JvmTest(private val enclaveClassName: String) {
     lateinit var enclaveHost : EnclaveHost
     var closeHost = true
 
-    private val mailCommands = mutableListOf<MailCommand>()
+    val mailCommands = mutableListOf<MailCommand>()
 
     @BeforeEach
     fun beforeEach() {
         enclaveHost = EnclaveHost.load(enclaveClassName)
-
         val attestationParameters = when(enclaveHost.enclaveMode){
             EnclaveMode.RELEASE, EnclaveMode.DEBUG -> getHardwareAttestationParams()
             else -> null
@@ -56,7 +55,6 @@ open class JvmTest(private val enclaveClassName: String) {
         enclaveHost.start(attestationParameters) {
             mailCommands.addAll(it)
         }
-
         closeHost = true
     }
 
