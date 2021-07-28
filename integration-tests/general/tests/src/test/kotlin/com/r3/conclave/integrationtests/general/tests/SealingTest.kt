@@ -13,8 +13,8 @@ private const val anotherInstanceOriginalEnclave = originalEnclave
 private const val anotherEnclaveSameSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveSameSigner"
 private const val anotherEnclaveDistinctSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveDifferentSigner"
 
-val unsealedMessageBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), null)
-val unsealedMessageAuthenticatedBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), OpaqueBytes("Sealing Hello World Authenticated Data!".toByteArray()))
+val unsealedMessageWithoutADBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), null)
+val unsealedMessageWithADBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), OpaqueBytes("Sealing Hello World Authenticated Data!".toByteArray()))
 val sealingRequest  = byteArrayOf(1)
 val unsealingRequest = byteArrayOf(2)
 
@@ -28,45 +28,45 @@ class SealingTest : JvmTest(originalEnclave) {
     @Test
     fun `seal and unseal data`() {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.PLAIN)
-        val unsealedMessageAfterBytes = enclaveHost.callEnclave(unsealingRequest + sealedMessage!!)
-        val unsealedMessageAfter = unsealedMessageAfterBytes!!.toPlaintextAndEnvelop()
-        assertEquals(unsealedMessageAfter, unsealedMessageBefore)
+        val unsealedMessageWithoutADAfterBytes = enclaveHost.callEnclave(unsealingRequest + sealedMessage!!)
+        val unsealedMessageWithoutADAfter = unsealedMessageWithoutADAfterBytes!!.toPlaintextAndEnvelop()
+        assertEquals(unsealedMessageWithoutADAfter, unsealedMessageWithoutADBefore)
     }
 
 
     @Test
     fun `seal in one enclave and unseal in another instance of the same enclave`() {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.PLAIN)
-        val unsealedMessageAfter = unsealMessageInEnclave(anotherInstanceOriginalEnclave, sealedMessage!!)
+        val unsealedMessageWithoutADAfter = unsealMessageInEnclave(anotherInstanceOriginalEnclave, sealedMessage!!)
 
-        assertEquals(unsealedMessageAfter, unsealedMessageBefore)
+        assertEquals(unsealedMessageWithoutADAfter, unsealedMessageWithoutADBefore)
     }
 
     @Test
     fun `seal in one enclave and unseal in another enclave`() {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.PLAIN)
-        val unsealedMessageAfter = unsealMessageInEnclave(anotherEnclaveSameSigner, sealedMessage!!)
+        val unsealedMessageWithoutADAfter = unsealMessageInEnclave(anotherEnclaveSameSigner, sealedMessage!!)
 
-        assertEquals(unsealedMessageAfter, unsealedMessageBefore)
+        assertEquals(unsealedMessageWithoutADAfter, unsealedMessageWithoutADBefore)
     }
 
 
     @Test
     fun `seal in one enclave and unseal in another instance of the same enclave (with authenticated data)`() {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.AUTHENTICATED)
-        val unsealedMessageAfter = unsealMessageInEnclave(anotherInstanceOriginalEnclave, sealedMessage!!)
+        val unsealedMessageWithoutADAfter = unsealMessageInEnclave(anotherInstanceOriginalEnclave, sealedMessage!!)
 
-        assertEquals(unsealedMessageAuthenticatedBefore.plaintext, unsealedMessageAfter.plaintext)
-        assertEquals(unsealedMessageAuthenticatedBefore.authenticatedData, unsealedMessageAfter.authenticatedData)
+        assertEquals(unsealedMessageWithADBefore.plaintext, unsealedMessageWithoutADAfter.plaintext)
+        assertEquals(unsealedMessageWithADBefore.authenticatedData, unsealedMessageWithoutADAfter.authenticatedData)
     }
 
     @Test
     fun `seal in one enclave and unseal in another enclave (with authenticated data)`() {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.AUTHENTICATED)
-        val unsealedMessageAfter = unsealMessageInEnclave(anotherEnclaveSameSigner, sealedMessage!!)
+        val unsealedMessageWithoutADAfter = unsealMessageInEnclave(anotherEnclaveSameSigner, sealedMessage!!)
 
-        assertEquals(unsealedMessageAuthenticatedBefore.plaintext, unsealedMessageAfter.plaintext)
-        assertEquals(unsealedMessageAuthenticatedBefore.authenticatedData, unsealedMessageAfter.authenticatedData)
+        assertEquals(unsealedMessageWithADBefore.plaintext, unsealedMessageWithoutADAfter.plaintext)
+        assertEquals(unsealedMessageWithADBefore.authenticatedData, unsealedMessageWithoutADAfter.authenticatedData)
     }
 
     @Test
@@ -117,8 +117,8 @@ class SealingTest : JvmTest(originalEnclave) {
     private fun sealMessageInOriginalEnclave(messageType: MessageType = MessageType.PLAIN): ByteArray? {
         return when(messageType)
         {
-            MessageType.PLAIN->enclaveHost.callEnclave(sealingRequest + unsealedMessageBefore.toByteArray())
-            MessageType.AUTHENTICATED->enclaveHost.callEnclave(sealingRequest + unsealedMessageAuthenticatedBefore.toByteArray())
+            MessageType.PLAIN->enclaveHost.callEnclave(sealingRequest + unsealedMessageWithoutADBefore.toByteArray())
+            MessageType.AUTHENTICATED->enclaveHost.callEnclave(sealingRequest + unsealedMessageWithADBefore.toByteArray())
         }
     }
 
