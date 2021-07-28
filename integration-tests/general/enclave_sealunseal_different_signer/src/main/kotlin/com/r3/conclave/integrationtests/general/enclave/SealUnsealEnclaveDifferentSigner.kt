@@ -1,5 +1,5 @@
 package com.r3.conclave.integrationtests.general.enclave
 
-class SealUnsealEnclaveDifferentSigner : SealUnsealEnclave() {
+class SealUnsealEnclaveDifferentSigner : AbstractSealUnsealEnclave() {
 
 }

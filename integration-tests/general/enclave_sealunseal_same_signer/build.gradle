@@ -7,7 +7,7 @@ plugins {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.r3.conclave:conclave-enclave"
-    implementation project(":general:enclave_sealunseal")
+    implementation project(":general:enclave_sealunseal_abstract")
 }
 
 conclave {
