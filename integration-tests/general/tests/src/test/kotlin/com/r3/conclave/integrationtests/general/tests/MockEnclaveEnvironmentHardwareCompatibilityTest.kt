@@ -14,13 +14,10 @@ import com.r3.conclave.host.internal.InternalsKt.createHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
 import com.r3.conclave.integrationtests.general.common.*
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 import java.lang.IllegalStateException
 import java.nio.file.Files.copy
 import java.nio.file.StandardCopyOption
@@ -71,10 +68,10 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     private val nativeEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
     private val mockEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
 
-    @BeforeAll
+    @BeforeEach
     fun setup() {
         //  We want this test to run only in DEBUG mode
-        assumeTrue(EnclaveMode.DEBUG.name == System.getProperty("enclaveMode"))
+        assumeTrue(EnclaveMode.DEBUG.name.toLowerCase() == System.getProperty("enclaveMode"))
     }
 
     @AfterEach
