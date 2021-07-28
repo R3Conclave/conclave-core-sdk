@@ -17,6 +17,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.lang.IllegalStateException
 import java.nio.file.Files.copy
@@ -26,6 +29,8 @@ import java.nio.file.StandardCopyOption
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
+
+@Tag("hardware")
 class MockEnclaveEnvironmentHardwareCompatibilityTest {
     companion object {
 
@@ -34,10 +39,16 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
             // Create keys across two different enclaves, ...
             setOf(EnclaveClass(SecretKeyEnclave1::class.java), EnclaveClass(SecretKeyEnclave2::class.java)),
-            // ... which have one of two IsvProdId values
-            setOf(EnclaveIsvProdId(10), EnclaveIsvProdId(20)),
-            // ... and one of two IsvSvn values.
-            setOf(EnclaveIsvSvn(2), EnclaveIsvSvn(3)),
+            /* Note: the following two sets (IsvProdId and IsvSvn) were containing two values each.
+                Both IsvProdId and IsvSvn are defining the identity of the enclaves.
+                This was not a problem, as this test was used with Avian and it was possible to dynamically create
+                enclaves with different Prod Ids and IsvSvn values.
+                But with GraalVM the enclaves can't be built dynamically, so for the moment we only set one
+                value for each set, so that we only test one combination, which is matching the combination of the
+                enclaves.
+            */
+            setOf(EnclaveIsvProdId(1)),
+            setOf(EnclaveIsvSvn(1)),
             // Create either REPORT or SEAL keys. The other key types are not relevant.
             setOf(KeyNameField(KeyName.REPORT), KeyNameField(KeyName.SEAL)),
             // Create keys with all 8 possible policy combinations by using MRENCLAVE, MRSIGNER and NOISVPRODID.
@@ -59,6 +70,12 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
 
     private val nativeEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
     private val mockEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
+
+    @BeforeAll
+    fun setup() {
+        //  We want this test to run only in DEBUG mode
+        assumeTrue(EnclaveMode.DEBUG.name == System.getProperty("enclaveMode"))
+    }
 
     @AfterEach
     fun cleanUp() {
@@ -135,7 +152,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val host = loadNativeHostFromFile(enclaveSpec)
 
-            val attestationParameters = when (host!!.enclaveMode) {
+            val attestationParameters = when (host.enclaveMode) {
                 EnclaveMode.RELEASE, EnclaveMode.DEBUG -> JvmTest.getHardwareAttestationParams()
                 else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
             }
