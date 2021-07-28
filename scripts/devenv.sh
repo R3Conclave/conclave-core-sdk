@@ -8,11 +8,11 @@ fi
 source ${script_dir}/ci_build_common.sh
 # You can set this variable to mount the IDEs from the host
 host_ide_dir=${HOST_IDE_DIR:-"${HOME}/.opt"}
-idea_version=${IDEA_VERSION:-"IC-203.6682.168"}
-idea_download_file=ideaIC-2020.3.1.tar.gz
+idea_version=${IDEA_VERSION:-"IC-212.4746.92"}
+idea_download_file=ideaIC-2021.2.tar.gz
 idea_download_address=https://download-cf.jetbrains.com/idea/$idea_download_file
-clion_version=${clion_version:-"2020.2.4"}
-clion_download_file=CLion-2020.2.4.tar.gz
+clion_version=${clion_version:-"2021.1.3"}
+clion_download_file=CLion-2021.1.3.tar.gz
 clion_download_address=https://download-cf.jetbrains.com/cpp/$clion_download_file
 
 source ${script_dir}/devenv_envs.sh
@@ -39,7 +39,6 @@ if [[ -z ${container_id} ]]; then
       env_display="-e DISPLAY=${DISPLAY}"
     fi
   fi
-
   if [ ${CONCLAVE_DOCKER_IDE:-""} = "1" ]; then
     if [ ! -d ${host_ide_dir}/idea-$idea_version ]; then
       # remove any previous version of IntelliJ IDEA that might be dangling around
@@ -47,7 +46,7 @@ if [[ -z ${container_id} ]]; then
       echo "Downloading IntelliJ IDEA from ${idea_download_address}..."
       mkdir -p $host_ide_dir
       curl -SL -o ${host_ide_dir}/$idea_download_file $idea_download_address
-      echo "ae00e8cfc9a41a772d3f7a7aba463a744ea832f8  ${host_ide_dir}/$idea_download_file" | shasum -c -
+      echo "7c27799861fb1ba0d43a3565a1ec2be789e1871191be709f0e79f1e17d3571fe  ${host_ide_dir}/$idea_download_file" | shasum -a 256 -c -
       tar -C $host_ide_dir -zxvf ${host_ide_dir}/$idea_download_file
       rm ${host_ide_dir}/$idea_download_file
     fi

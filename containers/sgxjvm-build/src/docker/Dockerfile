@@ -51,6 +51,7 @@ RUN apt-get update -y && apt-get install -y \
     cpio \
     debhelper \
     exuberant-ctags \
+    emacs \
     g++ \
     gcc \
     gdb \
@@ -160,6 +161,9 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && /scripts/setup-users.
 
 # Configure a nicer/more useful prompt that doesn't show the (bogus/artificial) username, but does show git branch.
 RUN echo "export PS1=\"conclave \[\e[32m\]\$(git branch | awk '/^\* / { print \$2 }')\[\e[0m\] \w> \"" >>/etc/bash.bashrc
+
+# Make emacs not to use window system
+RUN echo "alias emacs='emacs -nw'" >>/etc/bash.bashrc
 
 # Make ls use colors.
 RUN echo "alias ls='ls --color'" >>/etc/bash.bashrc
