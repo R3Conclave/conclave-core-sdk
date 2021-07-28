@@ -14,7 +14,7 @@ private const val anotherEnclaveSameSigner = "com.r3.conclave.integrationtests.g
 private const val anotherEnclaveDistinctSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveDifferentSigner"
 
 val unsealedMessageBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), null)
-val unsealedMessageAuthenticatedBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), null)
+val unsealedMessageAuthenticatedBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), OpaqueBytes("Sealing Hello World Authenticated Data!".toByteArray()))
 val sealingRequest  = byteArrayOf(1)
 val unsealingRequest = byteArrayOf(2)
 

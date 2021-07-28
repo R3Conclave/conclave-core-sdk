@@ -27,7 +27,6 @@ import java.nio.file.StandardCopyOption
  * in hardware mode.
  */
 
-@Tag("hardware")
 class MockEnclaveEnvironmentHardwareCompatibilityTest {
     companion object {
 
