@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-private const val originalEnclave = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclave1"
+private const val originalEnclave = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclave"
 private const val anotherInstanceOriginalEnclave = originalEnclave
 private const val anotherEnclaveSameSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveSameSigner"
 private const val anotherEnclaveDistinctSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveDifferentSigner"
