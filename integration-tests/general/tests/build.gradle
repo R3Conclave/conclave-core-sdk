@@ -24,16 +24,6 @@ dependencies {
     testRuntimeOnly project(path: ":general:enclave_with_postoffice", configuration: enclaveMode)
 }
 
-tasks.withType(Test) {
-    useJUnitPlatform {
-        if (findProperty("hardwareTests") == null) {
-            excludeTags("hardware")
-        } else {
-            includeTags("hardware")
-        }
-    }
-}
-
 test {
     systemProperty 'enclaveMode', enclaveMode
 }
