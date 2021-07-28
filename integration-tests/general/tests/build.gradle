@@ -13,7 +13,6 @@ dependencies {
     testImplementation project( ":general:common")
     testImplementation project(":general:enclave_secret_key")
     testImplementation project(":general:enclave_secret_key_2")
-    testRuntimeOnly project(path: ":general:enclave_sealunseal_abstract", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_secret_key", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_secret_key_2", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:enclave_sealunseal", configuration: enclaveMode)
