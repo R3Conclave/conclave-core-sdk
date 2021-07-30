@@ -23,7 +23,7 @@ nav:
         - Maximising the security of your enclave: security.md
     - Reference:
         - Threads: threads.md
-        - JavaScript: javascript.md
+        - JavaScript/Python: javascript-python.md
         - File system: filesystem.md
         - Performance: performance.md
         - Testing on macOS: container-gradle.md

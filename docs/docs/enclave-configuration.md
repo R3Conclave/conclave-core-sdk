@@ -193,10 +193,11 @@ A comma separated list of languages to support using the polyglot context capabi
 This allows for code in the supported languages to be parsed and invoked by the enclave giving the ability 
 to deploy dynamic code, or to develop part of your enclave logic in a different language.
 
-The current version of conclave only supports JavaScript so the value for this setting can either be the
-default empty string or `"js"` indicating the enclave should provide support for JavaScript polyglot contexts.
+The current version of conclave supports JavaScript and Python. The values for this setting can either be the
+default empty string, `"js"`, or `"python"` indicating the enclave should provide support for JavaScript or Python 
+polyglot contexts, respectively.
 
-See [this page on running JavaScript in your enclave](javascript.md) for details on how to use this setting.
+See [this page on running JavaScript/Python in your enclave](javascript-python.md) for details on how to use this setting.
 
 ### simulation, debug and release
 

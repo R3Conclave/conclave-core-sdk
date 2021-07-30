@@ -41,4 +41,9 @@ int __libc_current_sigrtmax(void) {
     return 0;
 }
 
+int raise(int sig) {
+    enclave_trace("raise\n");
+    return -1;
+}
+
 }

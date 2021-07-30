@@ -117,4 +117,9 @@ int fscanf ( FILE * stream, const char * format, ... ) {
     return 0;
 }
 
+ssize_t __getdelim (char **__lineptr, size_t *__n, int __delimiter, FILE *__stream) {
+    enclave_trace("__getdelim\n");
+    return -1;
+}
+
 }

@@ -19,7 +19,7 @@ but can also be used to secure your infrastructure against attack.
 
 - High level, simple API that is much easier to use than other enclave APIs.
 - Write your host app in any language that can run on a Java Virtual Machine like Java, Kotlin or even 
-  [JavaScript](javascript.md). 
+  [JavaScript](javascript-python.md) or [Python](javascript-python.md). 
 - Write your enclave using the [GraalVM](https://www.graalvm.org/) native image technology for incredibly tight memory 
   usage, support for any GraalVM language and instant startup time. Eliminate all memory management errors that would 
   undermine the security of your enclave, thanks to the built-in compacting generational garbage collector.
@@ -67,7 +67,7 @@ and then keep your machine trusted by applying updates.
 
 * **Exploring more of Conclave's capabilities** 
 
-    * [**Using JavaScript.**](javascript.md) How to use JIT compiled JavaScript inside the enclave.
+    * [**Using JavaScript or Python.**](javascript-python.md) How to use JIT compiled JavaScript or Python inside the enclave.
 
     * [**Integrating Conclave with Blockchain Applications**](writing-cordapps.md) You'll need a way for your users to get data to and from your
 service that has integrated identity, workflow, firewall handling, database integration and more. Corda is an enterprise
@@ -91,6 +91,10 @@ is available where you can find the development team during UK office hours (GMT
 
 
 ## Release notes
+
+### 1.2
+1. :jigsaw: New feature! Easily enable and use Python. It is JIT compiled inside the enclave and can interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it is possible
+to run simple Python function, importing modules will likely lead to build issues.
 
 ### 1.1
 
@@ -189,7 +193,7 @@ Please read the list of [known issues](known-issues.md).
    out of the box on [Azure Confidential Compute VMs](https://docs.microsoft.com/en-us/azure/confidential-computing/),
    without any need to get an approved signing key: you can self sign enclaves and go straight to 'release mode' on
    Azure. Follow our tutorial on [how to deploy your app to Azure](azure.md) to learn more.
-1. :jigsaw: **New feature!** [Easily enable and use JavaScript](javascript.md). It is JIT compiled inside the enclave, 
+1. :jigsaw: **New feature!** [Easily enable and use JavaScript](javascript-python.md). It is JIT compiled inside the enclave, 
    warms up to be as fast as V8 and can interop with JVM bytecode. Full support for the latest ECMAScript standards.
 1. :jigsaw: **New feature!** Mail is now integrated with the SGX data sealing and TCB recovery features. If a version of 
    the CPU microcode, SGX architectural enclaves or the enclave itself is revoked, old mail will be readable by the newly

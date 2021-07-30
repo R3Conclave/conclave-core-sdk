@@ -21,6 +21,21 @@ void *dlopen(const char *filename, int flags) {
     return nullptr;
 }
 
+void *dlmopen(const char *filename, int flags) {
+    enclave_trace("dlmopen\n");
+    return nullptr;
+}
+
+char *dlerror(){
+    enclave_trace("dlerror\n");
+    return nullptr;
+}
+
+int dlinfo(void *handle, int request, void *info) {
+    enclave_trace("dlinfo\n");
+    return -1;
+}
+
 int dladdr(void* addr, Dl_info* info) {
     enclave_trace("dladdr\n");
     return 0;

@@ -5,6 +5,8 @@
 #include "file_manager.h"
 #include "unistd.h"
 
+typedef unsigned int gid_t;
+
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
 STUB(ftruncate);
@@ -260,6 +262,11 @@ int execve(const char* pathname, char* const argv[], char* const envp[]) {
 off64_t lseek64(int fd, off64_t offset, int whence) {
     enclave_trace("lseek64\n");
     return lseek64_impl(fd, offset, whence);
+}
+
+int getgroups(int gidsetsize, gid_t grouplist[]) {
+    enclave_trace("getgroups\n");
+    return -1;
 }
 
 }

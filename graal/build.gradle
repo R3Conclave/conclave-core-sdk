@@ -47,12 +47,16 @@ task cloneAndPatchRepository(type: Exec) {
 task buildGraal(type: Exec) {
     dependsOn cloneAndPatchRepository
     environment['JAVA_HOME'] = System.getenv('JVMCI_HOME')
-
+    
+    // MX version 5.294.1 must use Python 3 otherwise the
+    // exception 'ImportError: No module named pathlib' is thrown 
+    environment['MX_PYTHON_VERSION'] = 3
+    
     workingDir "${project.buildDir}/graal/vm"
     // The --force-bash-launchers makes the build faster and use far less RAM by skipping the native-imaging of
     // some tools we don't use or care about. Without that flag the build can fail due to running out of RAM.
-    commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graal-js,/substratevm',
-        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=js,polybench', 'build'
+    commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graalpython,graal-js,/substratevm',
+        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=python,js,polybench', 'build'
 }
 
 def outputDir = "${project.buildDir}/distributions"

@@ -52,4 +52,9 @@ char *realpath(const char *path, char *resolved_path) {
     return resolved_path;
 }
 
+int mkostemp(char *tmpl, int flags) {
+    enclave_trace("mkostemp\n");
+    return -1;
+}
+
 }
