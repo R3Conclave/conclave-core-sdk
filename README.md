@@ -5,7 +5,7 @@ This repository contains an SDK that makes working with SGX enclaves easy.
 To find your way around, start reading the docs under [internal-docs](/internal-docs/docs/index.md)
 and in particular [the directory layout](/internal-docs/docs/directories.md).
 
-## Setting up a development environment
+## Setting up a development environment & building the SDK
 
 Developing Conclave requires some level of Linux support. On macOS or Windows you
 can use Docker with the devenv container. We've tried a variety of approaches to
@@ -14,24 +14,22 @@ however, other virtualisation approaches can lead to weird bugs and flakyness.
 Conclave's build is unfortunately not really portable, and the SGX SDK is at any
 rate only supported on two versions of Ubuntu.
 
-Incidentally, to actually build an _enclave_ using the Conclave SDK can be done on
-Windows and macOS, in addition to Linux.
+Instructions on how to set up the devenv container can be found
+[here](/internal-docs/docs/index.md#using-the-devenv-container). Once the container has been set up,
+you should be able to enter the development environment by running `./scripts/devenv_shell.sh`.
+From inside the development container, you can build the SDK and run tests by running
+`./gradlew build test`.
 
-Once Docker is [installed and set up](/internal-docs/docs/index.md#using-the-devenv-container), use `./scripts/devenv_shell.sh` to set up the
-build container and log into it. Then run `./gradlew test` to build all the components
-and run the tests.
+Due to the large number of native components, the build may take some time.
 
-The build takes a long time because there are a lot of native components.
+It is worth noting that while development is (mostly) limited to linux, enclaves can
+still be created using the SDK on Windows and MacOS.
 
 ### IntelliJ and CLion (Linux only)
-On Linux you can run IntelliJ and CLion (expense a license) from inside the devenv.
-Setting the environment variable `CONCLAVE_DOCKER_IDE=1` will enable their automatic download/installation.
-Just add `export CONCLAVE_DOCKER_IDE_TEST=1` to the last row of shell initialization scripts (e.g. in `.bashrc`).
 
-Restart the terminal and use `./scripts/idea.sh` and `./scripts/clion.sh` to start the respective IDEs.
+There is some support for using IntelliJ and CLion within the container, though only on linux. Refer
+to [using the devenv container](/internal-docs/docs/index.md) for instructions.
 
 ## Joining the project
 
-Please join the #conclave channel on Slack and the sgx@r3.com Outlook group (you can join it
-yourself using the Outlook web UI).
-
+Please ensure you have access to @Conclave group on Microsoft teams.

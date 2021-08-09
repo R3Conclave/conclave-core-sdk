@@ -121,6 +121,10 @@ openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_p
 ./gradlew build -PenclaveMode="release"
 ```
 
+!!! important
+    To start an enclave in release or debug mode, your system will need an installation of the intel SGX driver stack.
+    See [machine setup](machine-setup.md) for installation instructions.
+
 ## Got this far? Join the community!
 
 There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
