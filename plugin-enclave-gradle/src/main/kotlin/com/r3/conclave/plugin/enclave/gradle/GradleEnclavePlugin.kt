@@ -65,6 +65,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             if (conclaveExtension.supportLanguages.get().length > 0) {
                 target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:" + conclaveExtension.graalVMSDKVersion.get())
             }
+            // Add dependencies automatically (so developers don't have to)
+            target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$sdkVersion")
+            target.dependencies.add("testImplementation", "com.r3.conclave:conclave-host:$sdkVersion")
         }
 
         val shadowJarTask = target.tasks.withType(ShadowJar::class.java).getByName("shadowJar") { task ->

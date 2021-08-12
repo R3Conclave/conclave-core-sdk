@@ -6,7 +6,6 @@ plugins {
 dependencies {
     // The test will act as the host and client.
 
-    testImplementation "com.r3.conclave:conclave-host"
     testImplementation "com.r3.conclave:conclave-client"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"

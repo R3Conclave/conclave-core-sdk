@@ -7,7 +7,6 @@ plugins {
 dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
     implementation project(":tribuo:common")
-    implementation "com.r3.conclave:conclave-enclave:$conclave_version"
 
     runtimeOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     runtimeOnly "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"

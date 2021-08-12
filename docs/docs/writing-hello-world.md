@@ -218,12 +218,11 @@ plugins {
 }
 ```
 
-and a dependency on the Conclave enclave library and a test dependency on the Conclave host library:
+and add your dependencies, in this case we are using junit for testing. You don't need to include conclave libraries
+here as the enclave gradle plugin will include them for you:
 
-```groovy hl_lines="2-3"
+```groovy
 dependencies {
-    implementation "com.r3.conclave:conclave-enclave"
-    testImplementation "com.r3.conclave:conclave-host"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```
@@ -1020,22 +1019,16 @@ your enclave project, or integrating enclave tests in your host project.
 
 ### Mock tests within the enclave project
 
+Mock mode allows you to whitebox test your enclave by running it fully in-memory. There is no need for SGX hardware
+or a specific OS and thus it is ideal for cross-platform unit testing.
+
 Conclave supports building and running tests within the enclave project itself. When you define tests as part
 of your enclave project, the enclave classes are loaded along with the tests. Conclave detects this
 configuration and automatically enables mock mode for the enclave and test host. You do not need to explicitly 
 specify [mock mode](mockmode.md) for your project.
 
-This allows you to whitebox test your enclave by running it fully in-memory. There is no need for SGX hardware 
-or a specific OS and thus it is ideal for cross-platform unit testing.
-
-To enable mock mode in your enclave project tests you need to include the following test dependency in your
-**enclave** module `build.gradle` file.
-
-```groovy hl_lines="2"
-testImplementation "com.r3.conclave:conclave-host"
-```
-
-You can then create an instance of the enclave as normal by calling `EnclaveHost.load`.
+To use this functionality, simply create an instance of the enclave as usual by calling `EnclaveHost.load` inside your
+test class.
 
 ```java
 EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");

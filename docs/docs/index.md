@@ -96,6 +96,9 @@ is available where you can find the development team during UK office hours (GMT
 1. :jigsaw: New feature! Easily enable and use Python. It is JIT compiled inside the enclave and can interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it is possible
 to run simple Python function, importing modules will likely lead to build issues.
 
+2. :jigsaw: New feature! The Conclave plugin will now automatically add conclave-enclave as a dependency to your enclave
+module and also conclave-host for mock testing, so that you don't have to.
+
 ### 1.1
 
 !!! important
