@@ -25,7 +25,7 @@ SGX enclaves can be used in one of four modes, in order of increasing realism:
 
 Only release mode locks out the host and provides the standard SGX security model.
 
-## Setting up your machine
+## Set up your machine
 
 For this tutorial you will need [Java 8 or 11](system-requirements.md#supported-jdks) (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
 and the Gradle build system for you, so you don't need anything to get started except the IDE itself (the free 
@@ -55,7 +55,7 @@ Enclaves can run in simulation mode without requiring any special setup of Linux
 of course get no hardware protections. To run against real SGX hardware you must perform some 
 [additional machine setup](machine-setup.md).
 
-## Compiling the sample enclave
+## Compile the sample enclave
 
 **Step 1:** Import the project
  
@@ -81,9 +81,9 @@ Now explore the `build` folder.
 As normal with Gradle, the `assemble` task has bundled the program into a zip, with startup scripts. These scripts are
 nothing special - they just set up the classpath. You could also e.g. make a fat JAR if you want. 
 
-Alternatively you can build you application from the command line as described in the next section.
+Alternatively you can build your application from the command line as described in the next section.
 
-### Selecting your mode
+### Select your mode
 
 In the sample app, the `assemble` task will build the app for **simulation mode** by default.
 
@@ -188,7 +188,7 @@ cd client/build/install
 !!! note
     The `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
 
-## Running the host
+## Run the host
 === "Linux"
 
     Just run the host app like any app - no special customisation or setup is required with Conclave! Here we will run
@@ -264,7 +264,7 @@ What you can do is rename `gradlew` to something else, then copy the `scripts/co
 IntelliJ will run the `container-gradle` script whilst  thinking it's running normal Gradle.
 
 
-## Running the client
+## Run the client
 
 The host has opened up a TCP port which will now listen for requests from remote clients. So, let's run the client app:
 
