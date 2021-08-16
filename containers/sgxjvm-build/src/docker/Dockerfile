@@ -96,7 +96,7 @@ RUN apt-get update -y && apt-get install -y \
 ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
-ENV MX_VERSION          5.294.1
+ENV MX_VERSION          5.301.0
 ENV JAVA_HOME           /usr/lib/jvm/java-8-openjdk-amd64
 ENV JVMCI_VERSION       21.0-b03
 ENV LABSJDK_VERSION     11.0.9
@@ -113,11 +113,11 @@ RUN echo "794963ca90fb0561caf3ed2bee1d9ba394226f355689cdda28161e6e0620a713  /opt
 RUN tar -zxf /opt/as.ld.objdump.gold.r3.tar.gz -C /usr/local/bin external/toolset/ubuntu18.04 --strip=3
 
 # MX
-RUN curl -sSL -o /opt/$MX_VERSION.tar.gz https://github.com/graalvm/mx/archive/$MX_VERSION.tar.gz
-RUN echo "43ee29ef1305655b3b7db2b0e738ef3560d77ebf9e5eedbfb07612447322e5a6 /opt/$MX_VERSION.tar.gz" | sha256sum -c -
-RUN tar -xaf /opt/$MX_VERSION.tar.gz -C /opt
-RUN rm -v /opt/$MX_VERSION.tar.gz
-RUN chmod a+wx /opt/mx-$MX_VERSION
+# Download the right MX version
+RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git /opt/mx-$MX_VERSION
+# Checkout the exact commit to ensure the same code is always used even if the branch is updated
+RUN git -C /opt/mx-$MX_VERSION checkout 5e0efda
+RUN chmod -R a+wx /opt/mx-$MX_VERSION
 
 # JVMCI-enabled JDK8
 RUN curl -sSL -o /opt/$JVMCI_FILE https://github.com/graalvm/graal-jvmci-8/releases/download/jvmci-$JVMCI_VERSION/$JVMCI_FILE

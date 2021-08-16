@@ -1,5 +1,5 @@
 diff --git a/substratevm/mx.substratevm/suite.py b/substratevm/mx.substratevm/suite.py
-index fb7c359..9630d36 100644
+index f1b5a9f..723e65c 100644
 --- a/substratevm/mx.substratevm/suite.py
 +++ b/substratevm/mx.substratevm/suite.py
 @@ -113,6 +113,10 @@ suite = {
@@ -22,10 +22,10 @@ index fb7c359..9630d36 100644
              "javaCompliance": "8+",
              "checkstyleVersion" : "8.8",
 diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
-index 68af1e5..38fb680 100644
+index 37a4551..b155ed4 100644
 --- a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
 +++ b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/SubstrateOptions.java
-@@ -413,6 +413,18 @@ public class SubstrateOptions {
+@@ -420,6 +420,18 @@ public class SubstrateOptions {
      @Option(help = "Provide java.lang.Terminator exit handlers for executable images", type = User)//
      public static final HostedOptionKey<Boolean> InstallExitHandlers = new HostedOptionKey<>(false);
  
@@ -36,7 +36,7 @@ index 68af1e5..38fb680 100644
 +    public static final HostedOptionKey<Boolean> ExportStaticSymbols = new HostedOptionKey<>(false);
 +
 +    @Option(help = "Default libraries to be excluded by the linker (list of comma-separated library names, i.e., dl,pthreads)", type = OptionType.Expert)
-+    public static final HostedOptionKey<String[]> ExcludeLibraries = new HostedOptionKey<>(new String[]{});
++    public static final HostedOptionKey<LocatableMultiOptionValue.Strings> ExcludeLibraries = new HostedOptionKey<>(new LocatableMultiOptionValue.Strings());
 +
 +    @Option(help = "Exclude loading net library", type = OptionType.Expert)
 +    public static final HostedOptionKey<Boolean> ExcludeLoadingNetwork = new HostedOptionKey<>(false);
@@ -114,7 +114,7 @@ index 0000000..d3cd4bc
 +    }
 +}
 diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/FileSystemProviderSupport.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/FileSystemProviderSupport.java
-index fd8ba7f..b4159bd 100644
+index 4e55c1e..f4e2025 100644
 --- a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/FileSystemProviderSupport.java
 +++ b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/FileSystemProviderSupport.java
 @@ -25,6 +25,7 @@
@@ -158,10 +158,10 @@ index 85e2c4a..7f78541 100644
              URLStreamHandler handler = (URLStreamHandler) ReflectionUtil.lookupMethod(URL.class, "getURLStreamHandler", String.class).invoke(null, protocol);
              if (handler != null) {
 diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
-index 7bb7d7b..6ff556a 100644
+index d9b2596..e11730c 100644
 --- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
 +++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
-@@ -599,10 +599,12 @@ public final class NativeLibraries {
+@@ -608,10 +608,12 @@ public final class NativeLibraries {
              return false;
          }
          for (CLibrary lib : annotated) {
@@ -178,11 +178,11 @@ index 7bb7d7b..6ff556a 100644
              }
          }
          annotated.clear();
-diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java
-index c8738dd..a6bdd7e 100644
---- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java
-+++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeBootImageViaCC.java
-@@ -122,8 +122,10 @@ public abstract class NativeBootImageViaCC extends NativeBootImage {
+diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeImageViaCC.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeImageViaCC.java
+index 92e7346..d838ff7 100644
+--- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeImageViaCC.java
++++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/NativeImageViaCC.java
+@@ -125,8 +125,10 @@ public abstract class NativeImageViaCC extends NativeImage {
                      additionalPreOptions.add("-Wl,--dynamic-list");
                      additionalPreOptions.add("-Wl," + exportedSymbolsPath.toAbsolutePath());
  
@@ -195,7 +195,7 @@ index c8738dd..a6bdd7e 100644
                  } catch (IOException e) {
                      VMError.shouldNotReachHere();
                  }
-@@ -152,7 +154,9 @@ public abstract class NativeBootImageViaCC extends NativeBootImage {
+@@ -155,7 +157,9 @@ public abstract class NativeImageViaCC extends NativeImage {
                      }
                      break;
                  case SHARED_LIBRARY:
@@ -219,8 +219,21 @@ index 8fcbce1..305b9ec 100644
              for (String specialRootModule : specialRootModules) {
                  if (moduleName.equals(specialRootModule)) {
                      for (Path srcRoot : specialSrcRoots.get(specialRootModule)) {
+diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java
+index dd43417..0ae578e 100644
+--- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java
++++ b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationAwt.java
+@@ -42,7 +42,7 @@ import org.graalvm.nativeimage.impl.InternalPlatform;
+ import java.awt.GraphicsEnvironment;
+ 
+ @Platforms({InternalPlatform.PLATFORM_JNI.class})
+-@AutomaticFeature
++//@AutomaticFeature
+ @SuppressWarnings({"unused"})
+ public class JNIRegistrationAwt extends JNIRegistrationUtil implements Feature {
+ 
 diff --git a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
-index e73dec7..bc43761 100644
+index 2e01394..7630aed 100644
 --- a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
 +++ b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
 @@ -30,6 +30,7 @@ import com.oracle.svm.core.jdk.NativeLibrarySupport;
@@ -231,14 +244,14 @@ index e73dec7..bc43761 100644
  import org.graalvm.collections.EconomicMap;
  import org.graalvm.collections.Equivalence;
  import org.graalvm.nativeimage.c.function.CFunctionPointer;
-@@ -109,6 +110,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
+@@ -111,6 +112,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
  
      @Override
      public void initialize(PlatformNativeLibrarySupport.NativeLibrary lib) {
 +        if (SubstrateOptions.ExcludeLoadingNetwork.hasBeenSet() && SubstrateOptions.ExcludeLoadingNetwork.getValue()) {
 +            return;
 +        }
-+        
++
          String libName = lib.getCanonicalIdentifier();
          PointerBase onLoadFunction;
          if (lib.isBuiltin()) {

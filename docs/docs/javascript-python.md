@@ -78,13 +78,14 @@ code. Add a constructor that prepares the JavaScript/Python context:
         }
     
         @Override
-        protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
+        protected byte[] receiveFromUntrustedHost(byte[] bytes) {
     ```
 === "Python"
     ```java hl_lines="4-12"
         // We store the previous result to showcase that the enclave internals can be examined in a mock test.
         byte[] previousResult;
 
+        private final Context context;
         private final Value bindings;
         private static final String pythonCode = "def reverse(input):\n"
                 + " return input[::-1]";
@@ -96,7 +97,7 @@ code. Add a constructor that prepares the JavaScript/Python context:
         }
 
         @Override
-        protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
+        protected byte[] receiveFromUntrustedHost(byte[] bytes) {
     ```
 
 !!! Warning
@@ -115,7 +116,6 @@ code. Add a constructor that prepares the JavaScript/Python context:
             // Get the post office object for responding back to this mail and use it to encrypt our response.
             final byte[] responseBytes = postOffice(mail).encryptMail(reversedEncodedString);
             postMail(responseBytes, routingHint);
-            System.out.println("Exiting receiveMail");
         
             // Please ensure that close is called before or while the enclave is being destroyed. Failing to do so
             // will hang the application when the method destroyEnclave is called

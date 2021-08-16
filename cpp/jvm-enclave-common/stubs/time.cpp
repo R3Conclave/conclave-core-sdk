@@ -35,4 +35,9 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     return 0;
 }
 
+int nanosleep(const struct timespec *req, struct timespec *rem) {
+     enclave_trace("nanosleep\n");
+     return -1;
+}
+
 }

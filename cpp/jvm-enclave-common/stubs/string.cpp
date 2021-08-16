@@ -32,4 +32,9 @@ char *strcat(char *destination, const char *source) {
     return destination;
 }
 
+char* __strtok_r(char *str, const char *delim, char **saveptr) {
+    enclave_trace("__strtok_r\n");
+    return nullptr;
+}
+
 }
