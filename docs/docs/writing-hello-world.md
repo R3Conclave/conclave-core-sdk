@@ -881,6 +881,7 @@ The constraint lets you specify:
 3. The minimum revocation level 
 4. The product ID
 5. The security level of the instance: `SECURE`, `STALE`, `INSECURE`
+6. The maximum age of the attestation in ISO-8601 duration format
 
 If you specify a signing public key then you must also specify the product ID, otherwise if the organisation that
 created the enclave makes a second different kind of enclave in future, a malicious host might connect you with the
@@ -939,6 +940,19 @@ real `ReverseEnclave` we wrote earlier.
             + "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE").check(attestation);
     ```
 
+It is also possible to specify a maximum age for the attestation using the EXPIRE keyword:
+
+```java
+EnclaveConstraint.parse(
+        "S:5124CA3A9C8241A3C0A51A1909197786401D2B79FA9FF849F2AA798A942165D3 " +
+        "PROD:1 SEC:INSECURE " +
+        "EXPIRE:P6M2W5D"    // 6 months, 2 weeks, 5 days
+)
+```
+
+When specified, this will cause the check to fail if the timestamp within the attestation object indicates an
+age older than the specified duration. If no period is specified then no expiry check will be applied. The age string
+uses the ISO-8601 duration format.
 
 ### Keys and mail
 

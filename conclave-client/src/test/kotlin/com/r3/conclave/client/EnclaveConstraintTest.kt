@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Test
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
+import java.security.Timestamp
 import java.time.Instant
+import java.time.Period
 import kotlin.random.Random
 
 class EnclaveConstraintTest {
@@ -101,6 +103,20 @@ class EnclaveConstraintTest {
             acceptableCodeHashes =
                 mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
         }
+        assertThat(actual).isEqualTo(expected)
+        assertThat(EnclaveConstraint.parse(actual.toString())).isEqualTo(expected)
+    }
+
+    @Test
+    fun `parse maximum attestation age`() {
+        val actual =
+            EnclaveConstraint.parse("EXPIRE:P2M3W4D C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
+        val expected = EnclaveConstraint().apply {
+            maxAttestationAge = Period.parse("P2M3W4D")
+            acceptableCodeHashes =
+                mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
+        }
+        assertThat(actual.maxAttestationAge).isNotNull
         assertThat(actual).isEqualTo(expected)
         assertThat(EnclaveConstraint.parse(actual.toString())).isEqualTo(expected)
     }
@@ -241,6 +257,23 @@ class EnclaveConstraintTest {
         }
     }
 
+    @Test
+    fun `check against attestation age`() {
+        val reallyOldEnclave = TestEnclaveInstanceInfo(timestamp = Instant.EPOCH)
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave attestation data is out of date with an age that exceeds P6M.",
+            reallyOldEnclave,
+        ) {
+            acceptableCodeHashes.add(codeHash)
+            maxAttestationAge = Period.parse("P6M")
+        }
+        val reallyNewEnclave = TestEnclaveInstanceInfo(timestamp = Instant.now())
+        val constraint = EnclaveConstraint()
+        constraint.acceptableCodeHashes.add(codeHash)
+        constraint.maxAttestationAge = Period.parse("P6M")
+        constraint.check(reallyNewEnclave)
+    }
+
     private fun EnclaveInstanceInfo.checkAgainstConstraint(block: EnclaveConstraint.() -> Unit) {
         val constraint = EnclaveConstraint()
         block(constraint)
@@ -273,7 +306,8 @@ class EnclaveConstraintTest {
         codeSigningKeyHash: SecureHash = Companion.codeSigner,
         productID: Int = Companion.productId,
         revocationLevel: Int = Companion.revocationLevel,
-        summary: EnclaveSecurityInfo.Summary = STALE
+        summary: EnclaveSecurityInfo.Summary = STALE,
+        timestamp: Instant = Instant.now()
     ) : EnclaveInstanceInfo {
         override val enclaveInfo: EnclaveInfo = EnclaveInfo(
             codeHash = codeHash,
@@ -286,7 +320,7 @@ class EnclaveConstraintTest {
         override val securityInfo: EnclaveSecurityInfo = SGXEnclaveSecurityInfo(
             summary = summary,
             reason = "for reasons...",
-            timestamp = Instant.now(),
+            timestamp = timestamp,
             cpuSVN = OpaqueBytes(Random.nextBytes(16))
         )
 

@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveInfo
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveSecurityInfo
 import com.r3.conclave.common.SecureHash
+import java.time.*
 
 /**
  * This utility class provides a template against which remote attestations may be matched. It defines a little domain
@@ -77,6 +78,13 @@ class EnclaveConstraint {
     var minSecurityLevel: EnclaveSecurityInfo.Summary = EnclaveSecurityInfo.Summary.STALE
 
     /**
+     * How old the attestation is allowed to be. Defaults to null, representative of no maximum age.
+     * The Period class stores the duration in (months days weeks etc). It's important to remember that these quantities
+     * mean nothing until they are compared with a date because, for instance, the number of days in a month is variable.
+     */
+    var maxAttestationAge: Period? = null
+
+    /**
      * Throws [InvalidEnclaveException] if the constraint doesn't match the [EnclaveInfo] with a message explaining why not.
      *
      * @throws IllegalStateException If any criteria are in an incorrect state. For example, [productID] not specified
@@ -125,6 +133,13 @@ class EnclaveConstraint {
         checkEnclave(enclave.securityInfo.summary >= minSecurityLevel) {
             "Enclave has a security level of ${enclave.securityInfo.summary} which is lower than the required level of $minSecurityLevel."
         }
+
+        maxAttestationAge?.let {
+            val earliestAllowedAttestation = ZonedDateTime.now() - maxAttestationAge
+            checkEnclave(earliestAllowedAttestation.toInstant().isBefore(enclave.securityInfo.timestamp)) {
+                "Enclave attestation data is out of date with an age that exceeds ${maxAttestationAge}."
+            }
+        }
     }
 
     private inline fun checkEnclave(value: Boolean, message: () -> String) {
@@ -142,6 +157,7 @@ class EnclaveConstraint {
         if (productID != other.productID) return false
         if (minRevocationLevel != other.minRevocationLevel) return false
         if (minSecurityLevel != other.minSecurityLevel) return false
+        if (maxAttestationAge != other.maxAttestationAge) return false
 
         return true
     }
@@ -152,6 +168,7 @@ class EnclaveConstraint {
         result = 31 * result + (productID ?: 0)
         result = 31 * result + (minRevocationLevel ?: 0)
         result = 31 * result + minSecurityLevel.hashCode()
+        result = 31 * result + (maxAttestationAge.hashCode() ?: 0)
         return result
     }
 
@@ -161,6 +178,7 @@ class EnclaveConstraint {
         acceptableSigners.mapTo(tokens) { "S:$it" }
         productID?.let { tokens += "PROD:$it" }
         minRevocationLevel?.let { tokens += "REVOKE:$it" }
+        maxAttestationAge?.let { tokens += "EXPIRE:$it" }
         tokens += "SEC:$minSecurityLevel"
         return tokens.joinToString(" ")
     }
@@ -171,7 +189,7 @@ class EnclaveConstraint {
      * @suppress
      */
     companion object {
-        private val keys = setOf("C", "S", "PROD", "REVOKE", "SEC")
+        private val keys = setOf("C", "S", "PROD", "REVOKE", "SEC", "EXPIRE")
 
         /**
          * Parses a Conclave specific textual constraint format designed to be compact and conveniently embeddable in
@@ -184,6 +202,8 @@ class EnclaveConstraint {
          * * `S:` an entry in the [acceptableSigners] set.
          * * `REVOKE:` the value of [minRevocationLevel], optional
          * * `SEC:` whether to accept debug/stale enclave hosts or not, optional.
+         * * `EXPIRE:` expiry duration, check if the attestation is older than the specified duration, optional.
+         *             The duration string uses the ISO-8601 duration format.
          *
          * `SEC` is optional. It may take values of `INSECURE`, `STALE` or `SECURE`. See the documentation for
          * [EnclaveSecurityInfo.Summary] for information on what these mean. The default is `STALE`, which optimises for uptime.
@@ -225,6 +245,9 @@ class EnclaveConstraint {
             constraint.minRevocationLevel = keyValues["REVOKE"]?.single()?.toInt()
             keyValues["SEC"]?.let {
                 constraint.minSecurityLevel = EnclaveSecurityInfo.Summary.valueOf(it.single())
+            }
+            keyValues["EXPIRE"]?.let {
+                constraint.maxAttestationAge = Period.parse(it.single())
             }
             return constraint
         }
