@@ -75,9 +75,12 @@ TEST(enclave_shared_data, real_time_backwards) {
     sd.real_time = 500;
     EXPECT_EQ(esd.real_time(), 500);
     sd.real_time = 450;
-    EXPECT_EQ(esd.real_time(), 500);
+    EXPECT_EQ(esd.real_time(), 500 + 1000 /*delta = 1 us*/);
     sd.real_time = 510;
-    EXPECT_EQ(esd.real_time(), 510);
+    EXPECT_EQ(esd.real_time(), 500 + 2000 /*delta = 2 us*/);
+    EXPECT_EQ(esd.real_time(), 500 + 3000 /*delta = 3 us*/);
+    sd.real_time = 3511;
+    EXPECT_EQ(esd.real_time(), 3511);
     
 }
 

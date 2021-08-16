@@ -24,23 +24,30 @@ uint64_t EnclaveSharedData::real_time() {
     SharedData sd;
     getSharedData(sd);
 
-    // Ensure time cannot go backwards
-    // Here we are trying to avoid "over-locking" the mutex in cases where it's not necessary.
-    // To do so, we are implementing the Double-Checked locking pattern.
-    // For more information, refer to this (great) article: https://preshing.com/20130930/double-checked-locking-is-fixed-in-cpp11/
-
+    // Ensure time cannot go backwards nor be stalled
     // The prefix "local_" was used to provide a more explicit differentiation against its atomics counterparts.
+    sgx_scoped_lock lock(spinlock_);
     uint64_t local_real_time = sd.real_time;
     uint64_t local_last_time = last_time_.load(std::memory_order_acquire);
+
     if (local_real_time > local_last_time) {
-        sgx_scoped_lock lock(spinlock_);
-        local_real_time = sd.real_time;
-        local_last_time = last_time_.load(std::memory_order_relaxed);
-        if (local_real_time > local_last_time) {
-            local_last_time = local_real_time;
-            last_time_.store(local_real_time, std::memory_order_release);
-        }
+        local_last_time = local_real_time;
     }
+    else {
+        // local_real_time is either the same as local_last_time or
+        // smaller meaning the local_real_time cannot be trusted.
+        // Time is measured in nanoseconds therefore if this function is called twice in a row
+        // time must have increased at least one nanosecond.
+        // Because it is not possible to determine the current real time, last time is
+        // increased by a delta.
+        // The delta is 1us rather than 1ns because 1 us is the maximum resolution that Java time supports in Java 11
+        // (https://bugs.openjdk.java.net/browse/JDK-8068730).
+        const uint64_t ONE_USEC = 1000;
+        local_last_time += ONE_USEC;
+    }
+
+    last_time_.store(local_last_time, std::memory_order_release);
+
     return local_last_time ;
 }
 
