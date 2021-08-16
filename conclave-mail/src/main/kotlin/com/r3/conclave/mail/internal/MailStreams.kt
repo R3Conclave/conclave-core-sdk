@@ -13,8 +13,7 @@ import com.r3.conclave.utilities.internal.writeData
 import java.io.*
 import java.security.PrivateKey
 import java.security.PublicKey
-import javax.crypto.BadPaddingException
-import javax.crypto.ShortBufferException
+import javax.crypto.AEADBadTagException
 
 // Utils for encoding a 16 bit unsigned value in big endian.
 private fun ByteArray.writeShort(offset: Int, value: Int) {
@@ -161,7 +160,8 @@ class MailEncryptingStream(
      */
     override fun write(b: ByteArray, off: Int, len: Int) {
         if ((off < 0) || (off > b.size) || (len < 0) ||
-                ((off + len) > b.size) || ((off + len) < 0)) {
+            ((off + len) > b.size) || ((off + len) < 0)
+        ) {
             throw IndexOutOfBoundsException("$off + $len >= ${b.size}")
         }
         val endOffset = off + len
@@ -275,11 +275,11 @@ class MailDecryptingStream(
     private var privateKeyProvided = privateKey != null
 
     /**
-     * Provide the private key needed to decrypt the stream. If the header has alraedy been read this method will immediately
+     * Provide the private key needed to decrypt the stream. If the header has already been read this method will immediately
      * authenticate it.
      */
     fun setPrivateKey(privateKey: PrivateKey) {
-        check(!privateKeyProvided) { "Private key has already been provoded." }
+        check(!privateKeyProvided) { "Private key has already been provided." }
         this.privateKey = privateKey
         privateKeyProvided = true
         if (_prologue != null) {
@@ -348,8 +348,10 @@ class MailDecryptingStream(
 
     val header: EnclaveMailHeaderImpl get() = prologue.header
 
-    private fun error(s: String, cause: Exception? = null): Nothing {
-        throw IOException("$s. Corrupt stream or not Conclave Mail.", cause)
+    private fun error(customMessage: String? = null, cause: Exception? = null): Nothing {
+        var message = if (customMessage != null) "$customMessage. " else ""
+        message += "Corrupt stream or not Conclave Mail."
+        throw MailDecryptionException(message, cause)
     }
 
     private val encryptedBuffer = ByteArray(Noise.MAX_PACKET_LEN) // Reused to hold encrypted packets.
@@ -423,11 +425,8 @@ class MailDecryptingStream(
         // Now we can decrypt it.
         val plaintextLength = try {
             cipherState.decryptWithAd(null, encryptedBuffer, 0, currentDecryptedBuffer, 0, packetLength)
-        } catch (e: ShortBufferException) {
-            // Data was possibly corrupted.
-            throw IOException(e)
-        } catch (e: BadPaddingException) {
-            throw IOException(e)
+        } catch (e: Exception) {
+            error(cause = e)
         }
         // The plaintext has a user bytes length field.
         if (plaintextLength < 2) {
@@ -495,8 +494,13 @@ class MailDecryptingStream(
         } catch (e: EOFException) {
             error("Premature end of stream during handshake")
         }
+
         val payloadBuf = ByteArray(0)
-        handshake.readMessage(handshakeBuf, 0, handshakeBuf.size, payloadBuf, 0)
+        try {
+            handshake.readMessage(handshakeBuf, 0, handshakeBuf.size, payloadBuf, 0)
+        } catch (e: AEADBadTagException) {
+            error("The mail could not be decrypted due to either data corruption or key mismatch", e)
+        }
         check(handshake.action == HandshakeState.SPLIT)
         return handshake
     }
@@ -579,3 +583,5 @@ enum class MailProtocol(
 ) {
     SENDER_KEY_TRANSMITTED("Noise_X_25519_AESGCM_SHA256", 96),
 }
+
+class MailDecryptionException(message: String? = null, cause: Exception? = null) : IOException(message, cause)

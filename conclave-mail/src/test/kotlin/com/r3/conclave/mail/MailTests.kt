@@ -1,6 +1,7 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
+import com.r3.conclave.mail.internal.MailDecryptionException
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -91,6 +92,32 @@ class MailTests {
             // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
             bobPostOffice.decryptMail(bytes)
         }
+    }
+
+    @Test
+    fun `key mismatch`() {
+        val mail = PostOffice.create(bob.publicKey).encryptMail(message1)
+
+        assertThatThrownBy {
+            PostOffice.create(alice.publicKey).decryptMail(mail)
+        }.isInstanceOf(MailDecryptionException::class.java)
+    }
+
+
+    @Test
+    fun `invalid sender`() {
+        val alicePostOffice = PostOffice.create(bob.publicKey, alice, "topic")
+
+        val mallory = Curve25519PrivateKey.random()
+        val malloryPostOffice = PostOffice.create(alice.publicKey, mallory, "topic")
+        val mail = malloryPostOffice.encryptMail(message1)
+
+        assertThatIllegalArgumentException().isThrownBy {
+            alicePostOffice.decryptMail(mail)
+        }.withMessageContaining(
+            "Mail does not appear to have been targeted for this post office. " +
+                    "Authenticated sender was ${mallory.publicKey} but expected ${bob.publicKey}"
+        )
     }
 
     @Test
