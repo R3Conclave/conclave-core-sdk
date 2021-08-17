@@ -15,6 +15,8 @@ import com.r3.conclave.utilities.internal.parseHex
 import com.r3.conclave.utilities.internal.writeData
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -458,6 +460,59 @@ class EnclaveHostMockTest {
         host.start(null, null)
         assertThat(host.enclaveInstanceInfo.enclaveInfo.enclaveMode).isEqualTo(EnclaveMode.MOCK)
         assertThat(host.enclaveInstanceInfo.enclaveInfo.codeSigningKeyHash).isEqualTo(hash)
+    }
+
+    class EnclaveWithHooks : Enclave() {
+
+        var onStartupWasCalled: Boolean = false
+        var onShutdownWasCalled: Boolean = false
+
+        override fun onStartup() {
+            onStartupWasCalled = true
+        }
+
+        override fun onShutdown() {
+            onShutdownWasCalled = true
+        }
+    }
+
+    @Test
+    fun `enclave onStartup and onShutdown are called at the right moment`() {
+
+        val host = createMockHost(EnclaveWithHooks::class.java)
+        val enclave = host.mockEnclave as EnclaveWithHooks
+
+        // The host was only created but the initialization process has not started yet
+        assertFalse(enclave.onStartupWasCalled, "The host was created but not initialised. onStartup should not have been called")
+        assertFalse(enclave.onShutdownWasCalled, "The host was created but not uninitialised. onShutdown should not have been called")
+
+        host.start(null, null)
+
+        // The host is now running so it must have been initialised
+        assertTrue(enclave.onStartupWasCalled, "The host was initialised. onStartup should have been called")
+        assertFalse(enclave.onShutdownWasCalled, "The host was initialised but not uninitialised. onShutdown should not have been called")
+
+        host.close()
+
+        // The host has now been stopped so it must have been uninitialised
+        assertTrue(enclave.onStartupWasCalled, "The host was initialised and uninitialised. onStartup should have been called")
+        assertTrue(enclave.onShutdownWasCalled, "The host was initialised and uninitialised. onShutdown should have been called")
+    }
+
+    @Test
+    fun `enclave onShutdown is not called when the enclave is not initialised even if the host is closed`() {
+
+        val host = createMockHost(EnclaveWithHooks::class.java)
+        val enclave = host.mockEnclave as EnclaveWithHooks
+
+
+        // The host was only created but the initialization process has not started yet
+        assertFalse(enclave.onShutdownWasCalled, "The host was created but not uninitialised. onShutdown should not have been called")
+
+        host.close()
+
+        // The host has now been stopped so it must have been uninitialised
+        assertFalse(enclave.onShutdownWasCalled, "The host was closed even though it was not initialised. onShutdown should not been called")
     }
 
     class PreviousValueEnclave : Enclave() {

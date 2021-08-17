@@ -40,6 +40,9 @@ import kotlin.collections.HashMap
  * Enclaves can sign things with a key that appears in the [com.r3.conclave.common.EnclaveInstanceInfo].
  * This can be useful when the enclave is being used to create a proof of correct
  * computation, rather than operate on secret data.
+ *
+ * Please use the method [onStartup] to provide the configuration required to initialise the enclave, and
+ * the method [onShutdown] to release the resources held by the enclave before its destruction.
  */
 abstract class Enclave {
     /**
@@ -221,6 +224,15 @@ abstract class Enclave {
         }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
+            when (val type = input.get().toInt()) {
+                0 -> onAttestation(input)
+                1 -> onOpen()
+                2 -> onClose()
+                else -> throw IllegalStateException("Unknown type $type")
+            }
+        }
+
+        private fun onAttestation(input: ByteBuffer) {
             val attestation = Attestation.get(input)
             val attestationReportBody = attestation.reportBody
             val enclaveReportBody = enclave.attestationHandler.report[body]
@@ -240,6 +252,15 @@ Received: $attestationReportBody"""
                 enclave.encryptionKeyPair.public as Curve25519PublicKey,
                 attestation
             )
+        }
+
+        private fun onOpen() {
+            enclave.onStartup()
+        }
+
+        private fun onClose() {
+           // This method call must be at the top so the enclave derived class can release its resources
+           enclave.onShutdown()
         }
 
         private fun sendEnclaveInfo() {
@@ -277,6 +298,24 @@ Received: $attestationReportBody"""
             }
         }
     }
+
+    /**
+     * Override this method if the enclave requires extra configuration. Please be aware that any initialization code
+     * must be placed in this method and not in the class constructor to ensure the enclave is started correctly.
+     * This method is invoked as the last step of the enclave initialization.
+     */
+    open fun onStartup() {
+
+    }
+
+    /**
+     * Override this method to release any resources held by the enclave. This method is called when the enclave is
+     * asked to be shut down. This gives an opportunity to the enclave to release its resources before being destroyed.
+     */
+    open fun onShutdown() {
+
+    }
+
 
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
         private val currentEnclaveCall = ThreadLocal<Long>()

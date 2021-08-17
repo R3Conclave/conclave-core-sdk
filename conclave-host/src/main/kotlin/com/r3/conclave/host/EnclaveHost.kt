@@ -392,6 +392,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             if (mailReceipt != null)
                 enclaveMessageHandler.deliverAcknowledgementReceipt(mailReceipt)
 
+            adminHandler.sendOpen()
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
         }
@@ -584,6 +585,10 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         // could yield a secondary error if an exception was thrown in enclave.start without this.
         if (hostStateManager.state !is Started) return
         try {
+            // Ask the enclave to close so all its resources are released before the enclave is destroyed
+            adminHandler.sendClose()
+
+            // Destroy the enclave
             enclaveHandle.destroy()
         } finally {
             hostStateManager.state = Closed
@@ -611,11 +616,24 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 }
                 1 -> {  // Attestation request
                     val attestationBytes = writeData { host._enclaveInstanceInfo!!.attestation.writeTo(this) }
-                    sender.send(attestationBytes.size) { buffer ->
+                    sender.send(1 + attestationBytes.size) { buffer ->
+                        buffer.put(0)
                         buffer.put(attestationBytes)
                     }
                 }
                 else -> throw IllegalStateException("Unknown type $type")
+            }
+        }
+
+        fun sendOpen() {
+            sender.send(1) { buffer ->
+                buffer.put(1)
+            }
+        }
+
+        fun sendClose() {
+            sender.send(1) { buffer ->
+                buffer.put(2)
             }
         }
     }
