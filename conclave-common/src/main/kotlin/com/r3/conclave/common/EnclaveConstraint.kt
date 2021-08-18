@@ -1,9 +1,5 @@
-package com.r3.conclave.client
+package com.r3.conclave.common
 
-import com.r3.conclave.common.EnclaveInfo
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveSecurityInfo
-import com.r3.conclave.common.SecureHash
 import java.time.*
 
 /**

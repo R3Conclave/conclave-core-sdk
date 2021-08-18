@@ -1,5 +1,15 @@
 # API changes
 
+## 1.1 to 1.2
+
+To facilitate future plans for enclave to enclave communication, the following classes have been moved from `
+com.r3.conclave.client` to `com.r3.conclave.common`:
+
+* `EnclaveConstraint`
+* `InvalidEnclaveException`
+
+Client code should be updated appropriately.
+
 ## 1.0 to 1.1
 
 There have been a number of changes in the way that you use mock mode in your Conclave projects. You will

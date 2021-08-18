@@ -1,6 +1,5 @@
-package com.r3.conclave.client
+package com.r3.conclave.common
 
-import com.r3.conclave.common.*
 import com.r3.conclave.common.EnclaveSecurityInfo.Summary.*
 import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.*
@@ -8,7 +7,6 @@ import org.junit.jupiter.api.Test
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
-import java.security.Timestamp
 import java.time.Instant
 import java.time.Period
 import kotlin.random.Random
@@ -302,12 +300,12 @@ class EnclaveConstraintTest {
     }
 
     private class TestEnclaveInstanceInfo(
-        codeHash: SecureHash = Companion.codeHash,
-        codeSigningKeyHash: SecureHash = Companion.codeSigner,
-        productID: Int = Companion.productId,
-        revocationLevel: Int = Companion.revocationLevel,
-        summary: EnclaveSecurityInfo.Summary = STALE,
-        timestamp: Instant = Instant.now()
+            codeHash: SecureHash = Companion.codeHash,
+            codeSigningKeyHash: SecureHash = codeSigner,
+            productID: Int = productId,
+            revocationLevel: Int = Companion.revocationLevel,
+            summary: EnclaveSecurityInfo.Summary = STALE,
+            timestamp: Instant = Instant.now()
     ) : EnclaveInstanceInfo {
         override val enclaveInfo: EnclaveInfo = EnclaveInfo(
             codeHash = codeHash,

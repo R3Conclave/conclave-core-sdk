@@ -1,6 +1,6 @@
 package com.r3.conclave.sample.client;
 
-import com.r3.conclave.client.EnclaveConstraint;
+import com.r3.conclave.common.EnclaveConstraint;
 import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.mail.Curve25519PrivateKey;
 import com.r3.conclave.mail.EnclaveMail;

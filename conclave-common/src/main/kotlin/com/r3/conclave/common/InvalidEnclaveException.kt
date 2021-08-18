@@ -1,4 +1,4 @@
-package com.r3.conclave.client
+package com.r3.conclave.common
 
 /**
  * Exception that is thrown by the [EnclaveConstraint] if an enclave violates its constraints.

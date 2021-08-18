@@ -827,7 +827,7 @@ The client app will do three things:
 Here's the initial boilerplate to grab the user input, connect, download and deserialize the `EnclaveInstanceInfo`.
 
 ```java
-import com.r3.conclave.client.InvalidEnclaveException;
+import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.common.EnclaveInstanceInfo;
 
 import java.io.DataInputStream;
