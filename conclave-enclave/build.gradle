@@ -10,12 +10,6 @@ compileJava {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-configurations {
-    testConf {
-        transitive = false
-    }
-}
-
 dependencies {
     api project(":conclave-common")
 
@@ -31,8 +25,6 @@ dependencies {
     // ASM: byte code manipulation library
     testImplementation "org.ow2.asm:asm:$asm_version"
     testImplementation "org.mockito:mockito-inline:$mockito_version"
-
-    testConf project(":conclave-client")
 }
 
 // This task is needed by :internal-testing for quickly generating dynamic test enclaves. Normally the shadowJar task
@@ -47,14 +39,8 @@ task fatJar(type: ShadowJar) {
 }
 
 test {
-    def jvmEnclaveCommonJarTask = tasks.getByPath(":cpp:jvm-enclave-common:jar")
-    dependsOn(configurations.testConf)
-    systemProperty 'conclave-enclave.test-jar', configurations.testConf.asPath
     doFirst {
-        if (!configurations.testRuntimeClasspath.disjoint(configurations.testConf)) {
-            throw new GradleException("${configurations.testConf.asPath} is now on the test classpath. Choose a dependency " +
-                    "which is not and update the c.r.c.e.internal.memory tests accordingly.")
-        }
+        def jvmEnclaveCommonJarTask = tasks.getByPath(":cpp:jvm-enclave-common:jar")
         systemProperty 'jvmEnclaveCommonJarPath', jvmEnclaveCommonJarTask.outputs.files.asPath
     }
 }
