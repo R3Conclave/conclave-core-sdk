@@ -70,7 +70,7 @@ of course get no hardware protections. To run against real SGX hardware you must
 ![Import Gradle script](./images/gradle-import.png) 
  
 **Step 4:** Double-click on `:host:assemble`. This is the second
-highlighted `assemble` in the screenshot of Intellij's Gradle window below. Voila! :smile: You have just built your first enclave.
+highlighted `assemble` in the screenshot of IntelliJ's Gradle window below. Voila! :smile: You have just built your first enclave.
 
 ![Double-click on `:host:assemble`](./images/gradle-tasks.png)
   
@@ -82,6 +82,7 @@ As normal with Gradle, the `assemble` task has bundled the program into a zip, w
 nothing special - they just set up the classpath. You could also e.g. make a fat JAR if you want. 
 
 Alternatively you can build your application from the command line as described in the next section.
+
 
 ### Select your mode
 
@@ -121,16 +122,11 @@ openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_p
 ./gradlew build -PenclaveMode="release"
 ```
 
+
 !!! important
     To start an enclave in release or debug mode, your system will need an installation of the intel SGX driver stack.
     See [machine setup](machine-setup.md) for installation instructions.
 
-## Got this far? Join the community!
-
-There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
-is available where you can find the development team during UK office hours (GMT 0900-1700).
-
-[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
 
 ## Confused about various Gradle commands (`build`/`assemble`/`installDist`/`run`)? Here is an explanation.
 
@@ -188,7 +184,9 @@ cd client/build/install
 !!! note
     The `run` task is a part of the [Application plugin](https://docs.gradle.org/current/userguide/application_plugin.html).
 
+
 ## Run the host
+
 === "Linux"
 
     Just run the host app like any app - no special customisation or setup is required with Conclave! Here we will run
@@ -256,13 +254,12 @@ You can proceed to [Running the client](#running-the-client) when you see the fo
 Listening on port 9999. Use the client app to send strings for reversal.
 ```
 
-### IntelliJ configuration
-If you are using IntelliJ, you may want to create a launch configuration to incorporate the `build` and `deploy` stages. If using the
-`container-gradle` script on macOS, IntelliJ does expect the command to launch Gradle to be called `gradle` or `gradlew`.
-What you can do is rename `gradlew` to something else, then copy the `scripts/container-gradle` script to be called
-`gradlew` in your project root. Finally, edit the last line of the script to start the renamed script. Therefore
-IntelliJ will run the `container-gradle` script whilst  thinking it's running normal Gradle.
 
+### IntelliJ configuration
+If you are using IntelliJ, you may want to create a launch configuration to incorporate the `build` and `run` stages. If using the
+`container-gradle` script on macOS, IntelliJ does expect the command to launch Gradle to be called `gradle` or `gradlew`.
+What you can do is rename `gradlew` to something else, then copy the `scripts/container-gradle` script to `gradlew` in your project root. Finally, edit the last line of the script to start the renamed script. Then,
+IntelliJ will run the `container-gradle` script while thinking it's running normal Gradle.
 
 ## Run the client
 
@@ -334,3 +331,11 @@ Try this:
     Aibohphobia is the fear of palindromes.
 
 If you get stuck join the [mailing list](https://groups.io/g/conclave-discuss) and ask for help! 
+
+
+## Got this far? Join the community!
+
+There's a public mailing list for users to discuss Conclave, and we also welcome general SGX talk. A Slack channel
+is available where you can find the development team during UK office hours (GMT 0900-1700).
+
+[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
