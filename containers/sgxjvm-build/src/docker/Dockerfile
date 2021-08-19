@@ -58,6 +58,7 @@ RUN apt-get update -y && apt-get install -y \
     gdbserver \
     git \
     libcurl4-openssl-dev \
+    libgbm-dev \
     libprotobuf-dev \
     libsgx-dcap-ql \
     libsgx-dcap-ql-dev \
