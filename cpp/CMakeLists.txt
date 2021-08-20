@@ -18,7 +18,6 @@ include(GoogleTest)
 add_custom_target(build_tests_and_run ${CMAKE_CTEST_COMMAND} -V ${CMAKE_BINARY_DIR})
 
 add_subdirectory(linux-sgx)
-add_subdirectory(openjdk8)
 add_subdirectory(zlib)
 add_subdirectory(dummy)
 
