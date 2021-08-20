@@ -23,7 +23,6 @@ abstract class AttestationEnclaveHandler(private val env: EnclaveEnvironment) : 
     }
 
     override fun onReceive(connection: AttestationEnclaveHandler, input: ByteBuffer) {
-        check(_report == null)
         val quotingEnclaveTargetInfo = Cursor.read(SgxTargetInfo, input)
         val report = env.createReport(quotingEnclaveTargetInfo, reportData)
         _report = report

@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
@@ -292,6 +293,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      */
     val mockEnclave: Any get() = enclaveHandle.mockEnclave
 
+    private lateinit var attestationConnection: AttestationHostHandler.Connection
+    private lateinit var attestationService: AttestationService
+
     /**
      * Causes the enclave to be loaded and the `Enclave` object constructed inside.
      * This method must be called before sending is possible. Remember to call
@@ -353,7 +357,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
-        val attestationService = getAttestationService(attestationParameters)
+        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
 
         try {
             this.mailCallback = mailCallback
@@ -364,7 +368,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             adminHandler = mux.addDownstream(AdminHandler(this))
             // The attestation handler manages the process of generating remote attestations that are then
             // placed into the EnclaveInstanceInfo.
-            val attestationConnection = mux.addDownstream(AttestationHostHandler(
+            attestationConnection = mux.addDownstream(AttestationHostHandler(
                 // Ignore the attestation parameters if the enclave mode is non-hardware and switch to mock attestation.
                 attestationParameters?.takeIf { enclaveMode.isHardware }
             ))
@@ -375,15 +379,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // Additionally, the enclave is initialised when it receives its first bytes. We use the request for
             // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
             // for us to query.
-            //
-            // TODO: Change this to fetch quotes on demand.
-            val signedQuote = attestationConnection.getSignedQuote()
-            val attestation = attestationService.attestQuote(signedQuote)
-            _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-                adminHandler.enclaveInfo.signatureKey,
-                adminHandler.enclaveInfo.encryptionKey,
-                attestation
-            )
+            updateAttestation()
+
             // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
@@ -399,26 +396,29 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     }
 
     /**
-     * Return the correct attestation service for the given attestation parameters and enclave mode.
+     * Perform a fresh attestation with the attestation service. On successful completion the [enclaveInstanceInfo]
+     * property may be updated to a newer one. If so make sure to provide this to end clients.
      *
-     * EPID and DCAP can only be used if the enclave is release or debug, and mock is only used if the enclave is
-     * simulation or mock. In the later case any attestation parameters provided are ignored.
+     * Note that an attestation is already performed on startup. It's recommended to call this method if a long time
+     * has passed and clients may want a more fresh version.
      */
-    private fun getAttestationService(attestationParameters: AttestationParameters?): AttestationService {
-        fun getHardwareAttestationService(isRelease: Boolean): HardwareAttestationService {
-            return when (attestationParameters) {
-                is AttestationParameters.EPID -> EpidAttestationService(isRelease, attestationParameters.attestationKey)
-                is AttestationParameters.DCAP -> DCAPAttestationService(isRelease)
-                null -> throw IllegalArgumentException("Attestation parameters needed for $enclaveMode mode.")
-            }
-        }
+    fun updateAttestation() {
+        val attestation = getAttestation(true)
+        updateEnclaveInstanceInfo(attestation)
+    }
 
-        return when (enclaveMode) {
-            EnclaveMode.RELEASE -> getHardwareAttestationService(isRelease = true)
-            EnclaveMode.DEBUG -> getHardwareAttestationService(isRelease = false)
-            EnclaveMode.SIMULATION -> MockAttestationService(isSimulation = true)
-            EnclaveMode.MOCK -> MockAttestationService(isSimulation = false)
-        }
+    private fun getAttestation(ignoreCachedData: Boolean): Attestation {
+        val signedQuote = attestationConnection.getSignedQuote(ignoreCachedData)
+        val attestation = attestationService.attestQuote(signedQuote)
+        return attestation
+    }
+
+    private fun updateEnclaveInstanceInfo(attestation: Attestation) {
+        _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
+            adminHandler.enclaveInfo.signatureKey,
+            adminHandler.enclaveInfo.encryptionKey,
+            attestation
+        )
     }
 
     /**
