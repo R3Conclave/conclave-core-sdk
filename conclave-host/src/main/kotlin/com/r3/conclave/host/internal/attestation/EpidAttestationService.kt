@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.ByteCursor
@@ -7,6 +7,8 @@ import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.AttestationUtils
 import com.r3.conclave.common.internal.attestation.EpidAttestation
 import com.r3.conclave.common.internal.attestation.attestationObjectMapper
+import com.r3.conclave.host.internal.debug
+import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.readFully
 import java.io.IOException

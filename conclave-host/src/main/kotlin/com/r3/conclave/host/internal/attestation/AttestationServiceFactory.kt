@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.host.AttestationParameters
@@ -14,8 +14,8 @@ object AttestationServiceFactory {
         return when (enclaveMode) {
             EnclaveMode.RELEASE -> getHardwareService(isRelease = true, enclaveMode, attestationParameters)
             EnclaveMode.DEBUG -> getHardwareService(isRelease = false, enclaveMode, attestationParameters)
-            EnclaveMode.SIMULATION -> AttestationServiceMock(isSimulation = true)
-            EnclaveMode.MOCK -> AttestationServiceMock(isSimulation = false)
+            EnclaveMode.SIMULATION -> MockAttestationService(isSimulation = true)
+            EnclaveMode.MOCK -> MockAttestationService(isSimulation = false)
         }
     }
 

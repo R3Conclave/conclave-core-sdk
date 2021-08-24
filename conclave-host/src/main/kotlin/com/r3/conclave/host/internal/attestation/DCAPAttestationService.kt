@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
@@ -9,6 +9,7 @@ import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.common.internal.toEcdsaP256AuthData
 import com.r3.conclave.common.internal.toPckCertPath
+import com.r3.conclave.host.internal.Native
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.x509Certs
 

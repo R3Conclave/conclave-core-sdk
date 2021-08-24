@@ -104,9 +104,12 @@ to run simple Python function, importing modules will likely lead to build issue
 2. :jigsaw: New feature! The Conclave plugin will now automatically add conclave-enclave as a dependency to your enclave
 module and also conclave-host for mock testing, so that you don't have to.
 
-3. The `Enclave` class now includes the methods `onStartup` and `onShutdown`. These two new method where added to provide to developers
+3. The `Enclave` class now includes the methods `onStartup` and `onShutdown`. These two new method were added to provide to developers
 suitable methods to add all the enclave initialisation logic, and to release the resources held by the enclave, respectively.
 
+4. The `EnclaveHost` class now includes the method `updateAttestation`. This method was added to provide developers a way
+   to reassess the attestation without having to restart the enclave.
+   
 ### 1.1
 
 !!! important

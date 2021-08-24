@@ -1,11 +1,10 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.MockAttestation
-import com.r3.conclave.host.internal.AttestationService
 import java.time.Instant
 
 /**
@@ -13,7 +12,7 @@ import java.time.Instant
  *
  * @param isSimulation Whether the [MockAttestation.enclaveMode] property of the attestation is simulation or mock.
  */
-class AttestationServiceMock(private val isSimulation: Boolean) : AttestationService {
+class MockAttestationService(private val isSimulation: Boolean) : AttestationService {
     override fun attestQuote(signedQuote: ByteCursor<SgxSignedQuote>): MockAttestation {
         return MockAttestation(Instant.now(), signedQuote[quote][reportBody].asReadOnly(), isSimulation)
     }

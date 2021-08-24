@@ -1,4 +1,4 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.ByteCursor
