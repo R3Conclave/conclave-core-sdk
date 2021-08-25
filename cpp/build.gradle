@@ -8,19 +8,27 @@ def types = ["Simulation", "Debug", "Release"]
 
 task generateHostJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.host.internal.Native']) {
     dependsOn ":conclave-host:jar"
-    inputJar = tasks.getByPath(":conclave-host:jar").archiveFile.get().asFile
+    inputJars = files(tasks.getByPath(":conclave-host:jar").archiveFile.get().asFile)
     outputHeader = file("$projectDir/jvm-host/include/host_jni.h")
 }
 
 task generateHostSharedJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.host.internal.NativeShared']) {
     dependsOn ":conclave-host:jar"
-    inputJar = tasks.getByPath(":conclave-host:jar").archiveFile.get().asFile
+    File conclaveHostJar = tasks.getByPath(":conclave-host:jar").archiveFile.get().asFile
+    // The task cpp:generateHostSharedJniHeader started to fail after updating the properties apiVersion, languageVersion to 1.5 in the common.gradle file
+    // The task :cpp:generateHostSharedJniHeaders depends on the conclave-host-*.jar and it was failing because the class io.github.classgraph.Resource could not be found.
+    // To fix the issue, the path to the io.github.classgraph dependency must be given to the command javah.
+    // The code below gets the compile classpath used by the task :conclave-host:jar and then gets the file classgraph-*.jar
+    File dependencyJar = project(":conclave-host").configurations.compileClasspath.filter{ jarFile ->
+        jarFile.name.contains("classgraph-${classgraph_version}.jar")
+    }.singleFile
+    inputJars = files(conclaveHostJar, dependencyJar)
     outputHeader = file("$projectDir/jvm-host-shared/include/host_jni_shared.h")
 }
 
 task generateEnclaveJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.enclave.internal.Native']) {
     dependsOn ":conclave-enclave:jar"
-    inputJar = tasks.getByPath(":conclave-enclave:jar").archiveFile.get().asFile
+    inputJars = files(tasks.getByPath(":conclave-enclave:jar").archiveFile.get().asFile)
     outputHeader = file("$projectDir/jvm-enclave-common/include/enclave_jni.h")
 }
 
@@ -149,8 +157,8 @@ class Javah extends DefaultTask {
 
     @OutputFile
     File outputHeader
-    @InputFile
-    File inputJar
+    @Input
+    FileCollection inputJars
 
     @Inject
     Javah(String nativeClass) {
@@ -164,7 +172,7 @@ class Javah extends DefaultTask {
             spec.commandLine("/usr/bin/env", "javah",
                     "-v",
                     "-o", outputHeader,
-                    "-cp", inputJar,
+                    "-cp", inputJars.asPath,
                     nativeClass
             )
         }

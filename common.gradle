@@ -21,8 +21,8 @@ subprojects {
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
                 jvmTarget = VERSION_1_8
-                apiVersion = '1.4'
-                languageVersion = '1.4'
+                apiVersion = '1.5'
+                languageVersion = '1.5'
             }
         }
     }
