@@ -326,7 +326,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
             }
 
-            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type", linuxExec) { task ->
+            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>("generateEnclaveMetadata$type", type, linuxExec) { task ->
                 val signingTask = enclaveExtension.signingType.map {
                     when (it) {
                         SigningType.DummyKey -> signEnclaveWithKeyTask

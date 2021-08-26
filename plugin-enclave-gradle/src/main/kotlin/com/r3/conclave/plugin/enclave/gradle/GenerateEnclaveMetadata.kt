@@ -8,6 +8,7 @@ import javax.inject.Inject
 
 open class GenerateEnclaveMetadata @Inject constructor(
         objects: ObjectFactory,
+        private val buildType: BuildType,
         private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile
@@ -32,14 +33,23 @@ open class GenerateEnclaveMetadata @Inject constructor(
                 linuxExec.cleanPreparedFiles()
             }
         } else {
-            commandLine(inputSignTool.asFile.get(), "dump",
-                        "-enclave", inputSignedEnclave.asFile.get(),
-                        "-dumpfile", metadataFile
-                )
+            commandLine(
+                    inputSignTool.asFile.get(), "dump",
+                    "-enclave", inputSignedEnclave.asFile.get(),
+                    "-dumpfile", metadataFile
+            )
         }
 
         val enclaveMetadata = EnclaveMetadata.parseMetadataFile(metadataFile)
         logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
+
+        val buildTypeString = buildType.toString().toUpperCase()
+        val buildSecurityString = when(buildType) {
+            BuildType.Release -> "SECURE"
+            else -> "INSECURE"
+        }
+
+        logger.lifecycle("Enclave mode:        $buildTypeString ($buildSecurityString)")
     }
 }
