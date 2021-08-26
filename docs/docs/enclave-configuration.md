@@ -212,6 +212,8 @@ of Graal's reference manual.
 This allows for code which rely on reflection to specify which classes, methods, fields and their properties
 will be available at run time.
 
+The path should be absolute or relative to the root of the enclave module.
+
 ### serializationConfigurationFiles
 _Default:_ empty list
 
@@ -220,6 +222,8 @@ A list of serialization configuration files as specified in Graal's
 documentation file.
 
 This allows to specify classes which are expected to be serialized using Java serialization.
+
+The path should be absolute or relative to the root of the enclave module.
 
 ## Assisted Configuration of Native Image Builds
 

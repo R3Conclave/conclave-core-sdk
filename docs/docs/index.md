@@ -110,6 +110,9 @@ suitable methods to add all the enclave initialisation logic, and to release the
 4. The `EnclaveHost` class now includes the method `updateAttestation`. This method was added to provide developers a way
    to reassess the attestation without having to restart the enclave.
    
+5. :jigsaw: New feature! The Conclave plugin will now automatically pass all resources from the main source set
+   (`enclave/src/main/resources`) to Native Image with no extra config required.
+   
 ### 1.1
 
 !!! important

@@ -80,13 +80,13 @@ open class NativeImage @Inject constructor(
     val librariesWholeArchive: ConfigurableFileCollection = objects.fileCollection()
 
     @get:InputFile
+    val appResourcesConfig: RegularFileProperty = objects.fileProperty()
+
+    @get:InputFile
     val reflectionConfiguration: RegularFileProperty = objects.fileProperty()
 
     @get:InputFiles
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
-
-    @get:InputFiles
-    val resourcesConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     @get:InputFiles
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
@@ -406,18 +406,20 @@ open class NativeImage @Inject constructor(
         return emptyList()
     }
 
-    private fun includeResourcesOption(defaultResourcesConfig: Path): List<String> {
-        val configs = resourcesConfigurationFiles.map { it.absolutePath } + defaultResourcesConfig.toAbsolutePath().toString()
-        val files = configs.joinToString(separator = ",")
-        return listOf("-H:ResourceConfigurationFiles=$files",
-            "-H:Log=registerResource:verbose")
+    private fun includeResourcesOption(internalResourcesConfig: File): List<String> {
+        val configs = listOf(internalResourcesConfig, appResourcesConfig.get().asFile)
+        val files = configs.joinToString(separator = ",") { it.absolutePath }
+        return listOf(
+            "-H:ResourceConfigurationFiles=$files",
+            "-H:Log=registerResource:verbose"
+        )
     }
 
     override fun action() {
         GenerateLinkerScript.writeToFile(linkerScript)
 
-        val defaultResourcesConfig = linkerScript.parent.resolve("default-resources-config.json")
-        GenerateDefaultResourcesConfig.writeToFile(defaultResourcesConfig)
+        val internalResourcesConfig = linkerScript.parent.resolve("internal-resources-config.json").toFile()
+        ResourcesConfig.create(includes = listOf(".*/intel-.*pem")).writeToFile(internalResourcesConfig)
 
         var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
         if (!nativeImageFile.exists()) {
@@ -446,7 +448,7 @@ open class NativeImage @Inject constructor(
             + sgxLibrariesOptions()
             + linkerScriptOption()
             + reflectConfigurationOption()
-            + includeResourcesOption(defaultResourcesConfig)
+            + includeResourcesOption(internalResourcesConfig)
             + serializationConfigurationOption()
             + getLanguages()
         )

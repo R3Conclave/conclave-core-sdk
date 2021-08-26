@@ -23,7 +23,6 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
 
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
-    val resourcesConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     fun release(action: Action<EnclaveExtension>) {

@@ -16,6 +16,7 @@ import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
@@ -124,7 +125,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.into(baseDirectory)
         }
 
-        val linkerToolFile = target.file(osDependentTools.getLdFile())
         val nativeImageLinkerToolFile = target.file(osDependentTools.getNativeImageLdFile())
         val signToolFile = target.file(osDependentTools.getSgxSign())
 
@@ -144,6 +144,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.enclaveClass.set(enclaveClassNameTask.outputEnclaveClassName)
             task.reflectionConfig.set(baseDirectory.resolve("reflectconfig").toFile())
         }
+
+        val generateAppResourcesConfigTask =
+            target.createTask<GenerateAppResourcesConfig>("generateAppResourcesConfig") { task ->
+                val mainSourceSet = (target.properties["sourceSets"] as SourceSetContainer).getByName("main")
+                task.resourcesDirectory.set(mainSourceSet.resources.srcDirs.single())
+                task.appResourcesConfigFile.set((baseDirectory / "app-resources-config.json").toFile())
+            }
+
 
         val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
             task.fromDependencies(
@@ -213,7 +221,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
 
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>("buildUnsignedGraalEnclave$type", type, linkerScriptFile, linuxExec) { task ->
-                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask, linuxExec, copyEnclaveCommonHeaders)
+                task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask, generateAppResourcesConfigTask, linuxExec, copyEnclaveCommonHeaders)
                 task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath, nativeImageLinkerToolFile)
                 task.nativeImagePath.set(target.file(graalVMDistributionPath))
                 task.jarFile.set(shadowJarTask.archiveFile)
@@ -240,8 +248,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "$substrateDependenciesPath/libjvm_enclave_common.a"
                 )
                 task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
+                task.appResourcesConfig.set(generateAppResourcesConfigTask.appResourcesConfigFile)
                 task.reflectionConfigurationFiles.from(conclaveExtension.reflectionConfigurationFiles)
-                task.resourcesConfigurationFiles.from(conclaveExtension.resourcesConfigurationFiles)
                 task.serializationConfigurationFiles.from(conclaveExtension.serializationConfigurationFiles)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)

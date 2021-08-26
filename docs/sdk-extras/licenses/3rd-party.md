@@ -40,6 +40,10 @@ Apache 2: https://github.com/FasterXML/jackson-databind/blob/2.13/LICENSE
 
 Apache 2: https://github.com/FasterXML/jackson-modules-java8/blob/master/LICENSE
 
+**[FasterXML / jackson-modules-kotlin](https://github.com/FasterXML/jackson-module-kotlin/)**
+
+Apache 2: https://github.com/FasterXML/jackson-module-kotlin/blob/master/LICENSE
+
 **[Oracle / Graal VM Community Edition ](https://github.com/oracle/graal)**
 
 Product License  - GraalVM Community Edition
