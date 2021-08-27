@@ -14,13 +14,27 @@ enclave {
     };
 
     untrusted {
-        void jvm_ocall(
+        void jvm_ocall_heap(
+            [user_check] void* bufferIn,
+            int bufferInLen
+        ) allow(jvm_ecall);
+
+        void jvm_ocall_stack(
             [in, size=bufferInLen] void* bufferIn,
             int bufferInLen
         ) allow(jvm_ecall);
 
         void shared_data_ocall(
             [out] void** sharedBufferAddr
+        );
+
+        void allocate_untrusted_memory(
+            [out] void** bufferPointer,
+            int bufferLength
+        );
+
+        void free_untrusted_memory(
+            [in] void** buffer
         );
     };
 };

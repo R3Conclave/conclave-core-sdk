@@ -263,9 +263,27 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
     }
 }
 
+// Called by the EDL when the enclave has decided to allocate the buffer on the untrusted stack
+void jvm_ocall_stack(void* bufferIn, int bufferInLen) {
+    jvm_ocall(bufferIn, bufferInLen);
+}
+
+// Called by the EDL when the enclave has decided to allocate the buffer on the hosts heap
+void jvm_ocall_heap(void* bufferIn, int bufferInLen) {
+    jvm_ocall(bufferIn, bufferInLen);
+}
+
 void shared_data_ocall(void** sharedBufferAddr) {
     void* shared_data = static_cast<void*>(r3::conclave::HostSharedData::instance().get(EcallContext::getEnclaveId()));
     *sharedBufferAddr = shared_data;
+}
+
+void allocate_untrusted_memory(void** untrustedBufferPtr, int size) {
+    *untrustedBufferPtr = malloc(size);
+}
+
+void free_untrusted_memory(void** untrustedBufferPtr) {
+    free(*untrustedBufferPtr);
 }
 
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;

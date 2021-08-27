@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
+import kotlin.random.Random
 
 class NonThreadSafeEnclaveTests : JvmTest(threadSafe = false) {
     private val defaultTCSNum = 10
@@ -123,5 +124,12 @@ class NonThreadSafeEnclaveTests : JvmTest(threadSafe = false) {
         val recorder = RecordingCallback()
         sendMessage(child, recorder)
         assertThat(recorder.calls.single()).isEqualTo("test".toByteArray())
+    }
+
+    @Test
+    fun `large ECALL and OCALL`() {
+        val largePayload = Random.nextBytes(1024 * 512)
+        val response = sendMessage(Echo(largePayload))
+        assertThat(largePayload.contentEquals(response)).isTrue
     }
 }
