@@ -26,6 +26,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.ValueSource
+import java.lang.IllegalStateException
 import java.util.stream.Stream
 import kotlin.random.Random
 
@@ -81,6 +82,19 @@ class EnclaveHostMockTest {
     }
 
     @Test
+    fun `callEnclave after close`() {
+        val host = createMockHost(SimpleReturnEnclave::class.java)
+        host.start(null, null)
+        host.close()
+        assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
+            host.callEnclave(byteArrayOf())
+        }.withMessage("The enclave host has been closed.")
+        assertThatIllegalStateException().isThrownBy {
+            host.callEnclave(byteArrayOf()) { it }
+        }.withMessage("The enclave host has been closed.")
+    }
+
+    @Test
     fun `deliverMail before start`() {
         checkLeakedCallbacks = false
         val host = createMockHost(SimpleReturnEnclave::class.java)
@@ -90,6 +104,19 @@ class EnclaveHostMockTest {
         assertThatIllegalStateException().isThrownBy {
             host.deliverMail(1, byteArrayOf(), null) { it }
         }.withMessage("The enclave host has not been started.")
+    }
+
+    @Test
+    fun `deliverMail after close`() {
+        val host = createMockHost(SimpleReturnEnclave::class.java)
+        host.start(null, null)
+        host.close()
+        assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
+            host.deliverMail(1, byteArrayOf(), null)
+        }.withMessage("The enclave host has been closed.")
+        assertThatIllegalStateException().isThrownBy {
+            host.deliverMail(1, byteArrayOf(), null) { it }
+        }.withMessage("The enclave host has been closed.")
     }
 
     @Test

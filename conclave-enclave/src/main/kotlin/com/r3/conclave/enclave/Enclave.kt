@@ -54,6 +54,7 @@ abstract class Enclave {
     }
 
     private lateinit var env: EnclaveEnvironment
+    private val enclaveStateManager = StateManager<EnclaveState>(EnclaveState.New)
 
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
@@ -90,6 +91,12 @@ abstract class Enclave {
      * for your own thread safety.
      */
     protected open val threadSafe: Boolean get() = false
+
+    private fun receiveFromUntrustedHostInternal(bytes: ByteArray) : ByteArray? {
+        check(enclaveStateManager.state !is EnclaveState.New) { "Communication between the host and the enclave is not possible. Enclave has not been started." }
+        check(enclaveStateManager.state !is EnclaveState.Closed) { "Communication between the host and the enclave is not possible. Enclave has been closed." }
+        return receiveFromUntrustedHost(bytes)
+    }
 
     /**
      * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
@@ -254,13 +261,19 @@ Received: $attestationReportBody"""
             )
         }
 
-        private fun onOpen() {
+        @Synchronized
+        fun onOpen() {
+            if (enclave.enclaveStateManager.state is EnclaveState.Started) return
             enclave.onStartup()
+            enclave.enclaveStateManager.transitionStateFrom<EnclaveState.New>(to = EnclaveState.Started)
         }
 
+        @Synchronized
         private fun onClose() {
+           if (enclave.enclaveStateManager.state is EnclaveState.Closed) return
            // This method call must be at the top so the enclave derived class can release its resources
            enclave.onShutdown()
+           enclave.enclaveStateManager.transitionStateFrom<EnclaveState.Started>(to = EnclaveState.Closed)
         }
 
         private fun sendEnclaveInfo() {
@@ -391,7 +404,7 @@ Received: $attestationReportBody"""
         private val callTypeValues = InternalCallType.values()
 
         // Variable so we can compare it in an assertion later.
-        private val receiveFromUntrustedHostCallback = HostCallback { receiveFromUntrustedHost(it) }
+        private val receiveFromUntrustedHostCallback = HostCallback { receiveFromUntrustedHostInternal(it) }
 
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
@@ -434,9 +447,9 @@ Received: $attestationReportBody"""
                 // This works even if the host calls back into the enclave on the same stack. However if the host
                 // makes a call on a separate thread, it's treated as a separate call as you'd expect.
                 if (!threadSafe) {
-                    synchronized(this@Enclave) { this@Enclave.receiveMail(id, mail, routingHint) }
+                    synchronized(this@Enclave) { this@Enclave.receiveMailInternal(id, mail, routingHint) }
                 } else {
-                    this@Enclave.receiveMail(id, mail, routingHint)
+                    this@Enclave.receiveMailInternal(id, mail, routingHint)
                 }
                 /**
                  * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
@@ -678,6 +691,12 @@ Received: $attestationReportBody"""
     //region Mail
     private lateinit var encryptionKeyPair: KeyPair
 
+    private fun receiveMailInternal(id: Long, mail: EnclaveMail, routingHint: String?) {
+        check(enclaveStateManager.state !is EnclaveState.New) { "Enclave cannot receive mails. Enclave has not been started." }
+        check(enclaveStateManager.state !is EnclaveState.Closed) { "Enclave cannot receive mails. Enclave has been closed." }
+        receiveMail(id, mail, routingHint)
+    }
+
     /**
      * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted
      * and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
@@ -844,6 +863,12 @@ Received: $attestationReportBody"""
     private data class DestinationAndTopic(val destination: PublicKey, val topic: String)
     private data class TargetRangeSequence(val range: RangeSequence, val sequenceNumber: Long)
     //endregion
+
+    private sealed class EnclaveState {
+        object New : EnclaveState()
+        object Started : EnclaveState()
+        object Closed : EnclaveState()
+    }
 }
 
 // Typealias to make this code easier to read.
