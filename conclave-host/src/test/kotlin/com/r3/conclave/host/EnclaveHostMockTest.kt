@@ -8,6 +8,7 @@ import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.RecordingCallback
+import com.r3.conclave.internaltesting.threadWithFuture
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.digest
@@ -522,6 +523,24 @@ class EnclaveHostMockTest {
             val previousValue = this.previousValue
             this.previousValue = bytes
             return previousValue
+        }
+    }
+
+    @Test
+    fun `calling callUntrustedHost from a separate thread throws exception`() {
+        host = createMockHost(CallUntrustedHostInSeparateThreadEnclave::class.java)
+        host.start(null, null)
+        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+            host.callEnclave(byteArrayOf()) { it }
+        }.withMessageEndingWith("may not attempt to call out to the host outside the context of a call.")
+    }
+
+    class CallUntrustedHostInSeparateThreadEnclave : Enclave() {
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
+            val future = threadWithFuture {
+                callUntrustedHost(bytes)!!
+            }
+            return future.get()!!
         }
     }
 
