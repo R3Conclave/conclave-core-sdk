@@ -16,7 +16,8 @@ startAESMContainer
 
 # Run the DCAP attestation tests in Debug and Simulation modes using integration tests.
 # Note, the DCAP run doesn't test the samples as they can be run on the EPID machines which are cheaper.
-runDocker com.r3.sgx/sgxjvm-build "./integration-tests-dcap.sh"
+runDocker com.r3.sgx/sgxjvm-build "cd integration-tests \
+    && ./gradlew -PenclaveMode=debug general:tests:test --tests com.r3.conclave.integrationtests.general.tests.AttestationTests"
 
 # Teardown AESM container
 teardownAESM
