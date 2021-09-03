@@ -10,3 +10,4 @@
 - [ ] Has an item been added to the [Release notes](https://github.com/corda/sgxjvm/blob/master/docs/docs/index.md)?
 - [ ] Have all dependencies introduced by this PR been approved?
 - [ ] Has licences/3rd-party.md been updated to reflect any new dependencies?
+- [ ] If the gradle plugin has been updated, have the gradle plugin tests been run in TeamCity?
