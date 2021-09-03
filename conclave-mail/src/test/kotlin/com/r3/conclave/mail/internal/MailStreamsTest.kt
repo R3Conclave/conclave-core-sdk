@@ -10,6 +10,8 @@ import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.Arguments.arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -31,6 +33,7 @@ class MailStreamsTest {
             keyDerivation = null
         )
         private val msg = "Hello, can you hear me?".toByteArray()
+        private val privateHeader = "None of your business!".toByteArray()
 
         @JvmStatic
         val dataSizes = intArrayOf(
@@ -47,6 +50,28 @@ class MailStreamsTest {
             2 * MAX_PACKET_PAYLOAD_LENGTH,
             50 * 1024 * 1024,
         )
+
+        @JvmStatic
+        val privateHeaderSizes = intArrayOf(
+            -1,     // null
+            0,
+            42,
+            512 * 1024,
+        )
+
+        /**
+         * Get configurations for parameterizable tests
+         */
+        @JvmStatic
+        fun getTestConfigurations(): ArrayList<Arguments> {
+            val configurations = ArrayList<Arguments>()
+            for (dataSize in dataSizes) {
+                for (privateHeaderSize in privateHeaderSizes) {
+                    configurations.add(arguments(dataSize, privateHeaderSize))
+                }
+            }
+            return configurations
+        }
     }
 
     @Test
@@ -54,15 +79,16 @@ class MailStreamsTest {
         val bytes = encryptMessage()
         // Can't find, it's encrypted.
         assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("Hello"))
+        assertEquals(-1, String(bytes, Charsets.US_ASCII).indexOf("None"))
         assertEquals(2, getPacketCount(bytes))
         val stream = decrypt(bytes)
         assertThat(stream.header).isEqualTo(header)
     }
 
     @ParameterizedTest
-    @MethodSource("getDataSizes")
-    fun `single byte writes`(dataSize: Int) {
-        testWrite(dataSize) { encryptingStream, data ->
+    @MethodSource("getTestConfigurations")
+    fun `single byte writes`(dataSize: Int, privateHeaderSize: Int) {
+        testWrite(dataSize, privateHeaderSize) { encryptingStream, data ->
             for (b in data) {
                 encryptingStream.write(b.toInt())
             }
@@ -70,42 +96,55 @@ class MailStreamsTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getDataSizes")
-    fun `write entire data at once`(dataSize: Int) {
-        testWrite(dataSize) { encryptingStream, data ->
+    @MethodSource("getTestConfigurations")
+    fun `write entire data at once`(dataSize: Int, privateHeaderSize: Int) {
+        testWrite(dataSize, privateHeaderSize) { encryptingStream, data ->
             encryptingStream.write(data)
         }
     }
 
     @ParameterizedTest
-    @MethodSource("getDataSizes")
-    fun `write in chunks`(dataSize: Int) {
-        testWrite(dataSize) { encryptingStream, data ->
+    @MethodSource("getTestConfigurations")
+    fun `write in chunks`(dataSize: Int, privateHeaderSize: Int) {
+        testWrite(dataSize, privateHeaderSize) { encryptingStream, data ->
             data.inputStream().copyTo(encryptingStream, 8192)
         }
     }
 
-    private fun testWrite(dataSize: Int, block: (MailEncryptingStream, ByteArray) -> Unit) {
+    private fun testWrite(dataSize: Int, privateHeaderSize: Int, block: (MailEncryptingStream, ByteArray) -> Unit) {
         val senderPrivateKey = Curve25519PrivateKey.random()
         val data = ByteArray(dataSize).also(Noise::random)
+        val privateHeader = when(privateHeaderSize < 0) {
+            true -> null
+            false -> ByteArray(privateHeaderSize).also(Noise::random)
+        }
 
         val baos = ByteArrayOutputStream()
-        MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, senderPrivateKey, 0).use { encrypt ->
+        MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, privateHeader, senderPrivateKey, 0).use { encrypt ->
             block(encrypt, data)
         }
         val encrypted = baos.toByteArray()
 
         // Each packet should be max noise packet size, minus the remainder bytes and the terminator packet.
-        assertThat(getPacketCount(encrypted)).isEqualTo(ceil(data.size.toDouble() / MAX_PACKET_PAYLOAD_LENGTH).toInt() + 1)
+        val totalDataSize = data.size + maxOf(0, privateHeaderSize) + 4
+        assertThat(getPacketCount(encrypted)).isEqualTo(ceil(totalDataSize.toDouble() / MAX_PACKET_PAYLOAD_LENGTH).toInt() + 1)
 
-        val decrypted = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey).readFully()
+        val mds = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey)
+        val decrypted = mds.readFully()
         assertArrayEquals(data, decrypted)
+
+        // Zero length encrypted header is treated as null
+        if (privateHeaderSize <= 0) {
+            assertNull(mds.privateHeader)
+        } else {
+            assertArrayEquals(privateHeader, mds.privateHeader)
+        }
     }
 
     @ParameterizedTest
-    @MethodSource("getDataSizes")
-    fun `single byte reads`(dataSize: Int) {
-        testRead(dataSize) { decryptingStream, out ->
+    @MethodSource("getTestConfigurations")
+    fun `single byte reads`(dataSize: Int, privateHeaderSize: Int) {
+        testRead(dataSize, privateHeaderSize) { decryptingStream, out ->
             while (true) {
                 val b = decryptingStream.read()
                 if (b == -1) {
@@ -119,9 +158,9 @@ class MailStreamsTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getDataSizes")
-    fun `read entire data at once`(dataSize: Int) {
-        testRead(dataSize) { decryptingStream, out ->
+    @MethodSource("getTestConfigurations")
+    fun `read entire data at once`(dataSize: Int, privateHeaderSize: Int) {
+        testRead(dataSize, privateHeaderSize) { decryptingStream, out ->
             val buffer = ByteArray(dataSize)
             val n = decryptingStream.read(buffer)
             assertThat(n).isEqualTo(dataSize)
@@ -130,17 +169,22 @@ class MailStreamsTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getDataSizes")
-    fun `read in chunks`(dataSize: Int) {
-        testRead(dataSize) { decryptingStream, out ->
+    @MethodSource("getTestConfigurations")
+    fun `read in chunks`(dataSize: Int, privateHeaderSize: Int) {
+        testRead(dataSize, privateHeaderSize) { decryptingStream, out ->
             val n = decryptingStream.copyTo(out, 8192)
             assertThat(n.toInt()).isEqualTo(dataSize)
         }
     }
 
-    private fun testRead(dataSize: Int, block: (MailDecryptingStream, ByteArrayOutputStream) -> Unit) {
+    private fun testRead(dataSize: Int, privateHeaderSize: Int, block: (MailDecryptingStream, ByteArrayOutputStream) -> Unit) {
         val data = ByteArray(dataSize).also(Noise::random)
-        val encrypted = encryptMessage(message = data)
+        val privateHeader = when(privateHeaderSize < 0) {
+            true -> null
+            false -> ByteArray(privateHeaderSize).also(Noise::random)
+        }
+
+        val encrypted = encryptMessage(message = data, privateHeader = privateHeader)
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey)
         val out = ByteArrayOutputStream()
@@ -149,6 +193,13 @@ class MailStreamsTest {
         decryptingStream.close()
 
         assertArrayEquals(data, out.toByteArray())
+
+        // Zero length encrypted header is treated as null
+        if (privateHeaderSize <= 0) {
+            assertNull(decryptingStream.privateHeader)
+        } else {
+            assertArrayEquals(privateHeader, decryptingStream.privateHeader)
+        }
     }
 
     @Test
@@ -254,7 +305,7 @@ class MailStreamsTest {
             val plaintext = "This is my plaintext".encodeToByteArray()
             val senderPrivateKey = Curve25519PrivateKey.random()
             val baos = ByteArrayOutputStream()
-            MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, senderPrivateKey, 0).use { encrypt ->
+            MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, null, senderPrivateKey, 0).use { encrypt ->
                 encrypt.write(plaintext, 0x7fffffff, 1)
             }
         }.withMessage("2147483647 + 1 >= 20")
@@ -280,11 +331,12 @@ class MailStreamsTest {
     private fun encryptMessage(
         senderPrivateKey: PrivateKey = Companion.senderPrivateKey,
         header: EnclaveMailHeaderImpl = Companion.header,
+        privateHeader: ByteArray? = Companion.privateHeader,
         minSize: Int = 0,
         message: ByteArray = msg
     ): ByteArray {
         val baos = ByteArrayOutputStream()
-        val encrypt = MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, senderPrivateKey, minSize)
+        val encrypt = MailEncryptingStream(baos, receivingPrivateKey.publicKey, header, privateHeader, senderPrivateKey, minSize)
         encrypt.write(message)
         encrypt.close()
         return baos.toByteArray()

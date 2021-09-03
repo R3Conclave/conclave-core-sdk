@@ -276,8 +276,8 @@ abstract class PostOffice(
      *
      * @see EnclaveMailHeader
      */
-    final override fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
-        return super.encryptMail(body, envelope)
+    fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
+        return super.encryptMail(body, envelope, null)
     }
 
     /**

@@ -32,6 +32,21 @@ private fun ByteArray.readShort(offset: Int): Int {
     return (b1 shl 8) or b2
 }
 
+private fun OutputStream.writeInt(value: Int) {
+    write((value ushr 24) and 0xFF)
+    write((value ushr 16) and 0xFF)
+    write((value ushr 8) and 0xFF)
+    write(value and 0xFF)
+}
+
+private fun InputStream.readInt(): Int {
+    val b1 = (read() and 0xFF)
+    val b2 = (read() and 0xFF)
+    val b3 = (read() and 0xFF)
+    val b4 = (read() and 0xFF)
+    return (b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4;
+}
+
 /**
  * A stream filter that encrypts the input data. Closing this stream writes a termination footer which protects the
  * result against truncation attacks, so you must remember to do so.
@@ -63,6 +78,7 @@ class MailEncryptingStream(
     out: OutputStream,
     private val destinationPublicKey: PublicKey,
     private val header: EnclaveMailHeaderImpl,
+    private val privateHeader: ByteArray?,
     private val senderPrivateKey: PrivateKey,
     private val minSize: Int
 ) : FilterOutputStream(out) {
@@ -74,18 +90,21 @@ class MailEncryptingStream(
         internal const val MAX_PACKET_PAYLOAD_LENGTH = MAX_PACKET_PLAINTEXT_LENGTH - 2
     }
 
-    private var cipherState: CipherState? = null
+    private val cipherState: CipherState
     private val buffer = ByteArray(Noise.MAX_PACKET_LEN)
     private var bufferPosition = 0
     private var payloadBytesWritten = 0
 
-    // If this hasn't been written to before, emit the necessary headers to set up the Diffie-Hellman "handshake".
+    init {
+        cipherState = handshake()
+        writePrivateHeader()
+    }
+
+    // Emit the necessary headers to set up the Diffie-Hellman "handshake".
     // The other party isn't here to "handshake" with us but that's OK because this is a non-interactive protocol:
     // they will complete it when reading the stream.
-    private fun maybeHandshake(): CipherState {
-        cipherState?.let { return it }  // Already set up the stream.
-
-        val protocol = MailProtocol.SENDER_KEY_TRANSMITTED
+    private fun handshake(): CipherState {
+        val protocol = MailProtocol.SENDER_KEY_TRANSMITTED_V2
         // Noise can be used in various modes, the protocol name is an ASCII string that identifies the settings.
         // We write it here. It looks like this: Noise_X_25519_AESGCM_SHA256
         return HandshakeState(protocol.noiseProtocolName, HandshakeState.INITIATOR).use { handshake ->
@@ -127,8 +146,22 @@ class MailEncryptingStream(
             split.senderOnly()   // One way not two way communication.
             val cipherState = split.sender
             check(handshake.action == HandshakeState.COMPLETE)
-            this.cipherState = cipherState
             cipherState
+        }
+    }
+
+    /**
+     * Send the encrypted header.
+     * First write the size of the buffer, then the bytes of the buffer itself.
+     */
+    private fun writePrivateHeader() {
+        if (privateHeader == null) {
+            writeInt(0)
+        } else {
+            writeInt(privateHeader.size)
+            if (privateHeader.isNotEmpty()) {
+                write(privateHeader)
+            }
         }
     }
 
@@ -207,7 +240,6 @@ class MailEncryptingStream(
      * ciphertext length .
      */
     private fun writePacket() {
-        val cipherState = maybeHandshake()
         val remainingPayloadLength = MAX_PACKET_PAYLOAD_LENGTH - bufferPosition
         val paddingLength = (minSize - payloadBytesWritten).coerceIn(0, remainingPayloadLength)
         // Append zeros to the end as padding towards reaching minSize.
@@ -273,6 +305,11 @@ class MailDecryptingStream(
     // We have a separate flag to track whether the private key has been provided or not because we want to be able to
     // clear the key as soon as it's not needed.
     private var privateKeyProvided = privateKey != null
+
+    // The encrypted header from the sender, null until it has been received after a successful handshake or if no
+    // encrypted header is present
+    internal var privateHeader: ByteArray? = null
+    private var privateHeaderRead: Boolean = false
 
     /**
      * Provide the private key needed to decrypt the stream. If the header has already been read this method will immediately
@@ -365,6 +402,8 @@ class MailDecryptingStream(
     }
 
     override fun read(): Int {
+        maybeReadPrivateHeader()
+
         return if (ensureAvailablePacket()) {
             currentDecryptedBuffer[currentUserBytesIndex++].toInt() and 0xFF
         } else {
@@ -373,6 +412,8 @@ class MailDecryptingStream(
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
+        maybeReadPrivateHeader()
+
         if ((len > (b.size - off)) || off < 0 || len < 0) {
             throw IndexOutOfBoundsException("$off + $len >= ${b.size}")
         }
@@ -479,6 +520,45 @@ class MailDecryptingStream(
         }
     }
 
+    /**
+     * Lazily read the encrypted header, required due to lazy execution of handshake
+     */
+    private fun maybeReadPrivateHeader() {
+        if (!privateHeaderRead) {
+            readPrivateHeader()
+        }
+    }
+
+    /**
+     * Counterpart to readPrivateHeader in MailEncryptingStream
+     * receives the number of bytes, followed by the byte buffer itself
+     */
+    private fun readPrivateHeader() {
+        // Needs to be set ahead of receiving the buffer to prevent infinite recursion
+        // This is required as readPrivateHeader is called lazily before the first read
+        privateHeaderRead = true
+
+        // If the mail protocol doesn't include the encrypted header, don't read it!
+        if (prologue.protocol < MailProtocol.SENDER_KEY_TRANSMITTED_V2) {
+            privateHeader = null
+            return
+        }
+
+        // Attempt to read the private header
+        try {
+            privateHeader = when(val headerSize = readInt()) {
+                0 -> null
+                else -> readExactlyNBytes(headerSize)
+            }
+        } catch (e: EOFException) {
+            privateHeaderRead = false
+            error("Premature end of stream while reading encrypted header")
+        } catch (e: Exception) {
+            privateHeaderRead = false
+            throw e
+        }
+    }
+
     private fun setupHandshake(prologue: Prologue): HandshakeState {
         val privateKey =
             this.privateKey ?: throw IOException("Private key has not been provided to decrypt the stream.")
@@ -534,19 +614,9 @@ class MailDecryptingStream(
             header.topic,
             Curve25519PublicKey(senderPublicKey),
             header.envelope,
+            privateHeader,
             mailBody
         )
-    }
-
-    private class DecryptedEnclaveMail(
-        override val sequenceNumber: Long,
-        override val topic: String,
-        override val authenticatedSender: PublicKey,
-        private val _envelope: ByteArray?,
-        private val _bodyAsBytes: ByteArray
-    ) : EnclaveMail {
-        override val envelope: ByteArray? get() = _envelope?.clone()
-        override val bodyAsBytes: ByteArray get() = _bodyAsBytes.clone()
     }
 
     companion object {
@@ -582,6 +652,15 @@ enum class MailProtocol(
     val handshakeLength: Int
 ) {
     SENDER_KEY_TRANSMITTED("Noise_X_25519_AESGCM_SHA256", 96),
+
+    /**
+     * Identical to SENDER_KEY_TRANSMITTED but also supports the private header, an encrypted block that appears in the
+     * stream immediately following the handshake.
+     *
+     * MailDecryptionStream instances supporting this protocol will also accept mail items using the previous one
+     * (SENDER_KEY_TRANSMITTED). When doing so, the private header will be null.
+     */
+    SENDER_KEY_TRANSMITTED_V2("Noise_X_25519_AESGCM_SHA256", 96),
 }
 
 class MailDecryptionException(message: String? = null, cause: Exception? = null) : IOException(message, cause)

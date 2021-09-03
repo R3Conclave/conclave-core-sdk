@@ -27,12 +27,12 @@ abstract class AbstractPostOffice {
         }
 
     @Synchronized
-    open fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
+    protected fun encryptMail(body: ByteArray, envelope: ByteArray?, privateHeader: ByteArray?): ByteArray {
         encryptCalled = true
         val header = EnclaveMailHeaderImpl(sequenceNumber++, topic, envelope, keyDerivation)
         val minSize = minSizePolicy.getMinSize(body.size)
         val output = ByteArrayOutputStream(getExpectedSize(header, minSize, body))
-        val stream = MailEncryptingStream(output, destinationPublicKey, header, senderPrivateKey, minSize)
+        val stream = MailEncryptingStream(output, destinationPublicKey, header, privateHeader, senderPrivateKey, minSize)
         stream.write(body)
         stream.close()
         return output.toByteArray()
@@ -45,7 +45,7 @@ abstract class AbstractPostOffice {
         val payloadSize = maxOf(body.size, minSize)
         val packetCount = (payloadSize / MailEncryptingStream.MAX_PACKET_PAYLOAD_LENGTH) + 1
         // The 2 is for the prologue size field.
-        return 2 + prologueSize + MailProtocol.SENDER_KEY_TRANSMITTED.handshakeLength + (packetCount * PACKET_OVERHEAD) + payloadSize
+        return 2 + prologueSize + MailProtocol.SENDER_KEY_TRANSMITTED_V2.handshakeLength + (packetCount * PACKET_OVERHEAD) + payloadSize
     }
 
     companion object {
