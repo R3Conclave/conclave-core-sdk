@@ -28,6 +28,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
+import kotlin.io.path.deleteIfExists
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -203,7 +204,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
         private fun Path.deleteQuietly() {
             try {
-                Files.deleteIfExists(this)
+                deleteIfExists()
             } catch (e: IOException) {
                 // Ignore
             }

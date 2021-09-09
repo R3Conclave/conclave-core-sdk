@@ -1,8 +1,12 @@
 package com.r3.conclave.internaltesting
 
 import org.assertj.core.api.Condition
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.jar.JarEntry
+import java.util.jar.JarInputStream
 import kotlin.concurrent.thread
+import kotlin.io.path.inputStream
 
 /**
  * Executes the given block on a new thread, returning a [CompletableFuture] linked to the result. If [block] throws
@@ -52,3 +56,11 @@ val throwableWithMailCorruptionErrorMessage =
             return match
         }
     }
+
+fun JarInputStream.entries(): Sequence<JarEntry> = generateSequence { nextJarEntry }
+
+fun Path.jarEntryNames(): List<String> {
+    return JarInputStream(inputStream()).use {
+        it.entries().map { it.name }.toList()
+    }
+}

@@ -13,9 +13,10 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.ValueSource
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.stream.Stream
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeBytes
 
 class UnistdTest : JimfsTest() {
 
@@ -29,7 +30,7 @@ class UnistdTest : JimfsTest() {
 
     @BeforeEach
     fun createFile() {
-        Files.write(Paths.get(file), data)
+        Paths.get(file).writeBytes(data)
     }
 
     @AfterEach
@@ -160,7 +161,7 @@ class UnistdTest : JimfsTest() {
         val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), data.size, 0, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
-        val readBytes = Files.readAllBytes(Paths.get(file))
+        val readBytes = Paths.get(file).readBytes()
         assertThat(readBytes).isEqualTo(newValues)
     }
 
@@ -197,7 +198,7 @@ class UnistdTest : JimfsTest() {
         val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), newValues.size, offset, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
-        val readBytes = Files.readAllBytes(Paths.get(file))
+        val readBytes = Paths.get(file).readBytes()
         assertThat(readBytes).isEqualTo(data.copyOfRange(0, offset.toInt()) + newValues)
     }
 
@@ -210,7 +211,7 @@ class UnistdTest : JimfsTest() {
         val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), newValues.size, offset, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
-        val readBytes = Files.readAllBytes(Paths.get(file))
+        val readBytes = Paths.get(file).readBytes()
         assertThat(readBytes).isEqualTo(data + newValues)
     }
 
@@ -224,7 +225,7 @@ class UnistdTest : JimfsTest() {
         val writtenBytes = Unistd.pwrite(null, fd, MockCCharPointer(file), newValues.size, offset, MockCIntPointer())
         assertThat(writtenBytes).isEqualTo(newValues.size.toLong())
 
-        val readBytes = Files.readAllBytes(Paths.get(file))
+        val readBytes = Paths.get(file).readBytes()
         assertThat(readBytes).isEqualTo(data + newValues)
     }
 
@@ -237,7 +238,7 @@ class UnistdTest : JimfsTest() {
         val written = Unistd.write(null, fd, MockCCharPointer(file), newValues.size, MockCIntPointer())
         assertThat(written).isEqualTo(newValues.size)
 
-        val readBytes = Files.readAllBytes(Paths.get(file))
+        val readBytes = Paths.get(file).readBytes()
         assertThat(readBytes).isEqualTo(newValues)
     }
 
@@ -250,7 +251,7 @@ class UnistdTest : JimfsTest() {
         val written = Unistd.write(null, fd, MockCCharPointer(file), newValues.size, MockCIntPointer())
         assertThat(written).isEqualTo(newValues.size)
 
-        val readBytes = Files.readAllBytes(Paths.get(file))
+        val readBytes = Paths.get(file).readBytes()
         assertThat(readBytes).isEqualTo(data + newValues)
     }
 
@@ -268,7 +269,7 @@ class UnistdTest : JimfsTest() {
         val written = Unistd.write(null, fd, MockCCharPointer(file), newValues.size, MockCIntPointer())
         assertThat(written).isEqualTo(newValues.size)
 
-        val readAllBytes = Files.readAllBytes(Paths.get(file))
+        val readAllBytes = Paths.get(file).readBytes()
         assertThat(readAllBytes).isEqualTo(data + ByteArray(offset.toInt()) + newValues)
     }
 

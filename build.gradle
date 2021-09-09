@@ -1,7 +1,7 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' apply false
     id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
-    id "com.github.ben-manes.versions" version "0.27.0"
+    id "com.github.ben-manes.versions" version "0.39.0"
     id 'base'
     id 'idea'
     id 'org.jetbrains.dokka' version '1.5.0-SNAPSHOT'

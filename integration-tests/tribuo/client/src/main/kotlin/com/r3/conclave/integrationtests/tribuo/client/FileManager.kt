@@ -2,8 +2,9 @@ package com.r3.conclave.integrationtests.tribuo.client
 
 import com.r3.conclave.integrationtests.tribuo.common.DeleteFile
 import com.r3.conclave.integrationtests.tribuo.common.EnclaveFile
-import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeBytes
 
 /**
  * This class is responsible for sending file handling requests to the enclave, when not in mock mode.
@@ -23,7 +24,7 @@ open class FileManager(protected val client: Client) {
     open fun sendFile(filePath: String, contentModifier: ((ByteArray) -> ByteArray)? = null): String {
         val path = Paths.get(dataDir).resolve(filePath)
         val enclavePath = resolve(filePath)
-        val data = Files.readAllBytes(path)
+        val data = path.readBytes()
         return client.sendAndReceive(EnclaveFile(enclavePath, data))
     }
 
@@ -61,9 +62,9 @@ class MockFileManager(client: Client): FileManager(client) {
     override fun sendFile(filePath: String, contentModifier: ((ByteArray) -> ByteArray)?): String {
         val path = Paths.get(resolve(filePath))
         if (contentModifier != null) {
-            val originalContent = Files.readAllBytes(path)
+            val originalContent = path.readBytes()
             val newContentWithAdjustedPaths = contentModifier(originalContent)
-            Files.write(path, newContentWithAdjustedPaths)
+            path.writeBytes(newContentWithAdjustedPaths)
         }
         return path.toAbsolutePath().toString()
     }
@@ -76,9 +77,9 @@ class MockFileManager(client: Client): FileManager(client) {
     override fun deleteFile(filePath: String, contentModifier: ((ByteArray) -> ByteArray)?) {
         if (contentModifier != null) {
             val path = Paths.get(resolve(filePath))
-            val originalContent = Files.readAllBytes(path)
+            val originalContent = path.readBytes()
             val newContentWithAdjustedPaths = contentModifier(originalContent)
-            Files.write(path, newContentWithAdjustedPaths)
+            path.writeBytes(newContentWithAdjustedPaths)
         }
     }
 

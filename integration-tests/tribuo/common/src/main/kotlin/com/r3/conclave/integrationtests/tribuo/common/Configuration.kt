@@ -16,9 +16,9 @@ import org.tribuo.transform.TransformTrainer
 import org.tribuo.transform.TransformationMap
 import org.tribuo.transform.transformations.LinearScalingTransformation
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.readBytes
 
 /**
  * Common interface between client and enclave.
@@ -120,7 +120,7 @@ class Configuration(id: Int, configurationFile: String) : IConfiguration, Tribuo
         newCM.addConfiguration(provConfig)
         val mnistLogisticConfig = config.parent.resolve(MNIST_LOGISTIC_CONFIG_FILE_NAME).toAbsolutePath().toString()
         newCM.save(File(mnistLogisticConfig), true)
-        return Files.readAllBytes(Paths.get(mnistLogisticConfig))
+        return Paths.get(mnistLogisticConfig).readBytes()
     }
 
     /**
@@ -203,7 +203,7 @@ class Configuration(id: Int, configurationFile: String) : IConfiguration, Tribuo
         newCM = ConfigurationManager()
         newCM.addConfiguration(transformedProvConfig)
         newCM.save(File(transformedOutputFile), true)
-        return Files.readAllBytes(Paths.get(transformedOutputFile))
+        return Paths.get(transformedOutputFile).readBytes()
     }
 
     /**

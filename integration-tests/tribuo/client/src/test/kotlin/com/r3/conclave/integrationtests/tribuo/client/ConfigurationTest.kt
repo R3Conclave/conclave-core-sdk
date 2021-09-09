@@ -13,8 +13,8 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.TestWatcher
-import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.io.path.deleteIfExists
 
 class ConfigurationWatcher : TestWatcher {
     override fun testFailed(context: ExtensionContext?, cause: Throwable?) {
@@ -42,8 +42,8 @@ class ConfigurationTest : TribuoTest() {
                 configuration.close()
             }
             if (System.getProperty("enclaveMode") == "mock") {
-                Files.deleteIfExists(Paths.get(client.resolve(MNIST_LOGISTIC_CONFIG_FILE_NAME)))
-                Files.deleteIfExists(Paths.get(client.resolve(MNIST_TRANSFORMED_LOGISTIC_CONFIG_FILE_NAME)))
+                Paths.get(client.resolve(MNIST_LOGISTIC_CONFIG_FILE_NAME)).deleteIfExists()
+                Paths.get(client.resolve(MNIST_TRANSFORMED_LOGISTIC_CONFIG_FILE_NAME)).deleteIfExists()
             }
         }
     }

@@ -3,13 +3,12 @@ package com.r3.conclave.enclave.internal.substratevm
 import com.r3.conclave.enclave.internal.substratevm.mock.MockCCharPointer
 import com.r3.conclave.enclave.internal.substratevm.mock.MockCIntPointer
 import com.r3.conclave.enclave.internal.substratevm.mock.MockStat64
-import com.r3.conclave.enclave.internal.substratevm.mock.MockTimeSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
+import kotlin.io.path.writeBytes
 
 class StatTest : JimfsTest() {
     companion object {
@@ -23,8 +22,8 @@ class StatTest : JimfsTest() {
 
     @BeforeEach
     fun writeNewFile() {
-        writeTime = Instant.now()!!
-        Files.write(path, data)
+        writeTime = Instant.now()
+        path.writeBytes(data)
     }
 
     @Test
@@ -68,7 +67,7 @@ class StatTest : JimfsTest() {
         // Wait a few seconds to ensure the modified timestamp is greater than the previous one
         Thread.sleep(WRITE_TIME_GAP_IN_MILLISECONDS)
         val now = Instant.now()
-        Files.write(Paths.get(file), data)
+        Paths.get(file).writeBytes(data)
 
         val stat = MockStat64()
         val ret = Stat.xstat64(null, VERSION, MockCCharPointer(file), stat, MockCIntPointer())

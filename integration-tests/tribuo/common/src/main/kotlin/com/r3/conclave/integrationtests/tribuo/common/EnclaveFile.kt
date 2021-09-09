@@ -3,8 +3,11 @@ package com.r3.conclave.integrationtests.tribuo.common
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.isDirectory
+import kotlin.io.path.writeBytes
 
 /**
  * This class is responsible for representing and handling files in the enclave.
@@ -20,11 +23,11 @@ data class EnclaveFile(val filePath: String, val data: ByteArray) : TribuoTask()
      */
     override fun execute(): ByteArray {
         val path = Paths.get(filePath)
-        if (Files.isDirectory(path)) {
-            Files.createDirectories(path)
+        if (path.isDirectory()) {
+            path.createDirectories()
         } else {
-            Files.createDirectories(path.parent)
-            Files.write(path, data)
+            path.parent.createDirectories()
+            path.writeBytes(data)
         }
         return Json.encodeToString(path.toAbsolutePath().toString()).toByteArray()
     }
@@ -60,7 +63,7 @@ data class DeleteFile(val filePath: String) : TribuoTask() {
      */
     override fun execute(): ByteArray {
         val path = Paths.get(filePath)
-        Files.delete(path)
+        path.deleteExisting()
         return Json.encodeToString(path.toAbsolutePath().toString()).toByteArray()
     }
 }

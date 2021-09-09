@@ -7,8 +7,8 @@ import com.r3.conclave.common.internal.handler.LeafSender
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.deleteIfExists
 
 class NativeEnclaveHandle<CONNECTION>(
     override val enclaveMode: EnclaveMode,
@@ -45,17 +45,13 @@ class NativeEnclaveHandle<CONNECTION>(
 
     override fun destroy() {
         if (tempFile) {
-            enclaveFile.deleteQuietly()
+            try {
+                enclaveFile.deleteIfExists()
+            } catch (e: IOException) {
+                // Ignore
+            }
         }
         Native.destroyEnclave(enclaveId)
-    }
-
-    private fun Path.deleteQuietly() {
-        try {
-            Files.deleteIfExists(this)
-        } catch (e: IOException) {
-            // Ignore
-        }
     }
 
     override val mockEnclave: Any get() {
