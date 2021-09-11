@@ -5,6 +5,7 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
@@ -23,7 +24,6 @@ import java.security.Signature
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
-import kotlin.collections.HashMap
 
 /**
  * Subclass this inside your enclave to provide an entry point. The outside world
@@ -216,8 +216,10 @@ abstract class Enclave {
      * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
      * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
      */
-    private class AdminHandler(private val enclave: Enclave, private val env: EnclaveEnvironment) :
-        Handler<AdminHandler> {
+    private class AdminHandler(
+        private val enclave: Enclave,
+        private val env: EnclaveEnvironment
+    ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
@@ -233,7 +235,7 @@ abstract class Enclave {
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             when (val type = input.get().toInt()) {
                 0 -> onAttestation(input)
-                1 -> onOpen()
+                1 -> onOpen(input)
                 2 -> onClose()
                 else -> throw IllegalStateException("Unknown type $type")
             }
@@ -262,8 +264,12 @@ Received: $attestationReportBody"""
         }
 
         @Synchronized
-        fun onOpen() {
+        fun onOpen(input: ByteBuffer) {
             if (enclave.enclaveStateManager.state is EnclaveState.Started) return
+            val ackReceipt = input.getNullable { getRemainingBytes() }
+            if (ackReceipt != null) {
+                enclave.enclaveMessageHandler.populateAcknowledgedRanges(ackReceipt)
+            }
             enclave.onStartup()
             enclave.enclaveStateManager.transitionStateFrom<EnclaveState.New>(to = EnclaveState.Started)
         }
@@ -384,7 +390,6 @@ Received: $attestationReportBody"""
          *
          */
         private val lockObject = Object()
-        private var hasAcknowledgementReceipt = false
         private var mustSendReceipt = false
         // this map keeps track of acknowledged mail (note: we keep sequence numbers (ranges), not mail ids)
         private val materialisedAckReceipt = HashMap<DestinationAndTopic,RangeSequence>()
@@ -404,87 +409,97 @@ Received: $attestationReportBody"""
         private val callTypeValues = InternalCallType.values()
 
         // Variable so we can compare it in an assertion later.
-        private val receiveFromUntrustedHostCallback = HostCallback { receiveFromUntrustedHostInternal(it) }
+        private val receiveFromUntrustedHostCallback = HostCallback(::receiveFromUntrustedHostInternal)
 
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val hostThreadID = input.getLong()
             val type = callTypeValues[input.get().toInt()]
+            val hostThreadId = input.getLong()
             // Assign the host thread ID to the current thread so that callUntrustedHost/postMail/etc can pick up the
             // right state for the thread.
-            currentEnclaveCall.set(hostThreadID)
-            val stateManager = enclaveCalls.computeIfAbsent(hostThreadID) {
+            currentEnclaveCall.set(hostThreadId)
+            val stateManager = enclaveCalls.computeIfAbsent(hostThreadId) {
                 // The initial state is to receive on receiveFromUntrustedHost.
                 StateManager(Receive(receiveFromUntrustedHostCallback, receiveFromUntrustedHost = true))
             }
-            if (type == InternalCallType.CALL_RETURN) {
-                stateManager.state = Response(input.getRemainingBytes())
-            } else if (type == InternalCallType.MAIL_DELIVERY) {
-                val id = input.getLong()
-                val routingHint = String(input.getIntLengthPrefixBytes()).takeIf { it.isNotEmpty() }
-                // Wrap the remaining bytes in a InputStream to avoid copying.
-                val decryptingStream = MailDecryptingStream(input.inputStream())
-                val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
-                    requireNotNull(keyDerivation) {
-                        "Missing metadata to decrypt mail. Mail destined for an enclave must be created using a PostOffice " +
-                                "from the enclave's EnclaveInstanceInfo object (i.e. EnclaveInstanceInfo.createPostOffice()). " +
-                                "If the sender of this mail is another enclave then Enclave.postOffice(EnclaveInstanceInfo) " +
-                                "must be used instead."
-                    }
-                    // Ignore any extra bytes in the keyDerivation.
-                    require(keyDerivation.size >= SgxCpuSvn.size + SgxIsvSvn.size) { "Invalid key derivation header size" }
-                    val keyDerivationBuffer = ByteBuffer.wrap(keyDerivation)
-                    val cpuSvn = keyDerivationBuffer.getSlice(SgxCpuSvn.size)
-                    val isvSvn = keyDerivationBuffer.getUnsignedShort()
-                    val entropy = getSecretEntropy(cpuSvn, isvSvn)
-                    // We now have the private key to decrypt the mail body and authenticate the header.
-                    Curve25519PrivateKey(entropy)
+            when (type) {
+                MAIL -> onMail(input)
+                UNTRUSTED_HOST -> onUntrustedHost(stateManager, hostThreadId, input)
+                CALL_RETURN -> onCallReturn(stateManager, input)
+            }
+        }
+
+        private fun onMail(input: ByteBuffer) {
+            val id = input.getLong()
+            val routingHint = input.getNullable { String(getIntLengthPrefixBytes()) }
+            // Wrap the remaining bytes in a InputStream to avoid copying.
+            val decryptingStream = MailDecryptingStream(input.inputStream())
+            val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
+                requireNotNull(keyDerivation) {
+                    "Missing metadata to decrypt mail. Mail destined for an enclave must be created using a PostOffice " +
+                            "from the enclave's EnclaveInstanceInfo object (i.e. EnclaveInstanceInfo.createPostOffice()). " +
+                            "If the sender of this mail is another enclave then Enclave.postOffice(EnclaveInstanceInfo) " +
+                            "must be used instead."
                 }
-                checkMailOrdering(id, mail)
-                // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
-                // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
-                // require spotting the absence of something rather than the presence of something, which is hard.
-                // This works even if the host calls back into the enclave on the same stack. However if the host
-                // makes a call on a separate thread, it's treated as a separate call as you'd expect.
-                if (!threadSafe) {
-                    synchronized(this@Enclave) { this@Enclave.receiveMailInternal(id, mail, routingHint) }
-                } else {
-                    this@Enclave.receiveMailInternal(id, mail, routingHint)
-                }
-                /**
-                 * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
-                 * hence why we do it here and not in acknowledgeMail
-                 */
-                emitAcknowledgementReceipt()
-            } else if (type == InternalCallType.ACKNOWLEDGEMENT_RECEIPT) {
-                populateAcknowledgedRanges(input.getIntLengthPrefixBytes())
+                // Ignore any extra bytes in the keyDerivation.
+                require(keyDerivation.size >= SgxCpuSvn.size + SgxIsvSvn.size) { "Invalid key derivation header size" }
+                val keyDerivationBuffer = ByteBuffer.wrap(keyDerivation)
+                val cpuSvn = keyDerivationBuffer.getSlice(SgxCpuSvn.size)
+                val isvSvn = keyDerivationBuffer.getUnsignedShort()
+                val entropy = getSecretEntropy(cpuSvn, isvSvn)
+                // We now have the private key to decrypt the mail body and authenticate the header.
+                Curve25519PrivateKey(entropy)
+            }
+            checkMailOrdering(id, mail)
+            // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
+            // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
+            // require spotting the absence of something rather than the presence of something, which is hard.
+            // This works even if the host calls back into the enclave on the same stack. However if the host
+            // makes a call on a separate thread, it's treated as a separate call as you'd expect.
+            if (!threadSafe) {
+                synchronized(this@Enclave) { this@Enclave.receiveMailInternal(id, mail, routingHint) }
             } else {
-                val state = stateManager.checkStateIs<Receive>()
-                checkNotNull(state.callback) {
-                    "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
-                }
-                // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
-                // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
-                // require spotting the absence of something rather than the presence of something, which is hard.
-                // This works even if the host calls back into the enclave on the same stack. However if the host
-                // makes a call on a separate thread, it's treated as a separate call as you'd expect.
-                val response = if (!threadSafe) {
-                    // If this is a recursive call, we already hold the lock and the synchronized statement is a no-op.
-                    // This assertion is here to document that fact.
-                    if (state.callback != receiveFromUntrustedHostCallback) check(Thread.holdsLock(this@Enclave))
-                    synchronized(this@Enclave) { state.callback.apply(input.getRemainingBytes()) }
-                } else {
-                    state.callback.apply(input.getRemainingBytes())
-                }
-                if (response != null) {
-                    // If the user calls back into the host whilst handling a local call or a mail, they end up
-                    // inside callUntrustedHost. So, for a non-thread safe enclave it's OK that this is outside the
-                    // lock, because it'll be held whilst calling out to the enclave during an operation which is when
-                    // there's actual risk of corruption. By the time we get here the enclave should be done and ready
-                    // for the next request.
-                    sendCallToHost(hostThreadID, response, InternalCallType.CALL_RETURN)
+                this@Enclave.receiveMailInternal(id, mail, routingHint)
+            }
+            /**
+             * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
+             * hence why we do it here and not in acknowledgeMail
+             */
+            emitAcknowledgementReceipt()
+        }
+
+        private fun onUntrustedHost(stateManager: StateManager<CallState>, hostThreadID: Long, input: ByteBuffer) {
+            val state = stateManager.checkStateIs<Receive>()
+            checkNotNull(state.callback) {
+                "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
+            }
+            // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
+            // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
+            // require spotting the absence of something rather than the presence of something, which is hard.
+            // This works even if the host calls back into the enclave on the same stack. However if the host
+            // makes a call on a separate thread, it's treated as a separate call as you'd expect.
+            val response = if (!threadSafe) {
+                // If this is a recursive call, we already hold the lock and the synchronized statement is a no-op.
+                // This assertion is here to document that fact.
+                if (state.callback != receiveFromUntrustedHostCallback) check(Thread.holdsLock(this@Enclave))
+                synchronized(this@Enclave) { state.callback.apply(input.getRemainingBytes()) }
+            } else {
+                state.callback.apply(input.getRemainingBytes())
+            }
+            if (response != null) {
+                // If the user calls back into the host whilst handling a local call or a mail, they end up
+                // inside callUntrustedHost. So, for a non-thread safe enclave it's OK that this is outside the
+                // lock, because it'll be held whilst calling out to the enclave during an operation which is when
+                // there's actual risk of corruption. By the time we get here the enclave should be done and ready
+                // for the next request.
+                sendToHost(CALL_RETURN, hostThreadID, response.size) { buffer ->
+                    buffer.put(response)
                 }
             }
+        }
+
+        private fun onCallReturn(stateManager: StateManager<CallState>, input: ByteBuffer) {
+            stateManager.state = Response(input.getRemainingBytes())
         }
 
         private fun checkMailOrdering(mailID: Long, mail: EnclaveMail) {
@@ -537,7 +552,9 @@ Received: $attestationReportBody"""
             var response: Response? = null
             try {
                 // This could re-enter the enclave in onReceive, if the user has provided a callback.
-                sendCallToHost(hostThreadID, bytes, InternalCallType.CALL)
+                sendToHost(UNTRUSTED_HOST, hostThreadID, bytes.size) { buffer ->
+                    buffer.put(bytes)
+                }
             } finally {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have
                 // their own exception handling and reuse of the host-enclave communication channel for another call.
@@ -552,31 +569,32 @@ Received: $attestationReportBody"""
         }
 
         /**
-         * Pass the given [bytes] to the host, who will receive them synchronously.
+         * Pass the custom [payload] to the host, who will receive them synchronously.
          *
-         * @param threadID The thread ID received from the host which is sent back as is so that the host can know
-         * which of the possible many concurrent calls this response is for.
          * @param type Tells the host whether these bytes are the return value of a callback
          * (in which case it has to return itself) or are from [callUntrustedHost] (in which case they need to be passed
          * to the callback).
+         * @param hostThreadId The thread ID received from the host which is sent back as is so that the host can know
+         * which of the possible many concurrent calls this response is for.
          */
-        private fun sendCallToHost(threadID: Long, bytes: ByteArray, type: InternalCallType) {
-            sender.send(Long.SIZE_BYTES + 1 + bytes.size) { buffer ->
-                buffer.putLong(threadID)
+        private fun sendToHost(
+            type: InternalCallType,
+            hostThreadId: Long,
+            payloadSize: Int,
+            payload: (ByteBuffer) -> Unit
+        ) {
+            sender.send(1 + Long.SIZE_BYTES + payloadSize) { buffer ->
                 buffer.put(type.ordinal.toByte())
-                buffer.put(bytes)
+                buffer.putLong(hostThreadId)
+                payload(buffer)
             }
         }
 
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
             val routingHintBytes = routingHint?.toByteArray()
-            val size = Int.SIZE_BYTES + (routingHintBytes?.size ?: 0) + encryptedBytes.size
-            sendMailCommandToHost(size, mailType = MailCommandType.POST.ordinal.toByte()) { buffer ->
-                if (routingHintBytes != null) {
-                    buffer.putIntLengthPrefixBytes(routingHintBytes)
-                } else {
-                    buffer.putInt(0)
-                }
+            val size = nullableSize(routingHintBytes) { it.intLengthPrefixSize } + encryptedBytes.size
+            sendMailCommandToHost(MailCommandType.POST, size) { buffer ->
+                buffer.putNullable(routingHintBytes) { putIntLengthPrefixBytes(it) }
                 buffer.put(encryptedBytes)
             }
         }
@@ -584,7 +602,7 @@ Received: $attestationReportBody"""
         fun acknowledgeMail(mailID: Long) {
             synchronized(lockObject) {
                 updateAcknowledgementReceipt(mailID)
-                sendMailCommandToHost(Long.SIZE_BYTES, mailType = MailCommandType.ACKNOWLEDGE.ordinal.toByte()) { buffer ->
+                sendMailCommandToHost(MailCommandType.ACKNOWLEDGE, Long.SIZE_BYTES) { buffer ->
                     buffer.putLong(mailID)
                 }
             }
@@ -627,25 +645,16 @@ Received: $attestationReportBody"""
                 }
 
                 val sealed = env.sealData(PlaintextAndEnvelope(OpaqueBytes(plainText)))
-                sendMailCommandToHost(
-                    sealed.intLengthPrefixSize,
-                    mailType = MailCommandType.RECEIPT.ordinal.toByte()
-                ) { buffer ->
-                    buffer.putIntLengthPrefixBytes(sealed)
+                sendMailCommandToHost(MailCommandType.RECEIPT, sealed.size) { buffer ->
+                    buffer.put(sealed)
                 }
 
                 mustSendReceipt = false
             }
         }
 
-        private fun populateAcknowledgedRanges(ackReceipt: ByteArray) {
+        fun populateAcknowledgedRanges(ackReceipt: ByteArray) {
             synchronized(lockObject) {
-                check(!hasAcknowledgementReceipt) { "Already received AcknowledgementReceipt." }
-                hasAcknowledgementReceipt = true
-
-                materialisedAckReceipt.clear()
-                nextExpectedSequences.clear()
-
                 val bis = env.unsealData(ackReceipt).plaintext.inputStream()
                 val dis = DataInputStream(bis)
 
@@ -667,23 +676,22 @@ Received: $attestationReportBody"""
             }
         }
 
-        private fun sendMailCommandToHost(size: Int, mailType: Byte, block: (ByteBuffer) -> Unit) {
-            val threadID = checkNotNull(currentEnclaveCall.get()) {
+        private fun sendMailCommandToHost(mailType: MailCommandType, size: Int, block: (ByteBuffer) -> Unit) {
+            val hostThreadId = checkNotNull(currentEnclaveCall.get()) {
                 "Thread ${Thread.currentThread()} may not attempt to send or acknowledge mail outside the context of a call or delivery."
             }
-
-            sender.send(Long.SIZE_BYTES + 2 + size) { buffer ->
-                buffer.putLong(threadID)
-                buffer.put(InternalCallType.MAIL_DELIVERY.ordinal.toByte())
-                buffer.put(mailType) /* MailCommandType */
+            sendToHost(MAIL, hostThreadId, 1 + size) { buffer ->
+                buffer.put(mailType.ordinal.toByte())
                 block(buffer)
             }
         }
     }
 
     private sealed class CallState {
-        class Receive(val callback: HostCallback?, @Suppress("unused") val receiveFromUntrustedHost: Boolean) :
-            CallState()
+        class Receive(
+            val callback: HostCallback?,
+            @Suppress("unused") val receiveFromUntrustedHost: Boolean
+        ) : CallState()
 
         class Response(val bytes: ByteArray) : CallState()
     }

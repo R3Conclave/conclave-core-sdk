@@ -62,13 +62,27 @@ fun ByteBuffer.getUnsignedShort(): Int = java.lang.Short.toUnsignedInt(getShort(
 fun ByteBuffer.getUnsignedShort(index: Int): Int = java.lang.Short.toUnsignedInt(getShort(index))
 
 fun ByteBuffer.putUnsignedShort(value: Int): ByteBuffer {
-    require(value >= 0 && value <= 65535) { "Not an unsigned short: $value" }
+    require(value in 0..65535) { "Not an unsigned short: $value" }
     return putShort(value.toShort())
 }
 
 fun ByteBuffer.getUnsignedInt(): Long = Integer.toUnsignedLong(getInt())
 
 fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(it) }
+
+inline fun <T> ByteBuffer.getNullable(block: ByteBuffer.() -> T): T? {
+    val isNull = getBoolean()
+    return if (!isNull) block(this) else null
+}
+
+inline fun <T> ByteBuffer.putNullable(value: T?, block: ByteBuffer.(T) -> Unit) {
+    putBoolean(value == null)
+    if (value != null) {
+        block(this, value)
+    }
+}
+
+inline fun <T> nullableSize(value: T?, size: (T) -> Int): Int = 1 + (value?.let(size) ?: 0)
 
 /**
  * Read the remaining bytes of the buffer. The buffer is exhausted after this operation, the position equal to the
