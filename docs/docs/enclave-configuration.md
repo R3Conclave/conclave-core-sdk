@@ -81,7 +81,7 @@ and read by enclaves with a lower revocation level. This is not true in the oppo
 unseal data that was encrypted by an enclave with a lower revocation level.
 
 This directly affects enclaves that are using [mail as storage](mail.md#using_mail_for_storage). When a new enclave
-is deployed with a higher revocation level and the host contains persisted data sealed with a previous version of
+is deployed with a higher revocation level, and the host contains persisted data sealed with a previous version of
 the enclave, the newer enclave is able to process the stored mail. If a malicious host decides to drop in an older
 version of the enclave, potentially to exploit a discovered vulnerability in the enclave, then this older enclave
 cannot read the data sealed using an enclave with a higher revocation level.
@@ -100,7 +100,7 @@ This setting defines the maximum size the heap is allowed to grow to in the runt
 
 You might be familiar with the JVM option `-Xmx` which allows you to set the maximum heap size of a JVM based
 application. Most of the time in a normal JVM application you can just leave this setting alone and let the JVM 
-decide the heap size. However the option is there in case you need to increase beyond the default maximum, or if you
+decide the heap size. However, the option is there in case you need to increase beyond the default maximum, or if you
 want to configure your application to use less memory to co-exist with other applications.
 
 The `maxHeapSize` setting provides the same control over heap memory as the JVM provides, but for the runtime 
@@ -114,7 +114,7 @@ you create an object or store some data in memory inside an enclave it is stored
 the enclave runtime manages its own heap - to ensure all data stays with the EPC memory.
 
 So, what should the heap size be set to? This depends. In most cases you can leave this setting at its default value
-of 256Mb. For many enclaves this will be enough. However your enclave may want access to a very large set of data.
+of 256Mb. For many enclaves this will be enough. However, your enclave may want access to a very large set of data.
 In this case you want to increase the heap size.
 
 What happens if you want to specify a heap size that is greater than the EPC provided on your SGX system? Well, this
@@ -132,7 +132,7 @@ without any problems on a system with 128Mb of EPC but it may run much faster an
 with 256Mb or more EPC.
 
 !!! tip
-    The size is specified in bytes but you can put a `k`, `m` or `g` after the value to specify it in kilobytes, 
+    The size is specified in bytes, but you can put a `k`, `m` or `g` after the value to specify it in kilobytes, 
     megabytes or gigabytes respectively.
 
 ### maxThreads
@@ -170,7 +170,7 @@ overflowing.
 
 The stack is used internally by the JVM to hold information about the current function; the chain of functions
 that called the current function (the 'call stack'); temporary variables and other contextual information. 
-Stack can be consumed in different ways but the default value provided for `maxStackSize` ensures you will
+Stack can be consumed in different ways, but the default value provided for `maxStackSize` ensures you will
 likely never see an exhausted stack unless you accidentally generate an infinite recursion via a function calling
 itself.
 
@@ -232,7 +232,7 @@ One way of generating the reflection and serialization configuration files is by
 The agent will track usage of dynamic features and generate the configuration files when run
 against a regular Java VM.
 
-To ensure all of the necessary classes/resources are included in the configuration files you should ensure
+To ensure all the necessary classes/resources are included in the configuration files you should ensure
 all enclave code paths are executed, for example by writing extensive tests and running them in `mock` mode.
 
 When placed under `enclave/src/main/resources/META-INF/native-image` the configuration files will be picked up

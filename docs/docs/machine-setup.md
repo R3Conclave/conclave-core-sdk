@@ -8,7 +8,7 @@ So. There's an easy way to do this, and a hard way.
 1. Upload your Java app to it and run it, as if it were any other Java app.
 1. There is no step 3!
 
-When using Azure everything is fully automatic.
+When using Azure, everything is fully automatic.
 
 ## The harder way
 
@@ -33,7 +33,7 @@ made by Apple).
 
 There is a community maintained list of [tested/compatible hardware available on GitHub](https://github.com/ayeks/SGX-hardware).
 
-For some machines SGX must be explicitly enabled in the BIOS/UEFI firmware screens. For others it can be activated
+For some machines SGX must be explicitly enabled in the BIOS/UEFI firmware screens. For others, it can be activated
 by any root user: the Conclave host API will try to activate it for you, if possible and if run with sufficient
 permissions.
 
@@ -86,8 +86,8 @@ The quick summary looks like this:
    * For Ubuntu 18 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' > /etc/apt/sources.list.d/intelsgx.list`
    * For Ubuntu 20 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intelsgx.list`
    * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`
-   * Then run `apt-get update`
-   * And finally `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`
+   * Then run: `apt-get update`
+   * Finally: `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`
 3. For other users, use the SDK installer (which installs the platform services software as well)
 4. These steps will start the `aesm_service`. 
 
@@ -95,7 +95,7 @@ The quick summary looks like this:
 ## Limited network connectivity
 
 The enclave host machine needs to contact Intel's attestation servers, as part of proving to third parties that it's
-a genuine unrevoked CPU running in the latest known secure configuration. Therefore if the machine has limited
+a genuine unrevoked CPU running in the latest known secure configuration. Therefore, if the machine has limited
 connectivity you must use an outbound HTTP[S] proxy server.
 
 The `aesmd` service has a configuration file in `/etc/aesmd.conf`. You may need to put your proxy settings there.

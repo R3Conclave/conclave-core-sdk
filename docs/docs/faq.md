@@ -9,10 +9,10 @@ hide:
 
 ### What app architecture issues should we consider?
 
-We plan to offer more guidance on this in future. Until then consider:
+We plan to offer more guidance on this in the future. Until then consider:
 
 * Dataset size. It must fit in memory in a single CPU machine.
-* Slightly lower performance than usual. The extra security checks used by SGX reduce execution performance and the embedded 
+* Slightly lower performance than usual. The extra security checks used by SGX reduce execution performance, and the embedded 
   JVM inside the enclave isn't as sophisticated as HotSpot, so peak performance will be lower than normal for Java.
 * Client-side tooling. Enclaves are useless unless the end user of the service they provide is checking a remote
   attestation. Because web browsers know nothing about remote attestation you will have to provide an independent tool

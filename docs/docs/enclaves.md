@@ -45,7 +45,7 @@ enclave can exchange byte buffers back and forth. This is an efficient operation
 into the enclave using a direct memory copy. Conclave provides convenient APIs to facilitate this data passing between 
 enclave and host. 
 
-However, it is important to note that, unlike the enclave, neither this 'host' process nor the underlying
+However, it is important to note that, unlike the enclave, neither this 'host' process, nor the underlying
 operating system are trusted by the users of the enclave. Yet the enclave depends on them. The following sections 
 explain how message encryption, remote attestation, and the Conclave-specific 'Mail' API combine to solve this problem.
 
@@ -127,32 +127,36 @@ The software and hardware that must be uncompromised for a system to work correc
 *trusted computing base*, or TCB. In Conclave the TCB includes the CPU itself, the patchable microcode of the CPU,
 and all software running inside the enclave - both your code and the Conclave runtime.
 
-A major goal in secure systems design is to minimise the size of the TCB. This is for two reasons.
+A major goal in secure systems design is to minimise the size of the TCB. This is for two reasons which will be 
+discussed in the following section on security.
 
 ### Security
 
-The software industry has decades of experience with building secure and tamperproof systems. A
-simple heuristic is that the more code there is inside the TCB that handles attacker-controlled data, the easier 
-it will be for an adversary to find a mistake and break in.
+The software industry has decades of experience with building secure and tamper-proof systems. A simple heuristic is 
+that the more code there is inside the TCB that handles attacker-controlled data, the easier it will be for an adversary 
+to find a mistake and break in. 
 
-It's always been good design to minimise the amount of code that handles potentially malicious data and enclaves give
-you an even greater incentive to do so. That's because enclaves don't magically make the software inside them
-un-hackable. They protect the code and its memory from outside interference by the owner of the computer (and any
-hackers that gained access to the operating system) but if the code running inside the enclave has a bug that can
-be used to get in, those protections are of no use. Thus it's important for an enclave to be written securely.
+It's always been good design to minimise the amount of code that handles potentially malicious data, and enclaves give 
+you an even greater incentive to do so. That's because enclaves don't magically make the software inside them 
+un-hackable. They protect the code and its memory from outside interference by the owner of the computer (and any 
+hackers that gained access to the operating system). However, if the code running inside the enclave has a bug that can 
+be used to get in, those protections are of no use. Thus, it's important for an enclave to be written securely.
 
-Conclave helps with this dramatically because it lets you write enclave logic in memory-safe, type-safe languages like
-Java or Kotlin. These languages eliminate by construction huge swathes of bugs. All buffer bounds are checked,
-no memory is freed before use and all casts are valid. This makes it much easier to process data
-from outside the enclave because you don't have to worry that you might accidentally let an attacker in.
+Conclave helps with this dramatically because it lets you write enclave logic in memory-safe, type-safe languages like 
+Java or Kotlin. These languages eliminate by construction huge swathes of bugs. All buffer bounds get checked, no memory 
+gets freed before use and all casts are valid. This makes it much easier to process data from outside the enclave 
+because you don't have to worry that you might accidentally let an attacker in.
 
-Sometimes people find this confusing: a JVM is quite large, so if the TCB needs to be small isn't that a problem? 
-It's not for two reasons. One reason is because this heuristic only applies for code that an attacker can actually 
-reach and influence via external input, but the input data to the JVM (bytecode) is itself a fixed part of the enclave.
-Attackers can't modify it without changing the measurement reported in the remote attestation and thus being detected by
-the client - the client's enclave constraint will be violated and an exception  will be thrown. The second reason is
-that Conclave uses the GraalVM Native Image JVM, in which all bytecode is compiled to native code ahead of time. The
-actual JVM in use is therefore quite tiny; it consists mostly of the garbage collector.
+Sometimes people find this confusing: a JVM is quite large, so if the TCB needs to be small isn't that a problem? The 
+answer is no for two reasons:
+
+1.	This heuristic only applies for code that an attacker can reach and influence via external input, but the input data 
+      to the JVM (bytecode) is itself a fixed part of the enclave. Attackers can't modify it without changing the 
+      measurement reported in the remote attestation and thus alerting the client - the client's enclave constraint will 
+      be violated, and an exception will be thrown.
+2.	Conclave uses the GraalVM Native Image JVM, in which all bytecode is compiled to native code ahead of time. The 
+      actual JVM in use is therefore quite tiny; it consists mostly of the garbage collector.
+
 
 !!! warning
 
@@ -191,7 +195,7 @@ and so on. Keeping as much code in the host as possible has two key advantages:
 
 The second point is intuitive to understand. Think of your enclave as a concrete version of your privacy policy. If you
 change your web server, core database engine or even entire operating system then this is of no concern to your users.
-You've only changed *how* data is processed. But if you change *what* you do with their data, they may have an opinion
+You've only changed *how* data is processed. However, if you change *what* you do with their data, they may have an opinion
 on this and want to know about it. Remote attestation lets them see that the core business logic has changed, and in
 what way.
 
@@ -210,7 +214,7 @@ purpose-designed APIs work together to make it as simple as possible for develop
 
 ### A note on measurements vs signers
 
-The code hash included in a remote attestation is called a **measurement**. It's not the hash of any particular file
+A **measurement** is the code hash included in a remote attestation. It's not the hash of any particular file
 but rather a more complex hash that must be calculated with special tools. It covers the entire module and all of its
 dependencies loaded into an enclave (a fat JAR).
 
@@ -231,9 +235,9 @@ for two reasons:
 2. Some SGX capable computers have a root key that must whitelist enclaves to be executed. This can be used by the
    owners of SGX-capable machines to retain visibility and control into what programs are actually running on their 
    hardware. Whilst this capability could therefore be leveraged by cloud vendors to restrict which SGX workloads
-   their servers will allow to run, we are not aware of any that operate in this way in practice.
+   their servers will allow running, we are not aware of any that operate in this way in practice.
 
-The hash of the public part of the key that signed an enclave is included in remote attestations, so you can choose to
+Included in remote attestations is the hash of the public part of the key that signed an enclave, so you can choose to
 communicate with any enclave signed by a given key.
 
 ### Enclaves vs alternative approaches
@@ -248,23 +252,23 @@ us now briefly trace the historical evolution that led to the SGX enclave design
 
 The first attempts at implementing trusted computing relied on a so-called *trusted platform module* chip (TPM). The
 TPM contained special registers called *platform configuration registers* (PCR). A PCR was sized to contain a hash, but
-could not be written directly. Instead writing to a PCR concatenated the new hash value with the prior, and stored the
+could not be written directly. Instead, writing to a PCR concatenated the new hash value with the prior, and stored the
 result of hashing that concatenation. PCRs therefore contained the final hash in a chain of hashes. The only way to get
 a PCR to a particular value is to feed it the right sequence of hashes, called the *chain of trust*.
  
 The firmware and electronics on the motherboard implemented a *static root of trust*. In this design, the initial boot 
 ROM would load the BIOS and other firmware, hash it into a PCR and then pass control to it. The firmware would then in 
-turn hash and load the next stage into the same PCR and so on. Thus by the time the system booted, all the software 
-and firmware on the system had been hashed together. The contents of the PCR could then be remotely attested and the 
+turn hash and load the next stage into the same PCR and so on. Thus, by the time the system booted, all the software 
+and firmware on the system had been hashed together. The contents of the PCR could then be remotely attested, and the 
 user could verify what software booted. This then let them reason about how the remote computer would behave.
 
 Given the explanations above the problem with this approach is hopefully now obvious - this approach defined the TCB
 as everything in the entire boot sequence, including the whole operating system kernel. Any bug at any point in this
 code would allow someone to create a forged chain of trust and undermine the system. But system firmware is already
-very large and likely to contain bugs, let alone a kernel. And even if the entire boot was 
+very large and likely to contain bugs, let alone a kernel. Even if the entire boot was 
 secure the operating system or application server would likely contain bugs allowing in remote attackers anyway.
 
-On the open PC platform this system turned out to be too easy to defeat, and became abandoned outside of a few use
+On the open PC platform this system turned out to be too easy to defeat, and became abandoned outside a few use
 cases involving disk encryption (with no remote attestation). Despite its failure in PCs, static roots of trust 
 worked well enough for games consoles where the entire boot sequence could be encrypted, locked down, attested to
 multi-player game networks and very carefully audited by a vertically integrated systems manufacturer. 

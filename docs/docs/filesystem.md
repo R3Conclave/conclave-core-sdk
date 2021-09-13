@@ -1,6 +1,6 @@
 # Files and storage
 
-Conclave enclaves can do file I/O but it's not mapped to the host filesystem. Instead, all filesystem activity is
+Conclave enclaves can do file I/O, but it's not mapped to the host filesystem. Instead, all filesystem activity is
 mapped to an in-memory file system. The goal of this support is to enable usage of libraries and applications that
 need to load data files from disk, to provide a simple 'scratch space' for files if you find them easier to work with,
 and to enable you to use file APIs to prepare data before it's encrypted for storage.
