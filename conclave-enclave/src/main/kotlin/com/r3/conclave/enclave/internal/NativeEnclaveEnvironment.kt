@@ -1,7 +1,6 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
@@ -77,7 +76,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
     }
 
     private fun initialiseEnclave(input: ByteArray): HandlerConnected<*> {
-        seedRandom();
+        seedRandom()
 
         val enclaveClassName = String(input)
         // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
@@ -117,17 +116,18 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
-        require(toBeSealed.plaintext.size > 0)
-        val sealedData =
-            ByteArray(Native.calcSealedBlobSize(toBeSealed.plaintext.size, toBeSealed.authenticatedData?.size ?: 0))
+        val sealedData = ByteArray(Native.calcSealedBlobSize(
+            toBeSealed.plaintext.size,
+            toBeSealed.authenticatedData?.size ?: 0
+        ))
         Native.sealData(
             output = sealedData,
             outputOffset = 0,
             outputSize = sealedData.size,
-            plaintext = toBeSealed.plaintext.bytes,
+            plaintext = toBeSealed.plaintext,
             plaintextOffset = 0,
             plaintextSize = toBeSealed.plaintext.size,
-            authenticatedData = toBeSealed.authenticatedData?.bytes,
+            authenticatedData = toBeSealed.authenticatedData,
             authenticatedDataOffset = 0,
             authenticatedDataSize = toBeSealed.authenticatedData?.size ?: 0
         )
@@ -151,7 +151,7 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
             authenticatedDataOutLength = authenticatedData?.size ?: 0
         )
 
-        return PlaintextAndEnvelope(OpaqueBytes(plaintext), authenticatedData?.let(::OpaqueBytes))
+        return PlaintextAndEnvelope(plaintext, authenticatedData)
     }
 
     override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {

@@ -19,7 +19,7 @@ if [ $enclaveMode != "Simulation" ]; then
 fi
 
 runDocker com.r3.sgx/sgxjvm-build "cd integration-tests \
-    && ./gradlew -PenclaveMode=$enclaveMode test -i ${TEST_OPTS:-}"
+    && ./gradlew -s -PenclaveMode=$enclaveMode test -i ${TEST_OPTS:-}"
 
 if [ $enclaveMode != "Simulation" ]; then
     # Teardown AESM container

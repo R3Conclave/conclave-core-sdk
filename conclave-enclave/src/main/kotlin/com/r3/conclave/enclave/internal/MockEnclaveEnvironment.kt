@@ -2,7 +2,6 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.KeyName.REPORT
 import com.r3.conclave.common.internal.KeyName.SEAL
@@ -44,7 +43,7 @@ class MockEnclaveEnvironment(
                     return true
                 }
             }
-            return false;
+            return false
         }
     }
 
@@ -113,13 +112,13 @@ class MockEnclaveEnvironment(
         )
         sealedBlob.put(iv)
         if (authenticatedData != null) {
-            cipher.updateAAD(authenticatedData.buffer())
+            cipher.updateAAD(authenticatedData)
             sealedBlob.putInt(authenticatedData.size)
-            sealedBlob.put(authenticatedData.buffer())
+            sealedBlob.put(authenticatedData)
         } else {
             sealedBlob.putInt(0)
         }
-        cipher.doFinal(toBeSealed.plaintext.buffer(), sealedBlob)
+        cipher.doFinal(ByteBuffer.wrap(toBeSealed.plaintext), sealedBlob)
         return sealedBlob.array()
     }
 
@@ -135,7 +134,7 @@ class MockEnclaveEnvironment(
         }
         val plaintext = ByteBuffer.allocate(inputBuffer.remaining() - TAG_SIZE)
         cipher.doFinal(inputBuffer, plaintext)
-        return PlaintextAndEnvelope(OpaqueBytes(plaintext.array()), authenticatedData?.let(::OpaqueBytes))
+        return PlaintextAndEnvelope(plaintext.array(), authenticatedData)
     }
 
     // Replicates sgx_get_key behaviour in hardware as determined by MockEnclaveEnvironmentHardwareCompatibilityTest.

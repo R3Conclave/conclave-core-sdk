@@ -1,10 +1,11 @@
 package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.internal.PlaintextAndEnvelope
+import com.r3.conclave.enclave.internal.PlaintextAndEnvelope
 import com.r3.conclave.host.EnclaveHost
-import org.junit.jupiter.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -13,8 +14,11 @@ private const val anotherInstanceOriginalEnclave = originalEnclave
 private const val anotherEnclaveSameSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveSameSigner"
 private const val anotherEnclaveDistinctSigner = "com.r3.conclave.integrationtests.general.enclave.SealUnsealEnclaveDifferentSigner"
 
-val unsealedMessageWithoutADBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), null)
-val unsealedMessageWithADBefore = PlaintextAndEnvelope(OpaqueBytes("Sealing Hello World!".toByteArray()), OpaqueBytes("Sealing Hello World Authenticated Data!".toByteArray()))
+val unsealedMessageWithoutADBefore = PlaintextAndEnvelope("Sealing Hello World!".toByteArray(), null)
+val unsealedMessageWithADBefore = PlaintextAndEnvelope(
+    "Sealing Hello World!".toByteArray(),
+    "Sealing Hello World Authenticated Data!".toByteArray()
+)
 val sealingRequest  = byteArrayOf(1)
 val unsealingRequest = byteArrayOf(2)
 
@@ -56,8 +60,7 @@ class SealingTest : JvmTest(originalEnclave) {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.AUTHENTICATED)
         val unsealedMessageWithoutADAfter = unsealMessageInEnclave(anotherInstanceOriginalEnclave, sealedMessage!!)
 
-        assertEquals(unsealedMessageWithADBefore.plaintext, unsealedMessageWithoutADAfter.plaintext)
-        assertEquals(unsealedMessageWithADBefore.authenticatedData, unsealedMessageWithoutADAfter.authenticatedData)
+        assertThat(unsealedMessageWithoutADAfter).isEqualTo(unsealedMessageWithADBefore)
     }
 
     @Test
@@ -65,8 +68,7 @@ class SealingTest : JvmTest(originalEnclave) {
         val sealedMessage = sealMessageInOriginalEnclave(MessageType.AUTHENTICATED)
         val unsealedMessageWithoutADAfter = unsealMessageInEnclave(anotherEnclaveSameSigner, sealedMessage!!)
 
-        assertEquals(unsealedMessageWithADBefore.plaintext, unsealedMessageWithoutADAfter.plaintext)
-        assertEquals(unsealedMessageWithADBefore.authenticatedData, unsealedMessageWithoutADAfter.authenticatedData)
+        assertThat(unsealedMessageWithoutADAfter).isEqualTo(unsealedMessageWithADBefore)
     }
 
     @Test
@@ -85,9 +87,7 @@ class SealingTest : JvmTest(originalEnclave) {
             EnclaveMode.RELEASE, EnclaveMode.DEBUG -> getHardwareAttestationParams()
             else -> null
         }
-        newEnclave.start(attestationParameters) {
-        }
-
+        newEnclave.start(attestationParameters, null) { }
         return newEnclave
     }
 
@@ -97,14 +97,14 @@ class SealingTest : JvmTest(originalEnclave) {
 
         val plainText = this.sliceArray(2 until plainTextSize + 2)
         val authenticatedData = if (authenticatedDataSize != 0) this.sliceArray(plainTextSize + 2 until this.size) else null
-        return PlaintextAndEnvelope(OpaqueBytes(plainText), authenticatedData?.let { OpaqueBytes(it) })
+        return PlaintextAndEnvelope(plainText, authenticatedData)
     }
 
     private fun PlaintextAndEnvelope.toByteArray(): ByteArray {
-        val plainTextBytes = this.plaintext.bytes
-        val plainTextSize = this.plaintext.bytes.size
-        val authenticatedDataBytes = this.authenticatedData?.bytes
-        val authenticatedDataSize = (this.authenticatedData?.bytes?.size) ?: 0
+        val plainTextBytes = this.plaintext
+        val plainTextSize = this.plaintext.size
+        val authenticatedDataBytes = this.authenticatedData
+        val authenticatedDataSize = this.authenticatedData?.size ?: 0
 
         val returnArray = ByteArray(2 + plainTextSize + authenticatedDataSize)
         returnArray[0] = plainTextSize.toByte()

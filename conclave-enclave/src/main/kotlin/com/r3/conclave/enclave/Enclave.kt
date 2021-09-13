@@ -3,7 +3,6 @@ package com.r3.conclave.enclave
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxReport.body
@@ -21,7 +20,6 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
@@ -37,7 +35,7 @@ import java.util.function.Function
  *    scheme. Clients that obtain a [EnclaveInstanceInfo] from the host can create
  *    mails and send it to the host for delivery. Override and implement [receiveMail] to receive mail via the host.
  *
- * Enclaves can sign things with a key that appears in the [com.r3.conclave.common.EnclaveInstanceInfo].
+ * Enclaves can sign things with a key that appears in the [EnclaveInstanceInfo].
  * This can be useful when the enclave is being used to create a proof of correct
  * computation, rather than operate on secret data.
  *
@@ -70,6 +68,10 @@ abstract class Enclave {
      * to the [signatureKey], ready for creation of digital signatures over
      * data you provide. The private key is not directly exposed to avoid accidental
      * mis-use (e.g. for encryption).
+     *
+     * When serialising your signed data structure, consider also attaching the serialised [EnclaveInstanceInfo] of this
+     * enclave with it ([enclaveInstanceInfo]). This ensures the signature can still be verified by the end-user even
+     * if the enclave's signing key changes.
      */
     protected fun signer(): Signature {
         val signature = SignatureSchemeEdDSA.createSignature()
@@ -644,7 +646,7 @@ Received: $attestationReportBody"""
                     }
                 }
 
-                val sealed = env.sealData(PlaintextAndEnvelope(OpaqueBytes(plainText)))
+                val sealed = env.sealData(PlaintextAndEnvelope(plainText))
                 sendMailCommandToHost(MailCommandType.RECEIPT, sealed.size) { buffer ->
                     buffer.put(sealed)
                 }

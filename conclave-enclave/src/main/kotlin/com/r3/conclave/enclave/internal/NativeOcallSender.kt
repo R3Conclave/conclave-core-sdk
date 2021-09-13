@@ -6,6 +6,6 @@ import java.nio.ByteBuffer
 
 object NativeOcallSender : LeafSender() {
     override fun sendSerialized(serializedBuffer: ByteBuffer) {
-        Native.jvmOcall(serializedBuffer.getRemainingBytes())
+        Native.jvmOcall(serializedBuffer.getRemainingBytes(avoidCopying = true))
     }
 }

@@ -1,9 +1,8 @@
 package com.r3.conclave.integrationtests.general.enclave
 
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
-import com.r3.conclave.common.internal.PlaintextAndEnvelope
+import com.r3.conclave.enclave.internal.PlaintextAndEnvelope
 
 abstract class AbstractSealUnsealEnclave : Enclave() {
 
@@ -20,7 +19,6 @@ abstract class AbstractSealUnsealEnclave : Enclave() {
     }
 
     override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
-
         return when (bytes[0].toInt()) {
             1 -> {
                 val unsealedData = parseInputBytes(bytes)
@@ -28,7 +26,7 @@ abstract class AbstractSealUnsealEnclave : Enclave() {
             }
             2 -> {
                 val sealedData = bytes.sliceArray(1 until bytes.size)
-                var plaintextAndEnvelope = unsealData(sealedData)
+                val plaintextAndEnvelope = unsealData(sealedData)
                 preparePlainTextAndEnvelope(plaintextAndEnvelope)
             }
             else -> "".toByteArray()
@@ -39,17 +37,13 @@ abstract class AbstractSealUnsealEnclave : Enclave() {
         val plainTextSize = bytes[1].toInt()
         val authenticationSize = bytes[2].toInt()
         val plainText = bytes.sliceArray(3 until plainTextSize + 3)
-        val authenticatedData =
-                if (authenticationSize != 0) bytes.sliceArray(plainTextSize + 3 until bytes.size) else null
-        return PlaintextAndEnvelope(
-                OpaqueBytes(plainText),
-                if (authenticatedData != null) OpaqueBytes(authenticatedData) else null
-        )
+        val authenticatedData = if (authenticationSize != 0) bytes.sliceArray(plainTextSize + 3 until bytes.size) else null
+        return PlaintextAndEnvelope(plainText, authenticatedData)
     }
 
     private fun preparePlainTextAndEnvelope(plaintextAndEnvelope: PlaintextAndEnvelope): ByteArray {
-        val plainTextBytes = plaintextAndEnvelope.plaintext.bytes
-        val authenticatedDataBytes = plaintextAndEnvelope.authenticatedData?.bytes
+        val plainTextBytes = plaintextAndEnvelope.plaintext
+        val authenticatedDataBytes = plaintextAndEnvelope.authenticatedData
         val sizes = byteArrayOf(
                 plainTextBytes.size.toByte(),
                 authenticatedDataBytes?.size?.toByte() ?: 0

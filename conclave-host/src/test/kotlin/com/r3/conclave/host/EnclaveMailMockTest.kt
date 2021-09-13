@@ -6,8 +6,14 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
-import com.r3.conclave.mail.*
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.mail.Curve25519PrivateKey
+import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.EnclaveMail
+import com.r3.conclave.mail.PostOffice
+import com.r3.conclave.utilities.internal.deserialise
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -17,7 +23,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.security.PrivateKey
 import java.security.PublicKey
 
-class MailHostTest {
+class EnclaveMailMockTest {
     companion object {
         private val messageBytes = "message".toByteArray()
     }
@@ -26,6 +32,16 @@ class MailHostTest {
     private val echo by lazy { createMockHost(MailEchoEnclave::class.java) }
     private val noop by lazy { createMockHost(NoopEnclave::class.java) }
     private val postOffices = HashMap<Pair<EnclaveInstanceInfo, String>, PostOffice>()
+
+    @Test
+    fun `deliverMail before start`() {
+        assertThatIllegalStateException().isThrownBy {
+            noop.deliverMail(1, byteArrayOf(), null)
+        }.withMessage("The enclave host has not been started.")
+        assertThatIllegalStateException().isThrownBy {
+            noop.deliverMail(1, byteArrayOf(), null) { it }
+        }.withMessage("The enclave host has not been started.")
+    }
 
     @Test
     fun `encrypt and deliver mail`() {
@@ -518,8 +534,7 @@ class MailHostTest {
     }
 
     class NoopEnclave : Enclave() {
-        override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
-        }
+        override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) = Unit
     }
 
     // Receives mail, decrypts it and gives the body back to the host.

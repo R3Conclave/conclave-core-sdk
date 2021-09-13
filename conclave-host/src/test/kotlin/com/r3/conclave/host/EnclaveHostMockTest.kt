@@ -3,7 +3,6 @@ package com.r3.conclave.host
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
@@ -12,22 +11,14 @@ import com.r3.conclave.internaltesting.threadWithFuture
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.parseHex
 import com.r3.conclave.utilities.internal.writeData
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.ArgumentsProvider
-import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.ValueSource
-import java.lang.IllegalStateException
-import java.util.stream.Stream
 import kotlin.random.Random
 
 class EnclaveHostMockTest {
@@ -41,7 +32,7 @@ class EnclaveHostMockTest {
 
             @Suppress("UNCHECKED_CAST")
             val enclaveCalls = (enclaveCallHandler.field("threadIDToTransaction") as Map<Long, Any>).values.map {
-                it.javaClass.getDeclaredField("stateManager").also { it.isAccessible = true }.get(it) as StateManager<*>
+                it.javaClass.getDeclaredField("stateManager").apply { isAccessible = true }.get(it) as StateManager<*>
             }
             assertThat(enclaveCalls.map { it.state.javaClass.simpleName }).containsOnly("Ready")
         }
@@ -367,7 +358,7 @@ class EnclaveHostMockTest {
             }
         }.withMessage("Boom!")
         assertThat(enclaveCallbackResponse).isEqualTo(byteArrayOf(1, 2))
-        assertThat(secondLevelCallSuccessful).isFalse()
+        assertThat(secondLevelCallSuccessful).isFalse
 
         val response = host.callEnclave(byteArrayOf(1)) { fromEnclave ->
             fromEnclave + host.callEnclave(throwCommand(throwException = false, message = "Yay!"))!!
@@ -506,7 +497,6 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave onStartup and onShutdown are called at the right moment`() {
-
         val host = createMockHost(EnclaveWithHooks::class.java)
         val enclave = host.mockEnclave as EnclaveWithHooks
 
@@ -529,10 +519,8 @@ class EnclaveHostMockTest {
 
     @Test
     fun `enclave onShutdown is not called when the enclave is not initialised even if the host is closed`() {
-
         val host = createMockHost(EnclaveWithHooks::class.java)
         val enclave = host.mockEnclave as EnclaveWithHooks
-
 
         // The host was only created but the initialization process has not started yet
         assertFalse(enclave.onShutdownWasCalled, "The host was created but not uninitialised. onShutdown should not have been called")

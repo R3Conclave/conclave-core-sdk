@@ -1,0 +1,13 @@
+//
+//
+// Example usage: ./gradlew --init-script scripts/macos-init.gradle sdkRepo
+//
+// The build artifacts are in /tmp/conclave-build, not in module's build directory.
+// TODO Incorporate this into build.gradle via a property or parameter and also have it copy the artifacts into their
+//  correct build directories.
+
+gradle.projectsLoaded {
+   rootProject.allprojects {
+      buildDir = "/tmp/conclave-build/${project.name}"
+   }
+}

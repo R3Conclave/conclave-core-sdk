@@ -40,7 +40,7 @@ interface EnclaveInstanceInfo {
      * A key used by the enclave to digitally sign static data structures.
      *
      * This is not the same as the enclave code signing key, which just links
-     * a specific enclave file to its author.
+     * the enclave code to its author.
      */
     val dataSigningKey: PublicKey
 

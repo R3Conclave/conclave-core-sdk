@@ -1,7 +1,6 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import org.assertj.core.api.Assertions.assertThat
@@ -14,8 +13,8 @@ import kotlin.random.Random
 
 class MockEnclaveEnvironmentTest {
     private companion object {
-        private val plaintext = OpaqueBytes("Super Secret!".toByteArray())
-        private val authenticatedData = OpaqueBytes("Authenticate!".toByteArray())
+        private val plaintext = "Super Secret!".toByteArray()
+        private val authenticatedData = "Authenticate!".toByteArray()
     }
 
     class EnclaveA : Enclave()
@@ -30,7 +29,7 @@ class MockEnclaveEnvironmentTest {
         val env1 = createMockEnclaveEnvironment<EnclaveA>(mockConfig)
         val reportData = Random.nextBytes(SgxReportData.size)
         val reportBody1 = env1.createReport(null, Cursor.wrap(SgxReportData, reportData))[SgxReport.body]
-        assertThat(reportBody1[SgxReportBody.attributes][SgxAttributes.flags].isSet(SgxEnclaveFlags.DEBUG)).isTrue()
+        assertThat(reportBody1[SgxReportBody.attributes][SgxAttributes.flags].isSet(SgxEnclaveFlags.DEBUG)).isTrue
         assertThat(reportBody1[SgxReportBody.isvProdId].read()).isEqualTo(4)
         // isvSvn is 1 based whereas revocationLevel is zero based.
         assertThat(reportBody1[SgxReportBody.isvSvn].read()).isEqualTo(4)
