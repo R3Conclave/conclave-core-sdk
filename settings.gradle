@@ -69,4 +69,5 @@ include 'hsm-tool'
 include 'plugin-enclave-gradle'
 
 include 'graal'
+include 'graal:cap-cache'
 include 'filesystem'

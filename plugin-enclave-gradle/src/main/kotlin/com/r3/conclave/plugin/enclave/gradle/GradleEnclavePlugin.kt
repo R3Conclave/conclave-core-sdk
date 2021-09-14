@@ -174,6 +174,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val graalVMPath = "$baseDirectory/com/r3/conclave/graalvm"
         val graalVMDistributionPath = "$graalVMPath/distribution"
+        val capCachePath = "$graalVMPath/cap-cache"
         val untarGraalVM = target.createTask<Exec>("untarGraalVM") { task ->
             task.dependsOn(copyGraalVM)
             Files.createDirectories(Paths.get(graalVMDistributionPath))
@@ -224,6 +225,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.dependsOn(untarGraalVM, copySgxToolsTask, copySubstrateDependenciesTask, generateReflectionConfigTask, generateAppResourcesConfigTask, linuxExec, copyEnclaveCommonHeaders)
                 task.inputs.files(graalVMDistributionPath, sgxDirectory, substrateDependenciesPath, nativeImageLinkerToolFile)
                 task.nativeImagePath.set(target.file(graalVMDistributionPath))
+                task.capCache.set(target.file(capCachePath))
                 task.jarFile.set(shadowJarTask.archiveFile)
                 task.includePaths.from(
                         "$conclaveDependenciesDirectory/include"
