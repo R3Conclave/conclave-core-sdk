@@ -128,16 +128,6 @@ subprojects {
         reproducibleFileOrder = true
     }
 
-    tasks.withType(Test) {
-        useJUnitPlatform {
-            if (findProperty("hardwareTests") == null) {
-                excludeTags("hardware")
-            } else {
-                includeTags("hardware")
-            }
-        }
-    }
-
     configurations {
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
