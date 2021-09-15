@@ -162,3 +162,11 @@ Conclave support for JavaScript and Python is provided by the polyglot capabilit
 the [GraalVM documentation on embedding languages](https://www.graalvm.org/reference-manual/embed-languages/)
 for detailed instructions on how to use this capability.
 
+!!! note
+    The functionality described on this page involves JIT compilation within the secure enclave. Due to the
+    unavailability of the CPUID instruction in SGX enclaves, some optimisations which depend on the presence of
+    certain instruction set extensions may not take place and performance may be degraded.
+
+!!! warning
+    The processor of the host system must support the SSE and SSE2 instruction set extensions. If these extensions
+    are not present, the enclave may abort unexpectedly.

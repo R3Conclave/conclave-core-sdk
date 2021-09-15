@@ -9,5 +9,5 @@ mkdir build
 cd build
 git clone --depth 1 https://github.com/oracle/graal.git -b release/graal-vm/21.2
 cd graal
-patch -p1 -i ../../graal.patch
+patch -p1 -i ../../patches/graal.patch
 ```
