@@ -44,6 +44,11 @@ task cloneAndPatchRepository(type: Exec) {
  * - native-image-configure (native)
  * - js (native)
  */
+
+//  This property can be used to speed up an SDK build when no
+//    dynamic languages are needed
+def excludeDynamicLanguages = findProperty('excludeDynamicLanguages')
+
 task buildGraal(type: Exec) {
     dependsOn cloneAndPatchRepository
     environment['JAVA_HOME'] = System.getenv('JVMCI_HOME')
@@ -55,8 +60,13 @@ task buildGraal(type: Exec) {
     workingDir "${project.buildDir}/graal/vm"
     // The --force-bash-launchers makes the build faster and use far less RAM by skipping the native-imaging of
     // some tools we don't use or care about. Without that flag the build can fail due to running out of RAM.
-    commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graalpython,graal-js,/substratevm',
+    if (excludeDynamicLanguages != null) {
+        commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', '/substratevm',
+        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=polybench', 'build'
+    } else {
+        commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graalpython,graal-js,/substratevm',
         '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=python,js,polybench', 'build'
+    }
 }
 
 def outputDir = "${project.buildDir}/distributions"
@@ -150,13 +160,21 @@ task generateCAPCache(type: Exec) {
             from zipTree(jvmEnclaveCommonJar)
             into "${project.buildDir}/include"
         }
-        commandLine "${getGraalBuildFolder.graalVMDir}/bin/native-image", '--shared', '-cp', "$capCacheProjectShadowJar:$conclaveEnclaveFatJar",
-                '-H:+ExitAfterCAPCache', '-H:+NewCAPCache', "-H:CAPCacheDir=$capCacheDir",
-                "-H:CCompilerOption=-I${project.buildDir}/include/com/r3/conclave/include",
-                "--no-fallback",
-                "--language:js",
-                "--language:python",
-                "-H:Name=cap-cache"
+	if (excludeDynamicLanguages != null) {
+            commandLine "${getGraalBuildFolder.graalVMDir}/bin/native-image", '--shared', '-cp', "$capCacheProjectShadowJar:$conclaveEnclaveFatJar",
+            '-H:+ExitAfterCAPCache', '-H:+NewCAPCache', "-H:CAPCacheDir=$capCacheDir",
+            "-H:CCompilerOption=-I${project.buildDir}/include/com/r3/conclave/include",
+            "--no-fallback",
+            "-H:Name=cap-cache"
+	} else {
+            commandLine "${getGraalBuildFolder.graalVMDir}/bin/native-image", '--shared', '-cp', "$capCacheProjectShadowJar:$conclaveEnclaveFatJar",
+            '-H:+ExitAfterCAPCache', '-H:+NewCAPCache', "-H:CAPCacheDir=$capCacheDir",
+            "-H:CCompilerOption=-I${project.buildDir}/include/com/r3/conclave/include",
+            "--no-fallback",
+            "--language:js",
+            "--language:python",
+            "-H:Name=cap-cache"
+	}
     }
 }
 
