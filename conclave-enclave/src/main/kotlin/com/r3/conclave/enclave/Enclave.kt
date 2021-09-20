@@ -21,7 +21,9 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
+import kotlin.concurrent.withLock
 
 /**
  * Subclass this inside your enclave to provide an entry point. The outside world
@@ -53,6 +55,9 @@ abstract class Enclave {
 
     private lateinit var env: EnclaveEnvironment
     private val enclaveStateManager = StateManager<EnclaveState>(EnclaveState.New)
+    private val lock = ReentrantLock()
+    private val enclaveQuiescentCondition = lock.newCondition()
+    private var numberReceiveCallsExecuting = 0
 
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
@@ -94,10 +99,8 @@ abstract class Enclave {
      */
     protected open val threadSafe: Boolean get() = false
 
-    private fun receiveFromUntrustedHostInternal(bytes: ByteArray) : ByteArray? {
-        check(enclaveStateManager.state !is EnclaveState.New) { "Communication between the host and the enclave is not possible. Enclave has not been started." }
-        check(enclaveStateManager.state !is EnclaveState.Closed) { "Communication between the host and the enclave is not possible. Enclave has been closed." }
-        return receiveFromUntrustedHost(bytes)
+    private fun receiveFromUntrustedHostInternal(bytes: ByteArray): ByteArray? {
+        return executeReceive { receiveFromUntrustedHost(bytes) }
     }
 
     /**
@@ -265,23 +268,29 @@ Received: $attestationReportBody"""
             )
         }
 
-        @Synchronized
         fun onOpen(input: ByteBuffer) {
-            if (enclave.enclaveStateManager.state is EnclaveState.Started) return
-            val ackReceipt = input.getNullable { getRemainingBytes() }
-            if (ackReceipt != null) {
-                enclave.enclaveMessageHandler.populateAcknowledgedRanges(ackReceipt)
+            enclave.lock.withLock {
+                enclave.enclaveStateManager.transitionStateFrom<EnclaveState.New>(to = EnclaveState.Started)
+                val ackReceipt = input.getNullable { getRemainingBytes() }
+                if (ackReceipt != null) {
+                    enclave.enclaveMessageHandler.populateAcknowledgedRanges(ackReceipt)
+                }
+                enclave.onStartup()
             }
-            enclave.onStartup()
-            enclave.enclaveStateManager.transitionStateFrom<EnclaveState.New>(to = EnclaveState.Started)
         }
 
-        @Synchronized
         private fun onClose() {
-           if (enclave.enclaveStateManager.state is EnclaveState.Closed) return
-           // This method call must be at the top so the enclave derived class can release its resources
-           enclave.onShutdown()
-           enclave.enclaveStateManager.transitionStateFrom<EnclaveState.Started>(to = EnclaveState.Closed)
+            enclave.lock.withLock {
+                enclave.enclaveStateManager.transitionStateFrom<EnclaveState.Started>(to = EnclaveState.Closed)
+                // Wait until all messages being processed are completed
+                while (enclave.numberReceiveCallsExecuting > 0) {
+                    enclave.enclaveQuiescentCondition.await()
+                }
+                // This method call must be at the top so the enclave derived class can release its resources
+                // Any code that releases resources used by the enclave must be placed after the function
+                // onShutdown
+                enclave.onShutdown()
+            }
         }
 
         private fun sendEnclaveInfo() {
@@ -453,16 +462,8 @@ Received: $attestationReportBody"""
                 Curve25519PrivateKey(entropy)
             }
             checkMailOrdering(id, mail)
-            // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
-            // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
-            // require spotting the absence of something rather than the presence of something, which is hard.
-            // This works even if the host calls back into the enclave on the same stack. However if the host
-            // makes a call on a separate thread, it's treated as a separate call as you'd expect.
-            if (!threadSafe) {
-                synchronized(this@Enclave) { this@Enclave.receiveMailInternal(id, mail, routingHint) }
-            } else {
-                this@Enclave.receiveMailInternal(id, mail, routingHint)
-            }
+            this@Enclave.receiveMailInternal(id, mail, routingHint)
+
             /**
              * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
              * hence why we do it here and not in acknowledgeMail
@@ -475,19 +476,9 @@ Received: $attestationReportBody"""
             checkNotNull(state.callback) {
                 "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
             }
-            // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
-            // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
-            // require spotting the absence of something rather than the presence of something, which is hard.
-            // This works even if the host calls back into the enclave on the same stack. However if the host
-            // makes a call on a separate thread, it's treated as a separate call as you'd expect.
-            val response = if (!threadSafe) {
-                // If this is a recursive call, we already hold the lock and the synchronized statement is a no-op.
-                // This assertion is here to document that fact.
-                if (state.callback != receiveFromUntrustedHostCallback) check(Thread.holdsLock(this@Enclave))
-                synchronized(this@Enclave) { state.callback.apply(input.getRemainingBytes()) }
-            } else {
-                state.callback.apply(input.getRemainingBytes())
-            }
+
+            val response = state.callback.apply(input.getRemainingBytes())
+
             if (response != null) {
                 // If the user calls back into the host whilst handling a local call or a mail, they end up
                 // inside callUntrustedHost. So, for a non-thread safe enclave it's OK that this is outside the
@@ -702,11 +693,39 @@ Received: $attestationReportBody"""
     private lateinit var encryptionKeyPair: KeyPair
 
     private fun receiveMailInternal(id: Long, mail: EnclaveMail, routingHint: String?) {
-        check(enclaveStateManager.state !is EnclaveState.New) { "Enclave cannot receive mails. Enclave has not been started." }
-        check(enclaveStateManager.state !is EnclaveState.Closed) { "Enclave cannot receive mails. Enclave has been closed." }
-        receiveMail(id, mail, routingHint)
+        executeReceive { receiveMail(id, mail, routingHint) }
     }
 
+    private fun <T> executeReceive(lambda: () -> T): T {
+        // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
+        // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
+        // require spotting the absence of something rather than the presence of something, which is hard.
+        // This works even if the host calls back into the enclave on the same stack. However if the host
+        // makes a call on a separate thread, it's treated as a separate call as you'd expect.
+        if (!threadSafe) {
+            lock.withLock {
+                enclaveStateManager.checkStateIs<EnclaveState.Started> { "Enclave cannot receive mails. Enclave is not in the Started state." }
+                return lambda.invoke()
+            }
+        } else {
+            lock.withLock {
+                enclaveStateManager.checkStateIs<EnclaveState.Started> { "Enclave cannot receive mails. Enclave is not in the Started state." }
+                ++numberReceiveCallsExecuting
+            }
+
+            try {
+                return lambda.invoke()
+            } finally {
+                lock.withLock {
+                    --numberReceiveCallsExecuting
+                    if (numberReceiveCallsExecuting == 0) {
+                        enclaveQuiescentCondition.signal()
+                    }
+                }
+            }
+        }
+    }
+    
     /**
      * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted
      * and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
