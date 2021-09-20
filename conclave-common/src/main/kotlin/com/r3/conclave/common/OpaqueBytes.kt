@@ -67,6 +67,6 @@ open class OpaqueBytes(private val _bytes: ByteArray) {
          * @throws IllegalArgumentException if the string contains incorrectly-encoded characters.
          */
         @JvmStatic
-        fun parse(str: String): OpaqueBytes = OpaqueBytes(parseHex(str.toUpperCase()))
+        fun parse(str: String): OpaqueBytes = OpaqueBytes(parseHex(str.uppercase()))
     }
 }

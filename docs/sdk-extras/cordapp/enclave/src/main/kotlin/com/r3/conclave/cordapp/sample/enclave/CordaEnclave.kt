@@ -30,8 +30,7 @@ abstract class CordaEnclave : Enclave() {
         val dis = DataInputStream(bais)
         val isAnonymousSender = dis.readBoolean()
         if (isAnonymousSender) {
-            val authenticated = true
-            return authenticated
+            return true
         }
 
         val identity = SenderIdentityImpl.deserialize(dis)
@@ -47,8 +46,7 @@ abstract class CordaEnclave : Enclave() {
     private fun authenticateIdentity(sharedSecret: ByteArray, identity: SenderIdentityImpl): Boolean {
         val isTrusted = identity.isTrusted(trustedRootCertificate)
         val didSign: Boolean = identity.didSign(sharedSecret)
-        val authenticated = isTrusted && didSign
-        return authenticated
+        return isTrusted && didSign
     }
 
     private fun storeIdentity(authenticatedSender: PublicKey, identity: SenderIdentityImpl) {
@@ -88,7 +86,7 @@ abstract class CordaEnclave : Enclave() {
     }
 
     /**
-     * Invoked when a mail has been delivered by the host (via [EnclaveHost.deliverMail]), successfully decrypted and authenticated.
+     * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted and authenticated.
      * This method is similar to the same overload in [Enclave] but with an additional optional parameter which is the verified [SenderIdentity]
      * of the sender, verified against the root certificate hardcoded into this enclave ([trustedRootCertificate]).
      *
@@ -116,18 +114,17 @@ abstract class CordaEnclave : Enclave() {
          * The network CA root certificate used to validate the identity shared by the sender
          */
         @JvmStatic
-        val trustedRootCertificate: X509Certificate = getTrustedRootCertificate(trustedRootCertificateResourcePath)
-
-        private fun getTrustedRootCertificate(trustedRootCertificateResourcePath: String): X509Certificate {
+        val trustedRootCertificate: X509Certificate = run {
             try {
                 CordaEnclave::class.java.getResourceAsStream(trustedRootCertificateResourcePath).use {
                     val certificateFactory: CertificateFactory = CertificateFactory.getInstance("X509")
-                    return certificateFactory.generateCertificate(it) as X509Certificate
+                    certificateFactory.generateCertificate(it) as X509Certificate
                 }
             } catch (exception: Exception) {
                 // Log an error message to let people know what went wrong and throw the exception again to ensure
                 // the behaviour related to exceptions remains the same
-                Logger.getGlobal().severe("Failed to load trusted root certificate. Please ensure the resource exists and it is not corrupted. Resource path: $trustedRootCertificateResourcePath")
+                Logger.getGlobal().severe("Failed to load trusted root certificate. Please ensure the resource " +
+                        "exists and it is not corrupted. Resource path: $trustedRootCertificateResourcePath")
                 throw exception
             }
         }

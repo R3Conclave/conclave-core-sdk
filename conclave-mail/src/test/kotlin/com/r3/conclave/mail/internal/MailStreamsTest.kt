@@ -272,7 +272,7 @@ class MailStreamsTest {
         val encrypted = encryptMessage(header = header)
 
         val topicIndex = String(encrypted).indexOf("topic")
-        encrypted[topicIndex] = 'T'.toByte()
+        encrypted[topicIndex] = 'T'.code.toByte()
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream())
         // The change goes unnoticed.

@@ -591,7 +591,7 @@ class MailDecryptingStream(
      *
      * It is the caller's responsibility to close this stream.
      */
-    fun decryptMail(deriveKey: (ByteArray?) -> PrivateKey): EnclaveMail {
+    fun decryptMail(deriveKey: (ByteArray?) -> PrivateKey): DecryptedEnclaveMail {
         // TODO: Optimise out copies here.
         //
         // We end up copying the mail every time it's read, the copy being defensive and thus useful only to protect

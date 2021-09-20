@@ -352,7 +352,7 @@ data class MockAttestation(
 
     override val securitySummary: EnclaveSecurityInfo.Summary get() = EnclaveSecurityInfo.Summary.INSECURE
 
-    override val securityReason: String get() = "Enclave is running in ${enclaveMode.name.toLowerCase()} mode."
+    override val securityReason: String get() = "Enclave is running in ${enclaveMode.name.lowercase()} mode."
 
     override fun serialise(): ByteArray {
         return writeData {

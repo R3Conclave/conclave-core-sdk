@@ -1,5 +1,6 @@
 package com.r3.conclave.integrationtests.general.common.tasks
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -40,6 +41,7 @@ val format = Json { serializersModule = messageModule }
  * @param encoded Serialized response as a [ByteArray]
  * @return Instance of the response type
  */
+@OptIn(ExperimentalSerializationApi::class)
 inline fun <reified R> decode(encoded: ByteArray): R {
     return format.decodeFromString(String(encoded))
 }

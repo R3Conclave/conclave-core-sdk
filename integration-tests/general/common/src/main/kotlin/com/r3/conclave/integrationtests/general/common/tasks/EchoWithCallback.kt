@@ -9,12 +9,13 @@ class EchoWithCallback(val data: ByteArray) : JvmTestTask(), Deserializer<ByteAr
     override fun run(context: RuntimeContext): ByteArray {
         var echoBack = data
         while (true) {
-            val response =
-                context.callHost(echoBack) ?: return Json.encodeToString(ByteArraySerializer(), byteArrayOf())
-                    .toByteArray()
+            val response = context.callHost(echoBack)
+            if (response == null) {
+                val encodeToString = Json.encodeToString(ByteArraySerializer(), byteArrayOf())
+                return encodeToString.toByteArray()
+            }
             echoBack = response
         }
-        return Json.encodeToString(ByteArraySerializer(), data).toByteArray()
     }
 
     override fun deserialize(encoded: ByteArray): ByteArray {

@@ -24,8 +24,8 @@ abstract class StringHandler : Handler<StringSender> {
 class StringSender(private val upstream: Sender) {
     fun send(string: String) {
         val bytes = string.toByteArray()
-        upstream.send(bytes.size, Consumer { buffer ->
+        upstream.send(bytes.size) { buffer ->
             buffer.put(bytes)
-        })
+        }
     }
 }

@@ -10,6 +10,7 @@ import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
+import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.MailDecryptingStream
@@ -54,11 +55,6 @@ abstract class Enclave {
     }
 
     private lateinit var env: EnclaveEnvironment
-    private val enclaveStateManager = StateManager<EnclaveState>(EnclaveState.New)
-    private val lock = ReentrantLock()
-    private val enclaveQuiescentCondition = lock.newCondition()
-    private var numberReceiveCallsExecuting = 0
-
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
@@ -66,7 +62,18 @@ abstract class Enclave {
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
 
-    private val postOffices = HashMap<DestinationAndTopic, EnclavePostOffice>()
+    private val postOffices = HashMap<PublicKeyAndTopic, EnclavePostOffice>()
+    private val lock = ReentrantLock()
+    private val enclaveQuiescentCondition = lock.newCondition()
+    /**
+     * Guarded by [lock]
+     */
+    private val enclaveStateManager = StateManager<EnclaveState>(New)
+
+    /**
+     * Guarded by [lock]
+     */
+    private var numberReceiveCallsExecuting = 0
 
     /**
      * Returns a [Signature] object pre-initialised with the private key corresponding
@@ -98,10 +105,6 @@ abstract class Enclave {
      * for your own thread safety.
      */
     protected open val threadSafe: Boolean get() = false
-
-    private fun receiveFromUntrustedHostInternal(bytes: ByteArray): ByteArray? {
-        return executeReceive { receiveFromUntrustedHost(bytes) }
-    }
 
     /**
      * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
@@ -270,7 +273,7 @@ Received: $attestationReportBody"""
 
         fun onOpen(input: ByteBuffer) {
             enclave.lock.withLock {
-                enclave.enclaveStateManager.transitionStateFrom<EnclaveState.New>(to = EnclaveState.Started)
+                enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
                 val ackReceipt = input.getNullable { getRemainingBytes() }
                 if (ackReceipt != null) {
                     enclave.enclaveMessageHandler.populateAcknowledgedRanges(ackReceipt)
@@ -281,8 +284,8 @@ Received: $attestationReportBody"""
 
         private fun onClose() {
             enclave.lock.withLock {
-                enclave.enclaveStateManager.transitionStateFrom<EnclaveState.Started>(to = EnclaveState.Closed)
-                // Wait until all messages being processed are completed
+                enclave.enclaveStateManager.transitionStateFrom<Started>(to = Closed)
+                // Wait until all receive calls being processed have completed
                 while (enclave.numberReceiveCallsExecuting > 0) {
                     enclave.enclaveQuiescentCondition.await()
                 }
@@ -348,6 +351,8 @@ Received: $attestationReportBody"""
 
 
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
+        private lateinit var sender: Sender
+
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
 
@@ -403,13 +408,11 @@ Received: $attestationReportBody"""
         private val lockObject = Object()
         private var mustSendReceipt = false
         // this map keeps track of acknowledged mail (note: we keep sequence numbers (ranges), not mail ids)
-        private val materialisedAckReceipt = HashMap<DestinationAndTopic,RangeSequence>()
+        private val materialisedAckReceipt = HashMap<PublicKeyAndTopic, RangeSequence>()
         // this map says what sequence number to expect next
-        private val nextExpectedSequences = HashMap<DestinationAndTopic,RangeSequence>()
+        private val nextExpectedSequences = HashMap<PublicKeyAndTopic, RangeSequence>()
         // this map shares instances of RangeSequence (via TargetRangeSequence) with materialisedAckReceipt
         private val mailIdToTargetRangeSequence = HashMap<Long, TargetRangeSequence>()
-
-        private lateinit var sender: Sender
 
         override fun connect(upstream: Sender): EnclaveMessageHandler {
             sender = upstream
@@ -420,7 +423,7 @@ Received: $attestationReportBody"""
         private val callTypeValues = InternalCallType.values()
 
         // Variable so we can compare it in an assertion later.
-        private val receiveFromUntrustedHostCallback = HostCallback(::receiveFromUntrustedHostInternal)
+        private val receiveFromUntrustedHostCallback = HostCallback { executeReceive { receiveFromUntrustedHost(it) } }
 
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
@@ -461,8 +464,11 @@ Received: $attestationReportBody"""
                 // We now have the private key to decrypt the mail body and authenticate the header.
                 Curve25519PrivateKey(entropy)
             }
-            checkMailOrdering(id, mail)
-            this@Enclave.receiveMailInternal(id, mail, routingHint)
+
+            executeReceive {
+                checkMailOrdering(id, mail)
+                receiveMail(id, mail, routingHint)
+            }
 
             /**
              * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
@@ -471,12 +477,17 @@ Received: $attestationReportBody"""
             emitAcknowledgementReceipt()
         }
 
-        private fun onUntrustedHost(stateManager: StateManager<CallState>, hostThreadID: Long, input: ByteBuffer) {
+        private fun onUntrustedHost(stateManager: StateManager<CallState>, hostThreadId: Long, input: ByteBuffer) {
             val state = stateManager.checkStateIs<Receive>()
             checkNotNull(state.callback) {
                 "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
             }
 
+            if (state.callback != receiveFromUntrustedHostCallback) {
+                // If this is a recursive call then we already hold the lock. This assertion is here to document that
+                // fact.
+                check(lock.isHeldByCurrentThread)
+            }
             val response = state.callback.apply(input.getRemainingBytes())
 
             if (response != null) {
@@ -485,7 +496,7 @@ Received: $attestationReportBody"""
                 // lock, because it'll be held whilst calling out to the enclave during an operation which is when
                 // there's actual risk of corruption. By the time we get here the enclave should be done and ready
                 // for the next request.
-                sendToHost(CALL_RETURN, hostThreadID, response.size) { buffer ->
+                sendToHost(CALL_RETURN, hostThreadId, response.size) { buffer ->
                     buffer.put(response)
                 }
             }
@@ -497,7 +508,7 @@ Received: $attestationReportBody"""
 
         private fun checkMailOrdering(mailID: Long, mail: EnclaveMail) {
             synchronized(lockObject) {
-                val key = DestinationAndTopic(mail.authenticatedSender, mail.topic)
+                val key = PublicKeyAndTopic(mail.authenticatedSender, mail.topic)
 
                 // link mailID with acknowledged ranges
                 mailIdToTargetRangeSequence[mailID] = TargetRangeSequence(
@@ -531,10 +542,10 @@ Received: $attestationReportBody"""
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {
-            val hostThreadID = checkNotNull(currentEnclaveCall.get()) {
+            val hostThreadId = checkNotNull(currentEnclaveCall.get()) {
                 "Thread ${Thread.currentThread()} may not attempt to call out to the host outside the context of a call."
             }
-            val stateManager = enclaveCalls.getValue(hostThreadID)
+            val stateManager = enclaveCalls.getValue(hostThreadId)
             val newReceiveState = Receive(callback, receiveFromUntrustedHost = false)
             // We don't expect the enclave to be in the Response state here as that implies a bug since Response is only
             // a temporary holder to capture the return value.
@@ -545,7 +556,7 @@ Received: $attestationReportBody"""
             var response: Response? = null
             try {
                 // This could re-enter the enclave in onReceive, if the user has provided a callback.
-                sendToHost(UNTRUSTED_HOST, hostThreadID, bytes.size) { buffer ->
+                sendToHost(UNTRUSTED_HOST, hostThreadId, bytes.size) { buffer ->
                     buffer.put(bytes)
                 }
             } finally {
@@ -559,6 +570,36 @@ Received: $attestationReportBody"""
                 }
             }
             return response?.bytes
+        }
+
+        private fun <T> executeReceive(lambda: () -> T): T {
+            // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
+            // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
+            // require spotting the absence of something rather than the presence of something, which is hard.
+            // This works even if the host calls back into the enclave on the same stack. However if the host
+            // makes a call on a separate thread, it's treated as a separate call as you'd expect.
+            if (!threadSafe) {
+                lock.withLock {
+                    enclaveStateManager.checkStateIs<Started>()
+                    return lambda.invoke()
+                }
+            } else {
+                lock.withLock {
+                    enclaveStateManager.checkStateIs<Started>()
+                    ++numberReceiveCallsExecuting
+                }
+
+                try {
+                    return lambda.invoke()
+                } finally {
+                    lock.withLock {
+                        --numberReceiveCallsExecuting
+                        if (numberReceiveCallsExecuting == 0) {
+                            enclaveQuiescentCondition.signal()
+                        }
+                    }
+                }
+            }
         }
 
         /**
@@ -631,7 +672,7 @@ Received: $attestationReportBody"""
                     writeInt(AcknowledgementReceiptVersion.value)
                     writeInt(materialisedAckReceipt.size)
                     materialisedAckReceipt.forEach { (key, ranges) ->
-                        writeIntLengthPrefixBytes(key.destination.encoded)
+                        writeIntLengthPrefixBytes(key.publicKey.encoded)
                         writeUTF(key.topic)
                         ranges.write(this)
                     }
@@ -659,7 +700,7 @@ Received: $attestationReportBody"""
                 repeat(numberOfTopics) {
                     val pk = Curve25519PublicKey(dis.readIntLengthPrefixBytes())
                     val topic = dis.readUTF()
-                    val key = DestinationAndTopic(pk, topic)
+                    val key = PublicKeyAndTopic(pk, topic)
 
                     val ranges = RangeSequence()
                     ranges.read(dis)
@@ -692,40 +733,6 @@ Received: $attestationReportBody"""
     //region Mail
     private lateinit var encryptionKeyPair: KeyPair
 
-    private fun receiveMailInternal(id: Long, mail: EnclaveMail, routingHint: String?) {
-        executeReceive { receiveMail(id, mail, routingHint) }
-    }
-
-    private fun <T> executeReceive(lambda: () -> T): T {
-        // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
-        // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
-        // require spotting the absence of something rather than the presence of something, which is hard.
-        // This works even if the host calls back into the enclave on the same stack. However if the host
-        // makes a call on a separate thread, it's treated as a separate call as you'd expect.
-        if (!threadSafe) {
-            lock.withLock {
-                enclaveStateManager.checkStateIs<EnclaveState.Started> { "Enclave cannot receive mails. Enclave is not in the Started state." }
-                return lambda.invoke()
-            }
-        } else {
-            lock.withLock {
-                enclaveStateManager.checkStateIs<EnclaveState.Started> { "Enclave cannot receive mails. Enclave is not in the Started state." }
-                ++numberReceiveCallsExecuting
-            }
-
-            try {
-                return lambda.invoke()
-            } finally {
-                lock.withLock {
-                    --numberReceiveCallsExecuting
-                    if (numberReceiveCallsExecuting == 0) {
-                        enclaveQuiescentCondition.signal()
-                    }
-                }
-            }
-        }
-    }
-    
     /**
      * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted
      * and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
@@ -780,7 +787,7 @@ Received: $attestationReportBody"""
      */
     protected fun postOffice(destinationPublicKey: PublicKey, topic: String): EnclavePostOffice {
         synchronized(postOffices) {
-            return postOffices.computeIfAbsent(DestinationAndTopic(destinationPublicKey, topic)) {
+            return postOffices.computeIfAbsent(PublicKeyAndTopic(destinationPublicKey, topic)) {
                 EnclavePostOfficeImpl(destinationPublicKey, topic, null)
             }
         }
@@ -831,7 +838,7 @@ Received: $attestationReportBody"""
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo, topic: String): EnclavePostOffice {
         enclaveInstanceInfo as EnclaveInstanceInfoImpl
         synchronized(postOffices) {
-            return postOffices.computeIfAbsent(DestinationAndTopic(enclaveInstanceInfo.encryptionKey, topic)) {
+            return postOffices.computeIfAbsent(PublicKeyAndTopic(enclaveInstanceInfo.encryptionKey, topic)) {
                 EnclavePostOfficeImpl(enclaveInstanceInfo.encryptionKey, topic, enclaveInstanceInfo.keyDerivation)
             }
         }
@@ -889,7 +896,7 @@ Received: $attestationReportBody"""
     // sizes within any given topic.
     private val defaultMinSizePolicy = MinSizePolicy.movingAverage()
 
-    private data class DestinationAndTopic(val destination: PublicKey, val topic: String)
+    private data class PublicKeyAndTopic(val publicKey: PublicKey, val topic: String)
     private data class TargetRangeSequence(val range: RangeSequence, val sequenceNumber: Long)
     //endregion
 

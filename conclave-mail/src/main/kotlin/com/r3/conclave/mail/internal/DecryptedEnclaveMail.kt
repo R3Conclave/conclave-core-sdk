@@ -8,7 +8,7 @@ class DecryptedEnclaveMail(
     override val topic: String,
     override val authenticatedSender: PublicKey,
     private val _envelope: ByteArray?,
-    public val privateHeader: ByteArray?,
+    val privateHeader: ByteArray?,
     private val _bodyAsBytes: ByteArray,
 ) : EnclaveMail {
     override val envelope: ByteArray? get() = _envelope?.clone()

@@ -29,7 +29,7 @@ abstract class AttestationTest {
     abstract val enclaveHost: EnclaveHost
 
     class EnclaveInstanceInfoEnclave : Enclave() {
-        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? = enclaveInstanceInfo.serialize()
+        override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray = enclaveInstanceInfo.serialize()
     }
 
     @BeforeEach
@@ -70,9 +70,6 @@ abstract class AttestationTest {
 
     @Test
     fun `EnclaveInstanceInfo matches across host and enclave`() {
-        // TODO Don't run this test with DCAP as ECDSA sig verification doesn't work with Avian. We don't plan to fix
-        //  this but rather we should make sure it works with Graal. However that requires changes to TestEnclaves as it
-        //  only produces Avian enclaves. https://r3-cev.atlassian.net/browse/CON-248.
         assumeFalse((enclaveHost.enclaveInstanceInfo as EnclaveInstanceInfoImpl).attestation is DcapAttestation)
         val eiiFromEnclave = EnclaveInstanceInfo.deserialize(enclaveHost.callEnclave(byteArrayOf())!!)
         val eiiFromHost = enclaveHost.enclaveInstanceInfo
@@ -80,8 +77,7 @@ abstract class AttestationTest {
     }
 
     @Test
-    fun `Ensure the attestation can be run multiple times`() {
-
+    fun `ensure the attestation can be run multiple times`() {
         val host = createMockHost(EnclaveHostMockTest.EnclaveWithHooks::class.java)
         host.start(null, null)
         val onStartupAttestationTimestamp = host.enclaveInstanceInfo.securityInfo.timestamp

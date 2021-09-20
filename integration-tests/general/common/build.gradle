@@ -3,6 +3,12 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
+compileKotlin {
+    kotlinOptions {
+        freeCompilerArgs = [ '-Xopt-in=kotlin.RequiresOptIn' ]
+    }
+}
+
 dependencies {
     api "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
     implementation "org.ow2.asm:asm:$asm_version"

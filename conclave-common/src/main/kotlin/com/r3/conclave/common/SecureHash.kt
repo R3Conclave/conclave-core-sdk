@@ -73,7 +73,7 @@ class SHA256Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
          */
         @JvmStatic
         fun parse(str: String): SHA256Hash {
-            return parseHex(str.toUpperCase()).let {
+            return parseHex(str.uppercase()).let {
                 when (it.size) {
                     32 -> SHA256Hash(it)
                     else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")
@@ -126,7 +126,7 @@ class SHA512Hash private constructor(bytes: ByteArray) : SecureHash(bytes) {
          */
         @JvmStatic
         fun parse(str: String): SHA512Hash {
-            return parseHex(str.toUpperCase()).let {
+            return parseHex(str.uppercase()).let {
                 when (it.size) {
                     64 -> SHA512Hash(it)
                     else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 64 bytes in hex: $str")

@@ -33,7 +33,7 @@ class SetInt(val key: String, val number: Int) : JvmTestTask(), Deserializer<Int
     override fun run(context: RuntimeContext): ByteArray {
         val prev = context.getValue(key) as Int? ?: 0
         context.setValue(key, number)
-        return Json.encodeToString(Int.serializer(), prev!!).toByteArray()
+        return Json.encodeToString(Int.serializer(), prev).toByteArray()
     }
 
     override fun deserialize(encoded: ByteArray): Int {

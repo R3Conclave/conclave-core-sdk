@@ -164,7 +164,7 @@ class EnclaveConstraint {
         result = 31 * result + (productID ?: 0)
         result = 31 * result + (minRevocationLevel ?: 0)
         result = 31 * result + minSecurityLevel.hashCode()
-        result = 31 * result + (maxAttestationAge.hashCode() ?: 0)
+        result = 31 * result + maxAttestationAge.hashCode()
         return result
     }
 

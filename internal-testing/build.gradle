@@ -18,12 +18,3 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
 }
-
-// Include the conclave-enclave fat jar to speed up the generation of the dynamic test enclaves.
-processResources {
-    with copySpec {
-        from project(":conclave-enclave").fatJar
-        into "com/r3/conclave/internaltesting/dynamic"
-        rename { "conclave-enclave-fat.jar" }
-    }
-}

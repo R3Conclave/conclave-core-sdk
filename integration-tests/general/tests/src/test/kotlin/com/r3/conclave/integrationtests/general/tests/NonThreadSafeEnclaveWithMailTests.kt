@@ -6,9 +6,8 @@ import org.junit.jupiter.api.Test
 import java.util.concurrent.CompletableFuture
 
 class NonThreadSafeEnclaveWithMailTests : JvmTest("com.r3.conclave.integrationtests.general.enclave.NonThreadSafeEnclaveWithMail") {
-
     @Test
-    fun notMultiThreadedByDefault() {
+    fun `not multi-threaded by default`() {
         // Run a bunch of threads through the enclave. They will check that only one thread is inside
         // receiveFromUntrustedHost at once and throw if not.
         val callbackFutures = (0..10).map {
@@ -25,8 +24,7 @@ class NonThreadSafeEnclaveWithMailTests : JvmTest("com.r3.conclave.integrationte
             }
         }
 
-        CompletableFuture.allOf(*callbackFutures.toTypedArray())
-            .join()
+        CompletableFuture.allOf(*callbackFutures.toTypedArray()).join()
 
         // Now do it again but with mail.
         val mailFutures = (0..10).map {
@@ -38,7 +36,6 @@ class NonThreadSafeEnclaveWithMailTests : JvmTest("com.r3.conclave.integrationte
             }
         }
 
-        CompletableFuture.allOf(*mailFutures.toTypedArray())
-            .join()
+        CompletableFuture.allOf(*mailFutures.toTypedArray()).join()
     }
 }

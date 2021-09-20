@@ -40,7 +40,7 @@ object NativeLoader {
             }
         }
 
-        val hostLibrariesResourcePath = "com/r3/conclave/host-libraries/${enclaveMode.name.toLowerCase().capitalize()}"
+        val hostLibrariesResourcePath = "com/r3/conclave/host-libraries/${enclaveMode.name.lowercase().replaceFirstChar { it.titlecase() }}"
 
         ClassGraph()
             .whitelistPaths(hostLibrariesResourcePath)

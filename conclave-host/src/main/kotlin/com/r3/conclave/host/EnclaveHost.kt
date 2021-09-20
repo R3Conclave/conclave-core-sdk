@@ -167,7 +167,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private fun findEnclave(className: String): Pair<InputStream?, EnclaveMode> {
             // Look for an SGX enclave image.
             val found = EnclaveMode.values().mapNotNull { mode ->
-                val resourceName = "/${className.replace('.', '/')}-${mode.name.toLowerCase()}.signed.so"
+                val resourceName = "/${className.replace('.', '/')}-${mode.name.lowercase()}.signed.so"
                 val url = EnclaveHost::class.java.getResource(resourceName)
                 url?.let { Pair(it, mode) }
             }
@@ -381,10 +381,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 attestationParameters?.takeIf { enclaveMode.isHardware }
             ))
 
-            // We request an attestation at every startup. This is because in early releases the keys were ephemeral
-            // and changed on restart, but this is no longer true.
-            //
-            // Additionally, the enclave is initialised when it receives its first bytes. We use the request for
+            // The enclave is initialised when it receives its first bytes. We use the request for
             // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
             // for us to query.
             updateAttestation()
@@ -409,14 +406,13 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * has passed and clients may want a more fresh version.
      */
     fun updateAttestation() {
-        val attestation = getAttestation(true)
+        val attestation = getAttestation()
         updateEnclaveInstanceInfo(attestation)
     }
 
-    private fun getAttestation(ignoreCachedData: Boolean): Attestation {
-        val signedQuote = attestationConnection.getSignedQuote(ignoreCachedData)
-        val attestation = attestationService.attestQuote(signedQuote)
-        return attestation
+    private fun getAttestation(): Attestation {
+        val signedQuote = attestationConnection.getSignedQuote(ignoreCachedData = true)
+        return attestationService.attestQuote(signedQuote)
     }
 
     private fun updateEnclaveInstanceInfo(attestation: Attestation) {
@@ -755,6 +751,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             val previousCallState = callStateManager.transitionStateFrom<CallState>(to = intoEnclaveState)
             // Going into a callEnclave, the call state should only be Ready or IntoEnclave.
             check(previousCallState !is Response)
+
             var response: Response? = null
             try {
                 body(threadID)

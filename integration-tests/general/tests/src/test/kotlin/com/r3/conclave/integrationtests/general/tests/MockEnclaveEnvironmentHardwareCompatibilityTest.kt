@@ -2,34 +2,33 @@ package com.r3.conclave.integrationtests.general.tests
 
 import com.google.common.collect.Sets
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1
-import com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.OpaqueBytes
-import kotlin.random.Random
+import com.r3.conclave.common.internal.*
+import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.host.internal.InternalsKt.createHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
-import com.r3.conclave.integrationtests.general.common.*
+import com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave1
+import com.r3.conclave.integrationtests.general.enclave.SecretKeyEnclave2
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import java.lang.IllegalStateException
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.nio.file.Files
 import java.nio.file.Files.copy
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import kotlin.random.Random
 
 /**
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
-
 class MockEnclaveEnvironmentHardwareCompatibilityTest {
     companion object {
-
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
         // key request parameters we're interested in.
         private val secretKeySpecs: List<SecretKeySpec> = Sets.cartesianProduct(
@@ -70,7 +69,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     @BeforeEach
     fun setup() {
         //  We want this test to run only in DEBUG mode
-        assumeTrue(EnclaveMode.DEBUG.name.toLowerCase() == System.getProperty("enclaveMode"))
+        assumeTrue(EnclaveMode.DEBUG.name.lowercase() == System.getProperty("enclaveMode"))
     }
 
     @AfterEach
@@ -121,27 +120,16 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         }
     }
 
-    private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec) : EnclaveHost {
+    private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec): EnclaveHost {
         val enclaveClassName = enclaveSpec.enclaveClass.canonicalName
         // Look for an SGX enclave image.
         val enclaveMode = EnclaveMode.DEBUG
-        val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.toLowerCase()}.signed.so"
-        val url = EnclaveHost::class.java.getResource(resourceName)
-        val found =  Pair(url, enclaveMode)
-        val stream = found.first.openStream()
+        val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
+        val stream = EnclaveHost::class.java.getResource(resourceName)!!.openStream()
 
-        val enclaveFile = try {
-            createTempFile(enclaveClassName, "signed.so")
-        } catch (e: Exception) {
-            throw EnclaveLoadException("Unable to load enclave", e)
-        }
-        try {
-            stream.use { copy(it, enclaveFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
-            return createHost(enclaveMode, enclaveFile.toPath(), enclaveClassName, true)
-        } catch (e: Exception) {
-            enclaveFile.delete()
-            throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
-        }
+        val enclaveFile = Files.createTempFile(enclaveClassName, "signed.so")
+        stream.use { copy(it, enclaveFile, REPLACE_EXISTING) }
+        return createHost(enclaveMode, enclaveFile, enclaveClassName, true)
     }
 
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {

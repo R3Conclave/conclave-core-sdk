@@ -33,7 +33,6 @@ class Sum1ToN(val n: Int) : JvmTestTask(), Deserializer<Int> {
         } finally {
             semaphore.release(n) // in case an exception occurred before releasing the semaphore
         }
-        return Json.encodeToString(Int.serializer(), -1).toByteArray()
     }
 
     override fun deserialize(encoded: ByteArray): Int {
