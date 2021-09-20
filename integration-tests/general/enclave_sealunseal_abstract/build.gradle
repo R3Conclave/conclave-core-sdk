@@ -1,10 +1,10 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'com.r3.conclave.enclave'
 }
 
 dependencies {
+    implementation "com.r3.conclave:conclave-enclave:$conclave_version"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation project(":general:common")
 }

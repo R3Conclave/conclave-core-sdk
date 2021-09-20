@@ -1,12 +1,13 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.r3.conclave.enclave'
 }
 
 dependencies {
     // The test will act as the host and client.
 
-    testImplementation "com.r3.conclave:conclave-client"
+    testImplementation "com.r3.conclave:conclave-client:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 

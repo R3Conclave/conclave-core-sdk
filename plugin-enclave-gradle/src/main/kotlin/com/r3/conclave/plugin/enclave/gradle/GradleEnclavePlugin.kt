@@ -71,6 +71,20 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$sdkVersion")
             target.dependencies.add("testImplementation", "com.r3.conclave:conclave-host:$sdkVersion")
+            // Make sure that the user has specified productID, print friendly error message if not
+            if (!conclaveExtension.productID.isPresent) {
+                throw GradleException(
+                        "Enclave product ID not specified! " +
+                        "Please set the 'productID' property in the build configuration for your enclave.\n" +
+                        "If you're unsure what this error message means, please consult the conclave documentation.")
+            }
+            // Make sure that the user has specified revocationLevel, print friendly error message if not
+            if (!conclaveExtension.revocationLevel.isPresent) {
+                throw GradleException(
+                        "Enclave revocation level not specified! " +
+                        "Please set the 'revocationLevel' property in the build configuration for your enclave.\n" +
+                        "If you're unsure what this error message means, please consult the conclave documentation.")
+            }
         }
 
         val shadowJarTask = target.tasks.withType(ShadowJar::class.java).getByName("shadowJar") { task ->
