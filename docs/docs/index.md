@@ -112,7 +112,11 @@ suitable methods to add all the enclave initialisation logic, and to release the
    
 5. :jigsaw: New feature! The Conclave plugin will now automatically pass all resources from the main source set
    (`enclave/src/main/resources`) to Native Image with no extra config required.
-   
+
+6. The conclave gradle plugin will now check your build configuration for [productID](enclave-configuration.md#conclave-configuration-options)
+   and [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
+   message if they are missing.
+
 ### 1.1
 
 !!! important
