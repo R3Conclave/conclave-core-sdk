@@ -1,22 +1,22 @@
 package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.integrationtests.general.common.tasks.Outliers
+import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.lang.RuntimeException
 
-class ExceptionMustBeCaughtTest : JvmTest(threadSafe = false) {
+class ExceptionMustBeCaughtTest : AbstractEnclaveActionTest() {
     @ParameterizedTest
     @ValueSource(strings = ["Finalizers", "DivideByZero", "NullPointer"])
     fun `exception is thrown, caught and processed successfully inside an enclave`(name: String) {
         try {
-            val action = Outliers(name)
-            val result = sendMessage(action)
+            val result = callEnclave(Outliers(name))
             if (!result.success) fail(result.message)
             println("Passed: $name")
-        } catch (rte: RuntimeException){
+        } catch (rte: RuntimeException) {
             rte.printStackTrace()
             fail(rte.message!!)
         }
@@ -30,14 +30,11 @@ class ExceptionMustBeCaughtTest : JvmTest(threadSafe = false) {
             // exception thrown inside an enclave,
             // propagated to the host as RuntimeException.
             // no return value.
-            val action = Outliers(name)
-            sendMessageNoReply(action)
+            callEnclave(Outliers(name))
             println("Passed: $name")
-        } catch (rte: RuntimeException){
-            closeHost = false
+        } catch (rte: RuntimeException) {
             println("RuntimeException: ${rte.message}")
-        } catch (rte: Throwable){
-            closeHost = false
+        } catch (rte: Throwable) {
             println("Throwable: ${rte.message}")
         }
     }

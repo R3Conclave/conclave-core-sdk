@@ -1,10 +1,10 @@
 package com.r3.conclave.integrationtests.general.common.tasks
 
 import avian.test.*
-
+import com.r3.conclave.integrationtests.general.common.EnclaveContext
 import com.r3.conclave.integrationtests.general.common.TestResult
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 val testCases = mapOf<String, () -> Any?>(
     "AllFloats" to { AllFloats.main(emptyArray()) },
@@ -99,24 +99,16 @@ val disabledTestCases = mapOf<String, () -> Any?>(
 )
 
 @Serializable
-data class AvianTestRunner(val name: String) : JvmTestTask(), Deserializer<TestResult> {
-    override fun run(context: RuntimeContext): ByteArray {
-        val lambda = testCases[name] ?: return response(false, "test not found: $name")
-
-        try {
+data class AvianTestRunner(val name: String) : EnclaveTestAction<TestResult>() {
+    override fun run(context: EnclaveContext, isMail: Boolean): TestResult {
+        val lambda = testCases[name] ?: return TestResult(false, "test not found: $name")
+        return try {
             lambda()
+            TestResult(true, name)
         } catch (error: Throwable) {
-            return response(false, "$error\n${error.stackTrace.joinToString("\n")}")
+            TestResult(false, "$error\n${error.stackTrace.joinToString("\n")}")
         }
-
-        return response(true, name)
     }
 
-    override fun deserialize(encoded: ByteArray): TestResult {
-        return decode(encoded)
-    }
-
-    private fun response(success: Boolean, error: String): ByteArray {
-        return Json.encodeToString(TestResult.serializer(), TestResult(success, error)).toByteArray()
-    }
+    override fun resultSerializer(): KSerializer<TestResult> = TestResult.serializer()
 }

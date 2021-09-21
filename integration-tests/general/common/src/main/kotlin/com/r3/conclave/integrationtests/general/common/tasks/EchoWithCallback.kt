@@ -1,24 +1,19 @@
 package com.r3.conclave.integrationtests.general.common.tasks
 
+import com.r3.conclave.integrationtests.general.common.EnclaveContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ByteArraySerializer
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.builtins.serializer
 
 @Serializable
-class EchoWithCallback(val data: ByteArray) : JvmTestTask(), Deserializer<ByteArray> {
-    override fun run(context: RuntimeContext): ByteArray {
+class EchoWithCallback(val data: ByteArray) : EnclaveTestAction<Unit>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) {
         var echoBack = data
         while (true) {
-            val response = context.callHost(echoBack)
-            if (response == null) {
-                val encodeToString = Json.encodeToString(ByteArraySerializer(), byteArrayOf())
-                return encodeToString.toByteArray()
-            }
+            val response = context.callUntrustedHost(echoBack) ?: return
             echoBack = response
         }
     }
 
-    override fun deserialize(encoded: ByteArray): ByteArray {
-        return decode(encoded)
-    }
+    override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }

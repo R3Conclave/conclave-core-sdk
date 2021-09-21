@@ -1,0 +1,8 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    api project(":general:common")
+    api "com.r3.conclave:conclave-enclave:$conclave_version"
+}

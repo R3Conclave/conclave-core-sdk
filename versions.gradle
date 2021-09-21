@@ -8,6 +8,7 @@ ext {
     conclave_version = '1.2-SNAPSHOT'
     kotlin_version = '1.5.30'
     kotlinx_serialization_json_version = '1.0.1'
+    kotlinx_serialization_protobuf_version = '1.2.2'
     asm_version = '7.3.1'
     jackson_version = '2.10.2'
     log4j_version = '2.13.0'

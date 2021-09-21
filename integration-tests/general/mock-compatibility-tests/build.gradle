@@ -1,0 +1,22 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation project(":general:common-test")
+    testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation project(":general:common-enclave")
+    testImplementation project(":general:threadsafe-enclave")
+    testImplementation project(":general:threadsafe-enclave-same-signer")
+    testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
+}
+
+test {
+    systemProperty 'enclaveMode', enclaveMode
+}

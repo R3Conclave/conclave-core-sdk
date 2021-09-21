@@ -1,0 +1,10 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    implementation project(":general:common")
+    implementation "com.r3.conclave:conclave-host:$conclave_version"
+    implementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    implementation "org.assertj:assertj-core:$assertj_version"
+}

@@ -1,32 +1,85 @@
 package com.r3.conclave.integrationtests.general.tests
 
-import com.r3.conclave.integrationtests.general.common.tasks.Sum1ToN
-import com.r3.conclave.integrationtests.general.common.tasks.Wait
-import com.r3.conclave.integrationtests.general.common.tasks.threadWithFuture
-import com.r3.conclave.integrationtests.general.common.tasks.toByteArray
+import com.r3.conclave.integrationtests.general.common.tasks.*
+import com.r3.conclave.integrationtests.general.common.threadWithFuture
+import com.r3.conclave.integrationtests.general.common.toByteArray
+import com.r3.conclave.integrationtests.general.common.toInt
+import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
+import java.util.stream.IntStream
+import kotlin.concurrent.withLock
+import kotlin.streams.toList
 
-class ThreadSafeEnclaveTests : JvmTest(threadSafe = true) {
+class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave") {
+    @Test
+    fun `concurrent calls into the enclave`() {
+        val n = 10000
+        callEnclave(SetMaxCallCount(n))
+
+        val sum = IntStream.rangeClosed(1, n)
+            .parallel()
+            .mapToObj { callEnclave(ConcurrentCallsIntoEnclaveAction(it)) }
+            .toList()
+            .single { it > 0 }
+        assertThat(sum).isEqualTo((n * (n + 1)) / 2)
+    }
+
+    @Test
+    fun `concurrent calls into the enclave with callbacks`() {
+        val n = 100
+        val sums = IntStream.rangeClosed(1, n)
+            .parallel()
+            .map { i ->
+                var sum = 0
+                callEnclave(RepeatedOcallsAction(i)) {
+                    sum += it.toInt() + 1
+                    null
+                }
+                sum
+            }
+            .toList()
+        assertThat(sums).isEqualTo((1..n).map { (it * (it + 1)) / 2 })
+    }
+
+    @Test
+    fun `TCS allocation policy`() {
+        val tcs = 10
+        // launch #of host threads exceeding TCSNum
+        val lock = ReentrantLock()
+        // Check that TCS are NOT by default bound to application threads
+        val concurrentCalls = tcs + 20
+        val ongoing = CountDownLatch(concurrentCalls)
+
+        val futures = (1..concurrentCalls).map {
+            threadWithFuture {
+                lock.withLock {
+                    val response = callEnclave(Increment(it))
+                    assertThat(response).isEqualTo(it + 1)
+                }
+                ongoing.countDown()
+                ongoing.await()
+            }
+        }
+        futures.forEach { it.join() }
+    }
 
     @Test
     fun `TCS reallocation`() {
         repeat(3) {
-            // using atomic here due to the bug with synchronized block
-            // https://r3-cev.atlassian.net/browse/CON-345
             val callCount = AtomicInteger(0)
-            val responses = { _: ByteArray ->
-                callCount.incrementAndGet()
-                null
-            }
 
-            val futures = (1..Wait.PARALLEL_ECALLS).map { n ->
+            val futures = (1..TcsReallocationAction.PARALLEL_ECALLS).map { n ->
                 threadWithFuture {
-                    val wait = Wait(n.toByteArray())
-                    sendMessage(wait, responses)
+                    callEnclave(TcsReallocationAction(n.toByteArray())) {
+                        callCount.incrementAndGet()
+                        null
+                    }
                 }
             }
             futures.forEach { it.join() }
@@ -35,10 +88,9 @@ class ThreadSafeEnclaveTests : JvmTest(threadSafe = true) {
     }
 
     @Test
-    fun `threading in enclave`() {
+    fun `threading inside enclave`() {
         val n = 8 // <= defaultTCSNum(10)
-        val calc = Sum1ToN(n)
-        val result = sendMessage(calc)
+        val result = callEnclave(TooManyThreadsRequestedAction(n))
         assertThat(result).isEqualTo((n * (n + 1)) / 2)
     }
 
@@ -47,11 +99,8 @@ class ThreadSafeEnclaveTests : JvmTest(threadSafe = true) {
     @Test
     fun `exception is thrown if too many threads are requested`() {
         val n = 15 // > defaultTCSNum(10)
-        val calc = Sum1ToN(n)
         assertThatThrownBy {
-            sendMessage(calc)
+            callEnclave(TooManyThreadsRequestedAction(n))
         }.hasMessageContaining("The enclave ran out of TCS slots when calling from a new thread into the enclave.") // SGX_ERROR_OUT_OF_TCS
-
-        closeHost = false
     }
 }
