@@ -25,8 +25,9 @@ subprojects {
 
     def type = name.drop("native-substratevm-".size()).capitalize()
     tasks.getByName("jar") { Jar task ->
-        task.dependsOn(":cpp:compileSubstrateVMLib$type")
+        task.dependsOn(":cpp:compileSubstrateVMLib$type", ":cpp:compileFatFsEnclave$type")
         def substrateVmBuildDir = "$cppBuildDir/$type/substratevm"
+        def fatfsEnclaveBuildDir = "$cppBuildDir/$type/fatfs/enclave"
         def jvmEdlBuildDir = "$cppBuildDir/$type/jvm-edl"
         def jvmCommonBuildDir = "$cppBuildDir/$type/jvm-host-enclave-common"
         def jvmEnclaveCommonBuildDir = "$cppBuildDir/$type/jvm-enclave-common"
@@ -35,6 +36,9 @@ subprojects {
         task.into "com/r3/conclave/substratevm/$type", {
             from(substrateVmBuildDir) {
                 include "libsubstratevm.a"
+            }
+            from(fatfsEnclaveBuildDir) {
+	        include "libfatfs_enclave.a"
             }
             from(jvmEdlBuildDir) {
                 include "libjvm_enclave_edl.a"

@@ -8,6 +8,7 @@ apply from: '../common.gradle'
 conclave {
     productID = 1
     revocationLevel = 0
-    maxHeapSize = "268435456"
-    maxStackSize = "2097152"
+    maxHeapSize = "256m"
+    maxStackSize = "2m"
+    fileSystemSize = "64m"
 }

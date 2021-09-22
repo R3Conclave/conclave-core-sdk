@@ -8,8 +8,9 @@ extern "C" {
 
 typedef uint32_t mode_t;
 
-int __fxstat64_impl(int ver, int fildes, struct stat64 * stat_buf);
-int __xstat64_impl(int ver, const char * path, struct stat64 * stat_buf);
+    int __fxstat64_impl(int ver, int fildes, struct stat64 * stat_buf, int& err);
+    int __xstat64_impl(int ver, const char * path, struct stat64 * stat_buf, int& err);
+    int mkdir_impl(const char* path, mode_t mode);
 
 #ifdef __cplusplus
 }

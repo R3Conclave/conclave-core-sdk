@@ -100,6 +100,9 @@ open class NativeImage @Inject constructor(
     val maxHeapSize: Property<String> = objects.property(String::class.java)
 
     @get:Input
+    val fileSystemSize: Property<String> = objects.property(String::class.java)
+
+    @get:Input
     val supportLanguages: Property<String> = objects.property(String::class.java)
 
     @get:Input
@@ -114,32 +117,29 @@ open class NativeImage @Inject constructor(
     @get:InputDirectory
     val capCache: RegularFileProperty = objects.fileProperty()
 
-    private fun defaultOptions() = listOf(
-        "--no-fallback",
-        "--no-server",
-        "-H:+UseStaticLinking",
-        "-H:+ExportStaticSymbols",
-        "-H:+ExcludeLoadingNetwork",
-        "-H:ExcludeLibraries=pthread,dl,rt,z",
-        "-H:-SpawnIsolates",
-        "-H:+ForceNoROSectionRelocations",
-        // "-H:AlignedHeapChunkSize=4096",
-        "-R:MaxHeapSize=" + calculateMaxHeapSize(GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())),
-        "-R:StackSize=" + calculateMaxStackSize(),
-        "--enable-all-security-services",
-        /*
-         * Explicitly set Jimfs classes and its guava dependency to initialize at build time,
-         * otherwise NativeImage claims they were unintentionally initialized at build time and errors.
-         * These classes are being initialized at build time since the new default filesystem is being
-         * instantiated during Graal's build.
-         */
-        "--initialize-at-build-time=com.r3.conclave.shaded.com.google.common",
-        "--initialize-at-build-time=com.r3.conclave.filesystem.jimfs",
-        "-H:-AddAllFileSystemProviders",
-        "--features=com.oracle.svm.core.jdk.DefaultFileSystemFeature",
-        "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
-        "-H:+UseCAPCache"
-    )
+    private fun defaultOptions(): List<String> {
+        val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
+        val fileSystemSizeBytes = GenerateEnclaveConfig.getSizeBytes(fileSystemSize.get())
+
+        return listOf(
+            "--no-fallback",
+            "--no-server",
+            "-H:+UseStaticLinking",
+            "-H:+ExportStaticSymbols",
+            "-H:+ExcludeLoadingNetwork",
+            "-H:ExcludeLibraries=pthread,dl,rt,z",
+            "-H:-SpawnIsolates",
+            "-H:+ForceNoROSectionRelocations",
+            // "-H:AlignedHeapChunkSize=4096",
+            "-R:MaxHeapSize=" + calculateMaxHeapSize(maxHeapSizeBytes),
+            "-R:StackSize=" + calculateMaxStackSize(),
+            "-Dcom.r3.conclave.fatfs.filesystemsize=$fileSystemSizeBytes",
+            "--enable-all-security-services",
+            "--initialize-at-build-time=com.r3.conclave.enclave.internal.fatfs",
+            "-H:-AddAllFileSystemProviders",
+            "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
+            "-H:+UseCAPCache")
+    }
 
     private val compilerOptions get() = listOf(
             "-H:CCompilerOption=-B${ldPath.get().asFile.parentFile.absolutePath}",

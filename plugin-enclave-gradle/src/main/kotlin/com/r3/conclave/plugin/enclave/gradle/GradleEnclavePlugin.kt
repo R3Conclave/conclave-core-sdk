@@ -251,6 +251,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.libraryPath.set(target.file(sgxDirectory))
                 task.libraries.from(
                         "$substrateDependenciesPath/libsubstratevm.a",
+                        "$substrateDependenciesPath/libfatfs_enclave.a",
                         "$substrateDependenciesPath/libjvm_host_enclave_common_enclave.a",
                         "$substrateDependenciesPath/libjvm_enclave_edl.a",
                         "$substrateDependenciesPath/libz.a"
@@ -269,6 +270,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.serializationConfigurationFiles.from(conclaveExtension.serializationConfigurationFiles)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+                task.fileSystemSize.set(conclaveExtension.fileSystemSize)
                 task.supportLanguages.set(conclaveExtension.supportLanguages)
                 task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
                 task.outputEnclave.set(unsignedEnclaveFile)

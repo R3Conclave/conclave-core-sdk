@@ -1,11 +1,5 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm'
-    id 'org.jetbrains.kotlin.plugin.serialization'
-}
-
-// TODO move the mock data structures to a more appropriate module
-dependencies {
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
+    id 'java'
 }
 
 jar {

@@ -12,4 +12,5 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
+    maxThreads = 10
 }

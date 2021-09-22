@@ -147,10 +147,6 @@ bool FileManager::exists(std::string filename) {
 }
 
 int FileManager::allocateHandle() {
-    // This variable is unlikely to ever wrap but check just in case.
-    while (files_.find(next_handle_) != files_.end()) {
-        ++next_handle_;
-    }
     return next_handle_++;
 }
 

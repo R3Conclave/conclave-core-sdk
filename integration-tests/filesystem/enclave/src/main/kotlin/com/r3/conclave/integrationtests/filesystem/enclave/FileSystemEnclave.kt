@@ -4,19 +4,28 @@ import com.google.protobuf.Int32Value
 import com.google.protobuf.Int64Value
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.integrationtests.filesystem.common.proto.Request
-import com.r3.conclave.integrationtests.filesystem.common.proto.StringList
-import sun.nio.fs.DefaultFileSystemProvider
 import java.io.*
 import java.net.URL
 import java.nio.channels.ByteChannel
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
-import java.nio.file.spi.FileSystemProvider
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import kotlin.collections.forEachIndexed
+import kotlin.collections.map
+import kotlin.collections.plus
+import kotlin.collections.set
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeText
+
 
 class FileSystemEnclave : Enclave() {
+
+    companion object {
+        const val NUM_THREADS = 9
+    }
 
     private val inputStreams = ConcurrentHashMap<Int, InputStream>()
     private val outputStreams = ConcurrentHashMap<Int, OutputStream>()
@@ -92,7 +101,7 @@ class FileSystemEnclave : Enclave() {
                 byteArrayOf(fis.fd.valid().toByte())
             }
 
-            Request.Type.JIMFS_INPUT_STREAM_OPEN -> {
+            Request.Type.INPUT_STREAM_OPEN -> {
                 val inputStream = URL("file://${request.path}").openStream()
                 inputStreams[request.uid] = inputStream
                 return inputStream.toString().toByteArray()
@@ -162,26 +171,64 @@ class FileSystemEnclave : Enclave() {
                 inputStream.javaClass.name.toByteArray()
             }
 
-            Request.Type.FILE_SYSTEMS_GET_DEFAULT -> {
-                FileSystems.getDefault().toString().toByteArray()
-            }
-            Request.Type.FILE_SYSTEMS_GET_DEFAULT_PROVIDER -> {
-                FileSystems.getDefault().provider().toString().toByteArray()
-            }
-
-            Request.Type.FILE_SYSTEM_PROVIDER_INSTALLED_PROVIDERS -> {
-                val builder = StringList.newBuilder()
-                FileSystemProvider.installedProviders().forEach {
-                    builder.addValues(it.toString())
+            Request.Type.MANY_FILES_READ_WRITE -> {
+                //  These are not really Java threads, just reusing the terminology for consistency
+                //    with the tests below
+                val numFiles = NUM_THREADS
+                repeat(numFiles) { i ->
+                    Paths.get("test_file_$i.txt").writeText("Dummy text from thread $i\n")
                 }
-                builder.build().toByteArray()
+
+                var allByteArray = byteArrayOf(numFiles.toByte())
+
+                repeat(numFiles) { i ->
+                    allByteArray += Paths.get("test_file_$i.txt").readBytes()
+                }
+                allByteArray
             }
 
-            Request.Type.DEFAULT_FILE_SYSTEM_PROVIDER_CREATE -> {
-                DefaultFileSystemProvider.create().toString().toByteArray()
+            Request.Type.MULTI_THREAD_MANY_FILES_READ_WRITE -> {
+                val executor = Executors.newFixedThreadPool(NUM_THREADS)
+                val futures = (0 until NUM_THREADS).map { i ->
+                    executor.submit {
+                        Paths.get("test_file_$i.txt").writeText("Dummy text from thread $i\n")
+                    }
+                }
+                var allThreadFilesContent = byteArrayOf(NUM_THREADS.toByte())
+
+                futures.forEachIndexed{ i, it_future ->
+                    it_future.get()
+                    allThreadFilesContent += Paths.get("test_file_$i.txt").readBytes()
+                }
+                executor.shutdown()
+                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    executor.shutdownNow()
+                }
+
+                allThreadFilesContent
             }
 
-            else -> {
+            Request.Type.MULTI_THREAD_SINGLE_FILE_READ_WRITE -> {
+                val executor = Executors.newFixedThreadPool(NUM_THREADS)
+                val raf = RandomAccessFile("test_file.txt", "rws")
+                val futures = (0 until NUM_THREADS).map { i ->
+                    executor.submit {
+                        val text = "Dummy text from thread $i\n"
+                        raf.write(text.toByteArray())
+                    }
+                }
+                futures.forEach{ it_future ->
+                    it_future.get()
+                }
+                executor.shutdown()
+                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    executor.shutdownNow()
+                }
+
+                var allThreadFilesContent = byteArrayOf(NUM_THREADS.toByte())
+                allThreadFilesContent += Paths.get("test_file.txt").readBytes()
+                allThreadFilesContent
+            } else -> {
                 throw IllegalArgumentException("Unknown request type: ${request.type}")
             }
         }

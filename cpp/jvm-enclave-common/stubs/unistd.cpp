@@ -16,7 +16,6 @@ STUB(geteuid);
 STUB(getgid);
 STUB(gethostname);
 STUB(lseek);
-STUB(lstat);
 STUB(pathconf);
 STUB(readlink);
 STUB(_exit);
@@ -37,18 +36,17 @@ extern "C" {
 extern unsigned long __HeapSize;
 extern unsigned long __ImageBase;
 unsigned long heap_size = (unsigned long)((unsigned long long)&__HeapSize - (unsigned long long)&__ImageBase);
-off64_t lseek64_impl(int fd, off64_t offset, int whence);
 
-int access(const char *pathname, int) {
-    // SubstrateVM checks for access to the random device. Just let that
-    // succeed
+int access(const char *pathname, int mode) {
     enclave_trace("access(%s)\n", pathname);
+    
     if (conclave::FileManager::instance().exists(pathname)) {
         return 0;
-    }
-    else {
-        errno = -EPERM;
-        return -1;
+    } else {
+        int err = 0;
+        const int res = access_impl(pathname, mode, err);
+	errno = err;
+	return res;
     }
 }
 
@@ -116,16 +114,11 @@ ssize_t write(int fd, const void *buf, size_t count) {
 
 int close(int handle) {
     enclave_trace("close\n");
+
     if (!conclave::FileManager::instance().close(handle)) {
         return 0;
     }
-    close_impl(handle);
-    return 0;
-}
-
-int rmdir(const char* path) {
-    enclave_trace("rmdir\n");
-    return 0;
+    return close_impl(handle);
 }
 
 int chdir(const char* path) {
@@ -141,7 +134,7 @@ int dup(int oldfd) {
 
 int dup2(int fd1, int fd2) {
     enclave_trace("dup2\n");
-    return -1;
+    return dup2_impl(fd1, fd2);
 }
 
 pid_t fork() {
@@ -230,9 +223,20 @@ long syscall(long number, ...) {
 
 int unlink(const char* pathname) {
     enclave_trace("unlink(%s)\n", pathname);
-    return 0;
+    int err = 0;
+    const int res = rmdir_impl(pathname, err);
+    errno = err;
+    return res;
 }
 
+int rmdir(const char* pathname) {
+    enclave_trace("rmdir(%s)\n", pathname);
+    int err = 0;
+    const int res = rmdir_impl(pathname, err);
+    errno = err;
+    return res;
+}
+    
 int fsync(int fd) {
     enclave_trace("fsync\n");
     return 0;

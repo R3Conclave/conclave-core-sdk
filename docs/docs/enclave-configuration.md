@@ -40,6 +40,7 @@ conclave {
     revocationLevel = 0                 // Mandatory
     maxHeapSize = "256m"
     maxStackSize = "2m"
+    fileSystemSize = "64m"
     maxThreads = 10
     supportLanguages = ""
     reflectionConfigurationFiles.from("config.json")
@@ -182,6 +183,17 @@ thread that runs inside the enclave.
 !!! tip
     As with `maxHeapSize`, the size is specified in bytes but you can put a `k`, `m` or `g` after the value to 
     specify it in kilobytes, megabytes or gigabytes respectively.
+
+### fileSystemSize
+_Default:_ `64m`
+
+This is a setting to specify the maximum size of the in-memory filesystem.
+
+You can use this filesystem as if it were a FAT drive in the Enclave memory.
+
+!!! tip
+As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
+after the value to specify it in kilobytes, megabytes or gigabytes respectively.
 
 ### supportLanguages
 _Default:_ `""`

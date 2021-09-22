@@ -234,10 +234,23 @@ http://hg.openjdk.java.net/jdk8/jdk8/file/1773f1fd0fac/LICENSE
 Any source files required to be open-sourced under the terms of this
 license can be found in the supplied sources.zip file.
 
-**[Jimfs](https://github.com/google/jimfs)**
+**[FatFs](http://elm-chan.org/fsw/ff/00index_e.html)**
 
-Copyright 2013 Google Inc.
-Apache 2: https://github.com/google/jimfs/blob/master/LICENSE
+Copyright (C) 20xx, ChaN, all right reserved.
+
+FatFs module is an open source software. Redistribution and use of FatFs in
+source and binary forms, with or without modification, are permitted provided
+that the following condition is met:
+
+1. Redistributions of source code must retain the above copyright notice,
+    this condition and the following disclaimer.
+
+This software is provided by the copyright holder and contributors "AS IS"
+and any warranties related to this software are DISCLAIMED.
+The copyright owner or contributors be NOT LIABLE for any damages caused
+by use of this software.
+
+BSD style license: http://elm-chan.org/fsw/ff/doc/appnote.html#license
 
 **[OpenSSL](https://github.com/openssl/openssl)**
 

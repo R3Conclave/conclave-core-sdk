@@ -15,6 +15,7 @@ class JarTest {
             val prefix = "com/r3/conclave/substratevm/$build"
             return mutableListOf(
                 "$prefix/libsubstratevm.a",
+                "$prefix/libfatfs_enclave.a",
                 "$prefix/libjvm_host_enclave_common_enclave.a",
                 "$prefix/libjvm_enclave_edl.a",
                 "$prefix/libjvm_enclave_common.a",

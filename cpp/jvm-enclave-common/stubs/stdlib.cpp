@@ -41,7 +41,7 @@ char *realpath(const char *path, char *resolved_path) {
     }
     if (!resolved_path) {
         // The caller is responsible for freeing this. See https://man7.org/linux/man-pages/man3/realpath.3.html
-        resolved_path = (char*)malloc(resolved.size() + 1);
+        resolved_path = (char*)calloc(resolved.size() + 1, sizeof(char));
     }
     if (resolved_path) {
         // Ideally we should restrict this to PATH_MAX but we don't know what value of PATH_MAX

@@ -30,7 +30,8 @@ conclave {
         signingType = dummyKey
     }
 
-    maxHeapSize = "4g"
+    maxHeapSize = "5g"
+    fileSystemSize = "512m"
     reflectionConfigurationFiles.from("reflect-config.json")
     serializationConfigurationFiles.from("serialization-config.json")
 }

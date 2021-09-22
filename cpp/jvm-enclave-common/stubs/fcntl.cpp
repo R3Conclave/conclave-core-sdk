@@ -7,23 +7,22 @@
 
 extern "C" {
 
-int fcntl(int fd, int, ... ) {
-    jni_throw("STUB: fcntl(%d)", fd);
-    errno = -ENOSYS;
-    return -1;
-}
-
-int open(const char* __file, int oflag) {
-    conclave::File* file = conclave::FileManager::instance().open(__file);
-    if (file) {
-        return file->handle();
+    int fcntl(int fd, int, ... ) {
+	jni_throw("STUB: fcntl(%d)", fd);
+	errno = -ENOSYS;
+	return -1;
     }
-    int fd = conclave::FileManager::instance().allocateHandle();
-    return open_impl(__file, oflag, fd);
-}
 
-int open64 (const char* __file, int oflag, ...) {
-    return open(__file, oflag);
-}
+    int open(const char* file_path, int oflag) {
+	conclave::File* file = conclave::FileManager::instance().open(file_path);
 
+	if (file) {
+	    return file->handle();
+	}
+	return open_impl(file_path, oflag);
+    }
+
+    int open64 (const char* file_path, int oflag, ...) {
+	return open(file_path, oflag);
+    }
 }

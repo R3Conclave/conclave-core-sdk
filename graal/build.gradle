@@ -3,11 +3,9 @@ plugins {
 }
 
 def graalMajorMinorVersion = graal_version.substring(0, graal_version.length() - 2)
-def filesystemShadowJarTask = (Task) project.tasks.getByPath(':filesystem:shadowJar')
 task cloneAndPatchRepository(type: Exec) {
-    dependsOn filesystemShadowJarTask
-    inputs.files("clone.sh", "patches/graal_${graalMajorMinorVersion}.patch", filesystemShadowJarTask.getOutputs())
-    commandLine "${project.projectDir}/clone.sh", "$graalMajorMinorVersion", filesystemShadowJarTask.getOutputs().files.singleFile.toPath().toString()
+    inputs.files("clone.sh", "patches/graal_${graalMajorMinorVersion}.patch")
+    commandLine "${project.projectDir}/clone.sh", "$graalMajorMinorVersion"
     outputs.dir("${project.buildDir}/graal")
     workingDir "${project.buildDir}"
 }

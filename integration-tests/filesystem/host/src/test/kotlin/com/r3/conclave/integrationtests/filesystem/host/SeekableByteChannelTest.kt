@@ -10,8 +10,7 @@ class SeekableByteChannelTest : FileSystemEnclaveTest() {
 
     private class Handler(private val uid: Int, path: String) : AutoCloseable {
         init {
-            val reply = request(type = Request.Type.BYTE_CHANNEL_DELETE_ON_CLOSE, uid = uid, path = path)
-            assertThat(String(reply!!)).contains("com.r3.conclave.filesystem.jimfs.JimfsFileChannel@")
+            request(type = Request.Type.BYTE_CHANNEL_DELETE_ON_CLOSE, uid = uid, path = path)
         }
 
         override fun close() {
@@ -20,7 +19,6 @@ class SeekableByteChannelTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Disabled("DELETE_ON_CLOSE not supported")
     @Test
     fun byteChannelDeleteOnClose() {
         val path = "/bytechannel-delete-on-close.data"

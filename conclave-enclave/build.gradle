@@ -16,10 +16,7 @@ dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     implementation "org.graalvm.sdk:graal-sdk:$graal_version"
-    implementation project(":filesystem")
-
     testImplementation project(":internal-testing")
-    testImplementation project(":cpp:jvm-enclave-common")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     // ASM: byte code manipulation library
@@ -36,11 +33,4 @@ task fatJar(type: ShadowJar) {
             project.configurations.runtimeClasspath,
             project(":conclave-common").configurations.compileClasspath
     ]
-}
-
-test {
-    doFirst {
-        def jvmEnclaveCommonJarTask = tasks.getByPath(":cpp:jvm-enclave-common:jar")
-        systemProperty 'jvmEnclaveCommonJarPath', jvmEnclaveCommonJarTask.outputs.files.asPath
-    }
 }

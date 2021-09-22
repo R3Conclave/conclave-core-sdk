@@ -43,6 +43,7 @@ static String compileTaskNameHost(type) { return "compileHost$type" }
 static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
 static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
 static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
+static String compileTaskNameFatFsEnclave(type) { return "compileFatFsEnclave$type" }
 static String runCppUnitTestsTaskName(type) { return "runCppUnitTests$type" }
 static String symlinkTaskName(from, to) { return "symlink${from}To$to" }
 static String cmakeBuildType(type) { return "-DCMAKE_BUILD_TYPE=$type" }
@@ -127,7 +128,7 @@ for (type in types) {
             )
         }
     }
-
+ 
     tasks.create(compileTaskNameSubstrateVMLib(type), Exec) {
         dependsOn(createCmakeTaskName(type), generateEnclaveJniHeaders)
 
@@ -136,6 +137,17 @@ for (type in types) {
         commandLine("/usr/bin/env", "cmake",
                 "--build", buildDirectory(type),
                 "--target", "substratevm"
+        )
+    }
+
+    tasks.create(compileTaskNameFatFsEnclave(type), Exec) {
+        dependsOn(createCmakeTaskName(type), generateEnclaveJniHeaders)
+
+        workingDir(buildDirectory(type))
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", buildDirectory(type),
+                "--target", "fatfs_enclave"
         )
     }
 

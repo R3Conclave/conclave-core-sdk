@@ -70,8 +70,9 @@ class FilesTest : FileSystemEnclaveTest() {
 
     private class Handler(private val uid: Int, path:String) : Closeable {
         init {
-            val reply = request(type = Request.Type.FILES_NEW_INPUT_STREAM, uid = uid, path = path)
-            assertThat(String(reply!!)).startsWith("com.r3.conclave.filesystem.jimfs.JimfsInputStream@")
+            val replyBytes = request(type = Request.Type.FILES_NEW_INPUT_STREAM, uid = uid, path = path)
+            val reply = String(replyBytes!!)
+            assertThat(reply).startsWith("sun.nio.ch.ChannelInputStream")
         }
 
         fun readSingleByte() {
@@ -87,8 +88,10 @@ class FilesTest : FileSystemEnclaveTest() {
 
     private class FilesNewOutputStreamHandler(private val uid: Int, path: String) : AutoCloseable {
         init {
-            val reply = request(type = Request.Type.FILES_NEW_OUTPUT_STREAM_DELETE_ON_CLOSE, uid = uid, path = path)
-            assertThat(String(reply!!)).startsWith("com.r3.conclave.filesystem.jimfs.JimfsOutputStream@")
+            val replyBytes =
+                request(type = Request.Type.FILES_NEW_OUTPUT_STREAM_DELETE_ON_CLOSE, uid = uid, path = path)
+            val reply = String(replyBytes!!)
+            assertThat(reply).startsWith("java.nio.channels.Channels")
         }
 
         override fun close() {
@@ -153,7 +156,6 @@ class FilesTest : FileSystemEnclaveTest() {
         filesDelete(path)
     }
 
-    @Disabled("Accessing random devices via Files.newInputStream is not supported")
     @ParameterizedTest
     @ValueSource(strings = ["/dev/random", "/dev/urandom"])
     fun readRandomDevice(device: String) {
@@ -162,7 +164,6 @@ class FilesTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Disabled("DELETE_ON_CLOSE not supported")
     @Test
     fun outputStreamDeleteOnClose() {
         val path = "/fos-delete-on-close.data"

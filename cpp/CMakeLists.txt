@@ -28,3 +28,4 @@ add_subdirectory(jvm-host)
 add_subdirectory(jvm-host-shared)
 
 add_subdirectory(substratevm)
+add_subdirectory(fatfs/enclave)
