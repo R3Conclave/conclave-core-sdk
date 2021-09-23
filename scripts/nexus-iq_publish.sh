@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-if [ $# -ne 2 ]
+if [ $# -ne 3 ]
   then
-    echo "usage: nexus-iq_publish.sh [login] [password]"
+    echo "usage: nexus-iq_publish.sh [login] [password] [build-stage]"
     exit 1
 fi
 
@@ -21,6 +21,7 @@ nexus-iq-cli \
     -s https://nexusiq.dev.r3.com \
     -i conclave_sdk \
     -a $1:$2 \
+    -t $3 \
     -r "${script_dir}/../build/nexus-iq/nexus-iq_report.json" \
     "${script_dir}/../build/distributions/conclave-sdk-${version}.zip"
 

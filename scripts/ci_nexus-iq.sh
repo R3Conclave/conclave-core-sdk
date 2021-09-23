@@ -8,4 +8,4 @@ source ${script_dir}/ci_build_common.sh
 loadBuildImage
 
 # Build the SDK and publish it into Nexus-IQ
-runDocker com.r3.sgx/sgxjvm-build "./scripts/nexus-iq_publish.sh $1 $2"
+runDocker com.r3.sgx/sgxjvm-build "./scripts/nexus-iq_publish.sh $1 $2 $3"
