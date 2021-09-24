@@ -106,7 +106,7 @@ ENV LABSJDK_HOME        /opt/labsjdk-ce-$LABSJDK_VERSION-jvmci-$JVMCI_VERSION
 ENV JVMCI_FILE          openjdk-8u272+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
 ENV JVMCI_HOME          /opt/openjdk1.8.0_272-jvmci-$JVMCI_VERSION
 ENV MX_HOME             /opt/mx-$MX_VERSION
-ENV SGX_SDK_VERSION     2.12
+ENV SGX_SDK_VERSION     2.14
 
 # Linux SGX mitigation binaries
 RUN curl -sSL -o /opt/as.ld.objdump.gold.r3.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.gold.r3.tar.gz

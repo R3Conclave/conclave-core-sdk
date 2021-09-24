@@ -117,6 +117,10 @@ suitable methods to add all the enclave initialisation logic, and to release the
    and [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
    message if they are missing.
 
+7. The SGX SDK that Conclave is built upon has been updated to version 2.14. This provides bug fixes and other improvements.
+See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release) 
+for more details.
+
 ### 1.1
 
 !!! important

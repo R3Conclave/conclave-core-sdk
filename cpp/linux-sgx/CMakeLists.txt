@@ -11,7 +11,7 @@ else()
     set(DEBUG_FLAG DEBUG=1)
 endif()
 
-set(SGX_GIT_LABEL "sgx_2.13.3")
+set(SGX_GIT_LABEL "sgx_2.14")
 
 ExternalProject_Add(linux-sgx-ext
 # Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
