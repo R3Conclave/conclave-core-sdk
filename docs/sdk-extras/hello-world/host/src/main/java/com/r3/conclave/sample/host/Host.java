@@ -1,11 +1,7 @@
 package com.r3.conclave.sample.host;
 
 import com.r3.conclave.common.EnclaveInstanceInfo;
-import com.r3.conclave.host.AttestationParameters;
-import com.r3.conclave.host.EnclaveHost;
-import com.r3.conclave.host.EnclaveLoadException;
-import com.r3.conclave.host.MailCommand;
-import com.r3.conclave.host.MockOnlySupportedException;
+import com.r3.conclave.host.*;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -64,7 +60,7 @@ public class Host {
         // handle multiple clients, you shouldn't start one enclave per client. That'd be wasteful and won't fit in
         // available encrypted memory. A real app should use the routingHint parameter to select the right connection
         // back to the client, here.
-        enclave.start(new AttestationParameters.DCAP(), (commands) -> {
+        enclave.start(new AttestationParameters.DCAP(), null, (commands) -> {
             for (MailCommand command : commands) {
                 if (command instanceof MailCommand.PostMail) {
                     try {
@@ -99,7 +95,7 @@ public class Host {
 
         // Deliver it. The enclave will give us the encrypted reply in the callback we provided above, which
         // will then send the reply to the client.
-        enclave.deliverMail(1, mailBytes, "routingHint");
+        enclave.deliverMail(mailBytes, "routingHint");
 
         // Closing the output stream closes the connection. Different clients will block each other but this
         // is just a hello world sample.

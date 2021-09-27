@@ -44,6 +44,9 @@ abstract class AbstractTestActionEnclave : Enclave() {
         override val enclaveInstanceInfo: EnclaveInstanceInfo get() {
             return getEnclaveInstanceInfo()
         }
+        override val persistentMap: MutableMap<String, ByteArray> get() {
+            return getPersistentMap()
+        }
         override fun getSecretKey(keyRequest: Cursor<SgxKeyRequest, ByteBuffer>): ByteArray {
             return env.getSecretKey(keyRequest)
         }
@@ -57,7 +60,7 @@ abstract class AbstractTestActionEnclave : Enclave() {
 
     final override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray = processEncodedAction(bytes, false)
 
-    final override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+    final override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
         val responseBytes = processEncodedAction(mail.bodyAsBytes, true)
         val encryptedResponse = postOffice(mail).encryptMail(responseBytes)
         postMail(encryptedResponse, routingHint)

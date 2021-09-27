@@ -654,13 +654,9 @@ public class ReverseEnclave extends Enclave {
 ```
 
 The `receiveFromUntrustedHost` method here isn't really needed, it's just because we're already using this to demonstrate local calls.
-The new part is `receiveMail`. This method takes three parameters: the first is an identifier that the host gets to pick, which doesn't
-mean anything but we can use to acknowledge the mail if we want to using `Enclave.acknowledgeMail`. Acknowledgement can be used
-to tell the host the enclave is done processing the mail if it doesn't want to reply immediately. It will be discussed
-more in future tutorials. In this simple tutorial we reply immediately so don't need to use this feature, and thus we
-ignore the ID.
+The new part is `receiveMail`.
 
-The third parameter is a routing hint string. It's also provided by the host and it helps the host route replies when
+This method has a routing hint string parameter. It's provided by the host and it helps the host route replies when
 dealing with multiple clients. It's passed into `postMail` when the enclave posts a reply. In our example the host only
 deals with one client and so it's not used.
 
@@ -715,7 +711,7 @@ Replace the call to `EnclaveHost.start` in the `main` function of your `Host` cl
 ```java
 // Start it up.
 AtomicReference<byte[]> mailToSend = new AtomicReference<>();
-enclave.start(new AttestationParameters.DCAP(), (commands) -> {
+enclave.start(new AttestationParameters.DCAP(), null, (commands) -> {
     for (MailCommand command : commands) {
         if (command instanceof MailCommand.PostMail) {
             mailToSend.set(((MailCommand.PostMail) command).getEncryptedBytes());
@@ -763,7 +759,7 @@ input.readFully(mailBytes);
 
 // Deliver it. The enclave will give us some mail to reply with via the callback we passed in
 // to the start() method.
-enclave.deliverMail(1, mailBytes, "routingHint");
+enclave.deliverMail(mailBytes, "routingHint");
 byte[] toSend = mailToSend.getAndSet(null);
 output.writeInt(toSend.length);
 output.write(toSend);
@@ -779,10 +775,7 @@ This code is straightforward. In order, it:
 1. We deliver the encrypted mail bytes to the enclave.
 1. We pick up the response from the `AtomicReference` box that was set by the callback.
 
-The first parameter to `deliverMail` is a "mail ID" that the enclave can use to
-identify this mail to the host. This feature is intended for use with acknowledgement, which allows the enclave to
-signal that it's done with that message and the work it represents can be atomically/transactionally completed.
-The *routing hint* is an arbitrary string that can be used to identify the sender of the mail from the host's
+The *routing hint* parameter is an arbitrary string that can be used to identify the sender of the mail from the host's
 perspective, e.g. a connection ID, username, identity - it's up to you. The enclave can use this string to 
 signal to the host that a mail should go to that location. It's called a "hint" to remind you that the host code may
 be modified or written by an attacker, so the enclave can't trust it. However, the encryption on the mail makes it 
@@ -793,28 +786,22 @@ useless for the host to mis-direct mail.
 
 ### Mail commands
 
-The second parameter to `EnclaveHost.start` is a callback which returns a list of `MailCommand` objects from the enclave.
-There are three commands the host can receive:
+The third parameter to `EnclaveHost.start` is a callback which returns a list of `MailCommand` objects from the enclave.
+There are two commands the host can receive:
 
 1. **Post mail**. This is when the enclave wants to send mail over the network to a client. The enclave may provide a
    routing hint with the mail to help the host route the message. The host is also expected to safely store the message
    in case the enclave is restarted. If that happens then it needs to redeliver all the (unacknowledged) mail back to
    the enclave in order.
-1. **Acknowledge mail**. This is when the enclave no longer needs the mail to be redelivered to it on restart and the host
-   is thus expected to delete it from its store. There are many reasons why an enclave may not want a message redelivered.
-   For example, the conversation with the client has reached its end and so it acknowledges all the mail in that thread;
-   or the enclave can checkpoint in the middle by creating a mail to itself which condenses all the previous mail, which
-   are then all acknowledged.
-1. **AcknowledgementReceipt**. The enclave will also send this when acknowledging mail. When the host deletes acknowledged mails,
-   the remaining mails will not be in the default sequence (consecutive integers starting from 0).  In addition to deleting
-   acknowledged mail, the host has to keep the receipt data and present it to `host.start()` at the next enclave restart,
-   so the enclave knows what sequence to expect.
+2. **Store sealed state**. This is an encrypted blob which contains the enclave's state that needs to be persisted 
+   across restarts. The host must store this blob in the same transaction alongside the posting of mail. On restart 
+   the most recent sealed state blob must be passed into the `EnclaveHost.start`. Failure to do this will result in 
+   the enclave's client detecting a state roll back.
 
 The host receives these commands grouped together within the scope of a single `EnclaveHost.deliverMail` or `EnclaveHost.callEnclave`
 call. This allows the host to add transactionality when processing the commands. So for example, the delivery of the mail
 from the client to the enclave and the subsequent reply back can be processed atomically within the same database transaction
-when the host is providing persistent, durable messaging. Likewise the acknowledgement of any mail can occur within the
-same transaction.
+when the host is providing persistent, durable messaging.
 
 ## Writing the client
 

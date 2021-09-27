@@ -1,8 +1,12 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.AbstractPostOffice
+import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
+import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.EnclaveContext
+import com.r3.conclave.utilities.internal.deserialise
+import com.r3.conclave.utilities.internal.nullableRead
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -14,7 +18,6 @@ import java.security.PublicKey
 //       is delivered, if re-delivery could disconnect any callbacks? Maybe just remove the ability to send responses.
 // TODO: Improve the client API design doc section to actually describe the EnclaveClient interface/class.
 //       Figure out the request-with-response, request-with-no-response API.
-// TODO: Research how best to buffer messages to disk for unacknowledged mails (log with confirms/deletes)
 // TODO: Implement support for very large mails (seekable access).
 
 /**
@@ -219,6 +222,16 @@ abstract class PostOffice(
      */
     val nextSequenceNumber: Long get() = sequenceNumber
 
+    // TODO These belong in a layer above PostOffice: https://r3-cev.atlassian.net/browse/CON-617
+    private var _lastSeenStateId: EnclaveStateId? = null
+    var lastSeenStateId: ByteArray?
+        set(value) {
+            _lastSeenStateId = value?.let { EnclaveStateId(it.clone()) }
+        }
+        get() = _lastSeenStateId?.bytes?.clone()
+
+    var batchSequence = 0
+
     /**
      * Set the next sequence number to be used. This can only be called before any mail have been encrypted to ensure
      * they have increasing sequence numbers.
@@ -296,6 +309,34 @@ abstract class PostOffice(
             "Mail does not appear to have been targeted for this post office. Authenticated sender was ${mail.authenticatedSender} " +
                     "but expected $destinationPublicKey."
         }
+
+        mail.privateHeader?.deserialise {
+            val version = read()
+            check(version == 1)
+            val currentStateId = readEnclaveStateId()
+            val expectedPreviousStateId = nullableRead { readEnclaveStateId() }
+            val batchSequence = readInt()
+            if (_lastSeenStateId == currentStateId) {
+                // TODO Finish this off: https://r3-cev.atlassian.net/browse/CON-625
+                check(batchSequence == this@PostOffice.batchSequence + 1) {
+                    ""
+                }
+            } else {
+                // TODO Allow the user the ability to override the default behaviour on state ID mismatch: https://r3-cev.atlassian.net/browse/CON-617
+                check(_lastSeenStateId == expectedPreviousStateId) {
+                    "Possible dropped mail or state roll back by the host detected. Expected state ID $lastSeenStateId " +
+                            "but got $expectedPreviousStateId."
+                }
+                // TODO This should instead check that the value is the previous value, otherwise it's possible to drop
+                //  the last mail in the previous batch. https://r3-cev.atlassian.net/browse/CON-625
+                check(batchSequence == 0) {
+                    "The sealed state of the enclave has changed, but received mail which isn't the first of that state ($batchSequence)."
+                }
+                _lastSeenStateId = currentStateId
+            }
+            this@PostOffice.batchSequence = batchSequence
+        }
+
         return mail
     }
 

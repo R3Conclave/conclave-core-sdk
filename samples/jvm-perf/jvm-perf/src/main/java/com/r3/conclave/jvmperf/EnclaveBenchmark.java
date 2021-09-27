@@ -1,7 +1,6 @@
 package com.r3.conclave.jvmperf;
 
 import com.r3.conclave.benchmarks.Benchmarks;
-import com.r3.conclave.common.OpaqueBytes;
 import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
@@ -36,7 +35,7 @@ public class EnclaveBenchmark {
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
 
         if (enclave != null) {
-            enclave.start(new AttestationParameters.DCAP(), null);
+            enclave.start(new AttestationParameters.DCAP(), null, (commands) -> { });
         }
     }
 

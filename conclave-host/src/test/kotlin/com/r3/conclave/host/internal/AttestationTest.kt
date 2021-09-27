@@ -34,7 +34,7 @@ abstract class AttestationTest {
 
     @BeforeEach
     fun start() {
-        enclaveHost.start(attestationParameters, null)
+        enclaveHost.start(attestationParameters, null) { }
         assertThat(enclaveHost.enclaveMode).isEqualTo(expectedEnclaveMode)
         assertThat((enclaveHost.enclaveInstanceInfo as EnclaveInstanceInfoImpl).attestation).isInstanceOf(
             expectedAttestationType
@@ -79,7 +79,7 @@ abstract class AttestationTest {
     @Test
     fun `ensure the attestation can be run multiple times`() {
         val host = createMockHost(EnclaveHostMockTest.EnclaveWithHooks::class.java)
-        host.start(null, null)
+        host.start(null, null) { }
         val onStartupAttestationTimestamp = host.enclaveInstanceInfo.securityInfo.timestamp
 
         // The timestamp resolution from Java 8 is not high enough to detect that time has passed while the test executed

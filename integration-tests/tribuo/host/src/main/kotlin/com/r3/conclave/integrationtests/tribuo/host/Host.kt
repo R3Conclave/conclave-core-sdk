@@ -27,7 +27,7 @@ class Host {
                 acceptor.accept().use { connection ->
                     DataOutputStream(connection.getOutputStream()).use { output ->
                         EnclaveHost.load("com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave").use { enclave ->
-                            enclave.start(initializeAttestationParameters()) { commands: List<MailCommand?> ->
+                            enclave.start(initializeAttestationParameters(), null) { commands: List<MailCommand?> ->
                                 for (command in commands) {
                                     if (command is MailCommand.PostMail) {
                                         try {
@@ -47,13 +47,12 @@ class Host {
                             DataInputStream(connection.getInputStream()).use { input ->
                                 // Forward mails to the enclave
                                 try {
-                                    var i = 0L
                                     while (true) {
                                         val mailBytes = ByteArray(input.readInt())
                                         input.readFully(mailBytes)
 
                                         // Deliver it to the enclave
-                                        enclave.deliverMail(i++, mailBytes, null)
+                                        enclave.deliverMail(mailBytes, null)
                                     }
                                 } catch (_: IOException) {
                                     println("Client closed the connection.")

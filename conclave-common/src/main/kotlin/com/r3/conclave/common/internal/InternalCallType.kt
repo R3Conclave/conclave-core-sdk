@@ -13,5 +13,10 @@ enum class InternalCallType {
     /**
      * On the inbound-to-enclave path, contains a mail to be decrypted. On the outbound path, contains a mail command.
      */
-    MAIL
+    MAIL,
+
+    /**
+     * New sealed state command.
+     */
+    SEALED_STATE
 }

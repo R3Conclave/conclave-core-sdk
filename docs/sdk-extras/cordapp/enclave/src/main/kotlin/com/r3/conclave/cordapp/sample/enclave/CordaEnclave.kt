@@ -7,7 +7,6 @@ import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.mail.EnclaveMail
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
-import java.lang.Exception
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -71,7 +70,7 @@ abstract class CordaEnclave : Enclave() {
      * processed at this level, are forwarded to the abstract [CordaEnclave.receiveMail] callback which is defined
      * by the derived class.
      */
-    final override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+    final override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
         if (isTopicFirstMessage(mail)) {
             // only login supported so far
             val authenticated = tryAuthenticateAndStoreIdentity(mail)
@@ -81,7 +80,7 @@ abstract class CordaEnclave : Enclave() {
             postMail(reply, routingHint)
         } else {
             val identity = getSenderIdentity(mail.authenticatedSender)
-            receiveMail(id, mail, routingHint, identity)
+            receiveMail(mail, routingHint, identity)
         }
     }
 
@@ -93,7 +92,6 @@ abstract class CordaEnclave : Enclave() {
      * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.deliverMail`. In Java, checked
      * exceptions can be made to propagate by rethrowing them in an unchecked one.
      *
-     * @param id An opaque identifier for the mail.
      * @param mail Access to the decrypted/authenticated mail body+envelope.
      * @param routingHint An optional string provided by the host that can be passed to [postMail] to tell the
      * host that you wish to reply to whoever provided it with this mail (e.g. connection ID). Note that this may
@@ -102,7 +100,7 @@ abstract class CordaEnclave : Enclave() {
      * @param identity The identity of the sender validated by the enclave. This can be used to uniquely identify the sender.
      * Please be aware that this parameter is null if the sender decides to keep its anonymity.
      */
-    protected abstract fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?, identity: SenderIdentity?)
+    protected abstract fun receiveMail(mail: EnclaveMail, routingHint: String?, identity: SenderIdentity?)
 
     companion object {
         private const val topicFirstMessageSequenceNumber = 0L

@@ -42,10 +42,6 @@ messages such that you can always tell where they begin and end, without needing
 
 We plan to add additional features to the mail API in upcoming releases:
 
-**Storage.** Mail will be stored by the host process. Often an enclave is implementing a form of batch job. By allowing
-the host to handle storage of messages, mail allows it to delay starting the enclave until enough data has arrived. This
-in turn allows the host to best utilise the limited pool of encrypted RAM available for enclaves. 
-
 **Atomicity.** Mail should be delivered by the host to an enclave on each startup, until the mail is acknowledged.
 Acknowledgement and posting mail will become transactional, thus can be performed atomically with other acknowledgements
 and sending other replies.  In this way enclaves can ensure that restarting an enclave doesn't produce duplicate 
@@ -54,31 +50,6 @@ messages, perform the same actions twice or cause service interruptions to users
 !!! notice
 
     More sophisticated database solutions may be added in future releases.
-
-## Using mail for storage
-
-Mail is not only intended for messaging. It subsumes the "sealing" functionality that appears in most trusted computing
-platforms.
-
-By sending mail to itself an enclave can store chunks of data that will be fed back to it at startup. It can then
-delete these chunks by acknowledging the mails. Utilising mail this way has a variety of advantages:
-
-* The same encryption, authentication and trusted computing base (TCB) management features are available for stored data as well as messaging.
-* The API is simple and used the same way for both use cases.
-* Mail acknowledgement can be used to control data lifetime, by having enclaves signal to the host that it's safe to
-  delete data which is no longer needed.
-* Stored data typically comes from input data (i.e. messages) and may be stored incrementally. Sequence numbers and
-  topics provide a way to organise stored data that can be integrated with the client's view of time, thus allowing
-  rollback attacks on storage to be detected and blocked in some cases.
-
-This isn't a replacement for a full database. However, in many cases it may be more appropriate, as accessing a
-database from an enclave can leak a lot of data via access patterns and of course the database itself may need
-access to the unencrypted data to index or search it. The mail-to-self pattern avoids this by storing the dataset
-in memory and always reading all stored data at startup.
-
-!!! note
-    Currently storage management is delegated to the application. The enclave may signal acknowledgement requests
-    to the host but by default nothing is done with them.
 
 ## Attacks on messaging
 

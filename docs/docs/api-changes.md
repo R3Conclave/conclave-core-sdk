@@ -2,8 +2,53 @@
 
 ## 1.1 to 1.2
 
-To facilitate future plans for enclave to enclave communication, the following classes have been moved from `
-com.r3.conclave.client` to `com.r3.conclave.common`:
+We've made writing persistent code inside the enclave easy and secure from roll back attacks in 1.2. Mail is now 
+only used for communication and no longer plays a part in persistence. This means certain features are no longer 
+necessary and have been removed. We hope this is a one-off occurrence that will be worth the small effort in 
+upgrading your code.
+
+Firstly, mail acknowledgement no longer exists. Mail will no longer be replayed on enclave startup and so you no longer
+need to think about having to acknowledge any mail. That means the `acknowledgeMail` method in `Enclave` has been
+removed. This also means the mail ID parameter that's used for acknowledgement is no longer needed and has been
+removed as a parameter to the methods `EnclaveHost.deliverMail` and `Enclave.receiveMail`. 
+
+You will need to change the signature of your `receiveMail` method in your enclave class from:
+
+```java
+protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
+```
+
+to
+
+```java
+protected void receiveMail(EnclaveMail mail, String routingHint) {
+```
+
+If you have used `acknowledgeMail` then you will need to remove those calls. You may also need to redesign your 
+enclave to _not_ think about redelivery of mail, but this may actually make your code simpler!
+
+Another consequence of no longer having mail redelivery is that the the mail-to-self pattern to persist data across 
+enclave restarts is no longer valid. However, this has been replaced by a more secure and easier to use API with 
+the introduction of a `persistentMap` inside the enclave. This is a normal `java.util.Map` object which stores 
+key strings to arbitrary byte arrays. Use this map to persistent data that you need available across restarts.
+[Learn more about enclave persistence](persistence.md).
+
+On the host side the API has changed slightly as well. Since mail acknowledgement no longer exists then the mail 
+commands `AcknowledgeMail` and `AcknowledgementReceipt` have also been removed. They have been replaced by a new 
+command `StoreSealedState`. These changes have a small knock-on effect with the `start` method. The second byte array 
+parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob. 
+Also, the mail commands callback is no longer optional and must be specified.
+
+Whilst not an API change, the behaviour of Mail has changed. As Mail no longer functions as a persistence mechanism 
+and is solely used for communication, the enclave's encryption key now longer needs to be based off the MRSIGNER 
+value and is instead now session based. What this means is that a new random key is created each time an enclave 
+starts. This means no two enclaves will ever have the same encryption key. This prevents a malicious host from 
+spinning up multiple copies of the same enclave and trying to manipulate their state by replaying old mail. A 
+consequence of this is that clients can now see when the enclave has been restarted as they will need to download 
+the new `EnclaveInstanceInfo` to continue submitting mail.
+
+In other areas, we've had to move some classes to better support enclave-to-enclave communication. The following 
+classes have been moved from `com.r3.conclave.client` to `com.r3.conclave.common`:
 
 * `EnclaveConstraint`
 * `InvalidEnclaveException`

@@ -13,14 +13,18 @@ import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
 import com.r3.conclave.mail.*
+import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
+import com.r3.conclave.mail.internal.noise.protocol.Noise
+import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
-import java.io.DataInputStream
+import java.io.UTFDataFormatException
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
@@ -44,6 +48,10 @@ import kotlin.concurrent.withLock
  *
  * Please use the method [onStartup] to provide the configuration required to initialise the enclave, and
  * the method [onShutdown] to release the resources held by the enclave before its destruction.
+ *
+ * The enclave also provides a persistent key-value store ([persistentMap]) which is resistant to rollback attacks by
+ * the host. Use this to persist data that needs to exist across enclave restarts. Any data stored just in local
+ * variables will be reset on restart.
  */
 abstract class Enclave {
     /**
@@ -62,6 +70,7 @@ abstract class Enclave {
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
 
+    private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, EnclavePostOffice>()
     private val lock = ReentrantLock()
     private val enclaveQuiescentCondition = lock.newCondition()
@@ -74,6 +83,31 @@ abstract class Enclave {
      * Guarded by [lock]
      */
     private var numberReceiveCallsExecuting = 0
+
+    private val _persistentMap = LinkedHashMap<String, ByteArray>()
+
+    /**
+     * Returns a persistent key-value store where string keys can be mapped to byte values. Use this [MutableMap] to
+     * securely store data that needs to be available across enclave restarts.
+     *
+     * The entire map is serialised and encrypted after each [receiveMail] and [receiveFromUntrustedHost] call and is
+     * given to the host to persist. On restart the host is required to use the latest version of the map to
+     * re-initialise the enclave. Conclave makes a best-effort attempt at preventing the host from being able to rewind
+     * map, i.e. using an older version instead of the latest.
+     *
+     * The map is also not available if the enclave is multi-threaded (i.e. [threadSafe] is overridden to return
+     * `true`). Support for this maybe added in a future version.
+     *
+     * Note, the keys are encoded using UTF-8 and the encoded size of each key cannot be more than 65535 bytes.
+     *
+     * @throws IllegalStateException If [threadSafe] returns `true` or if the persistent map was not enabled in the
+     * build file.
+     */
+    val persistentMap: MutableMap<String, ByteArray> get() {
+        check(!threadSafe) { "The persistent map is not available in multi-threaded enclaves." }
+        // TODO Make the persistent Map off by default and add config options to enable it and set a max size: https://r3-cev.atlassian.net/browse/CON-651
+        return _persistentMap
+    }
 
     /**
      * Returns a [Signature] object pre-initialised with the private key corresponding
@@ -203,12 +237,15 @@ abstract class Enclave {
     }
 
     private fun initCryptography() {
-        val reportBody = env.createReport(null, null)[body]
-        val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
-        val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
-        val entropy = getSecretEntropy(cpuSvn, isvSvn)
-        signingKeyPair = signatureScheme.generateKeyPair(entropy)
-        val private = Curve25519PrivateKey(entropy)
+        // We generate a random session key on enclave start and use it for the enclave's encryption and signing key.
+        // This means they change each time the enclave restarts. This is perfectly acceptable as mail is (now) only
+        // used for communication and not for longer-term persistence. If there are in-flight mail when the enclave
+        // restarts they will be rejected and the client will need to be notified of that so that it can resubmit using
+        // the new EnclaveInstanceInfo. In fact we rely on this property to prevent the host from replaying old mail to
+        // the enclave on restart.
+        val sessionKey = ByteArray(32).also(Noise::random)
+        signingKeyPair = signatureScheme.generateKeyPair(sessionKey)
+        val private = Curve25519PrivateKey(sessionKey)
         encryptionKeyPair = KeyPair(private.publicKey, private)
     }
 
@@ -218,6 +255,47 @@ abstract class Enclave {
             update(encryptionKeyPair.public.encoded)
         }
         return Cursor.wrap(SgxReportData, reportData)
+    }
+
+    private fun applySealedState(sealedStateBlob: ByteArray) {
+        val sealedState = env.unsealData(sealedStateBlob).plaintext
+        sealedState.deserialise {
+            val version = read()
+            check(version == 1)
+            readEnclaveStateId()  // This is not used currently but it's here in case it's needed later.
+            // TODO Feed the time into native code https://r3-cev.atlassian.net/browse/CON-615
+            run {
+                val epochSecond = readLong()
+                val nano = readInt()
+                Instant.ofEpochSecond(epochSecond, nano.toLong())
+            }
+            repeat(readInt()) {
+                val key = readUTF()
+                val value = readIntLengthPrefixBytes()
+                _persistentMap[key] = value
+            }
+            repeat(readInt()) {
+                val clientPublicKey = Curve25519PublicKey(readExactlyNBytes(32))
+                val lastSeenStateId = readEnclaveStateId()
+                lastSeenStateIds[clientPublicKey] = lastSeenStateId
+            }
+        }
+    }
+
+    /**
+     * Creates the private header that needs to be attached along side the user's body in the outbound mail. The header
+     * contains the current sealed state ID and what the enclave thinks is the last ID the recipient has seen. This is
+     * used to protect against state rewind by the host.
+     */
+    private fun getMailPrivateHeader(receiveContext: ReceiveContext, publicKey: PublicKey): ByteArray {
+        val batchSequence = receiveContext.mailsPerOutboundClient.computeIfAbsent(publicKey) { MutableInt() }
+
+        return writeData {
+            writeByte(1)  // Version
+            write(receiveContext.stateId.bytes)
+            nullableWrite(lastSeenStateIds[publicKey]) { write(it.bytes) }
+            writeInt(batchSequence.value++)
+        }
     }
 
     /**
@@ -271,12 +349,12 @@ Received: $attestationReportBody"""
             )
         }
 
-        fun onOpen(input: ByteBuffer) {
+        private fun onOpen(input: ByteBuffer) {
             enclave.lock.withLock {
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
-                val ackReceipt = input.getNullable { getRemainingBytes() }
-                if (ackReceipt != null) {
-                    enclave.enclaveMessageHandler.populateAcknowledgedRanges(ackReceipt)
+                val sealedStateBlob = input.getNullable { getRemainingBytes() }
+                if (sealedStateBlob != null) {
+                    enclave.applySealedState(sealedStateBlob)
                 }
                 enclave.onStartup()
             }
@@ -355,64 +433,17 @@ Received: $attestationReportBody"""
 
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
-
+        // Maps sender + topic pairs to the highest sequence number seen so far. Sequence numbers must start from zero
+        // and can only increment by one for each delivered mail.
+        private val sequenceWatermarks = HashMap<PublicKeyAndTopic, SequenceWatermark>()
         /**
-         * Mail acknowledgement and expected sequence number(s).
+         * Holds the current [ReceiveContext], or null if there isn't a receive* action being executed of if the thread
+         * is multi-threaded, in which case this is always null.
          *
-         * - mail messages get a sequence number assigned by the sender's PostOffice.
-         * - mail acknowledgement receipt (MAC) contains acknowledged sequence numbers (per topic, as ranges (to save the memory))
-         *   - it gets updated everytime an enclave calls `acknowledge()` and emitted as [MailCommand.AcknowledgementReceipt].
-         *
-         * - in absence of MAC:
-         *   - mail sequence numbers are expected to start from zero
-         *   - and increment by 1 for every *new* message.
-         *   - on receiving end those sequence numbers are expected to form a contiguous sequence.
-         *
-         * - conclave does not require you to acknowledge received mail
-         * - nor does it impose any restrictions on order in which mail has to be acknowledged or which mail has to be acknowledged.
-         *
-         * - if all mail had been acknowledged:
-         *   - the receipt will contain a single range (again, per topic) - {start:0, count:N},
-         *     where N is number of messages acknowledged for this topic.
-         *   - the next mail received is expected to have a sequence number N (start+count)
-         *
-         * - there are two collections tracking mail sequence numbers at the code below: `materialisedAckReceipt` and `nextExpectedSequences`
-         *   - they look identical and, in fact, contain very same data (cloned) at the start
-         *   - they are separate because: you still under no obligation to acknowledge received mail,
-         *     so the received mail sequence number might (will) naturally be ahead of those acknowledged.
-         *   - `materialisedAckReceipt` get updated on `acknowledge`,
-         *      whereas `nextExpectedSequences` get updated at `checkMailOrdering` for incoming mail.
-         *
-         * Here is how it works (using a single topic example):
-         * - initially, there is no MAC, so sequence numbers start with zero
-         * - let's send three mails (seqnums: 0,1,2), but only acknowledge one with seq# 1
-         * - the MAC received and kept by the host will have acknowledged range `(start:1,count:1)`
-         * - let's now restart an enclave, but this time using MAC
-         *   - `materialisedAckReceipt` = `[(start:1,count:1)]`
-         *   - `nextExpectedSequences` = `[(start:1,count:1)]`
-         *   - that is we are definitely missing seq# 0,
-         *     on restart we have to replay all missing mail (seq# 0),
-         *     the mail with seq#2 is at the tail and won't be distinguishable from new mail with same seq#.
-         * - let's now replay the mail with seq# 2
-         *   - it will be rejected as we expected seq# is 0
-         *   - materialisedAckReceipt and nextExpectedSequences are staying intact
-         * - let's now replay the mail with seq# 0
-         *   - it will be accepted and `nextExpectedSequences` will now be `[(start:0,count:2)]`
-         *   - if we now acknowledge this mail (seq# 0), the `materialisedAckReceipt` will also be `[(start:0,count:2)]`
-         * - we can now safely send mail with seq#2
-         *   - it will be accepted, nextExpectedSequences` will now be `[(start:0,count:3)]`
-         *   - materialisedAckReceipt are still intact
-         *   - if we now acknowledge this mail (seq# 2), the `materialisedAckReceipt` will also be `[(start:0,count:3)]`
-         *
+         * Note, if the current receive context was also needed to be tracked for multi-threaded enclaves then this
+         * variable would be a [ThreadLocal].
          */
-        private val lockObject = Object()
-        private var mustSendReceipt = false
-        // this map keeps track of acknowledged mail (note: we keep sequence numbers (ranges), not mail ids)
-        private val materialisedAckReceipt = HashMap<PublicKeyAndTopic, RangeSequence>()
-        // this map says what sequence number to expect next
-        private val nextExpectedSequences = HashMap<PublicKeyAndTopic, RangeSequence>()
-        // this map shares instances of RangeSequence (via TargetRangeSequence) with materialisedAckReceipt
-        private val mailIdToTargetRangeSequence = HashMap<Long, TargetRangeSequence>()
+        var currentReceiveContext: ReceiveContext? = null
 
         override fun connect(upstream: Sender): EnclaveMessageHandler {
             sender = upstream
@@ -423,7 +454,7 @@ Received: $attestationReportBody"""
         private val callTypeValues = InternalCallType.values()
 
         // Variable so we can compare it in an assertion later.
-        private val receiveFromUntrustedHostCallback = HostCallback { executeReceive { receiveFromUntrustedHost(it) } }
+        private val receiveFromUntrustedHostCallback = HostCallback(::receiveFromUntrustedHost)
 
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
@@ -437,44 +468,25 @@ Received: $attestationReportBody"""
                 StateManager(Receive(receiveFromUntrustedHostCallback, receiveFromUntrustedHost = true))
             }
             when (type) {
-                MAIL -> onMail(input)
+                MAIL -> onMail(hostThreadId, input)
                 UNTRUSTED_HOST -> onUntrustedHost(stateManager, hostThreadId, input)
                 CALL_RETURN -> onCallReturn(stateManager, input)
+                SEALED_STATE -> throw UnsupportedOperationException("SEALED_STATE is not expected from the host")
             }
         }
 
-        private fun onMail(input: ByteBuffer) {
-            val id = input.getLong()
+        // TODO Mail acks: https://r3-cev.atlassian.net/browse/CON-616
+        private fun onMail(hostThreadId: Long, input: ByteBuffer) {
             val routingHint = input.getNullable { String(getIntLengthPrefixBytes()) }
             // Wrap the remaining bytes in a InputStream to avoid copying.
             val decryptingStream = MailDecryptingStream(input.inputStream())
-            val mail: EnclaveMail = decryptingStream.decryptMail { keyDerivation ->
-                requireNotNull(keyDerivation) {
-                    "Missing metadata to decrypt mail. Mail destined for an enclave must be created using a PostOffice " +
-                            "from the enclave's EnclaveInstanceInfo object (i.e. EnclaveInstanceInfo.createPostOffice()). " +
-                            "If the sender of this mail is another enclave then Enclave.postOffice(EnclaveInstanceInfo) " +
-                            "must be used instead."
-                }
-                // Ignore any extra bytes in the keyDerivation.
-                require(keyDerivation.size >= SgxCpuSvn.size + SgxIsvSvn.size) { "Invalid key derivation header size" }
-                val keyDerivationBuffer = ByteBuffer.wrap(keyDerivation)
-                val cpuSvn = keyDerivationBuffer.getSlice(SgxCpuSvn.size)
-                val isvSvn = keyDerivationBuffer.getUnsignedShort()
-                val entropy = getSecretEntropy(cpuSvn, isvSvn)
-                // We now have the private key to decrypt the mail body and authenticate the header.
-                Curve25519PrivateKey(entropy)
-            }
+            val mail = decryptingStream.decryptMail { encryptionKeyPair.private }
 
-            executeReceive {
-                checkMailOrdering(id, mail)
-                receiveMail(id, mail, routingHint)
-            }
-
-            /**
-             * We only need to emit a single receipt if multiple mail were acknowledged in this receiveMail call,
-             * hence why we do it here and not in acknowledgeMail
-             */
-            emitAcknowledgementReceipt()
+            executeReceive(
+                hostThreadId,
+                preReceive = { checkMailOrdering(mail) },
+                receiveMethod = { receiveMail(mail, routingHint) }
+            )
         }
 
         private fun onUntrustedHost(stateManager: StateManager<CallState>, hostThreadId: Long, input: ByteBuffer) {
@@ -483,12 +495,24 @@ Received: $attestationReportBody"""
                 "The enclave has not provided a callback to callUntrustedHost to receive the host's call back in."
             }
 
-            if (state.callback != receiveFromUntrustedHostCallback) {
-                // If this is a recursive call then we already hold the lock. This assertion is here to document that
-                // fact.
-                check(lock.isHeldByCurrentThread)
+            val bytes = input.getRemainingBytes()
+
+            val response = if (state.callback == receiveFromUntrustedHostCallback) {
+                // Top-level, i.e. receiveFromUntrustedHost
+                executeReceive(
+                    hostThreadId,
+                    preReceive = { },
+                    receiveMethod = { receiveFromUntrustedHost(bytes) }
+                )
+            } else {
+                // Recursive callback
+                if (!threadSafe) {
+                    // This check is to document that for a non thread-safe enclave the recursive call still holds the
+                    // lock.
+                    check(lock.isHeldByCurrentThread)
+                }
+                state.callback.apply(bytes)
             }
-            val response = state.callback.apply(input.getRemainingBytes())
 
             if (response != null) {
                 // If the user calls back into the host whilst handling a local call or a mail, they end up
@@ -506,38 +530,48 @@ Received: $attestationReportBody"""
             stateManager.state = Response(input.getRemainingBytes())
         }
 
-        private fun checkMailOrdering(mailID: Long, mail: EnclaveMail) {
-            synchronized(lockObject) {
-                val key = PublicKeyAndTopic(mail.authenticatedSender, mail.topic)
+        private fun checkMailOrdering(mail: EnclaveMail) {
+            val key = PublicKeyAndTopic(mail.authenticatedSender, mail.topic)
+            val watermark = sequenceWatermarks.computeIfAbsent(key) { SequenceWatermark() }
+            watermark.checkOrdering(mail)
+        }
 
-                // link mailID with acknowledged ranges
-                mailIdToTargetRangeSequence[mailID] = TargetRangeSequence(
-                    materialisedAckReceipt.computeIfAbsent(key) { RangeSequence() },
-                    mail.sequenceNumber
-                )
+        private fun sendSealedState(hostThreadId: Long, receiveContext: ReceiveContext) {
+            // For every client that has outbound mail, its last seen state ID needs to be updated to the new state ID.
+            for (outboundClient in receiveContext.mailsPerOutboundClient.keys) {
+                lastSeenStateIds[outboundClient] = receiveContext.stateId
+            }
 
-                val range = nextExpectedSequences.computeIfAbsent(key) { RangeSequence() }
-                val expected = range.expected()
-                val actual = mail.sequenceNumber
-                check(actual == expected) {
-                    when {
-                        range.isEmpty() -> {
-                            "First time seeing mail with topic ${mail.topic} so the sequence number must be zero but is " +
-                                "instead ${mail.sequenceNumber}. It may be the host is delivering mail out of order."
-                        }
-                        actual < expected -> {
-                            "Mail with sequence number ${mail.sequenceNumber} on topic ${mail.topic} has already been seen, " +
-                                    "was expecting $expected. Make sure the same PostOffice instance is used for the same " +
-                                    "sender key and topic, or if the sender key is long-term then a per-process topic is used. " +
-                                    "Otherwise it may be the host is replaying older messages."
-                        }
-                        else -> {
-                            "Next sequence number on topic ${mail.topic} should be $expected but is instead " +
-                                    "${actual}. It may be the host is delivering mail out of order."
-                        }
-                    }
+            // TODO Add padding to the sealed state blobs: https://r3-cev.atlassian.net/browse/CON-620
+            val serialised = writeData {
+                writeByte(1)  // Version
+                write(receiveContext.stateId.bytes)
+                Instant.now().also {
+                    writeLong(it.epochSecond)
+                    writeInt(it.nano)
                 }
-                range.add(mail.sequenceNumber)
+                writeMap(_persistentMap) { key, value ->
+                    try {
+                        writeUTF(key)
+                    } catch (e: UTFDataFormatException) {
+                        // TODO Check the key size upon insertion rather than here so that the user has better context
+                        //  of the offending key.
+                        throw IllegalArgumentException("The persistent map does not support keys which are bigger " +
+                                "than 65535 bytes when UTF-8 encoded.")
+                    }
+                    writeIntLengthPrefixBytes(value)
+                }
+                writeMap(lastSeenStateIds) { clientPublicKey, lastSeenStateId ->
+                    write(clientPublicKey.encoded)
+                    write(lastSeenStateId.bytes)
+                }
+            }
+
+            // TODO Use a KMS key if one is available
+            val sealedState = env.sealData(PlaintextAndEnvelope(serialised))
+
+            sendToHost(SEALED_STATE, hostThreadId, sealedState.size) { buffer ->
+                buffer.put(sealedState)
             }
         }
 
@@ -572,7 +606,7 @@ Received: $attestationReportBody"""
             return response?.bytes
         }
 
-        private fun <T> executeReceive(lambda: () -> T): T {
+        private fun <T> executeReceive(hostThreadId: Long, preReceive: () -> Unit, receiveMethod: () -> T): T {
             // We do locking for the user by default, because otherwise it'd be easy to forget that the host can
             // enter on multiple threads even if you aren't prepared for it. Spotting missing thread safety would
             // require spotting the absence of something rather than the presence of something, which is hard.
@@ -581,16 +615,21 @@ Received: $attestationReportBody"""
             if (!threadSafe) {
                 lock.withLock {
                     enclaveStateManager.checkStateIs<Started>()
-                    return lambda.invoke()
+                    preReceive()
+                    val receiveContext = ReceiveContext()
+                    val response = executeReceive(receiveMethod, receiveContext)
+                    sendSealedState(hostThreadId, receiveContext)
+                    return response
                 }
             } else {
                 lock.withLock {
                     enclaveStateManager.checkStateIs<Started>()
+                    preReceive()
                     ++numberReceiveCallsExecuting
                 }
 
                 try {
-                    return lambda.invoke()
+                    return receiveMethod()
                 } finally {
                     lock.withLock {
                         --numberReceiveCallsExecuting
@@ -600,6 +639,22 @@ Received: $attestationReportBody"""
                     }
                 }
             }
+        }
+
+        private fun <T> executeReceive(receiveMethod: () -> T, receiveContext: ReceiveContext): T {
+            check(currentReceiveContext == null) {
+                "deliverMail cannot be called in a callback to another deliverMail."
+            }
+            currentReceiveContext = receiveContext
+            val response = try {
+                receiveMethod()
+            } finally {
+                currentReceiveContext = null
+            }
+            check(receiveContext.pendingPostMails == 0) {
+                "There were ${receiveContext.pendingPostMails} mail(s) created which were not posted with postMail."
+            }
+            return response
         }
 
         /**
@@ -625,101 +680,59 @@ Received: $attestationReportBody"""
         }
 
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
+            val hostThreadId = checkNotNull(currentEnclaveCall.get()) {
+                "Thread ${Thread.currentThread()} may not attempt to send mail outside the context of a callEnclave " +
+                        "or deliverMail."
+            }
             val routingHintBytes = routingHint?.toByteArray()
             val size = nullableSize(routingHintBytes) { it.intLengthPrefixSize } + encryptedBytes.size
-            sendMailCommandToHost(MailCommandType.POST, size) { buffer ->
+            sendToHost(MAIL, hostThreadId, size) { buffer ->
                 buffer.putNullable(routingHintBytes) { putIntLengthPrefixBytes(it) }
                 buffer.put(encryptedBytes)
             }
-        }
-
-        fun acknowledgeMail(mailID: Long) {
-            synchronized(lockObject) {
-                updateAcknowledgementReceipt(mailID)
-                sendMailCommandToHost(MailCommandType.ACKNOWLEDGE, Long.SIZE_BYTES) { buffer ->
-                    buffer.putLong(mailID)
-                }
-            }
-        }
-
-        private fun updateAcknowledgementReceipt(mailID: Long) {
-            val target = mailIdToTargetRangeSequence.remove(mailID)
-            requireNotNull(target){ "Trying to acknowledge mail with unknown ID $mailID, or mail has already been acknowledged." }
-            target.range.add(target.sequenceNumber)
-            mustSendReceipt = true
-        }
-
-        /**
-         * This data must not be seen unsealed outside of the enclave.
-         *
-         * Receipt format:
-         * (0) version: Int
-         * (1) number_of_topics: Int
-         * for each topic:
-         *   (2) public_key: 32 bytes
-         *   (3) topic: 2 + UTF(text)
-         *   (5) number_of_ranges: Int
-         *   for each range:
-         *      (6) start seq# (Long)
-         *      (7) count (Long)
-         */
-        private fun emitAcknowledgementReceipt() {
-            synchronized(lockObject) {
-                if (!mustSendReceipt)
-                    return
-
-                val plainText = writeData {
-                    writeInt(AcknowledgementReceiptVersion.value)
-                    writeInt(materialisedAckReceipt.size)
-                    materialisedAckReceipt.forEach { (key, ranges) ->
-                        writeIntLengthPrefixBytes(key.publicKey.encoded)
-                        writeUTF(key.topic)
-                        ranges.write(this)
-                    }
-                }
-
-                val sealed = env.sealData(PlaintextAndEnvelope(plainText))
-                sendMailCommandToHost(MailCommandType.RECEIPT, sealed.size) { buffer ->
-                    buffer.put(sealed)
-                }
-
-                mustSendReceipt = false
-            }
-        }
-
-        fun populateAcknowledgedRanges(ackReceipt: ByteArray) {
-            synchronized(lockObject) {
-                val bis = env.unsealData(ackReceipt).plaintext.inputStream()
-                val dis = DataInputStream(bis)
-
-                val version = dis.readInt()
-                check(version == AcknowledgementReceiptVersion.value) {
-                    "Receipt version($version) does not match to expected(${AcknowledgementReceiptVersion.value})"
-                }
-                val numberOfTopics = dis.readInt() // number of key+topic
-                repeat(numberOfTopics) {
-                    val pk = Curve25519PublicKey(dis.readIntLengthPrefixBytes())
-                    val topic = dis.readUTF()
-                    val key = PublicKeyAndTopic(pk, topic)
-
-                    val ranges = RangeSequence()
-                    ranges.read(dis)
-                    materialisedAckReceipt[key] = ranges
-                    nextExpectedSequences[key] = ranges.clone()
-                }
-            }
-        }
-
-        private fun sendMailCommandToHost(mailType: MailCommandType, size: Int, block: (ByteBuffer) -> Unit) {
-            val hostThreadId = checkNotNull(currentEnclaveCall.get()) {
-                "Thread ${Thread.currentThread()} may not attempt to send or acknowledge mail outside the context of a call or delivery."
-            }
-            sendToHost(MAIL, hostThreadId, 1 + size) { buffer ->
-                buffer.put(mailType.ordinal.toByte())
-                block(buffer)
-            }
+            currentReceiveContext?.run { pendingPostMails-- }
         }
     }
+
+    private class SequenceWatermark {
+        // The -1 default allows us to check the first mail in this sequence is zero.
+        private var value = -1L
+
+        fun checkOrdering(mail: EnclaveMail) {
+            val expected = value + 1
+            check(mail.sequenceNumber == expected) {
+                when {
+                    value == -1L -> {
+                        "First time seeing mail with topic ${mail.topic} so the sequence number must be zero but " +
+                                "is instead ${mail.sequenceNumber}. It may be the host is delivering mail out of order."
+                    }
+                    mail.sequenceNumber < expected -> {
+                        "Mail with sequence number ${mail.sequenceNumber} on topic ${mail.topic} has already " +
+                                "been seen, was expecting $expected instead. Make sure the same PostOffice instance " +
+                                "is used for the same sender key and topic, or if the sender key is long-term then a " +
+                                "per-process topic is used. Otherwise it may be the host is replaying older messages."
+                    }
+                    else -> {
+                        "Next sequence number on topic ${mail.topic} should be $expected but is instead " +
+                                "${mail.sequenceNumber}. It may be the host is delivering mail out of order."
+                    }
+                }
+            }
+            value++
+        }
+    }
+
+    /**
+     * Represents an execution of [receiveMail] or [receiveFromUntrustedHost] and captures information needed to create
+     * the sealed state and necessary header information that needs to be attached to any outbound mail.
+     */
+    private class ReceiveContext {
+        val stateId = EnclaveStateId()
+        val mailsPerOutboundClient = HashMap<PublicKey, MutableInt>()
+        var pendingPostMails = 0
+    }
+
+    private class MutableInt(var value: Int = 0)
 
     private sealed class CallState {
         class Receive(
@@ -740,36 +753,17 @@ Received: $attestationReportBody"""
      * Default implementation throws [UnsupportedOperationException] so you should not
      * perform a supercall.
      *
-     * Received mail should be acknowledged by passing it to [acknowledgeMail], as
-     * otherwise it will be redelivered if the enclave restarts.
-     *
-     * By not acknowledging mail in a topic until a multi-step messaging conversation
-     * is finished, you can ensure that the conversation survives restarts and
-     * upgrades.
-     *
      * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.deliverMail`. In Java, checked
      * exceptions can be made to propagate by rethrowing them in an unchecked one.
      *
-     * @param id An opaque identifier for the mail.
      * @param mail Access to the decrypted/authenticated mail body+envelope.
      * @param routingHint An optional string provided by the host that can be passed to [postMail] to tell the
      * host that you wish to reply to whoever provided it with this mail (e.g. connection ID). Note that this may
      * not be the same as the logical sender of the mail if advanced anonymity techniques are being used, like
      * users passing mail around between themselves before it's delivered.
      */
-    protected open fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+    protected open fun receiveMail(mail: EnclaveMail, routingHint: String?) {
         throw UnsupportedOperationException("This enclave does not support receiving mail.")
-    }
-
-    /**
-     * Informs the host that the mail should not be redelivered after the next
-     * restart and can be safely deleted. Mail acknowledgements are atomic and
-     * only take effect once the enclave returns control to the host, so, calling
-     * this method multiple times on multiple different mails is safe even if the
-     * enclave is interrupted part way through.
-     */
-    protected fun acknowledgeMail(mailID: Long) {
-        enclaveMessageHandler.acknowledgeMail(mailID)
     }
 
     /**
@@ -782,8 +776,6 @@ Received: $attestationReportBody"""
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
-     *
-     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(destinationPublicKey: PublicKey, topic: String): EnclavePostOffice {
         synchronized(postOffices) {
@@ -803,8 +795,6 @@ Received: $attestationReportBody"""
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
      *
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
-     *
-     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(destinationPublicKey: PublicKey): EnclavePostOffice {
         return postOffice(destinationPublicKey, "default")
@@ -817,23 +807,18 @@ Received: $attestationReportBody"""
      * Note: Do not use this overload if the sender of the mail is another enclave. `postOffice(EnclaveInstanceInfo)` must
      * still be used when responding back to an enclave. This may mean having to ingest the sender's [EnclaveInstanceInfo]
      * object beforehand.
-     *
-     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(mail: EnclaveMail): EnclavePostOffice = postOffice(mail.authenticatedSender, mail.topic)
 
     /**
      * Returns a post office for mail targeted to an enclave with the given topic. The target enclave can be one running
-     * on this host or on another machine, and can even be this enclave if [enclaveInstanceInfo] is used (and thus enabling
-     * the mail-to-self pattern). The post office is setup with the enclave's private encryption key so the receipient
+     * on this host or on another machine. The post office is setup with the enclave's private encryption key so the receipient
      * can be sure mail originated from this enclave.
      *
      * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
      * This ensures mail is sequenced correctly.
      *
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
-     *
-     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo, topic: String): EnclavePostOffice {
         enclaveInstanceInfo as EnclaveInstanceInfoImpl
@@ -846,16 +831,13 @@ Received: $attestationReportBody"""
 
     /**
      * Returns a post office for mail targeted to an enclave with the topic "default". The target enclave can be one running
-     * on this host or on another machine, and can even be this enclave if [enclaveInstanceInfo] is used (and thus enabling
-     * the mail-to-self pattern). The post office is setup with the enclave's private encryption key so the receipient
+     * on this host or on another machine. The post office is setup with the enclave's private encryption key so the receipient
      * can be sure mail did indeed originate from this enclave.
      *
      * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
      * This ensures mail is sequenced correctly.
      *
      * The recipient should use [PostOffice.decryptMail] to make sure it verifies this enclave as the sender of the mail.
-     *
-     * @see <a href="https://docs.conclave.net/mail.html#using-mail-for-storage">Using mail for storage</a>
      */
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo): EnclavePostOffice {
         return postOffice(enclaveInstanceInfo, "default")
@@ -870,11 +852,9 @@ Received: $attestationReportBody"""
      * need or want to provide additional direction using the [routingHint]
      * parameter.
      *
-     * Note that posting and acknowledging mail is transactional. The delivery will
+     * Note that posting mail is transactional. The delivery will
      * only actually take place once the current enclave call or [receiveMail] call
-     * is finished. All posts and acknowledgements take place atomically, that is,
-     * you can acknowledge a mail and post a reply, or the other way around, and it
-     * doesn't matter which order you pick: you cannot get lost or replayed messages.
+     * is finished. All posts (along with the enclave's sealed state that is automatically generated) take place atomically.
      */
     protected fun postMail(encryptedMail: ByteArray, routingHint: String?) {
         enclaveMessageHandler.postMail(encryptedMail, routingHint)
@@ -890,6 +870,13 @@ Received: $attestationReportBody"""
         }
 
         override val senderPrivateKey: PrivateKey get() = encryptionKeyPair.private
+
+        override fun getPrivateHeader(): ByteArray? {
+            return enclaveMessageHandler.currentReceiveContext?.let { receiveContext ->
+                receiveContext.pendingPostMails++
+                getMailPrivateHeader(receiveContext, destinationPublicKey)
+            }
+        }
     }
 
     // By default let all post office instances use the same moving average instance to make it harder to analyse mail
@@ -897,7 +884,6 @@ Received: $attestationReportBody"""
     private val defaultMinSizePolicy = MinSizePolicy.movingAverage()
 
     private data class PublicKeyAndTopic(val publicKey: PublicKey, val topic: String)
-    private data class TargetRangeSequence(val range: RangeSequence, val sequenceNumber: Long)
     //endregion
 
     private sealed class EnclaveState {

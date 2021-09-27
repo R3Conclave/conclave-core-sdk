@@ -33,38 +33,20 @@ sealed class MailCommand {
     }
 
     /**
-     * A [MailCommand] which is emitted when the enclave wants to mark a given piece of mail as
-     * acknowledged (via `Enclave.acknowledgeMail`), so it can be deleted and should not be re-delivered.
+     * A [MailCommand] which is emitted each time the state of the enclave changes and thus needs to be persisted as a
+     * sealed blob so that it can be restored on enclave restart. A previous sealed state is invalidated and only the
+     * latest one should be passed into the enclave via [EnclaveHost.start]. Failure to do this will result in the
+     * enclave's client detecting a roll back attack.
      *
-     * You should perform the acknowledgement synchronously and atomically with any posts,
-     * as this is required for clients to observe transactional behaviour.
-     *
-     * @property mailID The user-defined ID passed alongside the mail in [EnclaveHost.deliverMail].
+     * @property sealedState The sealed state blob
      */
-    class AcknowledgeMail(val mailID: Long) : MailCommand() {
+    class StoreSealedState(val sealedState: ByteArray) : MailCommand() {
         override fun equals(other: Any?): Boolean {
-            return this === other || other is AcknowledgeMail && this.mailID == other.mailID
+            if (this === other) return true
+            if (other !is StoreSealedState) return false
+            return this.sealedState.contentEquals(other.sealedState)
         }
 
-        override fun hashCode(): Int = mailID.hashCode()
-    }
-
-    /**
-     * A [MailCommand] which is emitted along with [AcknowledgeMail] when the enclave wants to mark
-     * certain mail as acknowledged. To ensure the host can restart an enclave it's important that
-     * the last generated receipt be provided to [EnclaveHost.start].
-     *
-     * @property sealedData Sealed bytes representing the acknowledgement receipt.
-     * Only the enclave which emitted this receipt can read it.
-     * The host can treat this as opaque bytes which is passed into [EnclaveHost.start] if the enclave is restarted.
-     */
-    class AcknowledgementReceipt(val sealedData: ByteArray) : MailCommand() {
-        override fun equals(other: Any?): Boolean {
-            return this === other || (other is AcknowledgementReceipt && this.sealedData.contentEquals(other.sealedData))
-        }
-
-        override fun hashCode(): Int {
-            return sealedData.contentHashCode()
-        }
+        override fun hashCode(): Int = 31 * sealedState.contentHashCode()
     }
 }

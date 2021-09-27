@@ -28,7 +28,7 @@ public class ReverseEnclave extends Enclave {
     }
 
     @Override
-    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
+    protected void receiveMail(EnclaveMail mail, String routingHint) {
         // This is used when the host delivers a message from the client.
         // First, decode mail body as a String.
         final String stringToReverse = new String(mail.getBodyAsBytes());

@@ -24,7 +24,7 @@ open class FileSystemEnclaveTest {
                     val spid = OpaqueBytes.parse(System.getProperty("conclave.spid"))
                     val attestationKey = checkNotNull(System.getProperty("conclave.attestation-key"))
                     enclaveHost = EnclaveHost.load("com.r3.conclave.integrationtests.filesystem.enclave.FileSystemEnclave")
-                    enclaveHost.start(AttestationParameters.EPID(spid, attestationKey), null)
+                    enclaveHost.start(AttestationParameters.EPID(spid, attestationKey), null) { }
                 }
             }
         }

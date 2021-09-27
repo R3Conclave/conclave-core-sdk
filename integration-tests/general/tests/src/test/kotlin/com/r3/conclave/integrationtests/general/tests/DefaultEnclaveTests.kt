@@ -6,7 +6,6 @@ import com.r3.conclave.integrationtests.general.common.tasks.EchoWithCallback
 import com.r3.conclave.integrationtests.general.common.tasks.SpinAction
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
-import com.r3.conclave.mail.Curve25519PrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -39,9 +38,9 @@ class DefaultEnclaveTests : AbstractEnclaveActionTest() {
 
         // Now do it again but with mail.
         (0..10).map {
-            val postOffice = enclaveHost().enclaveInstanceInfo.createPostOffice(Curve25519PrivateKey.random(), "default")
+            val mailClient = newMailClient()
             threadWithFuture {
-                deliverMail(postOffice, CheckNotMultiThreadedAction()) {
+                mailClient.deliverMail(CheckNotMultiThreadedAction()) {
                     Thread.sleep(100)
                     null
                 }

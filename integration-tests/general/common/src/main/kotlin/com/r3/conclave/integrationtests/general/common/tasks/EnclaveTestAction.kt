@@ -36,6 +36,8 @@ private val protoBuf = ProtoBuf {
             subclass(CheckNotMultiThreadedAction::class, CheckNotMultiThreadedAction.serializer())
             subclass(SealData::class, SealData.serializer())
             subclass(UnsealData::class, UnsealData.serializer())
+            subclass(PutPersistentMap::class, PutPersistentMap.serializer())
+            subclass(GetPersistentMap::class, GetPersistentMap.serializer())
         }
     }
 }
@@ -69,7 +71,7 @@ object EnclaveInstanceInfoSerializer : KSerializer<EnclaveInstanceInfo> {
  * perform multiple different tasks.
  *
  * This is a workaround to the limitation of native image in non-mock mode, as building such an enclave takes time and
- * having a seperate enclave class for each test makes the integration test run time incredibly long.
+ * having a separate enclave class for each test makes the integration test run time incredibly long.
  */
 @Serializable
 abstract class EnclaveTestAction<R> {

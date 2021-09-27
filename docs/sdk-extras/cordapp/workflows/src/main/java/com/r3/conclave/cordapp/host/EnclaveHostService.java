@@ -9,7 +9,6 @@ import net.corda.core.flows.FlowLogic;
 import net.corda.core.node.services.CordaService;
 import net.corda.core.serialization.SingletonSerializeAsToken;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,7 +16,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Sub-class this helper class and make the sub-class a {@link CordaService} in order to load an enclave into the node.
@@ -36,7 +34,7 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
             enclave = EnclaveHost.load(enclaveClassName);
             // If you want to use pre-DCAP hardware via the older EPID protocol, you'll need to get the relevant API
             // keys from Intel and replace AttestationParameters.DCAP with AttestationParameters.EPID.
-            enclave.start(new AttestationParameters.DCAP(), (commands) -> {
+            enclave.start(new AttestationParameters.DCAP(), null, (commands) -> {
                 // The enclave is requesting that we deliver messages transactionally. In Corda there's no way to
                 // do an all-or-nothing message delivery to multiple peers at once: for that you need a genuine
                 // ledger transaction which is more complex and slower. So for now we'll just deliver messages
@@ -56,7 +54,7 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
         }
     }
 
-    private void enclaveToFlow(byte[] encryptedBytes, @Nullable String routingHint) {
+    private void enclaveToFlow(byte[] encryptedBytes, String routingHint) {
         // Called when the enclave is asking us to deliver an encrypted message to a peer.
         // The routing hint must be a specific flow ID. In this sample we don't let the enclave
         // trigger new flows with peers on the network, only respond to existing flows.
@@ -72,8 +70,6 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
         }
     }
 
-    private final AtomicInteger counter = new AtomicInteger();
-
     /**
      * Delivers the bytes of an encrypted message to the enclave without waiting for any response. This method will
      * return once the enclave has finished processing the mail, and the enclave may not respond.
@@ -81,7 +77,7 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
      * @param encryptedMail The bytes of an encrypted message as created via {@link com.r3.conclave.mail.PostOffice}.
      */
     public void deliverMail(byte[] encryptedMail) {
-        enclave.deliverMail(counter.incrementAndGet(), encryptedMail, null);
+        enclave.deliverMail(encryptedMail, null);
     }
 
     /**
@@ -100,7 +96,7 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
         // before we enter the enclave, as the enclave may immediately call back to request we deliver a response
         // and that will happen on the same call stack.
         FlowExternalOperation<byte[]> operation = pickUpMail(flow);
-        enclave.deliverMail(counter.incrementAndGet(), encryptedMail, flow.getRunId().getUuid().toString());
+        enclave.deliverMail(encryptedMail, flow.getRunId().getUuid().toString());
         // The operation might be completed already, but if not, the flow can sleep until the enclave decides to
         // reply (e.g. due to some other mail from some other flow) by calling await on this operation.
         return operation;

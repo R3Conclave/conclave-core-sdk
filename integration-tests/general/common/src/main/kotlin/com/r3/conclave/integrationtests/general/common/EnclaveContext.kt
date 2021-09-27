@@ -22,6 +22,7 @@ abstract class EnclaveContext {
     abstract val signatureKey: PublicKey
     abstract fun callUntrustedHost(bytes: ByteArray): ByteArray?
     abstract val enclaveInstanceInfo: EnclaveInstanceInfo
+    abstract val persistentMap: MutableMap<String, ByteArray>
     abstract fun getSecretKey(keyRequest: Cursor<SgxKeyRequest, ByteBuffer>): ByteArray
     abstract fun sealData(data: PlaintextAndAD): ByteArray
     abstract fun unsealData(sealedBlob: ByteArray): PlaintextAndAD

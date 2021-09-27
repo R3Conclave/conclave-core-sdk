@@ -8,11 +8,10 @@ import com.r3.conclave.mail.EnclaveMail
 class TribuoEnclave : Enclave() {
     /**
      * Deserialize the request sent by the client, execute it and mail the serialized result.
-     * @param id An opaque identifier for the mail.
      * @param mail Access to the decrypted/authenticated mail body+envelope.
      * @param routingHint ignored
      */
-    override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
+    override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
         val data = String(mail.bodyAsBytes)
         val task = format.decodeFromString(TribuoTask.serializer(), data)
         sendMail(mail, task.execute())

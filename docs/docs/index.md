@@ -98,28 +98,40 @@ is available where you can find the development team during UK office hours (GMT
     There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
     you might need to make to get your current project building with Conclave 1.2.
 
-1. :jigsaw: New feature! Easily enable and use Python. It is JIT compiled inside the enclave and can interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it is possible
-to run simple Python function, importing modules will likely lead to build issues.
+1. jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
+   recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
+   easy to understand and does not provide roll back protection againt the host. To address all these issues the 
+   `Enclave` class now exposes a simple key-value store represented as a normal `java.util.Map` object. Conclave will 
+   securely persist this map such that it survives restarts and is resilient to attempts by the host to roll it back 
+   to previous states. [Learn more about enclave persistence](persistence.md).
 
-2. :jigsaw: New feature! The Conclave plugin will now automatically add conclave-enclave as a dependency to your enclave
-module and also conclave-host for mock testing, so that you don't have to.
+1. jigsaw: **New feature!** We've added enclave lifecycle methods so that you can do any necessary enclave startup 
+   initialisation and shutdown cleanup. Override `onStartup` and `onShutdown` respectively.
 
-3. The `Enclave` class now includes the methods `onStartup` and `onShutdown`. These two new method were added to provide to developers
-suitable methods to add all the enclave initialisation logic, and to release the resources held by the enclave, respectively.
-
-4. The `EnclaveHost` class now includes the method `updateAttestation`. This method was added to provide developers a way
-   to reassess the attestation without having to restart the enclave.
+1. :jigsaw: **New feature!** As the host you can now update the enclave's attestation without having to restart it. 
+   Previously restarting was the only way to force an update on the `EnclaveInstanceInfo` object. Now you can call 
+   `EnclaveHost.updateAttestation` whilst the enclave is still running and the `enclaveInstanceInfo` property will 
+   be updated.
    
-5. :jigsaw: New feature! The Conclave plugin will now automatically pass all resources from the main source set
-   (`enclave/src/main/resources`) to Native Image with no extra config required.
+1. :jigsaw: **New feature!** We've improved the Conclave plugin even further and added more automation so that you 
+   don't have to write unnecessary boilerplate. It's no longer necessary to add the `conclave-enclave` library as a 
+   dependency to your enclave module. Also, the plugin will automatically add `conclave-host` as a 
+   `testImplementation` dependency to enable mock testing. And finally the plugin will make sure any enclave
+   resource files in `src/main/resources` are automatically added. Previously resource files had to be specified 
+   manually.
 
-6. The conclave gradle plugin will now check your build configuration for [productID](enclave-configuration.md#conclave-configuration-options)
-   and [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
+1. :jigsaw: New experimental feature! Easily enable and use Python. It is JIT compiled inside the enclave and can 
+   interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it 
+   is possible to run simple Python function, importing modules will likely lead to build issues.
+
+1. The gradle plugin will now check your build configuration for 
+   [productID](enclave-configuration.md#conclave-configuration-options) and
+   [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
    message if they are missing.
 
-7. The SGX SDK that Conclave is built upon has been updated to version 2.14. This provides bug fixes and other improvements.
-See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release) 
-for more details.
+1. The SGX SDK that Conclave is built upon has been updated to version 2.14. This provides bug fixes and other 
+   improvements. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release)
+   for more details.
 
 ### 1.1
 

@@ -4,7 +4,6 @@ import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -27,7 +26,7 @@ public class NativeTest {
     @BeforeAll
     static void startup() throws EnclaveLoadException {
         enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
-        enclave.start(new AttestationParameters.DCAP(), null);
+        enclave.start(new AttestationParameters.DCAP(), null, (commands) -> { });
     }
 
     @AfterAll

@@ -1,7 +1,7 @@
 package com.r3.conclave.cordapp.sample.enclave;
 
-import com.r3.conclave.enclave.EnclavePostOffice;
 import com.r3.conclave.cordapp.common.SenderIdentity;
+import com.r3.conclave.enclave.EnclavePostOffice;
 import com.r3.conclave.mail.EnclaveMail;
 
 import java.nio.charset.StandardCharsets;
@@ -18,7 +18,7 @@ public class ReverseEnclave extends CordaEnclave {
     }
 
     @Override
-    protected void receiveMail(long id, EnclaveMail mail, String routingHint, SenderIdentity identity) {
+    protected void receiveMail(EnclaveMail mail, String routingHint, SenderIdentity identity) {
         String reversedString = reverse(new String(mail.getBodyAsBytes()));
 
         String responseString;

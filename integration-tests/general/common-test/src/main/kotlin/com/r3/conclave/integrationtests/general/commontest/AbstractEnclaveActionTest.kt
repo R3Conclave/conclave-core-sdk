@@ -7,12 +7,12 @@ import com.r3.conclave.host.MailCommand
 import com.r3.conclave.integrationtests.general.common.tasks.EnclaveTestAction
 import com.r3.conclave.integrationtests.general.common.tasks.decode
 import com.r3.conclave.integrationtests.general.common.tasks.encode
+import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.exists
 
 abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: String) {
@@ -56,25 +56,23 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
         }
     }
 
-    private val enclaveHosts = ConcurrentHashMap<String, EnclaveHost>()
-    private val postedMail = ConcurrentHashMap<String, ByteArray>()
+    private val enclaves = HashMap<String, EnclaveHostWrapper>()
 
     @AfterEach
     fun closeEnclaves() {
-        enclaveHosts.values.forEach(EnclaveHost::close)
+        synchronized(enclaves) {
+            enclaves.values.forEach { it.enclaveHost.close() }
+            enclaves.clear()
+        }
     }
 
     fun enclaveHost(enclaveClassName: String = defaultEnclaveClassName): EnclaveHost {
-        return enclaveHosts.computeIfAbsent(enclaveClassName) {
-            val enclaveHost = EnclaveHost.load(enclaveClassName)
-            enclaveHost.start(getAttestationParams(enclaveHost)) { commands ->
-                for (command in commands) {
-                    if (command is MailCommand.PostMail) {
-                        postedMail[command.routingHint!!] = command.encryptedBytes
-                    }
-                }
-            }
-            enclaveHost
+        return getEnclaveHostWrapper(enclaveClassName).enclaveHost
+    }
+
+    fun restartEnclave(enclaveClassName: String = defaultEnclaveClassName) {
+        synchronized(enclaves) {
+            enclaves.getValue(enclaveClassName).restart()
         }
     }
 
@@ -86,23 +84,79 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
         return callEnclave(enclaveHost(enclaveClassName), action, callback)
     }
 
-    fun <R> deliverMail(
-        postOffice: PostOffice,
-        action: EnclaveTestAction<R>,
-        enclaveClassName: String = defaultEnclaveClassName,
-        callback: ((ByteArray) -> ByteArray?)? = null
-    ): R {
-        val encodedAction = encode(EnclaveTestAction.serializer(action.resultSerializer()), action)
-        val encryptedAction = postOffice.encryptMail(encodedAction)
-        val routingHint = UUID.randomUUID().toString()
-        val enclaveHost = enclaveHost(enclaveClassName)
-        if (callback != null) {
-            enclaveHost.deliverMail(0, encryptedAction, routingHint, callback)
-        } else {
-            enclaveHost.deliverMail(0, encryptedAction, routingHint)
+    fun newMailClient(enclaveClassName: String = defaultEnclaveClassName): MailClient {
+        return MailClientImpl(getEnclaveHostWrapper(enclaveClassName))
+    }
+
+    interface MailClient {
+        fun <R> deliverMail(action: EnclaveTestAction<R>, callback: ((ByteArray) -> ByteArray?)? = null): R
+    }
+
+
+    private fun getEnclaveHostWrapper(enclaveClassName: String): EnclaveHostWrapper {
+        return synchronized(enclaves) {
+            enclaves.computeIfAbsent(enclaveClassName, ::EnclaveHostWrapper)
         }
-        val encryptedResult = checkNotNull(postedMail.remove(routingHint))
-        val resultMail = postOffice.decryptMail(encryptedResult)
-        return decode(action.resultSerializer(), resultMail.bodyAsBytes)
+    }
+
+    private class EnclaveHostWrapper(private val enclaveClassName: String) {
+        val postedMail = HashMap<String, ByteArray>()
+        private var sealedState: ByteArray? = null
+        var enclaveHost = newEnclaveHost()
+        val clients = ArrayList<MailClientImpl>()
+
+        private fun newEnclaveHost(): EnclaveHost {
+            val enclaveHost = EnclaveHost.load(enclaveClassName)
+            enclaveHost.start(getAttestationParams(enclaveHost), sealedState) { commands ->
+                for (command in commands) {
+                    when (command) {
+                        is MailCommand.PostMail -> postedMail[command.routingHint!!] = command.encryptedBytes
+                        is MailCommand.StoreSealedState -> sealedState = command.sealedState
+                    }
+                }
+            }
+            return enclaveHost
+        }
+
+        fun restart() {
+            enclaveHost.close()
+            enclaveHost = newEnclaveHost()
+            clients.forEach { it.enclaveRestarted() }
+        }
+    }
+
+    private class MailClientImpl(private val enclave: EnclaveHostWrapper) : MailClient {
+        private val id = UUID.randomUUID().toString()
+        private val privatekey = Curve25519PrivateKey.random()
+        private var postOffice = createPostOffice()
+
+        init {
+            enclave.clients += this
+        }
+
+        override fun <R> deliverMail(action: EnclaveTestAction<R>, callback: ((ByteArray) -> ByteArray?)?): R {
+            val encodedAction = encode(EnclaveTestAction.serializer(action.resultSerializer()), action)
+            val encryptedAction = postOffice.encryptMail(encodedAction)
+            if (callback != null) {
+                enclave.enclaveHost.deliverMail(encryptedAction, id, callback)
+            } else {
+                enclave.enclaveHost.deliverMail(encryptedAction, id)
+            }
+            val encryptedResult = checkNotNull(enclave.postedMail.remove(id))
+            val resultMail = postOffice.decryptMail(encryptedResult)
+            return decode(action.resultSerializer(), resultMail.bodyAsBytes)
+        }
+
+        fun enclaveRestarted() {
+            val old = postOffice
+            postOffice = createPostOffice()
+            // TODO We wouldn't need to do this if we had a client layer API above PostOffice: https://r3-cev.atlassian.net/browse/CON-617
+            postOffice.lastSeenStateId = old.lastSeenStateId
+            postOffice.batchSequence = old.batchSequence
+        }
+
+        private fun createPostOffice(): PostOffice {
+            return enclave.enclaveHost.enclaveInstanceInfo.createPostOffice(privatekey, "default")
+        }
     }
 }

@@ -141,7 +141,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
                 EnclaveMode.RELEASE, EnclaveMode.DEBUG -> AbstractEnclaveActionTest.getHardwareAttestationParams()
                 else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
             }
-            host.start(attestationParameters, null)
+            host.start(attestationParameters, null) { }
             host
         }
     }
@@ -152,7 +152,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
             mockConfiguration.productID = enclaveSpec.isvProdId
             mockConfiguration.revocationLevel = enclaveSpec.isvSvn - 1
             val host = createMockHost(enclaveSpec.enclaveClass, mockConfiguration)
-            host.start(null, null)
+            host.start(null, null) { }
             host
         }
     }

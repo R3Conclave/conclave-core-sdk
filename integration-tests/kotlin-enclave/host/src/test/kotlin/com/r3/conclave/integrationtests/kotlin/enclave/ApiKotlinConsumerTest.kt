@@ -28,10 +28,10 @@ class ApiKotlinConsumerTest {
     fun `APIs work in Kotlin`() {
         host = EnclaveHost.load("com.r3.conclave.integrationtests.kotlin.enclave.KotlinEnclave")
 
-        val postedMail = ArrayList<ByteArray>()
+        val capturedCommands = ArrayList<MailCommand>()
 
-        host.start(null) { commands ->
-            postedMail += (commands.single() as MailCommand.PostMail).encryptedBytes
+        host.start(null, null) { commands ->
+            capturedCommands += commands
         }
 
         val responseForHost: ByteArray? = host.callEnclave(byteArrayOf(9)) { fromEnclave ->
@@ -43,11 +43,12 @@ class ApiKotlinConsumerTest {
         val postOffice: PostOffice = host.enclaveInstanceInfo.createPostOffice(privateKey, ApiKotlinConsumerTest::class.java.simpleName)
         val encryptedMail: ByteArray = postOffice.encryptMail("abc".toByteArray())
 
-        host.deliverMail(1, encryptedMail, null) { fromEnclave ->
+        host.deliverMail(encryptedMail, null) { fromEnclave ->
             fromEnclave + fromEnclave
         }
-        assertThat(postedMail).hasSize(1)
-        val responseForClient: EnclaveMail = postOffice.decryptMail(postedMail[0])
+
+        val postMail = capturedCommands.filterIsInstance<MailCommand.PostMail>().single()
+        val responseForClient: EnclaveMail = postOffice.decryptMail(postMail.encryptedBytes)
         assertThat(responseForClient.bodyAsBytes).isEqualTo("cbacba".toByteArray())
     }
 }

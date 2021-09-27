@@ -93,6 +93,8 @@ abstract class EnclavePostOffice(
      * @see EnclaveMailHeader
      */
     fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
-        return super.encryptMail(body, envelope, null)
+        return encryptMail(body, envelope, getPrivateHeader())
     }
+
+    protected abstract fun getPrivateHeader(): ByteArray?
 }

@@ -22,9 +22,9 @@ nav:
         - Rapid testing and development with Mock Mode: mockmode.md
         - Maximising the security of your enclave: security.md
     - Reference:
+        - Enclave persistence: persistence.md
         - Threads: threads.md
         - JavaScript/Python: javascript-python.md
-        - File system: filesystem.md
         - Performance: performance.md
         - Testing on macOS: container-gradle.md
     - API:

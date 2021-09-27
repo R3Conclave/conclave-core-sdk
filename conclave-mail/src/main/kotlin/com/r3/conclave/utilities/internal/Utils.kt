@@ -202,6 +202,13 @@ inline fun <reified T> DataInputStream.readList(block: DataInputStream.() -> T):
     return Array(readInt()) { block(this) }
 }
 
+inline fun <K, V> DataOutputStream.writeMap(map: Map<K, V>, block: DataOutputStream.(K, V) -> Unit) {
+    writeInt(map.size)
+    for ((key, value) in map.entries) {
+        block(this, key, value)
+    }
+}
+
 /** Reads this stream completely into a byte array and then closes it. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 
