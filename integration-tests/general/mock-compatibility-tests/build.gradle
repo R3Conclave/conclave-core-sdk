@@ -8,11 +8,15 @@ dependencies {
     testImplementation "com.r3.conclave:conclave-host:$conclave_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation project(":general:common-test")
     testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation project(":general:common-test")
     testImplementation project(":general:common-enclave")
+    // These two testImplementation dependencies add the two enclave classes onto the classpath and thus makes them
+    // available for mock mode.
     testImplementation project(":general:threadsafe-enclave")
     testImplementation project(":general:threadsafe-enclave-same-signer")
+    // The same two enclaves are then added as dependencies in the normal Conclave manner which adds their .so files
+    // onto the classpath and thus available in the non-mock modes as well.
     testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
 }

@@ -1,51 +1,33 @@
-package com.r3.conclave.integrationtests.filesystem.host
+package com.r3.conclave.integrationtests.general.tests.filesystem
 
-import com.r3.conclave.integrationtests.filesystem.host.FileInputStreamTest.Companion.fileInputStreamNonExistingFile
-import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesDelete
-import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesReadAllBytes
-import com.r3.conclave.integrationtests.filesystem.common.proto.Request
+import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.io.FileOutputStream
 
 class FileOutputStreamTest : FileSystemEnclaveTest() {
-    private class Handler(private val uid: Int, path: String, append: Boolean) : AutoCloseable {
+    private inner class Handler(private val uid: Int, path: String, append: Boolean) : AutoCloseable {
         init {
-            val reply = request(type = Request.Type.FILE_OUTPUT_STREAM_CONSTRUCTOR,
-                    uid = uid,
-                    path = path,
-                    append = append)
-            assertThat(String(reply!!)).startsWith(FileOutputStream::class.java.name + "@")
+            val reply = callEnclave(NewFileOuputStream(path, append, uid))
+            assertThat(reply).startsWith(FileOutputStream::class.java.name + "@")
         }
 
         fun writeByteByByte(data: ByteArray) {
             for (element in data) {
-                val reply = request(type = Request.Type.OUTPUT_STREAM_WRITE,
-                        uid = uid,
-                        data = byteArrayOf(element))
-                assertThat(reply).isEmpty()
+                callEnclave(WriteByteToOuputStream(uid, element.toInt()))
             }
         }
 
         fun writeBytes(data: ByteArray) {
-            val reply = request(type = Request.Type.OUTPUT_STREAM_WRITE_BYTES,
-                        uid = uid,
-                        data = data)
-            assertThat(reply).isEmpty()
+            callEnclave(WriteBytesToOuputStream(uid, data))
         }
 
         fun writeBytesOffset(data: ByteArray, offset: Int, length: Int) {
-            val reply = request(type = Request.Type.OUTPUT_STREAM_WRITE_OFFSET,
-                    data = data,
-                    uid = uid,
-                    offset = offset,
-                    length = length)
-            assertThat(reply).isEmpty()
+            callEnclave(WriteOffsetBytesToOuputStream(uid, data, offset, length))
         }
 
         override fun close() {
-            val reply = request(type = Request.Type.OUTPUT_STREAM_CLOSE, uid = uid)
-            assertThat(reply).isEmpty()
+            callEnclave(CloseOuputStream(uid))
         }
     }
 

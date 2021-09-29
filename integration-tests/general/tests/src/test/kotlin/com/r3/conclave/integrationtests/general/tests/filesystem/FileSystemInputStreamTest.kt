@@ -1,8 +1,6 @@
-package com.r3.conclave.integrationtests.filesystem.host
+package com.r3.conclave.integrationtests.general.tests.filesystem
 
-import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesDelete
-import com.r3.conclave.integrationtests.filesystem.host.FilesTest.Companion.filesWrite
-import com.r3.conclave.integrationtests.filesystem.common.proto.Request
+import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -10,34 +8,31 @@ import java.io.IOException
 
 class FileSystemInputStreamTest : FileSystemEnclaveTest() {
 
-    private class Handler(private val uid: Int, path: String) : AutoCloseable {
+    private inner class Handler(private val uid: Int, path: String) : AutoCloseable {
         init {
-            request(Request.Type.INPUT_STREAM_OPEN, uid = uid, path = path)
+            callEnclave(OpenUrlFileInputStream(path, uid))
         }
 
         fun readByteByByte(expectedData: ByteArray) {
             for (element in expectedData) {
-                val reply = request(type = Request.Type.INPUT_STREAM_READ, uid = uid)
-                assertThat(reply!!.size).isEqualTo(1)
-                assertThat(reply[0]).isEqualTo(element)
+                val reply = callEnclave(ReadByteFromInputStream(uid))
+                assertThat(reply).isEqualTo(element.toInt())
             }
-            val reply = request(type = Request.Type.INPUT_STREAM_READ, uid = uid)
-            assertThat(reply!!.size).isEqualTo(1)
-            assertThat(reply[0]).isEqualTo(-1)
+            val reply = callEnclave(ReadByteFromInputStream(uid))
+            assertThat(reply).isEqualTo(-1)
         }
 
         fun readBytes(expectedData: ByteArray) {
-            val reply = request(type = Request.Type.INPUT_STREAM_READ_BYTES, uid = uid)
+            val reply = callEnclave(ReadAllBytesFromInputStream(uid))
             assertThat(reply).isEqualTo(expectedData)
         }
 
         override fun close() {
-            val reply = request(type = Request.Type.INPUT_STREAM_CLOSE, uid = uid)
-            assertThat(reply).isEmpty()
+            callEnclave(CloseInputStream(uid))
         }
 
         fun reset() {
-            assertThatThrownBy { request(type = Request.Type.INPUT_STREAM_RESET, uid = uid) }
+            assertThatThrownBy { callEnclave(ResetInputStream(uid)) }
                     .isInstanceOf(java.lang.RuntimeException::class.java)
                     .hasCauseExactlyInstanceOf(IOException::class.java)
                     .hasMessageContaining("java.io.IOException: Resetting to invalid mark")
