@@ -12,16 +12,24 @@ need to think about having to acknowledge any mail. That means the `acknowledgeM
 removed. This also means the mail ID parameter that's used for acknowledgement is no longer needed and has been
 removed as a parameter to the methods `EnclaveHost.deliverMail` and `Enclave.receiveMail`. 
 
-You will need to change the signature of your `receiveMail` method in your enclave class from:
+You will need to change the signature of your `receiveMail` method in your enclave class:
 
 ```java
+// old
 protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
+
+// new
+protected void receiveMail(EnclaveMail mail, String routingHint) {
 ```
 
-to
+Similarly, you will need to update calls to `EnclaveHost.deliverMail`:
 
 ```java
-protected void receiveMail(EnclaveMail mail, String routingHint) {
+// old
+enclave.deliverMail(id, mail, routingHint)
+
+// new
+enclave.deliverMail(mail, routingHint)
 ```
 
 If you have used `acknowledgeMail` then you will need to remove those calls. You may also need to redesign your 
@@ -39,13 +47,17 @@ command `StoreSealedState`. These changes have a small knock-on effect with the 
 parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob. 
 Also, the mail commands callback is no longer optional and must be specified.
 
-Whilst not an API change, the behaviour of Mail has changed. As Mail no longer functions as a persistence mechanism 
-and is solely used for communication, the enclave's encryption key now longer needs to be based off the MRSIGNER 
-value and is instead now session based. What this means is that a new random key is created each time an enclave 
-starts. This means no two enclaves will ever have the same encryption key. This prevents a malicious host from 
-spinning up multiple copies of the same enclave and trying to manipulate their state by replaying old mail. A 
-consequence of this is that clients can now see when the enclave has been restarted as they will need to download 
-the new `EnclaveInstanceInfo` to continue submitting mail.
+Whilst not an API change, the behaviour of Mail has changed. As Mail no longer functions as a persistence mechanism and
+is solely used for communication, the enclave's encryption key is now session-based, rather than persisting across
+enclave restarts. In other words, a new random key is created each time an enclave starts. Since no two enclaves will
+ever have the same encryption key, a malicious host is prevented from spinning up multiple copies of the same enclave
+and trying to manipulate their state by replaying old mail.
+
+As a consequence, when the enclave restarts, clients will need to download the new `EnclaveInstanceInfo`
+and use this to create a new post office with the enclave's new key. The new post office must be used to send all
+subsequent mail. How can a client detect when the enclave restarts? The simplest way is to receive a message from the
+host which says that the enclave could not decrypt the last mail that was sent. The likely explanation for this decryption error is
+that the enclave was restarted and is now using a new key.
 
 In other areas, we've had to move some classes to better support enclave-to-enclave communication. The following 
 classes have been moved from `com.r3.conclave.client` to `com.r3.conclave.common`:
