@@ -23,7 +23,7 @@ but in this case to keep it simple the client will also be a command line app.
 In the unzipped SDK there is a directory called `repo` that contains a local Maven repository. This is where the libraries
 and Gradle plugin can be found. We need to tell Gradle to look there for plugins.
 
-Create or modify a file called `settings.gradle` in your project root directory so it looks like this:
+Create or modify a file called `settings.gradle` in your project root directory, so it looks like this:
 
 ```groovy
 pluginManagement {
@@ -206,7 +206,7 @@ tasks.register("prepareForSigning") {
 ```
 
 This creates a new task that can be invoked using Gradle to halt the build after generating materials that need to
-be signed by an external signing process. After the material has been signed the build can be resumed.
+be signed by an external signing process. After the material has been signed, the build can be resumed.
 
 ### Configure the _enclave_ module
 
@@ -382,7 +382,7 @@ is that some types of attack can be avoided. See the page on [enclave threading]
 
 ## Write a simple host program
 
-An enclave by itself is just a library: you must therefore load it from inside a host program.
+An enclave by itself is just a library, you must therefore load it from inside a host program.
 
 It's easy to load then pass data to and from an enclave. Let's start with the skeleton of a little command line app:
 
@@ -406,8 +406,8 @@ public class Host {
 }
 ```
 
-At first we will be building and running our enclave in simulation mode. This does not require the platform 
-hardware to support SGX. However simulation mode does require us to be using Linux. If we are not using 
+At first, we will be building and running our enclave in simulation mode. This does not require the platform 
+hardware to support SGX. However, simulation mode does require us to be using Linux. If we are not using 
 Linux as our host OS then we can use a Linux container or virtual machine as described in
 [Running the host](tutorial.md#running-the-host). Alternatively we could use [mock mode](mockmode.md)
 instead of simulation mode. When we want to switch to loading either a debug or release build of the enclave we need
@@ -464,12 +464,12 @@ above. If the enclave does fail to load for any reason then an exception is thro
     You can use the command `EnclaveHost.getCapabilitiesDiagnostics()` to print out some diagnostic information about the CPU, which can be helpful for troubleshooting.
 
 We then call `start` which initialises the enclave and the `MyEnclave` class inside it.
-You can load multiple enclaves at once but they must all use same mode, and each enclave will get its own isolated
+You can load multiple enclaves at once, but they must all use same mode, and each enclave will get its own isolated
 JVM.
 
 Note that an `EnclaveHost` allocates memory out of a pool called the "enclave page cache" which is a machine-wide
 limited resource. It'll be freed if the host JVM quits, but it's good practice to close the `EnclaveHost` object by
-calling `close` on it when done. Therefore we also make sure the `.close()` method is called on the enclave no
+calling `close` on it when done. Therefore, we also make sure the `.close()` method is called on the enclave no
 matter what using a try-with-resources statement. This doesn't actually matter in such a tiny hello world sample,
 because the enclave will be unloaded by the kernel once we exit like any other resource. It's just here to remind
 you that an enclave must be explicitly unloaded if you need to reinitialise it for whatever reason, or if you need
@@ -480,7 +480,7 @@ the memory back.
     again as in the above example. Cost-wise it's like starting a regular process even though no process will actually 
     exist. Treat the enclave like any other expensive resource and keep it around for as long as you might need it.
 
-Once we started the enclave, we call it passing in a string as bytes. The enclave will reverse it and we'll print out
+Once we started the enclave, we call it passing in a string as bytes. The enclave will reverse it, and we'll print out
 the answer. This is as easy as calling `EnclaveHost.callEnclave`, so put this in the `callEnclave` static method
 defined above:
 
@@ -540,7 +540,7 @@ clients can audit the enclave by repeating the Gradle build and comparing the va
 An instance has a security assessment, which can change in response to discovery of vulnerabilities in the
 infrastructure (i.e. without anything changing about the host or enclave itself). As we can see this enclave isn't
 actually considered secure yet because we're running in simulation mode still. An enclave can be `SECURE`, `STALE`, 
-or `INSECURE`. A assessment of `STALE` means there is a software/firmware/microcode update available for the platform
+or `INSECURE`. An assessment of `STALE` means there is a software/firmware/microcode update available for the platform
 that improves security in some way. The client may wish to observe when this starts being reported and define a 
 time span in which the remote enclave operator must upgrade.
 
@@ -732,7 +732,7 @@ mail commands can be found [below](#mail-commands).
 The enclave can provide a _routing hint_ to tell the host where it'd like the message delivered.
 It's called a "hint" because the enclave must always remember that
 the host is untrusted. It can be arbitrarily malicious and could, for example, not deliver the mail at all, or
-it could deliver it to the wrong place. However if it does deliver it wrongly, the encryption will ensure the
+it could deliver it to the wrong place. However, if it does deliver it wrongly, the encryption will ensure the
 bogus recipient can't do anything with the mail. In this simple hello world tutorial we can only handle one client
 at once so we're going to ignore the routing hint here. In a more sophisticated server your callback implementation can
 have access to your connected clients, a database, a durable queue, a `ThreadLocal` containing a servlet connection and so on. 
@@ -844,7 +844,7 @@ public class Client {
 How do you know the `EnclaveInstanceInfo` you've got is for the enclave you really intend to interact with? In normal
 client/server programming you connect to a host using some sort of identity, like a domain name or IP address. TLS 
 is used to ensure the server that picks up is the rightful owner of the domain name you intended to connect to. In
-enclave programming the location of the enclave might not matter much because the host is untrusted. Instead you have
+enclave programming the location of the enclave might not matter much because the host is untrusted. Instead, you have
 to verify *what* is running, rather than *where* it's running.
 
 !!! note
@@ -871,7 +871,7 @@ The constraint lets you specify:
 6. The maximum age of the attestation in ISO-8601 duration format
 
 If you specify a signing public key then you must also specify the product ID, otherwise if the organisation that
-created the enclave makes a second different kind of enclave in future, a malicious host might connect you with the
+created the enclave makes a second different kind of enclave in the future, a malicious host might connect you with the
 wrong one. If the input/output commands are similar then a confusion attack could be opened up. That's why you must
 always specify the product ID even if it's zero.
 
@@ -880,7 +880,7 @@ The simplest possible string-form constraint looks like this:
 `C:F86798C4B12BE12073B87C3F57E66BCE7A541EE3D0DDA4FE8853471139C9393F`
 
 It says "accept exactly one program, with that measurement hash". In this case the value came from the output of the
-build process as shown above. This is useful when you don't trust the author nor host of the enclave, and want to
+build process as shown above. This is useful when you neither trust the author nor the host of the enclave, and want to
 audit the source code and then reproduce the build.
 
 Often that's too rigid. We trust the *developer* of the enclave, just not the host. In that case we'll accept any enclave
@@ -905,7 +905,7 @@ EnclaveConstraint.parse("S:01280A6F7EAC8799C5CFDB1F11FF34BC9AE9A5BC7A7F7F54C7747
 This line of code parses a simple constraint that says any enclave (even if run in simulation mode) signed by this
 hash of a code signing key with product ID of 1 is acceptable. Obviously in a real app, you would remove the part
 that says `SEC:INSECURE`, but it's convenient to have this whilst developing. You'd probably also retrieve the
-constraint from a configuration file, system property or command line flag. Finally it uses the `check` method with
+constraint from a configuration file, system property or command line flag. Finally, it uses the `check` method with
 the attestation object. If anything is amiss an exception is thrown, so past this point we know we're talking to the
 real `ReverseEnclave` we wrote earlier.  
 
@@ -956,13 +956,13 @@ PrivateKey myKey = Curve25519PrivateKey.random();
 
 Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. At the
 moment in Conclave therefore, you must utilize our `Curve25519PublicKey` and `Curve25519PrivateKey`
-classes. In future we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply
+classes. In the future, we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply
 32 random bytes, which you can access using the `getEncoded()` method on `PrivateKey`. 
 
 Now we have a key with which to receive the response, we create a mail to the enclave. This is done using the
 `EnclaveInstanceInfo.createPostOffice` method, which returns a new `PostOffice` object. This is similar to the post office
-inside the enclave and let's us create mail with increasing sequence numbers. We pass in our private key when creating
-the post office so it's mixed in to the calculations when the mail is encrypted and thus becomes available in
+inside the enclave and lets us create mail with increasing sequence numbers. We pass in our private key when creating
+the post office, so it's mixed in to the calculations when the mail is encrypted and thus becomes available in
 `getAuthenticatedSender()` inside the enclave.
 
 ```java
@@ -1006,12 +1006,12 @@ socket.close();
 ```
 
 We write out the length of the mail, then the mail bytes, then read the length of the response and read the response 
-bytes. Finally we use `PostOffice.decryptMail` on the same instance we used to create our request, passing in the encrypted
+bytes. Finally, we use `PostOffice.decryptMail` on the same instance we used to create our request, passing in the encrypted
 reply. This method decrypts the bytes using our private key, checks they really did come from that enclave (by checking
 the authenticated sender key against the enclave's public key in the attestation), decodes the bytes and yields the reply.
 We can then access the body of the message using `EnclaveMail.getBodyAsBytes()`.
 
-Finally we close the socket, and we're done. Phew! 😅
+Finally, we close the socket, and we're done. Phew! 😅
 
 ## Testing
 
@@ -1050,7 +1050,7 @@ in a project separate from the enclave project.** A suitable place for your test
 the host project tests.
 
 Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs 
-to be loaded with `EnclaveHost.load`. By default this will run the tests in a simulated SGX environment and will require
+to be loaded with `EnclaveHost.load`. By default, this will run the tests in a simulated SGX environment and will require
 the tests to be executed within Linux. In addition, testing on real hardware will require the tests to be executed within
 Linux on a system that supports SGX.
 
@@ -1073,14 +1073,14 @@ You'll notice that we annotated the test class with `@EnabledOnOs(OS.LINUX)`. Th
 [JUnit 5](https://junit.org/junit5/docs/current/user-guide/#writing-tests-conditional-execution-os) and it will make sure
 the native test isn't run on non-Linux environments.
 
-The tests can use any enclave mode: release, debug, simulation or mock. Therefore if you want to run your tests on
+The tests can use any enclave mode: release, debug, simulation or mock. Therefore, if you want to run your tests on
 a non-Linux system then you can configure your tests to depend on a mock mode enclave instead. In this case, remove the
 `@EnabledOnOs(OS.LINUX)` annotation from the above code.
 
 !!! note
     Running your integration tests in mock mode is very similar to 
     [Integrating enclave tests in your host project](#integrating-enclave-tests-in-your-host-project). In both cases
-    the enclave code is loaded and run fully in memory. However for integration tests, you can also choose to run
+    the enclave code is loaded and run fully in memory. However, for integration tests, you can also choose to run
     the tests in modes other than mock, which is not possible for enclave project tests.
 
 Running
