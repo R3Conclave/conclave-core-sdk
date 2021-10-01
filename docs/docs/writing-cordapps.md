@@ -349,5 +349,5 @@ parameter object contains the identity of the sender or is set to null if the se
 ## Unit testing
 
 The unit tests are completely normal for Corda. However, as the code above will load a real or simulated Linux enclave,
-they won't run on Windows or macOS. You can build your enclave in [mock mode](mockmode.md) to fix this or on macOS, you can use the 
-`container-gradle` script to run the tests inside a Linux VM.
+they won't run on Windows or macOS. It is possible to work around this limitation using virtualization. For instructions
+on how to do this, consult the sample CorDapp readme.

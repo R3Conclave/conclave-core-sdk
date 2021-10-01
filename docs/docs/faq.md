@@ -227,7 +227,7 @@ Please see the discussion of [side channel attacks](security.md#side-channel-att
 
 ### What Java versions are usable?
 
-Please see [System Requirements](system-requirements.md#jdks) for documentation on supported JDKs.
+Please see [System Requirements](system-requirements.md#jdk-compatibility) for documentation on supported JDKs.
 
 ### At which points in time is a connection with Intel needed?
 

@@ -128,6 +128,10 @@ is available where you can find the development team during UK office hours (GMT
    [productID](enclave-configuration.md#conclave-configuration-options) and
    [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
    message if they are missing.
+   
+7. The container gradle script has been removed due to stability issues and will no longer be supported. If you are using container-gradle
+   to develop on Mac, we strongly suggest you stop doing so and follow [these instructions](system-requirements.md#running-conclave-projects)
+   for running your conclave projects instead.
 
 1. The SGX SDK that Conclave is built upon has been updated to version 2.14. This provides bug fixes and other 
    improvements. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release)
@@ -182,8 +186,7 @@ is available where you can find the development team during UK office hours (GMT
    for more details.
 1. We've improved the error messages in a number of places, including when there are problems signing the enclave
    and when there are issues in sending and receiving Mail messages.
-1. The [container-gradle](container-gradle.md) script has been updated to correctly handle configuration files
-   that live outside the source tree.
+1. The container-gradle script has been updated to correctly handle configuration files that live outside the source tree.
 1. The output of the enclave gradle build has been tidied up, hiding the information that would only normally be
    present on verbose builds. If you want to see the verbose output in your build then just add `--info` to your
    gradle build command line.
@@ -203,8 +206,7 @@ is available where you can find the development team during UK office hours (GMT
    intended to provide compatibility with libraries and programs that expect to load data or config files from disk.
    [Learn more about the in-memory filesystem](filesystem.md).
 1. :jigsaw: **New feature!** A new script is provided to make it easier to run your application inside a Docker container
-   on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine. Learn more about
-   the [container-gradle](container-gradle.md) script.
+   on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine.
 1. :jigsaw: **New feature!** The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
 1. :jigsaw: **New feature!** A tutorial for how to write [CorDapps](https://www.corda.net) has been added. Corda can
    provide your enclave with a business oriented peer-to-peer network that has integrated identity. [Learn more about

@@ -27,12 +27,12 @@ Only release mode locks out the host and provides the standard SGX security mode
 
 ## Set up your machine
 
-For this tutorial you will need [Java 8 or 11](system-requirements.md#supported-jdks) (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
+For this tutorial you will need [Java 8 or 11](system-requirements.md#jdk-compatibility) (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
 and the Gradle build system for you, so you don't need anything to get started except the IDE itself (the free 
 Community Edition works fine).
 
-Currently, we support developing enclaves on [Windows, macOS and Linux](system-requirements.md#operating-systems). However, there are a few platform specific
-differences to be aware of.
+Currently, we support developing enclaves on [Windows, macOS and Linux](system-requirements.md#operating-systems).
+However, there are a few platform specific differences to be aware of.
 
 Firstly, you need a [Linux](system-requirements.md#linux-distros-and-versions) environment to build and execute enclaves, including for native testing. This is because
 enclaves are Linux shared libraries with special extensions. Unless you are using Linux, you will need to install Docker.
@@ -85,7 +85,7 @@ nothing special - they just set up the classpath. You could also e.g. make a fat
 Alternatively you can build your application from the command line as described in the next section.
 
 
-### Select your mode
+### Select enclave mode
 
 In the sample app, the `assemble` task will build the app for **simulation mode** by default.
 
@@ -210,26 +210,32 @@ cd client/build/install
 
 === "macOS"
 
-    On macOS there is a script that lets you run Gradle (and by extension anything it runs) inside a Linux environment based
-    on the Conclave build container. It wraps Docker and makes it simpler to work with.
+    To execute enclaves in simulation mode on mac, you need to use docker. Start by installing docker desktop, then
+    using the following commands:
 
-    Just use the `../scripts/container-gradle` script as a replacement for `gradlew`. You might want to add it to your
-    `$PATH` variable. To run the host, use this command:
-    ```text
-    ../scripts/container-gradle host:run
+    ```
+    ./gradlew host:installDist
+    docker run -it --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash
     ```
 
-    For more information see the [Container Gradle](container-gradle.md) page.
+    These commands will build the app on your Mac, then mount the app into a Linux container and give you a shell.
+    Next, run the app from within the container:
 
-    !!! tip
-        Don't be surprised if the application gets built again from scratch! We do this to ensure the build and
-        runtime environments match.
+    ```
+    cd host/build/install
+    ./host/bin/host
+    ```
+
+    Press ctrl+D to exit the container when finished.
+
+    !!! info
+        For more information on these commands and how they can be adapted to suit your own project, see
+        [system requirements](system-requirements.md#running-conclave-projects).
 
 === "Windows"
 
-    On Windows you can still test locally in simulation mode using a Docker container. However you may need to configure
-    mounts and other parameters yourself. Refer to the `scripts/container-gradle` file to see how this is done on macOS.
-
+    On windows, there are two options for running enclaves in simulation mode. The first is using a Docker container as
+    follows:
 
     ___Windows PowerShell___
     ```
@@ -237,16 +243,19 @@ cd client/build/install
     docker run -it --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash
     ```
 
-    This will build the app on your Windows machine, then mount the app into a Linux container and get a shell. Next,
-    run the app from within the container:
+    These commands will build the app on your Windows machine, then mount the app into a Linux container and give you a
+    shell. Next, run the app from within the container:
+
     ```
     cd host/build/install
     ./host/bin/host
     ```
 
-    !!! tip
-        Please consult the [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) to understand
-        what switches you can pass to the `docker run` command.
+    Press ctrl+D to exit the container when finished.
+
+    !!! info
+        For more information on these commands and how they can be adapted to suit your own project, see
+        [system requirements](system-requirements.md#running-conclave-projects).
 
 If your Linux machine (or container) doesn't have SGX, you should see something like the following. Don't worry, you can still complete the tutorial because we are using [simulation mode](#selecting-your-mode):
 ```text
@@ -257,13 +266,6 @@ You can proceed to [Running the client](#running-the-client) when you see the fo
 ```text
 Listening on port 9999. Use the client app to send strings for reversal.
 ```
-
-
-### IntelliJ configuration
-If you are using IntelliJ, you may want to create a launch configuration to incorporate the `build` and `run` stages. If using the
-`container-gradle` script on macOS, IntelliJ does expect the command to launch Gradle to be called `gradle` or `gradlew`.
-What you can do is rename `gradlew` to something else, then copy the `scripts/container-gradle` script to `gradlew` in your project root. Finally, edit the last line of the script to start the renamed script. Then,
-IntelliJ will run the `container-gradle` script while thinking it's running normal Gradle.
 
 ## Run the client
 

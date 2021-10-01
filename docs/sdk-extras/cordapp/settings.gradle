@@ -9,8 +9,7 @@ pluginManagement {
                 if (Files.isDirectory(Paths.get("/repo/com"))) {
                     path = Paths.get("/repo")
                 } else {
-                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory. " +
-                            "If on macOS, try using the container-gradle script to execute run the tests. See the Conclave CorDapp tutorial on https://docs.conclave.net/writing-cordapps.html")
+                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
                 }
             }
             url = path.toFile()
