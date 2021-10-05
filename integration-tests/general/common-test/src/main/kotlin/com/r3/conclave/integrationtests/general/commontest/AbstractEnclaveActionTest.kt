@@ -152,7 +152,6 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
             postOffice = createPostOffice()
             // TODO We wouldn't need to do this if we had a client layer API above PostOffice: https://r3-cev.atlassian.net/browse/CON-617
             postOffice.lastSeenStateId = old.lastSeenStateId
-            postOffice.batchSequence = old.batchSequence
         }
 
         private fun createPostOffice(): PostOffice {

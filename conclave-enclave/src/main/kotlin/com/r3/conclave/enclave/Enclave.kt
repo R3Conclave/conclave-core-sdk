@@ -288,13 +288,12 @@ abstract class Enclave {
      * used to protect against state rewind by the host.
      */
     private fun getMailPrivateHeader(receiveContext: ReceiveContext, publicKey: PublicKey): ByteArray {
-        val batchSequence = receiveContext.mailsPerOutboundClient.computeIfAbsent(publicKey) { MutableInt() }
+        receiveContext.outboundClients += publicKey
 
         return writeData {
             writeByte(1)  // Version
             write(receiveContext.stateId.bytes)
             nullableWrite(lastSeenStateIds[publicKey]) { write(it.bytes) }
-            writeInt(batchSequence.value++)
         }
     }
 
@@ -538,7 +537,7 @@ Received: $attestationReportBody"""
 
         private fun sendSealedState(hostThreadId: Long, receiveContext: ReceiveContext) {
             // For every client that has outbound mail, its last seen state ID needs to be updated to the new state ID.
-            for (outboundClient in receiveContext.mailsPerOutboundClient.keys) {
+            for (outboundClient in receiveContext.outboundClients) {
                 lastSeenStateIds[outboundClient] = receiveContext.stateId
             }
 
@@ -728,11 +727,9 @@ Received: $attestationReportBody"""
      */
     private class ReceiveContext {
         val stateId = EnclaveStateId()
-        val mailsPerOutboundClient = HashMap<PublicKey, MutableInt>()
+        val outboundClients = HashSet<PublicKey>()
         var pendingPostMails = 0
     }
-
-    private class MutableInt(var value: Int = 0)
 
     private sealed class CallState {
         class Receive(

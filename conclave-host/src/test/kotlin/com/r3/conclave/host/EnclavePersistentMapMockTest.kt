@@ -117,17 +117,6 @@ class EnclavePersistentMapMockTest {
         }.hasMessageContaining("Possible dropped mail or state roll back by the host detected.")
     }
 
-    // TODO Complete support for multiple mail in same commands group: https://r3-cev.atlassian.net/browse/CON-625
-//    @Test
-//    fun `host unable to drop mail in same receiveMail batch`() {
-//
-//    }
-//
-//    @Test
-//    fun `host unable to reorder mail in same receiveMail batch`() {
-//
-//    }
-
     @Test
     fun `changes to the persistent map made by receiveFromUntrustedHost are preserved`() {
         executeActionsLocally(listOf(Put("key", "value")))
@@ -413,7 +402,6 @@ class EnclavePersistentMapMockTest {
             val old = postOffice
             postOffice = createPostOffice()
             postOffice.lastSeenStateId = old.lastSeenStateId
-            postOffice.batchSequence = old.batchSequence
         }
 
         private fun createPostOffice(): PostOffice {

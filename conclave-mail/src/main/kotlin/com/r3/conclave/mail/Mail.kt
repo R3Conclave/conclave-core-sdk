@@ -230,8 +230,6 @@ abstract class PostOffice(
         }
         get() = _lastSeenStateId?.bytes?.clone()
 
-    var batchSequence = 0
-
     /**
      * Set the next sequence number to be used. This can only be called before any mail have been encrypted to ensure
      * they have increasing sequence numbers.
@@ -306,35 +304,32 @@ abstract class PostOffice(
     fun decryptMail(encryptedEnclaveMail: ByteArray): EnclaveMail {
         val mail = MailDecryptingStream(encryptedEnclaveMail.inputStream()).decryptMail { senderPrivateKey }
         require(mail.authenticatedSender == destinationPublicKey) {
-            "Mail does not appear to have been targeted for this post office. Authenticated sender was ${mail.authenticatedSender} " +
-                    "but expected $destinationPublicKey."
+            "Mail does not appear to have been targeted for this post office. Authenticated sender was " +
+                    "${mail.authenticatedSender} but expected $destinationPublicKey."
         }
 
+        // See if the mail has a private header. If it does then the enclave has been configured for rollback detection
+        // and has sent us the necessary information to detect if the host has rolled back its state.
         mail.privateHeader?.deserialise {
             val version = read()
             check(version == 1)
             val currentStateId = readEnclaveStateId()
             val expectedPreviousStateId = nullableRead { readEnclaveStateId() }
-            val batchSequence = readInt()
-            if (_lastSeenStateId == currentStateId) {
-                // TODO Finish this off: https://r3-cev.atlassian.net/browse/CON-625
-                check(batchSequence == this@PostOffice.batchSequence + 1) {
-                    ""
-                }
-            } else {
+
+            if (_lastSeenStateId != currentStateId) {
                 // TODO Allow the user the ability to override the default behaviour on state ID mismatch: https://r3-cev.atlassian.net/browse/CON-617
                 check(_lastSeenStateId == expectedPreviousStateId) {
-                    "Possible dropped mail or state roll back by the host detected. Expected state ID $lastSeenStateId " +
-                            "but got $expectedPreviousStateId."
-                }
-                // TODO This should instead check that the value is the previous value, otherwise it's possible to drop
-                //  the last mail in the previous batch. https://r3-cev.atlassian.net/browse/CON-625
-                check(batchSequence == 0) {
-                    "The sealed state of the enclave has changed, but received mail which isn't the first of that state ($batchSequence)."
+                    "Possible dropped mail or state roll back by the host detected. Expected state ID " +
+                            "$_lastSeenStateId but got $expectedPreviousStateId."
                 }
                 _lastSeenStateId = currentStateId
+            } else {
+                // If the state ID hasn't changed then it probably means the enclave has sent multiple mail from the
+                // same receiveMail/receiveFromUntrustedHost invocation. Or it could mean the host is replaying the same
+                // mail to us. We may want to add replay, re-order and dropped mail detection support on the client side.
+                // But this is something slightly different to roll back detection and would need to be handled
+                // separately, probably by checking the sequence numbers. https://r3-cev.atlassian.net/browse/CON-625
             }
-            this@PostOffice.batchSequence = batchSequence
         }
 
         return mail
