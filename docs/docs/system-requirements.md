@@ -110,3 +110,5 @@ the enclave module to Java 8 bytecode, regardless of the Java version used to bu
 The host and client are normal Java libraries targeting Java 8, so all code outside the enclave module can be written
 and built with any Java version that is 8 or higher.
 
+## Gradle
+The tool used to build Conclave is Gradle. The recommended version is 6.6.1.

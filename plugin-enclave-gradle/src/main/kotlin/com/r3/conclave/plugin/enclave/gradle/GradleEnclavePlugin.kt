@@ -10,6 +10,7 @@ import com.r3.conclave.plugin.enclave.gradle.os.WindowsDependentTools
 import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginConvention
@@ -129,12 +130,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val osDependentTools = getOSDependentTools(conclaveDependenciesDirectory)
 
         val copyEnclaveCommonHeaders = target.createTask<Copy>("copyEnclaveCommonHeaders") { task ->
+            task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             task.group = CONCLAVE_GROUP
             task.fromDependencies("com.r3.conclave:jvm-enclave-common:$sdkVersion")
             task.into(baseDirectory)
         }
 
         val copySgxToolsTask = target.createTask<Copy>("copySgxTools") { task ->
+            task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             task.fromDependencies(*osDependentTools.getToolsDependenciesIDs(sdkVersion).toTypedArray())
             task.into(baseDirectory)
         }
@@ -168,6 +171,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
 
         val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
+            task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             task.fromDependencies(
                     "com.r3.conclave:graal:$sdkVersion",
                     "com.r3.conclave:conclave-build:$sdkVersion"
@@ -226,6 +230,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val substrateDependenciesPath = "$conclaveDependenciesDirectory/substratevm/$type"
             val sgxDirectory = "$conclaveDependenciesDirectory/sgx/$type"
             val copySubstrateDependenciesTask = target.createTask<Copy>("copySubstrateDependencies$type") { task ->
+                task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 task.fromDependencies(
                         "com.r3.conclave:native-substratevm-$typeLowerCase:$sdkVersion",
                         "com.r3.conclave:linux-sgx-$typeLowerCase:$sdkVersion"

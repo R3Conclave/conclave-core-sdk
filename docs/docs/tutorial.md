@@ -5,6 +5,8 @@
     * You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
     * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md) and 
         [architecture overview](architecture.md).
+    * Gradle versions greater than 6.x are not supported. Using a later version of Gradle might lead to build issues.
+    Refer to the [system requierments](system-requirements.md#gradle) for the recommended version of Gradle.
 
 You can find a **sample app** in the `hello-world` directory of your SDK. You can use this app as a template 
 for your own if you want a quick start. We will cover:
