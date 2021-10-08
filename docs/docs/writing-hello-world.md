@@ -147,53 +147,31 @@ subprojects {
 
 
 ### Configure the _host_ module
-Add this bit of code to your host `build.gradle` file to let the [mode](tutorial.md#enclave-modes) be chosen from the command line:
-
+We intend to use `conclave-web-host`, so no coding is required for the `host`. Simply create an empty `host` project and `build.gradle` with the following content:
 ```groovy
-// Override the default (simulation) with -PenclaveMode=
-def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
-```
-
-We can apply the Gradle `application` plugin and set the `mainClassName` property
-[in the usual manner](https://docs.gradle.org/current/userguide/application_plugin.html#application_plugin) to let us run
-the host from the command line:
-
-```groovy hl_lines="3 6-8"
 plugins {
-    id 'java'
     id 'application'
 }
 
 application {
-    mainClassName = "com.superfirm.host.Host" // CHANGE THIS 
+    mainClassName = "com.r3.conclave.host.EnclaveWebHost"
 }
 
-```
+// Override the default (simulation) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 
-Then add the following dependencies, also to the host's `build.gradle`:
-
-```groovy hl_lines="2 3"
 dependencies {
-    implementation "com.r3.conclave:conclave-host:$conclaveVersion"
     runtimeOnly project(path: ":enclave", configuration: mode)
-
-    runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
+    runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
+    // enable unit tests
+    testImplementation "com.r3.conclave:conclave-host:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }
 ```
 
-This says that at runtime (but not compile time) the `:enclave` module must be on the classpath, and configures 
-dependencies to respect the three different variants of the enclave. That is, the enclave module will expose tasks
-to compile and use either mock, simulation, debug or release mode. Which task to use is actually selected by the host build. 
-
 !!! tip
     Don't worry if you see the error `Could not resolve project :enclave`. This will be resolved when
     we configure the enclave module in the next section.
-
-For this simple tutorial we also add a runtime-only dependency on the popular [SLF4J](https://www.slf4j.org) library 
-which Conclave uses to do logging. SLF4J enables you to send Conclave's logging to any of the major logging frameworks 
-used in Java, but here, we add the "simple" backend which just causes it to log to the console. Finally we configure 
-unit testing using JUnit 5.
 
 If you intend to use an [external signing process](signing.md) to sign your enclave then add the following lines to
 the Gradle file:
@@ -318,18 +296,18 @@ Alternatively you can provide or [generate your own](signing.md#generating-keys-
 The client module is the simplest of all. This is literally a bog-standard hello world command line app Gradle build,
 with a single dependency on the Conclave client library:
 
-```groovy hl_lines="3 6-12"
+```groovy
 plugins {
-    id 'java'
     id 'application'
 }
 
 application {
-    mainClassName = "com.superfirm.client.Client" // CHANGE THIS
+    mainClassName = "com.r3.conclave.sample.client.Main" // CHANGE THIS
 }
 
 dependencies {
     implementation "com.r3.conclave:conclave-client:$conclaveVersion"
+    implementation "org.apache.httpcomponents:httpclient:4.5.13"
 }
 ```
 
@@ -351,20 +329,29 @@ import com.r3.conclave.enclave.Enclave;
  * Simply reverses the bytes that are passed in.
  */
 public class ReverseEnclave extends Enclave {
-    @Override
-    public byte[] receiveFromUntrustedHost(byte[] bytes) {
+    
+    private byte[] reverse(byte[] bytes) {
         byte[] result = new byte[bytes.length];
         for (int i = 0; i < bytes.length; i++)
             result[i] = bytes[bytes.length - 1 - i];
         return result;
+    }
+    
+    @Override
+    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
+        // This is used when the host delivers a message from the client.
+        final byte[] reversed = reverse(mail.getBodyAsBytes());
+        // Get the post office object for responding back to this mail and use it to encrypt our response.
+        final byte[] responseBytes = postOffice(mail).encryptMail(reversed);
+        postMail(responseBytes, routingHint);
     }
 }
 ```
 
 The `Enclave` class by itself doesn't require you to support direct communication with the host. This is because
 sometimes you don't need that and shouldn't have to implement message handlers. In this case we'll use that
-functionality because it's a good place to start learning, so we also override and implement the `receiveFromUntrustedHost`
-method which takes a byte array and optionally returns a byte array back. Here we just reverse the contents.
+functionality because it's a good place to start learning, so we also override and implement the `receiveMail`
+method which takes a byte array and optionally sends a byte array back via `postMail`. Here we just reverse the contents.
 
 !!! tip
     In a real app you would use the byte array to hold serialised data structures. You can use whatever data formats you
@@ -380,117 +367,6 @@ is malicious and can enter your code with multiple threads simultaneously even i
 your application level data via race conditions. By blocking multi-threading until you indicate readiness, the hope 
 is that some types of attack can be avoided. See the page on [enclave threading](threads.md) to learn more.
 
-## Write a simple host program
-
-An enclave by itself is just a library, you must therefore load it from inside a host program.
-
-It's easy to load then pass data to and from an enclave. Let's start with the skeleton of a little command line app:
-
-```java
-package com.superfirm.host // CHANGE THIS
-
-import com.r3.conclave.host.EnclaveHost;
-import com.r3.conclave.host.EnclaveLoadException;
-
-/**
- * This class demonstrates how to load an enclave and use it.
- */
-public class Host {
-    public static void main(String[] args) throws EnclaveLoadException {
-        // TODO: Fill this out
-    }
-
-    public static String callEnclave(EnclaveHost enclave, String input) {
-        // TODO: Fill this out.
-    }
-}
-```
-
-At first, we will be building and running our enclave in simulation mode. This does not require the platform 
-hardware to support SGX. However, simulation mode does require us to be using Linux. If we are not using 
-Linux as our host OS then we can use a Linux container or virtual machine as described in
-[Running the host](tutorial.md#running-the-host). Alternatively we could use [mock mode](mockmode.md)
-instead of simulation mode. When we want to switch to loading either a debug or release build of the enclave we need
-to ensure the platform supports SGX.
-
-By adding the code below to the main method we can determine whether the platform can load debug and release 
-enclaves. This method reports the actual hardware status even if you are currently working with mock or simulation enclaves.
-
-```java hl_lines="2-7"
-public static void main(String[] args) throws EnclaveLoadException {
-    try {
-        EnclaveHost.checkPlatformSupportsEnclaves(true);
-        System.out.println("This platform supports enclaves in simulation, debug and release mode.");
-    } catch (EnclaveLoadException e) {
-        System.out.println("This platform does not support hardware enclaves: " + e.getMessage());
-    }
-}
-```
-
-If SGX is not supported the function throws an exception which describes the reason why. There are a number of 
-common reasons why SGX may not be supported including:
-
-1. The CPU or the system BIOS does not support SGX.
-2. The host operating system is Windows or Mac OS. Conclave currently only supports loading
-   enclaves in simulation, debug or release modes on Linux.
-3. SGX is disabled in the BIOS and must be manually enabled by the user.
-4. SGX is disabled but can be enabled in software.
-
-If SGX is disabled but can be enabled in software the code below attempts to automatically enable SGX support 
-by specifying the 'true' parameter. It might be necessary to run this application with root access and/or reboot 
-the system in order to successfully enable SGX. The exception message will describe if this is the case.
-
-To load the enclave we'll put this after the platform check:
-
-```java
-String className = "com.superfirm.enclave.ReverseEnclave" // CHANGE THIS
-try (EnclaveHost enclave = EnclaveHost.load(className)) {
-    enclave.start(null, null);
-
-    System.out.println(callEnclave(enclave, "Hello world!"));
-    // !dlrow olleH      :-)
-
-    // TODO: Get the remote attestation
-}
-```
-
-This code starts by creating an [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) object. This names the 
-class and then attempts to load it inside another JVM running inside an enclave. A [remote attestation](enclaves.md#remote-attestation) procedure is
-then performed involving Intel's servers. This procedure can fail if attempting to load a debug or release enclave 
-and the platform does not support SGX. This is why it is important to perform the platform check we made in the code 
-above. If the enclave does fail to load for any reason then an exception is thrown describing the reason why.
-
-!!! tip
-    You can use the command `EnclaveHost.getCapabilitiesDiagnostics()` to print out some diagnostic information about the CPU, which can be helpful for troubleshooting.
-
-We then call `start` which initialises the enclave and the `MyEnclave` class inside it.
-You can load multiple enclaves at once, but they must all use same mode, and each enclave will get its own isolated
-JVM.
-
-Note that an `EnclaveHost` allocates memory out of a pool called the "enclave page cache" which is a machine-wide
-limited resource. It'll be freed if the host JVM quits, but it's good practice to close the `EnclaveHost` object by
-calling `close` on it when done. Therefore, we also make sure the `.close()` method is called on the enclave no
-matter what using a try-with-resources statement. This doesn't actually matter in such a tiny hello world sample,
-because the enclave will be unloaded by the kernel once we exit like any other resource. It's just here to remind
-you that an enclave must be explicitly unloaded if you need to reinitialise it for whatever reason, or if you need
-the memory back.
-
-!!! warning
-    Starting and stopping/closing an enclave is not free, so **don't** load the enclave, use it and immediately close it 
-    again as in the above example. Cost-wise it's like starting a regular process even though no process will actually 
-    exist. Treat the enclave like any other expensive resource and keep it around for as long as you might need it.
-
-Once we started the enclave, we call it passing in a string as bytes. The enclave will reverse it, and we'll print out
-the answer. This is as easy as calling `EnclaveHost.callEnclave`, so put this in the `callEnclave` static method
-defined above:
-
-```java
-// We'll convert strings to bytes and back.
-return new String(enclave.callEnclave(input.getBytes()));
-```
-
-So we just convert the string to bytes, send it to the enclave, and convert the response from bytes back to a string.
-
 ## Remote attestation
 
 There's no point in using an enclave to protect purely local data, as the data must ultimately come from the
@@ -498,15 +374,34 @@ There's no point in using an enclave to protect purely local data, as the data m
 prove its identity to the third parties who will upload secret data. If this paragraph doesn't make
 sense please review the [Architecture overview](architecture.md) and the [Enclaves](enclaves.md) section.
 
-Before we can set up communication with a client, we must therefore get remote attestation working.
+Before client can set up communication with an enclave, we must get remote attestation working.
     
-Using remote attestation is easy! Just obtain an `EnclaveInstanceInfo` and serialize/deserialize it using the
-provided methods. Add these lines to the end of the `main` function of your `Host` class:
-    
+Using remote attestation is easy! Just obtain an `EnclaveInstanceInfo` via `/attestation` endpoint and validate it.
+Here is an example of how to do that:
 ```java
-final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();
-final byte[] attestationBytes = attestation.serialize();
-System.out.println(EnclaveInstanceInfo.deserialize(attestationBytes));
+    private EnclaveInstanceInfo getEnclaveInstanceInfo() throws Exception {
+        HttpResponse response = httpClient.execute(new HttpGet(domain + "/attestation"));
+        StatusLine status = response.getStatusLine();
+        if (status.getStatusCode() != HttpStatus.SC_OK)
+            throw new IOException(status.toString());
+
+        int len = (int)response.getEntity().getContentLength();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(len);
+        response.getEntity().writeTo(baos);
+
+        byte[] attestationBytes = baos.toByteArray();
+        EnclaveInstanceInfo attestation = EnclaveInstanceInfo.deserialize(attestationBytes);
+
+        // Three distinct signing key hashes can be accepted.
+        // Release mode:            360585776942A4E8A6BD70743E7C114A81F9E901BF90371D27D55A241C738AD9
+        // Debug/Simulation mode:   4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+        // Mock mode:               0000000000000000000000000000000000000000000000000000000000000000
+        EnclaveConstraint.parse("S:360585776942A4E8A6BD70743E7C114A81F9E901BF90371D27D55A241C738AD9 "
+             + "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 "
+             + "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE").check(attestation);
+        return attestation;
+    }
+
 ```
 
 The `EnclaveInstanceInfo` has a useful `toString` function that will print out something like this:
@@ -553,26 +448,11 @@ some frequency with which it expects the host code to refresh the `EnclaveInstan
 stopping/closing and then restarting the enclave.
 
 ## Configure attestation
-
-To use SGX remote attestation for real we need to do some additional work. Remember how we wrote 
-`enclave.start(null, null);` above? The first parameter contains configuration data required to use an attestation
-service. There are three kinds of attestation service:
-
-1. EPID. This older protocol is supported by some desktop/laptop class Intel CPUs. The EPID protocol includes some
-   consumer privacy cryptography, and involves talking directly to Intel's IAS service to generate an attestation.
-   For that you need to obtain an API key and service provider ID from Intel. You can sign-up easily and for free. 
-   [Learn more about IAS](ias.md). Please note that Intel does not provide EPID attestation support for Xeon scalable CPUs
-   including Ice Lake and future generations. You need to use DCAP attestation on these platforms.
-2. Azure DCAP. The _datacenter attestation primitives_ protocol is newer and designed for servers. When running on a
+At the time of writing we only support DCAP attestation.
+1. Azure DCAP. The _datacenter attestation primitives_ protocol is newer and designed for servers. When running on a
    Microsoft Azure Confidential Compute VM or Kubernetes pod, you don't need any parameters. It's all configured out of 
    the box.
-3. Generic DCAP. When not running on Azure, you need to obtain API keys for Intel's PCCS service. 
-
-We'll target Azure for now to keep things simple. Replace the call to `EnclaveHost.start` above with this snippet:
-
-```java
-enclave.start(new AttestationParameters.DCAP(), null);
-```
+2. Generic DCAP. When not running on Azure, you need to obtain API keys for Intel's PCCS service. 
 
 !!! info
     Why does Conclave need to contact Intel's servers? It's because those servers contain the most up to date information
@@ -581,12 +461,28 @@ enclave.start(new AttestationParameters.DCAP(), null);
 
 ## Run what we've got so far
 
-Now everything should be ready to run the host from the command line.
-
-Run `gradlew host:run` and it should print "Hello World!" backwards along with the security info as shown above.
-
+Now everything should be ready to run the host from the command line (replace enclave class name with your enclave class name).
+```bash
+./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state"
+```
+or
+```bash
+./gradlew clean host:installDist
+./host/build/install/host/bin/host --enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state
+```
 !!! note
-    If you are using Windows or macOS then please follow the instructions for your operating system, which you can find in the [Running the host](tutorial.md#running-the-host) section.
+    `--sealed.state.file` specifies where the host would store a sealed state. See [Mail Commands](#mail-commands) for details.
+
+Expect to see the Spring Boot logo:
+```text
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v2.4.2)
+```
 
 During the build you should see output like this:
 
@@ -610,7 +506,7 @@ by debuggers to read/write the enclave's memory.
 You will need to run this on an [Azure Confidential VM](https://docs.microsoft.com/en-us/azure/confidential-computing/).
 
 ```bash
-./gradlew -PenclaveMode=debug host:run
+./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state"
 ```
 
 ## Encrypted messaging
@@ -627,33 +523,6 @@ API, JMS message queues, a simple TCP socket as in this tutorial, or even files.
 
 ### Receiving and posting mail in the enclave
 
-Firstly we need to upgrade our little enclave to be able to receive mails from clients. This is easy! Just override
-the `receiveMail` method:
-
-```java hl_lines="14-19"
-/**
- * Simply reverses the bytes that are passed in.
- */
-public class ReverseEnclave extends Enclave {
-    @Override
-    public byte[] receiveFromUntrustedHost(byte[] bytes) {
-        byte[] result = new byte[bytes.length];
-        for (int i = 0; i < bytes.length; i++) {
-            result[i] = bytes[bytes.length - 1 - i];
-        }
-        return result;
-    }
-
-    @Override
-    protected void receiveMail(long id, EnclaveMail mail, String routingHint) {
-        byte[] reversed = receiveFromUntrustedHost(mail.getBodyAsBytes());
-        byte[] responseBytes = postOffice(mail).encryptMail(reversed);
-        postMail(responseBytes, routingHint);
-    }
-}
-```
-
-The `receiveFromUntrustedHost` method here isn't really needed, it's just because we're already using this to demonstrate local calls.
 The new part is `receiveMail`.
 
 This method has a routing hint string parameter. It's provided by the host and it helps the host route replies when
@@ -811,33 +680,87 @@ The client app will do three things:
 1. Verify the enclave is acceptable: i.e. that it will do what's expected.
 1. Send it the command line arguments as a string to reverse and get back the answer, using encrypted mail.
 
-Here's the initial boilerplate to grab the user input, connect, download and deserialize the `EnclaveInstanceInfo`.
+The WebHost REST API includes the following three endpoints:
+* `/attestation` - get attestation info
+* `/deliver-mail` - deliver mail to enclave
+* `/inbox` - retrieve mail posted by enclave
 
+Here is a simple client which communicates with the web host using its REST API.
 ```java
-import com.r3.conclave.common.InvalidEnclaveException;
-import com.r3.conclave.common.EnclaveInstanceInfo;
-
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.net.Socket;
-
+/**
+ * Simple client to interact with enclave using REST API.
+ *
+ * Note: This is experimental code and as such is subject to change.
+ * Note 2: The current implementation does not support HTTPS protocol.
+ *         You might set up a "HTTPS To HTTP Reverse Proxy" as a workaround.
+ */
 public class Client {
-    public static void main(String[] args) throws IOException, InvalidEnclaveException {
-        if (args.length == 0) {
-            System.err.println("Please pass the string to reverse on the command line");
-            return;
-        }
-        String toReverse = String.join(" ", args);
 
-        // Connect to the host, it will send us a remote attestation (EnclaveInstanceInfo).
-        Socket socket = new Socket("localhost", 9999);
-        DataInputStream fromHost = new DataInputStream(socket.getInputStream());
-        byte[] attestationBytes = new byte[fromHost.readInt()];
-        fromHost.readFully(attestationBytes);
-        EnclaveInstanceInfo attestation = EnclaveInstanceInfo.deserialize(attestationBytes);
-    }
+    /**
+     * Client needs to know where the WebHost is
+     * and where to store the mail state.
+     *
+     * @param domain        points to running WebHost (i.e. http://my.web.host:8080)
+     * @param mailStateFile this is where the mail state (including mailSequenceNumber) is stored
+     *
+     * @throws IllegalArgumentException if `domain` string violates RFC 2396
+     */
+    public Client(String domain, String mailStateFile) throws IllegalArgumentException;
+
+    /**
+     * Retrieves enclave attestation info and validates it.
+     *
+     * @throws IOException             thrown if host is not available or there is a problem with mail state file
+     * @throws InvalidEnclaveException thrown if there is a problem with attestation
+     */
+    public void connect() throws IOException, InvalidEnclaveException;
+
+    /**
+     * Delivers message to an enclave, the reply (if any) will go into a specified mailbox.
+     *
+     * @param correlationId _uniquely_ identifies a mailbox
+     * @param message       bytes to be sent
+     * @throws IOException thrown if there is a problem communicating with the host
+     *                     or with the enclave
+     *                     or HTTP response code is not 200
+     */
+    public void deliverMail(String correlationId, byte[] message) throws IOException;
+
+    /**
+     * The client won't be notified of any new messages from the enclave,
+     * you have to call `checkInbox` to get the messages.
+     * All messages pulled will be removed from the mailbox.
+     *
+     * @param correlationId _uniquely_ identifies a mailbox
+     * @return retrieved mail as list of EnclaveMail objects
+     * @throws Exception thrown if there is a problem communicating with the host
+     *                   or HTTP response code is not 200
+     */
+    public List<EnclaveMail> checkInbox(String correlationId) throws IOException;
+
+    /**
+     * Saves mail state (if mail state file is specified)
+     * Close HTTP connected.
+     *
+     * @throws IOException
+     */
+    public void close() throws IOException;
 }
 ```
+
+And here is how you might use this `Client`:
+```java
+public static void main(String[] args) throws Exception {
+    Client client=new Client("http://127.0.0.1:8080",null);
+    client.connect();
+    System.out.println(client);
+    client.close();
+}
+```
+!!! note
+    In order to resume a mail session after restart, the client has to persist the mail state. The second parameter of the client constructor
+    is a filename where the mail state will be stored. The mail state includes values required for `PostOffice` (private key, topic, nextSeqN, stateId).
+    You *have to* call `close()` for mail state to be saved into the file.
 
 ### Constraints
 
@@ -947,71 +870,36 @@ The client wants to receive a response from the enclave, and we want that to be 
 need a key pair of its own. Conclave uses Curve25519, a state of the art elliptic curve algorithm. For reasons of
 implementation robustness and avoidance of side channel attacks, this is the only algorithm supported by Conclave Mail.
 If you want to use other algorithms for some reason you would need to implement your own messaging system on top of
-host-local calls. Alternatively, use that other algorithm to encrypt/decrypt a Curve25519 private key. Generating such
-a key is straightforward: 
+host-local calls. Alternatively, use that other algorithm to encrypt/decrypt a Curve25519 private key.
+
+The complexity of dealing with private keys is conveniently hidden inside the sample `Client`. If curious check `buildPostOffice()` method: 
 
 ```java
-PrivateKey myKey = Curve25519PrivateKey.random();
+private void buildPostOffice() throws IOException {
+    /**
+     * identityKey = Curve25519PrivateKey.random();
+     * topic = UUID.randomUUID().toString();
+     * nextMailSequenceN = 0
+     */
+    State state = ...;
+    postOffice = enclaveInstanceInfo.createPostOffice(state.identityKey, state.topic);
+    postOffice.setNextSequenceNumber(state.nextMailSequenceN);
+}
 ```
 
-Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. At the
-moment in Conclave therefore, you must utilize our `Curve25519PublicKey` and `Curve25519PrivateKey`
-classes. In the future, we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply
-32 random bytes, which you can access using the `getEncoded()` method on `PrivateKey`. 
+### Sending and receiving mail
 
-Now we have a key with which to receive the response, we create a mail to the enclave. This is done using the
-`EnclaveInstanceInfo.createPostOffice` method, which returns a new `PostOffice` object. This is similar to the post office
-inside the enclave and lets us create mail with increasing sequence numbers. We pass in our private key when creating
-the post office, so it's mixed in to the calculations when the mail is encrypted and thus becomes available in
-`getAuthenticatedSender()` inside the enclave.
+The `Client` provides two methods `deliverMail()` and `checkInbox()` wrapping corresponding endpoints of the Web Host REST API.
 
+Here is how you send a message to the enclave:
 ```java
-PostOffice postOffice = attestation.createPostOffice(myKey, "reverse");
-byte[] encryptedMail = postOffice.encryptMail(toReverse.getBytes(StandardCharsets.UTF_8));
+client.deliverMail(correlationId, input.getBytes(StandardCharsets.UTF_8));
 ```
 
-We've chosen a topic value of "reverse" but any will do as the client uses a random key and only sends one mail using it.
-However, if a client needs to send multiple mail which are related to each other such that it's important they reach the
-enclave in the same order then these mail need to all use the same topic and private key. In other words, they need to
-be created from the same `PostOffice` instance. The enclave will automatically detect any dropped or reordered messages
-and throw an exception.
-
-!!! tip
-    Make sure there's only one `PostOffice` instance per (destination public key, sender private key, topic) triple.
-    This can be done very easily in Kotlin by using a data class with these three properties as a key to a `HashMap`.
-    The same can be done in Java except it will be slightly more verbose as you will
-    need to override the `equals` and `hashCode`methods of your key class. Modern IDEs let you do this very quickly.
-
-In more complex apps it might be smart to use the topic in more complex ways, like how a web app can use the URL to
-separate different functions of the app.
-
-Now we have an encrypted message we can write it to the socket and receive the enclave's response.
-
+And here is how you retrieve incoming messages:
 ```java
-System.out.println("Sending the encrypted mail to the host.");
-DataOutputStream toHost = new DataOutputStream(socket.getOutputStream());
-toHost.writeInt(encryptedMail.length);
-toHost.write(encryptedMail);
-
-// Enclave will mail us back.
-byte[] encryptedReply = new byte[fromHost.readInt()];
-System.out.println("Reading reply mail of length " + encryptedReply.length + " bytes.");
-fromHost.readFully(encryptedReply);
-
-// The same post office will decrypt the response.
-EnclaveMail reply = postOffice.decryptMail(encryptedReply);
-System.out.println("Enclave reversed '" + toReverse + "' and gave us the answer '" + new String(reply.getBodyAsBytes()) + "'");
-
-socket.close();
+List<EnclaveMail> messages = client.checkInbox(correlationId);
 ```
-
-We write out the length of the mail, then the mail bytes, then read the length of the response and read the response 
-bytes. Finally, we use `PostOffice.decryptMail` on the same instance we used to create our request, passing in the encrypted
-reply. This method decrypts the bytes using our private key, checks they really did come from that enclave (by checking
-the authenticated sender key against the enclave's public key in the attestation), decodes the bytes and yields the reply.
-We can then access the body of the message using `EnclaveMail.getBodyAsBytes()`.
-
-Finally, we close the socket, and we're done. Phew! 😅
 
 ## Testing
 
@@ -1049,12 +937,10 @@ When you want to test your enclave on real SGX hardware or in a simulated SGX en
 in a project separate from the enclave project.** A suitable place for your tests would be to define them as part of
 the host project tests.
 
-Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs 
+Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs
 to be loaded with `EnclaveHost.load`. By default, this will run the tests in a simulated SGX environment and will require
 the tests to be executed within Linux. In addition, testing on real hardware will require the tests to be executed within
 Linux on a system that supports SGX.
-
-
 
 ```java
 @EnabledOnOs(OS.LINUX)
@@ -1078,10 +964,10 @@ a non-Linux system then you can configure your tests to depend on a mock mode en
 `@EnabledOnOs(OS.LINUX)` annotation from the above code.
 
 !!! note
-    Running your integration tests in mock mode is very similar to 
-    [Integrating enclave tests in your host project](#integrating-enclave-tests-in-your-host-project). In both cases
-    the enclave code is loaded and run fully in memory. However, for integration tests, you can also choose to run
-    the tests in modes other than mock, which is not possible for enclave project tests.
+Running your integration tests in mock mode is very similar to
+[Integrating enclave tests in your host project](#integrating-enclave-tests-in-your-host-project). In both cases
+the enclave code is loaded and run fully in memory. However, for integration tests, you can also choose to run
+the tests in modes other than mock, which is not possible for enclave project tests.
 
 Running
 
@@ -1104,6 +990,44 @@ command:
 ```
 
 !!! tip
-    To run the tests in a simulated SGX environment on a non-Linux machine you can use Docker, which manages Linux 
-    VMs for you. See the instructions for [compiling and running the host](tutorial.md#running-the-host) for more information.
+To run the tests in a simulated SGX environment on a non-Linux machine you can use Docker, which manages Linux
+VMs for you. See the instructions for [compiling and running the host](tutorial.md#running-the-host) for more information.
 
+### End-to-end test on CI
+
+Provided `Main` class demonstrates how you could do end-to-end test:
+```java
+public static void main(String[] args) throws Exception {
+    // edit URI if running web host on a different machine or with different address/port
+    Client client = new Client("http://127.0.0.1:8080", "/tmp/hello.mail.state");
+    client.connect();
+    System.out.println(client);
+
+    String correlationId = "corrId";
+    String input = String.join(" ", args);
+
+    client.deliverMail(correlationId, input.getBytes(StandardCharsets.UTF_8));
+    List<EnclaveMail> messages = client.checkInbox(correlationId);
+    client.close();
+
+    String actual = new String(messages.get(0).getBodyAsBytes());
+    System.out.println(actual);
+
+    String expected = reverse(input);
+    assert (actual == expected);
+}
+```
+
+To run this, you have to first start a process serving Web Host REST API:
+```bash
+./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-state" &
+```
+And now you can run the `client`:
+```bash
+./gradlew client:run --args "reverse me!"
+```
+Note: since the host is now running in background, you have to stop it manually:
+```bash
+kill -9 `ps -ef | grep com.r3.conclave.sample.enclave.ReverseEnclave | grep -v grep | tr -s ' ' | cut -d ' ' -f2`
+rm -rf /tmp/hello-world-state
+```

@@ -2,29 +2,27 @@ plugins {
     id 'application'
 }
 
-mainClassName = "com.r3.conclave.sample.host.Host"
+application {
+    // no user code on the host side
+    mainClassName = "com.r3.conclave.host.EnclaveWebHost"
+}
 
-// Override the default (simulation) with -PenclaveMode=
-def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+// Override the default (mock) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
 
-// Create a task that can be used for generating signing materials
+// Create a task that can be used for generating signing materials.
+// Only required if you building singed/release version.
 tasks.register("prepareForSigning") {
     it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
 }
 
 dependencies {
-    implementation "com.r3.conclave:conclave-host:$conclaveVersion"
-
-    // We need the enclave at runtime but not when compiling the host, because they don't share types.
+    // *your* enclave
     runtimeOnly project(path: ":enclave", configuration: mode)
-    runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
+    // EnclaveWebHost is coming from here
+    runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
 
+    // enable unit tests
+    testImplementation "com.r3.conclave:conclave-host:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
-}
-
-test {
-    testLogging {
-        outputs.upToDateWhen { false }
-        showStandardStreams = true
-    }
 }

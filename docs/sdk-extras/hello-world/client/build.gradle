@@ -1,12 +1,12 @@
 plugins {
-    id 'java'
     id 'application'
 }
 
 application {
-    mainClassName = "com.r3.conclave.sample.client.Client"
+    mainClassName = "com.r3.conclave.sample.client.Main"
 }
 
 dependencies {
     implementation "com.r3.conclave:conclave-client:$conclaveVersion"
+    implementation "org.apache.httpcomponents:httpclient:4.5.13"
 }

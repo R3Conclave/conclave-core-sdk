@@ -129,13 +129,18 @@ is available where you can find the development team during UK office hours (GMT
    [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
    message if they are missing.
    
-7. The container gradle script has been removed due to stability issues and will no longer be supported. If you are using container-gradle
+1. The container gradle script has been removed due to stability issues and will no longer be supported. If you are using container-gradle
    to develop on Mac, we strongly suggest you stop doing so and follow [these instructions](system-requirements.md#running-conclave-projects)
    for running your conclave projects instead.
 
 1. The SGX SDK that Conclave is built upon has been updated to version 2.14. This provides bug fixes and other 
    improvements. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release)
    for more details.
+
+1. :jigsaw: **New feature!** We've added a `conclave-web-host` component that allows you to interact with enclaves using REST API.
+   With `conclave-web-host` the user code is limited to `enclave` and `client`, the `host` is being taken care of by Conclave SDK.
+   At the time of writing, with `conclave-web-host`, the `enclave` implementation is restricted to only use `receiveMail` for incoming messages
+   and `postMail` for outgoing ones.
 
 ### 1.1
 

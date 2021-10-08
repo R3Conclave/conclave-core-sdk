@@ -182,6 +182,7 @@ tasks.withType(DokkaTask).configureEach {
                     "conclave-enclave",
                     "conclave-host",
                     "conclave-client",
+                    "conclave-web-host",
                     "conclave-mail"
             ]
 
@@ -350,6 +351,10 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
+        ),
+	    new PublishedProject(
+                projectPath: ':conclave-web-host',
+                description: 'Conclave Web host',
         ),
         new PublishedProject(
                 projectPath: ':conclave-client',

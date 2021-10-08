@@ -44,6 +44,14 @@ Apache 2: https://github.com/FasterXML/jackson-modules-java8/blob/master/LICENSE
 
 Apache 2: https://github.com/FasterXML/jackson-module-kotlin/blob/master/LICENSE
 
+**[HttpComponents Client](https://github.com/apache/httpcomponents-client/)**
+
+Apache 2: https://github.com/apache/httpcomponents-client/blob/master/LICENSE.txt
+
+**[Spring Boot](https://github.com/spring-projects/spring-boot/)**
+
+Apache 2: https://github.com/spring-projects/spring-boot/blob/main/LICENSE.txt
+
 **[Oracle / Graal VM Community Edition ](https://github.com/oracle/graal)**
 
 Product License  - GraalVM Community Edition

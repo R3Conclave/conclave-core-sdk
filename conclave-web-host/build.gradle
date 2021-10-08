@@ -1,0 +1,17 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm"
+    id "io.spring.dependency-management" version "$spring_dependency_management_version"
+}
+
+dependencies {
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    implementation "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
+    implementation project(":conclave-host")
+}
+
+configurations {
+    compile.exclude module: "spring-boot-starter-logging"
+}
+

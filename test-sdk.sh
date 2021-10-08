@@ -10,10 +10,20 @@ echo
 echo Now trying to build and test the hello-world sample
 echo
 pushd build/distributions/conclave-sdk-*/hello-world
+# just run unit test
 ./gradlew --stacktrace $gradle_args host:test
+#build and start the host
 ./gradlew -q $gradle_args host:installDist
-./host/build/install/host/bin/host &
-./gradlew --stacktrace -q client:run --args "abc"
+./host/build/install/host/bin/host  --enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/host.state &
+# starting spring boot might take a while
+sleep 5
+
+./gradlew --stacktrace -q client:run --args "reverse me!"
+
+# kill the host process
+kill -9 `ps -ef | grep com.r3.conclave.sample.enclave.ReverseEnclave | grep -v grep | tr -s ' ' | cut -d ' ' -f2`
+rm -rf /tmp/host.state
+
 popd
 
 if [ -e $JAVA_HOME/jre/lib/rt.jar ]; then
