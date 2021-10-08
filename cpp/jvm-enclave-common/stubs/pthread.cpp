@@ -175,8 +175,9 @@ int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacks
         enclave_trace("pthread_attr_getstack(invalid))\n");
         return EINVAL;
     }
+    *stackaddr = (void*)td.stack_limit_addr;
     *stacksize = td.stack_base_addr - td.stack_limit_addr;
-    enclave_trace("pthread_attr_getstack -> *stacksize=0x%lX\n", *stacksize);
+    enclave_trace("pthread_attr_getstack -> *stackaddr=0x%llX, *stacksize=0x%lX\n", (unsigned long long)td.stack_limit_addr, *stacksize);
     return 0;
 }
 
