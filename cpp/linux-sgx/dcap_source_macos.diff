@@ -1,5 +1,5 @@
 diff --git a/QuoteGeneration/common/inc/internal/se_trace.h b/QuoteGeneration/common/inc/internal/se_trace.h
-index e37301a..f291394 100644
+index 1aa0396..e3fbde0 100644
 --- a/QuoteGeneration/common/inc/internal/se_trace.h
 +++ b/QuoteGeneration/common/inc/internal/se_trace.h
 @@ -57,7 +57,7 @@ typedef enum
@@ -7,12 +7,12 @@ index e37301a..f291394 100644
  extern "C" {
  #endif
 -void se_trace_internal(int debug_level, const char *fmt, ...);
-+void se_trace_internal(se_trace_t debug_level, const char *fmt, ...);
++void se_trace_internal(se_trace_t int debug_level, const char *fmt, ...);
  void sgx_proc_log_report_default(int channel, int debug_level, const char* fmt, ...);
  #ifdef _WIN32
  extern void sgx_proc_log_report(int channel, int level, const char* format, ...);
 diff --git a/QuoteGeneration/download_prebuilt.sh b/QuoteGeneration/download_prebuilt.sh
-index 8470922..2fb513f 100755
+index 5060263..64d3c06 100755
 --- a/QuoteGeneration/download_prebuilt.sh
 +++ b/QuoteGeneration/download_prebuilt.sh
 @@ -39,14 +39,14 @@ server_ae_url=$server_url_path/$ae_file_name
@@ -42,7 +42,7 @@ index 8470922..2fb513f 100755
      echo "Checksum verification failure"
      exit -1
 diff --git a/QuoteVerification/prepare_sgxssl.sh b/QuoteVerification/prepare_sgxssl.sh
-index e025980..6d70b13 100755
+index 9dbd9bc..a73257e 100755
 --- a/QuoteVerification/prepare_sgxssl.sh
 +++ b/QuoteVerification/prepare_sgxssl.sh
 @@ -33,6 +33,7 @@
@@ -51,10 +51,10 @@ index e025980..6d70b13 100755
  sgxssl_dir=$top_dir/sgxssl
 +mkdir -p "$sgxssl_dir"
  openssl_out_dir=$sgxssl_dir/openssl_source
- openssl_ver_name=openssl-1.1.1i
+ openssl_ver_name=openssl-1.1.1k
  sgxssl_github_archive=https://github.com/01org/intel-sgx-ssl/archive
-@@ -46,8 +47,8 @@ sgxssl_chksum=95997e75d0ea09e525626ce3812bbd3dd972382a20a989bcf1c3acb9746d2a23
- openssl_chksum=e8be6a35fe41d10603c3cc635e93289ed00bf34b79671a3a4de64fcee00d5242
+@@ -46,8 +47,8 @@ sgxssl_chksum=825e58823f2ec39bcfb69c2c62cc4e769bdac057ade10b362cdeac1f5a563954
+ openssl_chksum=892a0875b9872acd04a9fde79b1f943075d5ea162415de3047c327df33fbaee5
  rm -f check_sum_sgxssl.txt check_sum_openssl.txt
  if [ ! -f $build_script ]; then
 -	wget $sgxssl_github_archive/$sgxssl_file_name.zip -P $sgxssl_dir/ || exit 1
