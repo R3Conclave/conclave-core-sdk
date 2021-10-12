@@ -88,7 +88,6 @@ interface EnclaveInstanceInfo {
      *
      * For a different stream of mail create another post office with a different topic.
      */
-    @JvmDefault
     fun createPostOffice(): PostOffice = createPostOffice(Curve25519PrivateKey.random(), "default")
 
     /**
