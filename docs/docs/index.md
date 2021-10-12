@@ -95,12 +95,12 @@ is available where you can find the development team during UK office hours (GMT
 ### 1.2
 
 !!! important
-    There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
-    you might need to make to get your current project building with Conclave 1.2.
+    There have been some breaking changes in this version of Conclave. Be sure to read the [API changes page](api-changes.md)
+    for the information you need to get your existing project building with Conclave 1.2.
 
 1. jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
    recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
-   easy to understand and does not provide roll back protection againt the host. To address all these issues the 
+   easy to understand and does not provide roll back protection against the host. To address all these issues the
    `Enclave` class now exposes a simple key-value store represented as a normal `java.util.Map` object. Conclave will 
    securely persist this map such that it survives restarts and is resilient to attempts by the host to roll it back 
    to previous states. [Learn more about enclave persistence](persistence.md).
@@ -141,6 +141,9 @@ is available where you can find the development team during UK office hours (GMT
    With `conclave-web-host` the user code is limited to `enclave` and `client`, the `host` is being taken care of by Conclave SDK.
    At the time of writing, with `conclave-web-host`, the `enclave` implementation is restricted to only use `receiveMail` for incoming messages
    and `postMail` for outgoing ones.
+
+8. The API for performing platform support checks has been streamlined. Please consult the [API changes page](api-changes.md)
+for more information.
 
 ### 1.1
 

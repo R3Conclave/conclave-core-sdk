@@ -1,4 +1,5 @@
 #pragma once
 #include <string>
 
-bool checkAndEnableEnclaveSupport(bool enable, bool& wasEnabled, std::string& message);
+bool checkEnclaveSupport(bool requireHardwareSupport, std::string& message);
+bool enableHardwareEnclaveSupport(std::string& message);

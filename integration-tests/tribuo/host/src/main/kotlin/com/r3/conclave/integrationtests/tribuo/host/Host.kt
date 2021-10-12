@@ -2,24 +2,34 @@ package com.r3.conclave.integrationtests.tribuo.host
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.OpaqueBytes
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.EnclaveLoadException
+import com.r3.conclave.host.PlatformSupportException
 import com.r3.conclave.host.MailCommand
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.ServerSocket
+import java.util.Set
 
 class Host {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            try {
-                EnclaveHost.checkPlatformSupportsEnclaves(true)
+            if (EnclaveHost.isHardwareEnclaveSupported()) {
                 println("This platform supports enclaves in simulation, debug and release mode.")
-            } catch (e: EnclaveLoadException) {
-                println("This platform does not support hardware enclaves: " + e.message)
+            } else if (EnclaveHost.isSimulatedEnclaveSupported()) {
+                println("This platform does not support hardware enclaves, but does support enclaves in simulation.")
+                println("Attempting to enable hardware enclave support...")
+                try {
+                    EnclaveHost.enableHardwareEnclaveSupport()
+                    println("Hardware support enabled!")
+                } catch (e: PlatformSupportException) {
+                    println("Failed to enable hardware enclave support. Reason: ${e.message}")
+                }
+            } else {
+                println("This platform supports enclaves in mock mode only.")
             }
             val port = 9999
             println("Listening on port $port.")

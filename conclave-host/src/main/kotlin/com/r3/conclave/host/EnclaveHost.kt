@@ -83,6 +83,19 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
 
         /**
+         * Construct a platform support exception with a specific message for cases where non-linux hosts
+         * attempt to load simulation, debug or release mode enclaves.
+         */
+        private fun getPlatformSupportExceptionNotLinux(cause: Throwable): PlatformSupportException {
+            val message =
+                    "This system does not support hardware enclaves. " +
+                    "If you wish to run enclaves built in simulation, release or debug mode, " +
+                    "you must run in a linux environment. Consult the conclave documentation " +
+                    "for platform specific instructions."
+            return PlatformSupportException(message, cause)
+        }
+
+        /**
          * Load the signed enclave for the given enclave class name.
          *
          * @param enclaveClassName The name of the enclave class to load.
@@ -90,11 +103,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * @throws IllegalArgumentException if there is no enclave file for the given class name.
          * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
          *                              not support hardware enclaves or if enclave support is disabled.
-         * @throws MockOnlySupportedException if the host OS is not Linux or if the CPU doesn't support even SIMULATION
-         *                                    enclaves.
+         * @throws PlatformSupportException if the mode is not mock and the host OS is not Linux or if the CPU doesn't
+         *                                  support SGX enclave in simulation mode or higher.
          */
         @JvmStatic
-        @Throws(EnclaveLoadException::class)
+        @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String): EnclaveHost {
             return load(enclaveClassName, null)
         }
@@ -108,16 +121,20 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          *                          of configuration parameters are used. This parameter is ignored when
          *                          not using mock mode.
          *
-         * @throws IllegalArgumentException if there is no enclave file for the given class name.
+         * @throws IllegalArgumentException if there is no enclave file for the given class name or if
+         *                                  an unexpected error occurs when trying to check platform support.
          * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
-         *                              not support hardware enclaves or if enclave support is disabled.
-         * @throws MockOnlySupportedException if the host OS is not Linux or if the CPU doesn't support even SIMULATION
-         *                                    enclaves.
+         *                              not support enclaves in the required mode.
+         * @throws PlatformSupportException if the mode is not mock and the host OS is not Linux or if the CPU doesn't
+         *                                  support SGX enclave in simulation mode or higher.
          */
         @JvmStatic
-        @Throws(EnclaveLoadException::class)
+        @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
             val (stream, enclaveMode) = findEnclave(enclaveClassName)
+
+            // Check that the platform supports the required enclave modes
+            checkPlatformEnclaveSupport(enclaveMode)
 
             // If this is a mock enclave then we create the host differently.
             if (enclaveMode == EnclaveMode.MOCK) {
@@ -141,7 +158,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     // the current platform - this will happen if the user tries to load an enclave
                     // on a platform other than Linux.
                     enclaveFile.deleteQuietly()
-                    throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts: ${e.message}")
+                    throw getPlatformSupportExceptionNotLinux(e)
                 } catch (e: Exception) {
                     enclaveFile.deleteQuietly()
                     throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
@@ -174,7 +191,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // Also look to see if a Mock enclave object is present
             val mockEnclaveExists = try {
                 Class.forName(className)
-                true;
+                true
             } catch (e: ClassNotFoundException) {
                 false
             }
@@ -212,46 +229,27 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
 
         /**
-         * Checks to see if the platform supports hardware based enclaves.
+         * Checks to see if the platform supports enclaves in a given mode and throws an exception if not.
          *
-         * This method checks to see if the CPU and the BIOS are capable of supporting enclaves and
-         * whether support has been enabled.
-         *
-         * If enclaves are supported but not enabled some platforms allow support to be enabled via a software
-         * call. This method can optionally be used to attempt to enable support on the platform.
-         * Enabling enclave support via software may require the application calling this method to
-         * be started with root privileges.
-         *
-         * @param enableSupport Set to true to attempt to enable enclave support on the platform if support is
-         * currently disabled.
-         *
-         * @throws EnclaveLoadException if HARDWARE enclave support is not available on the platform. The exception
-         * message gives a detailed reason why HARDWARE enclaves are not supported.
-         *
-         * @throws MockOnlySupportedException if mock only enclave is supported on the platform. The exception message
-         * gives a detailed reason why mock only enclaves are supported.
+         * @throws PlatformSupportException if the requested mode is not supported on the system.
          */
-        @JvmStatic
-        @Throws(EnclaveLoadException::class)
-        fun checkPlatformSupportsEnclaves(enableSupport: Boolean) {
+        private fun checkPlatformEnclaveSupport(enclaveMode: EnclaveMode) {
+            val requireHardwareSupport = enclaveMode.isHardware
             try {
-                // Note the EnclaveLoadMode does not matter in this case as we are always checking the hardware
-                NativeShared.checkPlatformSupportsEnclaves(enableSupport)
-            } catch (e: EnclaveLoadException) {
-                // Retrieve all CPU features.
+                NativeShared.checkPlatformEnclaveSupport(requireHardwareSupport)
+            } catch (e: PlatformSupportException) {
+                // Improve error message in case that SSE4.1 is missing
                 val features = NativeApi.cpuFeatures
-                // Check if SSE4.1 (required even for SIMULATION) is available.
                 if (!features.contains(CpuFeature.SSE4_1)) {
-                    // Improve the error message, listing all available features.
                     val sb = StringBuilder()
                     sb.append(e.message)
                     sb.append(
-                        features.joinToString(
-                            prefix = "\nCPU features: ", separator = ", ",
-                            postfix = "\nReason: SSE4.1 is required but was not found."
-                        )
+                            features.joinToString(
+                                    prefix = "\nCPU features: ", separator = ", ",
+                                    postfix = "\nReason: SSE4.1 is required but was not found."
+                            )
                     )
-                    throw MockOnlySupportedException(sb.toString())
+                    throw PlatformSupportException(sb.toString(), e)
                 } else {
                     throw e
                 }
@@ -259,9 +257,85 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 // We get an unsatisfied link error if the native library could not be loaded on
                 // the current platform - this will happen if the user tries to load an enclave
                 // on a platform other than Linux.
-                throw MockOnlySupportedException("Enclaves may only be loaded on Linux hosts.")
+                throw getPlatformSupportExceptionNotLinux(e)
             } catch (e: Exception) {
                 throw IllegalStateException("Unable to check platform support", e)
+            }
+        }
+
+        /**
+         * Determine whether simulated enclaves are supported on the current platform. Irrespective of the
+         * current project mode. To support simulated enclaves, the platform needs to be Linux.
+         *
+         * @return Boolean true if simulated enclaves are supported, false otherwise.
+         */
+        @JvmStatic
+        fun isSimulatedEnclaveSupported(): Boolean {
+            try {
+                NativeShared.checkPlatformEnclaveSupport(false)
+            } catch (e: PlatformSupportException) {
+                return false
+            } catch (e: UnsatisfiedLinkError) {
+                return false
+            }
+            return true
+        }
+
+        /**
+         * Determine whether hardware enclaves are supported on the current platform. Irrespective of the
+         * current project mode. To support hardware enclaves, the platform needs to be Linux and the system
+         * needs a CPU which supports the intel SGX instruction set extensions.
+         *
+         * @return Boolean true if hardware enclaves are supported, false otherwise.
+         */
+        @JvmStatic
+        fun isHardwareEnclaveSupported(): Boolean {
+            try {
+                NativeShared.checkPlatformEnclaveSupport(true)
+            } catch (e: PlatformSupportException) {
+                return false
+            } catch (e: UnsatisfiedLinkError) {
+                return false
+            }
+            return true
+        }
+
+        /**
+         * Determine which enclave modes are supported on the current platform. Irrespective of the current
+         * project mode.
+         *
+         * @return Set<EnclaveMode> containing the set of enclave modes that are supported by the current platform.
+         */
+        @JvmStatic
+        fun getSupportedModes(): Set<EnclaveMode> {
+            val supportedModes = EnumSet.of(EnclaveMode.MOCK)
+            if (isSimulatedEnclaveSupported()) {
+                supportedModes.add(EnclaveMode.SIMULATION)
+                if (isHardwareEnclaveSupported()) {
+                    supportedModes.add(EnclaveMode.DEBUG)
+                    supportedModes.add(EnclaveMode.RELEASE)
+                }
+            }
+            return supportedModes
+        }
+
+        /**
+         * Some platforms support software enablement of SGX, this method will attempt to do this. This may
+         * require elevated privileges and/or a reboot in order to work. The method is safe to call on machines
+         * where SGX is already enabled.
+         *
+         * @throws PlatformSupportException If SGX could not be enabled.
+         */
+        @JvmStatic
+        @Throws(PlatformSupportException::class)
+        fun enableHardwareEnclaveSupport() {
+            try {
+                NativeShared.enablePlatformHardwareEnclaveSupport()
+            } catch (e: UnsatisfiedLinkError) {
+                // We get an unsatisfied link error if the native library could not be loaded on
+                // the current platform - this will happen if the user tries to load an enclave
+                // on a platform other than Linux.
+                throw getPlatformSupportExceptionNotLinux(e)
             }
         }
     }

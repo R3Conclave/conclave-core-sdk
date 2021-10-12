@@ -4,17 +4,25 @@
 
 #include "cpu_info.h"
 
-static void raiseEnclaveLoadException(JNIEnv *jniEnv, const char *message) {
-    raiseException(jniEnv, message, "com/r3/conclave/host/EnclaveLoadException");
+static void raisePlatformSupportException(JNIEnv *jniEnv, const char *message) {
+    raiseException(jniEnv, message, "com/r3/conclave/host/PlatformSupportException");
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_NativeShared_checkPlatformSupportsEnclaves
-        (JNIEnv *jniEnv, jobject, jboolean enableSupport) {
+void JNICALL Java_com_r3_conclave_host_internal_NativeShared_checkPlatformEnclaveSupport
+        (JNIEnv *jniEnv, jobject, jboolean requireHardwareSupport) {
     std::string message;
-    bool was_enabled = false;
-    if (!checkAndEnableEnclaveSupport(enableSupport, was_enabled, message)) {
-        // SGX not enabled
-        raiseEnclaveLoadException(jniEnv, message.c_str());
+    if (!checkEnclaveSupport(requireHardwareSupport, message)) {
+        // SGX is not enabled
+        raisePlatformSupportException(jniEnv, message.c_str());
+    }
+}
+
+void JNICALL Java_com_r3_conclave_host_internal_NativeShared_enablePlatformHardwareEnclaveSupport
+        (JNIEnv *jniEnv, jobject) {
+    std::string message;
+    if (!enableHardwareEnclaveSupport(message)) {
+        // Failed to enable SGX in software
+        raisePlatformSupportException(jniEnv, message.c_str());
     }
 }
 

@@ -2,15 +2,17 @@
 
 ## 1.1 to 1.2
 
-We've made writing persistent code inside the enclave easy and secure from roll back attacks in 1.2. Mail is now 
-only used for communication and no longer plays a part in persistence. This means certain features are no longer 
-necessary and have been removed. We hope this is a one-off occurrence that will be worth the small effort in 
+### Improvements to mail and persistence
+
+We've made writing persistent code inside the enclave easy and secure from roll back attacks in 1.2. Mail is now
+only used for communication and no longer plays a part in persistence. This means certain features are no longer
+necessary and have been removed. We hope this is a one-off occurrence that will be worth the small effort in
 upgrading your code.
 
 Firstly, mail acknowledgement no longer exists. Mail will no longer be replayed on enclave startup and so you no longer
 need to think about having to acknowledge any mail. That means the `acknowledgeMail` method in `Enclave` has been
 removed. This also means the mail ID parameter that's used for acknowledgement is no longer needed and has been
-removed as a parameter to the methods `EnclaveHost.deliverMail` and `Enclave.receiveMail`. 
+removed as a parameter to the methods `EnclaveHost.deliverMail` and `Enclave.receiveMail`.
 
 You will need to change the signature of your `receiveMail` method in your enclave class:
 
@@ -32,19 +34,19 @@ enclave.deliverMail(id, mail, routingHint)
 enclave.deliverMail(mail, routingHint)
 ```
 
-If you have used `acknowledgeMail` then you will need to remove those calls. You may also need to redesign your 
+If you have used `acknowledgeMail` then you will need to remove those calls. You may also need to redesign your
 enclave to _not_ think about redelivery of mail, but this may actually make your code simpler!
 
-Another consequence of no longer having mail redelivery is that the the mail-to-self pattern to persist data across 
-enclave restarts is no longer valid. However, this has been replaced by a more secure and easier to use API with 
-the introduction of a `persistentMap` inside the enclave. This is a normal `java.util.Map` object which stores 
+Another consequence of no longer having mail redelivery is that the the mail-to-self pattern to persist data across
+enclave restarts is no longer valid. However, this has been replaced by a more secure and easier to use API with
+the introduction of a `persistentMap` inside the enclave. This is a normal `java.util.Map` object which stores
 key strings to arbitrary byte arrays. Use this map to persistent data that you need available across restarts.
 [Learn more about enclave persistence](persistence.md).
 
-On the host side the API has changed slightly as well. Since mail acknowledgement no longer exists then the mail 
-commands `AcknowledgeMail` and `AcknowledgementReceipt` have also been removed. They have been replaced by a new 
-command `StoreSealedState`. These changes have a small knock-on effect with the `start` method. The second byte array 
-parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob. 
+On the host side the API has changed slightly as well. Since mail acknowledgement no longer exists then the mail
+commands `AcknowledgeMail` and `AcknowledgementReceipt` have also been removed. They have been replaced by a new
+command `StoreSealedState`. These changes have a small knock-on effect with the `start` method. The second byte array
+parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob.
 Also, the mail commands callback is no longer optional and must be specified.
 
 Whilst not an API change, the behaviour of Mail has changed. As Mail no longer functions as a persistence mechanism and
@@ -59,20 +61,79 @@ subsequent mail. How can a client detect when the enclave restarts? The simplest
 host which says that the enclave could not decrypt the last mail that was sent. The likely explanation for this decryption error is
 that the enclave was restarted and is now using a new key.
 
-In other areas, we've had to move some classes to better support enclave-to-enclave communication. The following 
-classes have been moved from `com.r3.conclave.client` to `com.r3.conclave.common`:
+### Attestation check functionality moved from client to common
+
+To facilitate enclave to enclave communication, the following classes have been moved from `com.r3.conclave.client`
+to `com.r3.conclave.common`:
 
 * `EnclaveConstraint`
 * `InvalidEnclaveException`
 
 Client code should be updated appropriately.
 
+### Streamlined API for platform support checks
+
+Previously, to determine the level of platform support for enclaves you would have needed to use the following API
+method: `EnclaveHost.checkPlatformSupportsEnclaves()` (code example below). You could also pass `true` to this method
+to tell the SDK to attempt to software enable SGX on the system.
+
+```java
+public static void main(String args[]) {
+    try {
+        EnclaveHost.checkPlatformSupportsEnclaves(true);
+        // All modes supported
+    } catch (MockOnlySupportedException e) {
+        // Only mock mode supported
+    } catch (EnclaveLoadException e) {
+        // Hardware enclaves (release/debug) not supported
+    }
+}
+```
+
+In Conclave 1.2, this functionality has been split into separate methods to improve code readability:
+
+* `EnclaveHost.getSupportedModes()` returns a set (`Set<EnclaveMode>`) of enclave modes supported
+by the current platform.
+* `EnclaveHost.isSimulatedEnclaveSupported()` returns true if the host supports simulated enclaves, false
+otherwise.
+* `EnclaveHost.isHardwareEnclaveSupported()` returns true if the host supports hardware enclaves, false
+otherwise.
+* `EnclaveHost.enableHardwareEnclaveSupport()` attempts to software enable SGX. On failure, throws
+`com.r3.conclave.host.PlatformSupportException` with an appropriate error message.
+
+Example usage of the the new API functions:
+
+```java
+public static void main(String args[]) {
+    // Try to enable hardware enclave support if not already supported
+    if (!EnclaveHost.isHardwareEnclaveSupported()) {
+        try {
+            EnclaveHost.enableHardwareEnclaveSupport();
+        } catch (PlatformSupportException e) {
+            System.out.println(
+                    "Hardware enclave support is not enabled! " +
+                    "Reason: " + e);
+        }
+    }
+
+    // Print out a list of supported modes
+    Set<EnclaveMode> supportedModes = EnclaveHost.getSupportedModes();
+    System.out.println("Supported enclave modes: " + supportedModes);
+}
+```
+
+Note that `MockOnlySupportedException` is no longer a part of the API, and has been entirely superseded by
+`PlatformSupportException`.
+
+For more information, please consult the [updated tutorial documentation](writing-hello-world.md#write-a-simple-host-program).
+Alternatively, for working examples of usage, check the sample projects bundled with the SDK.
+
 ## 1.0 to 1.1
 
 There have been a number of changes in the way that you use mock mode in your Conclave projects. You will
 need to make some changes to your build files in order to build you earlier projects with Conclave 1.1.
 
-Firstly, the `MockHost` class for loading an enclave in mock mode has been removed. You will need to update your 
+Firstly, the `MockHost` class for loading an enclave in mock mode has been removed. You will need to update your
 code to use `EnclaveHost.load` instead of `MockHost.loadMock`. So the pre-1.1 code below:
 
 ```java
@@ -95,7 +156,7 @@ longer required. You need to remove any test dependency on `conclave-testing` fr
 files and remove any `import` statements that refer to `conclave-testing`.
 
 Lastly, you must make sure that your host project (the one that loads the enclave) does not include the
-enclave class on its classpath in anything other than mock mode. You can ensure this is the case by 
+enclave class on its classpath in anything other than mock mode. You can ensure this is the case by
 setting a `runtimeOnly` dependency on the enclave project in your host `build.gradle`.
 
 ```groovy

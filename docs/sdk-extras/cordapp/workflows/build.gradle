@@ -18,7 +18,7 @@ cordapp {
 }
 
 // Override the default (simulation) with -PenclaveMode=
-def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
 
 // Create a task that can be used for generating signing materials
 tasks.register("prepareForSigning") {

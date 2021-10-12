@@ -2,7 +2,6 @@ package com.r3.conclave.host
 
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.host.EnclaveHost.Companion.checkPlatformSupportsEnclaves
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
 import java.nio.file.Paths
@@ -56,13 +55,19 @@ class EnclaveWebController {
     fun init() {
         require(!enclaveClassName.isNullOrEmpty()) { "enclave.class is not set" }
 
-        try {
-            checkPlatformSupportsEnclaves(true)
+        if (EnclaveHost.isHardwareEnclaveSupported()) {
             println("This platform supports enclaves in simulation, debug and release mode.")
-        } catch (e: MockOnlySupportedException) {
-            println("This platform only supports mock enclaves: " + e.message)
-        } catch (e: EnclaveLoadException) {
-            println("This platform does not support hardware enclaves: " + e.message)
+        } else if (EnclaveHost.isSimulatedEnclaveSupported()) {
+            println("This platform does not support hardware enclaves, but does support enclaves in simulation.")
+            println("Attempting to enable hardware enclave support...")
+            try {
+                EnclaveHost.enableHardwareEnclaveSupport()
+                println("Hardware support enabled!")
+            } catch (e: PlatformSupportException) {
+                println("Failed to enable hardware enclave support. Reason: ${e.message}")
+            }
+        } else {
+            println("This platform supports enclaves in mock mode only.")
         }
 
         val mockConfiguration = buildMockConfiguration()

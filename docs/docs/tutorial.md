@@ -27,6 +27,10 @@ SGX enclaves can be used in one of four modes, in order of increasing realism:
 
 Only release mode locks out the host and provides the standard SGX security model.
 
+!!!note
+    Enclaves built in simulation, debug and release modes require a linux environment in order to run. For information
+    on how to set up your Windows or MacOS based system, see [here](system-requirements.md#running).
+
 ## Set up your machine
 
 For this tutorial you will need [Java 8 or 11](system-requirements.md#jdk-compatibility) (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
@@ -89,7 +93,7 @@ Alternatively you can build your application from the command line as described 
 
 ### Select enclave mode
 
-In the sample app, the `assemble` task will build the app for **simulation mode** by default.
+In the sample app, the `assemble` task will build the app for **mock mode** by default.
 
 Use the `-PenclaveMode` argument to configure the mode.
 If you are using SGX hardware, you can build the app for **debug mode** with the command:

@@ -41,7 +41,8 @@ object NativeShared {
         return tempDirectory
     }
 
-    external fun checkPlatformSupportsEnclaves(enableSupport: Boolean)
+    external fun checkPlatformEnclaveSupport(requireHardwareSupport: Boolean)
+    external fun enablePlatformHardwareEnclaveSupport()
 
     external fun getCpuFeatures(): Long
 }
