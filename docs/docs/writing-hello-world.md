@@ -157,8 +157,8 @@ application {
     mainClassName = "com.r3.conclave.host.EnclaveWebHost"
 }
 
-// Override the default (simulation) with -PenclaveMode=
-def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+// Override the default (mock) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
 
 dependencies {
     runtimeOnly project(path: ":enclave", configuration: mode)
