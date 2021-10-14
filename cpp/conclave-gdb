@@ -28,8 +28,6 @@ if [ ! -d "$HOME/.gdbsgxjvm" ]; then
     # Substrate VM sources
     find $SGXJVM_ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbsgxjvm/src_dirs
     # Java 8 sources (these were not used to build Graal so may not exactly match)
-    echo "directory $SGXJVM_ROOT_PATH/cpp/openjdk8/jdk/src/share/classes" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/cpp/openjdk8/jdk/src/solaris/classes/" >> $HOME/.gdbsgxjvm/src_dirs
     # Conclave directories
     echo "directory $SGXJVM_ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
     echo "directory $SGXJVM_ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs

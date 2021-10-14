@@ -35,7 +35,6 @@ pluginManagement {
 
     plugins {
         id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false
-        id 'com.google.protobuf' version protobuf_plugin_version apply false
     }
 }
 
