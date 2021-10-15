@@ -78,8 +78,6 @@ namespace conclave {
 
     static BYTE parsePosixModeFlag(const std::string mode) {
 	DEBUG_PRINT_FUNCTION;
-	BYTE flag = 0;
-
 	//  Ignore legacy letter "b", which is ignored on all POSIX systems
 	std::string mode_tmp(mode);
 	mode_tmp.erase(std::remove(mode_tmp.begin(), mode_tmp.end(), 'b'), mode_tmp.end());
@@ -735,6 +733,8 @@ namespace conclave {
 	} else {
 	    if (res == FR_DENIED) {
 		err = ENOTEMPTY;
+	    } else if (res == FR_NO_PATH) {
+		err = ENOENT;    
 	    }
 	    FATFS_DEBUG_PRINT("Error: unlinking failure with result %d\n", res);
 	    return -1;
@@ -752,7 +752,12 @@ namespace conclave {
 	return this->unlinkInternal(path, res);
     };
 
-
+    int FatFsFileManager::remove(const char* path, int& res) {
+	DEBUG_PRINT_FUNCTION;
+        //  FatFs delete files and dir with the same function "unlink"
+	return this->unlinkInternal(path, res);
+    };
+    
     int FatFsFileManager::chdir(const char* path) {
 	DEBUG_PRINT_FUNCTION;
 

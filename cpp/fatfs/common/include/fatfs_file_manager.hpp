@@ -108,6 +108,8 @@ namespace conclave {
 	
 	int unlink(const char* path, int& res);
 
+	int remove(const char* path_in, int& res);
+
 	int rmdir(const char* path, int& res);
 
 	int chdir(const char* path);

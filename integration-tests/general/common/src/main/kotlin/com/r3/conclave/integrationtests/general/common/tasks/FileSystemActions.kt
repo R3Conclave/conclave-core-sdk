@@ -43,11 +43,19 @@ class FilesWrite(private val path: String, val bytes: ByteArray) : FileSystemAct
 }
 
 @Serializable
-class FilesDelete(private val path: String) : FileSystemAction<Unit>() {
-    override fun run(context: EnclaveContext, isMail: Boolean) {
-        Files.delete(Paths.get(path))
+class DeleteFile(private val path: String, private val nioApi: Boolean) : FileSystemAction<Boolean>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) : Boolean {
+        //  Note that java.io.File "delete" does not throw
+        //  when the file is not present, while java.nio.Files "delete" does
+        return if (nioApi) {
+            Files.delete(Paths.get(path))
+            true
+        } else {
+            val file = File(path)
+            file.delete()
+        }
     }
-    override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
+    override fun resultSerializer(): KSerializer<Boolean> = Boolean.serializer()
 }
 
 @Serializable

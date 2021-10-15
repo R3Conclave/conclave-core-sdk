@@ -222,6 +222,9 @@ extern "C" {
 	void       *dli_saddr;  /* Exact address of symbol named in dli_sname */
     } Dl_info;
 
+    // stdio.h
+    int remove_impl(const char* pathname, int& res);
+
     // fcntl.h    
     int open_impl(const char* __file, int oflag);
     int lstat_impl(const char* pathname, struct stat* statbuf, int& err);

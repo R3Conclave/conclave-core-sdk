@@ -4,6 +4,8 @@ import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.IOException
 
 class FileSystemInputStreamTest : FileSystemEnclaveTest() {
@@ -39,8 +41,9 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Test
-    fun filesystemStreamReadResetReadBytes() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun fileSystemStreamReadResetReadBytes(nioApi: Boolean) {
         val path = "/filesystem.data"
         val smallFileData = byteArrayOf(1, 2, 3)
         filesWrite(path, smallFileData)
@@ -53,11 +56,12 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
             // Read all bytes at once
             inputStream.readBytes(smallFileData)
         }
-        filesDelete(path)
+        deleteFile(path, nioApi)
     }
 
-    @Test
-    fun filesystemResetThrowsException() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun fileSystemResetThrowsException(nioApi: Boolean) {
         val path = "/filesystem-reset.data"
         val smallFileData = byteArrayOf(1, 2, 3)
         filesWrite(path, smallFileData)
@@ -65,6 +69,6 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
         Handler(uid.getAndIncrement(), path).use { inputStream ->
             inputStream.reset()
         }
-        filesDelete(path)
+        deleteFile(path, nioApi)
     }
 }

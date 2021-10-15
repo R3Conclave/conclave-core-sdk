@@ -22,23 +22,31 @@ abstract class FileSystemEnclaveTest : AbstractEnclaveActionTest() {
         assertThat(reply).isEqualTo(data)
     }
 
-    fun filesDelete(path: String) {
-        callEnclave(FilesDelete(path))
+    fun deleteFile(path: String, nioApi: Boolean) {
+        callEnclave(DeleteFile(path, nioApi))
         assertThat(callEnclave(FilesExists(path))).isFalse
     }
 
-    fun filesDeleteNonExistingFile(path: String) {
-        assertThatThrownBy { callEnclave(FilesDelete(path)) }
-            .isInstanceOf(RuntimeException::class.java)
-            .hasCauseExactlyInstanceOf(NoSuchFileException::class.java)
-            .hasMessageContaining(path)
+    fun filesDeleteNonExistingFile(path: String, nioApi: Boolean) {
+        if (nioApi) {
+            assertThatThrownBy { callEnclave(DeleteFile(path, nioApi)) }
+                .isInstanceOf(RuntimeException::class.java)
+                .hasCauseExactlyInstanceOf(NoSuchFileException::class.java)
+                .hasMessageContaining(path)
+        } else {
+            assertThat(callEnclave(DeleteFile(path, nioApi))).isFalse
+        }
     }
 
-    fun filesDeleteNonEmptyDir(path: String) {
-        assertThatThrownBy { callEnclave(FilesDelete(path)) }
-            .isInstanceOf(RuntimeException::class.java)
-            .hasCauseExactlyInstanceOf(DirectoryNotEmptyException::class.java)
-            .hasMessageContaining(path)
+    fun filesDeleteNonEmptyDir(path: String, nioApi: Boolean) {
+        if (nioApi) {
+            assertThatThrownBy { callEnclave(DeleteFile(path, nioApi)) }
+                .isInstanceOf(RuntimeException::class.java)
+                .hasCauseExactlyInstanceOf(DirectoryNotEmptyException::class.java)
+                .hasMessageContaining(path)
+        } else {
+            assertThat(callEnclave(DeleteFile(path, nioApi))).isFalse
+        }
     }
 
     fun createDirectoryWithoutParent(path: String) {

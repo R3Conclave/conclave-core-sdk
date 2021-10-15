@@ -7,11 +7,18 @@
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
 STUB(fgets);
-STUB(remove);
 STUB(rename);
 
 extern "C" {
 
+int remove(const char* pathname) {
+    enclave_trace("remove(%s)\n", pathname);
+    int err = 0;
+    const int res = remove_impl(pathname, err);
+    errno = err;
+    return res;
+}
+    
 int printf(const char *s, ...) {
     va_list va;
     va_start(va, s);

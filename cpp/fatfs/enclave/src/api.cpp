@@ -127,6 +127,13 @@ int unlink_impl(const char* path, int& err) {
 };
 
 
+int remove_impl(const char* path, int& err) {
+    DEBUG_PRINT_FUNCTION;
+    auto& file_manager = get_fatfs_instance();
+    return file_manager.remove(path, err);
+};
+
+
 int socketpair_impl(int domain, int type, int protocol, int sv[2]) {
     DEBUG_PRINT_FUNCTION;
     auto& file_manager = get_fatfs_instance();

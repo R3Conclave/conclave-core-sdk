@@ -3,6 +3,8 @@ package com.r3.conclave.integrationtests.general.tests.filesystem
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.FileOutputStream
 
 class FileOutputStreamTest : FileSystemEnclaveTest() {
@@ -31,8 +33,9 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Test
-    fun fileOutputStreamWriteRead() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun fileOutputStreamWriteRead(nioApi: Boolean) {
         val path = "/fos.data"
         val fileData = byteArrayOf(1, 2, 3, 4)
         val reversedFileData = fileData.reversed().toByteArray()
@@ -43,7 +46,7 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         }
         // Read all bytes at once, delete the file and ensure opening it again fails with the expected exception
         filesReadAllBytes(path, fileData)
-        filesDelete(path)
+        deleteFile(path, nioApi)
         fileInputStreamNonExistingFile(path)
 
         // Overwrite the file by writing a new one all at once
@@ -61,12 +64,13 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         }
         // Read all bytes at once, delete the file and ensure opening it again fails with the expected exception
         filesReadAllBytes(path, expectedFileData)
-        filesDelete(path)
+        deleteFile(path, nioApi)
         fileInputStreamNonExistingFile(path)
     }
 
-    @Test
-    fun fileOutputStreamAppendWrite() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun fileOutputStreamAppendWrite(nioApi: Boolean) {
         val path = "/fos-append.data"
         val fileData = byteArrayOf(10, 20 , 30, 40)
         val appendData = byteArrayOf(50, 60, 70)
@@ -91,7 +95,7 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         }
         // Read all bytes at once, delete the file and ensure opening it again fails with the expected exception
         filesReadAllBytes(path, expectedData)
-        filesDelete(path)
+        deleteFile(path, nioApi)
         fileInputStreamNonExistingFile(path)
     }
 }

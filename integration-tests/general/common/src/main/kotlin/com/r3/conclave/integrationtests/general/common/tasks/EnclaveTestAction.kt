@@ -12,11 +12,11 @@ import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.protobuf.ProtoBuf
 
 /**
- * Represents an aribitary action that is "sent" to the enclave to be actioned. This enables one enclave class to
+ * Represents an arbitrary action that is "sent" to the enclave to be actioned. This enables one enclave class to
  * perform multiple different tasks.
  *
  * This is a workaround to the limitation of native image in non-mock mode, as building such an enclave takes time and
- * having a seperate enclave class for each test makes the integration test run time incredibly long.
+ * having a separate enclave class for each test makes the integration test run time incredibly long.
  */
 @Serializable
 abstract class EnclaveTestAction<R> {
@@ -28,7 +28,7 @@ abstract class EnclaveTestAction<R> {
 
     /**
      * This is executed inside the enclave's `receiveFromUntrustedHost`. The result value is serialised and returned.
-     * The action can also be sent in a mail and received by the encalve via `receiveMail`. The result value in this
+     * The action can also be sent in a mail and received by the enclave via `receiveMail`. The result value in this
      * case is serialised and encrypted in a response mail back to the sender.
      */
     abstract fun run(context: EnclaveContext, isMail: Boolean): R
@@ -89,7 +89,7 @@ private val protoBuf = ProtoBuf {
             subclass(GetPersistentMap::class, GetPersistentMap.serializer())
             subclass(PathsGet::class, PathsGet.serializer())
             subclass(FilesWrite::class, FilesWrite.serializer())
-            subclass(FilesDelete::class, FilesDelete.serializer())
+            subclass(DeleteFile::class, DeleteFile.serializer())
             subclass(FilesCreateDirectory::class, FilesCreateDirectory.serializer())
             subclass(FilesCreateDirectories::class, FilesCreateDirectories.serializer())
             subclass(FilesExists::class, FilesExists.serializer())

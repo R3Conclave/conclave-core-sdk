@@ -34,8 +34,9 @@ class FilesTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Test
-    fun createDeleteSingleDirectory() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun createDeleteSingleDirectory(nioApi: Boolean) {
         val parent = "/parent-dir"
         val child = "$parent/child-dir"
         // Ensure creating a directory without creating its parent first fails with the expected exception
@@ -44,13 +45,14 @@ class FilesTest : FileSystemEnclaveTest() {
         createDirectory(parent)
         createDirectory(child)
         // Ensure deleting the parent directory before the child fails with the expected exception
-        filesDeleteNonEmptyDir(parent)
-        filesDelete(child)
-        filesDelete(parent)
+        filesDeleteNonEmptyDir(parent, nioApi)
+        deleteFile(child, nioApi)
+        deleteFile(parent, nioApi)
     }
 
-    @Test
-    fun createDeleteMultipleDirectories() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun createDeleteMultipleDirectories(nioApi: Boolean) {
         val smallFileData = byteArrayOf(3, 2, 1)
         val dir = "/multiple-dir/conclave-test"
         val path = "$dir/file.data"
@@ -60,34 +62,36 @@ class FilesTest : FileSystemEnclaveTest() {
         filesWrite(path, smallFileData)
         filesReadAllBytes(path, smallFileData)
         // Ensure deleting the child directory without deleting the file first fails with the expected exception
-        filesDeleteNonEmptyDir(dir)
+        filesDeleteNonEmptyDir(dir, nioApi)
         // Delete the file and directory
-        filesDelete(path)
-        filesDelete(dir)
+        deleteFile(path, nioApi)
+        deleteFile(dir, nioApi)
         // Ensure deleting or opening the non existing file fails with the expected exception
-        filesDeleteNonExistingFile(path)
+        filesDeleteNonExistingFile(path, nioApi)
         fileInputStreamNonExistingFile(path)
     }
 
-    @Test
-    fun readBytes() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun readBytes(nioApi: Boolean) {
         val path = "/readBytes.data"
         val smallFileData = byteArrayOf(1, 2, 3, 4)
         filesWrite(path, smallFileData)
         // Test Files.readAllBytes
         filesReadAllBytes(path, smallFileData)
-        filesDelete(path)
+        deleteFile(path, nioApi)
         fileInputStreamNonExistingFile(path)
     }
 
-    @Test
-    fun fileSize() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun fileSize(nioApi: Boolean) {
         val path = "/file-size.data"
         val smallFileData = byteArrayOf(4, 3, 2, 1)
         filesWrite(path, smallFileData)
         // Test Files.size
         filesSize(path, smallFileData.size.toLong())
-        filesDelete(path)
+        deleteFile(path, nioApi)
     }
 
     @ParameterizedTest

@@ -50,8 +50,9 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Test
-    fun writeReadDeleteFiles() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun writeReadDeleteFiles(nioApi: Boolean) {
         val smallFileData = byteArrayOf(1, 2, 3)
         val path = "/file.data"
 
@@ -71,8 +72,8 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
          * Delete the file, ensure deleting it again and opening a FileInputStream
          * throws the expected exceptions.
          */
-        filesDelete(path)
-        filesDeleteNonExistingFile(path)
+        deleteFile(path, nioApi)
+        filesDeleteNonExistingFile(path, nioApi)
         fileInputStreamNonExistingFile(path)
 
         // Write the file again and readAllBytes at once
@@ -80,7 +81,7 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
         Handler(uid.getAndIncrement(), path).use { fis ->
             fis.readBytes(smallFileData)
         }
-        filesDelete(path)
+        deleteFile(path, nioApi)
     }
 
     @ParameterizedTest

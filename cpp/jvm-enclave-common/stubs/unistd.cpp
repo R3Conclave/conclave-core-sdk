@@ -224,7 +224,7 @@ long syscall(long number, ...) {
 int unlink(const char* pathname) {
     enclave_trace("unlink(%s)\n", pathname);
     int err = 0;
-    const int res = rmdir_impl(pathname, err);
+    const int res = unlink_impl(pathname, err);
     errno = err;
     return res;
 }
