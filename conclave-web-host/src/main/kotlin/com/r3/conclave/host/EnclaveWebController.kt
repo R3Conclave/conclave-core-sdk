@@ -19,7 +19,7 @@ class EnclaveWebController {
     /**
      * Enclave class to be loaded
      */
-    @Value("\${enclave.class}")
+    @Value("\${enclave.class:}")
     var enclaveClassName: String? = null
 
     /**
@@ -53,7 +53,8 @@ class EnclaveWebController {
 
     @PostConstruct
     fun init() {
-        require(!enclaveClassName.isNullOrEmpty()) { "enclave.class is not set" }
+        require(!enclaveClassName.isNullOrEmpty()) { "Please specify a full class name of your enclave using command line option `--enclave.class`, " +
+                "e.g. --enclave.class=package_name.enclave_class_name" }
 
         if (EnclaveHost.isHardwareEnclaveSupported()) {
             println("This platform supports enclaves in simulation, debug and release mode.")
