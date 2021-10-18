@@ -18,11 +18,10 @@ class EnclaveQuoteServiceEPID(val attestationParameters: AttestationParameters.E
         val getQuote = createSgxGetQuote(report)
         Native.getQuote(
             getQuote.buffer.array(),
-            signatureRevocationListIn = null,
-            // TODO Do we need to use the nonce?
-            quotingEnclaveReportNonceIn = null,
-            quotingEnclaveReportOut = null,
-            quoteOut = quoteBytes
+            null,
+            null,
+            null,
+            quoteBytes
         )
         val signedQuote = Cursor.wrap(SgxSignedQuote, quoteBytes)
         return signedQuote

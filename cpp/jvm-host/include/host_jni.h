@@ -13,7 +13,7 @@ extern "C" {
  * Signature: (Ljava/lang/String;Z)J
  */
 JNIEXPORT jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
-  (JNIEnv *, jobject, jstring, jboolean);
+  (JNIEnv *, jclass, jstring, jboolean);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -21,7 +21,7 @@ JNIEXPORT jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
  * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -29,7 +29,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
  * Signature: (J[B)V
  */
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
-  (JNIEnv *, jobject, jlong, jbyteArray);
+  (JNIEnv *, jclass, jlong, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -37,7 +37,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
  * Signature: ([B)V
  */
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote
-  (JNIEnv *, jobject, jbyteArray);
+  (JNIEnv *, jclass, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote
  * Signature: ([B)I
  */
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSize
-  (JNIEnv *, jobject, jbyteArray);
+  (JNIEnv *, jclass, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -53,7 +53,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSize
  * Signature: ([B[B[B[B[B)V
  */
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
-  (JNIEnv *, jobject, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray, jbyteArray, jbyteArray, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -61,7 +61,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
  * Signature: (Ljava/lang/String;[B)I
  */
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
-  (JNIEnv *, jobject, jstring, jbyteArray);
+  (JNIEnv *, jclass, jstring, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -69,7 +69,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
  * Signature: ()I
  */
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
-  (JNIEnv *, jobject);
+  (JNIEnv *, jclass);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -77,7 +77,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDC
  * Signature: ([B[B)I
  */
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
-  (JNIEnv *, jobject, jbyteArray, jbyteArray);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -85,7 +85,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
  * Signature: ([BI)[Ljava/lang/String;
  */
 JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral
-  (JNIEnv *, jobject, jbyteArray, jint);
+  (JNIEnv *, jclass, jbyteArray, jint);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -93,7 +93,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
  * Signature: (Ljava/lang/String;[B)V
  */
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata
-  (JNIEnv *, jobject, jstring, jbyteArray);
+  (JNIEnv *, jclass, jstring, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
@@ -101,7 +101,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata
  * Signature: ()Ljava/lang/String;
  */
 JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary
-  (JNIEnv *, jobject);
+  (JNIEnv *, jclass);
 
 #ifdef __cplusplus
 }

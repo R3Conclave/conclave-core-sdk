@@ -128,6 +128,16 @@ Note that `MockOnlySupportedException` is no longer a part of the API, and has b
 For more information, please consult the [updated tutorial documentation](writing-hello-world.md#write-a-simple-host-program).
 Alternatively, for working examples of usage, check the sample projects bundled with the SDK.
 
+## Java 11
+
+Now, an existing enclave will require java 11. So either the developer has to manually set it to java 8, or use jdk 11 at `enclave/build.gradle`:
+```
+compileJava {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+```
+
 ## 1.0 to 1.1
 
 There have been a number of changes in the way that you use mock mode in your Conclave projects. You will

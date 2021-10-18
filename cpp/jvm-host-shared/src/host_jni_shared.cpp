@@ -8,8 +8,8 @@ static void raisePlatformSupportException(JNIEnv *jniEnv, const char *message) {
     raiseException(jniEnv, message, "com/r3/conclave/host/PlatformSupportException");
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_NativeShared_checkPlatformEnclaveSupport
-        (JNIEnv *jniEnv, jobject, jboolean requireHardwareSupport) {
+void JNICALL Java_com_r3_conclave_host_internal_NativeSharedInternal_checkPlatformEnclaveSupport
+        (JNIEnv *jniEnv, jclass, jboolean requireHardwareSupport) {
     std::string message;
     if (!checkEnclaveSupport(requireHardwareSupport, message)) {
         // SGX is not enabled
@@ -17,8 +17,8 @@ void JNICALL Java_com_r3_conclave_host_internal_NativeShared_checkPlatformEnclav
     }
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_NativeShared_enablePlatformHardwareEnclaveSupport
-        (JNIEnv *jniEnv, jobject) {
+void JNICALL Java_com_r3_conclave_host_internal_NativeSharedInternal_enablePlatformHardwareEnclaveSupport
+        (JNIEnv *jniEnv, jclass) {
     std::string message;
     if (!enableHardwareEnclaveSupport(message)) {
         // Failed to enable SGX in software
@@ -26,7 +26,7 @@ void JNICALL Java_com_r3_conclave_host_internal_NativeShared_enablePlatformHardw
     }
 }
 
-JNIEXPORT jlong JNICALL Java_com_r3_conclave_host_internal_NativeShared_getCpuFeatures(JNIEnv *, jobject) {
+JNIEXPORT jlong JNICALL Java_com_r3_conclave_host_internal_NativeSharedInternal_getCpuFeatures(JNIEnv *, jclass) {
     uint64_t cpu_features{};
     r3::conclave::get_cpu_features_ext(&cpu_features);
     return static_cast<jlong>(cpu_features);

@@ -120,6 +120,14 @@ is available where you can find the development team during UK office hours (GMT
    resource files in `src/main/resources` are automatically added. Previously resource files had to be specified 
    manually.
 
+1. :jigsaw: **New feature!** We've added a `conclave-web-host` component that allows you to interact with enclaves using REST API.
+   With `conclave-web-host` the user code is limited to `enclave` and `client`, the `host` is being taken care of by Conclave SDK.
+   At the time of writing, with `conclave-web-host`, the `enclave` implementation is restricted to only use `receiveMail` for incoming messages
+   and `postMail` for outgoing ones.
+
+1. :jigsaw: **Java 11** is now default JDK for building enclaves. You can override this at enclave's `build.gradle` file.
+   See `cordapp` sample provided. 
+
 1. :jigsaw: New experimental feature! Easily enable and use Python. It is JIT compiled inside the enclave and can 
    interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it 
    is possible to run simple Python function, importing modules will likely lead to build issues.
@@ -137,13 +145,8 @@ is available where you can find the development team during UK office hours (GMT
    improvements. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release)
    for more details.
 
-1. :jigsaw: **New feature!** We've added a `conclave-web-host` component that allows you to interact with enclaves using REST API.
-   With `conclave-web-host` the user code is limited to `enclave` and `client`, the `host` is being taken care of by Conclave SDK.
-   At the time of writing, with `conclave-web-host`, the `enclave` implementation is restricted to only use `receiveMail` for incoming messages
-   and `postMail` for outgoing ones.
-
-8. The API for performing platform support checks has been streamlined. Please consult the [API changes page](api-changes.md)
-for more information.
+1. The API for performing platform support checks has been streamlined. Please consult the [API changes page](api-changes.md)
+   for more information.
 
 ### 1.1
 

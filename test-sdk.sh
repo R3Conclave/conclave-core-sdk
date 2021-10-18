@@ -26,16 +26,12 @@ rm -rf /tmp/host.state
 
 popd
 
-if [ -e $JAVA_HOME/jre/lib/rt.jar ]; then
-  echo
-  echo Testing the CorDapp sample
-  echo
-
-  pushd build/distributions/conclave-sdk-*/cordapp
-  ./gradlew $gradle_args workflows:test
-  popd
-else
-  echo
-  echo "\$JAVA_HOME ($JAVA_HOME) doesn't seem to be a Java 8, so skipping the CorDapp sample."
-  echo
-fi
+# Java 8 is required to run Corda
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+echo
+echo Testing the CorDapp sample
+echo
+export PATH=$JAVA_HOME/bin:$PATH
+pushd build/distributions/conclave-sdk-*/cordapp
+./gradlew $gradle_args workflows:test
+popd

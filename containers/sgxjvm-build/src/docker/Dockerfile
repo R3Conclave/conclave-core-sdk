@@ -72,8 +72,8 @@ RUN apt-get update -y && apt-get install -y \
     nexus-iq-cli \
     ocaml \
     ocamlbuild \
-    openjdk-11-jdk \
     openjdk-8-jdk \
+    openjdk-11-jdk \
     openssl \
     patch \
     protobuf-compiler \
@@ -98,13 +98,12 @@ ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV MX_VERSION          5.301.0
-ENV JAVA_HOME           /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME           /usr/lib/jvm/java-11-openjdk-amd64
 ENV JVMCI_VERSION       21.0-b03
 ENV LABSJDK_VERSION     11.0.9
 ENV LABSJDK_CE_11_FILE  labsjdk-ce-$LABSJDK_VERSION+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
 ENV LABSJDK_HOME        /opt/labsjdk-ce-$LABSJDK_VERSION-jvmci-$JVMCI_VERSION
-ENV JVMCI_FILE          openjdk-8u272+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
-ENV JVMCI_HOME          /opt/openjdk1.8.0_272-jvmci-$JVMCI_VERSION
+ENV JVMCI_HOME          $LABSJDK_HOME
 ENV MX_HOME             /opt/mx-$MX_VERSION
 ENV SGX_SDK_VERSION     2.14
 
@@ -119,12 +118,6 @@ RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git 
 # Checkout the exact commit to ensure the same code is always used even if the branch is updated
 RUN git -C /opt/mx-$MX_VERSION checkout 5e0efda
 RUN chmod -R a+wx /opt/mx-$MX_VERSION
-
-# JVMCI-enabled JDK8
-RUN curl -sSL -o /opt/$JVMCI_FILE https://github.com/graalvm/graal-jvmci-8/releases/download/jvmci-$JVMCI_VERSION/$JVMCI_FILE
-RUN echo "2ddcf577de907ad298ad361eda8895355dbbaa43  /opt/$JVMCI_FILE" | shasum -c -
-RUN tar -xaf /opt/$JVMCI_FILE -C /opt
-RUN rm -v /opt/$JVMCI_FILE
 
 # labs-openjdk-11
 RUN curl -sSL -o /opt/$LABSJDK_CE_11_FILE https://github.com/graalvm/labs-openjdk-11/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_11_FILE

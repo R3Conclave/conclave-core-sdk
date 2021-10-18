@@ -22,7 +22,7 @@ class AttestationTests : AbstractEnclaveActionTest() {
     fun `enclave info`() {
         // TODO consider using Java/Kotlin code to read ELF file - https://github.com/fornwall/jelf/
         val metadataCursor = Cursor.allocate(SgxEnclaveMetadata.INSTANCE)
-        Native.INSTANCE.getMetadata(getEnclaveFilename(), metadataCursor.buffer.array())
+        Native.getMetadata(getEnclaveFilename(), metadataCursor.buffer.array())
 
         val metadata = Cursor.wrap(SgxEnclaveMetadata.INSTANCE, metadataCursor.buffer.array(), 0, metadataCursor.size)
         val metaCodeHash = SHA256Hash.get(metadata[enclaveCss][body][enclaveHash].read())

@@ -80,7 +80,7 @@ extern const uint8_t _binary_app_jar_start[];
 extern const uint8_t _binary_app_jar_end[];
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
-        (JNIEnv *jniEnv, jobject, jbyteArray data) {
+        (JNIEnv *jniEnv, jclass, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
     abortOnJniException(jniEnv);
     auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
@@ -123,7 +123,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_readAppJarChunk
-        (JNIEnv *jniEnv, jobject, jlong jarOffset, jbyteArray dest, jint destOffset, jint length) {
+        (JNIEnv *jniEnv, jclass, jlong jarOffset, jbyteArray dest, jint destOffset, jint length) {
     static unsigned long jarSize = _binary_app_jar_end - _binary_app_jar_start;
     auto remainingBytes = jarSize - jarOffset;
     if (remainingBytes <= 0) {
@@ -139,7 +139,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_readAppJarCh
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_createReport
-        (JNIEnv *jniEnv, jobject, jbyteArray targetInfoIn, jbyteArray reportDataIn, jbyteArray reportOut) {
+        (JNIEnv *jniEnv, jclass, jbyteArray targetInfoIn, jbyteArray reportDataIn, jbyteArray reportOut) {
     jbyte *target_info = nullptr;
     if (targetInfoIn != nullptr) {
         target_info = jniEnv->GetByteArrayElements(targetInfoIn, nullptr);
@@ -169,7 +169,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_createReport
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_randomBytes
-        (JNIEnv *jniEnv, jobject, jbyteArray output, jint offset, jint length) {
+        (JNIEnv *jniEnv, jclass, jbyteArray output, jint offset, jint length) {
     if (length < 0) {
         raiseException(jniEnv, "Please specify a non-negative length");
         return;
@@ -190,7 +190,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_randomBytes
 }
 
 JNIEXPORT jboolean JNICALL Java_com_r3_conclave_enclave_internal_Native_isEnclaveSimulation
-        (JNIEnv *, jobject) {
+        (JNIEnv *, jclass) {
 #ifdef SGX_SIM
     return static_cast<jboolean>(true);
 #else
@@ -199,7 +199,7 @@ JNIEXPORT jboolean JNICALL Java_com_r3_conclave_enclave_internal_Native_isEnclav
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_calcSealedBlobSize
-        (JNIEnv* jniEnv, jobject, jint plaintextSize, jint authenticatedDataSize) {
+        (JNIEnv* jniEnv, jclass, jint plaintextSize, jint authenticatedDataSize) {
 
     auto ret = sgx_calc_sealed_data_size(authenticatedDataSize, plaintextSize);
 
@@ -212,7 +212,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_calcSealedBl
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_authenticatedDataSize
-        (JNIEnv* jniEnv, jobject, jbyteArray sealedBlob) {
+        (JNIEnv* jniEnv, jclass, jbyteArray sealedBlob) {
     JniPtr<uint8_t> jpSealedBlob(jniEnv, sealedBlob);
 
     if (jpSealedBlob.ptr) {
@@ -227,7 +227,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_authenticate
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_plaintextSizeFromSealedData
-        (JNIEnv* jniEnv, jobject, jbyteArray sealedBlob) {
+        (JNIEnv* jniEnv, jclass, jbyteArray sealedBlob) {
 
     JniPtr<uint8_t> jpSealedBlob(jniEnv, sealedBlob);
 
@@ -243,7 +243,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_plaintextSiz
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sealData
-        (JNIEnv* jniEnv, jobject,
+        (JNIEnv* jniEnv, jclass,
          jbyteArray output, jint outputOffset, jint outputSize,
          jbyteArray plaintext, jint plaintextOffset, jint plaintextSize,
          jbyteArray authenticatedData, jint authenticatedDataOffset, jint authenticatedDataSize) {
@@ -292,7 +292,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_sealData
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
-        (JNIEnv* jniEnv, jobject,
+        (JNIEnv* jniEnv, jclass,
          jbyteArray sealedBlob, jint sealedBlobOffset, jint sealedBlobLength,
          jbyteArray dataOut, jint dataOutOffset, jint dataOutLength,
          jbyteArray authenticatedDataOut, jint authenticatedDataOutOffset, jint authenticatedDataOutLength) {
@@ -363,7 +363,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_getKey
-        (JNIEnv* jniEnv, jobject, jbyteArray keyRequestIn, jbyteArray keyOut) {
+        (JNIEnv* jniEnv, jclass, jbyteArray keyRequestIn, jbyteArray keyOut) {
     auto *key_request = jniEnv->GetByteArrayElements(keyRequestIn, nullptr);
     auto *key = jniEnv->GetByteArrayElements(keyOut, nullptr);
 

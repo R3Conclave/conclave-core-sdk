@@ -1,23 +1,20 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal;
 
 /**
  * The JNI interface of the host. Requires symbols loaded with [NativeLoader]
  */
-object Native {
-    @Throws(Exception::class)
-    external fun createEnclave(path: String, isDebug: Boolean): Long
+public class Native {
+    public static native long createEnclave(String path, boolean isDebug);
 
-    @Throws(Exception::class)
-    external fun destroyEnclave(enclaveId: Long)
+    public static native void destroyEnclave(long enclaveId);
 
     // TODO use ByteBuffers directly
-    @Throws(Exception::class)
-    external fun jvmEcall(enclaveId: Long, data: ByteArray)
+    public static native void jvmEcall(long enclaveId, byte[] data);
 
     /**
      * sgx_status_t sgx_init_quote(sgx_target_info_t *p_target_info, sgx_epid_group_id_t *p_gid)
      */
-    external fun initQuote(initQuoteResponseOut: ByteArray)
+    public static native void initQuote(byte[] initQuoteResponseOut);
 
     /**
      * sgx_status_t SGXAPI sgx_calc_quote_size(
@@ -26,7 +23,7 @@ object Native {
      *     uint32_t* p_quote_size
      * );
      */
-    external fun calcQuoteSize(signatureRevocationListIn: ByteArray?): Int
+    public static native int calcQuoteSize(byte[] signatureRevocationListIn);
 
     /**
      * sgx_status_t SGXAPI sgx_get_quote(
@@ -41,13 +38,13 @@ object Native {
      *     uint32_t quote_size
      * );
      */
-    external fun getQuote(
-        getQuoteRequestIn: ByteArray,
-        signatureRevocationListIn: ByteArray?,
-        quotingEnclaveReportNonceIn: ByteArray?,
-        quotingEnclaveReportOut: ByteArray?,
-        quoteOut: ByteArray
-    )
+    public static native void getQuote(
+        byte[] getQuoteRequestIn,
+        byte[] signatureRevocationListIn,
+        byte[] quotingEnclaveReportNonceIn,
+        byte[] quotingEnclaveReportOut,
+        byte[] quoteOut
+    );
 
 
     /*
@@ -68,16 +65,16 @@ object Native {
             QeIdentity
         }
     */
-    external fun initQuoteDCAP(bundlePath: String, initQuoteResponseOut: ByteArray): Int // 0 --> OK
-    external fun calcQuoteSizeDCAP(): Int  // > 0 --> OK
-    external fun getQuoteDCAP(quoteRequestIn: ByteArray, quoteOut: ByteArray): Int // 0 --> OK
-    external fun getQuoteCollateral(fmspc: ByteArray, pck: Int): Array<String>
+    public static native int initQuoteDCAP(String bundlePath, byte[] initQuoteResponseOut); // 0 --> OK
+    public static native int calcQuoteSizeDCAP();  // > 0 --> OK
+    public static native int getQuoteDCAP(byte[] quoteRequestIn, byte[] quoteOut); // 0 --> OK
+    public static native String[] getQuoteCollateral(byte[] fmspc, int pck);
 
     // SgxMetadata
-    external fun getMetadata(
-        enclavePath: String,
-        metadataOut: ByteArray
-    )
+    public static native void getMetadata(
+        String enclavePath,
+        byte[] metadataOut
+    );
 
-    external fun getCpuCapabilitiesSummary(): String
+    public static native String getCpuCapabilitiesSummary();
 }

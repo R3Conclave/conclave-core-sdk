@@ -1,4 +1,3 @@
-import javax.inject.Inject
 import java.nio.file.Paths
 import java.nio.file.Files
 
@@ -6,30 +5,34 @@ apply plugin: "base"
 
 def types = ["Simulation", "Debug", "Release"]
 
-task generateHostJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.host.internal.Native']) {
+task generateHostJniHeaders(type: Copy) {
     dependsOn ":conclave-host:jar"
-    inputJars = files(tasks.getByPath(":conclave-host:jar").archiveFile.get().asFile)
-    outputHeader = file("$projectDir/jvm-host/include/host_jni.h")
+    def source = project(":conclave-host").buildDir
+    from ("$source/generated/sources/headers/java/main"){
+        include "com_r3_conclave_host_internal_Native.h"
+        rename "com_r3_conclave_host_internal_Native.h","host_jni.h"
+    }
+    into ("$projectDir/jvm-host/include")
 }
 
-task generateHostSharedJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.host.internal.NativeShared']) {
+task generateHostSharedJniHeaders(type: Copy) {
     dependsOn ":conclave-host:jar"
-    File conclaveHostJar = tasks.getByPath(":conclave-host:jar").archiveFile.get().asFile
-    // The task cpp:generateHostSharedJniHeader started to fail after updating the properties apiVersion, languageVersion to 1.5 in the common.gradle file
-    // The task :cpp:generateHostSharedJniHeaders depends on the conclave-host-*.jar and it was failing because the class io.github.classgraph.Resource could not be found.
-    // To fix the issue, the path to the io.github.classgraph dependency must be given to the command javah.
-    // The code below gets the compile classpath used by the task :conclave-host:jar and then gets the file classgraph-*.jar
-    File dependencyJar = project(":conclave-host").configurations.compileClasspath.filter{ jarFile ->
-        jarFile.name.contains("classgraph-${classgraph_version}.jar")
-    }.singleFile
-    inputJars = files(conclaveHostJar, dependencyJar)
-    outputHeader = file("$projectDir/jvm-host-shared/include/host_jni_shared.h")
+    def source = project(":conclave-host").buildDir
+    from ("$source/generated/sources/headers/java/main") {
+        include "com_r3_conclave_host_internal_NativeSharedInternal.h"
+        rename "com_r3_conclave_host_internal_NativeSharedInternal.h", "host_jni_shared.h"
+    }
+    into ("$projectDir/jvm-host-shared/include")
 }
 
-task generateEnclaveJniHeaders(type: Javah, constructorArgs: ['com.r3.conclave.enclave.internal.Native']) {
+task generateEnclaveJniHeaders(type: Copy) {
     dependsOn ":conclave-enclave:jar"
-    inputJars = files(tasks.getByPath(":conclave-enclave:jar").archiveFile.get().asFile)
-    outputHeader = file("$projectDir/jvm-enclave-common/include/enclave_jni.h")
+    def source = project(":conclave-enclave").buildDir
+    from ("$source/generated/sources/headers/java/main") {
+        include "com_r3_conclave_enclave_internal_Native.h"
+        rename "com_r3_conclave_enclave_internal_Native.h","enclave_jni.h"
+    }
+    into ("$projectDir/jvm-enclave-common/include")
 }
 
 /*
@@ -161,32 +164,5 @@ for (type in types) {
                 "--build", buildDirectory(type),
                 "--target", "build_tests_and_run"
         )
-    }
-}
-
-class Javah extends DefaultTask {
-    final String nativeClass
-
-    @OutputFile
-    File outputHeader
-    @Input
-    FileCollection inputJars
-
-    @Inject
-    Javah(String nativeClass) {
-        this.nativeClass = nativeClass
-    }
-
-    @TaskAction
-    def run() {
-        project.exec { spec ->
-            spec.workingDir(temporaryDir)
-            spec.commandLine("/usr/bin/env", "javah",
-                    "-v",
-                    "-o", outputHeader,
-                    "-cp", inputJars.asPath,
-                    nativeClass
-            )
-        }
     }
 }

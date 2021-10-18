@@ -121,15 +121,15 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
             toBeSealed.authenticatedData?.size ?: 0
         ))
         Native.sealData(
-            output = sealedData,
-            outputOffset = 0,
-            outputSize = sealedData.size,
-            plaintext = toBeSealed.plaintext,
-            plaintextOffset = 0,
-            plaintextSize = toBeSealed.plaintext.size,
-            authenticatedData = toBeSealed.authenticatedData,
-            authenticatedDataOffset = 0,
-            authenticatedDataSize = toBeSealed.authenticatedData?.size ?: 0
+            sealedData,
+            0,
+            sealedData.size,
+            toBeSealed.plaintext,
+            0,
+            toBeSealed.plaintext.size,
+            toBeSealed.authenticatedData,
+            0,
+            toBeSealed.authenticatedData?.size ?: 0
         )
         return sealedData
     }
@@ -140,15 +140,15 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         val authenticatedData = Native.authenticatedDataSize(sealedBlob).let { if (it > 0) ByteArray(it) else null }
 
         Native.unsealData(
-            sealedBlob = sealedBlob,
-            sealedBlobOffset = 0,
-            sealedBlobLength = sealedBlob.size,
-            dataOut = plaintext,
-            dataOutOffset = 0,
-            dataOutLength = plaintext.size,
-            authenticatedDataOut = authenticatedData,
-            authenticatedDataOutOffset = 0,
-            authenticatedDataOutLength = authenticatedData?.size ?: 0
+            sealedBlob,
+            0,
+            sealedBlob.size,
+            plaintext,
+            0,
+            plaintext.size,
+            authenticatedData,
+            0,
+            authenticatedData?.size ?: 0
         )
 
         return PlaintextAndEnvelope(plaintext, authenticatedData)

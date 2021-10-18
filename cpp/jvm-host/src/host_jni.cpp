@@ -38,7 +38,7 @@ void debug_print(const char *str, int n) {
 static bool signal_registered = false;
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getDeviceStatus
-        (JNIEnv *, jobject) {
+        (JNIEnv *, jclass) {
 #ifdef SGX_SIM
     // If in simulation mode, simulate device capabilities.
     return SGX_ENABLED;
@@ -93,7 +93,7 @@ static void initialise_enclave(sgx_enclave_id_t enclave_id) {
 }
 
 jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
-        (JNIEnv *jniEnv, jobject, jstring enclavePath, jboolean isDebug) {
+        (JNIEnv *jniEnv, jclass, jstring enclavePath, jboolean isDebug) {
 
     initialise_abort_handler();
         
@@ -117,7 +117,7 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
 }
 
 void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
-        (JNIEnv *jniEnv, jobject, jlong enclaveId) {
+        (JNIEnv *jniEnv, jclass, jlong enclaveId) {
     if (!EcallContext::available()) {
         EcallContext _(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
         const auto ret = ecall_finalize_enclave(static_cast<sgx_enclave_id_t>(enclaveId));
@@ -138,7 +138,7 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
 }
 
 void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
-        (JNIEnv *jniEnv, jobject, jlong enclaveId, jbyteArray data)
+        (JNIEnv *jniEnv, jclass, jlong enclaveId, jbyteArray data)
 try {
     // Prepare input buffer
     auto size = jniEnv->GetArrayLength(data);
@@ -167,7 +167,7 @@ typedef struct sgx_init_quote_request {
 } sgx_init_quote_request_t;
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote
-        (JNIEnv *jniEnv, jobject, jbyteArray initQuoteRequest) {
+        (JNIEnv *jniEnv, jclass, jbyteArray initQuoteRequest) {
     JniPtr<sgx_init_quote_request_t> request(jniEnv, initQuoteRequest);
     auto returnCode = sgx_init_quote(&request.ptr->target_info, &request.ptr->epid_group_id);
     if (returnCode == SGX_SUCCESS) {
@@ -178,7 +178,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSize
-        (JNIEnv *jniEnv, jobject, jbyteArray sigRlIn) {
+        (JNIEnv *jniEnv, jclass, jbyteArray sigRlIn) {
     JniPtr<const uint8_t> sig_rl(jniEnv, sigRlIn);
     uint32_t quoteSize = 0;
     auto returnCode = sgx_calc_quote_size(
@@ -201,7 +201,7 @@ typedef struct sgx_get_quote_request {
 } sgx_get_quote_request_t;
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
-        (JNIEnv *jniEnv, jobject, jbyteArray getQuoteRequestIn, jbyteArray sigRlIn, jbyteArray qeReportNonceIn, jbyteArray qeReportOut, jbyteArray quoteOut) {
+        (JNIEnv *jniEnv, jclass, jbyteArray getQuoteRequestIn, jbyteArray sigRlIn, jbyteArray qeReportNonceIn, jbyteArray qeReportOut, jbyteArray quoteOut) {
     JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
     JniPtr<const uint8_t> sig_rl(jniEnv, sigRlIn);
     JniPtr<const sgx_quote_nonce_t> qe_report_nonce(jniEnv, qeReportNonceIn);
@@ -227,7 +227,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata
-        (JNIEnv *jniEnv, jobject, jstring enclaveFilePath, jbyteArray metadataOut) {
+        (JNIEnv *jniEnv, jclass, jstring enclaveFilePath, jbyteArray metadataOut) {
 
     JniString path(jniEnv, enclaveFilePath);
     JniPtr<metadata_t> metadata(jniEnv, metadataOut);
@@ -321,7 +321,7 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
-        (JNIEnv *jniEnv, jobject, jstring bundle, jbyteArray targetInfoOut) {
+        (JNIEnv *jniEnv, jclass, jstring bundle, jbyteArray targetInfoOut) {
 
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
@@ -341,7 +341,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
-        (JNIEnv *jniEnv, jobject) {
+        (JNIEnv *jniEnv, jclass) {
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
@@ -356,7 +356,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDC
 }
 
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
-        (JNIEnv *jniEnv, jobject, jbyteArray getQuoteRequestIn, jbyteArray quoteOut) {
+        (JNIEnv *jniEnv, jclass, jbyteArray getQuoteRequestIn, jbyteArray quoteOut) {
 
     JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
     JniPtr<sgx_quote_t> quote(jniEnv, quoteOut);
@@ -375,7 +375,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
 }
 
 JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral
-  (JNIEnv *jniEnv, jobject, jbyteArray fmspc, jint pck_ca_type) {
+  (JNIEnv *jniEnv, jclass, jbyteArray fmspc, jint pck_ca_type) {
 
     JniPtr<uint8_t> p_fmspc(jniEnv, fmspc);
 
@@ -426,6 +426,6 @@ namespace r3::conclave {
 std::string getCpuCapabilitiesSummary();
 }
 
-JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary(JNIEnv *jniEnv, jobject) {
+JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary(JNIEnv *jniEnv, jclass) {
     return jniEnv->NewStringUTF(r3::conclave::getCpuCapabilitiesSummary().c_str());
 }

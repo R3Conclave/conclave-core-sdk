@@ -13,15 +13,16 @@ import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.JavaPlugin
-import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
+import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.Callable
@@ -43,10 +44,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.pluginManager.apply(JavaPlugin::class.java)
         target.pluginManager.apply(ShadowPlugin::class.java)
 
-        target.convention.getPlugin(JavaPluginConvention::class.java).apply {
-            sourceCompatibility = JavaVersion.VERSION_1_8
-            targetCompatibility = JavaVersion.VERSION_1_8
-        }
+        setJvmTargetVersion(target)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
@@ -116,11 +114,68 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createEnclaveArtifacts(target, sdkVersion, conclaveExtension, shadowJarTask)
     }
 
+    /**
+     * Set Java version for JavaCompile and KotlinCompile tasks.
+     * Always set the source/target compatibility to Java 11.
+     * If desired this can be overridden at enclave/build.gradle.
+     * You might have both Kotlin and Java source code in your enclave project,
+     * set JVM compatibility/target for both compileJava and compileKotlin tasks.
+     */
+    private fun setJvmTargetVersion(project: Project) {
+        val javaVersion = "11"
+
+        project.tasks.withType(JavaCompile::class.java) { task ->
+            task.sourceCompatibility = javaVersion
+            task.targetCompatibility = javaVersion
+
+            if (JavaVersion.current().isJava9Compatible) {
+                task.options.compilerArgs.addAll(listOf("--release", javaVersion))
+            }
+        }
+
+        try {
+            // Using reflection here as Gradle does not know anything about Jetbrains tasks.
+            project.tasks.forEach {
+                if (it.javaClass.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
+                    setKotlinOptionJvmTarget(it, javaVersion)
+                }
+            }
+        } catch (ex: Exception) {
+            throw GradleException("Attempt to automatically set Kotlin JVM target to Java 11 failed. " +
+                    "Please manually set your enclave's build target to Java 11.", ex)
+        }
+    }
+
+    private fun setKotlinOptionJvmTarget(obj: Any, javaVersion: String) {
+        /**
+         * JvmTarget for KotlinCompile tasks is hidden under KotlinOptions
+         *
+         * compileKotlin {
+         *    kotlinOptions {
+         *        jvmTarget = JavaVersion.VERSION_11
+         *    }
+         * }
+         */
+        val kotlinOptions = obj.getMethod("getKotlinOptions", false).invoke(obj)
+        kotlinOptions.getMethod("setJvmTarget", true, String::class.java).invoke(kotlinOptions, javaVersion)
+    }
+
+    /**
+     * sometimes you have to query a superclass for declared methods
+     */
+    private fun Any.getMethod(methodName: String, superclass: Boolean, vararg parameterType: Class<*>): Method {
+        return when(superclass) {
+            false -> javaClass.getDeclaredMethod(methodName, *parameterType)
+                .apply { isAccessible = true }
+            true -> javaClass.superclass.getDeclaredMethod(methodName, *parameterType)
+                .apply { isAccessible = true }
+        }
+    }
+
     private fun createMockArtifact(target: Project, shadowJarTask: ShadowJar) {
         // Mock mode does not require all the enclave building tasks. The enclave Jar file is just packaged
         // as an artifact.
         target.artifacts.add("mock", shadowJarTask.archiveFile)
-
     }
 
     private fun createEnclaveArtifacts(target: Project, sdkVersion: String, conclaveExtension: ConclaveExtension, shadowJarTask: ShadowJar) {
