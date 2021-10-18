@@ -1,10 +1,7 @@
-package com.r3.conclave.internaltesting
+package com.r3.conclave.common.internal.handler
 
-import com.r3.conclave.common.internal.handler.Handler
-import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
-import java.util.function.Consumer
 
 /**
  * A [Handler]/[Sender] pair that sends/receives strings.

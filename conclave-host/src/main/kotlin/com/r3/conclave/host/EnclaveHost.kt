@@ -6,7 +6,6 @@ import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
-import com.r3.conclave.common.internal.handler.ErrorHandler
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.common.internal.handler.SimpleMuxingHandler

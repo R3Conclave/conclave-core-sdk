@@ -6,7 +6,6 @@ import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
-import com.r3.conclave.internaltesting.RecordingCallback
 import com.r3.conclave.internaltesting.threadWithFuture
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.utilities.internal.deserialise

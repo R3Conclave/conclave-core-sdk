@@ -2,10 +2,7 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.internal.handler.ErrorHandler
-import com.r3.conclave.common.internal.handler.ThrowingErrorHandler
 import com.r3.conclave.host.EnclaveHost
-import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {

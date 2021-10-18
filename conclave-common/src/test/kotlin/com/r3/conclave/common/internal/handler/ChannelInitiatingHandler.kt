@@ -1,8 +1,5 @@
-@file:JvmName("Channels")
-
 package com.r3.conclave.common.internal.handler
 
-import com.r3.conclave.common.internal.handler.ChannelInitiatingHandler.Connection
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -17,7 +14,7 @@ data class Channel<CONNECTION>(val id: MuxId, val connection: CONNECTION)
 
 /**
  * A [Handler] capable of creating new channels dynamically with the other side, which should implement
- * [ChannelHandlingHandler]. New channels are created by calling [Connection.addDownstream].
+ * `ChannelHandlingHandler`. New channels are created by calling [Connection.addDownstream].
  */
 class ChannelInitiatingHandler : Handler<ChannelInitiatingHandler.Connection> {
     private val muxingHandler = MuxingHandler()
@@ -64,10 +61,10 @@ class ChannelInitiatingHandler : Handler<ChannelInitiatingHandler.Connection> {
             @Suppress("unchecked_cast")
             requestMap[requestId] = HandlerFuture(handler, future) as HandlerFuture<in Any>
 
-            upstream.send(Byte.SIZE_BYTES + Int.SIZE_BYTES, Consumer { buffer ->
+            upstream.send(Byte.SIZE_BYTES + Int.SIZE_BYTES) { buffer ->
                 buffer.put(ChannelDiscriminator.OPEN.value)
                 buffer.putInt(requestId)
-            })
+            }
             return future
         }
 
@@ -79,10 +76,10 @@ class ChannelInitiatingHandler : Handler<ChannelInitiatingHandler.Connection> {
         }
 
         fun removeDownstream(channelId: MuxId) {
-            upstream.send(Byte.SIZE_BYTES + Int.SIZE_BYTES, Consumer { buffer ->
+            upstream.send(Byte.SIZE_BYTES + Int.SIZE_BYTES) { buffer ->
                 buffer.put(ChannelDiscriminator.CLOSE.value)
                 buffer.putInt(channelId)
-            })
+            }
             muxConnection.removeDownstream(channelId)
         }
 

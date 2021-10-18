@@ -1,12 +1,15 @@
-package com.r3.conclave.common.internal.handler
+package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.SerializeException
+import com.r3.conclave.common.internal.handler.Handler
+import com.r3.conclave.common.internal.handler.HandlerConnected
+import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.utilities.internal.getBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 
 /**
- * A [Handler] that handle exceptions received from an [ExceptionSendingHandler].
+ * A [Handler] that handle exceptions received from an `ExceptionSendingHandler`.
  *
  * If an exception is received [onError] is called.
  */
@@ -15,8 +18,7 @@ abstract class ErrorHandler : Handler<ErrorHandler.Connection> {
     abstract fun onError(throwable: Throwable)
 
     final override fun onReceive(connection: Connection, input: ByteBuffer) {
-        val discriminator = input.get()
-        when (discriminator) {
+        when (input.get()) {
             SerializeException.Discriminator.ERROR.value -> {
                 val throwable = parseException(input)
                 onError(throwable)
@@ -27,7 +29,7 @@ abstract class ErrorHandler : Handler<ErrorHandler.Connection> {
                 downstream.onReceive(input)
             }
 
-            else -> throw java.lang.IllegalArgumentException("Unrecognized error discriminator")
+            else -> throw IllegalArgumentException("Unrecognized error discriminator")
         }
     }
 

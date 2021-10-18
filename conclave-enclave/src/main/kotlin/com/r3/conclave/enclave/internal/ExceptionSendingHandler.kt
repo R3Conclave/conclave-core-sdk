@@ -1,6 +1,9 @@
-package com.r3.conclave.common.internal.handler
+package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.SerializeException
+import com.r3.conclave.common.internal.handler.Handler
+import com.r3.conclave.common.internal.handler.HandlerConnected
+import com.r3.conclave.common.internal.handler.Sender
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 

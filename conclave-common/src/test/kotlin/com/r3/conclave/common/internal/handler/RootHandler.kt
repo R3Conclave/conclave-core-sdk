@@ -1,6 +1,7 @@
-package com.r3.conclave.internaltesting
+package com.r3.conclave.common.internal.handler
 
-import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.host.internal.ErrorHandler
+import com.r3.conclave.host.internal.ThrowingErrorHandler
 import java.nio.ByteBuffer
 
 /**
