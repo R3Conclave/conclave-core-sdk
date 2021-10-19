@@ -1,6 +1,5 @@
 package com.r3.conclave.internaltesting
 
-import org.assertj.core.api.Condition
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.jar.JarEntry
@@ -31,31 +30,6 @@ fun <T> threadWithFuture(block: () -> T): CompletableFuture<T> {
     }
     return future
 }
-
-private val mailCorruptionErrors = listOf(
-    "Unknown Noise DH algorithm",
-    "Unknown Noise cipher algorithm",
-    "Unknown Noise hash algorithm",
-    "Corrupt stream or not Conclave Mail",
-    "Premature end of stream",
-    "Protocol name must have 5 components",
-    "SGX_ERROR_INVALID_CPUSVN",
-    "SGX_ERROR_INVALID_ISVSVN",
-)
-
-val throwableWithMailCorruptionErrorMessage =
-    object : Condition<Throwable>("a throwable containing a corruption error message") {
-        override fun matches(value: Throwable?): Boolean {
-            val match = generateSequence(value, Throwable::cause).any {
-                val message = it.message
-                message != null && mailCorruptionErrors.any { it in message }
-            }
-            if (!match) {
-                value?.printStackTrace()
-            }
-            return match
-        }
-    }
 
 fun JarInputStream.entries(): Sequence<JarEntry> = generateSequence { nextJarEntry }
 

@@ -4,6 +4,7 @@ import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.host.MailCommand;
+import com.r3.conclave.mail.MailDecryptionException;
 import net.corda.core.flows.FlowExternalOperation;
 import net.corda.core.flows.FlowLogic;
 import net.corda.core.node.services.CordaService;
@@ -75,8 +76,9 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
      * return once the enclave has finished processing the mail, and the enclave may not respond.
      *
      * @param encryptedMail The bytes of an encrypted message as created via {@link com.r3.conclave.mail.PostOffice}.
+     * @throws MailDecryptionException if the enclave was unable to decrypt the mail bytes.
      */
-    public void deliverMail(byte[] encryptedMail) {
+    public void deliverMail(byte[] encryptedMail) throws MailDecryptionException {
         enclave.deliverMail(encryptedMail, null);
     }
 
@@ -90,8 +92,9 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
      * @param encryptedMail The contents of the mail.
      * @return An operation that can be passed to {@link FlowLogic#await(FlowExternalOperation)} to suspend the flow until
      * the enclave provides a mail to send.
+     * @throws MailDecryptionException if the enclave was unable to decrypt the mail bytes.
      */
-    public FlowExternalOperation<byte[]> deliverAndPickUpMail(FlowLogic<?> flow, byte[] encryptedMail) {
+    public FlowExternalOperation<byte[]> deliverAndPickUpMail(FlowLogic<?> flow, byte[] encryptedMail) throws MailDecryptionException {
         // Prepare the object that the enclave will signal if it wants to send a response. It must be in the map
         // before we enter the enclave, as the enclave may immediately call back to request we deliver a response
         // and that will happen on the same call stack.

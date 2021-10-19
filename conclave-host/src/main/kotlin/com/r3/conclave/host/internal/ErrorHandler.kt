@@ -13,11 +13,16 @@ import java.nio.ByteBuffer
  *
  * If an exception is received [onError] is called.
  */
-abstract class ErrorHandler : Handler<ErrorHandler.Connection> {
-    /** Handle an error raised and sent from the other side */
-    abstract fun onError(throwable: Throwable)
+class ErrorHandler : Handler<ErrorHandler.Connection> {
+    /**
+     * Throws the [Throwable] that was received from the enclave. It is up to the user of this class if they want to
+     * maintain Java semantics on checked exceptions or not.
+     */
+    private fun onError(throwable: Throwable) {
+        throw throwable
+    }
 
-    final override fun onReceive(connection: Connection, input: ByteBuffer) {
+    override fun onReceive(connection: Connection, input: ByteBuffer) {
         when (input.get()) {
             SerializeException.Discriminator.ERROR.value -> {
                 val throwable = parseException(input)

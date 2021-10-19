@@ -2,6 +2,7 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
+import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.CipherState
 import com.r3.conclave.mail.internal.noise.protocol.CipherStatePair
@@ -44,7 +45,7 @@ private fun InputStream.readInt(): Int {
     val b2 = (read() and 0xFF)
     val b3 = (read() and 0xFF)
     val b4 = (read() and 0xFF)
-    return (b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4;
+    return (b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4
 }
 
 /**
@@ -287,7 +288,7 @@ class MailDecryptingStream(
     private var cipherState: CipherState? = null
 
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
-    private var handshakeFailure: IOException? = null
+    private var handshakeFailure: MailDecryptionException? = null
 
 
     private lateinit var _senderPublicKey: ByteArray
@@ -511,7 +512,7 @@ class MailDecryptingStream(
                 return cipherState
             }
         } catch (e: Exception) {
-            val handshakeFailure = if (e is IOException) e else IOException(e)
+            val handshakeFailure = if (e is MailDecryptionException) e else MailDecryptionException(e)
             this.handshakeFailure = handshakeFailure
             throw handshakeFailure
         } finally {
@@ -560,8 +561,7 @@ class MailDecryptingStream(
     }
 
     private fun setupHandshake(prologue: Prologue): HandshakeState {
-        val privateKey =
-            this.privateKey ?: throw IOException("Private key has not been provided to decrypt the stream.")
+        val privateKey = checkNotNull(this.privateKey) { "Private key has not been provided to decrypt the stream." }
         val handshake = HandshakeState(prologue.protocol.noiseProtocolName, HandshakeState.RESPONDER)
         val localKeyPair = handshake.localKeyPair
         localKeyPair.setPrivateKey(privateKey.encoded, 0)
@@ -662,5 +662,3 @@ enum class MailProtocol(
      */
     SENDER_KEY_TRANSMITTED_V2("Noise_X_25519_AESGCM_SHA256", 96),
 }
-
-class MailDecryptionException(message: String? = null, cause: Exception? = null) : IOException(message, cause)

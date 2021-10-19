@@ -1,7 +1,5 @@
 package com.r3.conclave.mail
 
-import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
-import com.r3.conclave.mail.internal.MailDecryptionException
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -87,7 +85,7 @@ class MailTests {
             bytes[i]++
             assertThatThrownBy {
                 bobPostOffice.decryptMail(bytes)
-            }.`is`(throwableWithMailCorruptionErrorMessage)
+            }.isInstanceOf(MailDecryptionException::class.java)
             bytes[i]--
             // Definitely not corrupted now. Kinda redundant check but heck, better spend the cycles on this than reddit.
             bobPostOffice.decryptMail(bytes)

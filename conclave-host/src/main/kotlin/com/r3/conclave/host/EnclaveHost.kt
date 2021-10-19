@@ -15,6 +15,7 @@ import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.mail.Curve25519PublicKey
+import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
 import java.io.DataOutputStream
 import java.io.IOException
@@ -150,7 +151,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     throw EnclaveLoadException("Unable to load enclave", e)
                 }
                 try {
-                    stream.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
+                    stream!!.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
                     return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
                 } catch (e: UnsatisfiedLinkError) {
                     // We get an unsatisfied link error if the native library could not be loaded on
@@ -530,7 +531,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      */
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
-    private fun callEnclaveInternal(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>?): ByteArray? {
+    private fun callEnclaveInternal(bytes: ByteArray, callback: EnclaveCallback?): ByteArray? {
         return checkStateFirst { enclaveMessageHandler.callEnclave(bytes, callback) }
     }
 
@@ -546,6 +547,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * on the same thread, requesting mail to be sent back in response. However, it's
      * also possible the enclave will hold the mail without requesting any action.
      *
+     * If the enclave is not unable to decrypt the mail bytes then a [MailDecryptionException] is thrown. This can
+     * happen if the mail is not encrypted to the enclave's key, which will most likely occur if the enclave was
+     * restarted and the client had used the enclave's old encryption key. In such a scenerio the client must be
+     * informed so that it re-send the mail using the enclave's new encryption key.
+     *
      * @param mail The encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
      * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
@@ -554,8 +560,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * response.
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
+     * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
+     * corrupted mail bytes.
      * @throws IllegalStateException If the host has not been started.
      */
+    @Throws(MailDecryptionException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
         deliverMailInternal(mail, routingHint, callback)
     }
@@ -572,6 +581,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * on the same thread, requesting mail to be sent back in response. However, it's
      * also possible the enclave will hold the mail without requesting any action.
      *
+     * If the enclave is not unable to decrypt the mail bytes then a [MailDecryptionException] is thrown. This can
+     * happen if the mail is not encrypted to the enclave's key, which will most likely occur if the enclave was
+     * restarted and the client had used the enclave's old encryption key. In such a scenerio the client must be
+     * informed so that it re-send the mail using the enclave's new encryption key.
+     *
      * Note: The enclave does not have the option of using `Enclave.callUntrustedHost` for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
@@ -580,11 +594,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
+     * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
+     * corrupted mail bytes.
      * @throws IllegalStateException If the host has not been started.
      */
+    @Throws(MailDecryptionException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?) = deliverMailInternal(mail, routingHint, null)
 
-    private fun deliverMailInternal(mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>?) {
+    private fun deliverMailInternal(mail: ByteArray, routingHint: String?, callback: EnclaveCallback?) {
         return checkStateFirst { enclaveMessageHandler.deliverMail(mail, callback, routingHint) }
     }
 
@@ -737,18 +754,24 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             transaction.fireMailCommands(commandsCallback)
         }
 
-        fun callEnclave(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>?): ByteArray? {
+        fun callEnclave(bytes: ByteArray, callback: EnclaveCallback?): ByteArray? {
             // To support concurrent calls into the enclave, the current thread's ID is used a call ID which is passed between
             // the host and enclave. This enables each thread to have its own state for managing the calls.
-            return callEnclaveInternal(callback) { threadID ->
-                sendToEnclave(UNTRUSTED_HOST, threadID, bytes.size) { buffer ->
-                    buffer.put(bytes)
+            try {
+                return callIntoEnclave(callback) { threadID ->
+                    sendToEnclave(UNTRUSTED_HOST, threadID, bytes.size) { buffer ->
+                        buffer.put(bytes)
+                    }
                 }
+            } catch (e: MailDecryptionException) {
+                // callEnclave does not have throws declaration for MailDecryptionException (since it doesn't directly
+                // deal with mail) and so must be wrapped in an unchecked exception.
+                throw RuntimeException(e)
             }
         }
 
-        fun deliverMail(mailBytes: ByteArray, callback: Function<ByteArray, ByteArray?>?, routingHint: String?) {
-            callEnclaveInternal(callback) { threadID ->
+        fun deliverMail(mailBytes: ByteArray, callback: EnclaveCallback?, routingHint: String?) {
+            callIntoEnclave(callback) { threadID ->
                 val routingHintBytes = routingHint?.toByteArray()
                 val size = nullableSize(routingHintBytes) { it.intLengthPrefixSize } + mailBytes.size
                 sendToEnclave(MAIL, threadID, size) { buffer ->
@@ -759,7 +782,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
 
         // Sets up the state tracking and handle re-entrancy.
-        private fun callEnclaveInternal(callback: Function<ByteArray, ByteArray?>?, body: (Long) -> Unit): ByteArray? {
+        private fun callIntoEnclave(callback: EnclaveCallback?, body: (Long) -> Unit): ByteArray? {
             val threadID = Thread.currentThread().id
             val transaction = threadIDToTransaction.computeIfAbsent(threadID) { Transaction() }
             val callStateManager = transaction.stateManager
@@ -776,6 +799,19 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             var response: Response? = null
             try {
                 body(threadID)
+            } catch (t: Throwable) {
+                throw when (t) {
+                    // Unchecked exceptions propagate as is.
+                    is RuntimeException, is Error -> t
+                    // MailDecryptionException needs to propagate as is for deliverMail.
+                    is MailDecryptionException -> t
+                    // Checked exceptions are wrapped in a RuntimeException to avoid inconsistent throws declaration on
+                    // callEnclave and deliverMail for Java users.
+                    // TODO This should probably be a specific exception class so that the caller can determine more
+                    //  easily if the exception came from the enclave. callEnclave above would also need to be updated
+                    //  as well.
+                    else -> RuntimeException(t)
+                }
             } finally {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have
                 // their own exception handling and reuse of the host-enclave communication channel for another call.
@@ -812,7 +848,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
     private sealed class CallState {
         object Ready : CallState()
-        class IntoEnclave(val callback: Function<ByteArray, ByteArray?>?) : CallState()
+        class IntoEnclave(val callback: EnclaveCallback?) : CallState()
         class Response(val bytes: ByteArray) : CallState()
     }
 
@@ -822,3 +858,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         object Closed : HostState()
     }
 }
+
+// Typealias to make this code easier to read.
+private typealias EnclaveCallback = Function<ByteArray, ByteArray?>

@@ -7,7 +7,7 @@ import java.nio.file.Path
 
 fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {
     val enclaveHandle =
-        NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ThrowingErrorHandler())
+        NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ErrorHandler())
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 
@@ -15,7 +15,7 @@ fun createMockHost(enclaveClass: Class<*>, mockConfiguration: MockConfiguration?
     // For mock mode ensure the host can access the enclave constructor. It may have been set as private.
     val constructor = enclaveClass.getDeclaredConstructor()
     constructor.isAccessible = true
-    val enclaveHandle = MockEnclaveHandle(constructor.newInstance(), mockConfiguration, ThrowingErrorHandler())
+    val enclaveHandle = MockEnclaveHandle(constructor.newInstance(), mockConfiguration, ErrorHandler())
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 

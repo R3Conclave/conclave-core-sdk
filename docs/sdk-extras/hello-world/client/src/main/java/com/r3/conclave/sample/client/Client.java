@@ -5,6 +5,7 @@ import com.r3.conclave.common.EnclaveInstanceInfo;
 import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.mail.Curve25519PrivateKey;
 import com.r3.conclave.mail.EnclaveMail;
+import com.r3.conclave.mail.MailDecryptionException;
 import com.r3.conclave.mail.PostOffice;
 import com.r3.conclave.shaded.jackson.databind.JsonNode;
 import com.r3.conclave.shaded.jackson.databind.ObjectMapper;
@@ -20,7 +21,6 @@ import org.apache.http.impl.client.HttpClients;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,7 +77,7 @@ public class Client implements Closeable {
      *
      * @param correlationId _uniquely_ identifies a mailbox
      * @return retrieved mail as list of EnclaveMail objects
-     * @throws Exception thrown if there is a problem communicating with the host
+     * @throws IOException if there is a problem communicating with the host
      *                   or HTTP response code is not 200
      */
     public List<EnclaveMail> checkInbox(String correlationId) throws IOException {
@@ -88,11 +88,15 @@ public class Client implements Closeable {
         if (status.getStatusCode() != HttpStatus.SC_OK)
             throw new IOException(status.toString());
 
-        ArrayList<EnclaveMail> inboundMail = new ArrayList<>();
+        List<EnclaveMail> inboundMail = new ArrayList<>();
         // retrieved json represents a list of encrypted mail messages
         JsonNode json = new ObjectMapper().readTree(response.getEntity().getContent());
         for (JsonNode node : json) {
-            inboundMail.add(postOffice.decryptMail(node.binaryValue()));
+            try {
+                inboundMail.add(postOffice.decryptMail(node.binaryValue()));
+            } catch (MailDecryptionException e) {
+                throw new IOException("Unable to decrypt enclave response mail", e);
+            }
         }
         return inboundMail;
     }
@@ -103,22 +107,15 @@ public class Client implements Closeable {
      *
      * @param domain        points to running WebHost (i.e. http://my.web.host:8080)
      * @param mailStateFile this is where the mail state (including mailSequenceNumber) is stored
-     *
-     * @throws IllegalArgumentException if `domain` string violates RFC 2396
      */
     public Client(String domain, String mailStateFile) throws IllegalArgumentException {
         this.domain = domain;
         this.mailStateFile = mailStateFile;
-
-        // exploit uri syntax check
-        URI.create(domain);
     }
 
     /**
      * Saves mail state.
      * Close HTTP connected.
-     *
-     * @throws IOException
      */
     public void close() throws IOException {
         persistMailState();
@@ -137,12 +134,13 @@ public class Client implements Closeable {
         if (this.mailStateFile != null) {
             Path file = FileSystems.getDefault().getPath(this.mailStateFile);
             if (Files.exists(file)) {
+                Base64.Decoder base64 = Base64.getDecoder();
                 List<String> lines = Files.readAllLines(file);
                 return new State(
-                        new Curve25519PrivateKey(Base64.getDecoder().decode(lines.get(0))),
+                        new Curve25519PrivateKey(base64.decode(lines.get(0))),
                         lines.get(1),
                         Long.parseLong(lines.get(2)),
-                        decodeStateId(lines.get(3))
+                        (lines.get(3).isEmpty()) ? null : base64.decode(lines.get(3))
                 );
             }
         }
@@ -153,42 +151,18 @@ public class Client implements Closeable {
         // in case you don't care about mail state
         if (this.mailStateFile != null) {
             Path path = FileSystems.getDefault().getPath(this.mailStateFile);
-            ArrayList<String> lines = new ArrayList<>();
-            lines.add(Base64.getEncoder().encodeToString(postOffice.getSenderPrivateKey().getEncoded()));
+            Base64.Encoder base64 = Base64.getEncoder();
+            List<String> lines = new ArrayList<>();
+            lines.add(base64.encodeToString(postOffice.getSenderPrivateKey().getEncoded()));
             lines.add(postOffice.getTopic());
             lines.add(Long.toString(postOffice.getNextSequenceNumber()));
-            lines.add(encodeStateId(postOffice.getLastSeenStateId()));
+            if (postOffice.getLastSeenStateId() != null) {
+                lines.add(base64.encodeToString(postOffice.getLastSeenStateId()));
+            } else {
+                lines.add("");
+            }
             Files.write(path, lines);
         }
-    }
-
-    // using hex string and NULL for readability
-    private static byte[] decodeStateId(String s) {
-        int len = s.length();
-        if (len == 0 || s.equals("NULL"))
-            return null;
-
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i + 1), 16));
-        }
-        return data;
-    }
-
-    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
-
-    private static String encodeStateId(byte[] bytes) {
-        if (bytes == null || bytes.length == 0)
-            return "NULL";
-
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
     }
 
     private PostOffice buildPostOffice(EnclaveInstanceInfo enclaveInstanceInfo) throws IOException {
@@ -225,17 +199,14 @@ public class Client implements Closeable {
 
     @Override
     public String toString() {
-        StringBuffer out = new StringBuffer();
-        out.append("URI: " + domain + "\n");
-        out.append(enclaveInstanceInfo.toString());
-        return out.toString();
+        return "URI: " + domain + "\n" + enclaveInstanceInfo;
     }
 
     private EnclaveInstanceInfo enclaveInstanceInfo;
     private PostOffice postOffice;
 
-    private String domain;
-    private String mailStateFile;
+    private final String domain;
+    private final String mailStateFile;
 
     private CloseableHttpClient httpClient;
 
@@ -257,11 +228,6 @@ public class Client implements Closeable {
             this.topic = topic;
             this.nextMailSequenceN = nextMailSequenceN;
             this.stateId = stateId;
-        }
-
-        @Override
-        public String toString() {
-            return "key=" + identityKey + ", topic=" + topic + ", seq=" + nextMailSequenceN + ", state=" + encodeStateId(stateId);
         }
     }
 }

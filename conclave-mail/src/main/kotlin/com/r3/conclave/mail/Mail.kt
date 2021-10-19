@@ -297,10 +297,12 @@ abstract class PostOffice(
      *
      * @param encryptedEnclaveMail The encrypted mail bytes, produced by the sender's [encryptMail].
      *
+     * @throws MailDecryptionException If the mail could not be decrypted, either due to key mismatch or due to
+     * corrupted bytes.
+     * @throws IOException If the mail is decryptable but is malformed or corrupted in some way other.
      * @throws IllegalArgumentException If the mail is not targeted to the destination public key.
-     * @throws IOException if the mail is malformed or corrupted in some way.
      */
-    @Throws(IOException::class)
+    @Throws(MailDecryptionException::class, IOException::class)
     fun decryptMail(encryptedEnclaveMail: ByteArray): EnclaveMail {
         val mail = MailDecryptingStream(encryptedEnclaveMail.inputStream()).decryptMail { senderPrivateKey }
         require(mail.authenticatedSender == destinationPublicKey) {

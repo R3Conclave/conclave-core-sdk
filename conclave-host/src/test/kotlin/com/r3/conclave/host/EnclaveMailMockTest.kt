@@ -4,11 +4,11 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.host.internal.createMockHost
-import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.PostOffice
+import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -176,7 +176,7 @@ class EnclaveMailMockTest {
             encrypted[i]++
             assertThatThrownBy {
                 noop.deliverMail(encrypted, "test")
-            }.`is`(throwableWithMailCorruptionErrorMessage)
+            }.isInstanceOf(MailDecryptionException::class.java)
             encrypted[i]--
         }
     }

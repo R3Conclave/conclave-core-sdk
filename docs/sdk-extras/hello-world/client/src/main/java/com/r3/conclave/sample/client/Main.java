@@ -1,10 +1,10 @@
 package com.r3.conclave.sample.client;
 
+import com.r3.conclave.mail.EnclaveMail;
+
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-
-import com.r3.conclave.mail.EnclaveMail;
 
 public class Main {
 
@@ -27,15 +27,5 @@ public class Main {
 
         String actual = new String(messages.get(0).getBodyAsBytes());
         System.out.println("Reversing `" + input + "` gives `" + actual + "`");
-
-        String expected = reverse(input);
-        assert (actual == expected);
-    }
-
-    private static String reverse(String input) {
-        StringBuilder builder = new StringBuilder(input.length());
-        for (int i = input.length() - 1; i >= 0; i--)
-            builder.append(input.charAt(i));
-        return builder.toString();
     }
 }

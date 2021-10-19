@@ -4,6 +4,7 @@ import com.r3.conclave.host.AttestationParameters;
 import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
 import com.r3.conclave.host.MailCommand;
+import com.r3.conclave.mail.MailDecryptionException;
 import com.r3.conclave.mail.PostOffice;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.condition.OS;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,12 +28,12 @@ public class NativeTest {
     // We start by loading the enclave using EnclaveHost, and passing the class name of the Enclave subclass
     // that we defined in our enclave module.
     private static EnclaveHost enclave;
-    private static ArrayList<MailCommand> mailCommands = new ArrayList<>();
+    private static final List<MailCommand> mailCommands = new ArrayList<>();
 
     @BeforeAll
     static void startup() throws EnclaveLoadException {
         enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
-        enclave.start(new AttestationParameters.DCAP(), null, (commands) -> mailCommands.addAll(commands) );
+        enclave.start(new AttestationParameters.DCAP(), null, mailCommands::addAll);
     }
 
     @AfterAll
@@ -42,7 +44,7 @@ public class NativeTest {
     }
 
     @Test
-    void reverseNumber() throws IOException {
+    void reverseNumber() throws IOException, MailDecryptionException {
         PostOffice postOffice = enclave.getEnclaveInstanceInfo().createPostOffice();
         byte[] encryptedBytes = postOffice.encryptMail("123456".getBytes());
         enclave.deliverMail(encryptedBytes,"test");

@@ -1,7 +1,7 @@
 package com.r3.conclave.mail.internal
 
-import com.r3.conclave.internaltesting.throwableWithMailCorruptionErrorMessage
 import com.r3.conclave.mail.Curve25519PrivateKey
+import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PAYLOAD_LENGTH
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.Noise
@@ -207,10 +207,10 @@ class MailStreamsTest {
         val bytes = encryptMessage()
         for (truncatedSize in bytes.indices) {
             val truncated = bytes.copyOf(truncatedSize)
-            assertThatIOException()
+            assertThatThrownBy { decrypt(truncated) }
                 .describedAs("Truncated size $truncatedSize")
-                .isThrownBy { decrypt(truncated) }
-                .withMessageContaining("Corrupt stream or not Conclave Mail.")
+                .isInstanceOf(MailDecryptionException::class.java)
+                .hasMessageContaining("Corrupt stream or not Conclave Mail.")
         }
     }
 
@@ -250,9 +250,9 @@ class MailStreamsTest {
         val encrypted = encryptMessage()
 
         val decryptingStream = MailDecryptingStream(encrypted.inputStream())
-        assertThatIOException().isThrownBy {
-            decryptingStream.read()
-        }.withMessage("Private key has not been provided to decrypt the stream.")
+        assertThatThrownBy { decryptingStream.read() }
+            .isInstanceOf(MailDecryptionException::class.java)
+            .hasRootCauseMessage("Private key has not been provided to decrypt the stream.")
     }
 
     @Test
@@ -281,7 +281,7 @@ class MailStreamsTest {
         // But it should be detected as soon as the private key is supplied.
         assertThatThrownBy {
             decryptingStream.setPrivateKey(receivingPrivateKey)
-        }.`is`(throwableWithMailCorruptionErrorMessage)
+        }.isInstanceOf(MailDecryptionException::class.java)
     }
 
     @ParameterizedTest

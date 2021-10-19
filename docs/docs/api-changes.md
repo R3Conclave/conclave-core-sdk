@@ -49,6 +49,8 @@ command `StoreSealedState`. These changes have a small knock-on effect with the 
 parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob.
 Also, the mail commands callback is no longer optional and must be specified.
 
+### Switch to enclave instance session keys for encryption
+
 Whilst not an API change, the behaviour of Mail has changed. As Mail no longer functions as a persistence mechanism and
 is solely used for communication, the enclave's encryption key is now session-based, rather than persisting across
 enclave restarts. In other words, a new random key is created each time an enclave starts. Since no two enclaves will
@@ -57,9 +59,12 @@ and trying to manipulate their state by replaying old mail.
 
 As a consequence, when the enclave restarts, clients will need to download the new `EnclaveInstanceInfo`
 and use this to create a new post office with the enclave's new key. The new post office must be used to send all
-subsequent mail. How can a client detect when the enclave restarts? The simplest way is to receive a message from the
-host which says that the enclave could not decrypt the last mail that was sent. The likely explanation for this decryption error is
-that the enclave was restarted and is now using a new key.
+subsequent mail.
+
+How can a client detect when the enclave restarts? We've updated `EnclaveHost.deliverMail` to throw a new checked
+exception `MailDecryptionException` if the enclave was unable to decrypt the mail message. Since now the most likely
+explanation for this decryption error is that the enclave was restarted and is using a new key, the host should 
+catch this exception and use it to inform the client.
 
 ### Attestation check functionality moved from client to common
 
