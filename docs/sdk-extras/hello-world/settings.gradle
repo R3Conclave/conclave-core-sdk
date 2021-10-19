@@ -10,7 +10,6 @@ pluginManagement {
         }
         // Add standard repositories back.
         gradlePluginPortal()
-        jcenter()
         mavenCentral()
     }
 

@@ -147,14 +147,16 @@ subprojects {
 
 
 ### Configure the _host_ module
-We intend to use `conclave-web-host`, so no coding is required for the `host`. Simply create an empty `host` project and `build.gradle` with the following content:
+We intend to use `conclave-web-host`, so no coding is required for the `host`. Simply create an empty `host` project and
+`build.gradle` with the following content:
+
 ```groovy
 plugins {
     id 'application'
 }
 
 application {
-    mainClassName = "com.r3.conclave.host.EnclaveWebHost"
+    mainClassName = "com.r3.conclave.host.web.EnclaveWebHost"
 }
 
 // Override the default (mock) with -PenclaveMode=
@@ -162,8 +164,10 @@ def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
 
 dependencies {
     runtimeOnly project(path: ":enclave", configuration: mode)
+    // Use the host web server for receiving and sending mail to the clients.
     runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
-    // enable unit tests
+
+    // Enable unit tests
     testImplementation "com.r3.conclave:conclave-host:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }

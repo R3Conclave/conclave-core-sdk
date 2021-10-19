@@ -3,8 +3,8 @@ plugins {
 }
 
 application {
-    // no user code on the host side
-    mainClassName = "com.r3.conclave.host.EnclaveWebHost"
+    // conclave-web-host provides us with the main method to use.
+    mainClassName = "com.r3.conclave.host.web.EnclaveWebHost"
 }
 
 // Override the default (mock) with -PenclaveMode=
@@ -19,10 +19,10 @@ tasks.register("prepareForSigning") {
 dependencies {
     // *your* enclave
     runtimeOnly project(path: ":enclave", configuration: mode)
-    // EnclaveWebHost is coming from here
+    // Use the host web server for receiving and sending mail to the clients.
     runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
 
-    // enable unit tests
+    // Enable unit tests
     testImplementation "com.r3.conclave:conclave-host:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
 }

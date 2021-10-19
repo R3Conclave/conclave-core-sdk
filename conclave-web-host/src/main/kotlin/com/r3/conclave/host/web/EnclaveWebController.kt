@@ -1,10 +1,15 @@
-package com.r3.conclave.host
+package com.r3.conclave.host.web
 
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.MailCommand
+import com.r3.conclave.host.PlatformSupportException
+import com.r3.conclave.host.internal.loggerFor
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
-import java.nio.file.Paths
+import java.nio.file.Path
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import kotlin.io.path.exists
@@ -49,7 +54,7 @@ class EnclaveWebController {
      * Also, if this file exists, it's content will be passed into EnclaveHost.start() method.
      */
     @Value("\${sealed.state.file:}")
-    var sealedStateFile: String? = null
+    var sealedStateFile: Path? = null
 
     @PostConstruct
     fun init() {
@@ -57,18 +62,18 @@ class EnclaveWebController {
                 "e.g. --enclave.class=package_name.enclave_class_name" }
 
         if (EnclaveHost.isHardwareEnclaveSupported()) {
-            println("This platform supports enclaves in simulation, debug and release mode.")
+            logger.info("This platform supports enclaves in simulation, debug and release mode.")
         } else if (EnclaveHost.isSimulatedEnclaveSupported()) {
-            println("This platform does not support hardware enclaves, but does support enclaves in simulation.")
-            println("Attempting to enable hardware enclave support...")
+            logger.info("This platform does not support hardware enclaves, but does support enclaves in simulation.")
+            logger.info("Attempting to enable hardware enclave support...")
             try {
                 EnclaveHost.enableHardwareEnclaveSupport()
-                println("Hardware support enabled!")
+                logger.info("Hardware support enabled!")
             } catch (e: PlatformSupportException) {
-                println("Failed to enable hardware enclave support. Reason: ${e.message}")
+                logger.warn("Failed to enable hardware enclave support. Reason: ${e.message}")
             }
         } else {
-            println("This platform supports enclaves in mock mode only.")
+            logger.info("This platform supports enclaves in mock mode only.")
         }
 
         val mockConfiguration = buildMockConfiguration()
@@ -83,6 +88,9 @@ class EnclaveWebController {
                 }
             }
         }
+
+        logger.info("Enclave ${enclaveHost.enclaveClassName} started")
+        logger.info(enclaveHost.enclaveInstanceInfo.toString())
     }
 
     private fun updateInbox(key: String, encryptedBytes: ByteArray) {
@@ -93,17 +101,16 @@ class EnclaveWebController {
     }
 
     private fun persistSealedState(stateBlob: ByteArray) {
-        require(!sealedStateFile.isNullOrEmpty()) { "sealed.state.file is not set" }
-        Paths.get(sealedStateFile).writeBytes(stateBlob)
+        val sealedStateFile = checkNotNull(this.sealedStateFile) { "sealed.state.file is not set" }
+        sealedStateFile.writeBytes(stateBlob)
     }
 
     /**
      * sealed state file might not exist yet, return null then
      */
     private fun loadSealedState(): ByteArray? {
-        if (sealedStateFile.isNullOrEmpty() || !Paths.get(sealedStateFile).exists())
-            return null
-        return Paths.get(sealedStateFile).readBytes()
+        val sealedStateFile = this.sealedStateFile
+        return if (sealedStateFile?.exists() == true) sealedStateFile.readBytes() else null
     }
 
     @GetMapping("/attestation")
@@ -126,8 +133,8 @@ class EnclaveWebController {
         }
     }
 
-    private fun buildMockConfiguration(): MockConfiguration? {
-        var mockConfiguration = MockConfiguration()
+    private fun buildMockConfiguration(): MockConfiguration {
+        val mockConfiguration = MockConfiguration()
         if (!codeHash.isNullOrEmpty())
             mockConfiguration.codeHash = SHA256Hash.parse(codeHash!!)
         if (!codeSigningKeyHash.isNullOrEmpty())
@@ -137,5 +144,8 @@ class EnclaveWebController {
         mockConfiguration.tcbLevel = tcbLevel
         return mockConfiguration
     }
-}
 
+    private companion object {
+        private val logger = loggerFor<EnclaveWebController>()
+    }
+}

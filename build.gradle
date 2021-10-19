@@ -354,7 +354,7 @@ List<PublishedProject> publishedProjects = [
         ),
 	    new PublishedProject(
                 projectPath: ':conclave-web-host',
-                description: 'Conclave Web host',
+                description: 'Conclave web server host ',
         ),
         new PublishedProject(
                 projectPath: ':conclave-client',
