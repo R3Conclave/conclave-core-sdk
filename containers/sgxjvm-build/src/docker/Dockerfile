@@ -36,12 +36,6 @@ RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_r
 RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/18.04/prod bionic main"
 
-# Nexus-IQ CLI
-RUN wget -qO- https://repo.sonatype.com/repository/sonatype-hosted/pki/deb-gpg/GPG-KEY-sonatype-apt-hosted.asc | \
-   gpg --dearmor | \
-   tee /usr/share/keyrings/sonatype-apt-hosted.gpg >/dev/null
-RUN wget -P /etc/apt/sources.list.d/ https://repo.sonatype.com/repository/sonatype-hosted/deb/sonatype-hosted.list
-
 RUN apt-get update -y && apt-get install -y \
     autoconf \
     az-dcap-client \
@@ -69,7 +63,6 @@ RUN apt-get update -y && apt-get install -y \
     libunwind8 \
     make \
     nano \
-    nexus-iq-cli \
     ocaml \
     ocamlbuild \
     openjdk-8-jdk \
@@ -131,6 +124,12 @@ RUN echo "3b6e4c1bd6c4967feb40596ce7b29f31c048ebf539cd3b157f2978325ccd55eb  /opt
 RUN mkdir -p /opt/dokka/repository/org/jetbrains/dokka/
 RUN unzip /opt/dokka.zip -d /opt/dokka/repository/org/jetbrains/dokka/
 RUN rm -v /opt/dokka.zip
+
+# Nexus IQ
+ENV NEXUS_IQ_HOME /opt/nexus-iq/
+RUN mkdir -p $NEXUS_IQ_HOME
+RUN wget -O $NEXUS_IQ_HOME/nexus-iq-cli.jar https://download.sonatype.com/clm/scanner/nexus-iq-cli-1.125.0-01.jar
+RUN echo "944e776e8acb3f4018a0b184c62ff6833e54241f  $NEXUS_IQ_HOME/nexus-iq-cli.jar" | shasum -c -
 
 # Some incantation that's necessary to get rid of some Python errors that appear when building docs.
 # https://stackoverflow.com/a/59596814/2248578
