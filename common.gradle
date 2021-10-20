@@ -1,5 +1,3 @@
-import static org.gradle.api.JavaVersion.*
-
 version = conclave_version
 
 subprojects {
@@ -10,8 +8,8 @@ subprojects {
     ext.attestation_key = '***REMOVED***'
 
     tasks.withType(JavaCompile) {
-        sourceCompatibility = VERSION_1_8
-        targetCompatibility = VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
         options.encoding = 'UTF-8'
     }
 
@@ -20,7 +18,7 @@ subprojects {
         // as it does the built-in JavaCompile task.
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
-                jvmTarget = VERSION_1_8
+                jvmTarget = JavaVersion.VERSION_1_8
                 apiVersion = '1.5'
                 languageVersion = '1.5'
             }
