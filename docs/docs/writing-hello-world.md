@@ -477,6 +477,12 @@ or
 !!! note
     `--sealed.state.file` specifies where the host would store a sealed state. See [Mail Commands](#mail-commands) for details.
 
+!!! note
+    Make sure to use a different file for the enclave's sealed state if rebuilding in a different mode.
+    The enclave's state cannot migrate across modes.
+
+
+
 Expect to see the Spring Boot logo:
 ```text
   .   ____          _            __ _ _

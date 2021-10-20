@@ -258,7 +258,12 @@ abstract class Enclave {
     }
 
     private fun applySealedState(sealedStateBlob: ByteArray) {
-        val sealedState = env.unsealData(sealedStateBlob).plaintext
+        val sealedState: ByteArray
+        try {
+            sealedState = env.unsealData(sealedStateBlob).plaintext
+        } catch (e: Exception) {
+            throw IllegalStateException("Error occurred while unsealing enclave state: ${e.message}", e)
+        }
         sealedState.deserialise {
             val version = read()
             check(version == 1)
