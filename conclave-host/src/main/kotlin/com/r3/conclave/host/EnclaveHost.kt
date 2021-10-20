@@ -54,6 +54,9 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * @suppress
      */
     companion object {
+
+        private const val ENV_VAR_SGX_AESM_ADDR = "SGX_AESM_ADDR"
+
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
 
@@ -409,6 +412,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
+        checkAesmAddrEnvVar()
+
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
 
@@ -455,6 +460,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         updateEnclaveInstanceInfo(attestation)
     }
 
+    private fun checkAesmAddrEnvVar() {
+        val sgxAesmAddrEnvVar = System.getenv(ENV_VAR_SGX_AESM_ADDR)
+        if (enclaveMode.isHardware)
+            check(sgxAesmAddrEnvVar == null) { "Cannot start the enclave with the environment variable $ENV_VAR_SGX_AESM_ADDR set. Please unset it and try again." }
+        else if (sgxAesmAddrEnvVar != null) {
+            log.warn("Enclave will not be able to start-up in debug or release mode while $ENV_VAR_SGX_AESM_ADDR is set.")
+        }
+    }
     private fun getAttestation(): Attestation {
         val signedQuote = attestationConnection.getSignedQuote(ignoreCachedData = true)
         return attestationService.attestQuote(signedQuote)

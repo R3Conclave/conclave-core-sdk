@@ -14,7 +14,8 @@ Simulation, Debug or Release mode enclaves. Docker is not required if you are us
 Although it is possible to _build_ an enclave project in any [mode](tutorial.md#enclave-modes) on any of the listed
 platforms, it is only possible to _run_ simulation, debug or release mode enclaves in a Linux environment. It is
 therefore recommended that you develop and test your enclaves using mock mode first before building in simulation, 
-debug or release mode for testing or deployment on a Linux system.
+debug or release mode for testing or deployment on a Linux system. Please be sure that the environment variable _SGX_AESM_ADDR_
+is not set when running Conclave in debug or release mode. Failing to do so will prevent the enclave from starting up.
 
 It's possible to run Conclave applications built in simulation mode (but not debug or release) on operating systems
 other than Linux, but this requires some additional work to set up a linux environment:
@@ -22,7 +23,7 @@ other than Linux, but this requires some additional work to set up a linux envir
 === "MacOS"
     **Instructions for running apps under MacOS:**
 
-    1. Build you project as you normally would in your desired mode, e.g.: `./gradlew build -PenclaveMode=simulation`
+    1. Build your project as you normally would in your desired mode, e.g.: `./gradlew build -PenclaveMode=simulation`
     1. Download and install docker desktop.
     1. Navigate to your project and run the following command: `./gradle enclave:setupLinuxExecEnvironment`. This
        will create a docker image called `conclave-build` that can be instantiated as a container and used to run
@@ -49,7 +50,7 @@ other than Linux, but this requires some additional work to set up a linux envir
 === "Windows"
     **Instructions for running apps under Windows (powershell):**
 
-    1. Build you project as you normally would in your desired mode, e.g.: `.\gradlew.bat build -PenclaveMode=simulation`
+    1. Build your project as you normally would in your desired mode, e.g.: `.\gradlew.bat build -PenclaveMode=simulation`
     1. Download and install docker desktop.
     1. Navigate to your project and run the following command: `.\gradlew.bat enclave:setupLinuxExecEnvironment`. This
        will create a docker image called `conclave-build` that can be instantiated as a container and used to run
