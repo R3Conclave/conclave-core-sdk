@@ -133,11 +133,21 @@ class MailEncryptingStream(
             check(handshake.action == HandshakeState.WRITE_MESSAGE)
 
             // Ask Noise to select an ephemeral key and calculate the Diffie-Hellman handshake that sets up the AES key
-            // to encrypt with. We don't provide any initial payload, although we technically could. Being able to
-            // provide bytes during the handshake is an optimisation mostly relevant for an interactive handshake where
-            // latency is a primary concern. Enclaves have bigger performance issues to worry about.
+            // to encrypt with.
             val handshakeBytes = ByteArray(protocol.handshakeLength)
-            val handshakeLen = handshake.writeMessage(handshakeBytes, 0, null, 0, 0)
+
+            val handshakeLen = if (protocol == MailProtocol.SENDER_KEY_TRANSMITTED_V2) {
+                // We specify a payload of a single zero byte. This is irrelevant because being able to provide bytes
+                // during the handshake is an optimisation mostly relevant for an interactive handshake where latency is
+                // a primary concern. Enclaves have bigger performance issues to worry about. However we specify one anyway
+                // because if we don't, Safari will crash inside JS crypto code because it can't encrypt the empty array.
+                // Encrypting empty is a valid AES operation but Safari is buggy, and Safari is what gets used on Excel
+                // for macOS, so we have to support it for ConclaveJS.
+                val zero = byteArrayOf(0)
+                handshake.writeMessage(handshakeBytes, 0, zero, 0, 1)
+            } else {
+                handshake.writeMessage(handshakeBytes, 0, null, 0, 0)
+            }
             check(handshakeLen == handshakeBytes.size)
             out.write(handshakeBytes, 0, handshakeLen)
 
@@ -575,7 +585,11 @@ class MailDecryptingStream(
             error("Premature end of stream during handshake")
         }
 
-        val payloadBuf = ByteArray(0)
+        val payloadBuf = if (prologue.protocol == MailProtocol.SENDER_KEY_TRANSMITTED_V2) {
+            ByteArray(1)
+        } else {
+            ByteArray(0)
+        }
         try {
             handshake.readMessage(handshakeBuf, 0, handshakeBuf.size, payloadBuf, 0)
         } catch (e: AEADBadTagException) {
@@ -659,6 +673,8 @@ enum class MailProtocol(
      *
      * MailDecryptionStream instances supporting this protocol will also accept mail items using the previous one
      * (SENDER_KEY_TRANSMITTED). When doing so, the private header will be null.
+     *
+     * We add additional byte to the handshake length for compatibility with browsers.
      */
-    SENDER_KEY_TRANSMITTED_V2("Noise_X_25519_AESGCM_SHA256", 96),
+    SENDER_KEY_TRANSMITTED_V2("Noise_X_25519_AESGCM_SHA256", 96 + 1),
 }
