@@ -1,6 +1,7 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.host.internal.createMockHost
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -27,11 +30,23 @@ import javax.crypto.AEADBadTagException
 class EnclaveMailMockTest {
     companion object {
         private val messageBytes = "message".toByteArray()
+
+        // Get the set of persistent map and multithreading enablement options for general tests. The case
+        // where the enclave is multithreaded AND the persistent map is excluded, as this is an invalid state.
+        @JvmStatic
+        fun validPersistentMapEnablementStates(): List<Arguments> {
+            val configurations = ArrayList<Arguments>()
+            configurations.add(Arguments.arguments(false, false))
+            configurations.add(Arguments.arguments(false, true))
+            configurations.add(Arguments.arguments(true, false))
+            return configurations
+        }
     }
 
+    private val mockConfiguration = MockConfiguration()
     private val privateKey = Curve25519PrivateKey.random()
-    private val echo by lazy { createMockHost(MailEchoEnclave::class.java) }
-    private val noop by lazy { createMockHost(NoopEnclave::class.java) }
+    private val echo by lazy { createMockHost(MailEchoEnclave::class.java, mockConfiguration) }
+    private val noop by lazy { createMockHost(NoopEnclave::class.java, mockConfiguration) }
     private val postOffices = HashMap<Pair<EnclaveInstanceInfo, String>, PostOffice>()
 
     @Test
@@ -68,7 +83,9 @@ class EnclaveMailMockTest {
     }
 
     @Test
-    fun `deliverMail cannot be called in a callback to another deliverMail`() {
+    fun `deliverMail cannot be called in a callback to another deliverMail when persistent map is enabled`() {
+        mockConfiguration.enablePersistentMap = true
+
         echo.start(null, null) { }
 
         var thrown: IllegalStateException? = null
@@ -78,11 +95,12 @@ class EnclaveMailMockTest {
             }
             null
         }
-        assertThat(thrown!!.message).isEqualTo("deliverMail cannot be called in a callback to another deliverMail.")
+        assertThat(thrown!!.message).isEqualTo(
+                "deliverMail cannot be called in a callback to another deliverMail when the persistent map is enabled.")
     }
 
     @Test
-    fun `detect missing call to postMail`() {
+    fun `detect missing call to postMail when persistent map is enabled`() {
         class MissingPostEnclave : Enclave() {
             override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
                 postOffice(mail).encryptMail("missing!".toByteArray())
@@ -93,7 +111,8 @@ class EnclaveMailMockTest {
             }
         }
 
-        val missingPost = createMockHost(MissingPostEnclave::class.java)
+        mockConfiguration.enablePersistentMap = true
+        val missingPost = createMockHost(MissingPostEnclave::class.java, mockConfiguration)
         missingPost.start(null, null) { }
 
         assertThatIllegalStateException().isThrownBy {
@@ -204,9 +223,23 @@ class EnclaveMailMockTest {
         assertEquals("hello", String(message.bodyAsBytes))
     }
 
+    @Test
+    fun `multi threaded enclaves should throw an error when started if the persistent map is enabled`() {
+        class ThreadSafeNoopEnclave : NoopEnclave() {
+            override val threadSafe: Boolean get() = true
+        }
+        mockConfiguration.enablePersistentMap = true
+        val host = createMockHost(ThreadSafeNoopEnclave::class.java, mockConfiguration)
+        val e = assertThrows<EnclaveLoadException> {
+            host.start(null, null) {}
+        }
+        assertThat(e.cause!!).isInstanceOf(IllegalStateException::class.java)
+        assertThat(e.cause!!).hasMessageStartingWith("The persistent map is not available in multi-threaded enclaves.")
+    }
+
     @ParameterizedTest
-    @ValueSource(booleans = [ true, false ])
-    fun `multiple commands`(threadSafeEnclave: Boolean) {
+    @MethodSource("validPersistentMapEnablementStates")
+    fun `multiple commands`(threadSafeEnclave: Boolean, enablePersistentMap: Boolean) {
         val enclaveClass = if (threadSafeEnclave) {
             class ThreadSafeMultipleCommandsEnclave : MultipleCommandsEnclave() {
                 override val threadSafe: Boolean get() = true
@@ -219,23 +252,25 @@ class EnclaveMailMockTest {
             NonThreadSafeMultipleCommandsEnclave::class.java
         }
 
-        val host = createMockHost(enclaveClass)
+        val mockConfiguration = MockConfiguration()
+        mockConfiguration.enablePersistentMap = enablePersistentMap
+        val host = createMockHost(enclaveClass, mockConfiguration)
+
         var capturedCommands: List<MailCommand> = emptyList()
         host.start(null, null) { commands -> capturedCommands = commands }
 
         val messageFromBob = buildMail(host)
         host.deliverMail(messageFromBob, "test")
 
-        // The enclave's persistent map is not enabled in a thread-safe enclave and therefore a sealed state command
-        // is not emitted.
-        assertThat(capturedCommands).hasSize(if (threadSafeEnclave) 2 else 3)
+        // If the enclaves persistent map is not enabled, then no sealed state should be emitted
+        assertThat(capturedCommands).hasSize(if (enablePersistentMap) 3 else 2)
         with(capturedCommands[0] as MailCommand.PostMail) {
             assertEquals("hello", String(decryptMail(host, bytes = encryptedBytes).bodyAsBytes))
         }
         with(capturedCommands[1] as MailCommand.PostMail) {
             assertEquals("world", String(decryptMail(host, bytes = encryptedBytes).bodyAsBytes))
         }
-        if (!threadSafeEnclave) {
+        if (enablePersistentMap) {
             assertThat(capturedCommands[2]).isInstanceOf(MailCommand.StoreSealedState::class.java)
         }
 
@@ -243,14 +278,14 @@ class EnclaveMailMockTest {
         // callEnclave should cause a separate set of commands to come through.
         host.callEnclave(byteArrayOf())
 
-        assertThat(capturedCommands).hasSize(if (threadSafeEnclave) 2 else 3)
+        assertThat(capturedCommands).hasSize(if (enablePersistentMap) 3 else 2)
         with(capturedCommands[0] as MailCommand.PostMail) {
             assertEquals("123", String(decryptMail(host, bytes = encryptedBytes).bodyAsBytes))
         }
         with(capturedCommands[1] as MailCommand.PostMail) {
             assertEquals("456", String(decryptMail(host, bytes = encryptedBytes).bodyAsBytes))
         }
-        if (!threadSafeEnclave) {
+        if (enablePersistentMap) {
             assertThat(capturedCommands[2]).isInstanceOf(MailCommand.StoreSealedState::class.java)
         }
     }
@@ -334,7 +369,7 @@ class EnclaveMailMockTest {
         return postOffices.getValue(Pair(host.enclaveInstanceInfo, topic)).decryptMail(bytes)
     }
 
-    class NoopEnclave : Enclave() {
+    open class NoopEnclave : Enclave() {
         override fun receiveMail(mail: EnclaveMail, routingHint: String?) = Unit
     }
 

@@ -6,6 +6,9 @@ import com.r3.conclave.common.internal.*
 interface EnclaveEnvironment {
     val enclaveMode: EnclaveMode
 
+    val enablePersistentMap: Boolean
+    val maxPersistentMapSize: Long
+
     /**
      * Create an [SgxReport] of the enclave.
      * @param targetInfo Optional information of the target enclave if the report is to be used as part of local

@@ -29,8 +29,16 @@ package com.r3.conclave.common
  * of SGX this value is used to provide a mock value for the SGX CPU Security Version Number (CPUSVN). The
  * tcbLevel mock value must be between 1 and 65535. The value represents an ordered version number allowing for
  * testing of TCB recovery.
+ *
+ * @property enablePersistentMap Whether to enable the persistent map for the enclave. The persistent
+ * map is a persistent key-value store whose state is synchronized to the processing of mail in such a way as to
+ * make the store resistant to rollbacks. Enabling the persistent map has performance implications, so it is disabled
+ * by default.
+ *
+ * @property maxPersistentMapSize The maximum size of the persistent map in bytes. Default value is 16MiB.
  */
 class MockConfiguration {
+    // TODO - Have values in MockConfiguration reflect those specified in the build configuration (see CON-692)
     var codeHash: SHA256Hash? = null
     var codeSigningKeyHash: SHA256Hash? = null
 
@@ -51,4 +59,7 @@ class MockConfiguration {
             require(data in 0..65535) { "TCB level must be between 0 and 65535" }
             field = data
         }
+
+    var enablePersistentMap: Boolean = false
+    var maxPersistentMapSize: Long = 16 * 1024 * 1024;
 }

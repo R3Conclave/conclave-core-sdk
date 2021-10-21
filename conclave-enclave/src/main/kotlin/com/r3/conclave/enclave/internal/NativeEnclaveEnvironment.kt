@@ -115,6 +115,16 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
             }
         }
 
+    override val enablePersistentMap: Boolean
+        get() {
+            return NativeImageProperties.enablePersistentMap!!
+        }
+
+    override val maxPersistentMapSize: Long
+        get() {
+            return NativeImageProperties.maxPersistentMapSize!!
+        }
+
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
         val sealedData = ByteArray(Native.calcSealedBlobSize(
             toBeSealed.plaintext.size,

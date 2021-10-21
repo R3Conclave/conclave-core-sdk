@@ -103,6 +103,12 @@ open class NativeImage @Inject constructor(
     val fileSystemSize: Property<String> = objects.property(String::class.java)
 
     @get:Input
+    val enablePersistentMap: Property<Boolean> = objects.property(Boolean::class.java)
+
+    @get:Input
+    val maxPersistentMapSize: Property<String> = objects.property(String::class.java)
+
+    @get:Input
     val supportLanguages: Property<String> = objects.property(String::class.java)
 
     @get:Input
@@ -120,6 +126,8 @@ open class NativeImage @Inject constructor(
     private fun defaultOptions(): List<String> {
         val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
         val fileSystemSizeBytes = GenerateEnclaveConfig.getSizeBytes(fileSystemSize.get())
+        val enablePersistentMap = enablePersistentMap.get()
+        val maxPersistentMapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxPersistentMapSize.get())
 
         return listOf(
             "--no-fallback",
@@ -133,9 +141,11 @@ open class NativeImage @Inject constructor(
             // "-H:AlignedHeapChunkSize=4096",
             "-R:MaxHeapSize=" + calculateMaxHeapSize(maxHeapSizeBytes),
             "-R:StackSize=" + calculateMaxStackSize(),
-            "-Dcom.r3.conclave.fatfs.filesystemsize=$fileSystemSizeBytes",
+            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.fileSystemSize=$fileSystemSizeBytes",
+            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.enablePersistentMap=$enablePersistentMap",
+            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.maxPersistentMapSize=$maxPersistentMapSizeBytes",
+            "--initialize-at-build-time=com.r3.conclave.enclave.internal.NativeImageProperties",
             "--enable-all-security-services",
-            "--initialize-at-build-time=com.r3.conclave.enclave.internal.fatfs",
             "-H:-AddAllFileSystemProviders",
             "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
             "-H:+UseCAPCache")

@@ -73,6 +73,12 @@ class MockEnclaveEnvironment(
     override val enclaveMode: EnclaveMode
         get() = EnclaveMode.MOCK
 
+    override val enablePersistentMap: Boolean
+        get() = configuration.enablePersistentMap
+
+    override val maxPersistentMapSize: Long
+        get() = configuration.maxPersistentMapSize
+
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?

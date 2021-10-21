@@ -8,10 +8,11 @@ dependencies {
 }
 
 /**
- * The default enclave represents an enclave in its default configuration.
- * Do not change this configuration.
+ * This enclave should be representative of a use case which involves the persistent map.
+ * Do not disable the persistent map.
  */
 conclave {
     productID = 1
     revocationLevel = 0
+    enablePersistentMap = true
 }

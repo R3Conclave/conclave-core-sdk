@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
-class EnclavePersistentMapTest : AbstractEnclaveActionTest() {
+class EnclavePersistentMapTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave") {
     @ParameterizedTest
     @EnumSource(CallType::class)
     fun `persistent map updated by several threads, with enclave restarts`(type: CallType) {

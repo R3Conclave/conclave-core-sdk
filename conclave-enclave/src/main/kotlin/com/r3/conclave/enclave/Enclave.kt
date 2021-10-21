@@ -74,6 +74,7 @@ abstract class Enclave {
     private val postOffices = HashMap<PublicKeyAndTopic, EnclavePostOffice>()
     private val lock = ReentrantLock()
     private val enclaveQuiescentCondition = lock.newCondition()
+
     /**
      * Guarded by [lock]
      */
@@ -104,8 +105,11 @@ abstract class Enclave {
      * build file.
      */
     val persistentMap: MutableMap<String, ByteArray> get() {
-        check(!threadSafe) { "The persistent map is not available in multi-threaded enclaves." }
-        // TODO Make the persistent Map off by default and add config options to enable it and set a max size: https://r3-cev.atlassian.net/browse/CON-651
+        check(env.enablePersistentMap) {
+            "The enclave persistent map is not enabled. To enable the persistent map for your enclave, add " +
+            "\"def enablePersistentMap = true\" to your enclave build.gradle. For more information on the persistent " +
+            "map and the consequences of enabling it, consult the Conclave documentation."
+        }
         return _persistentMap
     }
 
@@ -193,6 +197,9 @@ abstract class Enclave {
         return if (this is InternalEnclave) {
             this.internalInitialise(env, upstream)
         } else {
+            check (!(env.enablePersistentMap && threadSafe)) {
+                "The persistent map is not available in multi-threaded enclaves."
+            }
             initCryptography()
             val exposeErrors = env.enclaveMode != EnclaveMode.RELEASE
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
@@ -258,9 +265,9 @@ abstract class Enclave {
     }
 
     private fun applySealedState(sealedStateBlob: ByteArray) {
-        val sealedState: ByteArray
-        try {
-            sealedState = env.unsealData(sealedStateBlob).plaintext
+        if (!env.enablePersistentMap) return
+        val sealedState = try {
+            env.unsealData(sealedStateBlob).plaintext
         } catch (e: Exception) {
             throw IllegalStateException("Error occurred while unsealing enclave state: ${e.message}", e)
         }
@@ -554,16 +561,26 @@ Received: $attestationReportBody"""
                     writeLong(it.epochSecond)
                     writeInt(it.nano)
                 }
+                var persistentMapBytesWritten: Long = 0
                 writeMap(_persistentMap) { key, value ->
+                    val streamPositionStart = this.size()
                     try {
                         writeUTF(key)
                     } catch (e: UTFDataFormatException) {
                         // TODO Check the key size upon insertion rather than here so that the user has better context
                         //  of the offending key.
-                        throw IllegalArgumentException("The persistent map does not support keys which are bigger " +
+                        throw IllegalArgumentException(
+                                "The persistent map does not support keys which are bigger " +
                                 "than 65535 bytes when UTF-8 encoded.")
                     }
                     writeIntLengthPrefixBytes(value)
+                    persistentMapBytesWritten += this.size() - streamPositionStart
+                    check(persistentMapBytesWritten <= env.maxPersistentMapSize) {
+                            "The persistent map capacity has been exceeded. To increase the size of the " +
+                            "persistent map for your project, add \"def maxPersistentMapSize = <size>\" to your " +
+                            "enclave build.gradle. For more information on the persistent map and the " +
+                            "consequences of increasing it's size, consult the Conclave documentation."
+                    }
                 }
                 writeMap(lastSeenStateIds) { clientPublicKey, lastSeenStateId ->
                     write(clientPublicKey.encoded)
@@ -620,10 +637,19 @@ Received: $attestationReportBody"""
                 lock.withLock {
                     enclaveStateManager.checkStateIs<Started>()
                     preReceive()
-                    val receiveContext = ReceiveContext()
-                    val response = executeReceive(receiveMethod, receiveContext)
-                    sendSealedState(hostThreadId, receiveContext)
-                    return response
+                    // Additional logic is required when the persistent map is enabled to do the following:
+                    // - Emit sealed state to disk
+                    // - Send sealed state IDs to clients
+                    // - Keep track of clients that have been sent sealed state IDs
+                    // - Prevent recursive calls to deliverMail
+                    return if (env.enablePersistentMap) {
+                        val receiveContext = ReceiveContext()
+                        val response = executeReceive(receiveMethod, receiveContext)
+                        sendSealedState(hostThreadId, receiveContext)
+                        response
+                    } else {
+                        receiveMethod()
+                    }
                 }
             } else {
                 lock.withLock {
@@ -647,7 +673,7 @@ Received: $attestationReportBody"""
 
         private fun <T> executeReceive(receiveMethod: () -> T, receiveContext: ReceiveContext): T {
             check(currentReceiveContext == null) {
-                "deliverMail cannot be called in a callback to another deliverMail."
+                "deliverMail cannot be called in a callback to another deliverMail when the persistent map is enabled."
             }
             currentReceiveContext = receiveContext
             val response = try {

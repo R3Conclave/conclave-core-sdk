@@ -4,6 +4,7 @@ import com.r3.conclave.integrationtests.general.common.tasks.CheckNotMultiThread
 import com.r3.conclave.integrationtests.general.common.tasks.Echo
 import com.r3.conclave.integrationtests.general.common.tasks.EchoWithCallback
 import com.r3.conclave.integrationtests.general.common.tasks.SpinAction
+import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
@@ -11,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
@@ -46,6 +48,14 @@ class DefaultEnclaveTests : AbstractEnclaveActionTest() {
                 }
             }
         }.forEach { it.join() }
+    }
+
+    @Test
+    fun `persistent map disabled by default`() {
+        val persistentMapAction = PutPersistentMap("Good morning!", "What's so good about it, eh?".toByteArray())
+        val mailClient = newMailClient()
+        val e = assertThrows<IllegalStateException> { mailClient.deliverMail(persistentMapAction) }
+        assertThat(e).hasMessageStartingWith("The enclave persistent map is not enabled.")
     }
 
     @Test

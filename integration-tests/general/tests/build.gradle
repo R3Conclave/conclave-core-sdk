@@ -11,6 +11,7 @@ dependencies {
     testImplementation project(":general:common")
     testImplementation project(":general:common-test")
     testRuntimeOnly project(path: ":general:default-enclave", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":general:persisting-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
 }

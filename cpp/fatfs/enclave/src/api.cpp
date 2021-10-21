@@ -13,11 +13,11 @@
 #include "fatfs_file_manager.hpp"
 
 extern "C" {
-    int Java_com_r3_conclave_enclave_internal_fatfs_Filesystem_getSize(graal_isolatethread_t*);
+    int Java_com_r3_conclave_enclave_internal_NativeImageProperties_getFileSystemSize(graal_isolatethread_t*);
 }
 
 static conclave::FatFsFileManager& get_fatfs_instance() {
-    static unsigned int size = Java_com_r3_conclave_enclave_internal_fatfs_Filesystem_getSize(r3::conclave::Jvm::instance().jniEnv().get());
+    static unsigned int size = Java_com_r3_conclave_enclave_internal_NativeImageProperties_getFileSystemSize(r3::conclave::Jvm::instance().jniEnv().get());
     return conclave::FatFsFileManager::instance(ENCLAVE_MEMORY, size);
 };
 

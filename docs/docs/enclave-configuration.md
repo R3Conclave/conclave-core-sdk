@@ -41,6 +41,8 @@ conclave {
     maxHeapSize = "256m"
     maxStackSize = "2m"
     fileSystemSize = "64m"
+    enablePersistentMap = false
+    maxPersistentMapSize = "16m"
     maxThreads = 10
     supportLanguages = ""
     reflectionConfigurationFiles.from("config.json")
@@ -194,6 +196,13 @@ You can use this filesystem as if it were a FAT drive in the Enclave memory.
 !!! tip
 As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
 after the value to specify it in kilobytes, megabytes or gigabytes respectively.
+
+### enablePersistentMap & maxPersistentMapSize
+_Defaults:_ `false` and `16m` respectively.
+
+The persistent map is a persistent, encrypted key-value store that his hardened against rewind attacks. Enabling the
+persistent map has potential performance implications, which is why it is disabled by default. For more information
+regarding the persistent map, see [here](persistence.md).
 
 ### supportLanguages
 _Default:_ `""`
