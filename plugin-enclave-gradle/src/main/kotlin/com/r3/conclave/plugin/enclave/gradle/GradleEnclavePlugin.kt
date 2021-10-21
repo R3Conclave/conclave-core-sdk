@@ -127,10 +127,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         project.tasks.withType(JavaCompile::class.java) { task ->
             task.sourceCompatibility = javaVersion
             task.targetCompatibility = javaVersion
-
-            if (JavaVersion.current().isJava9Compatible) {
-                task.options.compilerArgs.addAll(listOf("--release", javaVersion))
-            }
         }
 
         try {
