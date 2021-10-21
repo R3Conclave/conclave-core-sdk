@@ -60,6 +60,22 @@ interface EnclaveEnvironment {
         block(keyRequest)
         return getSecretKey(keyRequest)
     }
+
+    /**
+     * Set up the in-memory and the persistent filesystems.
+     * @param inMemoryFsSize Size (bytes) of the in-memory filesystem.
+     * @param persistentFsSize Size (bytes) of the persistent encrypted filesystem.
+     * @param inMemoryMountPath Mount point of the in-memory filesystem.
+     * @param persistentMountPath Mount point of the persistent filesystem.
+     * @param encryptionKey Byte array of the encryption key.
+     */
+    fun setupFileSystems(
+        inMemoryFsSize: Long,
+        persistentFsSize: Long,
+        inMemoryMountPath: String,
+        persistentMountPath: String,
+        encryptionKey: ByteArray
+    )
 }
 
 /**

@@ -18,11 +18,6 @@ object NativeImageProperties {
     val maxPersistentMapSize = System.getProperty("com.r3.conclave.enclave.internal.NativeImageProperties.maxPersistentMapSize")?.toLong()
 
     // Filesystem
-    val fileSystemSize = System.getProperty("com.r3.conclave.enclave.internal.NativeImageProperties.fileSystemSize")?.toLong()
-
-    @JvmStatic
-    @CEntryPoint(name = "Java_com_r3_conclave_enclave_internal_NativeImageProperties_getFileSystemSize")
-    fun getFileSystemSize(thread: IsolateThread?): Long {
-        return fileSystemSize ?: 0
-    }
+    val inMemoryFileSystemSize = System.getProperty("com.r3.conclave.enclave.internal.NativeImageProperties.inMemoryFileSystemSize")?.toLong() ?: 0
+    val persistentFileSystemSize = System.getProperty("com.r3.conclave.enclave.internal.NativeImageProperties.persistentFileSystemSize")?.toLong() ?: 0
 }

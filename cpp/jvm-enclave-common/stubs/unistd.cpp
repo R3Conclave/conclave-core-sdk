@@ -9,8 +9,6 @@ typedef unsigned int gid_t;
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
-STUB(ftruncate);
-STUB(ftruncate64);
 STUB(getegid);
 STUB(geteuid);
 STUB(getgid);
@@ -270,6 +268,47 @@ off64_t lseek64(int fd, off64_t offset, int whence) {
 
 int getgroups(int gidsetsize, gid_t grouplist[]) {
     enclave_trace("getgroups\n");
+    return -1;
+}
+
+int fdatasync(int fd) {
+    enclave_trace("fsync\n");
+    return 0;
+}
+
+int ftruncate(int fd, off_t length) {
+    enclave_trace("ftruncate(fs %d, length %lu)\n", fd, length);
+    int err = 0;
+    const int res = ftruncate_impl(fd, length, err);
+    errno = err;
+    return res;
+}
+
+int ftruncate64(int fd, off64_t length) {
+    enclave_trace("ftruncate(fs %d, length %lu)\n", fd, length);
+    int err = 0;
+    const int res = ftruncate_impl(fd, length, err);
+    errno = err;
+    return res;
+}
+
+int isatty(int fd) {
+    enclave_trace("isatty");
+    errno = EBADF;
+    return -1;
+}
+
+int tcgetattr(int fd, void* termios_p) {
+    enclave_trace("tcgetattr");
+    errno = EAGAIN;
+    return -1;
+}
+
+int tcsetattr(int fd,
+	      int optional_actions,	      
+	      void *termios_p) {
+    enclave_trace("tcsetattr");
+    errno = EAGAIN;
     return -1;
 }
 

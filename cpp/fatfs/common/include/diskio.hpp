@@ -68,24 +68,4 @@ DRESULT disk_ioctl(BYTE drive, BYTE cmd, void * buf);
 #define ATA_GET_MODEL		21	/* Get model name */
 #define ATA_GET_SN			22	/* Get serial number */
                                                                                                                                                                          
-typedef struct {                                                                                                                                                                                                 
-    DSTATUS (*d_init)   (BYTE drive);                                                                                                                                                                            
-    DSTATUS (*d_status) (BYTE drive);                                                                                                                                                                            
-    DRESULT (*d_read)   (BYTE drive, BYTE *buf, DWORD start, BYTE num);                                                                                                                                          
-    DRESULT (*d_write)  (BYTE drive, const BYTE *buf, DWORD start, BYTE num);                                                                                                                                    
-    DRESULT (*d_ioctl)  (BYTE drive, BYTE cmd, void * buf);                                                                                                                                                      
-} diskio_fxns;                                                                                                                                                                                                   
-                                                                                                                                                                                                                 
-DRESULT disk_register(BYTE drive,
-		      DSTATUS (*d_init)  (BYTE drive),
-		      DSTATUS (*d_status) (BYTE drive),
-		      DRESULT (*d_read)  (BYTE drive, BYTE *buf, DWORD start, BYTE num),
-		      DRESULT (*d_write) (BYTE drive, const BYTE *buf, DWORD start, BYTE num),
-		      DRESULT (*d_ioctl) (BYTE drive, BYTE cmd, void * buf));
-
-DRESULT disk_unregister(BYTE drive);
-
-void print_result(DRESULT result);
-
-
 #endif

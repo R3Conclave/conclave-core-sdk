@@ -3,9 +3,8 @@ package com.r3.conclave.integrationtests.general.tests.filesystem
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.IOException
 
 class FileSystemInputStreamTest : FileSystemEnclaveTest() {
@@ -35,16 +34,20 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
 
         fun reset() {
             assertThatThrownBy { callEnclave(ResetInputStream(uid)) }
-                    .isInstanceOf(java.lang.RuntimeException::class.java)
-                    .hasCauseExactlyInstanceOf(IOException::class.java)
-                    .hasMessageContaining("java.io.IOException: Resetting to invalid mark")
+                .isInstanceOf(java.lang.RuntimeException::class.java)
+                .hasCauseExactlyInstanceOf(IOException::class.java)
+                .hasMessageContaining("java.io.IOException: Resetting to invalid mark")
         }
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun fileSystemStreamReadResetReadBytes(nioApi: Boolean) {
-        val path = "/filesystem.data"
+    @CsvSource(
+        "/filesystem.data, true",
+        "/filesystem.data, false",
+        "/tmp/filesystem.data, true",
+        "/tmp/filesystem.data, false"
+    )
+    fun fileSystemStreamReadResetReadBytes(path: String, nioApi: Boolean) {
         val smallFileData = byteArrayOf(1, 2, 3)
         filesWrite(path, smallFileData)
         // Create an InputStream
@@ -60,9 +63,13 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun fileSystemResetThrowsException(nioApi: Boolean) {
-        val path = "/filesystem-reset.data"
+    @CsvSource(
+        "/filesystem-reset.data, true",
+        "/filesystem-reset.data, false",
+        "/tmp/filesystem-reset.data, true",
+        "/tmp/filesystem-reset.data, false"
+    )
+    fun fileSystemResetThrowsException(path: String, nioApi: Boolean) {
         val smallFileData = byteArrayOf(1, 2, 3)
         filesWrite(path, smallFileData)
         // Create an InputStream

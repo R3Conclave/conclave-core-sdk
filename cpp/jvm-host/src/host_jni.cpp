@@ -21,7 +21,9 @@
 #include "host_shared_data.h"
 #include "enclave_init.h"
 #include <signal.h>
-
+//  This is the file in the "fatfs/host" directory,
+//    not the one in fatfs/enclave
+#include "persistent_disk.hpp"
 // TODO pool buffers in ecalls/ocalls
 
 // From our patched version of the SGX SDK.
@@ -153,6 +155,8 @@ try {
                 inputBuffer,
                 size
     );
+    jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
+
     if (returnCode != SGX_SUCCESS) {
         raiseException(jniEnv, getErrorMessage(returnCode));
     }
@@ -285,6 +289,38 @@ void allocate_untrusted_memory(void** untrustedBufferPtr, int size) {
 void free_untrusted_memory(void** untrustedBufferPtr) {
     free(*untrustedBufferPtr);
 }
+
+void host_encrypted_read_ocall(int* res,
+			       const unsigned char drive,
+			       const unsigned int sector_id,
+			       const unsigned char num_sectors,
+			       const unsigned int sector_size,
+			       unsigned char* buf,
+			       const unsigned int buf_size) {
+    const int res_f = host_disk_read(drive, sector_id, num_sectors, sector_size, buf);
+    *res = res_f;
+}
+
+
+void host_encrypted_write_ocall(int* res,
+				const unsigned char drive,
+				const unsigned char* buf,
+				const unsigned int buf_size,
+				const unsigned int num_writes,
+				const unsigned int sector_size,
+				const unsigned int* indices,
+				const unsigned int indices_buf_size) {
+    const int res_f = host_disk_write(drive, buf, num_writes, sector_size, indices);
+    *res = res_f;
+}
+
+void host_disk_get_size_ocall(long* res,
+			      const unsigned char drive) {
+    const long res_f = host_disk_get_size(drive);
+    *res = res_f;
+}
+
+// End OCalls for Persistent Filesystem
 
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
 static std::mutex dcap_mutex;

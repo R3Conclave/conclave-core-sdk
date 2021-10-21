@@ -78,7 +78,7 @@ class EnclaveWebController {
         }
 
         val mockConfiguration = buildMockConfiguration()
-        enclaveHost = EnclaveHost.load(enclaveClassName!!, mockConfiguration)
+        enclaveHost = EnclaveHost.load(enclaveClassName!!, null, mockConfiguration)
 
         val sealedState = loadSealedState()
         enclaveHost.start(AttestationParameters.DCAP(), sealedState) { commands: List<MailCommand> ->

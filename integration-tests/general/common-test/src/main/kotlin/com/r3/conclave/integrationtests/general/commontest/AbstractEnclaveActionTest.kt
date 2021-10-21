@@ -11,12 +11,20 @@ import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import kotlin.io.path.div
 import kotlin.io.path.exists
 
 abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: String) {
     constructor() : this("com.r3.conclave.integrationtests.general.defaultenclave.DefaultEnclave")
+
+    @TempDir
+    @JvmField
+    //  Note, this can be overridden (in EnclaveRestartFileSystemTest class for example)
+    var fileSystemFileTempDir: Path? = null
 
     companion object {
         fun getAttestationParams(enclaveHost: EnclaveHost): AttestationParameters? {
@@ -95,18 +103,29 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
 
     private fun getEnclaveHostWrapper(enclaveClassName: String): EnclaveHostWrapper {
         return synchronized(enclaves) {
-            enclaves.computeIfAbsent(enclaveClassName, ::EnclaveHostWrapper)
+            enclaves.computeIfAbsent(enclaveClassName) { EnclaveHostWrapper(enclaveClassName) }
         }
     }
 
-    private class EnclaveHostWrapper(private val enclaveClassName: String) {
+    private inner class EnclaveHostWrapper(
+        private val enclaveClassName: String
+    ) {
         val postedMail = HashMap<String, ByteArray>()
         private var sealedState: ByteArray? = null
         var enclaveHost = newEnclaveHost()
         val clients = ArrayList<MailClientImpl>()
 
+
         private fun newEnclaveHost(): EnclaveHost {
-            val enclaveHost = EnclaveHost.load(enclaveClassName)
+            //  As fileSystemFileTempDir can be overridden (in EnclaveRestartFileSystem class for example),
+            //  in case it is "null" we call the single parameter Enclave.load
+            val enclaveHost = if (fileSystemFileTempDir == null) {
+                EnclaveHost.load(enclaveClassName)
+            } else {
+                EnclaveHost.load(
+                    enclaveClassName, fileSystemFileTempDir!! / "test.disk"
+                )
+            }
             enclaveHost.start(getAttestationParams(enclaveHost), sealedState) { commands ->
                 for (command in commands) {
                     when (command) {

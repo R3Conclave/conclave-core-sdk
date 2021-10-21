@@ -4,7 +4,8 @@ import com.r3.conclave.integrationtests.general.common.tasks.RandomAccessFileCon
 import com.r3.conclave.integrationtests.general.common.tasks.ReadAndWriteFiles
 import com.r3.conclave.integrationtests.general.common.tasks.WriteFilesConcurrently
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class MultiThreadedFileSystemTest : FileSystemEnclaveTest() {
     companion object {
@@ -18,21 +19,24 @@ class MultiThreadedFileSystemTest : FileSystemEnclaveTest() {
         assertThat(reply).isEqualTo(expected)
     }
 
-    @Test
-    fun readWriteManyFiles () {
-        val reply = callEnclave(ReadAndWriteFiles(THREADS))
+    @ParameterizedTest
+    @ValueSource(strings = ["", "/tmp"])
+    fun readWriteManyFiles(path: String) {
+        val reply = callEnclave(ReadAndWriteFiles(THREADS, path))
         verifyResponse(reply)
     }
 
-    @Test
-    fun multiThreadReadWriteManyFiles () {
-        val reply = callEnclave(WriteFilesConcurrently(THREADS))
+    @ParameterizedTest
+    @ValueSource(strings = ["", "/tmp"])
+    fun multiThreadReadWriteManyFiles(path: String) {
+        val reply = callEnclave(WriteFilesConcurrently(THREADS, path))
         verifyResponse(reply)
     }
 
-    @Test
-    fun multiThreadReadWriteSingleFile () {
-        val replyText = callEnclave(RandomAccessFileConcurrentWrites(THREADS))
+    @ParameterizedTest
+    @ValueSource(strings = ["", "/tmp"])
+    fun multiThreadReadWriteSingleFile(path: String) {
+        val replyText = callEnclave(RandomAccessFileConcurrentWrites(THREADS, path))
         val count = replyText.split("Dummy text from file").size - 1
         assertThat(count).isEqualTo(THREADS)
     }

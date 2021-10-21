@@ -112,4 +112,21 @@ public class Native {
      */
     public static native void getKey(byte[] keyRequestIn, byte[] keyOut);
 
+
+    /**
+     * JNI function (implemented in api.cpp) to pass the encryption key and
+     * the filesystem sizes to FatFs encryption layer.
+     * @param inMemoryFsSize Size (bytes) of the in-memory filesystem.
+     * @param persistentFsSize Size (bytes) of the persistent encrypted filesystem.
+     * @param inMemoryMountPath Mount point of the in-memory filesystem.
+     * @param persistentMountPath Mount point of the persistent filesystem.
+     * @param encryptionKey Byte array of the encryption key.
+     */
+    public static native void setupFileSystems(
+            long inMemoryFsSize,
+            long persistentFsSize,
+            String inMemoryMountPath,
+            String persistentMountPath,
+            byte[] encryptionKey
+    );
 }

@@ -31,6 +31,16 @@
 extern "C" {
 #endif
 
+    //  Function called by Kotlin Enclave to pass some filesystem related parameters and to allow    
+    //    the Enclave to store the JVM object
+    JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_setupFileSystems(JNIEnv *jniEnv,
+											 jobject,
+											 jlong in_memory_size,											
+											 jlong persistent_size,
+											 jstring in_memory_mount_path_in,
+											 jstring persistent_mount_path_in,
+											 jbyteArray encryption_key_in);
+
     // Debug print and trace functions for stubs and debug output
     extern void debug_print_enclave(const char* msg, int length);
     int enclave_print(const char *s, ...);
@@ -91,6 +101,32 @@ extern "C" {
 
     extern void throw_jvm_runtime_exception(const char *str);
     extern void jni_throw(const char *msg, ...);
+
+    // From <dirent.h>
+    typedef uint64_t           ino_t;
+    typedef int64_t            off_t;
+    typedef unsigned long int           ino64_t;
+    typedef long int                    doff64_t;
+
+#pragma pack(push, 1)
+    struct dirent {
+        uint64_t          d_ino;       /* inode number */
+        int64_t           d_off;       /* offset to the next dirent */
+        unsigned short    d_reclen;    /* length of this record */
+        unsigned char     d_type;      /* type of file; not supported
+					  by all file system types */
+        char              d_name[256]; /* filename */
+    };
+
+    struct dirent64 {
+        uint64_t          d_ino;       /* inode number */
+        int64_t           d_off;       /* offset to the next dirent */
+        unsigned short    d_reclen;    /* length of this record */
+        unsigned char     d_type;      /* type of file; not supported
+					  by all file system types */
+        char              d_name[256]; /* filename */
+    };
+#pragma pack(pop)
 
     /////////////////////////////////////////////////////////////////////////
     // Standard C Runtime Library functions
@@ -223,10 +259,11 @@ extern "C" {
     } Dl_info;
 
     // stdio.h
-    int remove_impl(const char* pathname, int& res);
+    FILE *fopen_impl(const char *path, const char *mode, int& err);
+    int remove_impl(const char* pathname, int& err);
 
     // fcntl.h    
-    int open_impl(const char* __file, int oflag);
+    int open_impl(const char* __file, int oflag, int& err);
     int lstat_impl(const char* pathname, struct stat* statbuf, int& err);
     int lstat64_impl(const char* pathname, struct stat64* statbuf, int& err);
 
@@ -246,6 +283,14 @@ extern "C" {
     int rmdir_impl(const char* pathname, int& err);
 
     int access_impl(const char* pathname, int mode, int& err);
+    int ftruncate_impl(int fd, off_t offset, int& err);
+
+    // dirent.h
+    void* opendir_impl(const char* dirname, int& err);
+    struct dirent64* readdir64_impl(void* dirp, int& err);
+    struct dirent* readdir_impl(void* dirp, int& err);
+    int closedir_impl(void* dirp, int& err);
+
 
 #ifdef __cplusplus
 }

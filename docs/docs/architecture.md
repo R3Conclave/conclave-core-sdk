@@ -204,9 +204,15 @@ In release mode any output to `stdout` and `stderr` is suppressed inside the enc
 
 !!! notice
 
-    Future versions of the platform may automatically set up encrypted logging. For now, if you want release mode
-    logging you can log to the [in-memory filesystem](persistence.md) and export logs from time to time to a 
-    trusted client or another enclave. Alternatively you may decide that due to the sensitive nature of what your 
+    In order to provide enclave logging, you have a couple of options.
+
+    You can use the [in-memory  filesystem](persistence.md) to have your logs in-memory and then export them from time to time to a 
+    trusted client or another enclave.
+
+    Or you can use the [persisted filesystem](persistence.md) to persist your logs. When you want to analyse them, you
+    will need to send the logs from the enclave to a trusted client.
+
+    Alternatively you may decide that due to the sensitive nature of what your 
     enclave does, nobody should receive its logs when in release mode: this is a perfectly normal and reasonable 
     choice! 
 

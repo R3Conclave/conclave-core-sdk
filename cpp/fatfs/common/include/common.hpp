@@ -1,5 +1,5 @@
-#ifndef FATFS_COMMON
-#define FATFS_COMMON
+#ifndef _FATFS_COMMON
+#define _FATFS_COMMON
 
 #define SECTOR_SIZE 512
 
@@ -15,6 +15,5 @@
 #define DEBUG_PRINT_FUNCTION
 #define FATFS_DEBUG_PRINT(fmt, ...)
 #endif  //    End of FATFS_DEBUG
-
 
 #endif  //    End of FATFS_COMMON

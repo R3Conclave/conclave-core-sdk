@@ -1,0 +1,40 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm"
+    id "com.r3.conclave.enclave"
+}
+
+dependencies {
+    implementation project(":general:common-enclave")
+    runtimeOnly "com.h2database:h2:$h2database_h2_version"
+    //  Using 1.18.2 version for JTS triggers a bug, we are using 1.16.0 (see versions.gradle)
+    runtimeOnly "org.locationtech.jts:jts:$locationtech_jts_version"
+    runtimeOnly "org.locationtech.jts:jts-core:$locationtech_jts_version"
+    runtimeOnly "org.locationtech.spatial4j:spatial4j:$locationtech_spatial4js_version"
+    runtimeOnly "javax.json:javax.json-api:$javax_json_version"
+    runtimeOnly "org.glassfish:javax.json:$javax_json_version"
+    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
+    runtimeOnly "com.ibm.icu:icu4j:$ibm_icu4j_version"
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+    inMemoryFileSystemSize = "0"
+    persistentFileSystemSize = "64m"
+    reflectionConfigurationFiles.from("reflect-config.json")
+
+    simulation {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
+
+    debug {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
+
+    release {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
+}

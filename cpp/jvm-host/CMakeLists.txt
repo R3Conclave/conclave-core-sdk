@@ -2,7 +2,7 @@ project(jvm-host)
 
 include(Determinise)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
     set(SIM_SUFFIX "_sim")
@@ -35,6 +35,7 @@ add_library(jvm_host SHARED ${sources})
 target_include_directories(jvm_host PUBLIC
         include
         ../jvm-host-shared/include
+	../fatfs/common/include
         ${JNI_INCLUDE_DIRS})
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
@@ -53,11 +54,13 @@ target_link_libraries(jvm_host
         -ljvm_host_shared
         jvm_host_edl
         jvm_host_enclave_common_host
+	-L../fatfs/host
+	fatfs_host
         ${CMAKE_THREAD_LIBS_INIT}
         # The $ORIGIN rpath is very important, using this we can bundle dependency .sos next to jvm_host.so without
         # having to specify LD_LIBRARY_PATH
         -Wl,-rpath,"$ORIGIN")
-add_dependencies(jvm_host linux-sgx-ext jvm_host_shared)
+add_dependencies(jvm_host linux-sgx-ext jvm_host_shared fatfs_host)
 
 get_property(HOST_SOURCES TARGET jvm_host PROPERTY SOURCES)
 determinise_compile(${HOST_SOURCES})

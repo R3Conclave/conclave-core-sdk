@@ -184,4 +184,14 @@ class MockEnclaveEnvironment(
             update(keyRequest[SgxKeyRequest.keyId].buffer)
         }.copyOf(16)
     }
+
+    override fun setupFileSystems(
+        inMemoryFsSize: Long,
+        persistentFsSize: Long,
+        inMemoryMountPath: String,
+        persistentMountPath: String,
+        encryptionKey: ByteArray
+    ) {
+        //  NO op for Mock mode
+    }
 }

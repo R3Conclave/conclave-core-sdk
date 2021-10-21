@@ -1,0 +1,14 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.conclave.enclave'
+}
+
+dependencies {
+    implementation project(":general:common-enclave")
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+    persistentFileSystemSize = "64m"
+}

@@ -40,7 +40,8 @@ conclave {
     revocationLevel = 0                 // Mandatory
     maxHeapSize = "256m"
     maxStackSize = "2m"
-    fileSystemSize = "64m"
+    inMemoryFileSystemSize = "64m"
+    persistentFileSystemSize = "0m"
     enablePersistentMap = false
     maxPersistentMapSize = "16m"
     maxThreads = 10
@@ -186,16 +187,62 @@ thread that runs inside the enclave.
     As with `maxHeapSize`, the size is specified in bytes but you can put a `k`, `m` or `g` after the value to 
     specify it in kilobytes, megabytes or gigabytes respectively.
 
-### fileSystemSize
+### inMemoryFileSystemSize
 _Default:_ `64m`
 
 This is a setting to specify the maximum size of the in-memory filesystem.
+If you specify a value of 0, the in-memory filesystem will be disabled.
 
-You can use this filesystem as if it were a FAT drive in the Enclave memory.
+You can use the in-memory filesystem as a "scratch pad" in the Enclave memory;
+your files will be lost if the enclave restarts.
+
+When enabled together with the persisted filesystem (`persistentFileSystemSize` below), the directory `/tmp` will be reserved and
+it will represent the mount point of the in-memory filesystem. Everything that you write there
+will be lost if the enclave restarts.
+
+When enabled alone, the mount point will be `/` and all files and directories will be considered
+part of the in-memory filesystem. 
+
 
 !!! tip
-As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
-after the value to specify it in kilobytes, megabytes or gigabytes respectively.
+    As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
+    after the value to specify it in kilobytes, megabytes or gigabytes respectively.
+
+### persistentFileSystemSize
+_Default:_ `0m`
+
+This is a setting to specify the maximum size of the persisted filesystem.
+If you specify a value of 0, the persisted filesystem will be disabled.
+
+You can use the persisted filesystem to read/write files that needs to be available
+after a restart of your enclaves. This is represented as a single encrypted file on the host;
+your enclave will load/save/read/write all files and directories into that file.
+
+Please remember that, in addition to the `persistentFileSystemSize`,
+you also **need to specify the host file path** in the `EnclaveHost.load` function,
+for example:
+
+``` EnclaveHost.load("com.mycompany.project.TestEnclave", "/home/USER/conclave.disk"); ```
+
+When this code gets executed for the first time, Conclave will create and encrypt this file using a key derived from the `MRSIGNER`.
+When the enclave restarts and if the file is present, Conclave will try to load and to prepare
+it so that it can be used by the enclave.
+
+Due to the nature of Intel SGX sealing keys, the file can only be decrypted by the enclave 
+that has encrypted it the first time.
+
+Note that whilst the persisted filesystem is encrypted and the host can't read it, **this is not transactional when used alone**:
+there would be no protection if the host performed rewind attacks by replacing the file with an older copy.
+
+In order to **prevent such rewind attacks**, you need to use [the `persistentMap` key-value store](persistence.md)
+in addition to the persisted filesystem.
+
+The persisted filesystem is also currently susceptible to **side channel attacks** if the host observes the frequency of
+reads/writes from/to the file; we plan to add an oblivious mechanism in a future release to cope with this.
+
+!!! tip
+    As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
+    after the value to specify it in kilobytes, megabytes or gigabytes respectively.
 
 ### enablePersistentMap & maxPersistentMapSize
 _Defaults:_ `false` and `16m` respectively.

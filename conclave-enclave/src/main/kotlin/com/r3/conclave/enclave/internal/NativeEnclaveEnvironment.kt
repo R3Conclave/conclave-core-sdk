@@ -101,6 +101,26 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
         return report
     }
 
+    override fun setupFileSystems(
+        inMemoryFsSize: Long,
+        persistentFsSize: Long,
+        inMemoryMountPath: String,
+        persistentMountPath: String,
+        encryptionKey: ByteArray
+    ) {
+        val inMemoryMountPathModified =
+            if (inMemoryMountPath.endsWith("/")) inMemoryMountPath else "$inMemoryMountPath/"
+        val persistentMountPathModified =
+            if (persistentMountPath.endsWith("/")) persistentMountPath else "$persistentMountPath/"
+        Native.setupFileSystems(
+            inMemoryFsSize,
+            persistentFsSize,
+            inMemoryMountPathModified,
+            persistentMountPathModified,
+            encryptionKey
+        )
+    }
+
     override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
         Native.randomBytes(output, offset, length)
     }

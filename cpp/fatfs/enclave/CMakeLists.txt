@@ -24,7 +24,9 @@ add_library(fatfs_enclave
   ../common/src/ffsystem.cpp
   ../common/src/ffunicode.cpp
   ../common/src/fatfs_file_manager.cpp
-  ../enclave/src/fatfs_ram.cpp
+  ../enclave/src/disk.cpp
+  ../enclave/src/inmemory_disk.cpp
+  ../enclave/src/persistent_disk.cpp
   ../enclave/src/api.cpp  
   )
 
@@ -35,6 +37,7 @@ target_include_directories(fatfs_enclave PUBLIC
   ../../jvm-edl/build/edl/enclave
   ../../jvm-host-enclave-common/include
   ../../jvm-enclave-common/include
+  ${JNI_INCLUDE_DIRS}
   $ENV{JAVA_HOME}/include
   $ENV{JAVA_HOME}/include/linux
   )

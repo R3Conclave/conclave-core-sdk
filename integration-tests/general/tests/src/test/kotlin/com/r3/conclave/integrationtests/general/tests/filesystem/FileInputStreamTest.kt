@@ -2,8 +2,8 @@ package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.FileInputStream
 
@@ -51,10 +51,14 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun writeReadDeleteFiles(nioApi: Boolean) {
+    @CsvSource(
+        "/file.data, true",
+        "/file.data, false",
+        "/tmp/file.data, true",
+        "/tmp/file.data, false"
+    )
+    fun writeReadDeleteFiles(path: String, nioApi: Boolean) {
         val smallFileData = byteArrayOf(1, 2, 3)
-        val path = "/file.data"
 
         // Write the file and create a FileInputStream
         filesWrite(path, smallFileData)
@@ -74,7 +78,7 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
          */
         deleteFile(path, nioApi)
         filesDeleteNonExistingFile(path, nioApi)
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
 
         // Write the file again and readAllBytes at once
         filesWrite(path, smallFileData)

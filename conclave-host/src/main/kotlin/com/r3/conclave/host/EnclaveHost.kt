@@ -112,13 +112,39 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String): EnclaveHost {
-            return load(enclaveClassName, null)
+            return load(enclaveClassName, null, null)
         }
 
         /**
          * Load the signed enclave for the given enclave class name.
          *
          * @param enclaveClassName The name of the enclave class to load.
+         * @param enclaveFileSystemFile Path of the file in the host that represents an encrypted
+         *                          persistent filesystem to be used by the Enclave.
+         *                          If a null path is provided, the file is not generated.
+         *                          In addition to this, the user needs to provide the persistent filesystem size
+         *                          in the enclave build.gradle file.
+         * @throws IllegalArgumentException if there is no enclave file for the given class name.
+         * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
+         *                              not support hardware enclaves or if enclave support is disabled.
+         * @throws PlatformSupportException if the mode is not mock and the host OS is not Linux or if the CPU doesn't
+         *                                  support SGX enclave in simulation mode or higher.
+         */
+        @JvmStatic
+        @Throws(EnclaveLoadException::class, PlatformSupportException::class)
+        fun load(enclaveClassName: String, enclaveFileSystemFile: Path?): EnclaveHost {
+            return load(enclaveClassName, enclaveFileSystemFile, null)
+        }
+
+        /**
+         * Load the signed enclave for the given enclave class name.
+         *
+         * @param enclaveClassName The name of the enclave class to load.
+         * @param enclaveFileSystemFile Path of the file in the host that represents an encrypted
+         *                          persistent filesystem to be used by the Enclave.
+         *                          If a null path is provided, the file is not generated.
+         *                          In addition to this, the user needs to provide the persistent filesystem size
+         *                          in the enclave build.gradle file.
          * @param mockConfiguration Defines the configuration to use when loading the enclave in mock mode.
          *                          If no configuration is provided when using mock mode then a default set
          *                          of configuration parameters are used. This parameter is ignored when
@@ -133,7 +159,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          */
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
-        fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
+        fun load(enclaveClassName: String, enclaveFileSystemFile: Path?, mockConfiguration: MockConfiguration?): EnclaveHost {
             val (stream, enclaveMode) = findEnclave(enclaveClassName)
 
             // Check that the platform supports the required enclave modes
@@ -155,7 +181,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 }
                 try {
                     stream!!.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
-                    return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
+                    return createHost(enclaveMode, enclaveFile, enclaveClassName, enclaveFileSystemFile, tempFile = true)
                 } catch (e: UnsatisfiedLinkError) {
                     // We get an unsatisfied link error if the native library could not be loaded on
                     // the current platform - this will happen if the user tries to load an enclave

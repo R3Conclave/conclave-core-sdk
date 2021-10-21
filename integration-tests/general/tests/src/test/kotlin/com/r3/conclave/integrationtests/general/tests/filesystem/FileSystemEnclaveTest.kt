@@ -4,13 +4,14 @@ import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicInteger
 
-abstract class FileSystemEnclaveTest : AbstractEnclaveActionTest() {
+abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) : AbstractEnclaveActionTest(defaultEnclaveClassName) {
+    constructor() : this("com.r3.conclave.integrationtests.filesystem.enclave.PersistentFileSystemEnclave")
+
     val uid = AtomicInteger()
 
     fun filesWrite(path: String, data: ByteArray) {
@@ -68,10 +69,23 @@ abstract class FileSystemEnclaveTest : AbstractEnclaveActionTest() {
         assertThat(callEnclave(FilesSize(path))).isEqualTo(expectedSize)
     }
 
-    fun fileInputStreamNonExistingFile(path: String) {
-        assertThatThrownBy { callEnclave(NewInputStream(path, uid.getAndIncrement(), nioApi = false)) }
+    fun fileInputStreamNonExistingFile(path: String, nioApi: Boolean) {
+        val exception = if (nioApi) {
+            java.nio.file.NoSuchFileException::class.java
+        } else {
+            java.io.FileNotFoundException::class.java
+        }
+        assertThatThrownBy {
+            callEnclave(
+                NewInputStream(
+                    path,
+                    uid.getAndIncrement(),
+                    nioApi
+                )
+            )
+        }
             .isInstanceOf(RuntimeException::class.java)
-            .hasCauseExactlyInstanceOf(FileNotFoundException::class.java)
+            .hasCauseExactlyInstanceOf(exception)
             .hasMessageContaining(path)
     }
 }

@@ -2,16 +2,15 @@ package com.r3.conclave.integrationtests.tribuo.host
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.PlatformSupportException
 import com.r3.conclave.host.MailCommand
+import com.r3.conclave.host.PlatformSupportException
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.ServerSocket
-import java.util.Set
+import java.nio.file.Paths
 
 class Host {
     companion object {
@@ -36,7 +35,7 @@ class Host {
             ServerSocket(port).use { acceptor ->
                 acceptor.accept().use { connection ->
                     DataOutputStream(connection.getOutputStream()).use { output ->
-                        EnclaveHost.load("com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave").use { enclave ->
+                        EnclaveHost.load("com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave", Paths.get("./tribuo_test.disk")).use { enclave ->
                             enclave.start(initializeAttestationParameters(), null) { commands: List<MailCommand?> ->
                                 for (command in commands) {
                                     if (command is MailCommand.PostMail) {

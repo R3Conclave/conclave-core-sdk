@@ -98,13 +98,20 @@ is available where you can find the development team during UK office hours (GMT
     There have been some breaking changes in this version of Conclave. Be sure to read the [API changes page](api-changes.md)
     for the information you need to get your existing project building with Conclave 1.2.
 
-1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
-   recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
-   easy to understand and does not provide roll back protection against the host. To address all these issues the
-   `Enclave` class now exposes a simple key-value store represented as a normal `java.util.Map` object. Conclave will 
-   securely persist this map such that it survives restarts and is resilient to attempts by the host to roll it back 
-   to previous states. [Learn more about enclave persistence](persistence.md).
-
+1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave.  
+   Previously we recommended the "mail-to-self" pattern for storing data across enclave restarts.
+   This is cumbersome to write, not easy to understand and does not provide roll back protection against the host.  
+   To address all these issues we have implemented not one but **two** new persistent mechanisms for securely storing
+   data, which you can use depending on your requirements.  
+   The first one is a simple **key-value store**: the `Enclave` class now exposes this as a normal `java.util.Map` object.  
+   Conclave will securely persist this map such that it survives restarts and is resilient to attempts by the host
+   to roll it back to previous states.  
+   The second one is a persisted filesystem: in the enclave you can now write code to persist your files and directories
+   which will be stored in a single encrypted file on the host, in such a way that the host can't have access to them.
+   These files and directories will be still available if the enclave restarts.
+   You can use the persisted filesystem together with the in-memory filesystem, already available in Conclave.
+   [Learn more about enclave persistence](persistence.md).
+   
 1. :jigsaw: **New feature!** We've added enclave lifecycle methods so that you can do any necessary enclave startup 
    initialisation and shutdown cleanup. Override `onStartup` and `onShutdown` respectively.
 

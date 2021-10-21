@@ -2,13 +2,13 @@ package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.Closeable
 
 class FilesTest : FileSystemEnclaveTest() {
-    private inner class Handler(private val uid: Int, path:String) : Closeable {
+    private inner class Handler(private val uid: Int, path: String) : Closeable {
         init {
             val reply = callEnclave(NewInputStream(path, uid, nioApi = true))
             assertThat(reply).startsWith("sun.nio.ch.ChannelInputStream")
@@ -35,9 +35,13 @@ class FilesTest : FileSystemEnclaveTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun createDeleteSingleDirectory(nioApi: Boolean) {
-        val parent = "/parent-dir"
+    @CsvSource(
+        "/parent-dir, true",
+        "/parent-dir, false",
+        "/tmp/parent-dir, true",
+        "/tmp/parent-dir, false"
+    )
+    fun createDeleteSingleDirectory(parent: String, nioApi: Boolean) {
         val child = "$parent/child-dir"
         // Ensure creating a directory without creating its parent first fails with the expected exception
         createDirectoryWithoutParent(child)
@@ -51,10 +55,14 @@ class FilesTest : FileSystemEnclaveTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun createDeleteMultipleDirectories(nioApi: Boolean) {
+    @CsvSource(
+        "/multiple-dir/conclave-test, true",
+        "/multiple-dir/conclave-test, false",
+        "/tmp/multiple-dir/conclave-test, true",
+        "/tmp/multiple-dir/conclave-test, false"
+    )
+    fun createDeleteMultipleDirectories(dir: String, nioApi: Boolean) {
         val smallFileData = byteArrayOf(3, 2, 1)
-        val dir = "/multiple-dir/conclave-test"
         val path = "$dir/file.data"
         // Create parent and child directories at once
         createDirectories(dir)
@@ -68,25 +76,33 @@ class FilesTest : FileSystemEnclaveTest() {
         deleteFile(dir, nioApi)
         // Ensure deleting or opening the non existing file fails with the expected exception
         filesDeleteNonExistingFile(path, nioApi)
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun readBytes(nioApi: Boolean) {
-        val path = "/readBytes.data"
+    @CsvSource(
+        "/readBytes.data, true",
+        "/readBytes.data, false",
+        "/tmp/readBytes.data, true",
+        "/tmp/readBytes.data, false"
+    )
+    fun readBytes(path: String, nioApi: Boolean) {
         val smallFileData = byteArrayOf(1, 2, 3, 4)
         filesWrite(path, smallFileData)
         // Test Files.readAllBytes
         filesReadAllBytes(path, smallFileData)
         deleteFile(path, nioApi)
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun fileSize(nioApi: Boolean) {
-        val path = "/file-size.data"
+    @CsvSource(
+        "/file-size.data, true",
+        "/file-size.data, false",
+        "/tmp/file-size.data, true",
+        "/tmp/file-size.data, false"
+    )
+    fun fileSize(path: String, nioApi: Boolean) {
         val smallFileData = byteArrayOf(4, 3, 2, 1)
         filesWrite(path, smallFileData)
         // Test Files.size
@@ -102,10 +118,15 @@ class FilesTest : FileSystemEnclaveTest() {
         }
     }
 
-    @Test
-    fun outputStreamDeleteOnClose() {
-        val path = "/fos-delete-on-close.data"
+    @ParameterizedTest
+    @CsvSource(
+        "/fos-delete-on-close.data, true",
+        "/fos-delete-on-close.data, false",
+        "/tmp/fos-delete-on-close.data, true",
+        "/tmp/fos-delete-on-close.data, false"
+    )
+    fun outputStreamDeleteOnClose(path: String, nioApi: Boolean) {
         FilesNewOutputStreamHandler(uid.getAndIncrement(), path).close()
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
     }
 }

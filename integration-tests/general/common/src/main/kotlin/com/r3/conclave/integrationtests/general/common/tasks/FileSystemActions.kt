@@ -292,13 +292,13 @@ class NewBufferedFileInputStream(private val path: String, private val uid: Int)
 }
 
 @Serializable
-class ReadAndWriteFiles(private val files: Int) : FileSystemAction<List<String>>() {
+class ReadAndWriteFiles(private val files: Int, private val parentDir: String) : FileSystemAction<List<String>>() {
     override fun run(context: EnclaveContext, isMail: Boolean): List<String> {
         repeat(files) { i ->
-            Paths.get("test_file_$i.txt").writeText("Dummy text from file $i")
+            Paths.get(parentDir, "test_file_$i.txt").writeText("Dummy text from file $i")
         }
         return (0 until files).map { i ->
-            String(Paths.get("test_file_$i.txt").readBytes())
+            String(Paths.get(parentDir, "test_file_$i.txt").readBytes())
         }
     }
 
@@ -306,17 +306,17 @@ class ReadAndWriteFiles(private val files: Int) : FileSystemAction<List<String>>
 }
 
 @Serializable
-class WriteFilesConcurrently(private val files: Int) : FileSystemAction<List<String>>() {
+class WriteFilesConcurrently(private val files: Int, private val parentDir: String) : FileSystemAction<List<String>>() {
     override fun run(context: EnclaveContext, isMail: Boolean): List<String> {
         val futures = (0 until files).map { i ->
             threadWithFuture {
-                Paths.get("test_file_$i.txt").writeText("Dummy text from file $i")
+                Paths.get(parentDir, "test_file_$i.txt").writeText("Dummy text from file $i")
             }
         }
 
         return futures.mapIndexed { i, future ->
             future.join()
-            String(Paths.get("test_file_$i.txt").readBytes())
+            String(Paths.get(parentDir, "test_file_$i.txt").readBytes())
         }
     }
 
@@ -324,17 +324,29 @@ class WriteFilesConcurrently(private val files: Int) : FileSystemAction<List<Str
 }
 
 @Serializable
-class RandomAccessFileConcurrentWrites(private val threads: Int) : FileSystemAction<String>() {
+class RandomAccessFileConcurrentWrites(private val threads: Int, private val parentDir: String) : FileSystemAction<String>() {
     override fun run(context: EnclaveContext, isMail: Boolean): String {
-        RandomAccessFile("test_file.txt", "rws").use { raf ->
+        val testFile = Paths.get(parentDir, "test_file.txt")
+        RandomAccessFile(testFile.toFile(), "rws").use { raf ->
             (0 until threads).map { i ->
                 threadWithFuture {
                     raf.write("Dummy text from file $i".toByteArray())
                 }
             }.forEach { it.join() }
         }
-        return String(Paths.get("test_file.txt").readBytes())
+        return String(testFile.readBytes())
     }
 
     override fun resultSerializer(): KSerializer<String> = String.serializer()
+}
+
+@Serializable
+class ReadFiles(private val files: Int, private val parentDir: String) : FileSystemAction<List<String>>() {
+    override fun run(context: EnclaveContext, isMail: Boolean): List<String> {
+        return (0 until files).map { i ->
+            String(Paths.get(parentDir, "test_file_$i.txt").readBytes())
+        }
+    }
+
+    override fun resultSerializer(): KSerializer<List<String>> = ListSerializer(String.serializer())
 }

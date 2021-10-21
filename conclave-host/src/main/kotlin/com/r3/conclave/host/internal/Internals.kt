@@ -5,9 +5,9 @@ import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.host.EnclaveHost
 import java.nio.file.Path
 
-fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {
+fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, enclaveFileSystemFile: Path?, tempFile: Boolean): EnclaveHost {
     val enclaveHandle =
-        NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ErrorHandler())
+        NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, enclaveFileSystemFile, ErrorHandler())
     return EnclaveHost.__internal_create(enclaveHandle)
 }
 

@@ -131,7 +131,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
 
         val enclaveFile = Files.createTempFile(enclaveClassName, "signed.so")
         stream.use { copy(it, enclaveFile, REPLACE_EXISTING) }
-        return createHost(enclaveMode, enclaveFile, enclaveClassName, true)
+        return createHost(enclaveMode, enclaveFile, enclaveClassName, null, true)
     }
 
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {

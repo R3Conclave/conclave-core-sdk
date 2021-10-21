@@ -11,6 +11,8 @@ STUB(rename);
 
 extern "C" {
 
+FILE *stdin = nullptr;
+    
 int remove(const char* pathname) {
     enclave_trace("remove(%s)\n", pathname);
     int err = 0;
@@ -18,7 +20,7 @@ int remove(const char* pathname) {
     errno = err;
     return res;
 }
-    
+
 int printf(const char *s, ...) {
     va_list va;
     va_start(va, s);
@@ -72,10 +74,14 @@ int sprintf(char *str, const char *format, ...) {
 
 FILE *fopen(const char *path, const char *mode) {
     conclave::File* file = conclave::FileManager::instance().open(path);
+
     if (file) {
         return (FILE*)file;
     }
-    return nullptr;
+    int err = 0;
+    FILE* res = fopen_impl(path, mode, err);
+    errno = err;
+    return res;
 }
 
 int fclose(FILE* fp) {
@@ -124,6 +130,17 @@ int fscanf ( FILE * stream, const char * format, ... ) {
     return 0;
 }
 
+int sscanf(const char *str, const char *format, ...) {
+    enclave_trace("sscanf");
+    return -1;
+}
+
+int fileno(FILE *stream) {
+    enclave_trace("fileno");
+    errno = EBADF;
+    return -1;
+}
+    
 ssize_t __getdelim (char **__lineptr, size_t *__n, int __delimiter, FILE *__stream) {
     enclave_trace("__getdelim\n");
     return -1;

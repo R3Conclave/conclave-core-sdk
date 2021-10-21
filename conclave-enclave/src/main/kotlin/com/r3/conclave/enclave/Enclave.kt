@@ -201,6 +201,11 @@ abstract class Enclave {
                 "The persistent map is not available in multi-threaded enclaves."
             }
             initCryptography()
+            /*
+            Here we should not add any code that throws exceptions. This is because the handler mechanisms haven't
+            yet been put in place and an exception would cause the Enclave to terminate in such a way that we can't
+            control and without meaningful stacktrace as this can't be reported back.
+            */
             val exposeErrors = env.enclaveMode != EnclaveMode.RELEASE
             val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
@@ -241,6 +246,34 @@ abstract class Enclave {
         // for both private and public keys due to the existence of attacks on elliptic curve cryptography that
         // effectively halve the key size, so 256 bit keys -> 128 bits of work to brute force.
         return digest("SHA-256") { update(secretKey) }
+    }
+
+    private fun getSecretKey(): ByteArray {
+        val reportBody = env.createReport(null, null)[body]
+        val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
+        val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
+
+        val secretKey = env.getSecretKey { keyRequest ->
+            keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
+            keyRequest[SgxKeyRequest.keyPolicy] = KeyPolicy.MRSIGNER
+            keyRequest[SgxKeyRequest.cpuSvn] = cpuSvn
+            keyRequest[SgxKeyRequest.isvSvn] = isvSvn
+        }
+        return secretKey
+    }
+
+    private fun setupFileSystems() {
+        val secretKey = getSecretKey()
+        val inMemorySize = NativeImageProperties.inMemoryFileSystemSize
+        val persistentSize = NativeImageProperties.persistentFileSystemSize
+
+        if (inMemorySize > 0L && persistentSize == 0L ||
+            inMemorySize == 0L && persistentSize > 0L) {
+            //  We do not allow other mount point apart from "/" when only one filesystem is present
+            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", secretKey)
+        } else if (inMemorySize > 0L && persistentSize > 0L) {
+            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", secretKey)
+        }
     }
 
     private fun initCryptography() {
@@ -362,11 +395,20 @@ Received: $attestationReportBody"""
 
         private fun onOpen(input: ByteBuffer) {
             enclave.lock.withLock {
+                /*
+                Functions that are not strictly related to the enclave initialization but that needs to be executed
+                  before the enclave starts up need to be placed here as here we can handle
+                  and catch exceptions properly.
+                Specifically, setupFileSystems can throw an exception in case the Host does not provide a
+                filesystem file path for it and by having the call here allows us to handle this gracefully.
+                 */
+
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
                 val sealedStateBlob = input.getNullable { getRemainingBytes() }
                 if (sealedStateBlob != null) {
                     enclave.applySealedState(sealedStateBlob)
                 }
+                enclave.setupFileSystems()
                 enclave.onStartup()
             }
         }

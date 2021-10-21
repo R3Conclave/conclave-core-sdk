@@ -1,14 +1,15 @@
 #include <algorithm>
-#include <string.h>
 
+#include "diskio_ext.hpp"
+#include "disk.hpp"
 #include "fatfs_file_manager.hpp"
-#include "fatfs_ram.hpp"
 
-#include "common.hpp"
+static const std::string kRootPath = "/";
 
 namespace conclave {
 
     static std::unordered_map<int, BYTE> createFlagMap() {
+	DEBUG_PRINT_FUNCTION;
 	/*
 	  http://elm-chan.org/fsw/ff/doc/open.html
 	  POSIX	FatFs
@@ -49,20 +50,20 @@ namespace conclave {
 
     
     static BYTE convertFlag(const int posix_flag) {
+	DEBUG_PRINT_FUNCTION;
 	//  We only allow a specific set of Posix flag
 	const int mask = O_RDONLY |O_RDWR | O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_EXCL;	
 	const static auto flags = createFlagMap();
 	const int masked_fatfs_flag = mask & posix_flag;
 	const BYTE fatfs_flag = flags.at(masked_fatfs_flag);
-	FATFS_DEBUG_PRINT("Converted from original Posix flag: %d, %04X\n" \
-			  "  to masked Posix flag: %d, %04X and then fatfs flag %d\n",
-			  posix_flag, posix_flag,
-			  masked_fatfs_flag, masked_fatfs_flag, (unsigned int)fatfs_flag);
+	FATFS_DEBUG_PRINT("Converted from Posix %d, %04X to fatfs flag %d\n",
+			  posix_flag, posix_flag, (unsigned int)fatfs_flag);
 	return fatfs_flag;
     }
 
 
     static std::unordered_map<std::string, BYTE> createPosixModeFlagMap() {
+	DEBUG_PRINT_FUNCTION;
 	std::unordered_map<std::string, BYTE> flags;
 	flags["r"]   = FA_READ;
 	flags["r+"]  = FA_READ | FA_WRITE;
@@ -89,355 +90,173 @@ namespace conclave {
     };
 
 
-    FatFsFileManager& FatFsFileManager::instance(const StorageType type,
-						 const unsigned int ramsize) {
-	static FatFsFileManager instance(type, ramsize);
-	return instance;
-    };
-
-
     FatFsFileManager::~FatFsFileManager() {
-	ramdisk_stop(drive_id_);
+	DEBUG_PRINT_FUNCTION;
+	disk_handler_->diskStop();
+	disk_stop(disk_handler_->getDriveId(), drive_text_id_);
+	
 	for (auto& kv : files_) {
 	    FIL* fil_ptr = kv.second;
 
-	    if (fil_ptr != NULL) {
+	    if (fil_ptr != nullptr) {
 		delete(kv.second);
 	    }
 	}
-
-	if (data_ != NULL) {
-	    free(data_);
-	    data_ = NULL;
-	};
-    };
-
-
-    void FatFsFileManager::initRamDisk(const unsigned int disk_size) {
-	data_ = (unsigned char*)calloc(disk_size, sizeof(unsigned char));
-
-	if (data_ == NULL) {
-	    const std::string message("Could not allocate memory for the RAM disk in the Enclave");
-	    throw std::runtime_error(message);
-	}
-	const DRESULT result = ramdisk_start(drive_id_, data_, disk_size, 1);   
-
-	if (result != RES_OK) {
-	    const std::string message("Error in creating the RAM disk in the Enclave");
-	    throw std::runtime_error(message);
-	}
-	FATFS_DEBUG_PRINT("Created RAM disk of size %u bytes\n", disk_size);
-    };
-
-    
-    FatFsFileManager::FatFsFileManager(const StorageType type,
-				       const unsigned int disk_size) {
-	if (type == ENCLAVE_MEMORY) {
-	    initRamDisk(disk_size);
-	} else {
-	    const std::string message("Developer error: no other modes available at the moment");
-	    throw std::runtime_error(message);
-	}
-    };
-
-
-    off_t FatFsFileManager::lseek(int fd, off_t offset, int whence) {
-	FATFS_DEBUG_PRINT("lseek fd %d, offset %ld, command %d\n", fd, offset, whence);
 	
-	if (whence == SEEK_CUR && offset == 0) {
-	    //  This is a no-op case, so we return successfully
-	    return 0;
-	} else {
-	    FATFS_DEBUG_PRINT("Error in seeking from handle %d\n", fd);
-	    return -1;
+	for (auto& kv : dirents_) {
+	    struct dirent* dir_ptr = kv.second;
+
+	    if (dir_ptr != nullptr) {
+		free(dir_ptr);
+	    }
 	}
 
-	/* 
-           The code here should work, but when working with files this does not seem
-	   to be executed, so better to return an error at the moment, as this hasn't been
-	   really tested.
-	   std::lock_guard<std::mutex> lock(file_mutex_);
-	   const FileHandle handle = fd; 
-	   const auto it = files_.find(handle);
+	for (auto& kv : dirents64_) {
+	    struct dirent64* dir_ptr = kv.second;
 
-	   if (it == files_.end()) {
-	   FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
-	   return -1;
-	   }
-
-	   FIL* fil_ptr = it->second;    
-	   const FRESULT res = f_lseek(fil_ptr, offset);
-
-	   if (res == FR_OK) {
-	   return 0;
-	   } else {
-	   FATFS_DEBUG_PRINT("Error in seeking from handle %d, result %d\n", handle, res);
-	   return -1;
-	   }
-	*/
-    };
-
-  
-    int FatFsFileManager::open(const char* path_name, int oflag) {
-	FATFS_DEBUG_PRINT("Opening file: %s\n", path_name);
-
-	if (path_name == NULL) {
-	    return -1;
-	}
-
-	const BYTE fatfs_mode_flag = convertFlag(oflag);
-	std::lock_guard<std::mutex> lock(file_mutex_);
-
-	const std::string path_name_str = path_name;
-	const auto it = file_paths_.find(path_name_str);
-
-	if (it != file_paths_.end()) {
-	    //  When opening again the same file, we do a f_sync (flush), so that we can read it correctly.	    
-	    const FileHandle old_handle = it->second;
-	    FIL* old_fil = files_.at(old_handle);
-	    const FRESULT res_sync = f_sync(old_fil);
-	    FATFS_DEBUG_PRINT("File %s, handle %d previously opened, synced with result %d\n", path_name, old_handle, res_sync);
-	    
-	    if (res_sync != 0) {
-		return -1;
-	    }	
-	}
-	FIL* fil_ptr = new FIL();
-	const FRESULT res = f_open(fil_ptr, path_name, fatfs_mode_flag);
-	    
-	if (res != FR_OK) {
-	    FATFS_DEBUG_PRINT("File not opened, with failure: %d\n", res);
-	    delete(fil_ptr);
-	    fil_ptr = NULL;
-	    return -1;
-	};
-
-	const FileHandle file_handle = createFileHandle(fil_ptr, path_name_str);
-	return file_handle;
-    };
-  
-    ssize_t FatFsFileManager::read(int fd, void* buf, size_t count) {
-	DEBUG_PRINT_FUNCTION;
-
-	if (buf == NULL || count == 0) {
-	    return 0;
-	}
-	std::lock_guard<std::mutex> lock(file_mutex_);
-	const FileHandle handle = fd; 
-	const auto it = files_.find(handle);
-
-	if (it == files_.end()) {
-	    FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
-	    return -1;
-	}
-
-	FATFS_DEBUG_PRINT("Reading from handle: %d, num bytes: %lu\n", handle, count);
-	
-	FIL* fil_ptr = it->second;    
-	UINT read_bytes = 0;
-	const FRESULT res = f_read(fil_ptr, buf, count, &read_bytes);
-
-	if (res == FR_OK) {
-	    return static_cast<ssize_t>(read_bytes);
-	} else {
-	    FATFS_DEBUG_PRINT("Error in reading from handle %d, result %d\n", handle, res);
-	    return 0;
+	    if (dir_ptr != nullptr) {
+		free(dir_ptr);
+	    }
 	}
     };
-
-    size_t FatFsFileManager::fread(void* buf, size_t size, size_t count, FILE* fp) {
-	DEBUG_PRINT_FUNCTION;
-
-	if (size == 0 || count == 0 || buf == NULL || fp == NULL) {
-	    return 0;
-	};
-
-	FIL* fil_ptr = reinterpret_cast<FIL*>(fp);
-
-	UINT read_bytes = 0;
-	const FRESULT res = f_read(fil_ptr, buf, count, &read_bytes);
-
-	if (res == FR_OK) {
-	    return read_bytes;	
-	} else {
-	    return 0;
-	}
-    };
-
-
-    ssize_t FatFsFileManager::pread(int fd, void* buf, size_t count, off_t offset) {
-	DEBUG_PRINT_FUNCTION;
-
-	if (count == 0 || buf == NULL) {
-	    return 0;
-	};
-
-	std::lock_guard<std::mutex> lock(file_mutex_);
-	const FileHandle handle = fd;
-	const auto it = files_.find(handle);
-
-	if (it == files_.end()) {
-	    return -1;
-	}
-
-	FIL* fil_ptr = it->second;    
-	fil_ptr->fptr = offset;    
-	UINT read_bytes = 0;
-	const FRESULT res = f_read(fil_ptr, buf, count, &read_bytes);
-
-	if (res == FR_OK) {
-	    return read_bytes;	
-	} else {
-	    return 0;
-	}
-    };
+           
     
+    FatFsFileManager::FatFsFileManager(const int first_handle,
+				       const int max_handle,
+				       const unsigned char* encryption_key,
+				       const std::string& mount_path,
+				       const std::shared_ptr<FatFsDisk>& disk_handler):
+	first_handle_(first_handle),
+	next_handle_(first_handle),
+	last_handle_(max_handle),
+	mount_path_(mount_path) {
 
-    FILE* FatFsFileManager::fdopen(int fd, const char *mode) {
-	DEBUG_PRINT_FUNCTION;
+	disk_handler_ = disk_handler;
+	drive_text_id_ = std::to_string(disk_handler_->getDriveId()) + ":";
+    }
 
-	if (mode == NULL) {
-	    return NULL;
-	}
-    
-	std::lock_guard<std::mutex> lock(file_mutex_);
 
-	const FileHandle handle = fd;	
-	const auto it = files_.find(handle);
-    
-	if (it != files_.end()) {
-	    FIL* fil = it->second;
-	    return reinterpret_cast<FILE*>(fil);
-	} else {
-	    return NULL;
-	};
-    };
-    
-    
-    FILE *FatFsFileManager::fopen(const char *path_name, const char *mode) {
-
-	if (mode == NULL || path_name == NULL) {
-	    return NULL;
-	}
-    
-	const BYTE fatfs_mode = parsePosixModeFlag(std::string(mode));
-
-	std::lock_guard<std::mutex> lock(file_mutex_);
-	const std::string path_name_str(path_name);
-
-	const auto it = file_paths_.find(path_name_str);
-
-	if (it != file_paths_.end()) {
-	    //  When opening again the same file, we do a f_sync (flush), so that we can read it correctly.	    
-	    FileHandle old_handle = it->second;
-	    FIL* old_fil = files_.at(old_handle);
-
-	    const FRESULT res_sync = f_sync(old_fil);
-	    FATFS_DEBUG_PRINT("File %s, handle %d previously opened, synced with result %d\n", path_name, old_handle, res_sync);
-	    
-	    if (res_sync != 0) {
-		return NULL;
-	    }	
-	}
-	
-	FIL* fil_ptr = new FIL();
-	const FRESULT res = f_open(fil_ptr, path_name, fatfs_mode);  
-
-	if (res != FR_OK) {
-	    delete(fil_ptr);
-	    fil_ptr = NULL;
-	    return NULL;
-	};
-	
-	createFileHandle(fil_ptr, path_name_str);
-	return reinterpret_cast<FILE*>(fil_ptr);
-    };
+    std::string FatFsFileManager::getMountPath() {
+	return mount_path_;
+    }
    
-    
-    size_t FatFsFileManager::fwrite(const void* buf, size_t size, size_t count, FILE* fp) {
-	DEBUG_PRINT_FUNCTION;
 
-	if (size == 0 || count == 0 || fp == NULL) {
-	    return 0;
-	};
-	FIL* fil = reinterpret_cast<FIL*>(fp);
+    void FatFsFileManager::init(const DiskInitialization init_type) {	
+	disk_handler_->diskStart();
 
-	UINT written_bytes = 0;
-	const FRESULT res = f_write(fil, buf, count, &written_bytes);
-
-	if (res == 0) {
-	    return written_bytes;
-	} else {
-	    return 0;
+	/*
+	  diskio.cpp->disk_start is the FatFs related call to register functions, 
+	  run mkfs (if required) and mount the filesystem.
+	  Given that we do not want to change the FatFs code much, we prefer to pass the disk_handler_
+	  shared pointer to disk_start function, even if we lose a bit of encapsulation.
+	  diskio.cpp->disk_* functions consist in the bridge between FatFs abstraction
+	  and in-memory/persistent filesystems.
+	*/
+	DRESULT res = disk_start(disk_handler_, init_type);
+	
+	if (res != RES_OK) {
+	    const std::string message("Error in initializing encrypted disk");
+	    throw std::runtime_error(message);
 	}
-    };
+	if (mount_path_ != kRootPath) {
+	    const int res_mkdir = mkdir(mount_path_.c_str(), 0);
+	    
+	    if (res_mkdir != 0) {
+		const std::string message("Error in creating the initial mount directory");
+		throw std::runtime_error(message);
+	    }
+	}	
+    }
+
+    
+    bool FatFsFileManager::isPathOwner(const std::string& path) {
+	return path.length() > 0 &&
+	    (path.find(mount_path_, 0) == 0 ||  //  Path starts with mount_path
+	     path == mount_path_.substr(0, mount_path_.size() - 1));  // Path is the mount_path (without / at the end)
+    }
 
 
-    ssize_t FatFsFileManager::pwrite(int fd, const void *buf, size_t count, off_t offset) {
-	DEBUG_PRINT_FUNCTION;
+    bool FatFsFileManager::isHandleOwner(const int handle) {
+	return handle != -1 && handle >= first_handle_ && handle <= last_handle_;
+    }
 
-	if (count == 0 || buf == NULL) {
+
+    bool FatFsFileManager::isDirOwner(const DIR* dir) {
+	return inverse_dir_paths_.find(dir) != inverse_dir_paths_.end();	    
+    }
+
+
+    std::string FatFsFileManager::generateFatFsPath(const char* path) {
+	//  This functions adds the drive identifier at the beginning of the path.
+	//    This is a FatFs requirement to access files in the correct drive.
+	//  An example of FatFs path is the following: "0:/mydir/myfile.txt"
+	if (path == nullptr) {
+	    return std::string();
+	}
+	return drive_text_id_ + std::string(path);
+    }
+    
+  
+    int FatFsFileManager::closeInternal(FIL* fil_ptr) {
+	const FileHandle file_handle = inverse_files_map_.at(fil_ptr);
+	const FRESULT res = f_close(fil_ptr);
+
+	if (res == FR_OK) {
+	    const std::string path = inverse_file_paths_.at(file_handle);
+
+	    files_.erase(file_handle);
+	    file_paths_.erase(path);
+	    inverse_files_map_.erase(fil_ptr);
+	    inverse_file_paths_.erase(file_handle);
+	    delete(fil_ptr);
+	    fil_ptr = nullptr;
+	    FATFS_DEBUG_PRINT("closeInternal successful, removed handle: %d, path: %s\n", file_handle, path.c_str());
 	    return 0;
-	};
-	std::lock_guard<std::mutex> lock(file_mutex_);
-
-	const FileHandle handle = fd;
-	const auto it = files_.find(handle);
-
-	if (it == files_.end()) {
+	} else {
+	    FATFS_DEBUG_PRINT("closeInternal error %d\n", res);
 	    return -1;
 	}
+    }
+    
 
-	FIL* fil_ptr = it->second;    
-	fil_ptr->fptr = offset;    
-	UINT written_bytes = 0;
-	const FRESULT res = f_write(fil_ptr, buf, count, &written_bytes);
+    int FatFsFileManager::unlinkInternal(const std::string& path, int& err) {
 
-	if (res == 0) {
-	    return written_bytes;
-	} else {
+	if (path.empty()) {
+	    return -1;
+	}
+	const FRESULT res = f_unlink(path.c_str());
+
+	if (res == FR_OK) {
+	    FATFS_DEBUG_PRINT("Path %s unlinked/removed successfully\n", path.c_str());
 	    return 0;
+	} else {
+	    if (res == FR_DENIED) {
+		err = ENOTEMPTY;
+	    } else if (res == FR_NO_PATH) {
+		err = ENOENT;    
+	    }
+	    FATFS_DEBUG_PRINT("Error: unlinking failure with result %d\n", res);
+	    return -1;
 	}
     };
     
 
-    ssize_t FatFsFileManager::write(int fd, const void *buf, size_t count) {
-	FATFS_DEBUG_PRINT("FatFs write %d %lu\n", fd, count);
+    FRESULT FatFsFileManager::statWithRoot(const char* path_in, FILINFO* info) {
+	FATFS_DEBUG_PRINT("statWithRoot %s\n", path_in);
 
-	std::lock_guard<std::mutex> lock(file_mutex_);
-
-	const FileHandle handle = fd;
-	const auto it = files_.find(handle);
-
-	if (it == files_.end()) {	    
-	    FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
-	    return 1;
-	}
-
-	FIL* fil_ptr = it->second;
-	UINT written_bytes = 0;
-
-	const FRESULT res = f_write(fil_ptr, buf, count, &written_bytes);
-
-	if (res == 0) {
-	    return static_cast<size_t>(written_bytes);
+	if (strcmp(path_in, kRootPath.c_str()) == 0) {
+	    //  FatFs does not accept the root directory as input parameter, so
+	    //    we do not call f_stat and return a minimal empty structure.
+	    info->fsize = 0;
+	    info->fdate = 0;
+	    info->ftime = 0;
+	    info->fattrib = AM_DIR;
+	    return FR_OK;
 	} else {
-	    return 0;
+	    std::string path = generateFatFsPath(path_in); 
+	    return f_stat(path.c_str(), info);
 	}
-    };
-
-
-    int FatFsFileManager::fclose(FILE* fp) {
-	DEBUG_PRINT_FUNCTION;
-
-	if (fp == NULL) {
-	    return EOF;
-	}
-
-	std::lock_guard<std::mutex> lock(file_mutex_);
-	FIL* fil_ptr = reinterpret_cast<FIL*>(fp);
-	return this->closeInternal(fil_ptr);
-    };
+    }
 
 
     static struct timespec convertTime(WORD fdate, WORD ftime) {
@@ -499,25 +318,10 @@ namespace conclave {
 	return t_timespec;
     }
 
-    static FRESULT statWithRoot(const char* path_name, FILINFO* info) {
-	DEBUG_PRINT_FUNCTION;
 
-	if (strcmp(path_name, "/") == 0) {
-	    //  FatFs does not accept the root directory as input parameter, so
-	    //    we do not call f_stat and return a minimal empty structure.
-	    info->fsize = 0;
-	    info->fdate = 0;
-	    info->ftime = 0;
-	    info->fattrib = AM_DIR;
-	    return FR_OK;
-	} else {
-	    return f_stat(path_name, info);
-	}
-    }
-
-    int FatFsFileManager::statInternal(const char* path_name, struct stat* stat_buf, int& err) {
+    int FatFsFileManager::statInternal(const char* path_in, struct stat* stat_buf, int& err) {
 	FILINFO info;	
-	const FRESULT res = statWithRoot(path_name, &info);
+	const FRESULT res = statWithRoot(path_in, &info);
     
 	if (res == FR_OK) {
 	    memset(stat_buf, 0, sizeof(struct stat));
@@ -542,9 +346,11 @@ namespace conclave {
     }
 
 
-    int FatFsFileManager::statInternal64(const char* path_name, struct stat64* stat_buf, int& err) {
+    int FatFsFileManager::statInternal64(const char* path_in,
+					 struct stat64* stat_buf,
+					 int& err) {
 	FILINFO info;
-	const FRESULT res = statWithRoot(path_name, &info);
+	const FRESULT res = statWithRoot(path_in, &info);
     
 	if (res == FR_OK) {
 	    memset(stat_buf, 0, sizeof(struct stat64));
@@ -569,44 +375,387 @@ namespace conclave {
     }
 
 
-    int FatFsFileManager::lstat(const char* path_name, struct stat* stat_buf, int& err) {
-	DEBUG_PRINT_FUNCTION;
-
-	return this->statInternal(path_name, stat_buf, err);
-    }
-
-    
-    int FatFsFileManager::lstat64(const char* path_name, struct stat64* stat_buf, int& err) {
-	DEBUG_PRINT_FUNCTION;
-
-	return this->statInternal64(path_name, stat_buf, err);
-    }
-
-    
-    int FatFsFileManager::closeInternal(FIL* fil_ptr) {
-	const FileHandle file_handle = inverse_files_map_.at(fil_ptr);
-	const FRESULT res = f_close(fil_ptr);
-
-	if (res == FR_OK) {
-	    const std::string path_name = inverse_file_paths_.at(file_handle);
-
-	    files_.erase(file_handle);
-	    file_paths_.erase(path_name);
-	    inverse_files_map_.erase(fil_ptr);
-	    inverse_file_paths_.erase(file_handle);
-	    delete(fil_ptr);
-	    fil_ptr = NULL;
-	    FATFS_DEBUG_PRINT("closeInternal successful, removed handle: %d, path: %s\n", file_handle, path_name.c_str());
+    off_t FatFsFileManager::lseekInternal(int fd, off_t offset, int whence) {
+	FATFS_DEBUG_PRINT("lseekInternal fd %d, offset %ld, command %d\n", fd, offset, whence);
+	
+	if (whence == SEEK_CUR && offset == 0) {
+	    //  This is a no-op case, so we return successfully
 	    return 0;
-	} else {
-	    FATFS_DEBUG_PRINT("closeInternal error %d\n", res);
+	}
+	const FileHandle handle = fd;
+	const auto it = files_.find(handle);
+
+	if (it == files_.end()) {
+	    FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
 	    return -1;
 	}
+	FIL* fil_ptr = it->second;
+
+	if (whence == SEEK_CUR) {
+	    off_t cur = (off_t)f_tell(fil_ptr);
+	    offset = cur + offset;
+	} else if (whence == SEEK_END) {
+	    off_t end = (off_t)f_size(fil_ptr);
+	    offset = end + offset;
+	}
+	const FRESULT res = f_lseek(fil_ptr, offset);
+
+	if (res == FR_OK) {
+	    return 0;
+	} else {
+	    FATFS_DEBUG_PRINT("Error in seeking from handle %d, result %d\n", handle, res);
+	    return -1;
+	}
+    };
+    
+
+    FileHandle FatFsFileManager::getNewHandle() {
+	int i = 0;
+
+	if (next_handle_ == last_handle_ + 1) {
+	    next_handle_ = first_handle_;
+	}
+	
+	const int num_handles = last_handle_ - first_handle_ + 1;
+
+	while (files_.find(next_handle_) != files_.end() && i < num_handles) {
+	    FATFS_DEBUG_PRINT("Scanning handle %d\n", next_handle_);
+	    
+	    if (next_handle_ == last_handle_) {
+		next_handle_ = first_handle_;	    
+	    } else {
+		next_handle_ ++;
+	    }
+	    i++;
+	}
+
+	//  This is in case all handles are not available
+	if (i == num_handles) {
+	    FATFS_DEBUG_PRINT("No handles available, returning %d\n", -1);
+	    return -1;
+	}
+	FATFS_DEBUG_PRINT("Returning handle %d\n", next_handle_ + 1);
+	return next_handle_++;
+    };
+    
+
+    void FatFsFileManager::insertFileHandle(const FileHandle handle,
+					    FIL* fil_ptr,
+					    const std::string& path) {
+	files_[handle] = fil_ptr;
+	file_paths_[path] = handle;
+	inverse_files_map_[fil_ptr] = handle;
+	inverse_file_paths_[handle] = path;
+	FATFS_DEBUG_PRINT("Created handle %d for file %s\n", handle, path.c_str());
     }
+
+    void FatFsFileManager::addDirHandle(DIR* dir_ptr, const std::string& path) {
+	dir_paths_[path] = dir_ptr;
+	inverse_dir_paths_[dir_ptr] = path;
+    }
+    
+
+    int FatFsFileManager::open(const char* path_in, int oflag, int& err) {
+	const std::string path = generateFatFsPath(path_in);
+	FATFS_DEBUG_PRINT("Opening file: %s\n", path.c_str());
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (path.empty()) {
+	    return -1;
+	}
+	const BYTE fatfs_mode_flag = convertFlag(oflag);
+	const std::string path_str = path;
+	const auto it = file_paths_.find(path_str);
+
+	if (it != file_paths_.end()) {
+	    //  When opening again the same file, we do a f_sync (flush), so that we can read it correctly.	    
+	    const FileHandle old_handle = it->second;
+	    FIL* old_fil = files_.at(old_handle);
+	    const FRESULT res_sync = f_sync(old_fil);
+	    FATFS_DEBUG_PRINT("File %s, handle %d previously opened, synced with result %d\n", path.c_str(), old_handle, res_sync);
+	    
+	    if (res_sync != 0) {
+		err = ENOENT;
+		return -1;
+	    }	
+	}
+	const FileHandle file_handle = getNewHandle();
+
+	if (file_handle == -1) {
+	    err = EMFILE;
+	    return -1;
+	}
+	FIL* fil_ptr = new FIL();
+	const FRESULT res = f_open(fil_ptr, path.c_str(), fatfs_mode_flag);
+	    
+	if (res != FR_OK) {
+	    FATFS_DEBUG_PRINT("File not opened, with failure: %d\n", res);
+	    delete(fil_ptr);
+	    fil_ptr = nullptr;
+	    err = ENOENT;
+	    return -1;
+	};
+	insertFileHandle(file_handle, fil_ptr, path_str);
+	return file_handle;
+    };
+  
+
+    off_t FatFsFileManager::lseek(int fd, off_t offset, int whence) {
+	FATFS_DEBUG_PRINT("lseek fd %d, offset %ld, command %d\n", fd, offset, whence);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	return lseekInternal(fd, offset, whence);
+    };
+
+    
+    ssize_t FatFsFileManager::read(int fd, void* buf, size_t count) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (buf == nullptr || count == 0) {
+	    return 0;
+	}
+	const FileHandle handle = fd; 
+	const auto it = files_.find(handle);
+
+	if (it == files_.end()) {
+	    FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
+	    return -1;
+	}
+
+	FATFS_DEBUG_PRINT("Reading from handle: %d, num bytes: %lu\n", handle, count);
+	
+	FIL* fil_ptr = it->second;    
+	UINT read_bytes = 0;
+	const FRESULT res = f_read(fil_ptr, buf, count, &read_bytes);
+
+	if (res == FR_OK) {
+	    return static_cast<ssize_t>(read_bytes);
+	} else {
+	    FATFS_DEBUG_PRINT("Error in reading from handle %d, result %d\n", handle, res);
+	    return 0;
+	}
+    };
+
+
+    size_t FatFsFileManager::fread(void* buf, size_t size, size_t count, FILE* fp) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (size == 0 || count == 0 || buf == nullptr || fp == nullptr) {
+	    return 0;
+	};
+	FIL* fil_ptr = reinterpret_cast<FIL*>(fp);
+
+	UINT read_bytes = 0;
+	const FRESULT res = f_read(fil_ptr, buf, count, &read_bytes);
+
+	if (res == FR_OK) {
+	    return read_bytes;	
+	} else {
+	    return 0;
+	}
+    };
+
+
+    ssize_t FatFsFileManager::pread(int fd, void* buf, size_t count, off_t offset) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (count == 0 || buf == nullptr) {
+	    return 0;
+	};
+	const FileHandle handle = fd;
+	const auto it = files_.find(handle);
+
+	if (it == files_.end()) {
+	    return -1;
+	}
+
+	FIL* fil_ptr = it->second;    
+	FRESULT res = f_lseek(fil_ptr, offset);
+
+	if (res != FR_OK) {
+	    return 0;
+	}
+	UINT read_bytes = 0;
+	res = f_read(fil_ptr, buf, count, &read_bytes);
+
+	if (res == FR_OK) {
+	    return read_bytes;	
+	} else {
+	    return 0;
+	}
+    };
+    
+
+    FILE* FatFsFileManager::fdopen(int fd, const char *mode) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (mode == nullptr) {
+	    return nullptr;
+	}
+	const FileHandle handle = fd;	
+	const auto it = files_.find(handle);
+    
+	if (it != files_.end()) {
+	    FIL* fil = it->second;
+	    return reinterpret_cast<FILE*>(fil);
+	} else {
+	    return nullptr;
+	};
+    };
+    
+    
+    FILE *FatFsFileManager::fopen(const char* path_in, const char *mode, int& err) {
+	const std::string path = generateFatFsPath(path_in);
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (mode == nullptr || path.empty()) {
+	    return nullptr;
+	}    
+	const BYTE fatfs_mode = parsePosixModeFlag(std::string(mode));
+	const std::string path_str(path);
+
+	const auto it = file_paths_.find(path_str);
+
+	if (it != file_paths_.end()) {
+	    //  When opening again the same file, we do a f_sync (flush), so that we can read it correctly.	    
+	    FileHandle old_handle = it->second;
+	    FIL* old_fil = files_.at(old_handle);
+	    const FRESULT res_sync = f_sync(old_fil);
+	    FATFS_DEBUG_PRINT("File %s, handle %d previously opened, synced with result %d\n", path.c_str(), old_handle, res_sync);
+	    
+	    if (res_sync != 0) {
+		err = ENOENT;
+		return nullptr;
+	    }	
+	}	
+	const FileHandle file_handle = getNewHandle();
+
+	if (file_handle == -1) {
+	    err = EMFILE;
+	    return nullptr;
+	}
+	FIL* fil_ptr = new FIL();
+	const FRESULT res = f_open(fil_ptr, path.c_str(), fatfs_mode);  
+
+	if (res != FR_OK) {
+	    delete(fil_ptr);
+	    fil_ptr = nullptr;
+	    err = ENOENT;
+	    return nullptr;
+	};
+	insertFileHandle(file_handle, fil_ptr, path_str);
+	return reinterpret_cast<FILE*>(fil_ptr);
+    };
+   
+    
+    size_t FatFsFileManager::fwrite(const void* buf, size_t size, size_t count, FILE* fp) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (size == 0 || count == 0 || fp == nullptr) {
+	    return 0;
+	};
+	FIL* fil = reinterpret_cast<FIL*>(fp);
+
+	UINT written_bytes = 0;
+	const FRESULT res = f_write(fil, buf, count, &written_bytes);
+
+	if (res == 0) {
+	    return written_bytes;
+	} else {
+	    return 0;
+	}
+    };
+
+
+    ssize_t FatFsFileManager::pwrite(int fd, const void *buf, size_t count, off_t offset) {
+	FATFS_DEBUG_PRINT("FatFs pwrite %d %lu %lu \n", fd, count, offset);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (count == 0 || buf == nullptr) {
+	    return 0;
+	};
+	const FileHandle handle = fd;
+	const auto it = files_.find(handle);
+
+	if (it == files_.end()) {
+	    return -1;
+	}
+	FIL* fil_ptr = it->second;    
+	UINT written_bytes = 0;
+
+	if (lseekInternal(fd, offset, SEEK_SET) == -1) {
+	    return 0;
+	};
+
+	FRESULT res = f_write(fil_ptr, buf, count, &written_bytes);
+
+	if (res == 0) {
+	    return written_bytes;
+	} else {
+	    return 0;
+	}
+    };
+    
+
+    ssize_t FatFsFileManager::write(int fd, const void *buf, size_t count) {
+	FATFS_DEBUG_PRINT("FatFs write %d %lu\n", fd, count);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	const FileHandle handle = fd;
+	const auto it = files_.find(handle);
+
+	if (it == files_.end()) {	    
+	    FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
+	    return 1;
+	}
+
+	FIL* fil_ptr = it->second;
+	UINT written_bytes = 0;
+
+	const FRESULT res = f_write(fil_ptr, buf, count, &written_bytes);
+
+	if (res == 0) {
+	    return static_cast<size_t>(written_bytes);
+	} else {
+	    return 0;
+	}
+    };
+
+
+    int FatFsFileManager::fclose(FILE* fp) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (fp == nullptr) {
+	    return EOF;
+	}
+	FIL* fil_ptr = reinterpret_cast<FIL*>(fp);
+	return this->closeInternal(fil_ptr);
+    };
+
+
+    int FatFsFileManager::lstat(const char* path_in, struct stat* stat_buf, int& err) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	return this->statInternal(path_in, stat_buf, err);
+    }
+
+    
+    int FatFsFileManager::lstat64(const char* path_in, struct stat64* stat_buf, int& err) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	return this->statInternal64(path_in, stat_buf, err);
+    }
+
     
     int FatFsFileManager::close(int fd) {
 	FATFS_DEBUG_PRINT("Closing file handle %d\n", fd);
-
 	std::lock_guard<std::mutex> lock(file_mutex_);
 
 	const FileHandle handle = fd;   
@@ -622,13 +771,11 @@ namespace conclave {
 
 	FIL* fil_ptr = it->second;
 
-	if (fil_ptr == NULL) {
-	    //  The descriptor id is in the map but with a NULL pointer as a value.
-	    //    This is the case of dummy file descriptors used in socketpair.
+	if (fil_ptr == nullptr) {
 	    FATFS_DEBUG_PRINT("Closing handle %d without file\n", fd);
 	    files_.erase(handle);
 	    inverse_file_paths_.erase(handle);
-	    return 0;
+	    return -1;
 	} else {
 	    return this->closeInternal(fil_ptr);
 	}
@@ -637,10 +784,8 @@ namespace conclave {
     int FatFsFileManager::fstat(int ver,
 				int fd,
 				struct stat64* stat_buf,
-				unsigned int num_bytes,
 				int& err) {
 	DEBUG_PRINT_FUNCTION;
-
 	std::lock_guard<std::mutex> lock(file_mutex_);
 
 	const FileHandle handle = fd;
@@ -650,121 +795,114 @@ namespace conclave {
 	    return -1;
 	}
 
-	const std::string path_name = it->second;    
-	return this->statInternal64(path_name.c_str(), stat_buf, err);
+	std::string path = it->second;	
+	//  Here "path" is a FatFs style path (for example "0:/mydir/myfile.txt"),
+	//    thus, to reuse the code below we need to remove the drive identifier,
+	//    "0:/" inthe example
+	path = path.substr(drive_text_id_.length(), path.length());
+	return this->statInternal64(path.c_str(), stat_buf, err);
     };
 
     
     int FatFsFileManager::stat(int ver,
-			       const char* path_name,
+			       const char* path_in,
 			       struct stat64* stat_buf,
-			       unsigned int num_bytes,
 			       int& err) {
-	DEBUG_PRINT_FUNCTION;
-	return this->statInternal64(path_name, stat_buf, err);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	return this->statInternal64(path_in, stat_buf, err);
     };
    
     
-    int FatFsFileManager::mkdir(const char* pathname, mode_t mode) {
-	FATFS_DEBUG_PRINT("Mkdir %s with mode %d\n", pathname, mode);
-
-	if (pathname == NULL) {
+    int FatFsFileManager::mkdir(const char* path_in, mode_t mode) {
+	FATFS_DEBUG_PRINT("Mkdir %s with mode %d\n", path_in, mode);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	
+	if (path_in == nullptr) {
 	    return -1;
 	}
 
-	if (strcmp(pathname, "/") == 0) {
+	if (strcmp(path_in, kRootPath.c_str()) == 0) {
 	    //  FatFs does not accept f_mkdir to be called with the root directory as input.
 	    //    So we return successfully anyway and prevent the call.
 	    return 0;
 	}
-
-	const FRESULT res = f_mkdir(pathname);
+	const std::string path = generateFatFsPath(path_in);
+	const FRESULT res = f_mkdir(path.c_str());
 
 	if (res == FR_OK) {
-	    FATFS_DEBUG_PRINT("Mkdir %s succeeded\n", pathname);
+	    FATFS_DEBUG_PRINT("Mkdir %s succeeded\n", path.c_str());
 	    return 0;
 	} else {
-	    FATFS_DEBUG_PRINT("Mkdir %s failed with result %d\n", pathname, res);
+	    FATFS_DEBUG_PRINT("Mkdir %s failed with result %d\n", path.c_str(), res);
 	    return -1;
 	}
     };
 
 
-    int FatFsFileManager::access(const char* pathname, mode_t mode, int& err) {
-	FATFS_DEBUG_PRINT("Accessing path %s with mode %d\n", pathname, mode);
-
-	if (strcmp(pathname, "/") == 0) {
+    int FatFsFileManager::access(const char* path_in, mode_t mode, int& err) {
+	FATFS_DEBUG_PRINT("Accessing path %s with mode %d\n", path_in, mode);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	
+	if (strcmp(path_in, kRootPath.c_str()) == 0) {
 	    //  FatFs does not accept f_stat to be called with the root directory as input.
 	    //    So we return successfully anyway and prevent the call.
-	    FATFS_DEBUG_PRINT("Path accessed is root directory %s\n", pathname);
+	    FATFS_DEBUG_PRINT("Path accessed is root directory %s\n", path_in);
 	    return 0;
 	}
 	
-	if (pathname == NULL) {
+	if (path_in == nullptr) {
 	    return -1;
 	}
 
+	const std::string path = generateFatFsPath(path_in);
 	FILINFO info;
-	const FRESULT res = f_stat(pathname, &info);
+	const FRESULT res = f_stat(path.c_str(), &info);
 
 	if (res == FR_OK) {
 	    //  We always give access to files or directories if they exist, no
 	    //    specific user permissions needed.
 	    return 0;
 	} else {
-	    FATFS_DEBUG_PRINT("Error: failure in accessing path %s with result %d\n", pathname, res);
+	    FATFS_DEBUG_PRINT("Error: failure in accessing path %s with result %d\n", path.c_str(), res);
 	    err = ENOENT;
 	    return -1;
 	}
     };
 
     
-    int FatFsFileManager::unlinkInternal(const char* path, int& err) {
-
-	if (path == NULL) {
-	    return -1;
-	}
-
-	const FRESULT res = f_unlink(path);
-
-	if (res == FR_OK) {
-	    FATFS_DEBUG_PRINT("Path %s unlinked/removed successfully\n", path);
-	    return 0;
-	} else {
-	    if (res == FR_DENIED) {
-		err = ENOTEMPTY;
-	    } else if (res == FR_NO_PATH) {
-		err = ENOENT;    
-	    }
-	    FATFS_DEBUG_PRINT("Error: unlinking failure with result %d\n", res);
-	    return -1;
-	}
-    };
-    
-    int FatFsFileManager::unlink(const char* path, int& res) {
-	DEBUG_PRINT_FUNCTION;
-	return this->unlinkInternal(path, res);
+    int FatFsFileManager::unlink(const char* path_in, int& err) {
+	const std::string path = generateFatFsPath(path_in);
+	FATFS_DEBUG_PRINT("unlink path %s\n", path.c_str());
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	return this->unlinkInternal(path, err);
     };
     
 
-    int FatFsFileManager::rmdir(const char* path, int& res) {
-	DEBUG_PRINT_FUNCTION;
-	return this->unlinkInternal(path, res);
+    int FatFsFileManager::rmdir(const char* path_in, int& err) {
+	const std::string path = generateFatFsPath(path_in);
+	FATFS_DEBUG_PRINT("rmdir path %s\n", path.c_str());
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	return this->unlinkInternal(path, err);
     };
 
-    int FatFsFileManager::remove(const char* path, int& res) {
-	DEBUG_PRINT_FUNCTION;
-        //  FatFs delete files and dir with the same function "unlink"
-	return this->unlinkInternal(path, res);
+
+    int FatFsFileManager::remove(const char* path_in, int& err) {
+	const std::string path = generateFatFsPath(path_in);
+	FATFS_DEBUG_PRINT("remove path %s\n", path.c_str());
+	std::lock_guard<std::mutex> lock(file_mutex_);
+	return this->unlinkInternal(path, err);
     };
     
-    int FatFsFileManager::chdir(const char* path) {
-	DEBUG_PRINT_FUNCTION;
 
-	if (path == NULL) {
+    int FatFsFileManager::chdir(const char* path_in) {
+	const std::string path = generateFatFsPath(path_in);
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (path.empty()) {
 	    return -1;
 	}
-	const FRESULT res = f_chdir(path);
+	const FRESULT res = f_chdir(path.c_str());
 
 	if (res == FR_OK) {
 	    return 0;
@@ -776,47 +914,24 @@ namespace conclave {
 
     char* FatFsFileManager::getcwd(char* buf, size_t size) {
 	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
 
-	if (buf == NULL) {
-	    return NULL;
+	if (buf == nullptr) {
+	    return nullptr;
 	}
 	const FRESULT res = f_getcwd(buf, size);
 
 	if (res == FR_OK) {
 	    return buf;
 	} else {
-	    return NULL;
+	    return nullptr;
 	}
     };
 
-    int FatFsFileManager::socketpair(int domain, int type, int protocol, int sv[2]) {
-	DEBUG_PRINT_FUNCTION;
-	/* 
-	   Used in Java File classes C implementation (FileDispatcherImpl.c) in the context of 
-	   copying file descriptor to prevent race conditions when closing them (see dup2).
-	   What we really need here is a couple of dummy descriptors to make Java happy, nothing else,
-	   as we manage descriptors ourselves.
-	   We don't even bother to close (i.e. remove from maps) one of the descriptor as in 
-	   FileDispatcherImpl.c, we rely on the destructor to do so.
-	*/
-	std::lock_guard<std::mutex> lock(file_mutex_);
-
-	FileHandle handle1 = getNewHandle();
-	FileHandle handle2 = getNewHandle();
-
-	sv[0] = static_cast<int>(handle1);
-	sv[1] = static_cast<int>(handle2);
-
-	files_[handle1] = NULL;
-	inverse_file_paths_[handle1] = std::string();
-	files_[handle2] = NULL;
-	inverse_file_paths_[handle2] = std::string();	
-	return 0;
-	
-    }
 
     int FatFsFileManager::dup2(int oldfd, int newfd) {
 	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
 	/*  
 	    In Java File classes, dup2 seems to be used to close the target
 	    descriptor in a mechanism to prevent race conditions, where
@@ -833,18 +948,176 @@ namespace conclave {
     };    
 
 
-    FileHandle FatFsFileManager::getNewHandle() {
-	return next_available_handle_++;
-    };
-    
+    void* FatFsFileManager::opendir(const char* path_in, int& err) {
+	const std::string path = generateFatFsPath(path_in);
+	FATFS_DEBUG_PRINT("Opening dir: %s\n", path.c_str());
 
-    FileHandle FatFsFileManager::createFileHandle(FIL* fil_ptr, const std::string& path) {
-	FileHandle handle = getNewHandle();
-	files_[handle] = fil_ptr;
-	file_paths_[path] = handle;
-	inverse_files_map_[fil_ptr] = handle;
-	inverse_file_paths_[handle] = path;
-	FATFS_DEBUG_PRINT("Created handle %d for file %s\n", handle, path.c_str());
-	return handle;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (path.empty()) {
+	    err = ENOTDIR;
+	    return nullptr;
+	}
+	const auto it = dir_paths_.find(path);
+	
+	if (it != dir_paths_.end()) {
+	    FATFS_DEBUG_PRINT("Opening the directory twice: %s\n", path.c_str());
+	    err = EACCES;
+	    return nullptr;
+	}
+	DIR* dir_ptr = new DIR();
+	FRESULT res = f_opendir(dir_ptr, path.c_str());
+
+	if (res != FR_OK) {
+	    err = ENOENT;
+	    delete dir_ptr;
+	    return nullptr;
+	}
+	addDirHandle(dir_ptr, path);
+	return dir_ptr;
+    }
+
+#define	DT_DIR	0040000	/* Directory.  */
+#define	DT_REG	0100000	/* Regular file.  */
+
+    struct dirent64* FatFsFileManager::readdir64(void* dirp, int& err) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (dirp == nullptr) {
+	    err = EBADF;
+	    return nullptr;
+	}
+	DIR* fatfs_dirp = static_cast<DIR*>(dirp);
+	const auto it64 = dirents64_.find((DIR*)fatfs_dirp);
+	struct dirent64* dirent64_ptr = nullptr;
+
+	if (it64 == dirents64_.end()) {
+	    //  It is the first time that the user call readdir for this directory
+	    //    we allocate a scratch space for that directory.
+	    //  These will be freed by the destructor of the class, whatever might happen.
+	    dirent64_ptr = static_cast<struct dirent64*>(calloc(1, sizeof(struct dirent64)));
+	    dirents64_[fatfs_dirp] = dirent64_ptr;
+	} else {
+	    dirent64_ptr = it64->second;
+	}
+	
+	FILINFO info;
+	FRESULT res = f_readdir(fatfs_dirp, &info);
+
+	if (res != FR_OK || info.fname[0] == 0) {
+	    err = ENOENT;
+	    return nullptr;
+	}
+	dirent64_ptr->d_ino = 0;
+	dirent64_ptr->d_off = 0;
+	dirent64_ptr->d_reclen = strlen(info.fname);
+	dirent64_ptr->d_type = (info.fattrib & AM_DIR) ? DT_DIR : DT_REG;
+	strcpy(dirent64_ptr->d_name, info.fname);
+	FATFS_DEBUG_PRINT("readdir64: %s\n", dirent64_ptr->d_name);
+ 	return dirent64_ptr;
+    }
+    
+    
+    struct dirent* FatFsFileManager::readdir(void* dirp, int& err) {
+	DEBUG_PRINT_FUNCTION;
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (dirp == nullptr) {
+	    err = EBADF;
+	    return nullptr;
+	}
+	DIR* fatfs_dirp = static_cast<DIR*>(dirp);
+	const auto it = dirents_.find(fatfs_dirp);
+	struct dirent* dirent_ptr = nullptr;
+
+	if (it == dirents_.end()) {
+	    //  It is the first time that the user call readdir for this directory
+	    //    we allocate a scratch space for that directory.
+	    //  These will be freed by the destructor of the class, whatever might happen.
+	    dirent_ptr = static_cast<struct dirent*>(calloc(1, sizeof(struct dirent)));
+	    dirents_[fatfs_dirp] = dirent_ptr;
+	} else {
+	    dirent_ptr = it->second;
+	}
+	
+	FILINFO info;
+	FRESULT res = f_readdir(fatfs_dirp, &info);
+
+	if (res != FR_OK || info.fname[0] == 0) {
+	    err = ENOENT;
+	    return nullptr;
+	}
+	dirent_ptr->d_ino = 0;
+	dirent_ptr->d_off = 0;
+	dirent_ptr->d_reclen = strlen(info.fname);
+	dirent_ptr->d_type = (info.fattrib & AM_DIR) ? DT_DIR : DT_REG;
+	strcpy(dirent_ptr->d_name, info.fname);
+	FATFS_DEBUG_PRINT("readdir: %s\n", dirent_ptr->d_name);
+ 	return dirent_ptr;
+    }
+
+    
+    int FatFsFileManager::closedir(void* dirp, int& err) {
+	DEBUG_PRINT_FUNCTION;
+
+	if (dirp == nullptr) {
+	    err = EBADF;
+	    return -1;
+	}
+	DIR* fatfs_dirp = static_cast<DIR*>(dirp);
+	const auto it = dirents_.find(fatfs_dirp);
+	const auto it64 = dirents64_.find(fatfs_dirp);
+
+	if (it == dirents_.end() && it64 == dirents64_.end()) {
+	    //  Wrong dirp as input
+	    err = EBADF;
+	    return -1;
+	}
+
+	if (it != dirents_.end()) {
+	    struct dirent* dirent_ptr = it->second;
+	    free(dirent_ptr);
+	    dirents_.erase(it);
+	}
+
+	if (it64 != dirents64_.end()) {
+	    struct dirent64* dirent64_ptr = it64->second;
+	    free(dirent64_ptr);
+	    dirents64_.erase(it64);
+	}
+
+	if (f_closedir(fatfs_dirp) != FR_OK) {
+	    const std::string message = "Unexpected failure while closding directory";
+	    throw std::runtime_error(message);
+	};
+	return 0;
+    }
+
+
+    int FatFsFileManager::ftruncate(int fd, off_t length, int& err) {	
+	FATFS_DEBUG_PRINT("ftruncate (fd: %d, offs: %lu\n", fd, length);
+	std::lock_guard<std::mutex> lock(file_mutex_);
+
+	if (lseekInternal(fd, length, SEEK_SET) == -1) {
+	    err = EBADF;
+	    return -1;
+	};
+
+	const FileHandle handle = fd;
+	const auto it = files_.find(handle);
+
+	if (it == files_.end()) {
+	    FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
+	    err = EBADF;
+	    return -1;
+	}
+	FIL* fil_ptr = it->second;
+
+	if (f_truncate(fil_ptr) != FR_OK) {
+	    errno = EINVAL;
+	    return -1;
+	};
+	return 0;
     }
 };

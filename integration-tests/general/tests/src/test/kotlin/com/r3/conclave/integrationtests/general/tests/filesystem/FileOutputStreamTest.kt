@@ -2,9 +2,8 @@ package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.FileOutputStream
 
 class FileOutputStreamTest : FileSystemEnclaveTest() {
@@ -34,9 +33,13 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun fileOutputStreamWriteRead(nioApi: Boolean) {
-        val path = "/fos.data"
+    @CsvSource(
+        "/fos.data, true",
+        "/fos.data, false",
+        "/tmp/fos.data, true",
+        "/tmp/fos.data, false"
+    )
+    fun fileOutputStreamWriteRead(path: String, nioApi: Boolean) {
         val fileData = byteArrayOf(1, 2, 3, 4)
         val reversedFileData = fileData.reversed().toByteArray()
         // Create a FileOutputStream and write the content byte by byte
@@ -47,7 +50,7 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         // Read all bytes at once, delete the file and ensure opening it again fails with the expected exception
         filesReadAllBytes(path, fileData)
         deleteFile(path, nioApi)
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
 
         // Overwrite the file by writing a new one all at once
         Handler(uid.getAndIncrement(), path, false).use { fos ->
@@ -65,14 +68,18 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         // Read all bytes at once, delete the file and ensure opening it again fails with the expected exception
         filesReadAllBytes(path, expectedFileData)
         deleteFile(path, nioApi)
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun fileOutputStreamAppendWrite(nioApi: Boolean) {
-        val path = "/fos-append.data"
-        val fileData = byteArrayOf(10, 20 , 30, 40)
+    @CsvSource(
+        "/fos-append.data, true",
+        "/fos-append.data, false",
+        "/tmp/fos-append.data, true",
+        "/tmp/fos-append.data, false"
+    )
+    fun fileOutputStreamAppendWrite(path: String, nioApi: Boolean) {
+        val fileData = byteArrayOf(10, 20, 30, 40)
         val appendData = byteArrayOf(50, 60, 70)
         // Create a FileOutputStream with append mode set
         Handler(uid.getAndIncrement(), path, true).use { fos ->
@@ -96,6 +103,6 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         // Read all bytes at once, delete the file and ensure opening it again fails with the expected exception
         filesReadAllBytes(path, expectedData)
         deleteFile(path, nioApi)
-        fileInputStreamNonExistingFile(path)
+        fileInputStreamNonExistingFile(path, nioApi)
     }
 }
