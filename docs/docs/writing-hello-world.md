@@ -590,7 +590,7 @@ Replace the call to `EnclaveHost.start` in the `main` function of your `Host` cl
 ```java
 // Start it up.
 AtomicReference<byte[]> mailToSend = new AtomicReference<>();
-enclave.start(new AttestationParameters.DCAP(), null, (commands) -> {
+enclave.start(new AttestationParameters.DCAP(), null, null, (commands) -> {
     for (MailCommand command : commands) {
         if (command instanceof MailCommand.PostMail) {
             mailToSend.set(((MailCommand.PostMail) command).getEncryptedBytes());
@@ -960,7 +960,7 @@ public class NativeTest {
     @BeforeAll
     static void startup() throws EnclaveLoadException {
         enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
-        enclave.start(new AttestationParameters.DCAP(), null);
+        enclave.start(new AttestationParameters.DCAP(), null, null);
     }
 }
 ```

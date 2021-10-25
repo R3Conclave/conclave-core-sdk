@@ -25,7 +25,7 @@ class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.
     @ValueSource(booleans = [ false, true ])
     fun `unseal with different instance of same enclave`(withAD: Boolean) {
         val differentInstanceOfSameEnclave = EnclaveHost.load(enclaveHost().enclaveClassName)
-        differentInstanceOfSameEnclave.let { it.start(getAttestationParams(it), null) { } }
+        differentInstanceOfSameEnclave.let { it.start(getAttestationParams(it), null, null) { } }
 
         val data = PlaintextAndAD("Sealing Hello World!".toByteArray(), if (withAD) "with AD!".toByteArray() else null)
         val sealedBlob = callEnclave(enclaveHost(), SealData(data))

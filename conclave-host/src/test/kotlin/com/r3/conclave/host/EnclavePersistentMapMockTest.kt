@@ -400,7 +400,7 @@ class EnclavePersistentMapMockTest {
         private val clients = HashBiMap.create<MockClient, String>()
 
         init {
-            enclaveHost.start(null, null, ::processCommands)
+            enclaveHost.start(null, null, null, ::processCommands)
         }
 
         fun newClient(client: MockClient) {
@@ -419,7 +419,7 @@ class EnclavePersistentMapMockTest {
 
             val index = sealedStates.lastIndex - rollBackNumberOfStates
             val sealedStateToRestore = if (index != -1) sealedStates[index] else null
-            enclaveHost.start(null, sealedStateToRestore, ::processCommands)
+            enclaveHost.start(null, sealedStateToRestore, null, ::processCommands)
             clients.keys.forEach { it.enclaveRestarted() }
         }
 

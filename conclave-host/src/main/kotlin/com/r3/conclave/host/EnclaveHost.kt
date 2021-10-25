@@ -14,6 +14,7 @@ import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
+import com.r3.conclave.host.internal.fatfs.FileSystemHandler
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
@@ -112,39 +113,13 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String): EnclaveHost {
-            return load(enclaveClassName, null, null)
+            return load(enclaveClassName, null)
         }
 
         /**
          * Load the signed enclave for the given enclave class name.
          *
          * @param enclaveClassName The name of the enclave class to load.
-         * @param enclaveFileSystemFile Path of the file in the host that represents an encrypted
-         *                          persistent filesystem to be used by the Enclave.
-         *                          If a null path is provided, the file is not generated.
-         *                          In addition to this, the user needs to provide the persistent filesystem size
-         *                          in the enclave build.gradle file.
-         * @throws IllegalArgumentException if there is no enclave file for the given class name.
-         * @throws EnclaveLoadException if the enclave does not load correctly or if the platform does
-         *                              not support hardware enclaves or if enclave support is disabled.
-         * @throws PlatformSupportException if the mode is not mock and the host OS is not Linux or if the CPU doesn't
-         *                                  support SGX enclave in simulation mode or higher.
-         */
-        @JvmStatic
-        @Throws(EnclaveLoadException::class, PlatformSupportException::class)
-        fun load(enclaveClassName: String, enclaveFileSystemFile: Path?): EnclaveHost {
-            return load(enclaveClassName, enclaveFileSystemFile, null)
-        }
-
-        /**
-         * Load the signed enclave for the given enclave class name.
-         *
-         * @param enclaveClassName The name of the enclave class to load.
-         * @param enclaveFileSystemFile Path of the file in the host that represents an encrypted
-         *                          persistent filesystem to be used by the Enclave.
-         *                          If a null path is provided, the file is not generated.
-         *                          In addition to this, the user needs to provide the persistent filesystem size
-         *                          in the enclave build.gradle file.
          * @param mockConfiguration Defines the configuration to use when loading the enclave in mock mode.
          *                          If no configuration is provided when using mock mode then a default set
          *                          of configuration parameters are used. This parameter is ignored when
@@ -159,7 +134,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          */
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
-        fun load(enclaveClassName: String, enclaveFileSystemFile: Path?, mockConfiguration: MockConfiguration?): EnclaveHost {
+        fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
             val (stream, enclaveMode) = findEnclave(enclaveClassName)
 
             // Check that the platform supports the required enclave modes
@@ -181,7 +156,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 }
                 try {
                     stream!!.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
-                    return createHost(enclaveMode, enclaveFile, enclaveClassName, enclaveFileSystemFile, tempFile = true)
+                    return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
                 } catch (e: UnsatisfiedLinkError) {
                     // We get an unsatisfied link error if the native library could not be loaded on
                     // the current platform - this will happen if the user tries to load an enclave
@@ -369,6 +344,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
     }
 
+    private var fileSystemHandler: FileSystemHandler? = null
+
     // EnclaveHandle is an internal class and thus to prevent it from leaking into the public API this is not a c'tor parameter.
     private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
     private val hostStateManager = StateManager<HostState>(New)
@@ -416,6 +393,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      *
      * @param sealedState The last sealed state that was emitted by the enclave via [MailCommand.StoreSealedState].
      *
+     * @param enclaveFileSystemFile Path of the file in the host that represents an encrypted
+     * persistent filesystem to be used by the Enclave.
+     * If a null path is provided, the file is not generated.
+     * In addition to this, the user needs to provide the persistent filesystem size
+     * in the enclave build.gradle file.
+     *
      * @param commandsCallback A callback that will be invoked when the enclave requires the host to carry out
      * actions, such as requesting delivery of mail to the client or storing the enclave's sealed state. These actions, or [MailCommand]s, are
      * grouped together within the scope of a [deliverMail] or [callEnclave] call. This enables the host to action these
@@ -433,6 +416,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     fun start(
         attestationParameters: AttestationParameters?,
         sealedState: ByteArray?,
+        enclaveFileSystemFile: Path?,
         commandsCallback: Consumer<List<MailCommand>>
     ) {
         if (hostStateManager.state is Started) return
@@ -466,11 +450,21 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
 
+            fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
             adminHandler.sendOpen(sealedState)
 
             hostStateManager.state = Started
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
+        }
+    }
+
+    private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
+        return if (enclaveMode != EnclaveMode.MOCK) {
+            val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
+            FileSystemHandler(fileSystemFilePaths)
+        } else {
+            null;
         }
     }
 
@@ -671,6 +665,8 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
             // Destroy the enclave
             enclaveHandle.destroy()
+
+            fileSystemHandler?.close()
         } finally {
             hostStateManager.state = Closed
         }

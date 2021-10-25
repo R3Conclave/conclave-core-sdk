@@ -35,7 +35,7 @@ public abstract class EnclaveHostService extends SingletonSerializeAsToken {
             enclave = EnclaveHost.load(enclaveClassName);
             // If you want to use pre-DCAP hardware via the older EPID protocol, you'll need to get the relevant API
             // keys from Intel and replace AttestationParameters.DCAP with AttestationParameters.EPID.
-            enclave.start(new AttestationParameters.DCAP(), null, (commands) -> {
+            enclave.start(new AttestationParameters.DCAP(), null, null, (commands) -> {
                 // The enclave is requesting that we deliver messages transactionally. In Corda there's no way to
                 // do an all-or-nothing message delivery to multiple peers at once: for that you need a genuine
                 // ledger transaction which is more complex and slower. So for now we'll just deliver messages

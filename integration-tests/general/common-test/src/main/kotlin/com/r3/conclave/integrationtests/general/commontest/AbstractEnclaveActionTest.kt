@@ -117,16 +117,19 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
 
 
         private fun newEnclaveHost(): EnclaveHost {
-            //  As fileSystemFileTempDir can be overridden (in EnclaveRestartFileSystem class for example),
-            //  in case it is "null" we call the single parameter Enclave.load
-            val enclaveHost = if (fileSystemFileTempDir == null) {
-                EnclaveHost.load(enclaveClassName)
+            enclaveHost = EnclaveHost.load(enclaveClassName)
+            //  Note that fileSystemFileTempDir can be overridden (in EnclaveRestartFileSystem class for example),
+            //    and can become null
+            val fileSystemFilePath = if (fileSystemFileTempDir == null) {
+                null
             } else {
-                EnclaveHost.load(
-                    enclaveClassName, fileSystemFileTempDir!! / "test.disk"
-                )
+                fileSystemFileTempDir?.resolve("test.disk")
             }
-            enclaveHost.start(getAttestationParams(enclaveHost), sealedState) { commands ->
+            enclaveHost.start(
+                getAttestationParams(enclaveHost),
+                sealedState,
+                fileSystemFilePath
+            ) { commands ->
                 for (command in commands) {
                     when (command) {
                         is MailCommand.PostMail -> postedMail[command.routingHint!!] = command.encryptedBytes

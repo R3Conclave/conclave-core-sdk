@@ -30,7 +30,7 @@ class ApiKotlinConsumerTest {
 
         val capturedCommands = ArrayList<MailCommand>()
 
-        host.start(null, null) { commands ->
+        host.start(null, null, null) { commands ->
             capturedCommands += commands
         }
 

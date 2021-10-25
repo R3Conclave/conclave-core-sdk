@@ -16,21 +16,16 @@ class NativeEnclaveHandle<CONNECTION>(
     private val enclaveFile: Path,
     private val tempFile: Boolean,
     override val enclaveClassName: String,
-    enclaveFileSystemFile: Path?,
     handler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
     private val enclaveId: Long
     override val connection: CONNECTION = handler.connect(this)
-    private val fileSystemHandler: FileSystemHandler
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
         NativeLoader.loadHostLibraries(enclaveMode)
         enclaveId = Native.createEnclave(enclaveFile.toAbsolutePath().toString(), enclaveMode != EnclaveMode.RELEASE)
         NativeApi.registerOcallHandler(enclaveId, HandlerConnected(handler, connection))
-
-        val filesystemPaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
-        fileSystemHandler = FileSystemHandler(filesystemPaths)
     }
 
     private var initialized = false
@@ -58,7 +53,6 @@ class NativeEnclaveHandle<CONNECTION>(
             }
         }
         Native.destroyEnclave(enclaveId)
-        fileSystemHandler.close()
     }
 
     override val mockEnclave: Any get() {

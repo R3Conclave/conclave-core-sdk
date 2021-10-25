@@ -46,12 +46,14 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>) {
     }
 
 
+    @Suppress("unused")
     @Synchronized
     fun getDriveSize(drive: Int): Long {
         return files.getOrNull(drive)?.length() ?: -1
     }
 
 
+    @Suppress("unused")
     @Synchronized
     fun read(drive: Int, sectorId: Int, numSectors: Int, sectorSize: Int): ByteArray {
         val randomAccessFile = files[drive]
@@ -65,6 +67,7 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>) {
     }
 
 
+    @Suppress("unused")
     @Synchronized
     fun write(drive: Int, inputBuffer: ByteArray, sectorSize: Int, indices: IntArray): Int {
         val randomAccessFile = files[drive]

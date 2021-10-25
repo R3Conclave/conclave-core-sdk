@@ -35,7 +35,7 @@ public class EnclaveBenchmark {
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.debug.BenchmarkEnclave");
 
         if (enclave != null) {
-            enclave.start(new AttestationParameters.DCAP(), null, (commands) -> { });
+            enclave.start(new AttestationParameters.DCAP(), null, null, (commands) -> { });
         }
     }
 

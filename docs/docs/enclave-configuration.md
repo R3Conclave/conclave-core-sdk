@@ -219,10 +219,10 @@ after a restart of your enclaves. This is represented as a single encrypted file
 your enclave will load/save/read/write all files and directories into that file.
 
 Please remember that, in addition to the `persistentFileSystemSize`,
-you also **need to specify the host file path** in the `EnclaveHost.load` function,
+you also **need to specify the host file path** in the `EnclaveHost.start` function call,
 for example:
 
-``` EnclaveHost.load("com.mycompany.project.TestEnclave", "/home/USER/conclave.disk"); ```
+``` enclaveHost.start(AttestationParameters.DCAP(), null, Paths.get("/home/USER/conclave.disk"); ```
 
 When this code gets executed for the first time, Conclave will create and encrypt this file using a key derived from the `MRSIGNER`.
 When the enclave restarts and if the file is present, Conclave will try to load and to prepare

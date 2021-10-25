@@ -61,7 +61,7 @@ class EnclaveMailMockTest {
 
     @Test
     fun `encrypt and deliver mail`() {
-        echo.start(null, null) { }
+        echo.start(null, null, null) { }
         val encryptedMail = buildMail(echo)
         var response: ByteArray? = null
         echo.deliverMail(encryptedMail, "test") { bytes ->
@@ -75,7 +75,7 @@ class EnclaveMailMockTest {
 
     @Test
     fun `deliver mail and answer enclave`() {
-        echo.start(null, null) { }
+        echo.start(null, null, null) { }
         val encryptedMail = buildMail(echo)
         // In response to the delivered mail, the enclave sends us a local message, and we send a local message back.
         // It asserts the answer we give is as expected.
@@ -86,7 +86,7 @@ class EnclaveMailMockTest {
     fun `deliverMail cannot be called in a callback to another deliverMail when persistent map is enabled`() {
         mockConfiguration.enablePersistentMap = true
 
-        echo.start(null, null) { }
+        echo.start(null, null, null) { }
 
         var thrown: IllegalStateException? = null
         echo.deliverMail(buildMail(echo), "routingHint") {
@@ -113,7 +113,7 @@ class EnclaveMailMockTest {
 
         mockConfiguration.enablePersistentMap = true
         val missingPost = createMockHost(MissingPostEnclave::class.java, mockConfiguration)
-        missingPost.start(null, null) { }
+        missingPost.start(null, null, null) { }
 
         assertThatIllegalStateException().isThrownBy {
             missingPost.deliverMail(buildMail(missingPost), null)
@@ -126,7 +126,7 @@ class EnclaveMailMockTest {
 
     @Test
     fun `exception thrown by receiveMail does not impact subsequent call`() {
-        echo.start(null, null) { }
+        echo.start(null, null, null) { }
 
         assertThatIllegalStateException().isThrownBy {
             echo.deliverMail(buildMail(echo), null) { "throw".toByteArray() }
@@ -145,7 +145,7 @@ class EnclaveMailMockTest {
     @Test
     fun `sequence numbers`() {
         // Verify that the enclave rejects a replay of the same message, or out of order delivery.
-        noop.start(null, null) { }
+        noop.start(null, null, null) { }
         val encrypted0 = buildMail(noop, sequenceNumber = 0, body = "message 0".toByteArray())
         val encrypted1 = buildMail(noop, sequenceNumber = 1, body = "message 1".toByteArray())
         val encrypted2 = buildMail(noop, sequenceNumber = 2, body = "message 2".toByteArray())
@@ -179,7 +179,7 @@ class EnclaveMailMockTest {
 
     @Test
     fun `sequence numbers must start from zero`() {
-        noop.start(null, null) { }
+        noop.start(null, null, null) { }
         val encrypted1 = buildMail(noop, sequenceNumber = 1)
         assertThatIllegalStateException()
             .isThrownBy { noop.deliverMail(encrypted1, "test") }
@@ -189,7 +189,7 @@ class EnclaveMailMockTest {
     @Test
     fun corruption() {
         // Check the enclave correctly rejects messages with corrupted headers or bodies.
-        noop.start(null, null) { }
+        noop.start(null, null, null) { }
         val encrypted = buildMail(noop)
         for (i in encrypted.indices) {
             encrypted[i]++
@@ -213,7 +213,7 @@ class EnclaveMailMockTest {
 
         val host = createMockHost(Enclave1::class.java)
         var postCommand: MailCommand.PostMail? = null
-        host.start(null, null) { commands ->
+        host.start(null, null, null) { commands ->
             postCommand = commands.filterIsInstance<MailCommand.PostMail>().single()
         }
         val messageFromBob = buildMail(host)
@@ -231,7 +231,7 @@ class EnclaveMailMockTest {
         mockConfiguration.enablePersistentMap = true
         val host = createMockHost(ThreadSafeNoopEnclave::class.java, mockConfiguration)
         val e = assertThrows<EnclaveLoadException> {
-            host.start(null, null) {}
+            host.start(null, null, null) {}
         }
         assertThat(e.cause!!).isInstanceOf(IllegalStateException::class.java)
         assertThat(e.cause!!).hasMessageStartingWith("The persistent map is not available in multi-threaded enclaves.")
@@ -257,7 +257,7 @@ class EnclaveMailMockTest {
         val host = createMockHost(enclaveClass, mockConfiguration)
 
         var capturedCommands: List<MailCommand> = emptyList()
-        host.start(null, null) { commands -> capturedCommands = commands }
+        host.start(null, null, null) { commands -> capturedCommands = commands }
 
         val messageFromBob = buildMail(host)
         host.deliverMail(messageFromBob, "test")
@@ -292,13 +292,13 @@ class EnclaveMailMockTest {
 
     @Test
     fun `enclave has different encryption key on restart and can't decrypt mail for previous instance`() {
-        echo.start(null, null) { }
+        echo.start(null, null, null) { }
         val previousEncryptionKey = echo.enclaveInstanceInfo.encryptionKey
         val encryptedMail = buildMail(echo)
         echo.close()
 
         val echo2 = createMockHost(MailEchoEnclave::class.java)
-        echo2.start(null, null) {  }
+        echo2.start(null, null, null) {  }
 
         assertThat(previousEncryptionKey).isNotEqualTo(echo2.enclaveInstanceInfo.encryptionKey)
         assertThatThrownBy {
@@ -344,7 +344,7 @@ class EnclaveMailMockTest {
         }
 
         val host = createMockHost(PostOfficeEnclave::class.java)
-        host.start(null, null) {  }
+        host.start(null, null, null) {  }
         host.deliverMail(buildMail(host, body = overload.toByteArray()), null)
     }
 

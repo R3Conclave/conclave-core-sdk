@@ -78,10 +78,10 @@ class EnclaveWebController {
         }
 
         val mockConfiguration = buildMockConfiguration()
-        enclaveHost = EnclaveHost.load(enclaveClassName!!, null, mockConfiguration)
+        enclaveHost = EnclaveHost.load(enclaveClassName!!, mockConfiguration)
 
         val sealedState = loadSealedState()
-        enclaveHost.start(AttestationParameters.DCAP(), sealedState) { commands: List<MailCommand> ->
+        enclaveHost.start(AttestationParameters.DCAP(), sealedState, null) { commands: List<MailCommand> ->
             for (command in commands) {
                 when (command) {
                     is MailCommand.PostMail -> updateInbox(command.routingHint!!, command.encryptedBytes)

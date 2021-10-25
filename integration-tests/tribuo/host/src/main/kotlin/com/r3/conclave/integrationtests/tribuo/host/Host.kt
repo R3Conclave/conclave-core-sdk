@@ -35,8 +35,8 @@ class Host {
             ServerSocket(port).use { acceptor ->
                 acceptor.accept().use { connection ->
                     DataOutputStream(connection.getOutputStream()).use { output ->
-                        EnclaveHost.load("com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave", Paths.get("./tribuo_test.disk")).use { enclave ->
-                            enclave.start(initializeAttestationParameters(), null) { commands: List<MailCommand?> ->
+                        EnclaveHost.load("com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave").use { enclave ->
+                            enclave.start(initializeAttestationParameters(), null, Paths.get("./tribuo_test.disk")) { commands: List<MailCommand?> ->
                                 for (command in commands) {
                                     if (command is MailCommand.PostMail) {
                                         try {
