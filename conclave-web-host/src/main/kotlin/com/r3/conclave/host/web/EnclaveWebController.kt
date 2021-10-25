@@ -52,15 +52,20 @@ class EnclaveWebController {
      * When/if enclave emits StoreSealedState mail command,
      * this is where the sealed state data will be stored.
      *
-     * Also, if this file exists, it's content will be passed into EnclaveHost.start() method.
+     * Also, if this file exists, its content will be passed into EnclaveHost.start() method.
      */
     @Value("\${sealed.state.file:}")
     var sealedStateFile: Path? = null
+
+    @Value("\${filesystem.file:}")
+    var fileSystemFilePath: Path? = null
 
     @PostConstruct
     fun init() {
         require(!enclaveClassName.isNullOrEmpty()) { "Please specify a full class name of your enclave using command line option `--enclave.class`, " +
                 "e.g. --enclave.class=package_name.enclave_class_name" }
+        require(fileSystemFilePath == null || (fileSystemFilePath != null && fileSystemFilePath.toString().isNotEmpty())) {
+            "Please specify a valid path for the persisted filesystem file e.g. --filesystem.file=/home/USER/conclave.disk" }
 
         if (EnclaveHost.isHardwareEnclaveSupported()) {
             logger.info("This platform supports enclaves in simulation, debug and release mode.")
@@ -81,7 +86,7 @@ class EnclaveWebController {
         enclaveHost = EnclaveHost.load(enclaveClassName!!, mockConfiguration)
 
         val sealedState = loadSealedState()
-        enclaveHost.start(AttestationParameters.DCAP(), sealedState, null) { commands: List<MailCommand> ->
+        enclaveHost.start(AttestationParameters.DCAP(), sealedState, fileSystemFilePath) { commands: List<MailCommand> ->
             for (command in commands) {
                 when (command) {
                     is MailCommand.PostMail -> updateInbox(command.routingHint!!, command.encryptedBytes)
