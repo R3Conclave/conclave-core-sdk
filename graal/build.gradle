@@ -1,12 +1,24 @@
+import java.text.SimpleDateFormat
+
 plugins {
     id 'java'
 }
 
+// These files are used as a dummy outputs in place of the graalvm repository directory.
+// This prevents buildGraal from re-triggering cloneAndPatchRepository.
+def graalCloneDummy = "${project.buildDir}/graal_cloned_time"
+def graalBuildDummy = "${project.buildDir}/graal_built_time"
+
 def graalMajorMinorVersion = graal_version.substring(0, graal_version.length() - 2)
 task cloneAndPatchRepository(type: Exec) {
-    inputs.files("clone.sh", "patches/graal_${graalMajorMinorVersion}.patch")
+    inputs.files("${project.projectDir}/clone.sh", "${project.projectDir}/patches/graal.patch")
+    outputs.files("${graalCloneDummy}")
     commandLine "${project.projectDir}/clone.sh", "$graalMajorMinorVersion"
-    outputs.dir("${project.buildDir}/graal")
+    doLast {
+        // Write current date to graal clone dummy file. If this task is run again, the content of this file
+        // will change and subsequent tasks will run.
+        new File(graalCloneDummy).text = "${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}\n"
+    }
     workingDir "${project.buildDir}"
 }
 
@@ -49,12 +61,17 @@ def excludeDynamicLanguages = findProperty('excludeDynamicLanguages')
 
 task buildGraal(type: Exec) {
     dependsOn cloneAndPatchRepository
+
+    // Register graal repository dummy file as an input and repository directory as output
+    inputs.files(graalCloneDummy)
+    outputs.files(graalBuildDummy)
+
     environment['JAVA_HOME'] = System.getenv('JVMCI_HOME')
-    
+
     // MX version 5.294.1 must use Python 3 otherwise the
     // exception 'ImportError: No module named pathlib' is thrown 
     environment['MX_PYTHON_VERSION'] = 3
-    
+
     workingDir "${project.buildDir}/graal/vm"
     // The --force-bash-launchers makes the build faster and use far less RAM by skipping the native-imaging of
     // some tools we don't use or care about. Without that flag the build can fail due to running out of RAM.
@@ -65,6 +82,12 @@ task buildGraal(type: Exec) {
         commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graalpython,graal-js,/substratevm',
         '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=python,js,polybench', 'build'
     }
+
+    doLast {
+        // Write current date to graal build dummy file. If this task is run again, the content of this file
+        // will change and subsequent tasks will run.
+        new File(graalBuildDummy).text = "${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}\n"
+    }
 }
 
 def outputDir = "${project.buildDir}/distributions"
@@ -73,7 +96,7 @@ def outputFile = "graalvm.tar"
 def graalVMLatestDir = "${project.buildDir}/graal/vm/latest_graalvm/"
 task getGraalBuildFolder(type: Exec) {
     dependsOn buildGraal
-    inputs.dir(graalVMLatestDir)
+    inputs.files(graalBuildDummy)
     standardOutput = new ByteArrayOutputStream()
     commandLine 'ls', "$graalVMLatestDir"
     doLast {
