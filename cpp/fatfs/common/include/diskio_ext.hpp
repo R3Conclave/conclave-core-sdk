@@ -11,15 +11,16 @@
 
 #include "disk.hpp"
 #include "diskio.hpp"
+#include "fatfs_result.hpp"
 
-DRESULT disk_register(const BYTE drive,
-		      const std::shared_ptr<conclave::FatFsDisk>& disk_handler);
+FatFsResult disk_register(const BYTE drive,
+                          const std::shared_ptr<conclave::FatFsDisk>& disk_handler);
 
-DRESULT disk_unregister(const BYTE drive);
+FatFsResult disk_unregister(const BYTE drive);
 
-DRESULT disk_start(const std::shared_ptr<conclave::FatFsDisk>& disk_handler,
-		   const conclave::DiskInitialization init_type);
+FatFsResult disk_start(const std::shared_ptr<conclave::FatFsDisk>& disk_handler,
+                       const conclave::DiskInitialization init_type);
 
-DRESULT disk_stop(const BYTE drive, const std::string& drive_text_id);
+FatFsResult disk_stop(const BYTE drive, const std::string& drive_text_id);
 
 #endif  //  End of _DISKIO_EXT

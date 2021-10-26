@@ -292,7 +292,7 @@ void free_untrusted_memory(void** untrustedBufferPtr) {
 
 void host_encrypted_read_ocall(int* res,
 			       const unsigned char drive,
-			       const unsigned int sector_id,
+			       const unsigned long sector_id,
 			       const unsigned char num_sectors,
 			       const unsigned int sector_size,
 			       unsigned char* buf,
@@ -308,7 +308,7 @@ void host_encrypted_write_ocall(int* res,
 				const unsigned int buf_size,
 				const unsigned int num_writes,
 				const unsigned int sector_size,
-				const unsigned int* indices,
+				const unsigned long* indices,
 				const unsigned int indices_buf_size) {
     const int res_f = host_disk_write(drive, buf, num_writes, sector_size, indices);
     *res = res_f;

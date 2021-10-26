@@ -10,7 +10,7 @@
 #define DEBUG_PRINT_FUNCTION printf("%s %s\n", __FILENAME__, __PRETTY_FUNCTION__ )
 #define FATFS_DEBUG_PRINT(fmt, ...) \
     do { if (FATFS_DEBUG) fprintf(stderr, "%s:%d:%s(): " fmt, __FILENAME__, \
-                                __LINE__, __func__, __VA_ARGS__); } while (0)
+                                  __LINE__, __func__, __VA_ARGS__); } while (0)
 #else
 #define DEBUG_PRINT_FUNCTION
 #define FATFS_DEBUG_PRINT(fmt, ...)

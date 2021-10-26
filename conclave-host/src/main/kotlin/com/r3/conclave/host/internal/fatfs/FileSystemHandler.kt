@@ -55,13 +55,13 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>) {
 
     @Suppress("unused")
     @Synchronized
-    fun read(drive: Int, sectorId: Int, numSectors: Int, sectorSize: Int): ByteArray {
+    fun read(drive: Int, sectorId: Long, numSectors: Int, sectorSize: Int): ByteArray {
         val randomAccessFile = files[drive]
 
         val position = sectorId * sectorSize
         val readSize = numSectors * sectorSize
         val buffer = ByteArray(readSize)
-        randomAccessFile.seek(position.toLong())
+        randomAccessFile.seek(position)
         randomAccessFile.readFully(buffer)
         return buffer
     }
@@ -69,7 +69,7 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>) {
 
     @Suppress("unused")
     @Synchronized
-    fun write(drive: Int, inputBuffer: ByteArray, sectorSize: Int, indices: IntArray): Int {
+    fun write(drive: Int, inputBuffer: ByteArray, sectorSize: Int, indices: LongArray): Int {
         val randomAccessFile = files[drive]
 
         var bufferIt = 0

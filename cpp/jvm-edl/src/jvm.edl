@@ -40,7 +40,7 @@ enclave {
         void host_encrypted_read_ocall(					     
 	    [out] int* res,
 	    unsigned char drive,
-	    unsigned int sector_id,
+	    unsigned long sector_id,
             unsigned char num_sectors,
 	    unsigned int sector_size,
 	    [out, size=buf_size] unsigned char* buf,
@@ -54,7 +54,7 @@ enclave {
 	    unsigned int buf_size,
  	    unsigned int num_writes,
  	    unsigned int element_size,
-	    [in, size=indices_buf_size] const unsigned int* indices,
+	    [in, size=indices_buf_size] const unsigned long* indices,
 	    unsigned int indices_buf_size
 	);
 

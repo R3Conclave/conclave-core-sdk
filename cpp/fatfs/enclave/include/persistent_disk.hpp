@@ -38,53 +38,53 @@ namespace conclave {
     class PersistentDisk : public FatFsDisk {
 
     private:
-	std::vector<unsigned long> sectors_table_1_;
-	std::vector<unsigned long> sectors_table_2_;
+        std::vector<unsigned long> sectors_table_1_;
+        std::vector<unsigned long> sectors_table_2_;
 
-	sgx_aes_gcm_128bit_key_t encryption_key_ = {0};
+        sgx_aes_gcm_128bit_key_t encryption_key_ = {0};
 
-	unsigned char buffer_encryption_[SECTOR_SIZE_AND_MAC] = {0};
+        unsigned char buffer_encryption_[SECTOR_SIZE_AND_MAC] = {0};
 
-	unsigned char buffer_writes_[SECTOR_SIZE_AND_MAC * SIZE_BUFFER_WRITES] = {0};
+        unsigned char buffer_writes_[SECTOR_SIZE_AND_MAC * SIZE_BUFFER_WRITES] = {0};
 
-	unsigned int buffer_indices_[SIZE_BUFFER_WRITES] = {0};
+        unsigned long buffer_indices_[SIZE_BUFFER_WRITES] = {0};
 
-	unsigned int current_sector_ = 0;
+        unsigned long current_sector_ = 0;
 
-	int encrypt(const unsigned long sector_id,
-		    const BYTE* input_buffer,
-		    BYTE* output_buffer);
+        int encrypt(const unsigned long sector_id,
+                    const BYTE* input_buffer,
+                    BYTE* output_buffer);
 
-	int decrypt(const unsigned long sector_id,
-		    const BYTE* input_buffer,
-		    BYTE* output_buffer);
+        int decrypt(const unsigned long sector_id,
+                    const BYTE* input_buffer,
+                    BYTE* output_buffer);
 
-	void prepareSectorTables();
+        void prepareSectorTables();
 
-	unsigned long mapSectorId(const unsigned long sector_id);
+        unsigned long mapSectorId(const unsigned long sector_id);
 
-	DRESULT flush();
+        DRESULT flush();
 
     public:
-	PersistentDisk(const BYTE drive,
-		       const unsigned long size,
-		       const unsigned char* encryption_key);
+        PersistentDisk(const BYTE drive,
+                       const unsigned long size,
+                       const unsigned char* encryption_key);
 
-	virtual ~PersistentDisk();
+        virtual ~PersistentDisk();
 
-	DRESULT diskRead(BYTE* output_buf,
-			 DWORD start,
-			 BYTE num_reads) override;
+        DRESULT diskRead(BYTE* output_buf,
+                         DWORD start,
+                         BYTE num_reads) override;
 
-	DRESULT diskWrite(const BYTE* input_buf,
-			  DWORD start,
-			  BYTE num_writes) override;
+        DRESULT diskWrite(const BYTE* input_buf,
+                          DWORD start,
+                          BYTE num_writes) override;
 
-	DRESULT diskIoCtl(BYTE cmd, void* buf) override;
+        DRESULT diskIoCtl(BYTE cmd, void* buf) override;
 
-	void diskStart() override;
+        void diskStart() override;
 
-	void diskStop() override;
+        void diskStop() override;
     };
 }
 #endif  //  End of _FATFS_PERSISTENT_DISK

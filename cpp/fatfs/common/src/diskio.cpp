@@ -10,23 +10,23 @@
 static std::vector<std::shared_ptr<conclave::FatFsDisk> > disks(FF_VOLUMES, nullptr);
 
 
-DRESULT disk_register(const BYTE drive, const std::shared_ptr<conclave::FatFsDisk>& disk) {
+FatFsResult disk_register(const BYTE drive, const std::shared_ptr<conclave::FatFsDisk>& disk) {
     if (drive >= FF_VOLUMES) {
-        return RES_PARERR;
+        return FatFsResult::WRONG_DRIVE_ID;
     } else {
-	disks[drive] = disk;
-	return RES_OK;
+        disks[drive] = disk;
+        return FatFsResult::OK;
     }
 }
 
 
-DRESULT disk_unregister(const BYTE drive) {
+FatFsResult disk_unregister(const BYTE drive) {
 
     if (drive >= FF_VOLUMES) {
-        return RES_PARERR;
-    } else {	
-	disks.erase(disks.begin() + static_cast<int>(drive));
-	return RES_OK;
+        return FatFsResult::WRONG_DRIVE_ID;
+    } else {
+        disks.erase(disks.begin() + static_cast<int>(drive));
+        return FatFsResult::OK;
     }
 }
 
@@ -35,8 +35,8 @@ DSTATUS disk_initialize(BYTE drive) {
 
     if (drive >= FF_VOLUMES) {
         return RES_PARERR;
-    } else {	
-	return disks.at(drive)->diskInitialize();
+    } else {
+        return disks.at(drive)->diskInitialize();
     }
 }
 
@@ -45,8 +45,8 @@ DSTATUS disk_status(BYTE drive) {
 
     if (drive >= FF_VOLUMES) {
         return RES_PARERR;
-    } else {	
-	return disks.at(drive)->diskStatus();
+    } else {
+        return disks.at(drive)->diskStatus();
     }
 }
 
@@ -55,8 +55,8 @@ DRESULT disk_read(BYTE drive, BYTE* buf, DWORD start, BYTE num) {
 
     if (drive >= FF_VOLUMES) {
         return RES_PARERR;
-    } else {	
-	return disks.at(drive)->diskRead(buf, start, num);
+    } else {
+        return disks.at(drive)->diskRead(buf, start, num);
     }
 }
 
@@ -65,8 +65,8 @@ DRESULT disk_write(BYTE drive, const BYTE* buf, DWORD start, BYTE num) {
 
     if (drive >= FF_VOLUMES) {
         return RES_PARERR;
-    } else {	
-	return disks.at(drive)->diskWrite(buf, start, num);
+    } else {
+        return disks.at(drive)->diskWrite(buf, start, num);
     }
 }
 #endif
@@ -75,9 +75,9 @@ DRESULT disk_write(BYTE drive, const BYTE* buf, DWORD start, BYTE num) {
 DRESULT disk_ioctl(BYTE drive, BYTE cmd, void* buf) {
 
     if (drive >= FF_VOLUMES) {
-	return RES_PARERR;
+        return RES_PARERR;
     } else {
-	return disks.at(drive)->diskIoCtl(cmd, buf);
+        return disks.at(drive)->diskIoCtl(cmd, buf);
     }
 }
 
@@ -102,17 +102,17 @@ DWORD get_fattime(void) {
     return 1;
 }
 
-DRESULT disk_start(const std::shared_ptr<conclave::FatFsDisk>& disk_handler,
-		   const conclave::DiskInitialization init_type) {
+FatFsResult disk_start(const std::shared_ptr<conclave::FatFsDisk>& disk_handler,
+                       const conclave::DiskInitialization init_type) {
     DEBUG_PRINT_FUNCTION;
     const BYTE drive = disk_handler->getDriveId();
 
     if (drive >= FF_VOLUMES) {
-        return RES_PARERR;
+        return FatFsResult::WRONG_DRIVE_ID;
     }
 
-    if (disk_register(drive, disk_handler) != RES_OK) {
-	return RES_ERROR;
+    if (disk_register(drive, disk_handler) != FatFsResult::OK) {
+        return FatFsResult::DRIVE_REGISTRATION_FAILED;
     }
     
     MKFS_PARM parms;
@@ -121,34 +121,41 @@ DRESULT disk_start(const std::shared_ptr<conclave::FatFsDisk>& disk_handler,
     const char* drive_text = disk_handler->getDriveTextId().c_str();
     
     if (init_type == conclave::DiskInitialization::FORMAT) {
-	BYTE work[FF_MAX_SS * 2];
-	FATFS_DEBUG_PRINT("MKFS drive %s\n", drive_text);
+        BYTE work[FF_MAX_SS * 2];
+        FATFS_DEBUG_PRINT("MKFS drive %s\n", drive_text);
 
-        if (f_mkfs(drive_text, &parms, work, sizeof(work)) != FR_OK) {
-            return RES_ERROR;
+        const FRESULT res_mkfs = f_mkfs(drive_text, &parms, work, sizeof(work));
+
+        if (res_mkfs != FR_OK) {
+            if (res_mkfs == FR_MKFS_ABORTED) {
+                FATFS_DEBUG_PRINT("mkfs failed with result %d\n", res_mkfs);
+                return FatFsResult::MKFS_ABORTED;
+            } else {
+                return FatFsResult::MKFS_GENERIC_ERROR;
+            }
         }
     }
 
     if (f_mount(disks[drive]->getFileSystem().get(), drive_text, 1) != FR_OK) {
-        return RES_ERROR;
+        return FatFsResult::MOUNT_FAILED;
     }
-    return RES_OK;
+    return FatFsResult::OK;
 }
 
 
-DRESULT disk_stop(const BYTE drive, const std::string& drive_text_id) {
+FatFsResult disk_stop(const BYTE drive, const std::string& drive_text_id) {
     DEBUG_PRINT_FUNCTION;
 
     if (drive >= FF_VOLUMES) {
-        return RES_PARERR;
+        return FatFsResult::WRONG_DRIVE_ID;
     }
     
-    if (disk_unregister(drive) != RES_OK) {
-        return RES_ERROR;
+    if (disk_unregister(drive) != FatFsResult::OK) {
+        return FatFsResult::DRIVE_UNREGISTRATION_FAILED;
     }
 
     if (f_mount(NULL, drive_text_id.c_str(), 1) != FR_OK) {
-        return RES_ERROR;
+        return FatFsResult::UMOUNT_FAILED;
     }
-    return RES_OK;
+    return FatFsResult::OK;
 }

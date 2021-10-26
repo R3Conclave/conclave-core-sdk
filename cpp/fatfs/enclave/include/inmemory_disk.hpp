@@ -8,31 +8,31 @@
 namespace conclave {
     /*
       This class provides an in-memory volatile FatFs filesystem used
-        in the Enclave.
+      in the Enclave.
       The member functions of this class are reading/writing streams of
-        encrypted bytes representing filesystem "sectors" (FatFs terminology).
+      encrypted bytes representing filesystem "sectors" (FatFs terminology).
       The actual file storage consists in an unsigned char buffer
-        which is initialized and resident only in the Enclave.
-     */
+      which is initialized and resident only in the Enclave.
+    */
     class InMemoryDisk : public FatFsDisk {
 
     private:
-	unsigned char* ram_buffer_ = NULL;
+        unsigned char* ram_buffer_ = NULL;
    
     public:
-	InMemoryDisk(const BYTE drive_id, const unsigned long size);
+        InMemoryDisk(const BYTE drive_id, const unsigned long size);
 
-	virtual ~InMemoryDisk();
+        virtual ~InMemoryDisk();
 
-	DRESULT diskRead(BYTE* output_buffer, DWORD start, BYTE num_reads) override;
+        DRESULT diskRead(BYTE* output_buffer, DWORD start, BYTE num_reads) override;
 
-	DRESULT diskWrite(const BYTE* content_buf, DWORD start, BYTE num_writes) override;
+        DRESULT diskWrite(const BYTE* content_buf, DWORD start, BYTE num_writes) override;
 
-	DRESULT diskIoCtl(BYTE cmd, void * buf) override;
+        DRESULT diskIoCtl(BYTE cmd, void * buf) override;
 
-	void diskStart() override;
+        void diskStart() override;
 
-	void diskStop() override;    
+        void diskStop() override;    
     };
 }
 #endif  //  End of _INMEMORY_DISK
