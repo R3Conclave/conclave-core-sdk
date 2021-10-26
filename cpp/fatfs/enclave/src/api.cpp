@@ -32,7 +32,7 @@ static std::mutex dummyHandleMutex;
 static std::vector<std::shared_ptr<conclave::FatFsFileManager> > filesystems;
 
 static std::string currentPath = "/";
-static JavaVM *jvm = NULL;
+static JavaVM* jvm = NULL;
 
 enum FileSystemType { IN_MEMORY, PERSISTENT };
 
@@ -40,11 +40,11 @@ static void raiseExceptionNoEnv(const char* c_message) {
     DEBUG_PRINT_FUNCTION;
     JNIEnv* env = NULL;
     jint rs = jvm->AttachCurrentThread((void**)&env, NULL);
-    
+
     if (rs != JNI_OK) {
-	FATFS_DEBUG_PRINT("JNI Crash %s\n", c_message);
-	abort();
-    }    
+        FATFS_DEBUG_PRINT("JNI Crash %s\n", c_message);
+        abort();
+    }
     raiseException(env, c_message);
     jvm->DetachCurrentThread();
     abort();
@@ -52,33 +52,35 @@ static void raiseExceptionNoEnv(const char* c_message) {
 
 
 std::unique_ptr<conclave::FatFsDisk> createDiskHandler(const FileSystemType type,
-						       const BYTE drive_id,
-						       const unsigned long size,
-						       const unsigned char* encryption_key) {
+    const BYTE drive_id,
+    const unsigned long size,
+    const unsigned char* encryption_key) {
     if (type == FileSystemType::PERSISTENT) {
-	return std::unique_ptr<conclave::FatFsDisk>(new conclave::PersistentDisk(drive_id, size, encryption_key));
-    } else if (type == FileSystemType::IN_MEMORY) {
-	return std::unique_ptr<conclave::FatFsDisk>(new conclave::InMemoryDisk(drive_id, size));
-    } else {
-	const std::string message = "Developer error, no filesystem type defined";
-	throw std::runtime_error(message);
-    }	
+        return std::unique_ptr<conclave::FatFsDisk>(new conclave::PersistentDisk(drive_id, size, encryption_key));
+    }
+    else if (type == FileSystemType::IN_MEMORY) {
+        return std::unique_ptr<conclave::FatFsDisk>(new conclave::InMemoryDisk(drive_id, size));
+    }
+    else {
+        const std::string message = "Developer error, no filesystem type defined";
+        throw std::runtime_error(message);
+    }
 }
 
 
 static std::shared_ptr<conclave::FatFsFileManager> createFileSystem(const FileSystemType type,
-								    const BYTE drive,
-								    const unsigned long size,
-								    const unsigned char* encryption_key,
-								    const std::string& mount_path) {
+    const BYTE drive,
+    const unsigned long size,
+    const unsigned char* encryption_key,
+    const std::string& mount_path) {
     const int first_handle = currentFirstAvailableHandle;
-    const int max_handle = currentFirstAvailableHandle + kMaxNumFiles -1;
+    const int max_handle = currentFirstAvailableHandle + kMaxNumFiles - 1;
     auto disk_handler = createDiskHandler(type, drive, size, encryption_key);
     auto filesystem = std::make_shared<conclave::FatFsFileManager>(first_handle,
-								   max_handle,
-								   encryption_key,
-								   mount_path,
-								   std::move(disk_handler));
+        max_handle,
+        encryption_key,
+        mount_path,
+        std::move(disk_handler));
     currentFirstAvailableHandle += kMaxNumFiles;
     currentDummyHandle = currentFirstAvailableHandle;
     return filesystem;
@@ -92,11 +94,11 @@ static std::string getJniMountPath(JNIEnv* env, jstring& path_in) {
     env->ReleaseStringUTFChars(path_in, path_str);
 
     if (path.length() > 0 && path.back() != '/') {
-	//  As we use these as mountpoints, our code needs to assume that we have a '/' at the end.
-	//    If we do not have it, we add it here.
-	//  This is to distinguish properly between /tmp vs /tmptest for example,
-	//    which are converted to /tmp/ and /tmptest/ and won't cause comparison issues.
-	path += "/";
+        //  As we use these as mountpoints, our code needs to assume that we have a '/' at the end.
+        //    If we do not have it, we add it here.
+        //  This is to distinguish properly between /tmp vs /tmptest for example,
+        //    which are converted to /tmp/ and /tmptest/ and won't cause comparison issues.
+        path += "/";
     }
     return path;
 }
@@ -104,18 +106,18 @@ static std::string getJniMountPath(JNIEnv* env, jstring& path_in) {
 
 // Get the encryption key from JNI and convert it to a string
 static bool getJniEncryptionKey(JNIEnv* env,
-				const jbyteArray& encryption_key_in,
-				unsigned char* encryption_buffer) {
+    const jbyteArray& encryption_key_in,
+    unsigned char* encryption_buffer) {
     jbyte* encryption_key = env->GetByteArrayElements(encryption_key_in, nullptr);
 
     if (encryption_key == nullptr) {
-	return false;
+        return false;
     }
     const jsize len = env->GetArrayLength(encryption_key_in);
     FATFS_DEBUG_PRINT("Encryption key has size %d\n", len);
 
     if (len != sizeof(sgx_aes_gcm_128bit_key_t)) {
-	return false;
+        return false;
     }
     memcpy(encryption_buffer, encryption_key, sizeof(sgx_aes_gcm_128bit_key_t));
     env->ReleaseByteArrayElements(encryption_key_in, encryption_key, 0);
@@ -133,18 +135,19 @@ static conclave::DiskInitialization getInitializationType(JNIEnv* env, const uns
     const bool encrypted_disk_required = (host_file_size != -1);
 
     if (!encrypted_disk_required) {
-	FATFS_DEBUG_PRINT("Disk not initialized, path not provided for drive %d\n", drive);
-	return conclave::DiskInitialization::ERROR;
+        FATFS_DEBUG_PRINT("Disk not initialized, path not provided for drive %d\n", drive);
+        return conclave::DiskInitialization::ERROR;
     }
     const bool host_file_present = (host_file_size != 0);
     conclave::DiskInitialization initialization;
-	
-    if (host_file_present) { 
-	FATFS_DEBUG_PRINT("Opening disk of size %lu bytes for drive %d\n", host_file_size, drive);
-	initialization = conclave::DiskInitialization::OPEN;
-    } else {
-	FATFS_DEBUG_PRINT("Creating disk for drive %d\n", drive);
-	initialization = conclave::DiskInitialization::FORMAT;
+
+    if (host_file_present) {
+        FATFS_DEBUG_PRINT("Opening disk of size %lu bytes for drive %d\n", host_file_size, drive);
+        initialization = conclave::DiskInitialization::OPEN;
+    }
+    else {
+        FATFS_DEBUG_PRINT("Creating disk for drive %d\n", drive);
+        initialization = conclave::DiskInitialization::FORMAT;
     }
 
     return initialization;
@@ -157,73 +160,73 @@ static conclave::DiskInitialization getInitializationType(JNIEnv* env, const uns
 //    so that exceptions are handled properly and we do not want to execute anything else in C++.
 //    This is because in JNI throwing an exception does not stop the C++ execution.
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_setupFileSystems(JNIEnv* env,
-										     jobject,
-										     jlong in_memory_size,
-										     jlong persistent_size,
-										     jstring in_memory_mount_path_in,
-										     jstring persistent_mount_path_in,
-										     jbyteArray encryption_key_in) {
+    jobject,
+    jlong in_memory_size,
+    jlong persistent_size,
+    jstring in_memory_mount_path_in,
+    jstring persistent_mount_path_in,
+    jbyteArray encryption_key_in) {
     FATFS_DEBUG_PRINT("Sizes: %lu, %lu\n", in_memory_size, persistent_size);
 
     if (encryption_key_in == nullptr) {
-	raiseException(env, "Filesystems not initialized, key not passed in");
-	return;
-    }    
+        raiseException(env, "Filesystems not initialized, key not passed in");
+        return;
+    }
     const std::string persistent_mount_path = getJniMountPath(env, persistent_mount_path_in);
     const std::string in_memory_mount_path = getJniMountPath(env, in_memory_mount_path_in);
     FATFS_DEBUG_PRINT("Paths %s %s\n", persistent_mount_path.c_str(), in_memory_mount_path.c_str());
 
     unsigned char encryption_key[sizeof(sgx_aes_gcm_128bit_key_t)];
-    
+
     bool encryption_key_retrieved = getJniEncryptionKey(env, encryption_key_in, encryption_key);
 
     if (!encryption_key_retrieved) {
-	raiseException(env, "Filesystems not initialized, key not retrieved");
-	return;
+        raiseException(env, "Filesystems not initialized, key not retrieved");
+        return;
     }
     unsigned char drive = 0;
     /*
       Note: the persistent filesystem, when present, needs to be the first one. This is because
-      we are using the drive id to map the filesystem here in the Enclave with the index of 
+      we are using the drive id to map the filesystem here in the Enclave with the index of
       the related file representing the filesystem in the Host (FileSystemHandler.kt).
       We can surely remove this assumption and improve this function, but this would require
       some effort that we can postpone.
       TO DO: Improve the mapping between the Enclave persistent filesystem and the Host file
     */
-    
-    if (persistent_size > 0) {
-	conclave::DiskInitialization initialization = getInitializationType(env, drive);
 
-	if (initialization == conclave::DiskInitialization::ERROR) {
-	    raiseException(env, "Filesystems not initialized, path not provided for drive");
-	    return;
-	}
-	auto filesystem = createFileSystem(FileSystemType::PERSISTENT,
-					   drive++,
-					   persistent_size,
-					   encryption_key,
-					   persistent_mount_path);
-	filesystem->init(initialization);
-	filesystems.push_back(filesystem);
+    if (persistent_size > 0) {
+        conclave::DiskInitialization initialization = getInitializationType(env, drive);
+
+        if (initialization == conclave::DiskInitialization::ERROR) {
+            raiseException(env, "Filesystems not initialized, path not provided for drive");
+            return;
+        }
+        auto filesystem = createFileSystem(FileSystemType::PERSISTENT,
+            drive++,
+            persistent_size,
+            encryption_key,
+            persistent_mount_path);
+        filesystem->init(initialization);
+        filesystems.push_back(filesystem);
     }
-    
+
     if (in_memory_size > 0) {
-	auto filesystem = createFileSystem(FileSystemType::IN_MEMORY,
-					   drive++,
-					   in_memory_size,
-					   encryption_key,
-					   in_memory_mount_path);
-	filesystem->init(conclave::DiskInitialization::FORMAT);	
-	filesystems.push_back(filesystem);
+        auto filesystem = createFileSystem(FileSystemType::IN_MEMORY,
+            drive++,
+            in_memory_size,
+            encryption_key,
+            in_memory_mount_path);
+        filesystem->init(conclave::DiskInitialization::FORMAT);
+        filesystems.push_back(filesystem);
     }
 
     jint res = env->GetJavaVM(&jvm);
 
     if (res != JNI_OK) {
-	FATFS_DEBUG_PRINT("JNI Crashed %d\n", -1);
-	raiseException(env, "Filesystems not initialized, jni crashed");
-	return;
-    }    
+        FATFS_DEBUG_PRINT("JNI Crashed %d\n", -1);
+        raiseException(env, "Filesystems not initialized, jni crashed");
+        return;
+    }
     return;
 }
 DLSYM_STATIC {
@@ -235,7 +238,7 @@ static std::string normalizePath(const std::string& path_in) {
     std::string path(path_in);
 
     if (path.empty() || path[0] != '/') {
-	path = currentPath + path;
+        path = currentPath + path;
     }
     return path;
 }
@@ -253,45 +256,43 @@ static std::string normalizePath(const std::string& path_in) {
 static std::shared_ptr<conclave::FatFsFileManager> getFatFsInstanceFromPath(const char* path_in) {
 
     if (path_in == nullptr || std::string(path_in).empty()) {
-	const std::string message("Developer error: could not determine a filesystem");
-	raiseExceptionNoEnv(message.c_str());
+        const std::string message("Developer error: could not determine a filesystem");
+        raiseExceptionNoEnv(message.c_str());
     }
 
     const std::string path = normalizePath(std::string(path_in));
     std::vector<std::shared_ptr<conclave::FatFsFileManager> > found_instances;
-    
+
     FATFS_DEBUG_PRINT("Path %s\n", path.c_str());
 
     for (auto& it : filesystems) {
 
-	if (it->isPathOwner(path)) {
-	    found_instances.push_back(it);
-	}
+        if (it->isPathOwner(path)) {
+            found_instances.push_back(it);
+        }
     }
     if (found_instances.size() == 1) {
-	FATFS_DEBUG_PRINT("Found filesystem: %d\n", 1);
-	return found_instances.at(0);
-    } else if (found_instances.size() == 2) {
-	//  This is the case where a path has matching two filesystems: one with a mount point "/"
-	//    and another with a "child" mount point, for example "/tmp".
-	//  The assumption here is that the root is always "/" and that we always have a root.
-	const std::string root = "/";
+        FATFS_DEBUG_PRINT("Found filesystem: %d\n", 1);
+        return found_instances.at(0);
+    }
+    else if (found_instances.size() == 2) {
+        //  This is the case where a path has matching two filesystems: one with a mount point "/"
+        //    and another with a "child" mount point, for example "/tmp".
+        //  The assumption here is that the root is always "/" and that we always have a root.
+        const std::string root = "/";
 
-	for (auto& it : found_instances) {
-	    if (it->getMountPath() != root) {
-		FATFS_DEBUG_PRINT("Found filesystem: %d\n", 1);
-		return it;
-	    }
-	}
-	FATFS_DEBUG_PRINT("Error: %d\n", 1);
-	const std::string message("Error: could not find the right filesystem among the found instances");
-	raiseExceptionNoEnv(message.c_str());
-	return nullptr;
-    } else {
-	FATFS_DEBUG_PRINT("Error: %d\n", 2);
-	const std::string message("Error: could not find the right filesystem");
-	raiseExceptionNoEnv(message.c_str());
-	return nullptr;
+        for (auto& it : found_instances) {
+            if (it->getMountPath() != root) {
+                FATFS_DEBUG_PRINT("Found filesystem: %d\n", 1);
+                return it;
+            }
+        }
+        FATFS_DEBUG_PRINT("Error: %d\n", 1);
+        return nullptr;
+    }
+    else {
+        FATFS_DEBUG_PRINT("Error: %d\n", 2);
+        return nullptr;
     }
 };
 
@@ -300,15 +301,15 @@ static std::shared_ptr<conclave::FatFsFileManager> getFatFsInstanceFromHandle(co
     FATFS_DEBUG_PRINT("Handle %d\n", fd);
 
     if (fd == -1) {
-	const std::string message("Developer error: could not determine a filesystem");
-	raiseExceptionNoEnv(message.c_str());
-	return nullptr;
+        const std::string message("Developer error: could not determine a filesystem");
+        raiseExceptionNoEnv(message.c_str());
+        return nullptr;
     }
     for (auto& it : filesystems) {
-	if (it->isHandleOwner(fd)) {
-	    FATFS_DEBUG_PRINT("Filesystem: %s\n", typeid(*it).name());
-	    return it;
-	}
+        if (it->isHandleOwner(fd)) {
+            FATFS_DEBUG_PRINT("Filesystem: %s\n", typeid(*it).name());
+            return it;
+        }
     }
 
     FATFS_DEBUG_PRINT("Error fd: %d\n", fd);
@@ -320,22 +321,23 @@ static std::shared_ptr<conclave::FatFsFileManager> getFatFsInstanceFromHandle(co
 
 static std::shared_ptr<conclave::FatFsFileManager> getFatFsInstanceFromDir(void* dir) {
     std::vector<std::shared_ptr<conclave::FatFsFileManager> > found_instances;
-  
+
     for (auto& it : filesystems) {
 
-	if (it->isDirOwner(static_cast<DIR*>(dir))) {
-	    found_instances.push_back(it);
-	}
+        if (it->isDirOwner(static_cast<DIR*>(dir))) {
+            found_instances.push_back(it);
+        }
     }
     if (found_instances.size() == 1) {
-	FATFS_DEBUG_PRINT("Found filesystem: %d\n", 1);
-	return found_instances.at(0);
-    } else {
-	FATFS_DEBUG_PRINT("Error: %d\n", 2);
-	const std::string message("Error: could not find the right filesystem");
-	raiseExceptionNoEnv(message.c_str());
-	return nullptr;
-    }  
+        FATFS_DEBUG_PRINT("Found filesystem: %d\n", 1);
+        return found_instances.at(0);
+    }
+    else {
+        FATFS_DEBUG_PRINT("Error: %d\n", 2);
+        const std::string message("Error: could not find the right filesystem");
+        raiseExceptionNoEnv(message.c_str());
+        return nullptr;
+    }
 };
 
 
@@ -345,32 +347,32 @@ int open_impl(const char* path, int oflag, int& err) {
     //  There is an attempt to open /proc/cgroups even before our JVM Enclave code is actually
     //    executed, therefore we want to skip this
     if (std::string(path).find("/proc/cgroups") == 0) {
-	err = ENOENT;
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	err = ENOENT;
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->open(path, oflag, err);
 };
 
 
-FILE *fopen_impl(const char *path, const char *mode, int& err) {
+FILE* fopen_impl(const char* path, const char* mode, int& err) {
     FATFS_DEBUG_PRINT("Fopen %s\n", path);
     //  There is an attempt to open /proc/cgroups even before our JVM Enclave code is actually
     //    executed, therefore we want to skip this
     if (std::string(path).find("/proc/cgroups") == 0) {
-	err = ENOENT;
-	return NULL;
+        err = ENOENT;
+        return NULL;
     }
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	err = ENOENT;
-	return NULL;
+        err = ENOENT;
+        return NULL;
     }
     return file_manager->fopen(path, mode, err);
 };
@@ -381,7 +383,7 @@ ssize_t read_impl(int fd, void* buf, size_t count) {
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->read(fd, buf, count);
 };
@@ -390,7 +392,7 @@ ssize_t read_impl(int fd, void* buf, size_t count) {
 ssize_t pread_impl(int fd, void* buf, size_t count, off_t offset) {
     auto file_manager = getFatFsInstanceFromHandle(fd);
     auto res = file_manager->pread(fd, buf, count, offset);
-   
+
     if (res == -1) {
         errno = -1;
     }
@@ -402,51 +404,52 @@ int close_impl(int fd) {
     DEBUG_PRINT_FUNCTION;
 
     if (fd >= currentFirstAvailableHandle) {
-	//  This is happening when closing a dummy descriptor created with "socketpair"
-	FATFS_DEBUG_PRINT("Closed dummy handle %u\n", fd);
-	std::lock_guard<std::mutex> lock(dummyHandleMutex);
-	dummyHandles.erase(fd);
-	return 0;
-    } else {
-	auto file_manager = getFatFsInstanceFromHandle(fd);
+        //  This is happening when closing a dummy descriptor created with "socketpair"
+        FATFS_DEBUG_PRINT("Closed dummy handle %u\n", fd);
+        std::lock_guard<std::mutex> lock(dummyHandleMutex);
+        dummyHandles.erase(fd);
+        return 0;
+    }
+    else {
+        auto file_manager = getFatFsInstanceFromHandle(fd);
 
-	if (file_manager == nullptr) {
-	    return -1;
-	}
-	return file_manager->close(fd);
+        if (file_manager == nullptr) {
+            return -1;
+        }
+        return file_manager->close(fd);
     }
 };
 
 
-off64_t lseek64_impl(int fd, off64_t offset, int whence) { 
+off64_t lseek64_impl(int fd, off64_t offset, int whence) {
     DEBUG_PRINT_FUNCTION;
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->lseek(fd, offset, whence);
 };
 
 
-ssize_t write_impl(int fd, const void *buf, size_t count) {
+ssize_t write_impl(int fd, const void* buf, size_t count) {
     DEBUG_PRINT_FUNCTION;
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->write(fd, buf, count);
 };
 
 
-ssize_t pwrite_impl(int fd, const void *buf, size_t count, off_t offset) {
+ssize_t pwrite_impl(int fd, const void* buf, size_t count, off_t offset) {
     DEBUG_PRINT_FUNCTION;
     assert(count <= std::numeric_limits<int>::max());
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->pwrite(fd, buf, count, offset);
 };
@@ -457,7 +460,7 @@ int __fxstat64_impl(int ver, int fd, struct stat64* stat_buf, int& err) {
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->fstat(ver, fd, stat_buf, err);
 };
@@ -468,18 +471,20 @@ int __xstat64_impl(int ver, const char* path, struct stat64* stat_buf, int& err)
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->stat(ver, path, stat_buf, err);
 };
 
 
-int mkdir_impl(const char* path, mode_t mode) {
+int mkdir_impl(const char* path, mode_t mode, int& err) {
     DEBUG_PRINT_FUNCTION;
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->mkdir(path, mode);
 };
@@ -491,7 +496,8 @@ int lstat_impl(const char* path, struct stat* stat_buf, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->lstat(path, stat_buf, err);
 };
@@ -502,7 +508,8 @@ int lstat64_impl(const char* path, struct stat64* stat_buf, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->lstat64(path, stat_buf, err);
 };
@@ -513,7 +520,8 @@ int rmdir_impl(const char* path, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->rmdir(path, err);
 };
@@ -524,7 +532,8 @@ int unlink_impl(const char* path, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->unlink(path, err);
 };
@@ -535,7 +544,8 @@ int remove_impl(const char* path, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->remove(path, err);
 };
@@ -544,10 +554,10 @@ int remove_impl(const char* path, int& err) {
 int socketpair_impl(int domain, int type, int protocol, int sv[2]) {
     DEBUG_PRINT_FUNCTION;
     std::lock_guard<std::mutex> lock(dummyHandleMutex);
-    
+
     const int handle1 = currentDummyHandle++;
     const int handle2 = currentDummyHandle++;
-    
+
     sv[0] = handle1;
     sv[1] = handle2;
     dummyHandles.insert(handle1);
@@ -561,7 +571,7 @@ int dup2_impl(int oldfd, int newfd) {
     auto file_manager = getFatFsInstanceFromHandle(oldfd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->dup2(oldfd, newfd);
 };
@@ -571,7 +581,8 @@ int access_impl(const char* path, int mode, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return -1;
+        err = ENOENT;
+        return -1;
     }
     return file_manager->access(path, mode, err);
 };
@@ -581,7 +592,8 @@ void* opendir_impl(const char* path, int& err) {
     auto file_manager = getFatFsInstanceFromPath(path);
 
     if (file_manager == nullptr) {
-	return nullptr;
+        err = ENOENT;
+        return nullptr;
     }
     return file_manager->opendir(path, err);
 }
@@ -591,7 +603,7 @@ struct dirent64* readdir64_impl(void* dirp, int& err) {
     auto file_manager = getFatFsInstanceFromDir(dirp);
 
     if (file_manager == nullptr) {
-	return nullptr;
+        return nullptr;
     }
     return file_manager->readdir64(dirp, err);
 }
@@ -601,7 +613,7 @@ struct dirent* readdir_impl(void* dirp, int& err) {
     auto file_manager = getFatFsInstanceFromDir(dirp);
 
     if (file_manager == nullptr) {
-	return nullptr;
+        return nullptr;
     }
     return file_manager->readdir(dirp, err);
 }
@@ -612,7 +624,7 @@ int closedir_impl(void* dirp, int& err) {
     auto file_manager = getFatFsInstanceFromDir(dirp);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->closedir(dirp, err);
 }
@@ -622,7 +634,7 @@ int ftruncate_impl(int fd, off_t offset, int& err) {
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
-	return -1;
+        return -1;
     }
     return file_manager->ftruncate(fd, offset, err);
 }

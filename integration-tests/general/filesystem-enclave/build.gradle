@@ -10,5 +10,5 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
-    persistentFileSystemSize = "64m"
+    persistentFileSystemSize = "32m"
 }

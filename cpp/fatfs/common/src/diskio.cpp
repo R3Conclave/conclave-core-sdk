@@ -116,8 +116,8 @@ DRESULT disk_start(const std::shared_ptr<conclave::FatFsDisk>& disk_handler,
     }
     
     MKFS_PARM parms;
-    parms.fmt = FM_FAT32;
-    parms.n_fat = 1;
+    memset(&parms, 0, sizeof(parms));
+    parms.fmt = FM_ANY;
     const char* drive_text = disk_handler->getDriveTextId().c_str();
     
     if (init_type == conclave::DiskInitialization::FORMAT) {
