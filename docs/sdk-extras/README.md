@@ -12,7 +12,10 @@ The `hello-world/` directory contains a sample project demonstrating how to use 
 enclave, a host and a client. This sample is the same as what you will build if you follow the tutorial
 in the Conclave docs.
 
-The `cordapp/` directory is a sample that shows how to integrate Conclave with a Corda Cordapp.
+The `cordapp/` directory is a sample that shows how to integrate Conclave with a Corda CorDapp.
+
+The `conclave-init.jar` file contains the Conclave Init tool, which automates the creation of new
+Conclave projects. Run `java -jar conclave-init.jar --help` or see the docs for more information.
 
 The `sources.zip` file contains a subset of the Conclave source code, released in order to meet the terms
 of the OpenJDK GPL2+Classpath Exception license.

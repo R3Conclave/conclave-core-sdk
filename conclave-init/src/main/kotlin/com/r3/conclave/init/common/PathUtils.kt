@@ -1,0 +1,9 @@
+package com.r3.conclave.init.common
+
+import java.io.File
+import java.nio.file.Path
+
+// Path Extensions
+fun Path.walkTopDown(): Sequence<Path> = toFile().walkTopDown().map(File::toPath)
+fun Path.deleteRecursively(): Boolean = toFile().deleteRecursively()
+

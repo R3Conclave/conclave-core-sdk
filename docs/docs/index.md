@@ -98,6 +98,7 @@ is available where you can find the development team during UK office hours (GMT
     There have been some breaking changes in this version of Conclave. Be sure to read the [API changes page](api-changes.md)
     for the information you need to get your existing project building with Conclave 1.2.
 
+
 1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave.  
    Previously we recommended the "mail-to-self" pattern for storing data across enclave restarts.
    This is cumbersome to write, not easy to understand and does not provide roll back protection against the host.  
@@ -126,6 +127,8 @@ is available where you can find the development team during UK office hours (GMT
    `testImplementation` dependency to enable mock testing. And finally the plugin will make sure any enclave
    resource files in `src/main/resources` are automatically added. Previously resource files had to be specified 
    manually.
+
+1. :jigsaw: **New feature!** We have made it easier than ever to start a conclave project using our new tool, [Conclave Init](conclave-init.md).
 
 1. :jigsaw: **New feature!** We've added a `conclave-web-host` component that allows you to interact with enclaves using REST API.
    With `conclave-web-host` the user code is limited to `enclave` and `client`, the `host` is being taken care of by Conclave SDK.

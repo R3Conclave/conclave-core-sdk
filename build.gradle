@@ -28,7 +28,7 @@ static Map<String, String> createEnvironment(String... names) {
     return names.collectEntries { [(it): System.getenv(it)] }
 }
 
-String getConclaveRevision()  {
+String getConclaveRevision() {
     String conclave_revision
 
     try {
@@ -55,7 +55,6 @@ ext {
     project.logger.info("Conclave revision: $conclave_revision")
 }
 
-import groovy.io.FileType
 
 // This code allows the user to run gradle like this: ./gradlew -PexcludeNative
 // and the native components will be downloaded instead of built locally. This
@@ -92,7 +91,7 @@ def addAttributeToManifest(Manifest manifest, String name, String value) {
     manifest.attributes[name] = value
 }
 
-allprojects{
+allprojects {
     tasks.withType(Jar).configureEach { task ->
         project.logger.info("Setting extra attributes that will be added to the manifest file for jars created from project ${task.project.name}")
         addAttributeToManifest(manifest, 'Conclave-Release-Version', conclave_version)
@@ -116,7 +115,7 @@ subprojects {
     tasks.withType(AbstractCompile) {
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
-                freeCompilerArgs = [ '-Xjvm-default=all', '-java-parameters' ]
+                freeCompilerArgs = ['-Xjvm-default=all', '-java-parameters']
             }
         }
     }
@@ -270,6 +269,7 @@ class PublishedProject {
     String projectPath
     String description
 }
+
 List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':cpp:jvm-enclave-common',
@@ -359,7 +359,7 @@ List<PublishedProject> publishedProjects = [
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
         ),
-	    new PublishedProject(
+        new PublishedProject(
                 projectPath: ':conclave-web-host',
                 description: 'Conclave web server host ',
         ),
@@ -409,7 +409,7 @@ if (includeNative) {
                 if (project.name == "conclave-mail" || project.name == "conclave-common") {
                     // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
                     // dependencies are in the compileOnly configuration.
-                    configurations = [ project.configurations.compileOnly ]
+                    configurations = [project.configurations.compileOnly]
                     exclude '**/pom.xml'
                     exclude '**/pom.properties'
                     exclude 'module-info.class'
@@ -503,7 +503,7 @@ task cleanSDK(type: Delete) {
 }
 
 task sdkRepo {
-    dependsOn = ["cleanSDK", publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" } ]
+    dependsOn = ["cleanSDK", publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }]
 }
 
 task zipGPL2Sources(type: Zip) {
@@ -551,7 +551,16 @@ task sdkCopyExtras(type: Copy) {
     }
 }
 
-task sdkFiles(type: Copy, dependsOn: ["sdkRepo", "buildDocs", "zipGPL2Sources", "sdkCopyExtras"]) {
+task sdkCopyConclaveInit(type: Copy, dependsOn: "conclave-init:shadowJar") {
+    from file("conclave-init/build/libs/conclave-init-shadow.jar")
+    into "$buildDir/sdk"
+    rename { "conclave-init.jar" }
+}
+
+// This task doesn't actually copy all the files, despite being called `sdkFiles`. It copies `docs/build` into the
+// `build/sdk` directory and depends on the other tasks which copy the other bits. We should probably rename this task
+// to "sdkCopyDocs", and move all the dependencies to the `sdk` task.
+task sdkFiles(type: Copy, dependsOn: ["sdkRepo", "buildDocs", "zipGPL2Sources", "sdkCopyExtras", "sdkCopyConclaveInit"]) {
     group = "SDK Build"
     description = "Build the SDK directory tree that we ship to end users."
     from("docs/build")

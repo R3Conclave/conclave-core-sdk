@@ -25,6 +25,45 @@ kill -9 `ps -ef | grep com.r3.conclave.sample.enclave.ReverseEnclave | grep -v g
 rm -rf /tmp/host.state
 
 popd
+sleep 10
+
+echo
+echo Now testing Conclave Init
+echo
+
+pushd build/distributions/conclave-sdk-*/
+
+conclaveVersion=${PWD#*conclave-sdk-}
+conclaveRepo=$PWD/repo
+
+# create java project
+$JAVA_HOME/bin/java -jar conclave-init.jar \
+  --enclave-class-name "MegaEnclave" \
+  --package "com.megacorp" \
+  --target "mega-project"
+
+# run the unit tests of the new project
+pushd mega-project
+./gradlew test -PconclaveRepo=$conclaveRepo -PconclaveVersion=$conclaveVersion
+popd
+
+# create kotlin project
+$JAVA_HOME/bin/java -jar conclave-init.jar \
+  --enclave-class-name "MegaEnclave" \
+  --package "com.megacorp" \
+  --target "mega-kotlin-project" \
+  --language kotlin
+
+# run unit tests
+pushd mega-kotlin-project
+./gradlew test -PconclaveRepo=$conclaveRepo -PconclaveVersion=$conclaveVersion
+popd
+
+# clean up
+rm -r mega-project
+rm -r mega-kotlin-project
+popd
+
 
 # Java 8 is required to run Corda
 export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64

@@ -61,6 +61,8 @@ include 'conclave-host'
 include 'conclave-web-host'
 include 'conclave-client'
 
+include 'conclave-init'
+
 include 'internal-testing'
 
 include 'containers:conclave-build'

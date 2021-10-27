@@ -26,6 +26,7 @@ nav:
         - Threads: threads.md
         - JavaScript/Python: javascript-python.md
         - Performance: performance.md
+        - Conclave Init: conclave-init.md
     - API:
         - JavaDocs: api/index.html
         - Configuration options for enclaves: enclave-configuration.md

@@ -1,3 +1,5 @@
+.DS_Store
+
 **/build/
 **/bin/
 **/cmake-build-debug/
@@ -16,12 +18,17 @@
 **/docs/docs/api
 **/docs/docs/javadoc
 ?/
+
 internal-docs/site
+
 docs/docs/api
 docs/virtualenv
-.DS_Store
+
 cpp/jvm-enclave-avian/generated_dlsym/dlsym.*
 cpp/jvm-enclave-common/include/enclave_jni.h
 cpp/jvm-host-shared/include/host_jni_shared.h
+
 stale_outputs_checked
 dokka/dokka/
+
+graal/cap-cache.build_artifacts.txt

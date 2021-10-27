@@ -381,6 +381,10 @@ Apache 2: https://github.com/fusesource/jansi/blob/master/license.txt
 
 Mozilla Public License: https://github.com/MihaiValentin/lunr-languages/blob/master/LICENSE
 
+**[PicoCLI](https://picocli.info)**
+
+Apache 2: https://github.com/remkop/picocli/blob/master/LICENSE
+
 **[YUIDoc Ember Theme](https://github.com/offirgolan/yuidoc-ember-theme)** -
 
 The MIT License (MIT)

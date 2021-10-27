@@ -32,35 +32,32 @@ Only release mode locks out the host and provides the standard SGX security mode
     on how to set up your Windows or MacOS based system, see [here](system-requirements.md#running).
 
 ## Set up your machine
+For this tutorial you will need [Java 8 or 11](system-requirements.md#jdk-compatibility) (your choice).
 
-For this tutorial you will need [Java 8 or 11](system-requirements.md#jdk-compatibility) (your choice). If you use IntelliJ IDEA the IDE can download both a JDK
-and the Gradle build system for you, so you don't need anything to get started except the IDE itself (the free 
-Community Edition works fine).
+There are also some platform-specific dependencies.
 
-Currently, we support developing enclaves on [Windows, macOS and Linux](system-requirements.md#operating-systems).
-However, there are a few platform specific differences to be aware of.
+=== "Windows/ Mac"
 
-Firstly, you need a [Linux](system-requirements.md#linux-distros-and-versions) environment to build and execute enclaves, including for native testing. This is because
-enclaves are Linux shared libraries with special extensions. Unless you are using Linux, you will need to install Docker.
-On Windows and macOS, Conclave uses Docker to build the enclave in a Linux environment. Ensure Docker is allocated **at 
-least 6GB of memory** as the build and deployment tasks are memory intensive.
-[Instructions are provided below](#running-the-host) to show you how to use Docker on Windows and macOS to run your
-entire application in "simulation mode". Alternatively, for day to day development building an enclave in [mock mode](mockmode.md)
-is plenty sufficient and allows you to debug into enclave calls as well. Compiling a real enclave
-is only needed for integration testing against the embedded JVM, or real deployment.
+    If you want to run your app in simulation mode or higher, **install Docker, and ensure that it is allocated at least
+    6GB of memory.**
 
-Secondly, when building enclaves Conclave internally uses the C++ compiler
-gcc. This is automatically installed when building on Windows and macOS but on Linux you need to make sure you have
-installed gcc yourself. If your build system uses the aptitude package manager then you can install everything you need with
-this command:
+    This tutorial contains full instructions on how to run `hello-world` using Docker. You can find more
+    general instructions for using Docker with Conclave at [System Requirements](system-requirements.md).
 
-```bash
-sudo apt-get install build-essential
-```
+    If you don't want to install Docker, you can still use [mock mode](#enclave-modes).
 
-Enclaves can run in simulation mode without requiring any special setup of Linux or SGX capable hardware. However you 
-of course get no hardware protections. To run against real SGX hardware you must perform some 
-[additional machine setup](machine-setup.md).
+=== "Linux"
+
+    Make sure the C++ compiler gcc is installed. If your build system uses the aptitude package manager then you can
+    install it with this command:
+
+    ```bash
+    sudo apt-get install build-essential
+    ```
+
+!!! Note
+    In this tutorial, you will run `hello-world` in simulation mode. Some [additional setup](machine-setup.md) will be
+    required when you want to use debug or release mode. See [Enclave modes](#enclave-modes) for more information.
 
 ## Compile the sample enclave
 

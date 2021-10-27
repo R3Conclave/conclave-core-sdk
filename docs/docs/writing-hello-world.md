@@ -1,5 +1,10 @@
 # Writing the sample enclave
 
+!!! tip
+    If you want to get started as quickly as possible, you can use [Conclave Init](conclave-init.md) to bootstrap your project. 
+
+    If you'd like to learn how Conclave apps work in detail, then keep reading.
+
 The sample "hello world" enclave just reverses whatever string is passed into it. We'll do these things to make
 our own version of the hello enclave project:
 
