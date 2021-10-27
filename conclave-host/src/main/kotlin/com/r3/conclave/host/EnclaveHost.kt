@@ -87,19 +87,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         }
 
         /**
-         * Construct a platform support exception with a specific message for cases where non-linux hosts
-         * attempt to load simulation, debug or release mode enclaves.
-         */
-        private fun getPlatformSupportExceptionNotLinux(cause: Throwable): PlatformSupportException {
-            val message =
-                    "This system does not support hardware enclaves. " +
-                    "If you wish to run enclaves built in simulation, release or debug mode, " +
-                    "you must run in a linux environment. Consult the conclave documentation " +
-                    "for platform specific instructions."
-            return PlatformSupportException(message, cause)
-        }
-
-        /**
          * Load the signed enclave for the given enclave class name.
          *
          * @param enclaveClassName The name of the enclave class to load.
@@ -157,12 +144,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 try {
                     stream!!.use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
                     return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
-                } catch (e: UnsatisfiedLinkError) {
-                    // We get an unsatisfied link error if the native library could not be loaded on
-                    // the current platform - this will happen if the user tries to load an enclave
-                    // on a platform other than Linux.
-                    enclaveFile.deleteQuietly()
-                    throw getPlatformSupportExceptionNotLinux(e)
                 } catch (e: Exception) {
                     enclaveFile.deleteQuietly()
                     throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
@@ -238,6 +219,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * @throws PlatformSupportException if the requested mode is not supported on the system.
          */
         private fun checkPlatformEnclaveSupport(enclaveMode: EnclaveMode) {
+            // All platforms support MOCK mode
+            if (enclaveMode == EnclaveMode.MOCK)
+                return
+
+            checkNotLinux()
+
             val requireHardwareSupport = enclaveMode.isHardware
             try {
                 NativeShared.checkPlatformEnclaveSupport(requireHardwareSupport)
@@ -257,11 +244,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 } else {
                     throw e
                 }
-            } catch (e: UnsatisfiedLinkError) {
-                // We get an unsatisfied link error if the native library could not be loaded on
-                // the current platform - this will happen if the user tries to load an enclave
-                // on a platform other than Linux.
-                throw getPlatformSupportExceptionNotLinux(e)
             } catch (e: Exception) {
                 throw IllegalStateException("Unable to check platform support", e)
             }
@@ -275,11 +257,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          */
         @JvmStatic
         fun isSimulatedEnclaveSupported(): Boolean {
+            if (!UtilsOS.isLinux())
+                return false
+
             try {
                 NativeShared.checkPlatformEnclaveSupport(false)
             } catch (e: PlatformSupportException) {
-                return false
-            } catch (e: UnsatisfiedLinkError) {
                 return false
             }
             return true
@@ -294,11 +277,12 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          */
         @JvmStatic
         fun isHardwareEnclaveSupported(): Boolean {
+            if (!UtilsOS.isLinux())
+                return false
+
             try {
                 NativeShared.checkPlatformEnclaveSupport(true)
             } catch (e: PlatformSupportException) {
-                return false
-            } catch (e: UnsatisfiedLinkError) {
                 return false
             }
             return true
@@ -333,13 +317,20 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(PlatformSupportException::class)
         fun enableHardwareEnclaveSupport() {
-            try {
-                NativeShared.enablePlatformHardwareEnclaveSupport()
-            } catch (e: UnsatisfiedLinkError) {
-                // We get an unsatisfied link error if the native library could not be loaded on
-                // the current platform - this will happen if the user tries to load an enclave
-                // on a platform other than Linux.
-                throw getPlatformSupportExceptionNotLinux(e)
+            checkNotLinux()
+            NativeShared.enablePlatformHardwareEnclaveSupport()
+        }
+
+        @JvmStatic
+        @Throws(PlatformSupportException::class)
+        private fun checkNotLinux() {
+            if (!UtilsOS.isLinux()) {
+                val message =
+                    "This system does not support hardware enclaves. " +
+                            "If you wish to run enclaves built in simulation, release or debug mode, " +
+                            "you must run in a linux environment. Consult the conclave documentation " +
+                            "for platform specific instructions."
+                throw PlatformSupportException(message)
             }
         }
     }

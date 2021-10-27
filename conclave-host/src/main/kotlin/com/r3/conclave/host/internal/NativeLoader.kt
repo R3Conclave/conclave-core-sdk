@@ -26,6 +26,7 @@ object NativeLoader {
      */
     @Synchronized
     fun loadHostLibraries(enclaveMode: EnclaveMode) {
+        check(UtilsOS.isLinux()) { "Failed to initialise NativeShared. NativeShared only works on Linux platforms" }
         // If host libraries have been already loaded, check input type consistency
         val localLinkedBinaryType = linkedEnclaveMode
         if (localLinkedBinaryType != null) {

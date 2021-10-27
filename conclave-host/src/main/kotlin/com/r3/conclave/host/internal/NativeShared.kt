@@ -12,6 +12,8 @@ object NativeShared {
     private val logger = loggerFor<NativeShared>()
 
     init {
+        check(UtilsOS.isLinux()) { "Failed to initialise NativeShared. NativeShared only works on Linux platforms" }
+
         val tempDirectory = createTempDirectory()
         logger.debug("Unpacking native libraries to $tempDirectory")
         val hostLibrariesResourcePath = "com/r3/conclave/host-libraries/shared"
@@ -42,7 +44,7 @@ object NativeShared {
     }
 
     fun checkPlatformEnclaveSupport(requireHardwareSupport: Boolean) {
-        return NativeSharedInternal.checkPlatformEnclaveSupport(requireHardwareSupport)
+        NativeSharedInternal.checkPlatformEnclaveSupport(requireHardwareSupport)
     }
 
     fun enablePlatformHardwareEnclaveSupport() {
