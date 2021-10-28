@@ -65,7 +65,7 @@ internal class TemplateTextTransformerTest {
             void firstTest() throws EnclaveLoadException, IOException {
                 // Start the enclave
                 EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.template.enclave.TemplateEnclaveJava");
-                mockHost.start(new AttestationParameters.DCAP(), null, (commands) -> mailCommands.addAll(commands));
+                mockHost.start(new AttestationParameters.DCAP(), null, null, (commands) -> mailCommands.addAll(commands));
                 assertTrue(true)
             }
         }
@@ -87,7 +87,7 @@ internal class TemplateTextTransformerTest {
             void firstTest() throws EnclaveLoadException, IOException {
                 // Start the enclave
                 EnclaveHost mockHost = EnclaveHost.load("com.megacorp.enclave.MegaEnclave");
-                mockHost.start(new AttestationParameters.DCAP(), null, (commands) -> mailCommands.addAll(commands));
+                mockHost.start(new AttestationParameters.DCAP(), null, null, (commands) -> mailCommands.addAll(commands));
                 assertTrue(true)
             }
         }

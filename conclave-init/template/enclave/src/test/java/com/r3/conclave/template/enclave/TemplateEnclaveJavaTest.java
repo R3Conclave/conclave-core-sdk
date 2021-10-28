@@ -21,7 +21,7 @@ class TemplateEnclaveJavaTest {
     void firstTest() throws EnclaveLoadException, IOException, MailDecryptionException {
         // Start the enclave
         EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.template.enclave.TemplateEnclaveJava");
-        mockHost.start(null, null, (commands) -> mailCommands.addAll(commands));
+        mockHost.start(null, null, null, (commands) -> mailCommands.addAll(commands));
 
         // Deliver some mail
         PostOffice postOffice = mockHost.getEnclaveInstanceInfo().createPostOffice();

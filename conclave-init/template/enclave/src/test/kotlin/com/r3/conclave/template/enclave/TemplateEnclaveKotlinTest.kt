@@ -14,7 +14,7 @@ class TemplateEnclaveKotlinTest {
     fun `first test`() {
         val mockHost = EnclaveHost.load("com.r3.conclave.template.enclave.TemplateEnclaveKotlin")
 
-        mockHost.start(null, null) { commands ->
+        mockHost.start(null, null, null) { commands ->
             commands.forEach { command ->
                 when (command) {
                     is MailCommand.PostMail -> {
