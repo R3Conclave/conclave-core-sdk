@@ -453,7 +453,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
         return if (enclaveMode != EnclaveMode.MOCK) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
-            FileSystemHandler(fileSystemFilePaths)
+            FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
             null;
         }

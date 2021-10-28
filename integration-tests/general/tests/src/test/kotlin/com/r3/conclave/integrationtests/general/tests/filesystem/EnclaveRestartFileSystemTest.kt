@@ -42,7 +42,8 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
         }
             .isInstanceOf(com.r3.conclave.host.EnclaveLoadException::class.java)
             .hasMessageContaining("Unable to start enclave")
-            .hasStackTraceContaining("Caused by: java.lang.RuntimeException: Filesystems not initialized, path not provided for drive")
+            .hasStackTraceContaining("Caused by: java.lang.IllegalStateException: The enclave has been configured to use" +
+                    " the persistent filesystem but no storage file was provided in EnclaveHost.start")
     }
 
     private fun restartEnclaveBetweenWriteAndRead(parentDir: String): String {

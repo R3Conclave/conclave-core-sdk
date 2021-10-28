@@ -39,8 +39,7 @@ void debug_print(const char *str, int n) {
 
 static bool signal_registered = false;
 
-JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getDeviceStatus
-        (JNIEnv *, jclass) {
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getDeviceStatus(JNIEnv *, jclass) {
 #ifdef SGX_SIM
     // If in simulation mode, simulate device capabilities.
     return SGX_ENABLED;
@@ -94,8 +93,10 @@ static void initialise_enclave(sgx_enclave_id_t enclave_id) {
     sgx_configure_thread_blocking(enclave_id, ei.deadlock_timeout_seconds);
 }
 
-jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
-        (JNIEnv *jniEnv, jclass, jstring enclavePath, jboolean isDebug) {
+jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave(JNIEnv *jniEnv,
+                                                                      jclass,
+                                                                      jstring enclavePath,
+                                                                      jboolean isDebug) {
 
     initialise_abort_handler();
         
@@ -118,8 +119,9 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave
     }
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
-        (JNIEnv *jniEnv, jclass, jlong enclaveId) {
+void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave(JNIEnv *jniEnv,
+                                                                      jclass,
+                                                                      jlong enclaveId) {
     if (!EcallContext::available()) {
         EcallContext _(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
         const auto ret = ecall_finalize_enclave(static_cast<sgx_enclave_id_t>(enclaveId));
@@ -139,29 +141,32 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
     r3::conclave::HostSharedData::instance().free(static_cast<sgx_enclave_id_t>(enclaveId));
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
-        (JNIEnv *jniEnv, jclass, jlong enclaveId, jbyteArray data)
-try {
-    // Prepare input buffer
-    auto size = jniEnv->GetArrayLength(data);
-    checkJniException(jniEnv);
-    auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
-    checkJniException(jniEnv);
+void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall(JNIEnv *jniEnv,
+                                                                jclass,
+                                                                jlong enclaveId,
+                                                                jbyteArray data) {
+    try {
+        // Prepare input buffer
+        auto size = jniEnv->GetArrayLength(data);
+        checkJniException(jniEnv);
+        auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
+        checkJniException(jniEnv);
 
         // Set the enclave ID TLS so that OCALLs have access to it
-    EcallContext context(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
-    auto returnCode = jvm_ecall(
-                static_cast<sgx_enclave_id_t>(enclaveId),
-                inputBuffer,
-                size
-    );
-    jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
+        EcallContext context(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
+        auto returnCode = jvm_ecall(
+                                    static_cast<sgx_enclave_id_t>(enclaveId),
+                                    inputBuffer,
+                                    size
+                                    );
+        jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
 
-    if (returnCode != SGX_SUCCESS) {
-        raiseException(jniEnv, getErrorMessage(returnCode));
+        if (returnCode != SGX_SUCCESS) {
+            raiseException(jniEnv, getErrorMessage(returnCode));
+        }
+    } catch (JNIException&) {
+        // No-op: the host JVM will deal with it
     }
-} catch (JNIException&) {
-    // No-op: the host JVM will deal with it
 }
 
 
@@ -170,8 +175,9 @@ typedef struct sgx_init_quote_request {
     sgx_epid_group_id_t epid_group_id;
 } sgx_init_quote_request_t;
 
-JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote
-        (JNIEnv *jniEnv, jclass, jbyteArray initQuoteRequest) {
+JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote(JNIEnv *jniEnv,
+                                                                           jclass,
+                                                                           jbyteArray initQuoteRequest) {
     JniPtr<sgx_init_quote_request_t> request(jniEnv, initQuoteRequest);
     auto returnCode = sgx_init_quote(&request.ptr->target_info, &request.ptr->epid_group_id);
     if (returnCode == SGX_SUCCESS) {
@@ -181,15 +187,16 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_initQuote
     }
 }
 
-JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSize
-        (JNIEnv *jniEnv, jclass, jbyteArray sigRlIn) {
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSize(JNIEnv *jniEnv,
+                                                                               jclass,
+                                                                               jbyteArray sigRlIn) {
     JniPtr<const uint8_t> sig_rl(jniEnv, sigRlIn);
     uint32_t quoteSize = 0;
     auto returnCode = sgx_calc_quote_size(
-            sig_rl.ptr,
-            static_cast<uint32_t>(sig_rl.size()),
-            &quoteSize
-    );
+                                          sig_rl.ptr,
+                                          static_cast<uint32_t>(sig_rl.size()),
+                                          &quoteSize
+                                          );
     if (returnCode == SGX_SUCCESS) {
         return quoteSize;
     } else {
@@ -204,24 +211,29 @@ typedef struct sgx_get_quote_request {
     const sgx_spid_t p_spid;
 } sgx_get_quote_request_t;
 
-JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
-        (JNIEnv *jniEnv, jclass, jbyteArray getQuoteRequestIn, jbyteArray sigRlIn, jbyteArray qeReportNonceIn, jbyteArray qeReportOut, jbyteArray quoteOut) {
+JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote(JNIEnv *jniEnv,
+                                                                          jclass,
+                                                                          jbyteArray getQuoteRequestIn,
+                                                                          jbyteArray sigRlIn,
+                                                                          jbyteArray qeReportNonceIn,
+                                                                          jbyteArray qeReportOut,
+                                                                          jbyteArray quoteOut) {
     JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
     JniPtr<const uint8_t> sig_rl(jniEnv, sigRlIn);
     JniPtr<const sgx_quote_nonce_t> qe_report_nonce(jniEnv, qeReportNonceIn);
     JniPtr<sgx_report_t> qe_report(jniEnv, qeReportOut);
     JniPtr<sgx_quote_t> quote(jniEnv, quoteOut);
     auto returnCode = sgx_get_quote(
-            &request.ptr->p_report,
-            request.ptr->quote_type,
-            &request.ptr->p_spid,
-            qe_report_nonce.ptr,
-            sig_rl.ptr,
-            static_cast<uint32_t>(sig_rl.size()),
-            qe_report.ptr,
-            quote.ptr,
-            static_cast<uint32_t>(quote.size())
-    );
+                                    &request.ptr->p_report,
+                                    request.ptr->quote_type,
+                                    &request.ptr->p_spid,
+                                    qe_report_nonce.ptr,
+                                    sig_rl.ptr,
+                                    static_cast<uint32_t>(sig_rl.size()),
+                                    qe_report.ptr,
+                                    quote.ptr,
+                                    static_cast<uint32_t>(quote.size())
+                                    );
     if (returnCode == SGX_SUCCESS) {
         qe_report.releaseMode = 0;
         quote.releaseMode = 0;
@@ -230,8 +242,10 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
     }
 }
 
-JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata
-        (JNIEnv *jniEnv, jclass, jstring enclaveFilePath, jbyteArray metadataOut) {
+JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata(JNIEnv *jniEnv,
+                                                                             jclass,
+                                                                             jstring enclaveFilePath,
+                                                                             jbyteArray metadataOut) {
 
     JniString path(jniEnv, enclaveFilePath);
     JniPtr<metadata_t> metadata(jniEnv, metadataOut);
@@ -263,7 +277,7 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
         jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), javaBufferIn.value());
         checkJniException(jniEnv);
     } catch (JNIException&) {
-      // No-op: delegate handling to the host JVM
+        // No-op: delegate handling to the host JVM
     }
 }
 
@@ -291,32 +305,33 @@ void free_untrusted_memory(void** untrustedBufferPtr) {
 }
 
 void host_encrypted_read_ocall(int* res,
-			       const unsigned char drive,
-			       const unsigned long sector_id,
-			       const unsigned char num_sectors,
-			       const unsigned int sector_size,
-			       unsigned char* buf,
-			       const unsigned int buf_size) {
+                               const unsigned char drive,
+                               const unsigned long sector_id,
+                               const unsigned char num_sectors,
+                               const unsigned int sector_size,
+                               unsigned char* buf,
+                               const unsigned int buf_size) {
     const int res_f = host_disk_read(drive, sector_id, num_sectors, sector_size, buf);
     *res = res_f;
 }
 
 
 void host_encrypted_write_ocall(int* res,
-				const unsigned char drive,
-				const unsigned char* buf,
-				const unsigned int buf_size,
-				const unsigned int num_writes,
-				const unsigned int sector_size,
-				const unsigned long* indices,
-				const unsigned int indices_buf_size) {
+                                const unsigned char drive,
+                                const unsigned char* buf,
+                                const unsigned int buf_size,
+                                const unsigned int num_writes,
+                                const unsigned int sector_size,
+                                const unsigned long* indices,
+                                const unsigned int indices_buf_size) {
     const int res_f = host_disk_write(drive, buf, num_writes, sector_size, indices);
     *res = res_f;
 }
 
 void host_disk_get_size_ocall(long* res,
-			      const unsigned char drive) {
-    const long res_f = host_disk_get_size(drive);
+                              const unsigned char drive,
+                              const unsigned long persistent_size) {
+    const long res_f = host_disk_get_size(drive, persistent_size);
     *res = res_f;
 }
 
@@ -356,8 +371,10 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
-        (JNIEnv *jniEnv, jclass, jstring bundle, jbyteArray targetInfoOut) {
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP(JNIEnv *jniEnv,
+                                                                               jclass,
+                                                                               jstring bundle,
+                                                                               jbyteArray targetInfoOut) {
 
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
@@ -376,8 +393,8 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
     }
 }
 
-JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP
-        (JNIEnv *jniEnv, jclass) {
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDCAP(JNIEnv *jniEnv,
+                                                                                   jclass) {
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
@@ -391,8 +408,10 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_calcQuoteSizeDC
     }
 }
 
-JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
-        (JNIEnv *jniEnv, jclass, jbyteArray getQuoteRequestIn, jbyteArray quoteOut) {
+JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP(JNIEnv *jniEnv,
+                                                                              jclass,
+                                                                              jbyteArray getQuoteRequestIn,
+                                                                              jbyteArray quoteOut) {
 
     JniPtr<const sgx_get_quote_request> request(jniEnv, getQuoteRequestIn);
     JniPtr<sgx_quote_t> quote(jniEnv, quoteOut);
@@ -401,7 +420,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
 
     quote3_error_t eval_result;
     if (quoting_lib->get_quote(const_cast<sgx_report_t*>(&request.ptr->p_report),
-            static_cast<uint32_t>(quote.size()), (uint8_t*)quote.ptr, eval_result)) {
+                               static_cast<uint32_t>(quote.size()), (uint8_t*)quote.ptr, eval_result)) {
         quote.releaseMode = 0;
     } else {
         raiseException(jniEnv, getQuotingErrorMessage(eval_result));
@@ -410,8 +429,10 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
     return (int)eval_result;
 }
 
-JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral
-  (JNIEnv *jniEnv, jclass, jbyteArray fmspc, jint pck_ca_type) {
+JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral(JNIEnv *jniEnv,
+                                                                                            jclass,
+                                                                                            jbyteArray fmspc,
+                                                                                            jint pck_ca_type) {
 
     JniPtr<uint8_t> p_fmspc(jniEnv, fmspc);
 
@@ -426,22 +447,22 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
     else {
         jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/String"),nullptr);
 
-    /**
-        enum class PckCaType {
-            Processor,
-            Platform
-        }
-        enum class CollateralType {
-            Version,
-            PckCrlIssuerChain,
-            RootCaCrl,
-            PckCrl,
-            TcbInfoIssuerChain,
-            TcbInfo,
-            QeIdentityIssuerChain,
-            QeIdentity
-        }
-    */
+        /**
+           enum class PckCaType {
+           Processor,
+           Platform
+           }
+           enum class CollateralType {
+           Version,
+           PckCrlIssuerChain,
+           RootCaCrl,
+           PckCrl,
+           TcbInfoIssuerChain,
+           TcbInfo,
+           QeIdentityIssuerChain,
+           QeIdentity
+           }
+        */
         char version[2] = { '0', 0};
         version[0] += collateral->version;
 
@@ -459,9 +480,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
 }
 
 namespace r3::conclave {
-std::string getCpuCapabilitiesSummary();
+    std::string getCpuCapabilitiesSummary();
 }
 
-JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary(JNIEnv *jniEnv, jclass) {
+JNIEXPORT jstring JNICALL Java_com_r3_conclave_host_internal_Native_getCpuCapabilitiesSummary(JNIEnv *jniEnv,
+                                                                                              jclass) {
     return jniEnv->NewStringUTF(r3::conclave::getCpuCapabilitiesSummary().c_str());
 }

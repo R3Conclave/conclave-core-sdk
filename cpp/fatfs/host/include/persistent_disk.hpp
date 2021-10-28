@@ -12,7 +12,7 @@ extern "C" {
 
 }
 
-long host_disk_get_size(const unsigned char drive);
+long host_disk_get_size(const unsigned char drive, const unsigned long persistent_size);
 
 int host_disk_start(const unsigned char drive);
 

@@ -62,7 +62,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_fatfs_FileSystemHandle
   to understand if the file is present or needs to be created and then to establish if the
   filesystem needs to be initialized or just loaded.
 */
-long host_disk_get_size(const unsigned char drive) {
+long host_disk_get_size(const unsigned char drive, const unsigned long persistent_size) {
     DEBUG_PRINT_FUNCTION;
     JNIEnv* env = NULL;
     jint rs = jvm->AttachCurrentThread((void**)&env, NULL);
@@ -77,16 +77,23 @@ long host_disk_get_size(const unsigned char drive) {
         jvm->DetachCurrentThread();     
         return -1;
     }    
-    jmethodID mid = env->GetMethodID(cls, "getDriveSize", "(I)J");
+    jmethodID mid = env->GetMethodID(cls, "getDriveSize", "(IJ)J");
     
     if (mid == nullptr) {
         FATFS_DEBUG_PRINT("Host not getting the file size of drive %d\n", drive);
         jvm->DetachCurrentThread();
         return -1;
     }           
-    const long res = env->CallLongMethod(obj,
-                                         mid,
-                                         static_cast<int>(drive));
+    long res = env->CallLongMethod(obj,
+				   mid,
+				   static_cast<int>(drive),
+				   persistent_size);
+    if (env->ExceptionCheck()) {
+	//  We rely on the DetachCurrentThread below to handle the pending exception and make the
+	//  Host JNI aware of it (we could clear and rethrow it, but the effect would be the same).
+	//  We also tell the Enclave that this has happened by returning a -1, so that it exits accordingly  
+        res = -1;
+    }
     jvm->DetachCurrentThread();
     return res;
 }

@@ -240,6 +240,10 @@ in addition to the persisted filesystem.
 The persisted filesystem is also currently susceptible to **side channel attacks** if the host observes the frequency of
 reads/writes from/to the file; we plan to add an oblivious mechanism in a future release to cope with this.
 
+!!! warning
+    This value cannot change once the enclave has started the first time, please choose an appropriate value
+    that is big enough for your needs in the long term.
+
 !!! tip
     As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
     after the value to specify it in kilobytes, megabytes or gigabytes respectively.

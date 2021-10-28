@@ -111,15 +111,15 @@ static bool getJniEncryptionKey(JNIEnv* env,
 //  The initialization of the persistent disk depends on the present of the
 //    file/filesystem path on the host.
 //  When loading the enclave, we do an OCall and we check the presence of the file on the host.
-static conclave::DiskInitialization getInitializationType(JNIEnv* env, const unsigned char drive) {
+static conclave::DiskInitialization getInitializationType(JNIEnv* env, const unsigned char drive, const unsigned long persistent_size) {
     long host_file_size = -1;
-    host_disk_get_size_ocall(&host_file_size, drive);
+    host_disk_get_size_ocall(&host_file_size, drive, persistent_size);
     FATFS_DEBUG_PRINT("Host disk size %ld\n", host_file_size);
 
-    const bool encrypted_disk_required = (host_file_size != -1);
+    const bool host_has_thrown_exception = (host_file_size == -1);
 
-    if (!encrypted_disk_required) {
-        FATFS_DEBUG_PRINT("Disk not initialized, path not provided for drive %d\n", drive);
+    if (host_has_thrown_exception) {
+        FATFS_DEBUG_PRINT("Disk not initialized, the host has thrown an exception, drive %d\n", drive);
         return conclave::DiskInitialization::ERROR;
     }
     const bool host_file_present = (host_file_size != 0);
@@ -141,21 +141,16 @@ static void handleInitException(JNIEnv* env, const FatFsResult result) {
     switch (result) {
         //  These are errors for which the user can't do much, so it is not
         //    useful to provide more info
+    case FatFsResult::MKFS_ABORTED:
+        raiseException(env, "Wrong persistent filesystem's sizes have been provided, limits have been exceeded");
+        return;
     case FatFsResult::WRONG_DRIVE_ID:
     case FatFsResult::MOUNT_FAILED:
     case FatFsResult::DRIVE_REGISTRATION_FAILED:
     case FatFsResult::MKFS_GENERIC_ERROR:
     case FatFsResult::ROOT_DIRECTORY_MOUNT_FAILED:
-        raiseException(env, "Unable to initialize the enclave's persistent filesystem."
-                       "Have you inadvertently changed the sizes of the persistent filesystem in the enclave's config or the content of the filesystem file? Have you changed enclave mode?");
-        return;
-
-    case FatFsResult::MKFS_ABORTED:
-        raiseException(env, "Wrong persistent filesystem's sizes have been provided, limits have been exceeded");
-        return;
     default:
-        // We should not reach this
-        raiseException(env, "Unable to initialize the enclave's persistent file system");
+        raiseException(env, "Unable to initialize the enclave's persistent filesystem");
         return;        
     }
 }
@@ -202,10 +197,11 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_setupFileSys
     */
     
     if (persistent_size > 0) {
-        conclave::DiskInitialization initialization = getInitializationType(env, drive);
-
+        conclave::DiskInitialization initialization = getInitializationType(env, drive, persistent_size);
+        
         if (initialization == conclave::DiskInitialization::ERROR) {
-            raiseException(env, "Filesystems not initialized, path not provided for drive");
+            //  The Host has thrown an exception as well
+            raiseException(env, "Filesystems not initialized");
             return;
         }
         auto filesystem = createFileSystem(FileSystemType::PERSISTENT,

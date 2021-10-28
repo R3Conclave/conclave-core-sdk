@@ -37,30 +37,31 @@ enclave {
             [in] void** buffer
         );
 
-        void host_encrypted_read_ocall(					     
-	    [out] int* res,
-	    unsigned char drive,
-	    unsigned long sector_id,
+        void host_encrypted_read_ocall(     
+            [out] int* res,
+            unsigned char drive,
+            unsigned long sector_id,
             unsigned char num_sectors,
-	    unsigned int sector_size,
-	    [out, size=buf_size] unsigned char* buf,
+            unsigned int sector_size,
+            [out, size=buf_size] unsigned char* buf,
             unsigned int buf_size
-	);
-	     
+        );
+             
         void host_encrypted_write_ocall( 
-	    [out] int* res,
-	    unsigned char drive,
-	    [in, size=buf_size] const unsigned char* buf,
-	    unsigned int buf_size,
- 	    unsigned int num_writes,
- 	    unsigned int element_size,
-	    [in, size=indices_buf_size] const unsigned long* indices,
-	    unsigned int indices_buf_size
-	);
+            [out] int* res,
+            unsigned char drive,
+            [in, size=buf_size] const unsigned char* buf,
+            unsigned int buf_size,
+            unsigned int num_writes,
+            unsigned int element_size,
+            [in, size=indices_buf_size] const unsigned long* indices,
+            unsigned int indices_buf_size
+        );
 
         void host_disk_get_size_ocall( 
-	    [out] long* res,
-	    unsigned char drive
-	);
+            [out] long* res,
+            unsigned char drive,
+            unsigned long persistent_size
+        );
     };
 };
