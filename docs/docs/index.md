@@ -158,6 +158,9 @@ is available where you can find the development team during UK office hours (GMT
 1. The API for performing platform support checks has been streamlined. Please consult the [API changes page](api-changes.md)
    for more information.
 
+1. :jigsaw: **New feature!** We've added a new overload of `EnclaveHost.load` which no longer requires having to specify the enclave
+class name as a parameter. Instead, `EnclaveHost` will scan for the single matching enclave on the classpath.
+
 ### 1.1
 
 !!! important

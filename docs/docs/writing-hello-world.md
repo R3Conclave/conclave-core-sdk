@@ -472,12 +472,12 @@ At the time of writing we only support DCAP attestation.
 
 Now everything should be ready to run the host from the command line (replace enclave class name with your enclave class name).
 ```bash
-./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state"
+./gradlew host:run --args="--sealed.state.file=/tmp/hello-world-sealed-state"
 ```
 or
 ```bash
 ./gradlew clean host:installDist
-./host/build/install/host/bin/host --enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state
+./host/build/install/host/bin/host --sealed.state.file=/tmp/hello-world-sealed-state
 ```
 !!! note
     `--sealed.state.file` specifies where the host would store a sealed state. See [Mail Commands](#mail-commands) for details.
@@ -521,7 +521,7 @@ by debuggers to read/write the enclave's memory.
 You will need to run this on an [Azure Confidential VM](https://docs.microsoft.com/en-us/azure/confidential-computing/).
 
 ```bash
-./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state"
+./gradlew host:run --args="--sealed.state.file=/tmp/hello-world-sealed-state"
 ```
 
 ## Encrypted messaging
@@ -1035,7 +1035,7 @@ public static void main(String[] args) throws Exception {
 
 To run this, you have to first start a process serving Web Host REST API:
 ```bash
-./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-state" &
+./gradlew host:run --args="--sealed.state.file=/tmp/hello-world-state" &
 ```
 And now you can run the `client`:
 ```bash

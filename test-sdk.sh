@@ -14,14 +14,14 @@ pushd build/distributions/conclave-sdk-*/hello-world
 ./gradlew --stacktrace $gradle_args host:test
 #build and start the host
 ./gradlew -q $gradle_args host:installDist
-./host/build/install/host/bin/host  --enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/host.state &
+./host/build/install/host/bin/host --sealed.state.file=/tmp/host.state & _PID=$!
 # starting spring boot might take a while
 sleep 5
 
 ./gradlew --stacktrace -q client:run --args "reverse me!"
 
 # kill the host process
-kill -9 `ps -ef | grep com.r3.conclave.sample.enclave.ReverseEnclave | grep -v grep | tr -s ' ' | cut -d ' ' -f2`
+kill -9 $_PID
 rm -rf /tmp/host.state
 
 popd

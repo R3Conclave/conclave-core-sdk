@@ -8,7 +8,7 @@ copy/paste it to act as the basis of your own commercial or open source apps.
 Start the host on a Linux system, which will build the enclave and host:
 
 ```
-./gradlew host:run --args="--enclave.class=com.r3.conclave.sample.enclave.ReverseEnclave --sealed.state.file=/tmp/hello-world-sealed-state"
+./gradlew host:run --args="--sealed.state.file=/tmp/hello-world-sealed-state"
 ```
 
 It should print out some info about the started enclave. Then you can use the client to send it strings to reverse:

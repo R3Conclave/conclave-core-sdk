@@ -32,7 +32,7 @@ public class NativeTest {
 
     @BeforeAll
     static void startup() throws EnclaveLoadException {
-        enclave = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
+        enclave = EnclaveHost.load();
         enclave.start(new AttestationParameters.DCAP(), null, null, mailCommands::addAll);
     }
 
