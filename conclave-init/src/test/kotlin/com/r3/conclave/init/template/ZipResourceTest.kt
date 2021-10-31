@@ -14,7 +14,7 @@ internal class ZipResourceTest() {
     fun `extract template`() {
         val outputDir = createTempDirectory()
 
-        ZipResource(outputDir).extractFiles()
+        ZipResource("/template.zip", outputDir).extractFiles()
 
         val expected = listOf(
             "README.md",
@@ -24,7 +24,7 @@ internal class ZipResourceTest() {
             "enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveKotlinTest.kt",
             "enclave/src/main/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveKotlin.kt",
             "build.gradle",
-            "versions.gradle",
+            "gradle.properties",
             "settings.gradle",
             "host/build.gradle"
         ).map(::Path).toSet()

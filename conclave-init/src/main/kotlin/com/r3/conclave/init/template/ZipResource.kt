@@ -9,8 +9,8 @@ import kotlin.io.path.createTempDirectory
 
 
 class ZipResource(
-    private val outputDir: Path = createTempDirectory("conclave-template"),
-    private val name: String = "/template.zip"
+    private val name: String = "/template.zip",
+    private val outputDir: Path = createTempDirectory("conclave-template")
 ) {
     fun extractFiles(): Path {
         val zipResource = this::class.java.getResourceAsStream(name)

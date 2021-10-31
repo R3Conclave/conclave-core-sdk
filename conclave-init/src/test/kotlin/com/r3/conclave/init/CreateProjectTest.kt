@@ -9,7 +9,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.net.URL
 import java.nio.file.Path
+import java.util.*
 import kotlin.io.path.*
 
 internal class TestCreateProject {
@@ -66,18 +68,21 @@ internal class TestCreateProject {
         val basePackage = JavaPackage("com.megacorp")
         val enclaveClass = JavaClass("MegaEnclave")
 
-        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir)
+        val conclaveRepo = createTempDirectory().apply { resolve("repo").createDirectories() }
+
+        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir, conclaveRepo, "1.2-SNAPSHOT")
 
         val expectedChildren = listOf(
             "README.md",
-            "enclave",
-            "build.gradle",
-            "gradlew.bat",
-            "versions.gradle",
-            "settings.gradle",
-            "gradlew",
             "gradle",
-            "host"
+            "gradlew.bat",
+            "gradle.properties",
+            "gradlew",
+            "build.gradle",
+            "settings.gradle",
+            "conclave-repo",
+            "enclave",
+            "host",
         ).map(::Path).toSet()
 
         val actualChildren = outputDir.listDirectoryEntries().map { it.relativeTo(outputDir) }.toSet()
@@ -99,4 +104,3 @@ internal class TestCreateProject {
         assertTrue(outputDir.walkTopDown().filter { it.extension == invalidExtension }.toList().isEmpty())
     }
 }
-

@@ -5,9 +5,11 @@ package com.r3.conclave.init.template
 class TemplateTextTransformer(
     private val basePackage: JavaPackage,
     private val templateEnclaveClass: JavaClass,
-    private val projectEnclaveClass: JavaClass
+    private val projectEnclaveClass: JavaClass,
+    private val conclaveVersion: String
 ) {
     fun transform(text: String): String = text
         .replace(templateEnclavePackage.name, basePackage.name)
         .replace(templateEnclaveClass.name, projectEnclaveClass.name)
+        .replace("{{ CONCLAVE_VERSION }}", conclaveVersion)
 }

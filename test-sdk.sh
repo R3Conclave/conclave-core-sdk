@@ -44,7 +44,7 @@ $JAVA_HOME/bin/java -jar conclave-init.jar \
 
 # run the unit tests of the new project
 pushd mega-project
-./gradlew test -PconclaveRepo=$conclaveRepo -PconclaveVersion=$conclaveVersion
+./gradlew test
 popd
 
 # create kotlin project
@@ -56,7 +56,7 @@ $JAVA_HOME/bin/java -jar conclave-init.jar \
 
 # run unit tests
 pushd mega-kotlin-project
-./gradlew test -PconclaveRepo=$conclaveRepo -PconclaveVersion=$conclaveVersion
+./gradlew test
 popd
 
 # clean up

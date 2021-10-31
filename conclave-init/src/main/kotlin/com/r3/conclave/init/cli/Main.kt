@@ -1,7 +1,9 @@
 package com.r3.conclave.init.cli
 
 import com.r3.conclave.init.ConclaveInit
+import com.r3.conclave.init.template.ManifestFiles
 import picocli.CommandLine
+import java.io.IOException
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
 import kotlin.system.exitProcess
@@ -12,8 +14,10 @@ fun main(args: Array<String>) {
 
     try {
         commandLine.parseArgs(*args)
-
         if (params.helpInfoRequested) commandLine.printHelpAndExit()
+        params.validateSdkRepo()
+    } catch (e: IllegalArgumentException) {
+        commandLine.printErrorAndHelpAndExit(e.message)
     } catch (e: CommandLine.PicocliException) {
         val message = (e.cause as? IllegalArgumentException)?.message ?: e.message
         commandLine.printErrorAndHelpAndExit(message)
@@ -23,9 +27,10 @@ fun main(args: Array<String>) {
         checkTargetDoesNotExist(this)
 
         println(projectSummary())
-        ConclaveInit.createProject(language, basePackage, enclaveClass, target)
+        ConclaveInit.createProject(language, basePackage, enclaveClass, target, sdkRepo, getConclaveVersion())
     }
 }
+
 
 private fun CommandLine.printHelpAndExit() {
     usage(System.out)
@@ -48,4 +53,14 @@ private fun checkTargetDoesNotExist(params: CommandLineParameters) {
     }
 }
 
+private fun getConclaveVersion(): String = try {
+    ManifestFiles.load().conclaveVersion
+} catch (e: IOException) {
+    System.err.println(
+        "Error: could not detect ConclaveVersion. " +
+                "Please add it manually to gradle.properties of the generated project"
+    )
+    returnEmptyString()
+}
 
+private fun returnEmptyString(): String = ""

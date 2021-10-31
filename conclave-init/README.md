@@ -1,7 +1,7 @@
 # Conclave Init
 Conclave Init is a tool for creating new conclave projects.
 
-It works by copying a template file with some modifications, namely custom package, enclave class name, and target directory.
+It works by copying a template project with some modifications, namely custom package, enclave class name, and target directory.
 
 ## Project Structure
 The CLI is exposed through [Main.kt](src/main/kotlin/com/r3/conclave/init/cli/Main.kt). You can see the available parameters in [CommandLineParameters](src/main/kotlin/com/r3/conclave/init/cli/CommandLineParameters.kt).

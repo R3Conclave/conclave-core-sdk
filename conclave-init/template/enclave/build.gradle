@@ -2,10 +2,8 @@ plugins {
     id 'com.r3.conclave.enclave'
 }
 
-apply from: "../versions.gradle"
-
 dependencies {
-    testImplementation "org.junit.jupiter:junit-jupiter:$jupiter_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
 }
 
 conclave {

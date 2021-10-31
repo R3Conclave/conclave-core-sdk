@@ -22,6 +22,8 @@ java -jar conclave-init.jar \
 !!! tip
     Conclave Init also supports Kotlin. Try appending the command with `--language kotlin`.
 
+Run `java -jar conclave-init.jar --help` to see all available options.
+
 ## Run the tests
 
 From the newly created project directory, run the tests with 
@@ -38,6 +40,7 @@ The command provided in [Generate a new project](#generate-a-new-project) will c
 .
 └── amazing-enclave
     ├── build.gradle
+    ├── conclave-repo/
     ├── enclave
     │   ├── build.gradle
     │   └── src
@@ -57,6 +60,7 @@ The command provided in [Generate a new project](#generate-a-new-project) will c
     │   └── wrapper
     │       ├── gradle-wrapper.jar
     │       └── gradle-wrapper.properties
+    ├── gradle.properties
     ├── gradlew
     ├── gradlew.bat
     ├── host
@@ -71,6 +75,8 @@ The command provided in [Generate a new project](#generate-a-new-project) will c
   package `com.megacorp.enclave`. The project is ready for you to start implementing your enclave code here!
 - The `host` directory has been created, too. It's lightweight, since only minimal config is required for the
   new `conclave-web-host`.
+- The `repo/` directory from the SDK has been copied to `conclave-repo/` and the `conclaveRepo` and `conclaveVersion`
+  properties have been set in `gradle.properties`.
 
 For more information on developing your application and how the parts of the application fit together, head to
 the [hello-world tutorial](writing-hello-world.md).

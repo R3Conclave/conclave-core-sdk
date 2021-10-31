@@ -6,7 +6,10 @@ import com.r3.conclave.init.template.JavaPackage
 import picocli.CommandLine
 import picocli.CommandLine.ITypeConverter
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 
 
 class CommandLineParameters {
@@ -43,6 +46,30 @@ class CommandLineParameters {
                 "Example: ../projects/amazing-conclave-app"]
     )
     lateinit var target: Path
+
+    private val pathToSdkRepo: Path by lazy {
+        val conclaveInitURI = this::class.java.protectionDomain.codeSource.location.toURI()
+        return@lazy Paths.get(conclaveInitURI).parent.resolve("repo")
+    }
+
+    @CommandLine.Option(
+        names = ["-s", "--sdk-repo"],
+        description = ["The path to the Conclave SDK repo, which will be copied into the target project.\n" +
+                "Default: /path/to/conclave-init.jar/../repo"]
+    )
+    val sdkRepo: Path = pathToSdkRepo
+
+    fun validateSdkRepo() {
+        val sdkRepoErrorHelp = "Expected to find Conclave SDK Repo at " +
+                "$sdkRepo. Specify another directory via the --sdk-repo parameter. " +
+                "It should be the path to the `repo/` subdirectory of the Conclave SDK."
+
+        require(sdkRepo.exists()) { "$sdkRepo does not exist. $sdkRepoErrorHelp" }
+        require(sdkRepo.isDirectory()) { "$sdkRepo is not a directory. $sdkRepoErrorHelp" }
+        require(sdkRepo.resolve("com").isDirectory()) { "$sdkRepo is not a Maven repository. $sdkRepoErrorHelp" }
+    }
+
+
 
     @CommandLine.Option(
         names = ["-l", "--language"],
