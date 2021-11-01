@@ -60,6 +60,7 @@ include 'conclave-enclave'
 include 'conclave-host'
 include 'conclave-web-host'
 include 'conclave-client'
+include 'conclave-web-client'
 
 include 'conclave-init'
 

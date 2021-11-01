@@ -206,8 +206,8 @@ abstract class Enclave {
             yet been put in place and an exception would cause the Enclave to terminate in such a way that we can't
             control and without meaningful stacktrace as this can't be reported back.
             */
-            val exposeErrors = env.enclaveMode != EnclaveMode.RELEASE
-            val connected = HandlerConnected.connect(ExceptionSendingHandler(exposeErrors = exposeErrors), upstream)
+            val exceptionSendingHandler = ExceptionSendingHandler(env.enclaveMode == EnclaveMode.RELEASE)
+            val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
             attestationHandler = mux.addDownstream(object : AttestationEnclaveHandler(env) {

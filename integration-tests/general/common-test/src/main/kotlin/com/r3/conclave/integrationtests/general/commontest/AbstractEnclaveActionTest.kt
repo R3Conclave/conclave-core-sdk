@@ -3,19 +3,14 @@ package com.r3.conclave.integrationtests.general.commontest
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.MailCommand
 import com.r3.conclave.integrationtests.general.common.tasks.EnclaveTestAction
 import com.r3.conclave.integrationtests.general.common.tasks.decode
 import com.r3.conclave.integrationtests.general.common.tasks.encode
-import com.r3.conclave.mail.Curve25519PrivateKey
-import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
-import kotlin.io.path.div
 import kotlin.io.path.exists
 
 abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: String) {
@@ -64,23 +59,23 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
         }
     }
 
-    private val enclaves = HashMap<String, EnclaveHostWrapper>()
+    private val enclaveTransports = HashMap<String, TestEnclaveTransport>()
 
     @AfterEach
     fun closeEnclaves() {
-        synchronized(enclaves) {
-            enclaves.values.forEach { it.enclaveHost.close() }
-            enclaves.clear()
+        synchronized(enclaveTransports) {
+            enclaveTransports.values.forEach { it.close() }
+            enclaveTransports.clear()
         }
     }
 
     fun enclaveHost(enclaveClassName: String = defaultEnclaveClassName): EnclaveHost {
-        return getEnclaveHostWrapper(enclaveClassName).enclaveHost
+        return getEnclaveTransport(enclaveClassName).enclaveHost
     }
 
     fun restartEnclave(enclaveClassName: String = defaultEnclaveClassName) {
-        synchronized(enclaves) {
-            enclaves.getValue(enclaveClassName).restart()
+        synchronized(enclaveTransports) {
+            enclaveTransports.getValue(enclaveClassName).restartEnclave()
         }
     }
 
@@ -93,7 +88,7 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
     }
 
     fun newMailClient(enclaveClassName: String = defaultEnclaveClassName): MailClient {
-        return MailClientImpl(getEnclaveHostWrapper(enclaveClassName))
+        return MailClientImpl(getEnclaveTransport(enclaveClassName))
     }
 
     interface MailClient {
@@ -101,83 +96,42 @@ abstract class AbstractEnclaveActionTest(private val defaultEnclaveClassName: St
     }
 
 
-    private fun getEnclaveHostWrapper(enclaveClassName: String): EnclaveHostWrapper {
-        return synchronized(enclaves) {
-            enclaves.computeIfAbsent(enclaveClassName) { EnclaveHostWrapper(enclaveClassName) }
-        }
-    }
-
-    private inner class EnclaveHostWrapper(
-        private val enclaveClassName: String
-    ) {
-        val postedMail = HashMap<String, ByteArray>()
-        private var sealedState: ByteArray? = null
-        var enclaveHost = newEnclaveHost()
-        val clients = ArrayList<MailClientImpl>()
-
-
-        private fun newEnclaveHost(): EnclaveHost {
-            enclaveHost = EnclaveHost.load(enclaveClassName)
-            //  Note that fileSystemFileTempDir can be overridden (in EnclaveRestartFileSystem class for example),
-            //    and can become null
-            val fileSystemFilePath = if (fileSystemFileTempDir == null) {
-                null
-            } else {
-                fileSystemFileTempDir?.resolve("test.disk")
-            }
-            enclaveHost.start(
-                getAttestationParams(enclaveHost),
-                sealedState,
-                fileSystemFilePath
-            ) { commands ->
-                for (command in commands) {
-                    when (command) {
-                        is MailCommand.PostMail -> postedMail[command.routingHint!!] = command.encryptedBytes
-                        is MailCommand.StoreSealedState -> sealedState = command.sealedState
-                    }
+    private fun getEnclaveTransport(enclaveClassName: String): TestEnclaveTransport {
+        return synchronized(enclaveTransports) {
+            enclaveTransports.computeIfAbsent(enclaveClassName) {
+                val enclaveFileSystemFile = fileSystemFileTempDir?.resolve("test.disk")
+                val transport = object : TestEnclaveTransport(enclaveClassName, enclaveFileSystemFile) {
+                    override val attestationParameters: AttestationParameters? get() = getAttestationParams(enclaveHost)
                 }
+                transport.startEnclave()
+                transport
             }
-            return enclaveHost
-        }
-
-        fun restart() {
-            enclaveHost.close()
-            enclaveHost = newEnclaveHost()
-            clients.forEach { it.enclaveRestarted() }
         }
     }
 
-    private class MailClientImpl(private val enclave: EnclaveHostWrapper) : MailClient {
-        private val id = UUID.randomUUID().toString()
-        private val privatekey = Curve25519PrivateKey.random()
-        private var postOffice = createPostOffice()
-
-        init {
-            enclave.clients += this
-        }
+    private class MailClientImpl(private val enclaveTransport: TestEnclaveTransport) : MailClient {
+        private val enclaveClient = enclaveTransport.startNewClient()
+        private val clientConnection = enclaveClient.clientConnection as TestEnclaveTransport.ClientConnection
 
         override fun <R> deliverMail(action: EnclaveTestAction<R>, callback: ((ByteArray) -> ByteArray?)?): R {
             val encodedAction = encode(EnclaveTestAction.serializer(action.resultSerializer()), action)
-            val encryptedAction = postOffice.encryptMail(encodedAction)
-            if (callback != null) {
-                enclave.enclaveHost.deliverMail(encryptedAction, id, callback)
+            val resultMail = if (callback == null) {
+                enclaveClient.sendMail(encodedAction)
             } else {
-                enclave.enclaveHost.deliverMail(encryptedAction, id)
+                // This is a bit of a hack. EnclaveClient doesn't support a callback, for obvious reasons, and so we
+                // have to manually encrypt the request and decrypt any response. By not using the EnclaveClient here
+                // means we're not exercising rollback detection, for example.
+                val postOffice = enclaveClient.postOffice("default")
+                val mailRequestBytes = postOffice.encryptMail(encodedAction)
+                val mailResponseBytes = enclaveTransport.enclaveHostService.deliverMail(
+                    mailRequestBytes,
+                    clientConnection.id,
+                    callback
+                )
+                mailResponseBytes?.let(postOffice::decryptMail)
             }
-            val encryptedResult = checkNotNull(enclave.postedMail.remove(id))
-            val resultMail = postOffice.decryptMail(encryptedResult)
+            checkNotNull(resultMail)
             return decode(action.resultSerializer(), resultMail.bodyAsBytes)
-        }
-
-        fun enclaveRestarted() {
-            val old = postOffice
-            postOffice = createPostOffice()
-            // TODO We wouldn't need to do this if we had a client layer API above PostOffice: https://r3-cev.atlassian.net/browse/CON-617
-            postOffice.lastSeenStateId = old.lastSeenStateId
-        }
-
-        private fun createPostOffice(): PostOffice {
-            return enclave.enclaveHost.enclaveInstanceInfo.createPostOffice(privatekey, "default")
         }
     }
 }

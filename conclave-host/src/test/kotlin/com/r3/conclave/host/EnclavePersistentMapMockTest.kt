@@ -1,6 +1,7 @@
 package com.r3.conclave.host
 
-import com.google.common.collect.HashBiMap
+import com.r3.conclave.client.EnclaveClient
+import com.r3.conclave.client.EnclaveRollbackException
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
@@ -9,11 +10,9 @@ import com.r3.conclave.host.EnclavePersistentMapMockTest.MapAction.WriteAction
 import com.r3.conclave.host.EnclavePersistentMapMockTest.MapAction.WriteAction.Put
 import com.r3.conclave.host.EnclavePersistentMapMockTest.MapAction.WriteAction.Remove
 import com.r3.conclave.host.EnclavePersistentMapMockTest.RestartStrategy.*
-import com.r3.conclave.host.internal.createMockHost
-import com.r3.conclave.mail.Curve25519PrivateKey
+import com.r3.conclave.internaltesting.MockEnclaveTransport
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.utilities.internal.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
@@ -25,46 +24,45 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.DataInputStream
 import java.io.DataOutputStream
-import java.security.PublicKey
 import java.util.*
-import java.util.concurrent.LinkedBlockingQueue
-import kotlin.IllegalStateException
-import kotlin.reflect.KClass
 
 class EnclavePersistentMapMockTest {
     private var useEchoEnclave = false
     private var threadSafeEnclave = false
-    private var _host: MockHost? = null
-    private var _client: MockClient? = null
-    private var _mockConfiguration: MockConfiguration? = null
+    private var _enclaveTransport: MockEnclaveTransport? = null
+    private var _client: EnclaveClient? = null
+
+    private val mockConfiguration = MockConfiguration().apply {
+        enablePersistentMap = true
+    }
 
     @AfterEach
     fun cleanUp() {
-        _host?.close()
+        _client?.close()
+        _enclaveTransport?.close()
     }
 
-    private val mockConfiguration: MockConfiguration get() {
-        return _mockConfiguration ?: run {
-            val config = MockConfiguration()
-            config.enablePersistentMap = true
-            config.also { _mockConfiguration = it }
-        }
-    }
-
-    private val host: MockHost get() {
-        return _host ?: run {
+    private val enclaveTransport: MockEnclaveTransport get() {
+        return _enclaveTransport ?: run {
             val enclaveClass = if (useEchoEnclave) {
                 if (threadSafeEnclave) ThreadSafeEchoEnclave::class
                 else NonThreadSafeEchoEnclave::class
             } else {
-                if (threadSafeEnclave) ThreadSafePersistingEnclave::class
-                else NonThreadSafePersistingEnclave::class
+                if (threadSafeEnclave) ThreadSafePersistentMapEnclave::class
+                else NonThreadSafePersistentMapEnclave::class
             }
-            MockHost(enclaveClass, mockConfiguration).also { _host = it }
+            MockEnclaveTransport(enclaveClass, mockConfiguration).also {
+                it.startEnclave()
+                _enclaveTransport = it
+            }
         }
     }
 
-    private val client: MockClient get() = _client ?: MockClient(host).also { _client = it }
+    private val client: EnclaveClient get() {
+        return _client ?: run {
+            enclaveTransport.startNewClient().also { _client = it }
+        }
+    }
 
     @Test
     fun `new entry`() {
@@ -117,18 +115,14 @@ class EnclavePersistentMapMockTest {
         Random().nextBytes(outbound)
 
         client.sendMail(outbound)
-        assertThat(client.receivedMail.size).isEqualTo(1)
-        assertThat(client.receivedMail.last().bodyAsBytes).isEqualTo(outbound)
-        assertThat(client.postOffice.lastSeenStateId).isNull()
+        assertThat(client.lastSeenStateId).isNull()
 
         // Restart the enclave and send another mail item
-        host.restartEnclave()
+        enclaveTransport.restartEnclave()
         Random().nextBytes(outbound)
 
         client.sendMail(outbound)
-        assertThat(client.receivedMail.size).isEqualTo(2)
-        assertThat(client.receivedMail.last().bodyAsBytes).isEqualTo(outbound)
-        assertThat(client.postOffice.lastSeenStateId).isNull()
+        assertThat(client.lastSeenStateId).isNull()
     }
 
     @ParameterizedTest
@@ -137,10 +131,10 @@ class EnclavePersistentMapMockTest {
         client.sendSingleAction(Put("key", "v1"))
         client.sendSingleAction(Put("key", "v2"))
         client.sendSingleAction(Get("key"))
-        host.restartEnclave(rollBackNumberOfStates = rollBackState)
+        enclaveTransport.restartEnclave(rollBackNumberOfStates = rollBackState)
         assertThatThrownBy {
             client.sendSingleAction(Get("key"))
-        }.hasMessageContaining("Possible dropped mail or state roll back by the host detected.")
+        }.isInstanceOf(EnclaveRollbackException::class.java)
     }
 
     // TODO Requires mail acks: https://r3-cev.atlassian.net/browse/CON-616
@@ -149,16 +143,16 @@ class EnclavePersistentMapMockTest {
     fun `host unable to roll back state even if client hasn't received explicit response`() {
         client.sendSingleAction(Put("key", "v1"))
         client.sendSingleAction(Put("key", "v2"))
-        host.restartEnclave(rollBackNumberOfStates = 1)
+        enclaveTransport.restartEnclave(rollBackNumberOfStates = 1)
         assertThatThrownBy {
             client.sendSingleAction(Get("key"))
-        }.hasMessageContaining("Possible dropped mail or state roll back by the host detected.")
+        }.isInstanceOf(EnclaveRollbackException::class.java)
     }
 
     @Test
     fun `changes to the persistent map made by receiveFromUntrustedHost are preserved`() {
         executeActionsLocally(listOf(Put("key", "value")))
-        host.restartEnclave()
+        enclaveTransport.restartEnclave()
         assertThat(client.sendGet(Get("key"))).isEqualTo("value")
     }
 
@@ -190,19 +184,19 @@ class EnclavePersistentMapMockTest {
         when (restartStrategy) {
             AllWritesInSingleMailWithRestartBeforeRead -> {
                 client.sendActionsInSingleMail(writes)
-                host.restartEnclave()
+                enclaveTransport.restartEnclave()
             }
             WritePerMailWithRestartAfterEachMail -> {
                 for (index in writes.indices) {
                     client.sendSingleAction(writes[index])
-                    host.restartEnclave()
+                    enclaveTransport.restartEnclave()
                 }
             }
             WritePerMailWithRestartBeforeRead -> {
                 for (write in writes) {
                     client.sendSingleAction(write)
                 }
-                host.restartEnclave()
+                enclaveTransport.restartEnclave()
             }
         }
 
@@ -213,35 +207,31 @@ class EnclavePersistentMapMockTest {
         return processActions(AllWritesInSingleMailWithRestartBeforeRead, listOf(write), get)
     }
 
-    private fun MockClient.sendSingleAction(action: MapAction): EnclaveMail? {
-        return sendActionsInSingleMail(listOf(action)).singleOrNull()
+    private fun EnclaveClient.sendSingleAction(action: MapAction): EnclaveMail? {
+        return sendActionsInSingleMail(listOf(action))
     }
 
-    private fun MockClient.sendGet(get: Get): String? {
+    private fun EnclaveClient.sendGet(get: Get): String? {
         val response = sendSingleAction(get)!!
         return get.parse(response.bodyAsBytes)
     }
 
-    private fun MockClient.sendActionsInSingleMail(actions: List<MapAction>): List<EnclaveMail> {
+    private fun EnclaveClient.sendActionsInSingleMail(actions: List<MapAction>): EnclaveMail? {
         val mailBody = writeData { serialiseActions(actions) }
-        sendMail(mailBody)
-        return ArrayList<EnclaveMail>().also(receivedMail::drainTo)
+        return sendMail(mailBody)
     }
 
-    private fun executeActionsLocally(actions: List<MapAction>, receiverClient: MockClient? = null): List<EnclaveMail> {
+    private fun executeActionsLocally(actions: List<MapAction>, receiverClient: EnclaveClient? = null): EnclaveMail? {
         val serialised = writeData {
-            nullableWrite(receiverClient) { write(it.publicKey.encoded) }
+            nullableWrite(receiverClient) { write(it.clientPublicKey.encoded) }
             if (receiverClient != null) {
-                writeUTF(receiverClient.mockHost.getRoutingHint(receiverClient))
+                val mockConnection = receiverClient.clientConnection as MockEnclaveTransport.ClientConnection
+                writeUTF(mockConnection.id)
             }
             serialiseActions(actions)
         }
-        host.enclaveHost.callEnclave(serialised)
-        return if (receiverClient != null) {
-            ArrayList<EnclaveMail>().also(receiverClient.receivedMail::drainTo)
-        } else {
-            emptyList()
-        }
+        enclaveTransport.enclaveHost.callEnclave(serialised)
+        return receiverClient?.pollMail()
     }
 
     private fun DataOutputStream.serialiseActions(actions: List<MapAction>) {
@@ -256,7 +246,7 @@ class EnclavePersistentMapMockTest {
         }
     }
 
-    private abstract class PersistingEnclave : Enclave() {
+    private abstract class PersistentMapEnclave : Enclave() {
         abstract override val threadSafe: Boolean
 
         override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
@@ -295,15 +285,17 @@ class EnclavePersistentMapMockTest {
         }
     }
 
-    private class ThreadSafePersistingEnclave : PersistingEnclave() {
+    private class ThreadSafePersistentMapEnclave : PersistentMapEnclave() {
         override val threadSafe: Boolean get() = true
     }
 
-    private class NonThreadSafePersistingEnclave : PersistingEnclave() {
+    private class NonThreadSafePersistentMapEnclave : PersistentMapEnclave() {
         override val threadSafe: Boolean get() = false
     }
 
     private abstract class EchoEnclave : Enclave() {
+        abstract override val threadSafe: Boolean
+
         override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
             val answer = mail.bodyAsBytes
             val postOffice = postOffice(mail)
@@ -388,89 +380,5 @@ class EnclavePersistentMapMockTest {
          * Sealed state generated after each write, which are all fed together in a single restart.
          */
         WritePerMailWithRestartBeforeRead
-    }
-
-
-    private class MockHost(
-        val enclaveClass: KClass<out Enclave>,
-        val mockConfiguration: MockConfiguration
-    ) : AutoCloseable {
-        var enclaveHost = createMockHost(enclaveClass.java, mockConfiguration)
-        private val sealedStates = ArrayList<ByteArray>()
-        private val clients = HashBiMap.create<MockClient, String>()
-
-        init {
-            enclaveHost.start(null, null, null, ::processCommands)
-        }
-
-        fun newClient(client: MockClient) {
-            clients[client] = UUID.randomUUID().toString()
-        }
-
-        fun deliverMail(mailBytes: ByteArray, client: MockClient) {
-            enclaveHost.deliverMail(mailBytes, getRoutingHint(client))
-        }
-
-        fun getRoutingHint(client: MockClient): String = clients.getValue(client)
-
-        fun restartEnclave(rollBackNumberOfStates: Int = 0) {
-            enclaveHost.close()
-            enclaveHost = createMockHost(enclaveClass.java, mockConfiguration)
-
-            val index = sealedStates.lastIndex - rollBackNumberOfStates
-            val sealedStateToRestore = if (index != -1) sealedStates[index] else null
-            enclaveHost.start(null, sealedStateToRestore, null, ::processCommands)
-            clients.keys.forEach { it.enclaveRestarted() }
-        }
-
-        private fun processCommands(mailCommands: List<MailCommand>) {
-            // Make sure there is one or fewer sealed state commands
-            val sealedStateCommands = mailCommands.filterIsInstance<MailCommand.StoreSealedState>()
-            when (sealedStateCommands.size) {
-                0 -> Unit
-                1 -> sealedStates += sealedStateCommands.single().sealedState
-                else -> throw IllegalStateException("Too many sealed state commands!")
-            }
-            for (mailCommand in mailCommands) {
-                if (mailCommand is MailCommand.PostMail) {
-                    val client = clients.inverse().getValue(mailCommand.routingHint)
-                    client.receiveMail(mailCommand.encryptedBytes)
-                }
-            }
-        }
-
-        override fun close() {
-            enclaveHost.close()
-        }
-    }
-
-    private class MockClient(val mockHost: MockHost) {
-        private val privatekey = Curve25519PrivateKey.random()
-        var postOffice = createPostOffice()
-        val receivedMail = LinkedBlockingQueue<EnclaveMail>()
-        val publicKey: PublicKey get() = privatekey.publicKey
-
-        init {
-            mockHost.newClient(this)
-        }
-
-        fun sendMail(body: ByteArray, envelope: ByteArray? = null) {
-            mockHost.deliverMail(postOffice.encryptMail(body, envelope), this)
-        }
-
-        fun receiveMail(mailBytes: ByteArray) {
-            receivedMail += postOffice.decryptMail(mailBytes)
-        }
-
-        fun enclaveRestarted() {
-            // TODO We wouldn't need to do this if we had a client layer API above PostOffice: https://r3-cev.atlassian.net/browse/CON-617
-            val old = postOffice
-            postOffice = createPostOffice()
-            postOffice.lastSeenStateId = old.lastSeenStateId
-        }
-
-        private fun createPostOffice(): PostOffice {
-            return mockHost.enclaveHost.enclaveInstanceInfo.createPostOffice(privatekey, "default")
-        }
     }
 }

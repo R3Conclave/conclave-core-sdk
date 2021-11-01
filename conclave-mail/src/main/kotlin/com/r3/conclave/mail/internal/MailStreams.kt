@@ -4,10 +4,7 @@ import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
-import com.r3.conclave.mail.internal.noise.protocol.CipherState
-import com.r3.conclave.mail.internal.noise.protocol.CipherStatePair
-import com.r3.conclave.mail.internal.noise.protocol.HandshakeState
-import com.r3.conclave.mail.internal.noise.protocol.Noise
+import com.r3.conclave.mail.internal.noise.protocol.*
 import com.r3.conclave.utilities.internal.dataStream
 import com.r3.conclave.utilities.internal.readExactlyNBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -677,4 +674,10 @@ enum class MailProtocol(
      * We add additional byte to the handshake length for compatibility with browsers.
      */
     SENDER_KEY_TRANSMITTED_V2("Noise_X_25519_AESGCM_SHA256", 96 + 1),
+}
+
+fun privateCurve25519KeyToPublic(privateKey: PrivateKey): Curve25519PublicKey {
+    val dh: DHState = Noise.createDH("25519")
+    dh.setPrivateKey(privateKey.encoded, 0)
+    return Curve25519PublicKey(dh.publicKey)
 }

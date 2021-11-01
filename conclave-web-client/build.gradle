@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+dependencies {
+    api project(":conclave-client")
+
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+
+    implementation "org.apache.httpcomponents.client5:httpclient5:$httpclient5_version"
+
+    testImplementation project(":internal-testing")
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "io.ktor:ktor-server-netty:$ktor_version"
+    testImplementation "io.ktor:ktor-serialization:$ktor_version"
+    testImplementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
+}

@@ -1,7 +1,7 @@
 package com.r3.conclave.mail
 
-import com.r3.conclave.mail.internal.noise.protocol.DHState
 import com.r3.conclave.mail.internal.noise.protocol.Noise
+import com.r3.conclave.mail.internal.privateCurve25519KeyToPublic
 import com.r3.conclave.utilities.internal.toHexString
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -70,13 +70,4 @@ class Curve25519PublicKey(private val encoded: ByteArray) : PublicKey {
     override fun hashCode(): Int = encoded.contentHashCode()
 
     override fun toString(): String = "Curve25519PublicKey(${encoded.toHexString()})"
-}
-
-// The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
-// thus effectively converting them into Java classes. Making it synthetic hides it from the compiler.
-@JvmSynthetic
-internal fun privateCurve25519KeyToPublic(privateKey: PrivateKey): Curve25519PublicKey {
-    val dh: DHState = Noise.createDH("25519")
-    dh.setPrivateKey(privateKey.encoded, 0)
-    return Curve25519PublicKey(dh.publicKey)
 }

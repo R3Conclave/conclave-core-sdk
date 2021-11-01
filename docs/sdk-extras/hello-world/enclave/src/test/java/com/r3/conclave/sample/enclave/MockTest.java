@@ -13,9 +13,9 @@ public class MockTest {
     @Test
     void reverseNumber() throws EnclaveLoadException {
         EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
-        mockHost.start(null, null, (commands) -> { });
+        mockHost.start(null, null, null, (commands) -> { });
 
-        /**
+        /*
          * Directly accessing a field (or a method) of the enclave is only possible in mock mode
          */
         ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();

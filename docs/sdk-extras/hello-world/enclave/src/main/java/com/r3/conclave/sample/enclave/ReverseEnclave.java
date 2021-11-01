@@ -1,7 +1,6 @@
 package com.r3.conclave.sample.enclave;
 
 import com.r3.conclave.enclave.Enclave;
-import com.r3.conclave.enclave.EnclavePostOffice;
 import com.r3.conclave.mail.EnclaveMail;
 
 /**

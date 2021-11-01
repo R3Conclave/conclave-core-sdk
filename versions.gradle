@@ -32,4 +32,6 @@ ext {
     locationtech_jts_version = '1.16.0'
     locationtech_spatial4js_version = '0.8'
     h2database_h2_version = '1.4.200'
+    httpclient5_version = '5.1'
+    ktor_version = '1.6.4'
 }

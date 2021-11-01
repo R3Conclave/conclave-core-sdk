@@ -1,5 +1,7 @@
 plugins {
+    id 'java'
     id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 application {
@@ -11,7 +13,7 @@ application {
 def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
 
 // Create a task that can be used for generating signing materials.
-// Only required if you building singed/release version.
+// Only required if you're building signed/release version.
 tasks.register("prepareForSigning") {
     it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
 }
@@ -19,10 +21,16 @@ tasks.register("prepareForSigning") {
 dependencies {
     // *your* enclave
     runtimeOnly project(path: ":enclave", configuration: mode)
-    // Use the host web server for receiving and sending mail to the clients.
+    // Use the host web server for receiving and sending mail to the clients. This means the client needs to use the
+    // conclave-web-client library.
     runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
 
     // Enable unit tests
     testImplementation "com.r3.conclave:conclave-host:$conclaveVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:5.6.0"
+}
+
+shadowJar {
+    archiveAppendix.set(mode)
+    archiveClassifier.set("")
 }

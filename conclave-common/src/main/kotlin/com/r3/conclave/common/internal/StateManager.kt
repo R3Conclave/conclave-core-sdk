@@ -8,13 +8,21 @@ class StateManager<S : Any>(initialState: S) {
     }
 
     inline fun <reified T : S> checkStateIs(): T {
-        return checkStateIs { "Expected state to be ${T::class.java.simpleName} but is ${state.javaClass.simpleName} instead." }
+        return checkStateIs {
+            "Expected state to be ${T::class.java.simpleName} but is ${state.javaClass.simpleName} instead."
+        }
+    }
+
+    inline fun <reified T : S> transitionStateFrom(to: S, lazyMessage: () -> Any): T {
+        val state = checkStateIs<T>(lazyMessage)
+        this.state = to
+        return state
     }
 
     inline fun <reified T : S> transitionStateFrom(to: S): T {
-        val state = checkStateIs<T>()
-        this.state = to
-        return state
+        return transitionStateFrom(to) {
+            "Expected state to be ${T::class.java.simpleName} but is ${state.javaClass.simpleName} instead."
+        }
     }
 
     inline fun <reified T : S> checkStateIsNot(lazyMessage: () -> Any): S {

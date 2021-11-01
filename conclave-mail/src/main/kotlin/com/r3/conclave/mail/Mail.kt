@@ -1,12 +1,9 @@
 package com.r3.conclave.mail
 
 import com.r3.conclave.mail.internal.AbstractPostOffice
-import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
-import com.r3.conclave.mail.internal.readEnclaveStateId
+import com.r3.conclave.mail.internal.privateCurve25519KeyToPublic
 import com.r3.conclave.utilities.internal.EnclaveContext
-import com.r3.conclave.utilities.internal.deserialise
-import com.r3.conclave.utilities.internal.nullableRead
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -79,7 +76,7 @@ interface EnclaveMailHeader {
 }
 
 /**
- * The decrypted version of an encrypted message sent from a client to an enclave.
+ * The decrypted version of an encrypted message sent from a client to an enclave and vice-versa.
  *
  * Implementations may decode raw bytes on demand, or may represent mail that isn't
  * encoded yet.
@@ -222,14 +219,6 @@ abstract class PostOffice(
      */
     val nextSequenceNumber: Long get() = sequenceNumber
 
-    // TODO These belong in a layer above PostOffice: https://r3-cev.atlassian.net/browse/CON-617
-    private var _lastSeenStateId: EnclaveStateId? = null
-    var lastSeenStateId: ByteArray?
-        set(value) {
-            _lastSeenStateId = value?.let { EnclaveStateId(it.clone()) }
-        }
-        get() = _lastSeenStateId?.bytes?.clone()
-
     /**
      * Set the next sequence number to be used. This can only be called before any mail have been encrypted to ensure
      * they have increasing sequence numbers.
@@ -304,37 +293,7 @@ abstract class PostOffice(
      */
     @Throws(MailDecryptionException::class, IOException::class)
     fun decryptMail(encryptedEnclaveMail: ByteArray): EnclaveMail {
-        val mail = MailDecryptingStream(encryptedEnclaveMail.inputStream()).decryptMail { senderPrivateKey }
-        require(mail.authenticatedSender == destinationPublicKey) {
-            "Mail does not appear to have been targeted for this post office. Authenticated sender was " +
-                    "${mail.authenticatedSender} but expected $destinationPublicKey."
-        }
-
-        // See if the mail has a private header. If it does then the enclave has been configured for rollback detection
-        // and has sent us the necessary information to detect if the host has rolled back its state.
-        mail.privateHeader?.deserialise {
-            val version = read()
-            check(version == 1)
-            val currentStateId = readEnclaveStateId()
-            val expectedPreviousStateId = nullableRead { readEnclaveStateId() }
-
-            if (_lastSeenStateId != currentStateId) {
-                // TODO Allow the user the ability to override the default behaviour on state ID mismatch: https://r3-cev.atlassian.net/browse/CON-617
-                check(_lastSeenStateId == expectedPreviousStateId) {
-                    "Possible dropped mail or state roll back by the host detected. Expected state ID " +
-                            "$_lastSeenStateId but got $expectedPreviousStateId."
-                }
-                _lastSeenStateId = currentStateId
-            } else {
-                // If the state ID hasn't changed then it probably means the enclave has sent multiple mail from the
-                // same receiveMail/receiveFromUntrustedHost invocation. Or it could mean the host is replaying the same
-                // mail to us. We may want to add replay, re-order and dropped mail detection support on the client side.
-                // But this is something slightly different to roll back detection and would need to be handled
-                // separately, probably by checking the sequence numbers. https://r3-cev.atlassian.net/browse/CON-625
-            }
-        }
-
-        return mail
+        return decryptMail(encryptedEnclaveMail, senderPrivateKey, destinationPublicKey)
     }
 
     private class Default(

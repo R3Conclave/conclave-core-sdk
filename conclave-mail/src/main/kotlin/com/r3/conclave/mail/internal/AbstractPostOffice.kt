@@ -26,7 +26,6 @@ abstract class AbstractPostOffice {
             _minSizePolicy = value
         }
 
-    @Synchronized
     protected fun encryptMail(body: ByteArray, envelope: ByteArray?, privateHeader: ByteArray?): ByteArray {
         encryptCalled = true
         val header = EnclaveMailHeaderImpl(sequenceNumber++, topic, envelope, keyDerivation)
@@ -57,6 +56,19 @@ abstract class AbstractPostOffice {
             for ((index, char) in topic.withIndex()) {
                 require(char.isLetterOrDigit() || char == '-') { "Character $index of the topic is not a character, digit or -" }
             }
+        }
+
+        fun decryptMail(
+            encryptedMailBytes: ByteArray,
+            recipientPrivateKey: PrivateKey,
+            expectedSenderPublicKey: PublicKey
+        ): DecryptedEnclaveMail {
+            val mail = MailDecryptingStream(encryptedMailBytes.inputStream()).decryptMail { recipientPrivateKey }
+            require(mail.authenticatedSender == expectedSenderPublicKey) {
+                "Mail does not originate from expected sender. Authenticated sender was ${mail.authenticatedSender} " +
+                        "but expected $expectedSenderPublicKey."
+            }
+            return mail
         }
     }
 }

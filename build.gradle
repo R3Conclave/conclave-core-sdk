@@ -184,12 +184,12 @@ tasks.withType(DokkaTask).configureEach {
 
             // Don't want users seeing deprecated stuff, they can call it up in their IDE if they need it.
             def subProjects = [
+                    "conclave-client",
                     "conclave-common",
                     "conclave-enclave",
                     "conclave-host",
-                    "conclave-client",
-                    "conclave-web-host",
-                    "conclave-mail"
+                    "conclave-mail",
+                    "conclave-web-client"
             ]
 
             subProjects.forEach() {
@@ -361,11 +361,15 @@ List<PublishedProject> publishedProjects = [
         ),
         new PublishedProject(
                 projectPath: ':conclave-web-host',
-                description: 'Conclave web server host ',
+                description: 'Conclave host web server',
         ),
         new PublishedProject(
                 projectPath: ':conclave-client',
                 description: 'Conclave client API',
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-web-client',
+                description: 'Conclave web client API',
         ),
         new PublishedProject(
                 projectPath: ':conclave-mail',

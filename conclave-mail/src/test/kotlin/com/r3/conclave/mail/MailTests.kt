@@ -113,7 +113,7 @@ class MailTests {
         assertThatIllegalArgumentException().isThrownBy {
             alicePostOffice.decryptMail(mail)
         }.withMessageContaining(
-            "Mail does not appear to have been targeted for this post office. " +
+            "Mail does not originate from expected sender. " +
                     "Authenticated sender was ${mallory.publicKey} but expected ${bob.publicKey}"
         )
     }

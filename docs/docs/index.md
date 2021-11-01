@@ -98,45 +98,53 @@ is available where you can find the development team during UK office hours (GMT
     There have been some breaking changes in this version of Conclave. Be sure to read the [API changes page](api-changes.md)
     for the information you need to get your existing project building with Conclave 1.2.
 
+1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
+   recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
+   easy to understand and does not provide roll back protection against the host. To address all these issues the 
+   `Enclave` class now exposes a simple key-value store represented as a normal `java.util.Map` object. Conclave 
+   will securely persist this map such that it survives restarts and is resilient to attempts by the host to roll it 
+   back to previous states.
 
-1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave.  
-   Previously we recommended the "mail-to-self" pattern for storing data across enclave restarts.
-   This is cumbersome to write, not easy to understand and does not provide roll back protection against the host.  
-   To address all these issues we have implemented not one but **two** new persistent mechanisms for securely storing
-   data, which you can use depending on your requirements.  
-   The first one is a simple **key-value store**: the `Enclave` class now exposes this as a normal `java.util.Map` object.  
-   Conclave will securely persist this map such that it survives restarts and is resilient to attempts by the host
-   to roll it back to previous states.  
-   The second one is a persisted filesystem: in the enclave you can now write code to persist your files and directories
-   which will be stored in a single encrypted file on the host, in such a way that the host can't have access to them.
-   These files and directories will be still available if the enclave restarts.
-   You can use the persisted filesystem together with the in-memory filesystem, already available in Conclave.
-   [Learn more about enclave persistence](persistence.md).
-   
+1. :jigsaw: **New feature!** We've actually introduced two forms of enclave persistence in 1.2! The rollback protection 
+   provided by the persistent map above may not be needed and comes at a cost of increased overheads. As an alternative 
+   the in-memory file system inside the enclave can be persisted directly to disk as an encrypted file on the host 
+   for faster performance. [Learn more about these two enclave persistence features](persistence.md).
+
+1. :jigsaw: **New feature!** To elimate the need to write the same boilerplate code for the host we've introduced a 
+   simple new host web server which exposes a REST API for sending and receiving mail and which implements the 
+   necessary behaviour of an enclave host. Your host module only needs to reference `conclave-web-host` as a 
+   runtime dependency and then all of the boilerplate host code can be done away with! Have a look at the updated hello 
+   world sample to see how it's used.
+
+1. :jigsaw: **New feature!** To complement the host web server, we've also introduced a client library to make it
+   super easy to write an web-based enclave client. Add `conclave-web-client` as a dependency to your client module 
+   and use make use of the new `WebEnclaveTransport` class in conjunction with the new `EnclaveClient`.
+
+1. :jigsaw: **New feature!** `EnclaveClient` is a new API in `conclave-client` which greatly simplies your client 
+   code and handles all of the complexities when communicating with an enclave. It is agnositic to the transport 
+   layer between it and the host and support for other network protocols beside HTTP can be added. 
+
+1. :jigsaw: **Java 11** is now the default JDK version inside the enclave. You can make use of the new APIs and 
+   features introduced since Java 8 when writing your enclave code! For compatibility the Conclave libraries are still 
+   compiled using Java 8 so you can continue to use Java 8 (or above) outside the enclave.
+
+1. :jigsaw: **New feature!** We have made it easier than ever to start a Conclave project using our new tool, 
+   [Conclave Init](conclave-init.md).
+
 1. :jigsaw: **New feature!** We've added enclave lifecycle methods so that you can do any necessary enclave startup 
    initialisation and shutdown cleanup. Override `onStartup` and `onShutdown` respectively.
 
-1. :jigsaw: **New feature!** As the host you can now update the enclave's attestation without having to restart it. 
+1. :jigsaw: **New feature!** The host can now update the enclave's attestation without having to restart it. 
    Previously restarting was the only way to force an update on the `EnclaveInstanceInfo` object. Now you can call 
    `EnclaveHost.updateAttestation` whilst the enclave is still running and the `enclaveInstanceInfo` property will 
    be updated.
    
-1. :jigsaw: **New feature!** We've improved the Conclave plugin even further and added more automation so that you 
-   don't have to write unnecessary boilerplate. It's no longer necessary to add the `conclave-enclave` library as a 
+1. :jigsaw: **New feature!** We've further improved the Conclave plugin and added more automation so that 
+   you have to write less boilerplate. It's no longer necessary to add the `conclave-enclave` library as a 
    dependency to your enclave module. Also, the plugin will automatically add `conclave-host` as a 
    `testImplementation` dependency to enable mock testing. And finally the plugin will make sure any enclave
    resource files in `src/main/resources` are automatically added. Previously resource files had to be specified 
    manually.
-
-1. :jigsaw: **New feature!** We have made it easier than ever to start a conclave project using our new tool, [Conclave Init](conclave-init.md).
-
-1. :jigsaw: **New feature!** We've added a `conclave-web-host` component that allows you to interact with enclaves using REST API.
-   With `conclave-web-host` the user code is limited to `enclave` and `client`, the `host` is being taken care of by Conclave SDK.
-   At the time of writing, with `conclave-web-host`, the `enclave` implementation is restricted to only use `receiveMail` for incoming messages
-   and `postMail` for outgoing ones.
-
-1. :jigsaw: **Java 11** is now default JDK for building enclaves. You can override this at enclave's `build.gradle` file.
-   See `cordapp` sample provided. 
 
 1. :jigsaw: New experimental feature! Easily enable and use Python. It is JIT compiled inside the enclave and can 
    interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it 
@@ -146,17 +154,18 @@ is available where you can find the development team during UK office hours (GMT
    [productID](enclave-configuration.md#conclave-configuration-options) and
    [revocationLevel](enclave-configuration.md#conclave-configuration-options) properties, and print a helpful error
    message if they are missing.
-   
-1. The container gradle script has been removed due to stability issues and will no longer be supported. If you are using container-gradle
-   to develop on Mac, we strongly suggest you stop doing so and follow [these instructions](system-requirements.md#running-conclave-projects)
-   for running your conclave projects instead.
 
-1. The SGX SDK that Conclave is built upon has been updated to version 2.14. This provides bug fixes and other 
-   improvements. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release)
+1. The API for checking platform support on the host been improved. `EnclaveHost.checkPlatformSupportsEnclaves` was 
+   found to be too complex and did too many things. It's been replaced by easier to understand methods. See the  
+   [API changes page](api-changes.md) for more information.
+
+1. Conclave now uses version 2.14 of the Intel SGX SDK. This provides bug fixes and other improvements. See the
+   [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.14-release)
    for more details.
 
-1. The API for performing platform support checks has been streamlined. Please consult the [API changes page](api-changes.md)
-   for more information.
+1. The container gradle script has been removed due to stability issues and will no longer be supported. If you are 
+   using container-gradle to develop on Mac, we strongly suggest you stop doing so and follow
+   [these instructions](system-requirements.md#running-conclave-projects) for running your conclave projects instead.
 
 1. :jigsaw: **New feature!** We've added a new overload of `EnclaveHost.load` which no longer requires having to specify the enclave
 class name as a parameter. Instead, `EnclaveHost` will scan for the single matching enclave on the classpath.

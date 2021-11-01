@@ -19,6 +19,9 @@ idea {
 subprojects {
     apply plugin: 'idea'
     apply plugin: 'eclipse'
+
+    version = conclaveVersion
+
     idea {
         module {
             downloadJavadoc = true

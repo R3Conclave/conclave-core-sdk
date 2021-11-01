@@ -777,6 +777,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * corrupted mail bytes.
      * @throws IllegalStateException If the host has not been started.
      */
+    // TODO This should throw EnclaveException
     @Throws(MailDecryptionException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
         deliverMailInternal(mail, routingHint, callback)
@@ -811,6 +812,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * corrupted mail bytes.
      * @throws IllegalStateException If the host has not been started.
      */
+    // TODO This should throw EnclaveException
     @Throws(MailDecryptionException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?) = deliverMailInternal(mail, routingHint, null)
 

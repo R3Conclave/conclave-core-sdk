@@ -1,12 +1,19 @@
 plugins {
     id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 application {
-    mainClassName = "com.r3.conclave.sample.client.Main"
+    mainClassName = "com.r3.conclave.sample.client.ReverseClient"
 }
 
 dependencies {
-    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
-    implementation "org.apache.httpcomponents:httpclient:4.5.13"
+    implementation "com.r3.conclave:conclave-web-client:$conclaveVersion"
+    implementation "info.picocli:picocli:4.6.1"
+
+    runtimeOnly "org.slf4j:slf4j-simple:1.7.32"
+}
+
+shadowJar {
+    archiveClassifier.set("")
 }

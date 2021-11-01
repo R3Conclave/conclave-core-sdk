@@ -5,22 +5,27 @@ import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.MailCommand
 import com.r3.conclave.host.PlatformSupportException
+import com.r3.conclave.host.internal.EnclaveHostService
 import com.r3.conclave.host.internal.loggerFor
+import com.r3.conclave.utilities.internal.deserialise
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.writeData
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.nio.file.Path
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import kotlin.io.path.exists
-import kotlin.io.path.readBytes
-import kotlin.io.path.writeBytes
+import kotlin.io.path.inputStream
+import kotlin.io.path.outputStream
 
 @RestController
 class EnclaveWebController {
-    private lateinit var enclaveHost: EnclaveHost
-    private val inboxes = HashMap<String, MutableList<ByteArray>>()
+    lateinit var enclaveHostService: EnclaveHostService
 
     /**
      * MockConfiguration parameters.
@@ -52,12 +57,10 @@ class EnclaveWebController {
     var sealedStateFile: Path? = null
 
     @Value("\${filesystem.file:}")
-    var fileSystemFilePath: Path? = null
+    var enclaveFileSystemFile: Path? = null
 
     @PostConstruct
     fun init() {
-        require(fileSystemFilePath == null || (fileSystemFilePath != null && fileSystemFilePath.toString().isNotEmpty())) {
-            "Please specify a valid path for the persisted filesystem file e.g. --filesystem.file=/home/USER/conclave.disk" }
         if (EnclaveHost.isHardwareEnclaveSupported()) {
             logger.info("This platform supports enclaves in simulation, debug and release mode.")
         } else if (EnclaveHost.isSimulatedEnclaveSupported()) {
@@ -74,70 +77,74 @@ class EnclaveWebController {
         }
 
         val mockConfiguration = buildMockConfiguration()
-        enclaveHost = EnclaveHost.load(mockConfiguration)
-        val sealedState = loadSealedState()
-        enclaveHost.start(AttestationParameters.DCAP(), sealedState, fileSystemFilePath) { commands: List<MailCommand> ->
-            for (command in commands) {
-                when (command) {
-                    is MailCommand.PostMail -> updateInbox(command.routingHint!!, command.encryptedBytes)
-                    is MailCommand.StoreSealedState -> persistSealedState(command.sealedState)
+        enclaveHostService = object : EnclaveHostService() {
+            override val enclaveHost: EnclaveHost = EnclaveHost.load(mockConfiguration)
+            override val enclaveFileSystemFile: Path? get() = this@EnclaveWebController.enclaveFileSystemFile
+            override fun storeSealedState(sealedState: ByteArray) {
+                val sealedStateFile = checkNotNull(sealedStateFile) { "sealed.state.file is not set" }
+                DataOutputStream(sealedStateFile.outputStream()).use {
+                    it.writeIntLengthPrefixBytes(sealedStateHeader)
+                    it.write(sealedState)
                 }
             }
         }
+        val sealedState = loadSealedState()
+        enclaveHostService.start(AttestationParameters.DCAP(), sealedState)
 
         logger.info("Enclave ${enclaveHost.enclaveClassName} started")
         logger.info(enclaveHost.enclaveInstanceInfo.toString())
     }
 
-    private fun updateInbox(key: String, encryptedBytes: ByteArray) {
-        synchronized(inboxes) {
-            val inbox = inboxes.computeIfAbsent(key) { ArrayList() }
-            inbox += encryptedBytes
+    private val sealedStateHeader: ByteArray by lazy {
+        writeData {
+            write(1)  // Version
+            write(enclaveHost.enclaveMode.ordinal)
         }
-    }
-
-    private fun persistSealedState(stateBlob: ByteArray) {
-        val sealedStateFile = checkNotNull(this.sealedStateFile) { "sealed.state.file is not set" }
-        sealedStateFile.writeBytes(
-            byteArrayOf(enclaveHost.enclaveMode.ordinal.toByte()) + stateBlob
-        )
     }
 
     /**
      * sealed state file might not exist yet, return null then
      */
     private fun loadSealedState(): ByteArray? {
-        val data = (if (sealedStateFile?.exists() == true) sealedStateFile!!.readBytes() else null) ?: return null
-        val savedEnclaveMode = enclaveModeFromInt(data[0].toInt())
-        val runtimeEnclaveMode = enclaveHost.enclaveMode
-        check(savedEnclaveMode == runtimeEnclaveMode) {
-            "Unable to restore the enclave's state from $sealedStateFile. " +
-                    "This file was encrypted when the enclave was running in $savedEnclaveMode " +
-                    "but now enclave is running in $runtimeEnclaveMode. " +
-                    "The enclave's state cannot migrate across modes."
+        val sealedStateFile = this.sealedStateFile ?: return null
+        if (!sealedStateFile.exists()) return null
+        DataInputStream(sealedStateFile.inputStream()).use { stream ->
+            val header = stream.readIntLengthPrefixBytes()
+            header.deserialise {
+                val version = read()
+                check(version == 1) { "Version $version of the sealed state file not supported" }
+                val savedEnclaveMode = EnclaveMode.values()[stream.read()]
+                val runtimeEnclaveMode = enclaveHost.enclaveMode
+                check(savedEnclaveMode == runtimeEnclaveMode) {
+                    "Unable to restore the enclave's state from $sealedStateFile. This file was encrypted when the " +
+                            "enclave was running in $savedEnclaveMode mode but now the enclave is running in " +
+                            "$runtimeEnclaveMode mode. The enclave's state cannot migrate across different modes."
+                }
+            }
+            return stream.readBytes()
         }
-        return data.copyOfRange(1, data.size)
     }
-
-    private fun enclaveModeFromInt(value: Int) = EnclaveMode.values()[value]
 
     @GetMapping("/attestation")
     fun attestation(): ByteArray = enclaveHost.enclaveInstanceInfo.serialize()
 
     @PostMapping("/deliver-mail")
-    fun deliverMail(@RequestHeader("Correlation-ID") correlationId: String, @RequestBody encryptedMail: ByteArray) {
-        enclaveHost.deliverMail(encryptedMail, correlationId)
+    fun deliverMail(
+        @RequestHeader("Correlation-ID") correlationId: String,
+        @RequestBody encryptedMail: ByteArray
+    ): ByteArray {
+        return enclaveHostService.deliverMail(encryptedMail, correlationId) ?: emptyBytes
     }
 
-    @PostMapping("/inbox")
-    fun inbox(@RequestHeader("Correlation-ID") correlationId: String): List<ByteArray> {
-        return synchronized(inboxes) { inboxes.remove(correlationId) } ?: emptyList()
+    @PostMapping("/poll-mail")
+    fun pollMail(@RequestHeader("Correlation-ID") correlationId: String): ByteArray {
+        return enclaveHostService.pollMail(correlationId) ?: emptyBytes
     }
 
     @PreDestroy
     fun shutdown() {
-        if (::enclaveHost.isInitialized) {
-            enclaveHost.close()
+        if (::enclaveHostService.isInitialized) {
+            enclaveHostService.close()
         }
     }
 
@@ -153,7 +160,10 @@ class EnclaveWebController {
         return mockConfiguration
     }
 
+    private val enclaveHost: EnclaveHost get() = enclaveHostService.enclaveHost
+
     private companion object {
         private val logger = loggerFor<EnclaveWebController>()
+        private val emptyBytes = ByteArray(0)
     }
 }
