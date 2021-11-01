@@ -100,18 +100,6 @@ open class NativeImage @Inject constructor(
     val maxHeapSize: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val enablePersistentMap: Property<Boolean> = objects.property(Boolean::class.java)
-
-    @get:Input
-    val maxPersistentMapSize: Property<String> = objects.property(String::class.java)
-
-    @get:Input
-    val inMemoryFileSystemSize: Property<String> = objects.property(String::class.java)
-
-    @get:Input
-    val persistentFileSystemSize: Property<String> = objects.property(String::class.java)
-
-    @get:Input
     val supportLanguages: Property<String> = objects.property(String::class.java)
 
     @get:Input
@@ -128,10 +116,6 @@ open class NativeImage @Inject constructor(
 
     private fun defaultOptions(): List<String> {
         val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
-        val enablePersistentMap = enablePersistentMap.get()
-        val maxPersistentMapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxPersistentMapSize.get())
-        val inMemoryFileSystemSizeBytes = GenerateEnclaveConfig.getSizeBytes(inMemoryFileSystemSize.get())
-        val persistentFileSystemSizeBytes = GenerateEnclaveConfig.getSizeBytes(persistentFileSystemSize.get())
         return listOf(
             "--no-fallback",
             "--no-server",
@@ -144,11 +128,6 @@ open class NativeImage @Inject constructor(
             // "-H:AlignedHeapChunkSize=4096",
             "-R:MaxHeapSize=" + calculateMaxHeapSize(maxHeapSizeBytes),
             "-R:StackSize=" + calculateMaxStackSize(),
-            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.enablePersistentMap=$enablePersistentMap",
-            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.maxPersistentMapSize=$maxPersistentMapSizeBytes",
-            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.inMemoryFileSystemSize=$inMemoryFileSystemSizeBytes",
-            "-Dcom.r3.conclave.enclave.internal.NativeImageProperties.persistentFileSystemSize=$persistentFileSystemSizeBytes",
-            "--initialize-at-build-time=com.r3.conclave.enclave.internal.NativeImageProperties",
             "--enable-all-security-services",
             "-H:-AddAllFileSystemProviders",
             "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",

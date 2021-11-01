@@ -25,9 +25,13 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
+import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 
 /**
@@ -264,8 +268,8 @@ abstract class Enclave {
 
     private fun setupFileSystems() {
         val secretKey = getSecretKey()
-        val inMemorySize = NativeImageProperties.inMemoryFileSystemSize
-        val persistentSize = NativeImageProperties.persistentFileSystemSize
+        val inMemorySize = env.inMemoryFileSystemSize
+        val persistentSize = env.persistentFileSystemSize
 
         if (inMemorySize > 0L && persistentSize == 0L ||
             inMemorySize == 0L && persistentSize > 0L) {

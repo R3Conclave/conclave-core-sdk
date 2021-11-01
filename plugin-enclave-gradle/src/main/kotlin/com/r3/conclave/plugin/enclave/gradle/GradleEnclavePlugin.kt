@@ -13,10 +13,7 @@ import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.plugins.JavaPlugin
-import org.gradle.api.tasks.AbstractCopyTask
-import org.gradle.api.tasks.Copy
-import org.gradle.api.tasks.Exec
-import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.*
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.internal.os.OperatingSystem
@@ -86,7 +83,21 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
         }
 
+        val enclaveClassNameTask = target.createTask<EnclaveClassName>("enclaveClassName") { task ->
+            task.dependsOn(target.tasks.withType(JavaCompile::class.java))
+            task.inputClassPath.set(getMainSourceSet(target).runtimeClasspath)
+        }
+
+        val generateEnclavePropertiesTask =
+            target.createTask<GenerateEnclaveProperties>("generateEnclaveProperties") { task ->
+                task.dependsOn(enclaveClassNameTask)
+                task.resourceDirectory.set(getMainSourceSet(target).output.resourcesDir.toString())
+                task.mainClassName.set(enclaveClassNameTask.outputEnclaveClassName)
+                task.conclaveExtension.set(conclaveExtension)
+            }
+
         val shadowJarTask = target.tasks.withType(ShadowJar::class.java).getByName("shadowJar") { task ->
+            task.dependsOn(generateEnclavePropertiesTask)
             task.isPreserveFileTimestamps = false
             task.isReproducibleFileOrder = true
             task.fileMode = Integer.parseInt("660", 8)
@@ -111,7 +122,20 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createMockArtifact(target, shadowJarTask)
 
         // Create the tasks that are required build the Release, Debug and Simulation artifacts.
-        createEnclaveArtifacts(target, sdkVersion, conclaveExtension, shadowJarTask)
+        createEnclaveArtifacts(
+                target,
+                sdkVersion,
+                conclaveExtension,
+                shadowJarTask,
+                generateEnclavePropertiesTask,
+                enclaveClassNameTask)
+    }
+
+    /**
+     * Get the main source set for a given project
+     */
+    private fun getMainSourceSet(project: Project): SourceSet {
+        return (project.properties["sourceSets"] as SourceSetContainer).getByName("main")
     }
 
     /**
@@ -174,7 +198,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.artifacts.add("mock", shadowJarTask.archiveFile)
     }
 
-    private fun createEnclaveArtifacts(target: Project, sdkVersion: String, conclaveExtension: ConclaveExtension, shadowJarTask: ShadowJar) {
+    private fun createEnclaveArtifacts(
+            target: Project,
+            sdkVersion: String,
+            conclaveExtension: ConclaveExtension,
+            shadowJarTask: ShadowJar,
+            generateEnclavePropertiesTask: GenerateEnclaveProperties,
+            enclaveClassNameTask: EnclaveClassName) {
+
         val baseDirectory = target.buildDir.toPath().resolve("conclave")
         val conclaveDependenciesDirectory = "$baseDirectory/com/r3/conclave"
 
@@ -196,10 +227,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val nativeImageLinkerToolFile = target.file(osDependentTools.getNativeImageLdFile())
         val signToolFile = target.file(osDependentTools.getSgxSign())
 
-        val enclaveClassNameTask = target.createTask<EnclaveClassName>("enclaveClassName") { task ->
-            task.inputJar.set(shadowJarTask.archiveFile)
-        }
-
         // Dummy key
         val createDummyKeyTask = target.createTask<GenerateDummyMrsignerKey>("createDummyKey") { task ->
             task.outputKey.set(baseDirectory.resolve("dummy_key.pem").toFile())
@@ -215,8 +242,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val generateAppResourcesConfigTask =
             target.createTask<GenerateAppResourcesConfig>("generateAppResourcesConfig") { task ->
-                val mainSourceSet = (target.properties["sourceSets"] as SourceSetContainer).getByName("main")
-                task.resourcesDirectory.set(mainSourceSet.resources.srcDirs.single())
+                task.dependsOn(generateEnclavePropertiesTask)
+                task.resourcesDirectory.set(getMainSourceSet(target).output.resourcesDir)
                 task.appResourcesConfigFile.set((baseDirectory / "app-resources-config.json").toFile())
             }
 
@@ -326,10 +353,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.serializationConfigurationFiles.from(conclaveExtension.serializationConfigurationFiles)
                 task.maxStackSize.set(conclaveExtension.maxStackSize)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
-                task.enablePersistentMap.set(conclaveExtension.enablePersistentMap)
-                task.maxPersistentMapSize.set(conclaveExtension.maxPersistentMapSize)
-                task.inMemoryFileSystemSize.set(conclaveExtension.inMemoryFileSystemSize)
-                task.persistentFileSystemSize.set(conclaveExtension.persistentFileSystemSize)
                 task.supportLanguages.set(conclaveExtension.supportLanguages)
                 task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
                 task.outputEnclave.set(unsignedEnclaveFile)

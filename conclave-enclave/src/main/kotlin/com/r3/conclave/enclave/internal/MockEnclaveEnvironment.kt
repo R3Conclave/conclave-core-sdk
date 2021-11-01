@@ -11,6 +11,7 @@ import com.r3.conclave.common.internal.KeyPolicy.NOISVPRODID
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
+import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getBytes
 import java.nio.ByteBuffer
@@ -21,9 +22,9 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
-    private val enclave: Any,
+    enclave: Enclave,
     mockConfiguration: MockConfiguration?
-) : EnclaveEnvironment {
+) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true)) {
     companion object {
         private const val IV_SIZE = 12
         private const val TAG_SIZE = 16
@@ -47,18 +48,17 @@ class MockEnclaveEnvironment(
         }
     }
 
-    // Use the configuration provided by the caller, or a default configuration
     private val configuration = mockConfiguration ?: MockConfiguration()
 
     // Our configuration stores the CPUSVN as an integer for simplicity. Hash this to a byte array.
     private val currentCpuSvn: ByteArray by lazy {
-        versionToCpuSvn(configuration.tcbLevel)
+        versionToCpuSvn(tcbLevel)
     }
 
     private val mrenclave: ByteArray by lazy {
-            // Use the value form the mock configuration if provided,  otherwise hardcode it
-            // to a hash of the java class name.
-            configuration.codeHash?.bytes ?: digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
+        // Use the value from the mock configuration if provided,  otherwise hardcode it
+        // to a hash of the java class name.
+        configuration.codeHash?.bytes ?: digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
     }
 
     private val mrsigner: ByteArray by lazy {
@@ -70,14 +70,23 @@ class MockEnclaveEnvironment(
         SecretKeySpec(digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }, "AES")
     }
 
-    override val enclaveMode: EnclaveMode
-        get() = EnclaveMode.MOCK
+    private val tcbLevel: Int
+        get() = configuration.tcbLevel ?: 1
+
+    override val productID: Int
+        get() = configuration.productID ?: super.productID
+
+    override val revocationLevel: Int
+        get() = configuration.revocationLevel ?: super.revocationLevel
 
     override val enablePersistentMap: Boolean
-        get() = configuration.enablePersistentMap
+        get() = configuration.enablePersistentMap ?: super.enablePersistentMap
 
     override val maxPersistentMapSize: Long
-        get() = configuration.maxPersistentMapSize
+        get() = configuration.maxPersistentMapSize ?: super.maxPersistentMapSize
+
+    override val enclaveMode: EnclaveMode
+        get() = EnclaveMode.MOCK
 
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
@@ -91,9 +100,9 @@ class MockEnclaveEnvironment(
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
         body[SgxReportBody.mrsigner] = ByteBuffer.wrap(mrsigner)
-        body[SgxReportBody.isvProdId] = configuration.productID
+        body[SgxReportBody.isvProdId] = productID
         // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
-        body[SgxReportBody.isvSvn] = configuration.revocationLevel + 1
+        body[SgxReportBody.isvSvn] = revocationLevel + 1
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
         return report
     }
@@ -162,12 +171,12 @@ class MockEnclaveEnvironment(
 
         require(keyName == SEAL) { "Unsupported KeyName $keyName" }
 
-        require(keyRequest[SgxKeyRequest.isvSvn].read() <= (configuration.revocationLevel + 1)) {
+        require(keyRequest[SgxKeyRequest.isvSvn].read() <= (revocationLevel + 1)) {
             "SGX_ERROR_INVALID_ISVSVN: The isv svn is greater than the enclave's isv svn"
         }
 
         val cpuSvn = keyRequest[SgxKeyRequest.cpuSvn].bytes
-        require(cpuSvn.all { it.toInt() == 0 } || isValidCpuSvn(configuration.tcbLevel, cpuSvn)) {
+        require(cpuSvn.all { it.toInt() == 0 } || isValidCpuSvn(tcbLevel, cpuSvn)) {
             "SGX_ERROR_INVALID_CPUSVN: The cpu svn is beyond platform's cpu svn value"
         }
 
@@ -178,7 +187,7 @@ class MockEnclaveEnvironment(
             if (keyPolicy.isSet(MRSIGNER)) {
                 update(mrsigner)
             }
-            update(ByteBuffer.allocate(2).putShort(configuration.productID.toShort()).array())  // Product Id is an unsigned short.
+            update(ByteBuffer.allocate(2).putShort(productID.toShort()).array())  // Product Id is an unsigned short.
             update(keyRequest[SgxKeyRequest.isvSvn].buffer)
             update(cpuSvn)
             update(keyRequest[SgxKeyRequest.keyId].buffer)

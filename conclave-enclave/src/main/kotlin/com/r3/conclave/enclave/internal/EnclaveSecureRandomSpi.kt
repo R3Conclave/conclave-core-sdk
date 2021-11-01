@@ -8,12 +8,12 @@ class EnclaveSecureRandomSpi : SecureRandomSpi() {
 
     override fun engineGenerateSeed(len: Int): ByteArray {
         val result = ByteArray(len)
-        NativeEnclaveEnvironment.randomBytes(result, 0, len)
+        Native.randomBytes(result, 0, len)
         return result
     }
 
     override fun engineNextBytes(output: ByteArray) {
-        NativeEnclaveEnvironment.randomBytes(output)
+        Native.randomBytes(output, 0, output.size)
     }
 
     override fun engineSetSeed(input: ByteArray?) {}

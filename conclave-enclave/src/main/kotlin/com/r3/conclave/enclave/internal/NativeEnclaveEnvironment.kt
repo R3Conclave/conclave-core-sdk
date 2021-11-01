@@ -17,75 +17,78 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 @PotentialPackagePrivate
-object NativeEnclaveEnvironment : EnclaveEnvironment {
+class NativeEnclaveEnvironment(enclaveProperties: Properties) : EnclaveEnvironment(enclaveProperties) {
     private var isEnclaveDebug: Boolean? = null
 
-    // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
-    // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
-    private val initialiseMethod =
-        Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
-            .apply { isAccessible = true }
+    companion object {
+        // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
+        // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
+        private val initialiseMethod =
+                Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
+                        .apply { isAccessible = true }
 
-    /** The singleton instance of the user supplied enclave. */
-    private var singletonHandler: HandlerConnected<*>? = null
+        /** The singleton instance of the user supplied enclave. */
+        private var singletonHandler: HandlerConnected<*>? = null
 
-    /**
-     * The ECALL entry point. In addition to [EntryPoint.entryPoint], this is also called from JNI code.
-     *
-     * @param input The chunk of data sent from the host.
-     */
-    @JvmStatic
-    fun enclaveEntry(input: ByteArray) {
-        val singletonHandler = synchronized(this) {
-            singletonHandler ?: run {
-                // The first ECALL is always the enclave class name, which we only use to instantiate the enclave.
-                singletonHandler = initialiseEnclave(input)
-                null
+        /**
+         * The ECALL entry point. In addition to [EntryPoint.entryPoint], this is also called from JNI code.
+         *
+         * @param input The chunk of data sent from the host.
+         */
+        @JvmStatic
+        fun enclaveEntry(input: ByteArray) {
+            val singletonHandler = synchronized(this) {
+                singletonHandler ?: run {
+                    // The first ECALL is always the enclave class name, which we only use to instantiate the enclave.
+                    singletonHandler = initialiseEnclave(input)
+                    null
+                }
+            }
+            singletonHandler?.onReceive(ByteBuffer.wrap(input).asReadOnlyBuffer())
+        }
+
+        private fun seedRandom() {
+            // java.util.Random is not designed for secure use and is even more insecure inside an
+            // enclave as it uses nanoTime for seeding. We can harden this implementation by seeding
+            // java.util.Random with java.util.SecureRandom in order to create a pseudorandom sequence
+            // from a truly random seed.
+
+            // There is no way to provide a global seed for the random number. Looking at util/Random.java
+            // in the OpenJDK though you can see that it is seeded from the time, combined with a field
+            // named "seedUniquifier" that is updated on each random object creation. We can get hold
+            // of this field and initialise it with a true random number to create a truly random
+            // seed.
+            try {
+                // Get the field that is used to ensure each instance of Random() creates a new
+                // sequence of numbers, even if the time (used as a seed) has not changed.
+                val seedUniquifierField = Random::class.java.getDeclaredField("seedUniquifier")
+                seedUniquifierField.isAccessible = true
+                val seedUniquifier = seedUniquifierField.get(null) as AtomicLong
+                seedUniquifierField.isAccessible = false
+
+                // Set the field to a truly random initialiser value. This is XOR'd with the system
+                // time (which comes from the host so may not be safe) to seed the random number
+                // generator.
+                val seed = SecureRandom()
+                seedUniquifier.set(seed.nextLong())
+            } catch (e: Exception) {
+                throw InternalError("Could not set Random seed. Failed to access the seedUniquifier field.", e)
             }
         }
-        singletonHandler?.onReceive(ByteBuffer.wrap(input).asReadOnlyBuffer())
-    }
 
-    private fun seedRandom() {
-        // java.util.Random is not designed for secure use and is even more insecure inside an 
-        // enclave as it uses nanoTime for seeding. We can harden this implementation by seeding
-        // java.util.Random with java.util.SecureRandom in order to create a pseudorandom sequence
-        // from a truly random seed.
+        private fun initialiseEnclave(input: ByteArray): HandlerConnected<*> {
+            seedRandom()
 
-        // There is no way to provide a global seed for the random number. Looking at util/Random.java
-        // in the OpenJDK though you can see that it is seeded from the time, combined with a field
-        // named "seedUniquifier" that is updated on each random object creation. We can get hold
-        // of this field and initialise it with a true random number to create a truly random
-        // seed.
-        try {
-            // Get the field that is used to ensure each instance of Random() creates a new
-            // sequence of numbers, even if the time (used as a seed) has not changed.
-            val seedUniquifierField = Random::class.java.getDeclaredField("seedUniquifier")
-            seedUniquifierField.isAccessible = true
-            val seedUniquifier = seedUniquifierField.get(null) as AtomicLong
-            seedUniquifierField.isAccessible = false
-
-            // Set the field to a truly random initialiser value. This is XOR'd with the system
-            // time (which comes from the host so may not be safe) to seed the random number
-            // generator.
-            val seed = SecureRandom()
-            seedUniquifier.set(seed.nextLong())
-        } catch (e: Exception) {
-            throw InternalError("Could not set Random seed. Failed to access the seedUniquifier field.", e)
+            val enclaveClassName = String(input)
+            // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
+            //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
+            val enclaveClass = Class.forName(enclaveClassName)
+            val enclave =
+                    enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }
+                            .newInstance()
+            val env = NativeEnclaveEnvironment(loadEnclaveProperties(enclaveClass, false))
+            return initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
         }
-    }
-
-    private fun initialiseEnclave(input: ByteArray): HandlerConnected<*> {
-        seedRandom()
-
-        val enclaveClassName = String(input)
-        // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
-        //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
-        val enclaveClass = Class.forName(enclaveClassName)
-        val enclave =
-            enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }
-                .newInstance()
-        return initialiseMethod.invoke(enclave, this, NativeOcallSender) as HandlerConnected<*>
     }
 
     override fun createReport(
@@ -133,16 +136,6 @@ object NativeEnclaveEnvironment : EnclaveEnvironment {
                 isDebugMode() -> EnclaveMode.DEBUG
                 else -> EnclaveMode.RELEASE
             }
-        }
-
-    override val enablePersistentMap: Boolean
-        get() {
-            return NativeImageProperties.enablePersistentMap!!
-        }
-
-    override val maxPersistentMapSize: Long
-        get() {
-            return NativeImageProperties.maxPersistentMapSize!!
         }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
