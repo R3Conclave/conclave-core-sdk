@@ -1,13 +1,12 @@
 package com.r3.conclave.init
 
-import com.r3.conclave.init.template.JavaClass
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.extension
 
-enum class Language(private val extension: String, val enclaveClass: JavaClass) {
-    KOTLIN("kt", JavaClass("TemplateEnclaveKotlin")),
-    JAVA("java", JavaClass("TemplateEnclaveJava"));
+enum class Language(private val extension: String) {
+    KOTLIN("kt"),
+    JAVA("java");
 
     fun matches(path: Path): Boolean {
         // Ignore files that aren't inside a src directory

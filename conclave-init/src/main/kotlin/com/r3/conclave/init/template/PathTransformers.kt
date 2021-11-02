@@ -28,7 +28,6 @@ class TemplatePathTransformer(
     private val basePackage: JavaPackage,
     private val templateRoot: Path,
     private val projectRoot: Path,
-    private val templateEnclaveClass: JavaClass,
     private val projectEnclaveClass: JavaClass,
 ) {
     fun transform(paths: Sequence<Path>): Sequence<Path> = paths

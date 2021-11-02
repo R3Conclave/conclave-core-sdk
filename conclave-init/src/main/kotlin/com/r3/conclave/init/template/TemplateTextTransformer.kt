@@ -4,7 +4,6 @@ package com.r3.conclave.init.template
 // such as Apache Freemarker
 class TemplateTextTransformer(
     private val basePackage: JavaPackage,
-    private val templateEnclaveClass: JavaClass,
     private val projectEnclaveClass: JavaClass,
     private val conclaveVersion: String
 ) {

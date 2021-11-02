@@ -24,10 +24,10 @@ object ConclaveInit {
             .filter(language::matches)
 
         val outputFiles =
-            TemplatePathTransformer(basePackage, templateRoot, outputRoot, language.enclaveClass, enclaveClass)
+            TemplatePathTransformer(basePackage, templateRoot, outputRoot, enclaveClass)
                 .transform(templateFiles)
 
-        val textTransformer = TemplateTextTransformer(basePackage, language.enclaveClass, enclaveClass, conclaveVersion)
+        val textTransformer = TemplateTextTransformer(basePackage, enclaveClass, conclaveVersion)
         (templateFiles zip outputFiles).forEach { (source, destination) ->
             with(destination.parent) { if (!exists()) createDirectories() }
 

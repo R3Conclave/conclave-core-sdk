@@ -49,6 +49,17 @@ $JAVA_HOME/bin/java -jar conclave-init.jar \
 # run the unit tests of the new project
 pushd mega-project
 ./gradlew test
+
+# run host and client
+# NOTE: this command is only run in mock mode, so that the signer can be provided below.
+./gradlew :host:run & _PID=$!
+sleep 5
+./gradlew :client:run \
+  --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
+
+# kill the host
+kill -9 $_PID
+sleep 10
 popd
 
 # create kotlin project
@@ -61,6 +72,17 @@ $JAVA_HOME/bin/java -jar conclave-init.jar \
 # run unit tests
 pushd mega-kotlin-project
 ./gradlew test
+
+# run the host and client
+# NOTE: this command is only run in mock mode, so that the signer can be provided below.
+./gradlew :host:run & _PID=$!
+sleep 5
+./gradlew :client:run \
+  --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
+
+# kill the host
+kill -9 $_PID
+sleep 10
 popd
 
 # clean up

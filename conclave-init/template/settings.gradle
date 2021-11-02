@@ -21,3 +21,4 @@ pluginManagement {
 
 include 'enclave'
 include 'host'
+include 'client'

@@ -1,20 +1,26 @@
-// plugins {
-//     id 'application'
-// }
-//
-// application {
-//     mainClassName = "com.r3.conclave.host.EnclaveWebHost"
-// }
-//
-// // Override the default (mock) with -PenclaveMode=
-// def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
-//
-// // Create a task that can be used for generating signing materials
-// tasks.register("prepareForSigning") {
-//     it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
-// }
-//
-// dependencies {
-//     runtimeOnly project(path: ":enclave", configuration: mode)
-//     runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
-// }
+plugins {
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+}
+
+application {
+    mainClassName = "com.r3.conclave.host.web.EnclaveWebHost"
+}
+
+// Override the default (mock) with -PenclaveMode=
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
+
+// Create a task that can be used for generating signing materials
+tasks.register("prepareForSigning") {
+    it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
+}
+
+dependencies {
+    runtimeOnly project(path: ":enclave", configuration: mode)
+    runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
+}
+
+shadowJar {
+    archiveAppendix.set(mode)
+    archiveClassifier.set("")
+}

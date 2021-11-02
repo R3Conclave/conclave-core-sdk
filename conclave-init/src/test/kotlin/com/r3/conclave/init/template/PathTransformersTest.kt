@@ -1,6 +1,5 @@
 package com.r3.conclave.init.template
 
-import com.r3.conclave.init.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import kotlin.io.path.Path
@@ -10,8 +9,8 @@ class PathTransformersTest {
     fun `transform package absolute`() {
         val transformer = TransformPackage(JavaPackage("com.megacorp"))
         val templatePath =
-            Path("/home/template/enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveJavaTest.java")
-        val expected = Path("/home/template/enclave/src/test/java/com/megacorp/enclave/TemplateEnclaveJavaTest.java")
+            Path("/home/template/enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveTest.java")
+        val expected = Path("/home/template/enclave/src/test/java/com/megacorp/enclave/TemplateEnclaveTest.java")
 
         assertEquals(expected, transformer.invoke(templatePath))
     }
@@ -19,16 +18,16 @@ class PathTransformersTest {
     @Test
     fun `transform package relative`() {
         val transformer = TransformPackage(JavaPackage("com.megacorp"))
-        val templatePath = Path("enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveKotlinTest.kt")
-        val expected = Path("enclave/src/test/kotlin/com/megacorp/enclave/TemplateEnclaveKotlinTest.kt")
+        val templatePath = Path("enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveTest.kt")
+        val expected = Path("enclave/src/test/kotlin/com/megacorp/enclave/TemplateEnclaveTest.kt")
 
         assertEquals(expected, transformer.invoke(templatePath))
     }
 
     @Test
     fun `transform java class name`() {
-        val transformer = TransformClassName(JavaClass("TemplateEnclaveJava"), JavaClass("MegaEnclave"))
-        val templatePath = Path("enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveJavaTest.kt")
+        val transformer = TransformClassName(JavaClass("TemplateEnclave"), JavaClass("MegaEnclave"))
+        val templatePath = Path("enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveTest.kt")
         val expected = Path("enclave/src/test/java/com/r3/conclave/template/enclave/MegaEnclaveTest.kt")
 
         assertEquals(expected, transformer.invoke(templatePath))
@@ -36,8 +35,8 @@ class PathTransformersTest {
 
     @Test
     fun `transform kotlin class name`() {
-        val transformer = TransformClassName(JavaClass("TemplateEnclaveKotlin"), JavaClass("MegaEnclave"))
-        val templatePath = Path("enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveKotlinTest.kt")
+        val transformer = TransformClassName(JavaClass("TemplateEnclave"), JavaClass("MegaEnclave"))
+        val templatePath = Path("enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveTest.kt")
         val expected = Path("enclave/src/test/kotlin/com/r3/conclave/template/enclave/MegaEnclaveTest.kt")
 
         assertEquals(expected, transformer.invoke(templatePath))
@@ -57,8 +56,8 @@ class PathTransformersTest {
         val templateFiles = sequenceOf(
             "/home/template/README.md",
             "/home/template/enclave/build.gradle",
-            "/home/template/enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveJavaTest.java",
-            "/home/template/enclave/src/main/java/com/r3/conclave/template/enclave/TemplateEnclaveJava.java",
+            "/home/template/enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveTest.java",
+            "/home/template/enclave/src/main/java/com/r3/conclave/template/enclave/TemplateEnclave.java",
             "/home/template/build.gradle",
             "/home/template/gradlew.bat",
             "/home/template/settings.gradle",
@@ -88,7 +87,6 @@ class PathTransformersTest {
             JavaPackage("com.megacorp"),
             Path("/home/template"),
             Path("/home/my/new/project"),
-            Language.JAVA.enclaveClass,
             JavaClass("MegaEnclave")
         ).transform(templateFiles)
 

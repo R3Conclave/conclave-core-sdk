@@ -18,11 +18,14 @@ internal class ZipResourceTest() {
 
         val expected = listOf(
             "README.md",
+            "client/build.gradle",
+            "client/src/main/java/com/r3/conclave/template/client/TemplateEnclaveClient.java",
+            "client/src/main/kotlin/com/r3/conclave/template/client/TemplateEnclaveClient.kt",
             "enclave/build.gradle",
-            "enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveJavaTest.java",
-            "enclave/src/main/java/com/r3/conclave/template/enclave/TemplateEnclaveJava.java",
-            "enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveKotlinTest.kt",
-            "enclave/src/main/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveKotlin.kt",
+            "enclave/src/test/java/com/r3/conclave/template/enclave/TemplateEnclaveTest.java",
+            "enclave/src/main/java/com/r3/conclave/template/enclave/TemplateEnclave.java",
+            "enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveTest.kt",
+            "enclave/src/main/kotlin/com/r3/conclave/template/enclave/TemplateEnclave.kt",
             "build.gradle",
             "gradle.properties",
             "settings.gradle",

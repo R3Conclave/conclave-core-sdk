@@ -1,0 +1,14 @@
+plugins {
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+}
+
+application {
+    mainClassName = "com.r3.conclave.template.client.TemplateEnclaveClient"
+}
+
+dependencies {
+    implementation "com.r3.conclave:conclave-web-client:$conclaveVersion"
+
+    runtimeOnly "org.slf4j:slf4j-simple:$slf4jVersion"
+}

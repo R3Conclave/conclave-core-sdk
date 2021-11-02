@@ -81,6 +81,7 @@ internal class TestCreateProject {
             "conclave-repo",
             "enclave",
             "host",
+            "client",
         ).map(::Path).toSet()
 
         val actualChildren = outputDir.listDirectoryEntries().map { it.relativeTo(outputDir) }.toSet()
@@ -92,12 +93,20 @@ internal class TestCreateProject {
         val enclaveTestContents = enclaveTestFile.readText()
         testFileStrings.forEach { assertTrue(enclaveTestContents.contains(it)) }
 
+        val clientBuildGradle = outputDir.resolve("client/build.gradle")
+        val clientMainClass = "com.megacorp.client.MegaEnclaveClient"
+        assertTrue(clientBuildGradle.readText().contains("mainClassName = \"$clientMainClass\""))
+
+        val hostBuildGradle = outputDir.resolve("host/build.gradle")
+        val hostMainClass = "com.r3.conclave.host.web.EnclaveWebHost"
+        assertTrue(hostBuildGradle.readText().contains("mainClassName = \"$hostMainClass\""))
+
         val sourceFiles = outputDir
             .walkTopDown()
             .filter { it.extension == expectedExtension }
             .map { it.nameWithoutExtension }
             .toSet()
-        assertEquals(setOf("MegaEnclave", "MegaEnclaveTest"), sourceFiles)
+        assertEquals(setOf("MegaEnclave", "MegaEnclaveTest", "MegaEnclaveClient"), sourceFiles)
 
         assertTrue(outputDir.walkTopDown().filter { it.extension == invalidExtension }.toList().isEmpty())
     }

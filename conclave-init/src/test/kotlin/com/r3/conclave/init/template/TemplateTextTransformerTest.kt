@@ -12,10 +12,10 @@ internal class TemplateTextTransformerTest {
         import com.r3.conclave.enclave.Enclave
         import org.junit.jupiter.api.Assertions.assertEquals
 
-        class TemplateEnclaveKotlinTest : Enclave() {
+        class TemplateEnclaveTest : Enclave() {
             @Test
             fun `first test`() {
-                val mockHost = EnclaveHost.load("com.r3.conclave.template.TemplateEnclaveKotlin")
+                val mockHost = EnclaveHost.load("com.r3.conclave.template.TemplateEnclave")
 
                 assertTrue(true)
             }
@@ -40,7 +40,6 @@ internal class TemplateTextTransformerTest {
 
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
-            JavaClass("TemplateEnclaveKotlin"),
             JavaClass("MegaEnclave"),
             "1.2-SNAPSHOT"
         ).transform(templateFileContents)
@@ -59,13 +58,13 @@ internal class TemplateTextTransformerTest {
 
         import static org.junit.jupiter.api.Assertions.assertEquals;
 
-        class TemplateEnclaveJavaTest {
+        class TemplateEnclaveTest {
             private static ArrayList<MailCommand> mailCommands = new ArrayList<>();
 
             @Test
             void firstTest() throws EnclaveLoadException, IOException {
                 // Start the enclave
-                EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.template.enclave.TemplateEnclaveJava");
+                EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.template.enclave.TemplateEnclave");
                 mockHost.start(new AttestationParameters.DCAP(), null, null, (commands) -> mailCommands.addAll(commands));
                 assertTrue(true)
             }
@@ -96,7 +95,6 @@ internal class TemplateTextTransformerTest {
 
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
-            JavaClass("TemplateEnclaveJava"),
             JavaClass("MegaEnclave"),
             "1.2-SNAPSHOT"
         ).transform(templateFileContents)
@@ -125,7 +123,6 @@ internal class TemplateTextTransformerTest {
 
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
-            JavaClass("TemplateEnclaveJava"),
             JavaClass("MegaEnclave"),
             "1.2-SNAPSHOT"
         ).transform(templateFileContents)

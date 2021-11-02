@@ -23,3 +23,5 @@ class JavaClass(val name: String) {
         require(invalid.isEmpty()) { "Java class name contains invalid characters $invalid" }
     }
 }
+
+val templateEnclaveClass = JavaClass("TemplateEnclave")
