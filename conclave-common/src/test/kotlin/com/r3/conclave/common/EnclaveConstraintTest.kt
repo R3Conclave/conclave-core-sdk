@@ -120,6 +120,17 @@ class EnclaveConstraintTest {
     }
 
     @Test
+    fun `parse multiple spaces are ignored`() {
+        val actual = EnclaveConstraint.parse("C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26  SEC:SECURE")
+        val expected = EnclaveConstraint().apply {
+            acceptableCodeHashes = mutableSetOf(SHA256Hash.parse("da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26"))
+            minSecurityLevel = SECURE
+        }
+        assertThat(actual).isEqualTo(expected)
+        assertThat(EnclaveConstraint.parse(actual.toString())).isEqualTo(expected)
+    }
+
+    @Test
     fun `invalid product ID`() {
         val constraint = EnclaveConstraint()
         assertThatIllegalArgumentException().isThrownBy {
@@ -139,7 +150,7 @@ class EnclaveConstraintTest {
     }
 
     @Test
-    fun `invalid states`() {
+    fun `invalid states during check`() {
         assertThatCheckThrowsIllegalStateException("Either a code hash or a code signer must be provided.") { }
         assertThatCheckThrowsIllegalStateException("A code signer must be provided with a product ID.") {
             acceptableCodeHashes.add(codeHash)
@@ -148,6 +159,18 @@ class EnclaveConstraintTest {
         assertThatCheckThrowsIllegalStateException("A product ID must be provided with a code signer.") {
             acceptableSigners.add(codeSigner)
         }
+    }
+
+    @Test
+    fun `invalid states after parse`() {
+        assertThatParseThrowsIllegalStateException(
+                "Either a code hash or a code signer must be provided.", "")
+        assertThatParseThrowsIllegalStateException(
+                "A product ID must be provided with a code signer.",
+                "S:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26")
+        assertThatParseThrowsIllegalStateException(
+                "A code signer must be provided with a product ID.",
+                "C:da78b28564fe5a9b4f5912901f068f9f94483006bc53e10ab93dbb97675eba26 PROD:9001")
     }
 
     @Test
@@ -284,6 +307,12 @@ class EnclaveConstraintTest {
         block(constraint)
         assertThatIllegalStateException().isThrownBy {
             constraint.check(enclave)
+        }.withMessage(message)
+    }
+
+    private fun assertThatParseThrowsIllegalStateException(message: String, constraints: String) {
+        assertThatIllegalStateException().isThrownBy {
+            EnclaveConstraint.parse(constraints)
         }.withMessage(message)
     }
 

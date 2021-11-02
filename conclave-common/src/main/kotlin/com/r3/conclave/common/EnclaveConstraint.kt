@@ -82,26 +82,33 @@ class EnclaveConstraint {
     var maxAttestationAge: Period? = null
 
     /**
-     * Throws [InvalidEnclaveException] if the constraint doesn't match the [EnclaveInfo] with a message explaining why not.
+     * @throws IllegalStateException If any criteria are in an incorrect state. For example, [productID] not specified
+     * when [acceptableSigners] has.
+     */
+    private fun checkCriteriaValid() {
+        check(acceptableCodeHashes.isNotEmpty() || acceptableSigners.isNotEmpty()) {
+            "Either a code hash or a code signer must be provided."
+        }
+        if (productID != null) {
+            check(acceptableSigners.isNotEmpty()) { "A code signer must be provided with a product ID." }
+        }
+        if (acceptableSigners.isNotEmpty()) {
+            check(productID != null) { "A product ID must be provided with a code signer." }
+        }
+    }
+
+    /**
+     * @throws InvalidEnclaveException if the constraint doesn't match the [EnclaveInfo] with a message explaining why not.
      *
      * @throws IllegalStateException If any criteria are in an incorrect state. For example, [productID] not specified
      * when [acceptableSigners] has.
      */
     @Throws(InvalidEnclaveException::class)
     fun check(enclave: EnclaveInstanceInfo) {
-        // First make sure the state of the constraint is valid, throwing IllegalStateException if it isn't.
-        check(acceptableCodeHashes.isNotEmpty() || acceptableSigners.isNotEmpty()) {
-            "Either a code hash or a code signer must be provided."
-        }
-        val productID = this.productID
-        if (productID != null) {
-            check(acceptableSigners.isNotEmpty()) { "A code signer must be provided with a product ID." }
-        } else {
-            check(acceptableSigners.isEmpty()) { "A product ID must be provided with a code signer." }
-        }
+        // First make sure the state of the constraint is valid.
+        checkCriteriaValid()
 
         // Now check the enclave against the constraint, throwing InvalidEnclaveException if it doesn't match.
-
         if (acceptableCodeHashes.isNotEmpty() && acceptableSigners.isEmpty()) {
             checkEnclave(enclave.enclaveInfo.codeHash in acceptableCodeHashes) {
                 "Enclave code hash does not match any of the acceptable code hashes. (measurement hash ${enclave.enclaveInfo.codeHash} vs acceptable ${acceptableCodeHashes.joinToString()}"
@@ -216,13 +223,18 @@ class EnclaveConstraint {
          * `C:2797b9581b9377d41a8ffc45990335048e79c976a6bbb4e7692ecad699a55317 C:f96839b2159ecf8ea80cd3c1eb6be7160b05bc0d701b115b64b7e0725d15adee`
          *
          * says, accept if the code/measurement hash is either `2797...` or `f968....`
+         *
+         * @param descriptor String specifying enclave constraints by way of the conclave constraints DSL.
+         *
+         * @throws IllegalStateException If any criteria are in an incorrect state. For example, [productID] not specified
+         * when [acceptableSigners] has.
          */
         @JvmStatic
         fun parse(descriptor: String): EnclaveConstraint {
             val keyValues = descriptor
                 .splitToSequence(' ')
+                .filter { it.isNotEmpty() }
                 .map {
-                    require(it.isNotEmpty()) { "Consecutive spaces not allowed" }
                     val parts = it.split(':')
                     require(parts.size == 2) { "Invalid token: $it" }
                     parts
@@ -246,6 +258,7 @@ class EnclaveConstraint {
             keyValues["EXPIRE"]?.let {
                 constraint.maxAttestationAge = Period.parse(it.single())
             }
+            constraint.checkCriteriaValid()
             return constraint
         }
     }
