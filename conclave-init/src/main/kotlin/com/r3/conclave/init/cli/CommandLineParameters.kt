@@ -76,7 +76,7 @@ class CommandLineParameters {
         description = ["The desired language for your new project. Allowed values: \${COMPLETION-CANDIDATES}.\n" +
                 "Default: \${DEFAULT-VALUE}"],
     )
-    val language: Language = Language.java
+    val language: Language = Language.JAVA
 
 
     fun projectSummary(): String = """

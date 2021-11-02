@@ -9,9 +9,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.net.URL
 import java.nio.file.Path
-import java.util.*
 import kotlin.io.path.*
 
 internal class TestCreateProject {
@@ -30,7 +28,7 @@ internal class TestCreateProject {
     @Test
     fun `test conclave init kotlin`() {
         testCreateProject(
-            Language.kotlin,
+            Language.KOTLIN,
             enclaveTestFilePath = "enclave/src/test/kotlin/com/megacorp/enclave/MegaEnclaveTest.kt",
             testFileStrings = listOf(
                 "package com.megacorp.enclave\n",
@@ -46,7 +44,7 @@ internal class TestCreateProject {
     @Test
     fun `test conclave init java`() {
         testCreateProject(
-            language = Language.java,
+            language = Language.JAVA,
             enclaveTestFilePath = "enclave/src/test/java/com/megacorp/enclave/MegaEnclaveTest.java",
             testFileStrings = listOf(
                 "package com.megacorp.enclave;\n",

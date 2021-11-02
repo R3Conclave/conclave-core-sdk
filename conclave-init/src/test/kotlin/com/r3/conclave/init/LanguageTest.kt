@@ -11,28 +11,28 @@ class LanguageTest {
     @Test
     fun `kotlin file matches kotlin`() {
         assertTrue(
-            Language.kotlin.matches(Path("/home/project/enclave/src/main/kotlin/com/foo/enclave/MyEnclave.kt"))
+            Language.KOTLIN.matches(Path("/home/project/enclave/src/main/kotlin/com/foo/enclave/MyEnclave.kt"))
         )
     }
 
     @Test
     fun `kotlin file doesn't match java`() {
         assertFalse(
-            Language.java.matches(Path("/home/project/enclave/src/main/kotlin/com/foo/enclave/MyEnclave.kt"))
+            Language.JAVA.matches(Path("/home/project/enclave/src/main/kotlin/com/foo/enclave/MyEnclave.kt"))
         )
     }
 
     @Test
     fun `java file matches java`() {
         assertTrue(
-            Language.java.matches(Path("/home/project/enclave/src/main/java/com/foo/enclave/MyEnclave.java"))
+            Language.JAVA.matches(Path("/home/project/enclave/src/main/java/com/foo/enclave/MyEnclave.java"))
         )
     }
 
     @Test
     fun `java file doesn't match kotlin`() {
         assertFalse(
-            Language.kotlin.matches(Path("/home/project/enclave/src/main/java/com/foo/enclave/MyEnclave.java"))
+            Language.KOTLIN.matches(Path("/home/project/enclave/src/main/java/com/foo/enclave/MyEnclave.java"))
         )
     }
 

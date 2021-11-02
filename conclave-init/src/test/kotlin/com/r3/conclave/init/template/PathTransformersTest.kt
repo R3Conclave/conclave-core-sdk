@@ -88,7 +88,7 @@ class PathTransformersTest {
             JavaPackage("com.megacorp"),
             Path("/home/template"),
             Path("/home/my/new/project"),
-            Language.java.enclaveClass,
+            Language.JAVA.enclaveClass,
             JavaClass("MegaEnclave")
         ).transform(templateFiles)
 

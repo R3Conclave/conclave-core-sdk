@@ -43,6 +43,8 @@ shadowJar {
     mainClassName = application.mainClassName
     // Note: The task `sdkCopyConclaveInit` in the root project depends on this archiveFileName
     archiveFileName = "conclave-init-shadow.jar"
+    // Workaround to prevent conclave-init looking like another tool which Nexus IQ doesn't like.
+    relocate 'kotlin', 'com.r3.conclave.shaded.kotlin'
 }
 
 tasks.withType(Test) {

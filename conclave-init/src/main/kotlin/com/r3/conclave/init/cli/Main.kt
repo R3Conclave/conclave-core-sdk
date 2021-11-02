@@ -13,7 +13,7 @@ import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
     val params = CommandLineParameters()
-    val commandLine = CommandLine(params).setCaseInsensitiveEnumValuesAllowed(true)
+    val commandLine = CommandLine(params)
 
     try {
         commandLine.parseArgs(*args)

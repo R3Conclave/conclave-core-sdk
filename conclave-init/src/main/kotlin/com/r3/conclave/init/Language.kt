@@ -6,8 +6,8 @@ import kotlin.io.path.Path
 import kotlin.io.path.extension
 
 enum class Language(private val extension: String, val enclaveClass: JavaClass) {
-    kotlin("kt", JavaClass("TemplateEnclaveKotlin")),
-    java("java", JavaClass("TemplateEnclaveJava"));
+    KOTLIN("kt", JavaClass("TemplateEnclaveKotlin")),
+    JAVA("java", JavaClass("TemplateEnclaveJava"));
 
     fun matches(path: Path): Boolean {
         // Ignore files that aren't inside a src directory
@@ -15,4 +15,6 @@ enum class Language(private val extension: String, val enclaveClass: JavaClass) 
 
         return path.extension == extension
     }
+
+    override fun toString(): String = name.lowercase()
 }
