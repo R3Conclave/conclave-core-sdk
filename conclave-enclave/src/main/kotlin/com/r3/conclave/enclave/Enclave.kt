@@ -1,23 +1,30 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockConfiguration
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxReport.body
+import com.r3.conclave.common.internal.SgxReportBody.mrenclave
+import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.common.internal.kds.KDSResponse
+import com.r3.conclave.common.internal.kds.PrivateKeyResponse
+import com.r3.conclave.common.kds.KDSKeySpecification
+import com.r3.conclave.common.kds.PolicyConstraint
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
+import com.r3.conclave.enclave.kds.KDSConfiguration
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
+import java.io.ByteArrayOutputStream
 import java.io.UTFDataFormatException
 import java.nio.ByteBuffer
 import java.security.KeyPair
@@ -58,14 +65,40 @@ import kotlin.concurrent.withLock
  * variables will be reset on restart.
  */
 abstract class Enclave {
+
     /**
      * Suppress kotlin specific companion objects from our API documentation.
      * @suppress
      */
     private companion object {
         private val signatureScheme = SignatureSchemeEdDSA()
+
+        private fun serializeKDSKeySpecification(kdsKeySpecification: KDSKeySpecification): ByteArray {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+
+            val masterKeyTypeSerialized = kdsKeySpecification.masterKeyType.toByteArray()
+            val masterKeyTypeByteBuffer = ByteBuffer.allocate(Int.SIZE_BYTES + masterKeyTypeSerialized.size)
+            masterKeyTypeByteBuffer.putInt(masterKeyTypeSerialized.size)
+            masterKeyTypeByteBuffer.put(masterKeyTypeSerialized)
+            byteArrayOutputStream.write(masterKeyTypeByteBuffer.rewind().getRemainingBytes())
+
+            val policyConstraintSerialize = serializePolicyConstraint(kdsKeySpecification.policyConstraint)
+            byteArrayOutputStream.write(policyConstraintSerialize)
+            return byteArrayOutputStream.toByteArray()
+        }
+
+        private fun serializePolicyConstraint(policyConstraint: PolicyConstraint): ByteArray {
+            val enclaveConstraintSerialized = policyConstraint.enclaveConstraint.toString().toByteArray()
+            val byteBuffer = ByteBuffer.allocate(2 + Int.SIZE_BYTES + enclaveConstraintSerialized.size)
+            byteBuffer.putBoolean(policyConstraint.ownCodeHash)
+            byteBuffer.putBoolean(policyConstraint.ownCodeSigner)
+            byteBuffer.putInt(enclaveConstraintSerialized.size)
+            byteBuffer.put(enclaveConstraintSerialized)
+            return byteBuffer.rewind().getRemainingBytes()
+        }
     }
 
+    private var kdsEII: EnclaveInstanceInfo? = null
     private lateinit var env: EnclaveEnvironment
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
@@ -139,6 +172,8 @@ abstract class Enclave {
     /** The serializable remote attestation object for this enclave instance. */
     protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
 
+    protected val kdsEnclaveInstanceInfo: EnclaveInstanceInfo? get() = kdsEII
+
     /**
      * If this property is false (the default) then a lock will be taken and the enclave will process mail and calls
      * from the host serially. To build a multi-threaded enclave you must firstly, obviously, write thread safe code
@@ -147,6 +182,8 @@ abstract class Enclave {
      * for your own thread safety.
      */
     protected open val threadSafe: Boolean get() = false
+
+    protected open val kdsConfig: KDSConfiguration? get() = null
 
     /**
      * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
@@ -218,6 +255,18 @@ abstract class Enclave {
                 override val reportData = createReportData()
             })
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
+            val kdsKeySpec = kdsConfig?.kdsKeySpec
+            if (kdsKeySpec != null) {
+                val report = env.createReport(null, null)
+                if (kdsKeySpec.policyConstraint.ownCodeHash) {
+                    val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
+                    kdsKeySpec.policyConstraint.enclaveConstraint.acceptableCodeHashes.add(mrenclave)
+                }
+                if (kdsKeySpec.policyConstraint.ownCodeSigner) {
+                    val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
+                    kdsKeySpec.policyConstraint.enclaveConstraint.acceptableSigners.add(mrsigner)
+                }
+            }
             connected
         }
     }
@@ -266,8 +315,9 @@ abstract class Enclave {
         return secretKey
     }
 
-    private fun setupFileSystems() {
-        val secretKey = getSecretKey()
+    private fun setupFileSystems(kdsPrivateKey: ByteArray?) {
+        // The KDS key may be longer than 128 bit, so we only use the first 128 bit
+        val secretKey = kdsPrivateKey?.copyOf(16) ?: getSecretKey()
         val inMemorySize = env.inMemoryFileSystemSize
         val persistentSize = env.persistentFileSystemSize
 
@@ -356,6 +406,7 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
+        private var kdsPrivateKey: ByteArray? = null
 
         override fun connect(upstream: Sender): AdminHandler {
             sender = upstream
@@ -368,9 +419,11 @@ abstract class Enclave {
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             when (val type = input.get().toInt()) {
-                0 -> onAttestation(input)
-                1 -> onOpen(input)
-                2 -> onClose()
+                AdminHandlerRequestTypes.Enclave.ATTESTATION.ordinal -> onAttestation(input)
+                AdminHandlerRequestTypes.Enclave.OPEN.ordinal -> onOpen(input)
+                AdminHandlerRequestTypes.Enclave.CLOSE.ordinal -> onClose()
+                AdminHandlerRequestTypes.Enclave.KDS_KEY_SPECIFICATION.ordinal -> onKDSKeySpecificationRequest()
+                AdminHandlerRequestTypes.Enclave.KDS_RESPONSE.ordinal -> onKDSResponse(input)
                 else -> throw IllegalStateException("Unknown type $type")
             }
         }
@@ -412,7 +465,7 @@ Received: $attestationReportBody"""
                 if (sealedStateBlob != null) {
                     enclave.applySealedState(sealedStateBlob)
                 }
-                enclave.setupFileSystems()
+                enclave.setupFileSystems(kdsPrivateKey)
                 enclave.onStartup()
             }
         }
@@ -435,10 +488,54 @@ Received: $attestationReportBody"""
             val encodedSigningKey = enclave.signatureKey.encoded   // 44 bytes
             val encodedEncryptionKey = enclave.encryptionKeyPair.public.encoded   // 32 bytes
             sender.send(1 + encodedSigningKey.size + encodedEncryptionKey.size) { buffer ->
-                buffer.put(0)  // Enclave info
+                buffer.put(AdminHandlerRequestTypes.Host.ENCLAVE_INFO.ordinal.toByte())  // Enclave info
                 buffer.put(encodedSigningKey)
                 buffer.put(encodedEncryptionKey)
             }
+        }
+
+        private fun onKDSKeySpecificationRequest() {
+            val initializationConfiguration = enclave.kdsConfig
+            require(initializationConfiguration != null) { "Enclave KDS configuration is missing." }
+            val kdsKeySpec = serializeKDSKeySpecification(initializationConfiguration.kdsKeySpec)
+            sender.send(1 + kdsKeySpec.size) { buffer ->
+                buffer.put(AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal.toByte())
+                buffer.put(kdsKeySpec)
+            }
+        }
+
+        private fun onKDSResponse(input: ByteBuffer) {
+            if (enclave.kdsEII != null) return
+
+            val enclaveInitializationConfiguration = enclave.kdsConfig
+            require(enclaveInitializationConfiguration != null) { "Enclave KDS configuration is missing." }
+            val kdsConstraint = enclaveInitializationConfiguration.kdsKeySpec
+            val kdsEnclaveConstraint = enclaveInitializationConfiguration.kdsEnclaveConstraint
+
+            val objectMapper = ObjectMapper()
+            val kdsResponse = objectMapper.readValue(input.inputStream(), KDSResponse::class.java)
+
+            val mailBytes = Base64.getDecoder().decode(kdsResponse.data)
+            val mail = enclave.decryptMail(ByteBuffer.wrap(mailBytes))
+            val kdsEEIBytes = Base64.getDecoder().decode(kdsResponse.kdsEnclaveInstanceInfo)
+            val kdsEII = EnclaveInstanceInfo.deserialize(kdsEEIBytes)
+
+            // Verify the KDS attestation report
+            kdsEnclaveConstraint.check(kdsEII)
+
+            // Verify KDS encryption key is the same key which encrypted the mail.
+            require(kdsEII.encryptionKey == mail.authenticatedSender) {
+                "Mail authenticated sender does not match the KDS EnclaveInstanceInfo encryption key."
+            }
+
+            // Verify key policy constraint
+            val privateKeyResponse = objectMapper.readValue(mail.bodyAsBytes, PrivateKeyResponse::class.java)
+            val privateKeyPolicyConstraint = EnclaveConstraint.parse(privateKeyResponse.policyConstraint)
+            require(privateKeyPolicyConstraint == kdsConstraint.policyConstraint.enclaveConstraint) {
+                "KDS response was generated using a different policy constraint from the one configured in the enclave."
+            }
+            enclave.kdsEII = kdsEII
+            kdsPrivateKey = Base64.getDecoder().decode(privateKeyResponse.privateKey)
         }
 
         /**
@@ -462,7 +559,7 @@ Received: $attestationReportBody"""
          */
         private fun sendAttestationRequest() {
             sender.send(1) { buffer ->
-                buffer.put(1)
+                buffer.put(AdminHandlerRequestTypes.Host.ATTESTATION.ordinal.toByte())
             }
         }
     }
@@ -482,6 +579,12 @@ Received: $attestationReportBody"""
      */
     open fun onShutdown() {
 
+    }
+
+    private fun decryptMail(input: ByteBuffer): EnclaveMail {
+        // Wrap the remaining bytes in a InputStream to avoid copying.
+        val decryptingStream = MailDecryptingStream(input.inputStream())
+        return decryptingStream.decryptMail { encryptionKeyPair.private }
     }
 
 
@@ -535,9 +638,7 @@ Received: $attestationReportBody"""
         // TODO Mail acks: https://r3-cev.atlassian.net/browse/CON-616
         private fun onMail(hostThreadId: Long, input: ByteBuffer) {
             val routingHint = input.getNullable { String(getIntLengthPrefixBytes()) }
-            // Wrap the remaining bytes in a InputStream to avoid copying.
-            val decryptingStream = MailDecryptingStream(input.inputStream())
-            val mail = decryptingStream.decryptMail { encryptionKeyPair.private }
+            val mail = decryptMail(input)
 
             executeReceive(
                 hostThreadId,
@@ -634,7 +735,7 @@ Received: $attestationReportBody"""
                 }
             }
 
-            // TODO Use a KMS key if one is available
+            // TODO Use a KDS key if one is available
             val sealedState = env.sealData(PlaintextAndEnvelope(serialised))
 
             sendToHost(SEALED_STATE, hostThreadId, sealedState.size) { buffer ->

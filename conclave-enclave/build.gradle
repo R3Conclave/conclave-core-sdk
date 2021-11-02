@@ -9,6 +9,7 @@ dependencies {
     api project(":conclave-common")
 
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     implementation "org.graalvm.sdk:graal-sdk:$graal_version"
     testImplementation project(":internal-testing")

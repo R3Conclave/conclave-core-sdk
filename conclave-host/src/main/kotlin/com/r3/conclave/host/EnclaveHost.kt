@@ -1,20 +1,28 @@
 package com.r3.conclave.host
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
+import com.r3.conclave.common.internal.handler.AdminHandlerRequestTypes
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
+import com.r3.conclave.common.internal.kds.KDSErrorResponse
+import com.r3.conclave.common.internal.kds.PrivateKeyRequest
+import com.r3.conclave.common.kds.KDSKeySpecification
+import com.r3.conclave.common.kds.PolicyConstraint
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
+import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
@@ -24,6 +32,7 @@ import io.github.classgraph.Resource
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -522,6 +531,26 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 throw PlatformSupportException(message)
             }
         }
+
+        private fun deserializeKDSKeySpecification(byteBuffer: ByteBuffer): KDSKeySpecification {
+            val masterKeyTypeLength = byteBuffer.getInt()
+            val masterKeyType = String(byteBuffer.getBytes(masterKeyTypeLength))
+
+            val policyConstraint = deserializePolicyConstraint(byteBuffer)
+            return KDSKeySpecification(masterKeyType, policyConstraint)
+        }
+
+        private fun deserializePolicyConstraint(byteBuffer: ByteBuffer): PolicyConstraint {
+            val ownCodeHash = byteBuffer.getBoolean()
+            val ownCodeSigner = byteBuffer.getBoolean()
+            val serializedEnclaveConstraintSize = byteBuffer.getInt()
+            val serializedEnclaveConstraint = byteBuffer.getBytes(serializedEnclaveConstraintSize)
+            val policyConstraint = PolicyConstraint()
+            policyConstraint.ownCodeHash = ownCodeHash
+            policyConstraint.ownCodeSigner = ownCodeSigner
+            policyConstraint.enclaveConstraint = EnclaveConstraint.parse(String(serializedEnclaveConstraint))
+            return policyConstraint
+        }
     }
 
     private var fileSystemHandler: FileSystemHandler? = null
@@ -560,6 +589,17 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     private lateinit var attestationConnection: AttestationHostHandler.Connection
     private lateinit var attestationService: AttestationService
 
+    @Throws(EnclaveLoadException::class)
+    @Synchronized
+    fun start(
+        attestationParameters: AttestationParameters?,
+        sealedState: ByteArray?,
+        enclaveFileSystemFile: Path?,
+        commandsCallback: Consumer<List<MailCommand>>
+    ) {
+        start(attestationParameters, sealedState, enclaveFileSystemFile, null, commandsCallback)
+    }
+
     /**
      * Causes the enclave to be loaded and the `Enclave` object constructed inside.
      * This method must be called before sending is possible. Remember to call
@@ -597,6 +637,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         attestationParameters: AttestationParameters?,
         sealedState: ByteArray?,
         enclaveFileSystemFile: Path?,
+        kdsConfiguration: KDSConfiguration?,
         commandsCallback: Consumer<List<MailCommand>>
     ) {
         if (hostStateManager.state is Started) return
@@ -626,6 +667,11 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             // for us to query.
             updateAttestation()
 
+            // Once the EnclaveInstanceInfo has been updated, we can do a KDS request.
+            if (kdsConfiguration != null) {
+                kdsRequest(kdsConfiguration)
+            }
+
             // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
@@ -645,6 +691,44 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
             null;
+        }
+    }
+
+    private fun kdsRequest(kdsConfiguration: KDSConfiguration) {
+        adminHandler.requestKDSKeySpecification()
+
+        // Return if the enclave wasn't configured with any KDS constraint
+        val kdsKeySpecification = adminHandler.kdsKeySpecification ?: return
+
+        val mapper = ObjectMapper()
+        val privateKeyRequest = PrivateKeyRequest(
+                appReport = Base64.getEncoder().encodeToString(enclaveInstanceInfo.serialize()),
+                name = "KDSKeySpecName",
+                mkType = kdsKeySpecification.masterKeyType,
+                policyConstraint = kdsKeySpecification.policyConstraint.enclaveConstraint.toString()
+        )
+
+        val url = URL("${kdsConfiguration.url}/private")
+        val con: HttpURLConnection = url.openConnection() as HttpURLConnection
+        con.connectTimeout = kdsConfiguration.timeout.toMillis().toInt()
+        con.readTimeout = kdsConfiguration.timeout.toMillis().toInt()
+        con.requestMethod = "POST"
+        con.setRequestProperty("Content-Type", "application/json; utf-8")
+        con.doOutput = true
+
+        con.outputStream.use { os ->
+            val input: ByteArray = mapper.writeValueAsBytes(privateKeyRequest)
+            os.write(input, 0, input.size)
+        }
+
+        if (con.responseCode != HttpURLConnection.HTTP_OK) {
+            val kdsErrorResponse = mapper.readValue(con.errorStream, KDSErrorResponse::class.java)
+            throw IOException(kdsErrorResponse.reason)
+        }
+
+        con.inputStream.use {
+            val response = it.readBytes()
+            adminHandler.sendKDSResponse(response)
         }
     }
 
@@ -862,22 +946,29 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
+        var kdsKeySpecification: KDSKeySpecification? = null
 
         override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             when (val type = input.get().toInt()) {
-                0 -> {  // Enclave info
+                AdminHandlerRequestTypes.Host.ENCLAVE_INFO.ordinal -> {  // Enclave info
                     check(_enclaveInfo == null) { "Already received enclave info" }
                     val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
                     val encryptionKey = Curve25519PublicKey(input.getBytes(32))
                     _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
                 }
-                1 -> {  // Attestation request
+                AdminHandlerRequestTypes.Host.ATTESTATION.ordinal -> {  // Attestation request
                     val attestationBytes = writeData { host._enclaveInstanceInfo!!.attestation.writeTo(this) }
                     sender.send(1 + attestationBytes.size) { buffer ->
-                        buffer.put(0)
+                        buffer.put(AdminHandlerRequestTypes.Enclave.ATTESTATION.ordinal.toByte())
                         buffer.put(attestationBytes)
+                    }
+                }
+                AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal -> {
+                    if (input.hasRemaining()) {
+                        val keySpecification = deserializeKDSKeySpecification(input)
+                        this.kdsKeySpecification = keySpecification
                     }
                 }
                 else -> throw IllegalStateException("Unknown type $type")
@@ -886,14 +977,27 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
         fun sendOpen(sealedState: ByteArray?) {
             sender.send(1 + nullableSize(sealedState) { it.size }) { buffer ->
-                buffer.put(1)
+                buffer.put(AdminHandlerRequestTypes.Enclave.OPEN.ordinal.toByte())
                 buffer.putNullable(sealedState) { put(it) }
             }
         }
 
         fun sendClose() {
             sender.send(1) { buffer ->
-                buffer.put(2)
+                buffer.put(AdminHandlerRequestTypes.Enclave.CLOSE.ordinal.toByte())
+            }
+        }
+
+        fun sendKDSResponse(kdsResponseJSON: ByteArray) {
+            sender.send(1 + kdsResponseJSON.size) { buffer ->
+                buffer.put(AdminHandlerRequestTypes.Enclave.KDS_RESPONSE.ordinal.toByte())
+                buffer.put(kdsResponseJSON)
+            }
+        }
+
+        fun requestKDSKeySpecification() {
+            sender.send(1) { buffer ->
+                buffer.put(AdminHandlerRequestTypes.Enclave.KDS_KEY_SPECIFICATION.ordinal.toByte())
             }
         }
     }

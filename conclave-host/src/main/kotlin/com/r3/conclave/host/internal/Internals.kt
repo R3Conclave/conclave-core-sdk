@@ -2,6 +2,7 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
+import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.host.EnclaveHost
 import java.nio.file.Path
 

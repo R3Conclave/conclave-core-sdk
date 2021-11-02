@@ -31,7 +31,18 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
             "com.r3.conclave.common.internal.attestation.EpidVerificationReport\$Base64Deserializer"
         )
 
-        val DEFAULT_CLASSES = ATTESTATION_CLASSES + IDENTITY_CLASSES
+        private val KDS_CLASSES = listOf(
+                "com.r3.conclave.common.EnclaveConstraint",
+                "com.r3.conclave.enclave.kds.KDSConfiguration",
+                "com.r3.conclave.common.kds.KDSKeySpecification",
+                "com.r3.conclave.common.internal.kds.KDSResponse",
+                "com.r3.conclave.common.internal.kds.PrivateKeyResponse",
+                "com.r3.conclave.common.kds.PolicyConstraint",
+                "com.r3.conclave.shaded.jackson.databind.ext.Java7HandlersImpl",
+                "com.r3.conclave.shaded.jackson.databind.ext.Java7SupportImpl"
+        )
+
+        val DEFAULT_CLASSES = ATTESTATION_CLASSES + IDENTITY_CLASSES + KDS_CLASSES
 
         @JvmStatic
         fun generateContent(classNames: List<String>): String {

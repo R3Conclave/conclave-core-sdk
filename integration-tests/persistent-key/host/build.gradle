@@ -1,0 +1,39 @@
+plugins {
+    id 'application'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+mainClassName = "com.r3.conclave.integrationtests.kds.PersistentHost"
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.r3.conclave:conclave-host:$conclave_version"
+
+    runtimeOnly project(path: ":persistent-key:enclave", configuration: enclaveMode)
+
+    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+jar {
+    manifest {
+        attributes('Main-Class': mainClassName)
+    }
+}
+
+def kdsPort = properties.get("kdsPort") ?: 8090
+
+def graalVMDir = tasks.getByPath(":persistent-key:enclave:untarGraalVM").outputs.files.first()
+def configurationDir = project(":persistent-key:enclave").projectDir.toPath().resolve("src/main/resources/META-INF/native-image")
+def filterFile = configurationDir.resolve("filter.json")
+application {
+    run.dependsOn(":persistent-key:enclave:untarGraalVM")
+    if (project.hasProperty("generateConfigFiles") && properties.get("enclaveMode").toString().toLowerCase() == "mock" != null) {
+        applicationDefaultJvmArgs = [
+                "-agentpath:$graalVMDir/lib/libnative-image-agent.so=config-output-dir=$configurationDir," +
+                        "caller-filter-file=$filterFile"
+        ]
+    }
+    applicationDefaultJvmArgs += "-DkdsPort=$kdsPort"
+}

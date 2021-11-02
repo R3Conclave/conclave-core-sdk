@@ -6,6 +6,7 @@ import com.r3.conclave.host.EnclaveHost;
 import com.r3.conclave.host.EnclaveLoadException;
 import org.openjdk.jmh.annotations.*;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,7 +29,7 @@ public class EnclaveBenchmark {
      * @throws EnclaveLoadException
      */
     @Setup(Level.Trial)
-    public void prepare(ExecutionPlatforms platform) throws EnclaveLoadException {
+    public void prepare(ExecutionPlatforms platform) throws EnclaveLoadException, IOException {
         if (platform.runtime.equals("graalvm-simulation"))
             enclave = EnclaveHost.load("com.r3.conclave.graalvm.simulation.BenchmarkEnclave");
         else if (platform.runtime.equals("graalvm-debug"))

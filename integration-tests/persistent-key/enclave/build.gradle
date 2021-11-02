@@ -1,0 +1,19 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.conclave.enclave'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+    persistentFileSystemSize = "64m"
+
+    simulation {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
+}
