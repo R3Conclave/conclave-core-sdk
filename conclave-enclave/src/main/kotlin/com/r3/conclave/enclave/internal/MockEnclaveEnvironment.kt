@@ -13,12 +13,8 @@ import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.getBytes
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
@@ -26,9 +22,6 @@ class MockEnclaveEnvironment(
     mockConfiguration: MockConfiguration?
 ) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true)) {
     companion object {
-        private const val IV_SIZE = 12
-        private const val TAG_SIZE = 16
-
         private val secureRandom = SecureRandom()
 
         private fun versionToCpuSvn(num: Int): ByteArray { 
@@ -65,9 +58,8 @@ class MockEnclaveEnvironment(
         configuration.codeSigningKeyHash?.bytes ?: ByteArray(32)
     }
 
-    private val cipher by lazy(NONE) { Cipher.getInstance("AES/GCM/NoPadding") }
-    private val keySpec by lazy(NONE) {
-        SecretKeySpec(digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }, "AES")
+    private val sealingSecret by lazy(NONE) {
+        digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
     }
 
     private val tcbLevel: Int
@@ -119,37 +111,12 @@ class MockEnclaveEnvironment(
 
     @Synchronized
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
-        val iv = ByteArray(IV_SIZE).also(secureRandom::nextBytes)
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(TAG_SIZE * 8, iv))
-        val authenticatedData = toBeSealed.authenticatedData
-        val sealedBlob = ByteBuffer.allocate(
-            IV_SIZE + Int.SIZE_BYTES + (authenticatedData?.size ?: 0) + toBeSealed.plaintext.size + TAG_SIZE
-        )
-        sealedBlob.put(iv)
-        if (authenticatedData != null) {
-            cipher.updateAAD(authenticatedData)
-            sealedBlob.putInt(authenticatedData.size)
-            sealedBlob.put(authenticatedData)
-        } else {
-            sealedBlob.putInt(0)
-        }
-        cipher.doFinal(ByteBuffer.wrap(toBeSealed.plaintext), sealedBlob)
-        return sealedBlob.array()
+        return EnclaveUtils.aesEncrypt(sealingSecret, toBeSealed)
     }
 
     @Synchronized
     override fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope {
-        cipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(TAG_SIZE * 8, sealedBlob, 0, IV_SIZE))
-        val inputBuffer = ByteBuffer.wrap(sealedBlob, IV_SIZE, sealedBlob.size - IV_SIZE)
-        val authenticatedDataSize = inputBuffer.getInt()
-        val authenticatedData = if (authenticatedDataSize > 0) {
-            inputBuffer.getBytes(authenticatedDataSize).also(cipher::updateAAD)
-        } else {
-            null
-        }
-        val plaintext = ByteBuffer.allocate(inputBuffer.remaining() - TAG_SIZE)
-        cipher.doFinal(inputBuffer, plaintext)
-        return PlaintextAndEnvelope(plaintext.array(), authenticatedData)
+        return EnclaveUtils.aesDecrypt(sealingSecret, sealedBlob)
     }
 
     // Replicates sgx_get_key behaviour in hardware as determined by MockEnclaveEnvironmentHardwareCompatibilityTest.

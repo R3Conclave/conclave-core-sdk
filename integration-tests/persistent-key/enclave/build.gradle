@@ -11,6 +11,7 @@ conclave {
     productID = 1
     revocationLevel = 0
     persistentFileSystemSize = "64m"
+    enablePersistentMap = true
 
     simulation {
         signingType = privateKey

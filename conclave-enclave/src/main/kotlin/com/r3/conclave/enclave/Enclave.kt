@@ -34,6 +34,12 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
+import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 
 /**
@@ -77,6 +83,7 @@ abstract class Enclave {
     private lateinit var adminHandler: AdminHandler
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
+    private var kdsPrivateKey: ByteArray? = null
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, EnclavePostOffice>()
@@ -275,7 +282,7 @@ abstract class Enclave {
 
     private fun getPrivateKey(): ByteArray {
         if (kdsConfig != null) {
-            val kdsPrivateKey = adminHandler.kdsPrivateKey
+            val kdsPrivateKey = kdsPrivateKey
             if (kdsPrivateKey != null) {
                 // The KDS key may be longer than 128 bit, so we only use the first 128 bit
                 return kdsPrivateKey.copyOf(16)
@@ -335,7 +342,13 @@ abstract class Enclave {
     private fun applySealedState(sealedStateBlob: ByteArray) {
         if (!env.enablePersistentMap) return
         val sealedState = try {
-            env.unsealData(sealedStateBlob).plaintext
+            // Decrypt sealed state using KDS key when the Enclave has been configured to obtain one,
+            // otherwise use the unsealing functions.
+            if (kdsConfig != null) {
+                decryptSealedState(sealedStateBlob).plaintext
+            } else {
+                env.unsealData(sealedStateBlob).plaintext
+            }
         } catch (e: Exception) {
             throw IllegalStateException("Error occurred while unsealing enclave state: ${e.message}", e)
         }
@@ -360,6 +373,10 @@ abstract class Enclave {
                 lastSeenStateIds[clientPublicKey] = lastSeenStateId
             }
         }
+    }
+
+    private fun decryptSealedState(sealedBlob: ByteArray): PlaintextAndEnvelope {
+        return EnclaveUtils.aesDecrypt(getPrivateKey(), sealedBlob)
     }
 
     /**
@@ -387,7 +404,6 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
-        var kdsPrivateKey: ByteArray? = null
 
         override fun connect(upstream: Sender): AdminHandler {
             sender = upstream
@@ -531,7 +547,7 @@ Received: $attestationReportBody"""
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
             enclave.kdsEII = kdsEII
-            kdsPrivateKey = Base64.getDecoder().decode(privateKeyResponse.privateKey)
+            enclave.kdsPrivateKey = Base64.getDecoder().decode(privateKeyResponse.privateKey)
         }
 
         /**
@@ -731,12 +747,19 @@ Received: $attestationReportBody"""
                 }
             }
 
-            // TODO Use a KDS key if one is available
-            val sealedState = env.sealData(PlaintextAndEnvelope(serialised))
+            val sealedState = if (kdsConfig != null) {
+                encryptSealedState(PlaintextAndEnvelope(serialised))
+            } else {
+                env.sealData(PlaintextAndEnvelope(serialised))
+            }
 
             sendToHost(SEALED_STATE, hostThreadId, sealedState.size) { buffer ->
                 buffer.put(sealedState)
             }
+        }
+
+        private fun encryptSealedState(toBeSealed: PlaintextAndEnvelope): ByteArray {
+            return EnclaveUtils.aesEncrypt(getPrivateKey(), toBeSealed)
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {

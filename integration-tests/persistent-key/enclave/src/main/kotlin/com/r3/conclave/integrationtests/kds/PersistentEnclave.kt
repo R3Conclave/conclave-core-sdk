@@ -22,8 +22,19 @@ class PersistentEnclave : Enclave() {
         }
     }
 
-
     override fun getKdsConfig(): KDSConfiguration {
         return KDS_CONFIGURATION
+    }
+
+    override fun onStartup() {
+        for (e in persistentMap) {
+            println("k: ${e.key}, v: ${String(e.value)}")
+        }
+    }
+
+    override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray {
+        println("receiveFromUntrustedHost: ${String(bytes)}")
+        persistentMap["key"] = bytes
+        return byteArrayOf()
     }
 }
