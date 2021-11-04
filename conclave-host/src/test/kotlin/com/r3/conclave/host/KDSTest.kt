@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveSecurityInfo
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
-import com.r3.conclave.host.kds.KDSConfiguration
-import com.r3.conclave.common.kds.KDSKeySpecification
-import com.r3.conclave.common.kds.PolicyConstraint
+import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.enclave.kds.KDSKeySpecification
+import com.r3.conclave.enclave.kds.PolicyConstraint
 import com.r3.conclave.host.internal.createMockHost
+import com.r3.conclave.host.kds.KDSConfiguration
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
@@ -23,17 +24,14 @@ import java.time.Duration
 
 class KDSTest {
     companion object {
-        private val POLICY_CONSTRAINT : PolicyConstraint
-        get() {
-            val policyConstraint = PolicyConstraint()
-            policyConstraint.ownCodeHash
-            policyConstraint.ownCodeSigner
-            policyConstraint.enclaveConstraint.minSecurityLevel = EnclaveSecurityInfo.Summary.INSECURE
-            return policyConstraint
+        private val POLICY_CONSTRAINT = PolicyConstraint().apply {
+            useOwnCodeHash()
+            useOwnCodeSignerAndProductID()
+            enclaveConstraint.minSecurityLevel = EnclaveSecurityInfo.Summary.INSECURE
         }
 
         private const val PORT = 8091
-        val KDS_KEY_SPECIFICATION = KDSKeySpecification("debug", POLICY_CONSTRAINT)
+        val KDS_KEY_SPECIFICATION = KDSKeySpecification(MasterKeyType.DEBUG, POLICY_CONSTRAINT)
 
         private fun mockHost(): EnclaveHost {
             return createMockHost(KDSConfiguredEnclave::class.java, null)
@@ -50,7 +48,7 @@ class KDSTest {
         }
     }
 
-    private class CloseableHttpServer(val httpServer: HttpServer): Closeable {
+    private class CloseableHttpServer(val httpServer: HttpServer) : Closeable {
         init {
             httpServer.start()
         }
@@ -91,22 +89,6 @@ class KDSTest {
                 startHost(host)
             }.withCauseExactlyInstanceOf(ConnectException::class.java)
                     .withStackTraceContaining("Connection refused")
-        }
-    }
-
-    @Test
-    fun `enclave KDS configuration missing`() {
-        httpServer {
-            val response = byteArrayOf(0)
-            it.sendResponseHeaders(HttpURLConnection.HTTP_OK, response.size.toLong())
-            it.responseBody.write(response)
-        }.use {
-            createMockHost(EnclaveHostMockTest.SimpleReturnEnclave::class.java, null).use { host ->
-                assertThatExceptionOfType(Exception::class.java).isThrownBy {
-                    startHost(host)
-                }.withCauseExactlyInstanceOf(IllegalArgumentException::class.java)
-                        .withStackTraceContaining("Enclave KDS configuration is missing.")
-            }
         }
     }
 

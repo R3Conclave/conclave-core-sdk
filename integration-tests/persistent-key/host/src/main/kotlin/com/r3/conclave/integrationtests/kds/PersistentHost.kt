@@ -6,6 +6,7 @@ import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.kds.KDSConfiguration
 import java.nio.file.Paths
 
+// TODO This needs to be replaced with a proper integration test
 class PersistentHost {
     companion object {
         private val kdsPort = System.getProperty("kdsPort").toInt()

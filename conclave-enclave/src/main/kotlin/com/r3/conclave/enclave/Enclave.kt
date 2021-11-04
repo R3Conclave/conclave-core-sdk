@@ -5,14 +5,13 @@ import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxReport.body
+import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.KDSResponse
 import com.r3.conclave.common.internal.kds.PrivateKeyResponse
-import com.r3.conclave.common.kds.KDSKeySpecification
-import com.r3.conclave.common.kds.PolicyConstraint
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
@@ -24,7 +23,6 @@ import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
-import java.io.ByteArrayOutputStream
 import java.io.UTFDataFormatException
 import java.nio.ByteBuffer
 import java.security.KeyPair
@@ -36,9 +34,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
-import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 
 /**
@@ -72,30 +67,6 @@ abstract class Enclave {
      */
     private companion object {
         private val signatureScheme = SignatureSchemeEdDSA()
-
-        private fun serializeKDSKeySpecification(kdsKeySpecification: KDSKeySpecification): ByteArray {
-            val byteArrayOutputStream = ByteArrayOutputStream()
-
-            val masterKeyTypeSerialized = kdsKeySpecification.masterKeyType.toByteArray()
-            val masterKeyTypeByteBuffer = ByteBuffer.allocate(Int.SIZE_BYTES + masterKeyTypeSerialized.size)
-            masterKeyTypeByteBuffer.putInt(masterKeyTypeSerialized.size)
-            masterKeyTypeByteBuffer.put(masterKeyTypeSerialized)
-            byteArrayOutputStream.write(masterKeyTypeByteBuffer.rewind().getRemainingBytes())
-
-            val policyConstraintSerialize = serializePolicyConstraint(kdsKeySpecification.policyConstraint)
-            byteArrayOutputStream.write(policyConstraintSerialize)
-            return byteArrayOutputStream.toByteArray()
-        }
-
-        private fun serializePolicyConstraint(policyConstraint: PolicyConstraint): ByteArray {
-            val enclaveConstraintSerialized = policyConstraint.enclaveConstraint.toString().toByteArray()
-            val byteBuffer = ByteBuffer.allocate(2 + Int.SIZE_BYTES + enclaveConstraintSerialized.size)
-            byteBuffer.putBoolean(policyConstraint.ownCodeHash)
-            byteBuffer.putBoolean(policyConstraint.ownCodeSigner)
-            byteBuffer.putInt(enclaveConstraintSerialized.size)
-            byteBuffer.put(enclaveConstraintSerialized)
-            return byteBuffer.rewind().getRemainingBytes()
-        }
     }
 
     private var kdsEII: EnclaveInstanceInfo? = null
@@ -255,18 +226,6 @@ abstract class Enclave {
                 override val reportData = createReportData()
             })
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
-            val kdsKeySpec = kdsConfig?.kdsKeySpec
-            if (kdsKeySpec != null) {
-                val report = env.createReport(null, null)
-                if (kdsKeySpec.policyConstraint.ownCodeHash) {
-                    val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
-                    kdsKeySpec.policyConstraint.enclaveConstraint.acceptableCodeHashes.add(mrenclave)
-                }
-                if (kdsKeySpec.policyConstraint.ownCodeSigner) {
-                    val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
-                    kdsKeySpec.policyConstraint.enclaveConstraint.acceptableSigners.add(mrsigner)
-                }
-            }
             connected
         }
     }
@@ -301,32 +260,54 @@ abstract class Enclave {
         return digest("SHA-256") { update(secretKey) }
     }
 
-    private fun getSecretKey(): ByteArray {
+    private fun getLocalSecretKey(): ByteArray {
         val reportBody = env.createReport(null, null)[body]
         val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
         val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
 
-        val secretKey = env.getSecretKey { keyRequest ->
+        return env.getSecretKey { keyRequest ->
             keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
             keyRequest[SgxKeyRequest.keyPolicy] = KeyPolicy.MRSIGNER
             keyRequest[SgxKeyRequest.cpuSvn] = cpuSvn
             keyRequest[SgxKeyRequest.isvSvn] = isvSvn
         }
-        return secretKey
     }
 
-    private fun setupFileSystems(kdsPrivateKey: ByteArray?) {
-        // The KDS key may be longer than 128 bit, so we only use the first 128 bit
-        val secretKey = kdsPrivateKey?.copyOf(16) ?: getSecretKey()
+    private fun getPrivateKey(): ByteArray {
+        if (kdsConfig != null) {
+            val kdsPrivateKey = adminHandler.kdsPrivateKey
+            if (kdsPrivateKey != null) {
+                // The KDS key may be longer than 128 bit, so we only use the first 128 bit
+                return kdsPrivateKey.copyOf(16)
+            }
+            // TODO There's no exception message as these are not propageted in release mode. However, from this example
+            //  and others we need a very special and privileged exception that will carry any necessary information
+            //  that's needed even in release.
+
+            // If the enclave has been configured to use a KDS and the host doesn't provide one, then for dev and
+            // testing the enclave will default to a machine-specific MRSIGNER key. However this most probably isn't
+            // what the enclave's clients would want to happen when connecting to a production release enclave.
+            check(env.enclaveMode != EnclaveMode.RELEASE)
+            if (env.enclaveMode == EnclaveMode.DEBUG) {
+                println("WARN: The enclave has been configured to use a KDS for encrypting persistent data but the " +
+                        "host has not provided one. Defaulting to a machine-only MRSIGNER key. However, this enclave " +
+                        "will not start in release mode if there is no KDS.")
+            }
+        }
+        return getLocalSecretKey()
+    }
+
+    private fun setupFileSystems() {
+        val privateKey = getPrivateKey()
         val inMemorySize = env.inMemoryFileSystemSize
         val persistentSize = env.persistentFileSystemSize
 
         if (inMemorySize > 0L && persistentSize == 0L ||
             inMemorySize == 0L && persistentSize > 0L) {
             //  We do not allow other mount point apart from "/" when only one filesystem is present
-            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", secretKey)
+            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", privateKey)
         } else if (inMemorySize > 0L && persistentSize > 0L) {
-            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", secretKey)
+            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", privateKey)
         }
     }
 
@@ -406,7 +387,7 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
-        private var kdsPrivateKey: ByteArray? = null
+        var kdsPrivateKey: ByteArray? = null
 
         override fun connect(upstream: Sender): AdminHandler {
             sender = upstream
@@ -465,7 +446,7 @@ Received: $attestationReportBody"""
                 if (sealedStateBlob != null) {
                     enclave.applySealedState(sealedStateBlob)
                 }
-                enclave.setupFileSystems(kdsPrivateKey)
+                enclave.setupFileSystems()
                 enclave.onStartup()
             }
         }
@@ -495,22 +476,37 @@ Received: $attestationReportBody"""
         }
 
         private fun onKDSKeySpecificationRequest() {
-            val initializationConfiguration = enclave.kdsConfig
-            require(initializationConfiguration != null) { "Enclave KDS configuration is missing." }
-            val kdsKeySpec = serializeKDSKeySpecification(initializationConfiguration.kdsKeySpec)
-            sender.send(1 + kdsKeySpec.size) { buffer ->
+            // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
+            // defined. The host will see that we've not sent back a key spec.
+            val kdsKeySpec = enclave.kdsConfig?.kdsKeySpec ?: return
+
+            val policyConstraint = kdsKeySpec.policyConstraint.enclaveConstraint
+
+            val report = env.createReport(null, null)
+            if (kdsKeySpec.policyConstraint.ownCodeHash) {
+                val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
+                policyConstraint.acceptableCodeHashes.add(mrenclave)
+            }
+            if (kdsKeySpec.policyConstraint.ownCodeSignerAndProductID) {
+                val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
+                policyConstraint.acceptableSigners.add(mrsigner)
+                policyConstraint.productID = report[body][isvProdId].read()
+            }
+
+            val policyConstraintBytes = policyConstraint.toString().toByteArray()
+            sender.send(2 + policyConstraintBytes.size) { buffer ->
                 buffer.put(AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal.toByte())
-                buffer.put(kdsKeySpec)
+                buffer.put(kdsKeySpec.masterKeyType.ordinal.toByte())
+                buffer.put(policyConstraintBytes)
             }
         }
 
         private fun onKDSResponse(input: ByteBuffer) {
-            if (enclave.kdsEII != null) return
+            check(enclave.kdsEII == null) { "Enclave has already received a KDS private key" }
 
-            val enclaveInitializationConfiguration = enclave.kdsConfig
-            require(enclaveInitializationConfiguration != null) { "Enclave KDS configuration is missing." }
-            val kdsConstraint = enclaveInitializationConfiguration.kdsKeySpec
-            val kdsEnclaveConstraint = enclaveInitializationConfiguration.kdsEnclaveConstraint
+            val kdsConfig = checkNotNull(enclave.kdsConfig) {
+                "Host is trying to send a KDS private key but enclave hasn't been configured for one"
+            }
 
             val objectMapper = ObjectMapper()
             val kdsResponse = objectMapper.readValue(input.inputStream(), KDSResponse::class.java)
@@ -521,7 +517,7 @@ Received: $attestationReportBody"""
             val kdsEII = EnclaveInstanceInfo.deserialize(kdsEEIBytes)
 
             // Verify the KDS attestation report
-            kdsEnclaveConstraint.check(kdsEII)
+            kdsConfig.kdsEnclaveConstraint.check(kdsEII)
 
             // Verify KDS encryption key is the same key which encrypted the mail.
             require(kdsEII.encryptionKey == mail.authenticatedSender) {
@@ -531,7 +527,7 @@ Received: $attestationReportBody"""
             // Verify key policy constraint
             val privateKeyResponse = objectMapper.readValue(mail.bodyAsBytes, PrivateKeyResponse::class.java)
             val privateKeyPolicyConstraint = EnclaveConstraint.parse(privateKeyResponse.policyConstraint)
-            require(privateKeyPolicyConstraint == kdsConstraint.policyConstraint.enclaveConstraint) {
+            check(privateKeyPolicyConstraint == kdsConfig.kdsKeySpec.policyConstraint.enclaveConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
             enclave.kdsEII = kdsEII

@@ -14,8 +14,7 @@ import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.common.internal.kds.PrivateKeyRequest
-import com.r3.conclave.common.kds.KDSKeySpecification
-import com.r3.conclave.common.kds.PolicyConstraint
+import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
@@ -531,26 +530,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                 throw PlatformSupportException(message)
             }
         }
-
-        private fun deserializeKDSKeySpecification(byteBuffer: ByteBuffer): KDSKeySpecification {
-            val masterKeyTypeLength = byteBuffer.getInt()
-            val masterKeyType = String(byteBuffer.getBytes(masterKeyTypeLength))
-
-            val policyConstraint = deserializePolicyConstraint(byteBuffer)
-            return KDSKeySpecification(masterKeyType, policyConstraint)
-        }
-
-        private fun deserializePolicyConstraint(byteBuffer: ByteBuffer): PolicyConstraint {
-            val ownCodeHash = byteBuffer.getBoolean()
-            val ownCodeSigner = byteBuffer.getBoolean()
-            val serializedEnclaveConstraintSize = byteBuffer.getInt()
-            val serializedEnclaveConstraint = byteBuffer.getBytes(serializedEnclaveConstraintSize)
-            val policyConstraint = PolicyConstraint()
-            policyConstraint.ownCodeHash = ownCodeHash
-            policyConstraint.ownCodeSigner = ownCodeSigner
-            policyConstraint.enclaveConstraint = EnclaveConstraint.parse(String(serializedEnclaveConstraint))
-            return policyConstraint
-        }
     }
 
     private var fileSystemHandler: FileSystemHandler? = null
@@ -698,14 +677,14 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         adminHandler.requestKDSKeySpecification()
 
         // Return if the enclave wasn't configured with any KDS constraint
-        val kdsKeySpecification = adminHandler.kdsKeySpecification ?: return
+        val enclaveKDSConfig = adminHandler.enclaveKDSConfig ?: return
 
         val mapper = ObjectMapper()
         val privateKeyRequest = PrivateKeyRequest(
                 appReport = Base64.getEncoder().encodeToString(enclaveInstanceInfo.serialize()),
                 name = "KDSKeySpecName",
-                mkType = kdsKeySpecification.masterKeyType,
-                policyConstraint = kdsKeySpecification.policyConstraint.enclaveConstraint.toString()
+                mkType = enclaveKDSConfig.masterKeyType.name.lowercase(),
+                policyConstraint = enclaveKDSConfig.policyConstraint.toString()
         )
 
         val url = URL("${kdsConfiguration.url}/private")
@@ -939,6 +918,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
     }
 
     private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
+    private class EnclaveKDSConfig(val masterKeyType: MasterKeyType, val policyConstraint: EnclaveConstraint)
 
     /** Deserializes keys and other info from the enclave during initialisation. */
     private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
@@ -946,7 +926,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
-        var kdsKeySpecification: KDSKeySpecification? = null
+        var enclaveKDSConfig: EnclaveKDSConfig? = null
 
         override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
 
@@ -966,10 +946,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
                     }
                 }
                 AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal -> {
-                    if (input.hasRemaining()) {
-                        val keySpecification = deserializeKDSKeySpecification(input)
-                        this.kdsKeySpecification = keySpecification
-                    }
+                    onKDSKeySpecification(input)
                 }
                 else -> throw IllegalStateException("Unknown type $type")
             }
@@ -999,6 +976,17 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             sender.send(1) { buffer ->
                 buffer.put(AdminHandlerRequestTypes.Enclave.KDS_KEY_SPECIFICATION.ordinal.toByte())
             }
+        }
+
+        private fun onKDSKeySpecification(byteBuffer: ByteBuffer) {
+            val masterKeyType = MasterKeyType.values()[byteBuffer.get().toInt()]
+            val policyConstraintString = String(byteBuffer.getRemainingBytes())
+            val policyConstraint = try {
+                EnclaveConstraint.parse(policyConstraintString)
+            } catch (e: IllegalStateException) {
+                throw IllegalStateException("Enclave has an invalid KDS policy constraint: ${e.message}")
+            }
+            enclaveKDSConfig = EnclaveKDSConfig(masterKeyType, policyConstraint)
         }
     }
 
