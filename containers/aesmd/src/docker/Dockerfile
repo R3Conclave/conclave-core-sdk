@@ -1,6 +1,6 @@
 FROM ubuntu:bionic-20200219
 
-LABEL version="1.2"
+LABEL version="1.2-RC1"
 LABEL description="Intel aesmd container"
 LABEL maintainer="conclave@r3.com"
 
