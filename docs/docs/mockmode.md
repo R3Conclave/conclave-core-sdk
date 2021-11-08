@@ -1,6 +1,6 @@
 # Building enclaves in Mock Mode
 
-Conclave provides a number of different [modes](tutorial.html#enclave-modes) when building your enclave, supporting different stages of the development
+Conclave provides a number of different [modes](enclave-modes.md) when building your enclave, supporting different stages of the development
 cycle. Release, debug and simulation modes all require a Linux environment in order to run. This does not prevent
 running a simulation enclave on MacOS or Windows if you load and run you project in a Docker container, but for
 convenience it is useful to be able to run your enclave code directly within the host environment. In addition, 
@@ -15,10 +15,21 @@ and enjoy the regular Java development experience.
 
 ## Using mock mode
 
-Mock mode can be used in two different ways. Firstly, you can compile your enclave in mock mode using the
-[`-PenclaveMode` flag](tutorial.md#selecting-your-mode) for fast, iterative development. 
+Mock mode can be used in two different ways, depending on whether the enclave is being loaded from outside or inside
+the enclave module.
 
-Secondly, when creating an `EnclaveHost` inside the enclave module, Conclave will automatically create it in mock mode.
+### Outside the enclave module
+Outside enclave module, The mode can be set when adding a Gradle dependency, just like any other mode:
+```groovy
+dependencies {
+    runtimeOnly project(path: ":enclave", configuration: "mock")
+}
+```
+
+See [Setting the enclave mode](enclave-modes.md#set-the-enclave-mode) for more details.
+
+### Inside the enclave module
+When creating an `EnclaveHost` inside the enclave module, Conclave will automatically create it in mock mode.
 This means any tests you define in the enclave module will automatically use mock mode - you can write your tests to load 
 and call the enclave without having to explicitly configure a mock enclave.
 For tests to use any other mode, they must be defined outside the enclave module, for example in the host.

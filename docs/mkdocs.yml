@@ -14,7 +14,7 @@ nav:
     - Conclave Architecture: architecture.md
   - Development:
     - Tutorials:
-        - Running your first enclave: tutorial.md
+        - Running your first enclave: running-hello-world.md
         - Writing your first enclave: writing-hello-world.md
         - Integrating an enclave with Corda: writing-cordapps.md
     - Design topics:
@@ -22,6 +22,7 @@ nav:
         - Rapid testing and development with Mock Mode: mockmode.md
         - Maximising the security of your enclave: security.md
     - Reference:
+        - Enclave modes: enclave-modes.md
         - Enclave persistence: persistence.md
         - Threads: threads.md
         - JavaScript/Python: javascript-python.md

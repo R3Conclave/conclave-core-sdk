@@ -37,8 +37,8 @@ but can also be used to secure your infrastructure against attack.
   using just JUnit.
 - Integrate and benefit from [Corda](https://www.corda.net), an open source peer-to-peer network for business uses with
   enterprise support.
-- [Tutorials](tutorial.md), guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our Slack 
-  channel and mailing list, even if you don't have a proper support contract!
+- [Tutorials](running-hello-world.md), guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our
+  [discord server](https://discord.com/invite/dDaBGqGPre) and mailing list, even if you don't have a proper support contract!
   
 Finally, **Conclave is free for individuals and early-stage startups!**
 
@@ -55,7 +55,7 @@ design. This will explain the concepts referred to in the rest of the documentat
 
 * **Writing and Running your First Conclave Application**
   
-    * [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
+    * [**Tutorial.**](running-hello-world.md) Once you understand the concepts go straight to writing your first enclave.
 
     * [**Enclave Configuration.**](enclave-configuration.md) Now you've created your first enclave, take a deeper look at the configuration options
 available for creating enclaves.
@@ -165,7 +165,7 @@ is available where you can find the development team during UK office hours (GMT
 
 1. The container gradle script has been removed due to stability issues and will no longer be supported. If you are 
    using container-gradle to develop on Mac, we strongly suggest you stop doing so and follow
-   [these instructions](system-requirements.md#running-conclave-projects) for running your conclave projects instead.
+   [these instructions](running-hello-world.md) for running your conclave projects instead.
 
 1. :jigsaw: **New feature!** We've added a new overload of `EnclaveHost.load` which no longer requires having to specify the enclave
 class name as a parameter. Instead, `EnclaveHost` will scan for the single matching enclave on the classpath.

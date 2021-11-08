@@ -19,5 +19,5 @@ It should print out some info about the started enclave. Then you can use the cl
 
 ### Note on conclave modes
 By default, this sample will build and run in [mock mode](https://docs.conclave.net/mockmode.html), and so won't use a
-secure enclave. For a list of modes and their properties, see [here](https://docs.conclave.net/tutorial.html#enclave-modes).
-For instructions on how to set the mode at build time, see [here](https://docs.conclave.net/tutorial.html#selecting-your-mode).
+secure enclave. For a list of modes and their properties, see [here](https://docs.conclave.net/enclave-modes.html).
+For instructions on how to set the mode at build time, see [here](https://docs.conclave.net/running-hello-world.html#beyond-mock-mode)

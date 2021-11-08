@@ -2,8 +2,9 @@
 
 Conclave Init is a tool for bootstrapping Conclave projects, reducing the amount of boilerplate you need to write.
 
-You can use the tool once you have [set up your machine](tutorial.md#set-up-your-machine)
-and downloaded [Conclave for Community](https://conclave.net/get-conclave/).
+You can use the tool once you have [set up your machine](system-requirements.md)
+and installed [Conclave](https://conclave.net/get-conclave/). (You can use the community edition for the purposes of
+this tutorial!)
 
 Conclave Init will automatically generate your Conclave project so that you can focus on writing enclave code!
 
@@ -35,7 +36,7 @@ From the newly created project directory, run the tests with
 ./gradlew test -PenclaveMode=<MODE>
 ```
 
-where `MODE` is the [Conclave mode](tutorial.md#enclave-modes).
+where `MODE` is the [enclave mode](enclave-modes.md).
 
 ## Run the application
 
@@ -48,7 +49,7 @@ where `MODE` is the [Conclave mode](tutorial.md#enclave-modes).
    ./gradlew host:shadowJar -PenclaveMode=<MODE>
    ./host/build/libs/host-<MODE>.jar
    ```
-   where `MODE` is the [Conclave mode](tutorial.md#enclave-modes) in lowercase. For example:
+   where `MODE` is the [enclave mode](enclave-modes.md) in lowercase. For example:
    ```bash
    ./gradlew :host:shadowJar -PenclaveMode=mock
    ./host/build/libs/host-mock.jar

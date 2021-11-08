@@ -189,7 +189,7 @@ The task makes the following two Gradle invocations equivalent:
 ./gradlew :enclave:generateEnclaveSigningMaterialRelease
 ```
 
-See the [tutorial](tutorial.md) and the ```hello-world``` sample in the Conclave SDK for an example of this configuration.
+See the [tutorial](running-hello-world.md) and the ```hello-world``` sample in the Conclave SDK for an example of this configuration.
 
 #### Generate the signing material
 

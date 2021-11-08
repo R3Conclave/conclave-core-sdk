@@ -157,7 +157,8 @@ subprojects {
 
 ### Configure the _host_ to run as a web server
 
-Add this bit of code to your host `build.gradle` file to let the [mode](tutorial.md#enclave-modes) be chosen from the command line:
+Add this bit of code to your host `build.gradle` file so the mode [mode](enclave-modes.md) may be set from the
+command line:
 
 ```groovy
 // Override the default (mock) with -PenclaveMode=
@@ -944,5 +945,6 @@ command:
 
 !!! tip
     To run the tests in a simulated SGX environment on a non-Linux machine you can use Docker, which manages Linux
-    VMs for you. See the instructions for [compiling and running the host](tutorial.md#running-the-host) for more 
+    VMs for you. See the [system requirements](enclave-modes.md#system-requirements) and instructions
+    for [compiling and running the host](running-hello-world.md#beyond-mock-mode) for more 
     information.
