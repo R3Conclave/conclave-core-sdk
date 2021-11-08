@@ -41,7 +41,7 @@ internal class TemplateTextTransformerTest {
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
             JavaClass("MegaEnclave"),
-            "1.2-SNAPSHOT"
+            "version-string"
         ).transform(templateFileContents)
         assertEquals(expected, transformed)
 
@@ -96,7 +96,7 @@ internal class TemplateTextTransformerTest {
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
             JavaClass("MegaEnclave"),
-            "1.2-SNAPSHOT"
+            "version-string"
         ).transform(templateFileContents)
         assertEquals(expected, transformed)
     }
@@ -115,7 +115,7 @@ internal class TemplateTextTransformerTest {
         val expected = """
         # Required properties for Conclave
         conclaveRepo=./conclave-repo
-        conclaveVersion=1.2-SNAPSHOT
+        conclaveVersion=version-string
 
         # Dependency versions
         jupiterVersion=5.6.0
@@ -124,7 +124,7 @@ internal class TemplateTextTransformerTest {
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
             JavaClass("MegaEnclave"),
-            "1.2-SNAPSHOT"
+            "version-string"
         ).transform(templateFileContents)
         assertEquals(expected, transformed)
     }

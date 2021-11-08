@@ -73,7 +73,7 @@ like this:
 
 ```text
 conclaveRepo=/path/to/sdk/repo
-conclaveVersion=1.2-SNAPSHOT
+conclaveVersion=1.3-SNAPSHOT
 ```
 
 Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory.
@@ -539,7 +539,7 @@ We should be ready to run the host web server from the command line.
 
 ```bash
 ./gradlew host:shadowJar
-java -jar host/build/libs/host-mock-1.2-SNAPSHOT.jar
+java -jar host/build/libs/host-mock-1.3-SNAPSHOT.jar
 ```
 
 !!! note

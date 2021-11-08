@@ -68,7 +68,7 @@ internal class TestCreateProject {
 
         val conclaveRepo = createTempDirectory().apply { resolve("repo").createDirectories() }
 
-        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir, conclaveRepo, "1.2-SNAPSHOT")
+        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir, conclaveRepo, "version-string")
 
         val expectedChildren = listOf(
             "README.md",
