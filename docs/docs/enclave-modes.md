@@ -56,7 +56,7 @@ All that is required to build and run Conclave projects in mock mode is a Java 8
 
 !!! note
     If your enclave uses reflection and/or Java serialization, some
-    additional configuration files may be required for simulation mode and above.
+    additional configuration files may be required when advancing from mock mode to other modes.
     See [Conclave configuration options](enclave-configuration.md#conclave-configuration-options) and
     [Assisted configuration of Native Image Builds](enclave-configuration.md#assisted-configuration-of-native-image-builds)
     for more details.
