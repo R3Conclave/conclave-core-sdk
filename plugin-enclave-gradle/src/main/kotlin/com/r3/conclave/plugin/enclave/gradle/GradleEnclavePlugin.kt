@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
+import org.gradle.api.logging.Logger
 import javax.inject.Inject
 
 @Suppress("UnstableApiUsage")
@@ -41,7 +42,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.pluginManager.apply(JavaPlugin::class.java)
         target.pluginManager.apply(ShadowPlugin::class.java)
 
-        setJvmTargetVersion(target)
+        updateJvmTargetVersion(target)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
@@ -139,25 +140,57 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     /**
-     * Set Java version for JavaCompile and KotlinCompile tasks.
-     * Always set the source/target compatibility to Java 11.
-     * If desired this can be overridden at enclave/build.gradle.
-     * You might have both Kotlin and Java source code in your enclave project,
-     * set JVM compatibility/target for both compileJava and compileKotlin tasks.
+     * Update if necessary the Java version for JavaCompile and KotlinCompile tasks
      */
-    private fun setJvmTargetVersion(project: Project) {
-        val javaVersion = "11"
+    private fun updateJvmTargetVersion(project: Project) {
+
+        var sourceAndTargetCompatibilityMessageLoggedOnce = false
+        fun updateSourceAndTargetCompatibility(task: JavaCompile, logger: Logger) {
+            val previousCompatibility = task.sourceCompatibility
+            task.sourceCompatibility = calculateCompatibilityJavaVersion()
+            task.targetCompatibility = task.sourceCompatibility
+            if (!sourceAndTargetCompatibilityMessageLoggedOnce && previousCompatibility != task.sourceCompatibility) {
+                logger.info("Java source and target compatibility have been updated to ${task.sourceCompatibility} from $previousCompatibility by the Conclave plugin.")
+                sourceAndTargetCompatibilityMessageLoggedOnce = true
+            }
+        }
+
+        var jvmTargetMessageLoggedOnce = false
+        fun updateKotlinOptionJvmTarget(task: Task, logger: Logger) {
+            /**
+             * JvmTarget for KotlinCompile tasks is hidden under KotlinOptions
+             *
+             * compileKotlin {
+             *    kotlinOptions {
+             *        jvmTarget = JavaVersion.VERSION_11
+             *    }
+             * }
+             */
+            val kotlinOptions = task.getMethod("getKotlinOptions", false).invoke(task)
+            val previousTargetVersion = kotlinOptions.getMethod("getJvmTarget", true).invoke(kotlinOptions) as String
+            val newTargetVersion = calculateCompatibilityJavaVersion()
+            kotlinOptions.getMethod("setJvmTarget", true, String::class.java).invoke(kotlinOptions, newTargetVersion)
+            if (!jvmTargetMessageLoggedOnce && previousTargetVersion != newTargetVersion) {
+                logger.info("Kotlin jvmTarget has been updated to $newTargetVersion from $previousTargetVersion by the Conclave plugin.")
+                jvmTargetMessageLoggedOnce = true
+            }
+        }
+
+        project.logger.info("JDK ${JavaVersion.current()} detected")
+
+        if (JavaVersion.current() < JavaVersion.VERSION_11) {
+            project.logger.info("Compiling the enclave using JDK 1.8 but it is recommended that JDK 11 be used instead.")
+        }
 
         project.tasks.withType(JavaCompile::class.java) { task ->
-            task.sourceCompatibility = javaVersion
-            task.targetCompatibility = javaVersion
+            updateSourceAndTargetCompatibility(task, project.logger)
         }
 
         try {
             // Using reflection here as Gradle does not know anything about Jetbrains tasks.
             project.tasks.forEach {
                 if (it.javaClass.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
-                    setKotlinOptionJvmTarget(it, javaVersion)
+                    updateKotlinOptionJvmTarget(it, project.logger)
                 }
             }
         } catch (ex: Exception) {
@@ -166,20 +199,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
     }
 
-    private fun setKotlinOptionJvmTarget(obj: Any, javaVersion: String) {
-        /**
-         * JvmTarget for KotlinCompile tasks is hidden under KotlinOptions
-         *
-         * compileKotlin {
-         *    kotlinOptions {
-         *        jvmTarget = JavaVersion.VERSION_11
-         *    }
-         * }
-         */
-        val kotlinOptions = obj.getMethod("getKotlinOptions", false).invoke(obj)
-        kotlinOptions.getMethod("setJvmTarget", true, String::class.java).invoke(kotlinOptions, javaVersion)
-    }
-
+    private fun calculateCompatibilityJavaVersion(): String =
+        if (JavaVersion.current() >= JavaVersion.VERSION_11) {
+            JavaVersion.VERSION_11.toString()
+        } else {
+            JavaVersion.VERSION_1_8.toString()
+        }
     /**
      * sometimes you have to query a superclass for declared methods
      */
