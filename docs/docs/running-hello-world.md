@@ -61,7 +61,7 @@ client. Amongst the output, you will see something like this:
 ```
 This is the [remote attestation](enclaves.md#remote-attestation), an object which proves certain information about the
 enclave that has been loaded. The private key that corresponds to the "Public encryption key" (printed above) is only
-available inside the enclave. Our client will use the "Public encryption key" key to encrypt data to send into the enclave.
+available inside the enclave. Our client will use the "Public encryption key" to encrypt data to send into the enclave.
 
 You can proceed to [Run the client](#run-the-client) when you see the following output:
 
@@ -143,8 +143,9 @@ via the `enclaveMode` Gradle parameter. For example, you could compile the host 
 This would generate the host JAR at `host/build/libs/host-simulation-1.2-RC1.jar`.
 
 !!! tip
-    If working from inside IntelliJ, start the shadowJar task for the host project from the tree on the right hand side,
-    and then edit the created run config. Add the `-PenclaveMode=<MODE>` flag to the arguments section of the run config.
+    If working from inside IntelliJ, find the shadowJar task of your host project from the Gradle menu on the right
+    hand side. Modify run configuration of this task by adding the -PenclaveMode=<MODE> flag to the arguments section.
+    Now you can run the task.
 
 For **release mode**, the sample app has been configured (in the `build.gradle` of the `enclave` subproject) to use
 external signing. Note that **external signing is optional** and you do not have to include it in your own projects.
@@ -193,7 +194,7 @@ You can generate `host-release-1.2-RC1.jar` like this:
     ```
     * Instantiate a container using the `conclave-build` image using
     ```bash
-    docker run -it --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash
+    docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
     ```
     This will give you a bash shell in the container that you can use to run your project as if you were on 
     a native Linux machine. Please note, this command may not be suitable for _your_ specific project! We've provided
@@ -226,7 +227,7 @@ You can generate `host-release-1.2-RC1.jar` like this:
     ```
     * Instantiate a container using the `conclave-build` image using
     ```bash
-    docker run -it --rm -p 9999:9999 -v ${PWD}:/project -w /project conclave-build /bin/bash
+    docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
     ```
     This will give you a bash shell in the container that you can use to run your project as if you were on 
     a native Linux machine. Please note, this command may not be suitable for _your_ specific project! We've provided
@@ -269,7 +270,7 @@ There's a public mailing list for users to discuss Conclave, and we also welcome
 - `--rm`: Automatically remove the container once it exits.
 - `-p <system-port>:<container-port>`: This options maps a port from your system to a port "inside" the container.
   If your project listens for connections on any port, you will need to use this option to forward that port into
-  the container. In the case of the command above, the port 9999 is mapped to port 9999 inside the container.
+  the container. In the case of the command above, the port 8080 is mapped to port 8080 inside the container.
 - `-v <system-dir>:<container-dir>`: This option mounts a directory from your filesystem inside the container. You
   will need to ensure that any files your project needs to access at runtime are mounted inside the container.
 - `-w <directory>` This is the directory within the container where you want the prompt to start (in this case, the
