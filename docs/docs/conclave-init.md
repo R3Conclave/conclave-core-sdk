@@ -10,11 +10,12 @@ Conclave Init will automatically generate your Conclave project so that you can 
 
 ## Generate a new project
 
-You will find `conclave-init.jar` at the root of the Conclave SDK. To create a new Conclave project, run the following
+You will find `conclave-init.jar` in the `tools` directory of the Conclave SDK. To create a new Conclave project,
+run the following
 command:
 
 ```shell
-java -jar conclave-init.jar \
+java -jar /path/to/conclave-sdk/tools/conclave-init.jar \
   --package com.megacorp \
   --enclave-class-name AmazingEnclave \
   --target ./amazing-conclave-app
@@ -46,13 +47,13 @@ where `MODE` is the [enclave mode](enclave-modes.md).
 
 1. Build and run the host with
    ```bash
-   ./gradlew host:shadowJar -PenclaveMode=<MODE>
-   ./host/build/libs/host-<MODE>.jar
+   ./gradlew :host:shadowJar -PenclaveMode=<MODE>
+   java -jar host/build/libs/host-<MODE>.jar
    ```
    where `MODE` is the [enclave mode](enclave-modes.md) in lowercase. For example:
    ```bash
    ./gradlew :host:shadowJar -PenclaveMode=mock
-   ./host/build/libs/host-mock.jar
+   java -jar host/build/libs/host-mock.jar
    ```
    This will spin up a Spring Boot server. You will know it's ready when you see the following output:
    ```bash

@@ -41,7 +41,7 @@ conclaveVersion=${PWD#*conclave-sdk-}
 conclaveRepo=$PWD/repo
 
 # create java project
-$JAVA_HOME/bin/java -jar conclave-init.jar \
+$JAVA_HOME/bin/java -jar tools/conclave-init.jar \
   --enclave-class-name "MegaEnclave" \
   --package "com.megacorp" \
   --target "mega-project"
@@ -63,7 +63,7 @@ sleep 10
 popd
 
 # create kotlin project
-$JAVA_HOME/bin/java -jar conclave-init.jar \
+$JAVA_HOME/bin/java -jar tools/conclave-init.jar \
   --enclave-class-name "MegaEnclave" \
   --package "com.megacorp" \
   --target "mega-kotlin-project" \

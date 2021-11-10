@@ -43,19 +43,23 @@ class CommandLineParameters {
         required = true,
         description = ["The absolute or relative path to the directory in which to create your new project. " +
                 "The directory will be created if it doesn't exist.\n" +
-                "Example: ../projects/amazing-conclave-app"]
+                "Example: ../projects/amazing-conclave-app"],
+        converter = [PathConverter::class]
     )
     lateinit var target: Path
 
     private val pathToSdkRepo: Path by lazy {
         val conclaveInitURI = this::class.java.protectionDomain.codeSource.location.toURI()
-        return@lazy Paths.get(conclaveInitURI).parent.resolve("repo")
+        val toolsDir = Paths.get(conclaveInitURI).parent
+        val sdkDir = toolsDir.parent
+        return@lazy sdkDir.resolve("repo").normalize()
     }
 
     @CommandLine.Option(
         names = ["-s", "--sdk-repo"],
         description = ["The path to the Conclave SDK repo, which will be copied into the target project.\n" +
-                "Default: /path/to/conclave-init.jar/../repo"]
+                "Default: /path/to/conclave-sdk/repo"],
+        converter = [PathConverter::class],
     )
     val sdkRepo: Path = pathToSdkRepo
 
@@ -68,7 +72,6 @@ class CommandLineParameters {
         require(sdkRepo.isDirectory()) { "$sdkRepo is not a directory. $sdkRepoErrorHelp" }
         require(sdkRepo.resolve("com").isDirectory()) { "$sdkRepo is not a Maven repository. $sdkRepoErrorHelp" }
     }
-
 
 
     @CommandLine.Option(
@@ -94,4 +97,8 @@ internal class JavaPackageConverter : ITypeConverter<JavaPackage> {
 
 internal class JavaClassConverter : ITypeConverter<JavaClass> {
     override fun convert(value: String): JavaClass = JavaClass(value)
+}
+
+internal class PathConverter: ITypeConverter<Path> {
+    override fun convert(value: String): Path = Paths.get(value).normalize()
 }
