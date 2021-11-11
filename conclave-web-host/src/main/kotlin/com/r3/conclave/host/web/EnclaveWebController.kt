@@ -38,14 +38,14 @@ class EnclaveWebController {
     @Value("\${mock.code.signing.key.hash:}")
     var codeSigningKeyHash: String? = null
 
-    @Value("\${mock.product.id:1}")
-    var productID: Int = 1
+    @Value("\${mock.product.id:}")
+    var productID: Int? = null
 
-    @Value("\${mock.revocation.level:0}")
-    var revocationLevel: Int = 0
+    @Value("\${mock.revocation.level:}")
+    var revocationLevel: Int? = null
 
-    @Value("\${mock.tcb.level:1}")
-    var tcbLevel: Int = 1
+    @Value("\${mock.tcb.level:}")
+    var tcbLevel: Int? = null
 
     /**
      * When/if enclave emits StoreSealedState mail command,
@@ -150,13 +150,15 @@ class EnclaveWebController {
 
     private fun buildMockConfiguration(): MockConfiguration {
         val mockConfiguration = MockConfiguration()
-        if (!codeHash.isNullOrEmpty())
+        if (!codeHash.isNullOrEmpty()) {
             mockConfiguration.codeHash = SHA256Hash.parse(codeHash!!)
-        if (!codeSigningKeyHash.isNullOrEmpty())
-            mockConfiguration.codeSigningKeyHash = SHA256Hash.parse(codeSigningKeyHash!!)
-        mockConfiguration.productID = productID
-        mockConfiguration.revocationLevel = revocationLevel
-        mockConfiguration.tcbLevel = tcbLevel
+        }
+        if (!codeSigningKeyHash.isNullOrEmpty()) {
+            SHA256Hash.parse(codeSigningKeyHash!!)
+        }
+        productID?.let { mockConfiguration.productID = it }
+        revocationLevel?.let { mockConfiguration.revocationLevel = it }
+        tcbLevel?.let { mockConfiguration.tcbLevel = it }
         return mockConfiguration
     }
 
