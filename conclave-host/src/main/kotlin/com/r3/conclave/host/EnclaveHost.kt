@@ -655,8 +655,10 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
 
+            if (enclaveFileSystemFile != null) log.info("Setting up persistent enclave file system...")
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
             adminHandler.sendOpen(sealedState)
+            if (enclaveFileSystemFile != null) log.info("Setup of the file system completed successfully.")
 
             hostStateManager.state = Started
         } catch (e: Exception) {
