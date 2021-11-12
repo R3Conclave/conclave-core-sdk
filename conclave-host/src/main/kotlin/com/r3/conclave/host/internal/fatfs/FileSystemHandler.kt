@@ -120,7 +120,7 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>, private val encl
         val position = sectorId * sectorSize
         val readSize = numSectors * sectorSize
         val buffer = ByteArray(readSize)
-
+        
         with(fileSystemFile.file) {
             seek(position + fileSystemFile.headerSize)
             readFully(buffer)

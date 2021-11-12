@@ -190,7 +190,8 @@ thread that runs inside the enclave.
 ### inMemoryFileSystemSize
 _Default:_ `64m`
 
-This is a setting to specify the maximum size of the in-memory filesystem.
+This is a setting to specify the maximum size of the in-memory filesystem. This value needs to be smaller than
+`maxHeapSize` above, as the memory used by the filesystem is taken from the Enclave's heap.
 If you specify a value of 0, the in-memory filesystem will be disabled.
 
 You can use the in-memory filesystem as a "scratch pad" in the Enclave memory;
@@ -203,6 +204,8 @@ will be lost if the enclave restarts.
 When enabled alone, the mount point will be `/` and all files and directories will be considered
 part of the in-memory filesystem. 
 
+!!! warning
+    The lower limit for the in-memory filesystem's size is 97792 bytes and the upper limit is the value of the `maxHeapSize`.
 
 !!! tip
     As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
@@ -222,7 +225,12 @@ Please remember that, in addition to the `persistentFileSystemSize`,
 you also **need to specify the host file path** in the `EnclaveHost.start` function call,
 for example:
 
-``` enclaveHost.start(AttestationParameters.DCAP(), null, Paths.get("/home/USER/conclave.disk"); ```
+``` enclaveHost.start(AttestationParameters.DCAP(), null, Paths.get("/home/USER/conclave_DEBUG.disk"); ```
+
+!!! tip
+    Once created with a specific enclave mode, the filesystem cannot be used by the same enclave built with a different enclave mode.  
+    You might want to add an identifier at the end of the file name to distinguish the enclave modes that has created it, 
+    as in the example above: `/home/USER/conclave_DEBUG.disk`.
 
 When this code gets executed for the first time, Conclave will create and encrypt this file using a key derived from the `MRSIGNER`.
 When the enclave restarts and if the file is present, Conclave will try to load and to prepare
@@ -242,11 +250,13 @@ reads/writes from/to the file; we plan to add an oblivious mechanism in a future
 
 !!! warning
     This value cannot change once the enclave has started the first time, please choose an appropriate value
-    that is big enough for your needs in the long term.
+    that is big enough for your needs in the long term.  
+    The lower limit for the persisted filesystem's size is 97792 bytes and the upper limit is ~2TB (2,199,023,255,040 bytes). Note that, because of the encryption
+    mechanisms, using very high values will cause a long initialization step.
 
 !!! tip
     As with `maxHeapSize` and `maxStackSize`, the size is specified in bytes but you can put a `k`, `m` or `g`
-    after the value to specify it in kilobytes, megabytes or gigabytes respectively.
+    after the value to specify it in kilobytes, megabytes or gigabytes respectively.      
 
 ### enablePersistentMap & maxPersistentMapSize
 _Defaults:_ `false` and `16m` respectively.
