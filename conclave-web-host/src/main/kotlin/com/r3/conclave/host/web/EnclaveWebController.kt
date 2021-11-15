@@ -19,6 +19,7 @@ import java.io.DataOutputStream
 import java.nio.file.Path
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
+import javax.servlet.http.HttpServletResponse
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
@@ -125,19 +126,32 @@ class EnclaveWebController {
         }
     }
 
+    private fun addCacheControlHeaders(response: HttpServletResponse) {
+        response.addHeader("Cache-Control", "no-store,no-cache,must-revalidate")
+    }
+
     @GetMapping("/attestation")
-    fun attestation(): ByteArray = enclaveHost.enclaveInstanceInfo.serialize()
+    fun attestation(response: HttpServletResponse): ByteArray {
+        addCacheControlHeaders(response)
+        return enclaveHost.enclaveInstanceInfo.serialize()
+    }
 
     @PostMapping("/deliver-mail")
     fun deliverMail(
         @RequestHeader("Correlation-ID") correlationId: String,
-        @RequestBody encryptedMail: ByteArray
+        @RequestBody encryptedMail: ByteArray,
+        response: HttpServletResponse
     ): ByteArray {
+        addCacheControlHeaders(response)
         return enclaveHostService.deliverMail(encryptedMail, correlationId) ?: emptyBytes
     }
 
     @PostMapping("/poll-mail")
-    fun pollMail(@RequestHeader("Correlation-ID") correlationId: String): ByteArray {
+    fun pollMail(
+        @RequestHeader("Correlation-ID") correlationId: String,
+        response: HttpServletResponse
+    ): ByteArray {
+        addCacheControlHeaders(response)
         return enclaveHostService.pollMail(correlationId) ?: emptyBytes
     }
 
