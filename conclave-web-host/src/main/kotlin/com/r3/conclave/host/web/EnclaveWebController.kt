@@ -8,6 +8,7 @@ import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.PlatformSupportException
 import com.r3.conclave.host.internal.EnclaveHostService
 import com.r3.conclave.host.internal.loggerFor
+import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.nio.file.Path
+import java.time.Duration
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import javax.servlet.http.HttpServletResponse
@@ -33,10 +35,10 @@ class EnclaveWebController {
      * Only used in Mock mode
      * and are ignored in Simulation/Debug/Release modes.
      */
-    @Value("\${mock.code.hash:}")
+    @Value("\${mock.code.hash:#{null}}")
     var codeHash: String? = null
 
-    @Value("\${mock.code.signing.key.hash:}")
+    @Value("\${mock.code.signing.key.hash:#{null}}")
     var codeSigningKeyHash: String? = null
 
     @Value("\${mock.product.id:}")
@@ -59,6 +61,12 @@ class EnclaveWebController {
 
     @Value("\${filesystem.file:}")
     var enclaveFileSystemFile: Path? = null
+
+    @Value("\${kds.url:#{null}}")
+    val kdsUrl: String? = null
+
+    @Value("\${kds.connection.timeout.seconds:}")
+    val kdsConnTimeoutInSec: Long? = null
 
     @PostConstruct
     fun init() {
@@ -89,7 +97,8 @@ class EnclaveWebController {
             }
         }
         val sealedState = loadSealedState()
-        enclaveHostService.start(AttestationParameters.DCAP(), sealedState, enclaveFileSystemFile, null)
+        val kdsConfiguration = loadKdsConfiguration()
+        enclaveHostService.start(AttestationParameters.DCAP(), sealedState, enclaveFileSystemFile, kdsConfiguration)
 
         logger.info("Enclave ${enclaveHost.enclaveClassName} started")
         logger.info(enclaveHost.enclaveInstanceInfo.toString())
@@ -123,6 +132,20 @@ class EnclaveWebController {
             }
             return stream.readBytes()
         }
+    }
+
+    private fun loadKdsConfiguration(): KDSConfiguration? {
+        if (kdsUrl != null) {
+            val conf = KDSConfiguration(kdsUrl)
+            if (kdsConnTimeoutInSec != null) {
+                conf.timeout = Duration.ofSeconds(kdsConnTimeoutInSec)
+            }
+            return conf
+        }
+        check(kdsConnTimeoutInSec == null) {
+            "Invalid arguments. The flag '--kds.connection.timeout.seconds' must be used with '--kds.url'"
+        }
+        return null
     }
 
     private fun addCacheControlHeaders(response: HttpServletResponse) {
@@ -163,10 +186,10 @@ class EnclaveWebController {
 
     private fun buildMockConfiguration(): MockConfiguration {
         val mockConfiguration = MockConfiguration()
-        if (!codeHash.isNullOrEmpty()) {
+        if (codeHash != null) {
             mockConfiguration.codeHash = SHA256Hash.parse(codeHash!!)
         }
-        if (!codeSigningKeyHash.isNullOrEmpty()) {
+        if (codeSigningKeyHash != null) {
             SHA256Hash.parse(codeSigningKeyHash!!)
         }
         productID?.let { mockConfiguration.productID = it }
