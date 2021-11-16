@@ -80,7 +80,6 @@ class EnclaveWebController {
         val mockConfiguration = buildMockConfiguration()
         enclaveHostService = object : EnclaveHostService() {
             override val enclaveHost: EnclaveHost = EnclaveHost.load(mockConfiguration)
-            override val enclaveFileSystemFile: Path? get() = this@EnclaveWebController.enclaveFileSystemFile
             override fun storeSealedState(sealedState: ByteArray) {
                 val sealedStateFile = checkNotNull(sealedStateFile) { "sealed.state.file is not set" }
                 DataOutputStream(sealedStateFile.outputStream()).use {
@@ -90,7 +89,7 @@ class EnclaveWebController {
             }
         }
         val sealedState = loadSealedState()
-        enclaveHostService.start(AttestationParameters.DCAP(), sealedState)
+        enclaveHostService.start(AttestationParameters.DCAP(), sealedState, enclaveFileSystemFile, null)
 
         logger.info("Enclave ${enclaveHost.enclaveClassName} started")
         logger.info(enclaveHost.enclaveInstanceInfo.toString())

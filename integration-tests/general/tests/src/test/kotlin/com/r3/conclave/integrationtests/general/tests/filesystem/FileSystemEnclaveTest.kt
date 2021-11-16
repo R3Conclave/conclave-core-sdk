@@ -9,8 +9,9 @@ import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicInteger
 
+// TODO The file system tests should test for both persisting and in-memory scenerios.
 abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) : AbstractEnclaveActionTest(defaultEnclaveClassName) {
-    constructor() : this("com.r3.conclave.integrationtests.filesystem.enclave.PersistentFileSystemEnclave")
+    constructor() : this("com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave")
 
     val uid = AtomicInteger()
 

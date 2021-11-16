@@ -983,11 +983,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private fun onKDSKeySpecification(byteBuffer: ByteBuffer) {
             val masterKeyType = MasterKeyType.values()[byteBuffer.get().toInt()]
             val policyConstraintString = String(byteBuffer.getRemainingBytes())
-            val policyConstraint = try {
-                EnclaveConstraint.parse(policyConstraintString)
-            } catch (e: IllegalStateException) {
-                throw IllegalStateException("Enclave has an invalid KDS policy constraint: ${e.message}")
-            }
+            val policyConstraint = EnclaveConstraint.parse(policyConstraintString)
             enclaveKDSConfig = EnclaveKDSConfig(masterKeyType, policyConstraint)
         }
     }

@@ -34,12 +34,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
-import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 
 /**
@@ -404,6 +398,7 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
+        private lateinit var generatedPolicyConstraint: EnclaveConstraint
 
         override fun connect(upstream: Sender): AdminHandler {
             sender = upstream
@@ -509,7 +504,14 @@ Received: $attestationReportBody"""
                 policyConstraint.productID = report[body][isvProdId].read()
             }
 
-            val policyConstraintBytes = policyConstraint.toString().toByteArray()
+            val generatedPolicyConstraintString = policyConstraint.toString()
+            try {
+                generatedPolicyConstraint = EnclaveConstraint.parse(generatedPolicyConstraintString)
+            } catch (e: IllegalStateException) {
+                throw IllegalArgumentException("Enclave has an invalid KDS policy constraint: ${e.message}")
+            }
+
+            val policyConstraintBytes = generatedPolicyConstraintString.toByteArray()
             sender.send(2 + policyConstraintBytes.size) { buffer ->
                 buffer.put(AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal.toByte())
                 buffer.put(kdsKeySpec.masterKeyType.ordinal.toByte())
@@ -533,7 +535,11 @@ Received: $attestationReportBody"""
             val kdsEII = EnclaveInstanceInfo.deserialize(kdsEEIBytes)
 
             // Verify the KDS attestation report
-            kdsConfig.kdsEnclaveConstraint.check(kdsEII)
+            try {
+                kdsConfig.kdsEnclaveConstraint.check(kdsEII)
+            } catch (e: InvalidEnclaveException) {
+                throw IllegalArgumentException("The KDS does not match the enclave's configured KDS constraint", e)
+            }
 
             // Verify KDS encryption key is the same key which encrypted the mail.
             require(kdsEII.encryptionKey == mail.authenticatedSender) {
@@ -543,7 +549,7 @@ Received: $attestationReportBody"""
             // Verify key policy constraint
             val privateKeyResponse = objectMapper.readValue(mail.bodyAsBytes, PrivateKeyResponse::class.java)
             val privateKeyPolicyConstraint = EnclaveConstraint.parse(privateKeyResponse.policyConstraint)
-            check(privateKeyPolicyConstraint == kdsConfig.kdsKeySpec.policyConstraint.enclaveConstraint) {
+            require(privateKeyPolicyConstraint == generatedPolicyConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
             enclave.kdsEII = kdsEII

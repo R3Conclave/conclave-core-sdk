@@ -1,10 +1,13 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
+import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.integrationtests.general.common.tasks.ReadAndWriteFiles
 import com.r3.conclave.integrationtests.general.common.tasks.ReadFiles
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
     private val numThreads: Int = 5
@@ -22,11 +25,14 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
             .hasMessageContaining("java.nio.file.NoSuchFileException: /tmp/test_file_0.txt")
     }
 
-    @Test
-    fun `can read files after enclave restarts from a restarted persistent filesystem `() {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `can read files after enclave restarts from a restarted persistent filesystem `(useKds: Boolean) {
+        this.useKds = useKds
+
         val reply = restartEnclaveBetweenWriteAndRead("")
 
-        repeat(numThreads) { it ->
+        repeat(numThreads) {
             val message = "Dummy text from file $it"
             assertThat(reply).contains(message)
         }
@@ -34,13 +40,11 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
 
     @Test
     fun `an enclave with persistent disk size bigger than 0 but without host path crashes`() {
-        //  This will override the JUnit assigned member variable in AbstractEnclaveActionTest class
-        //      as we want to call the EnclaveHost.load function without specifying the filesystem file path
         fileSystemFileTempDir = null
         assertThatThrownBy {
             callEnclave(ReadAndWriteFiles(numThreads, ""))
         }
-            .isInstanceOf(com.r3.conclave.host.EnclaveLoadException::class.java)
+            .isInstanceOf(EnclaveLoadException::class.java)
             .hasMessageContaining("Unable to start enclave")
             .hasStackTraceContaining("Caused by: java.lang.IllegalStateException: The enclave has been configured to use" +
                     " the persistent filesystem but no storage file was provided in EnclaveHost.start")

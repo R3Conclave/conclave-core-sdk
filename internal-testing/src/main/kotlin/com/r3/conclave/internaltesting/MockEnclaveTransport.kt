@@ -23,7 +23,7 @@ class MockEnclaveTransport(
     private var enclaveHostService = MockEnclaveHostService(enclaveClass, configuration)
 
     fun startEnclave() {
-        enclaveHostService.start(null, null)
+        enclaveHostService.start(null, null, null, null)
     }
 
     val enclaveHost: EnclaveHost get() = enclaveHostService.enclaveHost
@@ -35,7 +35,7 @@ class MockEnclaveTransport(
 
         val index = sealedStates.lastIndex - rollBackNumberOfStates
         val sealedStateToRestore = if (index != -1) sealedStates[index] else null
-        enclaveHostService.start(null, sealedStateToRestore)
+        enclaveHostService.start(null, sealedStateToRestore, null, null)
     }
 
     fun startNewClient(): EnclaveClient {
@@ -91,7 +91,6 @@ class MockEnclaveTransport(
         mockConfiguration: MockConfiguration?
     ) : EnclaveHostService() {
         override val enclaveHost: EnclaveHost = createMockHost(enclaveClass.java, mockConfiguration)
-        override val enclaveFileSystemFile: Path? get() = null
         override fun storeSealedState(sealedState: ByteArray) {
             sealedStates += sealedState
         }
