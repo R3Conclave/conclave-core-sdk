@@ -5,75 +5,43 @@ import com.r3.conclave.client.web.WebEnclaveTransport;
 import com.r3.conclave.common.EnclaveConstraint;
 import com.r3.conclave.common.InvalidEnclaveException;
 import com.r3.conclave.mail.EnclaveMail;
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.ITypeConverter;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.Callable;
 
-@Command(name = "reverse-client",
-        mixinStandardHelpOptions = true,
-        description = "Simple client that communicates with the ReverseEnclave using the web host.")
-public class ReverseClient implements Callable<Void> {
-    @Parameters(index = "0", description = "The string to send to the enclave to reverse.")
-    private String string;
+public class ReverseClient {
+    private static String DESCRIPTION = "Simple client that communicates with the ReverseEnclave using the web host.";
+    private static String USAGE_MESSAGE = "Usage: java -jar client.jar ENCLAVE_CONSTRAINT STRING_TO_REVERSE\n" +
+            "  ENCLAVE_CONSTRAINT: Enclave constraint which determines the enclave's identity and whether it's " +
+            "acceptable to use.\n" +
+            "  STRING_TO_REVERSE: The string to send to the enclave to reverse.";
 
-    @Option(names = {"-u", "--url"},
-            required = true,
-            description = "URL of the web host running the enclave.")
-    private String url;
+    private static String REVERSE_HOST_URL = "http://localhost:8080";
 
-    @Option(names = {"-c", "--constraint"},
-            required = true,
-            description = "Enclave constraint which determines the enclave's identity and whether it's acceptable to use.",
-            converter = EnclaveConstraintConverter.class)
-    private EnclaveConstraint constraint;
-
-    @Option(names = {"-f", "--file-state"},
-            required = true,
-            description = "File to store the state of the client. If the file doesn't exist a new one will be created.")
-    private Path file;
-
-    @Override
-    public Void call() throws IOException, InvalidEnclaveException {
-        EnclaveClient enclaveClient;
-        if (Files.exists(file)) {
-            enclaveClient = new EnclaveClient(Files.readAllBytes(file));
-            System.out.println("Loaded previous client state and thus using existing private key.");
-        } else {
-            System.out.println("No previous client state. Generating new state with new private key.");
-            enclaveClient = new EnclaveClient(constraint);
+    public static void main(String... args) throws IOException, InvalidEnclaveException {
+        if (args.length != 2) {
+            System.out.println(DESCRIPTION);
+            System.out.println(USAGE_MESSAGE);
         }
 
-        try (WebEnclaveTransport transport = new WebEnclaveTransport(url);
-             EnclaveClient client = enclaveClient)
-        {
+        EnclaveConstraint constraint = EnclaveConstraint.parse(args[0]);
+        String stringToReverse = args[1];
+
+        callEnclave(constraint, stringToReverse);
+    }
+
+    public static void callEnclave(EnclaveConstraint constraint, String stringToReverse) throws IOException, InvalidEnclaveException {
+        try (WebEnclaveTransport transport = new WebEnclaveTransport(REVERSE_HOST_URL);
+             EnclaveClient client = new EnclaveClient(constraint)) {
+
+            // Connect to the host and send the string to reverse
             client.start(transport);
-            byte[] requestMailBody = string.getBytes(StandardCharsets.UTF_8);
+            byte[] requestMailBody = stringToReverse.getBytes(StandardCharsets.UTF_8);
             EnclaveMail responseMail = client.sendMail(requestMailBody);
+
+            // Parse and print out the response
             String responseString = (responseMail != null) ? new String(responseMail.getBodyAsBytes()) : null;
-            System.out.println("Reversing `" + string + "` gives `" + responseString + "`");
-            Files.write(file, client.save());
+            System.out.println("Reversing `" + stringToReverse + "` gives `" + responseString + "`");
         }
-
-        return null;
-    }
-
-    private static class EnclaveConstraintConverter implements ITypeConverter<EnclaveConstraint> {
-        @Override
-        public EnclaveConstraint convert(String value) {
-            return EnclaveConstraint.parse(value);
-        }
-    }
-
-    public static void main(String... args) {
-        int exitCode = new CommandLine(new ReverseClient()).execute(args);
-        System.exit(exitCode);
     }
 }

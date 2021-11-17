@@ -21,6 +21,7 @@ nav:
         - Communicating with an enclave using Mail: mail.md
         - Rapid testing and development with Mock Mode: mockmode.md
         - Maximising the security of your enclave: security.md
+        - Writing a long-lived client: writing-a-long-lived-client.md
     - Reference:
         - Enclave modes: enclave-modes.md
         - Enclave persistence: persistence.md

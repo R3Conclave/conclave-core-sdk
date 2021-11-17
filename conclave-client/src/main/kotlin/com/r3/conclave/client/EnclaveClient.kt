@@ -146,7 +146,7 @@ open class EnclaveClient private constructor(
     val clientPrivateKey: PrivateKey
 
     /**
-     * The constraints the enclave must satify before this client will communicate with it.
+     * The constraints the enclave must satisfy before this client will communicate with it.
      */
     var enclaveConstraint: EnclaveConstraint
 
@@ -404,7 +404,7 @@ open class EnclaveClient private constructor(
     val postOffices: Set<PostOffice> get() = _postOffices.values.toSet()
 
     /**
-     * Serializes the state of the client to a byte array so that it can safely persisted and restored if the client is
+     * Serializes the state of the client to a byte array so that it can be safely persisted and restored if the client is
      * restarted. Use [EnclaveClient.restoreState] to materialise the state again. As the private key is also serialized
      * it's vitally important the bytes are persisted securely or are encrypted.
      *

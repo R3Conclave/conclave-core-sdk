@@ -21,10 +21,9 @@ sleep 5
 # client sends two requests, using the same state file
 for ((i=0;i<2;i++));
 do
-    $JAVA_HOME/bin/java -jar $(ls client/build/libs/client-*.jar) "reverse me!" \
-        -u=http://localhost:8080 \
-        -f=client/build/state \
-        -c="S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE"
+    $JAVA_HOME/bin/java -jar client/build/libs/client.jar \
+        "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" \
+        "reverse me!"
 done
 # kill the web server process
 kill -9 $_PID

@@ -341,10 +341,9 @@ Alternatively you can provide or [generate your own](signing.md#generating-keys-
 ### Configure the _client_ module
 
 The client module is the simplest of all. Since the host is using the Conclave web server, we will configure the 
-enclave client to be a web-client. We will need to pass in parameters at runtime to the client, so we will also use
-[picocli](https://picocli.info/) to create a nice command line interface.
+enclave client to be a web-client. 
 
-```groovy hl_lines="11-12"
+```groovy hl_lines="11"
 plugins {
     id 'application'
     id 'com.github.johnrengelman.shadow' version '6.1.0'
@@ -356,7 +355,6 @@ application {
 
 dependencies {
     implementation "com.r3.conclave:conclave-web-client:$conclaveVersion"
-    implementation "info.picocli:picocli:4.6.1"
 
     runtimeOnly "org.slf4j:slf4j-simple:1.7.32"
 }
@@ -540,7 +538,7 @@ We should be ready to run the host web server from the command line.
 
 ```bash
 ./gradlew host:shadowJar
-java -jar host/build/libs/host-mock-1.2-RC1.jar
+java -jar host/build/libs/host-mock.jar
 ```
 
 !!! note
@@ -606,49 +604,47 @@ _how_ to transport the mail, which is where [`EnclaveTransport`](/api/com/r3/con
 comes in. Since we're connecting to the host web server, we'll be using
 [`WebEnclaveTransport`](/api/com/r3/conclave/client/web/WebEnclaveTransport.html) as our transport.
 
-Here's the initial boilerplate setting up the command line interface using picocli and connecting the client to the 
-web server using the provided URL.
-
+Copy the client implementation below into your project:
 ```java
-@Command(name = "reverse-client",
-        mixinStandardHelpOptions = true,
-        description = "Simple client that communicates with the ReverseEnclave using the web host.")
-public class ReverseClient implements Callable<Void> {
-    @Parameters(index = "0", description = "The string to send to the enclave to reverse.")
-    private String string;
+package com.superfirm.cleint; // CHANGE THIS
 
-    @Option(names = {"-u", "--url"},
-            required = true,
-            description = "URL of the web host running the enclave.")
-    private String url;
+import com.r3.conclave.client.EnclaveClient;
+import com.r3.conclave.client.web.WebEnclaveTransport;
+import com.r3.conclave.common.EnclaveConstraint;
+import com.r3.conclave.common.InvalidEnclaveException;
+import com.r3.conclave.mail.EnclaveMail;
 
-    @Option(names = {"-c", "--constraint"},
-            required = true,
-            description = "Enclave constraint which determines the enclave's identity and whether it's acceptable to use.",
-            converter = EnclaveConstraintConverter.class)
-    private EnclaveConstraint constraint;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
-    @Override
-    public Void call() throws IOException, InvalidEnclaveException {
-        try (WebEnclaveTransport transport = new WebEnclaveTransport(url);
-             EnclaveClient client = new EnclaveClient(constraint))
-        {
+public class ReverseClient {
+    private static String DESCRIPTION = "Simple client that communicates with the ReverseEnclave using the web host.";
+    private static String USAGE_MESSAGE = "Usage: reverse-client ENCLAVE_CONSTRAINT STRING_TO_REVERSE\n" +
+            "  ENCLAVE_CONSTRAINT: Enclave constraint which determines the enclave's identity and whether it's " +
+            "acceptable to use.\n" +
+            "  STRING_TO_REVERSE: The string to send to the enclave to reverse.";
+
+    private static String REVERSE_HOST_URL = "http://localhost:8080";
+
+    public static void main(String... args) throws IOException, InvalidEnclaveException {
+        if (args.length != 2) {
+            System.out.println(DESCRIPTION);
+            System.out.println(USAGE_MESSAGE);
+        }
+
+        EnclaveConstraint constraint = EnclaveConstraint.parse(args[0]);
+        String stringToReverse = args[1];
+
+        callEnclave(constraint, stringToReverse);
+    }
+
+    public static void callEnclave(EnclaveConstraint constraint, String stringToReverse) throws IOException, InvalidEnclaveException {
+        try (WebEnclaveTransport transport = new WebEnclaveTransport(REVERSE_HOST_URL);
+             EnclaveClient client = new EnclaveClient(constraint)) {
+
             client.start(transport);
             // TODO
         }
-        return null;
-    }
-
-    private static class EnclaveConstraintConverter implements ITypeConverter<EnclaveConstraint> {
-        @Override
-        public EnclaveConstraint convert(String value) {
-            return EnclaveConstraint.parse(value);
-        }
-    }
-
-    public static void main(String... args) {
-        int exitCode = new CommandLine(new ReverseClient()).execute(args);
-        System.exit(exitCode);
     }
 }
 ```
@@ -785,21 +781,21 @@ send it mail. This is done by calling `EnclaveClient.sendMail` and passing in th
 message. If the enclave responds back immediately with a mail of its own then that is returned by `sendMail`. We can 
 use all of this to fill in the missing piece in our client:
 
-```java hl_lines="7-9"
-    @Override
-    public Void call() throws IOException, InvalidEnclaveException {
-        try (WebEnclaveTransport transport = new WebEnclaveTransport(url);
-             EnclaveClient client = new EnclaveClient(constraint))
-        {
-            client.start(transport);
-            byte[] requestMailBody = string.getBytes(StandardCharsets.UTF_8);
-            EnclaveMail responseMail = client.sendMail(requestMailBody);
-            String responseString = (responseMail != null) ? new String(responseMail.getBodyAsBytes()) : null;
-            System.out.println("Reversing `" + string + "` gives `" + responseString + "`");
-        }
+```java hl_lines="5 7-12"
+public static void callEnclave(EnclaveConstraint constraint, String stringToReverse) throws IOException, InvalidEnclaveException {
+    try (WebEnclaveTransport transport = new WebEnclaveTransport(REVERSE_HOST_URL);
+         EnclaveClient client = new EnclaveClient(constraint)) {
 
-        return null;
+        // Connect to the host and send the string to reverse
+        client.start(transport);
+        byte[] requestMailBody = stringToReverse.getBytes(StandardCharsets.UTF_8);
+        EnclaveMail responseMail = client.sendMail(requestMailBody);
+
+        // Parse and print out the response
+        String responseString = (responseMail != null) ? new String(responseMail.getBodyAsBytes()) : null;
+        System.out.println("Reversing `" + stringToReverse + "` gives `" + responseString + "`");
     }
+}
 ```
 
 The response we get back from the enclave is represented as an `EnclaveMail` object. We need the mail body which
@@ -808,52 +804,6 @@ contains the encoded reversed string.
 !!! tip
     If you write your enclave such that it might respond back to the client later at some point then you can use the 
     `pollMail` method to poll for responses. It will return `null` if there aren't any.
-
-### Writing a long-lived client
-
-In our example here we're using a new private key each time the client runs. This isn't an issue here as there's no 
-correlation between each run. If there was correlation between each run, or rather if the client needed to use the same 
-encryption key each time then we need to do a bit more.
-
-Conclave Mail uses the client's key as a form of identity and the enclave uses this to track the clients that 
-communciate with it. If it's important to the client that the enclave recognises it as the same entity across client 
-restarts then it must preserve its internal state. This includes the client's private key but there's 
-also other state that must be preserved. `EnclaveClient` provides a helpful `save()` method which will 
-serialize the necessary state to bytes and which can then be used at a later point to restore the client using the 
-`EnclaveClient` constructor that takes in a byte array.
-
-So show how this might be done, we will extend our client app to require a file where the client's state can be 
-saved and restored from.
-
-```java hl_lines="1-4 9-13 23"
-    @Option(names = {"-f", "--file-state"},
-            required = true,
-            description = "File to store the state of the client. If the file doesn't exist a new one will be created.")
-    private Path file;
-
-    @Override
-    public Void call() throws IOException, InvalidEnclaveException {
-        EnclaveClient enclaveClient;
-        if (Files.exists(file)) {
-            enclaveClient = new EnclaveClient(Files.readAllBytes(file));
-        } else {
-            enclaveClient = new EnclaveClient(constraint);
-        }
-
-        try (WebEnclaveTransport transport = new WebEnclaveTransport(url);
-             EnclaveClient client = enclaveClient)
-        {
-            client.start(transport);
-            byte[] requestMailBody = string.getBytes(StandardCharsets.UTF_8);
-            EnclaveMail responseMail = client.sendMail(requestMailBody);
-            String responseString = (responseMail != null) ? new String(responseMail.getBodyAsBytes()) : null;
-            System.out.println("Reversing `" + string + "` gives `" + responseString + "`");
-            Files.write(file, client.save());
-        }
-
-        return null;
-    }
-```
 
 ## Testing
 

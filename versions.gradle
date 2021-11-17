@@ -2,7 +2,6 @@ ext {
     // When updating the Conclave version make sure to also update the following:
     // * docs/sdk-extras/hello-world/gradle.properties
     // * docs/sdk-extras/cordapp/gradle.properties
-    // * docs/docs/running-hello-world.md
     // * docs/docs/writing-hello-world.md
     // * containers/aesmd/src/docker/Dockerfile
     // * containers/sgxjvm-build/src/docker/Dockerfile

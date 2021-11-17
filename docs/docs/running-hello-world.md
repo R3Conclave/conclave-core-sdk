@@ -45,7 +45,7 @@ which we provide. We can generate a fat JAR for the host and client using the `:
 
 You can run the host like any other executable JAR with the command
 ```bash
-java -jar host/build/libs/host-mock-1.2-RC1.jar
+java -jar host/build/libs/host-mock.jar
 ```
 
 The sample uses Conclave Web Host, a Spring Boot application which loads the enclave and waits for requests from the
@@ -73,13 +73,9 @@ You can proceed to [Run the client](#run-the-client) when you see the following 
 
 Run the client with
 ```bash
-java -jar client/build/libs/client-1.2-RC1.jar \
+java -jar client/build/libs/client.jar \
   # A constraint which defines which enclaves the client will accept.
-  --constraint "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" \
-  # A file in which to store any persistent state for the client.
-  --file-state "client-state" \
-  # The URL of the host server.
-  --url "http://localhost:8080" \
+  "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" \
   # The string to reverse
   reverse-me
 ```
@@ -110,7 +106,7 @@ which has been produced by the following sequence of events:
     `S:0000000000000000000000000000000000000000000000000000000000000000`, which we saw in the host output in the previous
     section.
 
-    Try removing the `client-state` file and rerunning the command with a different code signer:
+    Try rerunning the command with a different code signer:
     `"S:2222222222222222222222222222222222222222222222222222222222222222 PROD:1 SEC:INSECURE"`
     
     You should see the following error:
@@ -140,7 +136,7 @@ via the `enclaveMode` Gradle parameter. For example, you could compile the host 
     ./gradlew :host:shadowJar -PenclaveMode=simulation
     ```
 
-This would generate the host JAR at `host/build/libs/host-simulation-1.2-RC1.jar`.
+This would generate the host JAR at `host/build/libs/host-simulation.jar`.
 
 !!! tip
     If working from inside IntelliJ, find the shadowJar task of your host project from the Gradle menu on the right
@@ -151,7 +147,7 @@ For **release mode**, the sample app has been configured (in the `build.gradle` 
 external signing. Note that **external signing is optional** and you do not have to include it in your own projects.
 See [Enclave signing](signing.md) for more information on external signing.
 
-You can generate `host-release-1.2-RC1.jar` like this:
+You can generate `host-release.jar` like this:
 
 === "Windows"
     ```bash
@@ -203,7 +199,7 @@ You can generate `host-release-1.2-RC1.jar` like this:
     `docker <command> --help` for more information on the docker command line interface.
 
     * You can now run the host and client as we did for mock mode. The only differences are that the host must be run from
-     inside the container, and the host JAR will be named `host-simulation-1.2-RC1.jar` rather than `host-mock-1.2-RC1.jar`.
+     inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
     * Press `CTRL+D` to exit the container when finished.
 
     On Windows systems, it is also possible to install the Windows subsystem for linux (2) and download ubuntu 18.04
@@ -236,7 +232,7 @@ You can generate `host-release-1.2-RC1.jar` like this:
     `docker <command> --help` for more information on the docker command line interface.
 
     * You can now run the host and client as we did for mock mode. The only differences are that the host must be run from
-     inside the container, and the host JAR will be named `host-simulation-1.2-RC1.jar` rather than `host-mock-1.2-RC1.jar`.
+     inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
     * Press `CTRL+D` to exit the container when finished.
 
 === "Linux"
