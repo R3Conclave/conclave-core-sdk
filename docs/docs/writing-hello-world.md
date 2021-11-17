@@ -73,7 +73,7 @@ like this:
 
 ```text
 conclaveRepo=/path/to/sdk/repo
-conclaveVersion=1.2-RC1
+conclaveVersion=1.2-RC2
 ```
 
 Gradle properties can be set using a file in the project directory, or more usefully in the developer's home directory.
