@@ -23,7 +23,7 @@ dependencies {
     // onto the classpath and thus available in the non-mock modes as well.
     testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
-    kds "com.r3.conclave:kds:0.1-SNAPSHOT:simulation" // Use the simulation KDS for testing
+    kds "com.r3.conclave:kds:$kds_version:simulation" // Use the simulation KDS for testing
 }
 
 test {

@@ -6,6 +6,7 @@ ext {
     // * containers/aesmd/src/docker/Dockerfile
     // * containers/sgxjvm-build/src/docker/Dockerfile
     conclave_version = '1.2-RC3-SNAPSHOT'
+    kds_version = '0.1-RC1'
     kotlin_version = '1.5.30'
     kotlinx_serialization_json_version = '1.2.2'
     kotlinx_serialization_protobuf_version = '1.2.2'
