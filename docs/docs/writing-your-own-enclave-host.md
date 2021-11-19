@@ -38,7 +38,7 @@ public class MyEnclave extends Enclave {
 }
 ```
 
-Next, update the host build.gradle so that it uses the newly created main class:
+Next we create a main class for our host:
 
 ***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
 ```java
@@ -51,7 +51,7 @@ public class MyEnclaveHost {
 }
 ```
 
-Then configure the host build.gradle to use the newly created main class:
+Then we update the host build.gradle to reference the newly created main class:
 
 ***host/build.gradle (application)***
 
@@ -191,7 +191,7 @@ DataOutputStream toHost = new DataOutputStream(socket.getOutputStream());
 
 ## Attestation
 
-Once communication between the client and host has been established, the next step is attestation. Attestation is the process by which clients ensure the identity of the enclave with which they are communicating, and is a core concept which must be understood in order to write secure applications using the Conclave SDK.
+Once communication between the client and host has been established, the next step is attestation. Attestation is the process by which clients ensure the identity of the enclave with which they are communicating, and is a core concept which must be understood in order to write secure applications using the Conclave SDK. For more information regarding attestation, see [remote attestation](architecture.md#remote-attestation).
 
 During attestation, the host first generates attestation data for the enclave in question. Then the attestation is sent to the client for interrogation. This data can be thought of as similar to an SSL certificate in that it consists of a set of facts signed by a trusted third party (in this case, the CPU manufacturer). In this case however, it verifies the identity of a specific enclave.
 
