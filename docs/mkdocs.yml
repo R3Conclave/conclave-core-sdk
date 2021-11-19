@@ -16,6 +16,7 @@ nav:
     - Tutorials:
         - Running your first enclave: running-hello-world.md
         - Writing your first enclave: writing-hello-world.md
+        - Writing your own enclave host: writing-your-own-enclave-host.md
         - Integrating an enclave with Corda: writing-cordapps.md
     - Design topics:
         - Communicating with an enclave using Mail: mail.md
@@ -29,6 +30,7 @@ nav:
         - JavaScript/Python: javascript-python.md
         - Performance: performance.md
         - Conclave Init: conclave-init.md
+        - Conclave web host: conclave-web-host.md
     - API:
         - JavaDocs: api/index.html
         - Configuration options for enclaves: enclave-configuration.md
