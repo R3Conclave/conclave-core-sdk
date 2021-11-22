@@ -130,23 +130,20 @@ the [hello-world tutorial](writing-hello-world.md).
     for details on how to do this.
 
 === "Kotlin"
-    By default, Gradle will compile the generated Java project using Java 8. Conclave needs at least Java 8, but if you want
-    to compile to a later version then you can do so. See
-    the [Kotlin docs](https://docs.gradle.org/current/userguide/building_java_projects.html#sec:java_cross_compilation)
-    for details on how to do this.
-
-    !!! Note
-        Since this project uses Gradle 6, the `KotlinCompile` task is not directly available. You will need to replace
-        ```groovy
-        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions { /*...*/ }
-        }
-        ```
-        with
-        ```groovy
-        tasks.withType(AbstractCompile) {
-            if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
-                kotlinOptions { /*...*/ }
+    The following code in the root `build.gradle` of the generated project tells Gradle to compile the project to Java 11 bytecode:
+    ```groovy hl_lines="4"
+    tasks.withType(AbstractCompile) {
+        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
+            kotlinOptions {
+                jvmTarget = "11"
+                apiVersion = '1.5'
+                languageVersion = '1.5'
             }
         }
-        ```
+    }
+    ```
+
+    If you want to revert to Java 8, remove the block or set `jvmTarget=1.8`. See the [Kotlin docs](https://docs.gradle.org/current/userguide/building_java_projects.html#sec:java_cross_compilation) for more details.
+
+    !!! note
+        Since this project uses Gradle 6, the `KotlinCompile` task is not directly available. Hence we use `AbstractCompile` instead.
