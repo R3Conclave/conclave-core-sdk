@@ -9,10 +9,7 @@ import com.r3.conclave.host.PlatformSupportException
 import com.r3.conclave.host.internal.EnclaveHostService
 import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.host.kds.KDSConfiguration
-import com.r3.conclave.utilities.internal.deserialise
-import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.writeData
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.*
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
 import java.io.DataInputStream
@@ -118,19 +115,22 @@ class EnclaveWebController {
         val sealedStateFile = this.sealedStateFile ?: return null
         if (!sealedStateFile.exists()) return null
         DataInputStream(sealedStateFile.inputStream()).use { stream ->
-            val header = stream.readIntLengthPrefixBytes()
-            header.deserialise {
-                val version = read()
-                check(version == 1) { "Version $version of the sealed state file not supported" }
-                val savedEnclaveMode = EnclaveMode.values()[stream.read()]
-                val runtimeEnclaveMode = enclaveHost.enclaveMode
-                check(savedEnclaveMode == runtimeEnclaveMode) {
-                    "Unable to restore the enclave's state from $sealedStateFile. This file was encrypted when the " +
-                            "enclave was running in $savedEnclaveMode mode but now the enclave is running in " +
-                            "$runtimeEnclaveMode mode. The enclave's state cannot migrate across different modes."
-                }
-            }
+            validateSealedStateFileHeader(stream.readIntLengthPrefixBytes(), sealedStateFile)
             return stream.readBytes()
+        }
+    }
+
+    private fun validateSealedStateFileHeader(header: ByteArray, sealedStateFile: Path) {
+        header.deserialise {
+            val version = read()
+            check(version == 1) { "Version $version of the sealed state file not supported" }
+            val savedEnclaveMode = EnclaveMode.values()[read()]
+            val runtimeEnclaveMode = enclaveHost.enclaveMode
+            check(savedEnclaveMode == runtimeEnclaveMode) {
+                "Unable to restore the enclave's state from $sealedStateFile. This file was encrypted when the " +
+                        "enclave was running in $savedEnclaveMode mode but now the enclave is running in " +
+                        "$runtimeEnclaveMode mode. The enclave's state cannot migrate across different modes."
+            }
         }
     }
 
