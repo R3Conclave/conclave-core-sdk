@@ -1,6 +1,5 @@
 package com.r3.conclave.init
 
-import com.r3.conclave.init.common.copyRecursively
 import com.r3.conclave.init.common.deleteRecursively
 import com.r3.conclave.init.common.walkTopDown
 import com.r3.conclave.init.template.*
@@ -15,8 +14,6 @@ object ConclaveInit {
         basePackage: JavaPackage,
         enclaveClass: JavaClass,
         outputRoot: Path,
-        sdkRepo: Path,
-        conclaveVersion: String,
     ) {
         val templateRoot = ZipResource(name = "/template.zip").extractFiles()
         val templateFiles = templateRoot.walkTopDown()
@@ -27,7 +24,7 @@ object ConclaveInit {
             TemplatePathTransformer(basePackage, templateRoot, outputRoot, enclaveClass)
                 .transform(templateFiles)
 
-        val textTransformer = TemplateTextTransformer(basePackage, enclaveClass, conclaveVersion)
+        val textTransformer = TemplateTextTransformer(basePackage, enclaveClass)
         (templateFiles zip outputFiles).forEach { (source, destination) ->
             with(destination.parent) { if (!exists()) createDirectories() }
 
@@ -36,14 +33,9 @@ object ConclaveInit {
             destination.writeText(contents)
         }
 
-        copySdkRepo(sdkRepo, outputRoot)
         copyGradleWrapper(outputRoot)
 
         templateRoot.deleteRecursively()
-    }
-
-    private fun copySdkRepo(conclaveSdk: Path, outputRoot: Path) {
-        conclaveSdk.copyRecursively(outputRoot.resolve("conclave-repo"))
     }
 
     private fun copyGradleWrapper(outputRoot: Path) {

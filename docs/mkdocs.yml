@@ -32,6 +32,7 @@ nav:
         - JavaScript/Python: javascript-python.md
         - Performance: performance.md
         - Conclave Init: conclave-init.md
+        - Gradle Properties: gradle-properties.md
         - Conclave web host: conclave-web-host.md
     - API:
         - JavaDocs: api/index.html

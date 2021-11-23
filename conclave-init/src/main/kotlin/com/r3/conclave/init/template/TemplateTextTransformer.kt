@@ -4,11 +4,9 @@ package com.r3.conclave.init.template
 // such as Apache Freemarker
 class TemplateTextTransformer(
     private val basePackage: JavaPackage,
-    private val projectEnclaveClass: JavaClass,
-    private val conclaveVersion: String
+    private val projectEnclaveClass: JavaClass
 ) {
     fun transform(text: String): String = text
         .replace(templateEnclavePackage.name, basePackage.name)
         .replace(templateEnclaveClass.name, projectEnclaveClass.name)
-        .replace("{{ CONCLAVE_VERSION }}", conclaveVersion)
 }

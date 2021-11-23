@@ -2,7 +2,9 @@ package com.r3.conclave.init.cli
 
 import com.r3.conclave.init.ConclaveInit
 import com.r3.conclave.init.Language
+import com.r3.conclave.init.common.printBlock
 import com.r3.conclave.init.common.walkTopDown
+import com.r3.conclave.init.gradle.configureGradleProperties
 import com.r3.conclave.init.template.JavaClass
 import com.r3.conclave.init.template.JavaPackage
 import picocli.CommandLine
@@ -56,21 +58,6 @@ class ConclaveInitCli : Callable<Int> {
     )
     lateinit var target: Path
 
-    private val pathToSdkRepo: Path by lazy {
-        val conclaveInitURI = this::class.java.protectionDomain.codeSource.location.toURI()
-        val toolsDir = Paths.get(conclaveInitURI).parent
-        val sdkDir = toolsDir.parent
-        return@lazy sdkDir.resolve("repo").normalize()
-    }
-
-    @CommandLine.Option(
-        names = ["-s", "--sdk-repo"],
-        description = ["The path to the Conclave SDK repo, which will be copied into the target project.\n" +
-                "Default: /path/to/conclave-sdk/repo"],
-        converter = [PathConverter::class],
-    )
-    val sdkRepo: Path = pathToSdkRepo
-
 
     @CommandLine.Option(
         names = ["-l", "--language"],
@@ -79,39 +66,71 @@ class ConclaveInitCli : Callable<Int> {
     )
     val language: Language = Language.JAVA
 
+    @CommandLine.Option(
+        names = ["-g", "--configure-gradle"],
+        description = ["Attempt to configure the user-wide gradle properties. " +
+                "See https://docs.conclave.net/gradle-properties.html for more information.\n" +
+                "Default: \${DEFAULT-VALUE}"]
+    )
+    var configureGradle: Boolean = true
+
     override fun call(): Int {
-        validateSdkRepo()
         checkTargetDoesNotExist()
-        val conclaveVersion = getConclaveVersion(sdkRepo)
-        println(projectSummary())
-        ConclaveInit.createProject(language, basePackage, enclaveClass, target, sdkRepo, conclaveVersion)
+        if (configureGradle) configureGradle()
+        projectSummary().printBlock()
+        ConclaveInit.createProject(language, basePackage, enclaveClass, target)
         return 0
-    }
-
-    private fun validateSdkRepo() {
-        val sdkRepoErrorHelp = "Expected to find Conclave SDK Repo at " +
-                "$sdkRepo. Specify another directory via the --sdk-repo parameter. " +
-                "It should be the path to the `repo/` subdirectory of the Conclave SDK."
-
-        try {
-            check(sdkRepo.exists()) { "$sdkRepo does not exist. $sdkRepoErrorHelp" }
-            check(sdkRepo.isDirectory()) { "$sdkRepo is not a directory. $sdkRepoErrorHelp" }
-            check(sdkRepo.resolve("com").isDirectory()) { "$sdkRepo is not a Maven repository. $sdkRepoErrorHelp" }
-        } catch (e: IllegalStateException) {
-            println(e.message)
-            exitProcess(1)
-        }
     }
 
     private fun checkTargetDoesNotExist() {
         if (target.exists()) {
-            println( "Target directory ${target.absolutePathString()} already exists. " +
-                        "Please delete the existing directory or specify a different target." )
+            """
+            ERROR: Target directory ${target.absolutePathString()} already exists. Please
+            delete the existing directory or specify a different target.
+            """.printBlock()
+
             exitProcess(1)
         }
     }
 
-    private fun getConclaveVersion(sdkRepo: Path): String {
+    private fun configureGradle() {
+        val conclaveRepo = getPathToSdkRepo()
+        if (sdkRepoIsValid(conclaveRepo)) {
+            val conclaveVersion = getConclaveVersion(conclaveRepo)
+            configureGradleProperties(conclaveRepo, conclaveVersion)
+        }
+    }
+
+    private fun getPathToSdkRepo(): Path {
+        val conclaveInitURI = this::class.java.protectionDomain.codeSource.location.toURI()
+        val toolsDir = Paths.get(conclaveInitURI).parent
+        val sdkDir = toolsDir.parent
+        return sdkDir.resolve("repo").normalize()
+    }
+
+    private fun sdkRepoIsValid(sdkRepo: Path): Boolean {
+        val helpPrefix = """
+        WARNING: Could not detect Conclave SDK Repo. Was `conclave-init.jar` moved out
+        of the tools directory? Expected directory $sdkRepo
+        """.trimIndent()
+
+        try {
+            check(sdkRepo.exists()) { "$helpPrefix does not exist." }
+            check(sdkRepo.isDirectory()) { "$helpPrefix is not a directory." }
+            check(sdkRepo.resolve("com").isDirectory()) { "$helpPrefix is not a Maven repository." }
+        } catch (e: IllegalStateException) {
+            println(e.message)
+            """
+            Gradle must be configured manually or the generated project may not compile.
+
+            See https://docs.conclave.net/gradle-properties.html for more information.
+            """.printBlock()
+            return false
+        }
+        return true
+    }
+
+    private fun getConclaveVersion(sdkRepo: Path): String? {
         val jarsFromRepo = sdkRepo.walkTopDown().filter { it.extension == "jar" }
         val conclaveVersion = jarsFromRepo.firstNotNullOfOrNull { jar ->
             val manifest = jar.inputStream().use { JarInputStream(it).manifest }
@@ -119,12 +138,14 @@ class ConclaveInitCli : Callable<Int> {
         }
 
         if (conclaveVersion == null) {
-            System.err.println(
-                "Error: could not detect Conclave version of repo $sdkRepo. Please add it manually " +
-                        "to the gradle.properties file in the root of the generated project."
-            )
+            """
+            WARNING: could not detect Conclave version of repo $sdkRepo. Please edit the value
+            manually in gradle.properties.
+            
+            See https://docs.conclave.net/gradle-properties.html for more information.
+            """.printBlock()
 
-            return ""
+            return null
         }
 
         return conclaveVersion
@@ -148,5 +169,11 @@ internal class JavaClassConverter : CommandLine.ITypeConverter<JavaClass> {
 }
 
 internal class PathConverter : CommandLine.ITypeConverter<Path> {
-    override fun convert(value: String): Path = Paths.get(value).normalize()
+    override fun convert(value: String): Path = Paths.get(value.replaceTildeWithHome()).normalize()
+
+    private fun String.replaceTildeWithHome(): String {
+        return if (startsWith("~")) {
+            replaceFirst("~", System.getProperty("user.home"))
+        } else this
+    }
 }

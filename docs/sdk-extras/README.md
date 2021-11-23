@@ -17,7 +17,7 @@ as what you will build if you follow the tutorial in the Conclave docs.
 The `cordapp/` directory is a sample that shows how to integrate Conclave with
 a Corda CorDapp.
 
-the `tools/` directory contains the the Conclave Init tool, which automates the
+The `tools/` directory contains the Conclave Init tool, which automates the
 creation of new Conclave projects. Run `java -jar tools/conclave-init.jar
 --help` or see the docs for more information.
 

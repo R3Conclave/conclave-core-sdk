@@ -22,7 +22,7 @@ sleep 5
 for ((i=0;i<2;i++));
 do
     $JAVA_HOME/bin/java -jar client/build/libs/client.jar \
-        "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" \
+        "S:0000000000000000000000000000000000000000000000000000000000000000 S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" \
         "reverse me!"
 done
 # kill the web server process
@@ -39,14 +39,19 @@ pushd build/distributions/conclave-sdk-*/
 conclaveVersion=${PWD#*conclave-sdk-}
 conclaveRepo=$PWD/repo
 
+
 # create java project
 $JAVA_HOME/bin/java -jar tools/conclave-init.jar \
   --enclave-class-name "MegaEnclave" \
   --package "com.megacorp" \
-  --target "mega-project"
+  --target "mega-project" \
+  --configure-gradle=false
 
 # run the unit tests of the new project
 pushd mega-project
+
+echo -e "\nconclaveRepo=$conclaveRepo" >> gradle.properties
+echo -e "\nconclaveVersion=$conclaveVersion" >> gradle.properties
 ./gradlew test
 
 # run host and client
@@ -66,10 +71,15 @@ $JAVA_HOME/bin/java -jar tools/conclave-init.jar \
   --enclave-class-name "MegaEnclave" \
   --package "com.megacorp" \
   --target "mega-kotlin-project" \
-  --language kotlin
+  --language kotlin \
+  --configure-gradle=false
+
 
 # run unit tests
 pushd mega-kotlin-project
+
+echo -e "\nconclaveRepo=$conclaveRepo" >> gradle.properties
+echo -e "\nconclaveVersion=$conclaveVersion" >> gradle.properties
 ./gradlew test
 
 # run the host and client

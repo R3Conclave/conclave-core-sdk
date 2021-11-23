@@ -66,9 +66,7 @@ internal class TestCreateProject {
         val basePackage = JavaPackage("com.megacorp")
         val enclaveClass = JavaClass("MegaEnclave")
 
-        val conclaveRepo = createTempDirectory().apply { resolve("repo").createDirectories() }
-
-        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir, conclaveRepo, "1.2-SNAPSHOT")
+        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir)
 
         val expectedChildren = listOf(
             "README.md",
@@ -78,7 +76,6 @@ internal class TestCreateProject {
             "gradlew",
             "build.gradle",
             "settings.gradle",
-            "conclave-repo",
             "enclave",
             "host",
             "client",
