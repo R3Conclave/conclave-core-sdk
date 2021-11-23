@@ -125,6 +125,7 @@ debug, or release. This section describes how to build and run the sample in the
 [system requirements](enclave-modes.md#system-requirements) for your desired mode.**
 
 ### Build the enclave in other modes
+
 The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mode) such that you can supply the mode
 via the `enclaveMode` Gradle parameter. For example, you could compile the host for simulation mode with the command
 === "Windows"
@@ -150,11 +151,12 @@ See [Enclave signing](signing.md) for more information on external signing.
 You can generate `host-release.jar` like this:
 
 === "Windows"
-    ```bash
+    ```
     // Firstly, build the signing material:
     gradlew.bat prepareForSigning -PenclaveMode=release
 
     // Generate a signature from the signing material. The password for the sample external key is '12345'
+    // Note: you may need to install openssl before you can run this command
     openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
 
     // Finally build the signed enclave:
@@ -245,6 +247,40 @@ You can generate `host-release.jar` like this:
     This platform does not support hardware enclaves: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the CPU in this system
     ```
     Don't worry, you will still be able to use simulation mode even if you see this message.
+
+### Run the client in other modes
+The client build is independent of the mode. The only difference is that the enclave will have a different signing key
+when you are not using mock mode, which will be reflected in the Enclave Constraint provided to the client.
+
+When you run the host, you should see the new signing key in the output: 
+```bash hl_lines="3"
+[main] INFO com.r3.conclave.host.web.EnclaveWebController - Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
+  - Mode: MOCK
+  - Code signing key hash: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+  - Public signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
+  - Public encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
+  - Product ID: 1
+  - Revocation level: 0
+```
+
+If you haven't built the client already, build it the same way as you would for mock mode
+
+
+=== "Windows"
+    ```bash
+    gradlew.bat :client:shadowJar
+    ```
+=== "MacOS / Linux"
+    ```bash
+    ./gradlew :client:shadowJar
+    ```
+
+Then run the client using the signing key from the host's attestation report
+```bash
+java -jar client/build/libs/client.jar \
+  "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" \
+  reverse-me
+```
 
 ## Next steps
 Now you know how to build and run the hello world sample, see how it is implemented in [Writing hello world](writing-hello-world.md).
