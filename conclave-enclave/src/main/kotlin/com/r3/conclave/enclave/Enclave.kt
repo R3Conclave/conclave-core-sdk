@@ -210,9 +210,6 @@ abstract class Enclave {
         return if (this is InternalEnclave) {
             this.internalInitialise(env, upstream)
         } else {
-            check (!(env.enablePersistentMap && threadSafe)) {
-                "The persistent map is not available in multi-threaded enclaves."
-            }
             initCryptography()
             /*
             Here we should not add any code that throws exceptions. This is because the handler mechanisms haven't
@@ -451,6 +448,9 @@ Received: $attestationReportBody"""
                 Specifically, setupFileSystems can throw an exception in case the Host does not provide a
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
+                check (!(env.enablePersistentMap && enclave.threadSafe)) {
+                    "The persistent map is not available in multi-threaded enclaves."
+                }
 
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
                 val sealedStateBlob = input.getNullable { getRemainingBytes() }
