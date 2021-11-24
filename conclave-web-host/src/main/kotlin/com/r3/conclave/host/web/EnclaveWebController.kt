@@ -112,11 +112,20 @@ class EnclaveWebController {
      * sealed state file might not exist yet, return null then
      */
     private fun loadSealedState(): ByteArray? {
-        val sealedStateFile = this.sealedStateFile ?: return null
-        if (!sealedStateFile.exists()) return null
-        DataInputStream(sealedStateFile.inputStream()).use { stream ->
-            validateSealedStateFileHeader(stream.readIntLengthPrefixBytes(), sealedStateFile)
-            return stream.readBytes()
+        val sealedStateFile = this.sealedStateFile
+
+        if (sealedStateFile == null) {
+            logger.info("The sealed state file has not been provided. " +
+                    "The enclave will not be able to use the persistent map if it has been enabled.")
+            return null
+        } else if (!sealedStateFile.exists()) {
+            //  If the file has been provided, but it is not initialized yet, no warnings are required
+            return null
+        } else {
+            DataInputStream(sealedStateFile.inputStream()).use { stream ->
+                validateSealedStateFileHeader(stream.readIntLengthPrefixBytes(), sealedStateFile)
+                return stream.readBytes()
+            }
         }
     }
 
