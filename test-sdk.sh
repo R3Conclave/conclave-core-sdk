@@ -13,7 +13,7 @@ pushd build/distributions/conclave-sdk-*/hello-world
 # just run unit test
 ./gradlew --stacktrace $gradle_args test
 # build the host web server and client
-./gradlew -q $gradle_args host:shadowJar client:shadowJar
+./gradlew -q $gradle_args host:bootJar client:shadowJar
 # start the web server
 $JAVA_HOME/bin/java -jar $(ls host/build/libs/host-*.jar) & _PID=$!
 # wait for the web server to be ready

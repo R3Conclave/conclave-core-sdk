@@ -2,7 +2,12 @@
 A template project to use as a starting point for Conclave applications.
 
 Useful commands:
-Build the host and client:
+Build the host:
+```bash
+./gradlew bootJar
+```
+
+Build the client:
 ```bash
 ./gradlew shadowJar
 ```

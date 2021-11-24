@@ -28,14 +28,14 @@ cd /path/to/conclave/sdk/hello-world
 
 The sample app, like all Conclave apps, consists of an
 [an enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
-which we provide. We can generate a fat JAR for the host and client using the `:shadowJar` task.
+which we provide. We can generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks, respectively.
 === "Windows"
     ```bash
-    gradlew.bat :host:shadowJar :client:shadowJar
+    gradlew.bat :host:bootJar :client:shadowJar
     ```
 === "MacOS / Linux"
     ```bash
-    ./gradlew :host:shadowJar :client:shadowJar
+    ./gradlew :host:bootJar :client:shadowJar
     ```
 
 !!! note
@@ -130,18 +130,18 @@ The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mo
 via the `enclaveMode` Gradle parameter. For example, you could compile the host for simulation mode with the command
 === "Windows"
     ```bash
-    gradlew.bat :host:shadowJar -PenclaveMode=simulation
+    gradlew.bat :host:bootJar -PenclaveMode=simulation
     ```
 === "MacOS / Linux"
     ```bash
-    ./gradlew :host:shadowJar -PenclaveMode=simulation
+    ./gradlew :host:bootJar -PenclaveMode=simulation
     ```
 
 This would generate the host JAR at `host/build/libs/host-simulation.jar`.
 
 !!! tip
-    If working from inside IntelliJ, find the shadowJar task of your host project from the Gradle menu on the right
-    hand side. Modify run configuration of this task by adding the -PenclaveMode=<MODE> flag to the arguments section.
+    If working from inside IntelliJ, find the bootJar task of your host project from the Gradle menu on the right-hand 
+    side. Modify run configuration of this task by adding the -PenclaveMode=<MODE> flag to the arguments section.
     Now you can run the task.
 
 For **release mode**, the sample app has been configured (in the `build.gradle` of the `enclave` subproject) to use
@@ -160,7 +160,7 @@ You can generate `host-release.jar` like this:
     openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
 
     // Finally build the signed enclave:
-    gradlew.bat :host:shadowJar -PenclaveMode="release"
+    gradlew.bat :host:bootJar -PenclaveMode="release"
     ```
 === "MacOS / Linux"
     ```bash
@@ -171,7 +171,7 @@ You can generate `host-release.jar` like this:
     openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
 
     // Finally build the signed enclave:
-    ./gradlew :host:shadowJar -PenclaveMode="release"
+    ./gradlew :host:bootJar -PenclaveMode="release"
     ```
 
 
