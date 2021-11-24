@@ -14,7 +14,7 @@ If you get stuck, join our [discord server](https://discord.com/invite/dDaBGqGPr
 
 ## Prerequisites
 
-* You need a Java 8 or 11 JDK (your choice) installed in order to build and run the app.
+* You need JDK 11 installed in order to build and run the app.
 * You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
 * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md)
   and [architecture overview](architecture.md).
