@@ -170,7 +170,7 @@ subprojects {
 
 import org.jetbrains.dokka.gradle.DokkaTask
 tasks.withType(DokkaTask).configureEach {
-    moduleName.set("Conclave $conclave_version")
+    moduleName.set("Conclave")
     dokkaSourceSets {
         register("conclave") {
             displayName.set("Conclave")

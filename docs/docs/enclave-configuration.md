@@ -72,7 +72,7 @@ _Default: None. You must provide a value_
 
 The revocation level should be incremented whenever a weakness or vulnerability in the enclave code is discovered
 and fixed. Doing this will enable clients to avoid connecting to old, compromised enclaves. The client can set an
-[`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) that specifies the required minimum 
+[`EnclaveConstraint`](/api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum 
 revocation level when loading an enclave.
 
 The revocation level in an enclave affects the keys that are generated for 'sealing' data in an enclave. 

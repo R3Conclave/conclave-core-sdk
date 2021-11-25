@@ -365,7 +365,7 @@ And with that, we're done configuring the module.
 ## Create a new subclass of `Enclave`
 
 Enclaves are similar to standalone programs and as such have an equivalent to a "main class". This class must be a
-subclass of [`Enclave`](/api/com/r3/conclave/enclave/Enclave.html).
+subclass of [`Enclave`](api/-conclave/com.r3.conclave.enclave/-enclave/index.html).
 
 Create your enclave class:
 
@@ -598,11 +598,11 @@ The client app will do three things:
 1. Send it the command line arguments as a string to reverse and get back the answer, using encrypted mail.
 
 Actually, the first two steps are done for you when using an
-[`EnclaveClient`](/api/com/r3/conclave/client/EnclaveClient.html) object. `EnclaveClient` handles the encryption and 
+[`EnclaveClient`](/api/-conclave/com.r3.conclave.client/-enclave-client/index.html) object. `EnclaveClient` handles the encryption and 
 decryption of Mail for you and provides a simple interface for sending and receiving Mail. However, it doesn't know 
-_how_ to transport the mail, which is where [`EnclaveTransport`](/api/com/r3/conclave/client/EnclaveTransport.html) 
+_how_ to transport the mail, which is where [`EnclaveTransport`](/api/-conclave/com.r3.conclave.client/-enclave-transport/index.html) 
 comes in. Since we're connecting to the host web server, we'll be using
-[`WebEnclaveTransport`](/api/com/r3/conclave/client/web/WebEnclaveTransport.html) as our transport.
+[`WebEnclaveTransport`](/api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) as our transport.
 
 Copy the client implementation below into your project:
 ```java
@@ -667,7 +667,7 @@ One way to do this is by inspecting the properties on the `EnclaveInstanceInfo` 
 works fine, but testing an `EnclaveInstanceInfo` is a common pattern in enclave programming, so we provide an API to
 do it for you.
 
-The [`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) class takes an `EnclaveInstanceInfo` and
+The [`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) class takes an `EnclaveInstanceInfo` and
 performs some matching against it. A constraint object can be built in code, or it can be loaded from a small domain
 specific language encoded as a one-line string. The string form is helpful if you anticipate frequent upgrades that
 should be whitelisted or other frequent changes to the acceptable enclave, as it can be easily put into a

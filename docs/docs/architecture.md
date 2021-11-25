@@ -79,7 +79,7 @@ from whom they obtain the `EnclaveInstanceInfo` is the untrusted host.
 
 The client tests the `EnclaveInstanceInfo` against a set of _constraints_, depending on how flexible they want to be 
 about software upgrades to the enclave. Constraints are represented by an
-[`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) object, which can be read from/written to
+[`EnclaveConstraint`](/api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object, which can be read from/written to
 a small domain specific language suitable for embedding in config files, command line options and so on. A
 constraint may specify that a specific set of code hashes is required i.e. every version is whitelisted and no
 upgrade is possible until the constraint is adjusted. Or, it may specify a set of allowed signing keys, enabling
