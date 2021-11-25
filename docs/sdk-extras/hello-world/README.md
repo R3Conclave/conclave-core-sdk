@@ -1,23 +1,26 @@
-## Conclave Sample
+# Conclave Hello World
 
 This is a simple app using the Conclave API. It is licensed under the Apache 2 license, and therefore you may 
 copy/paste it to act as the basis of your own commercial or open source apps.
 
-# How to run
+## How to run
 
 Start the host on a Linux system, which will build the enclave and host:
 
-```
-./gradlew host:run --args="--sealed.state.file=/tmp/hello-world-sealed-state"
+```bash
+./gradlew host:bootJar
+java -jar host/build/libs/host-mock.jar
 ```
 
 It should print out some info about the started enclave. Then you can use the client to send it strings to reverse:
 
-```
-./gradlew client:run --args="reverse me!"
+```bash
+./gradlew client:shadowJar
+java -jar client/build/libs/client.jar "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" "reverse me"
 ```
 
-### Note on conclave modes
-By default, this sample will build and run in [mock mode](https://docs.conclave.net/mockmode.html), and so won't use a
-secure enclave. For a list of modes and their properties, see [here](https://docs.conclave.net/enclave-modes.html).
-For instructions on how to set the mode at build time, see [here](https://docs.conclave.net/running-hello-world.html#beyond-mock-mode)
+## Next step
+
+To understand what the first string parameter to the client is or why the host jar has "mock" in the file name then 
+head over to our [online docsite](https://docs.conclave.net/running-hello-world.html). A local copy is also 
+available in the SDK zip.
