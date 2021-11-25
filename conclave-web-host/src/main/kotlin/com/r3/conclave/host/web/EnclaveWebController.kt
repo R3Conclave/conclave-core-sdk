@@ -199,7 +199,7 @@ class EnclaveWebController {
             mockConfiguration.codeHash = SHA256Hash.parse(codeHash!!)
         }
         if (codeSigningKeyHash != null) {
-            SHA256Hash.parse(codeSigningKeyHash!!)
+            mockConfiguration.codeSigningKeyHash = SHA256Hash.parse(codeSigningKeyHash!!)
         }
         productID?.let { mockConfiguration.productID = it }
         revocationLevel?.let { mockConfiguration.revocationLevel = it }
