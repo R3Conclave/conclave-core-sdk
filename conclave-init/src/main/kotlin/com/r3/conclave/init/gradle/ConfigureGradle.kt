@@ -3,7 +3,6 @@ package com.r3.conclave.init.gradle
 import com.r3.conclave.init.common.equals
 import com.r3.conclave.init.common.printBlock
 import java.nio.file.Path
-import java.util.*
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.appendLines
 import kotlin.io.path.createDirectories
@@ -42,7 +41,7 @@ fun configureGradleProperties(expectedConclaveRepo: Path, expectedConclaveVersio
     }
 
     if (setConclaveRepo) {
-        gradlePropertiesFile.path.appendLines(listOf("conclaveRepo=$expectedConclaveRepo"))
+        gradlePropertiesFile.path.appendLines(listOf("conclaveRepo=${expectedConclaveRepo.toStringWithForwardSlashes()}"))
     }
 
     if (setConclaveVersion) {
@@ -53,6 +52,10 @@ fun configureGradleProperties(expectedConclaveRepo: Path, expectedConclaveVersio
     Configuration of ${gradlePropertiesFile.path.absolutePathString()} is complete.
     """.printBlock()
 }
+
+
+// gradle.properties always requires forward slashes in paths, even on Windows
+fun Path.toStringWithForwardSlashes(): String = toString().replace("\\", "/")
 
 
 fun askForPermission(gradlePropertiesFile: Path): Boolean {
