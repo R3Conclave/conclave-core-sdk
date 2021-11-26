@@ -24,8 +24,12 @@ We plan to offer more guidance on this in the future. Until then consider:
 
 The elliptic curve used is Curve25519 for encryption and Ed25519 for signing. The symmetric cipher is AES256/GCM. 
 The hash function is SHA256. The [Noise protocol](https://noiseprotocol.org/) is used to perform Diffie-Hellman key agreement and set up the 
-ciphering keys. As these algorithms represent the state of the art and are widely deployed on the web, there are
-no plans to support other algorithms or curves at this time.
+ciphering keys. 
+
+For reasons of implementation robustness and avoidance of side channel attacks, this is the only algorithm supported by Conclave Mail.
+If you want to use other algorithms for some reason you would need to implement your own messaging system on top of
+host-local calls. Alternatively, use that other algorithm to encrypt/decrypt a Curve25519 private key.
+
 
 ### Which communication channels exist to/from the enclave?
  

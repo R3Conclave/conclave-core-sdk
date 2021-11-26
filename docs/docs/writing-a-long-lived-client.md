@@ -47,6 +47,6 @@ if (providedConstraint != null && loadedConstraint != providedConstraint) {
 Files.write(stateFile, enclaveClient.save())
 ```
 
-Notice how an [enclave constraint](writing-hello-world.md#constraints) is not required when loading the state from the file.
+Notice how an [enclave constraint](constraints.md) is not required when loading the state from the file.
 In general, we assume that the constraint will not change for a long-lived client. The constraint can always be
 updated using `EnclaveClient.setEnclaveConstraint()`.

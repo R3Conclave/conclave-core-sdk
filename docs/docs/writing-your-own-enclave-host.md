@@ -257,7 +257,7 @@ The constraints are specified using a simple string representation and the check
 * `SEC:INSECURE` - Allow enclaves with a security level of INSECURE or higher.
 
 !!!note
-    These constraints will only work in mock mode and do not provide any security guarantees. The process for selecting these parameters in a general way is beyond the scope of this tutorial, and will not be detailed here. For more information, please see [here](writing-hello-world.md#constraints).
+    These constraints will only work in mock mode and do not provide any security guarantees. The process for selecting these parameters in a general way is beyond the scope of this tutorial, and will not be detailed here. For more information, please see [Constraints](constraints.md).
 
 ## Enclave-Client Communication
 

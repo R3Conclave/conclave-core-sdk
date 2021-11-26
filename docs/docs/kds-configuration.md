@@ -89,7 +89,7 @@ conclave {
 Taking a look at the configuration above, we first have a `kds {}` section which
 contains all KDS related configuration. This section contains the
 `kdsEnclaveConstraint` property, which defines the
-[enclave constraints](writing-hello-world.md#constraints) to use during
+[enclave constraints](constraints.md) to use during
 attestation when getting a key from the KDS enclave.
 
 Next we have the `keySpec {}` section. This section contains parameters which
@@ -108,7 +108,7 @@ The key policy constraint can be thought of as similar to the
 `EnclaveConstraint` object used by clients during attestation to verify an
 `EnclaveInstanceInfo` object received from a remote enclave, and can be
 configured in much the same way by setting the `constraint` property using the
-[enclave constraint DSL](writing-hello-world.md#constraints).
+[enclave constraint DSL](constraints.md).
 In this case however, the KDS imposes the key policy constraint on the
 `EnclaveInstanceInfo` of the requesting enclave before releasing a key to it.
 

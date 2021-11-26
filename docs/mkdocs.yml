@@ -26,6 +26,7 @@ nav:
         - Writing a long-lived client: writing-a-long-lived-client.md
     - Reference:
         - Enclave modes: enclave-modes.md
+        - Enclave constraints: constraints.md
         - Enclave persistence: persistence.md
         - Key Derivation Service configuration: kds-configuration.md
         - Threads: threads.md

@@ -22,7 +22,7 @@ URL of the key derivation service to use.
 Timeout to use when attempting to contact the key derivation service enclave.
 
 ## REST API:
-The REST API consists of several endpoints, detailed below. When using this API, clients begin an interaction with the enclave by fetching an attestation. The client will then use the Conclave SDK to examine the attestation information and make a decision as to whether or not to proceed (see [enclave-constraints](writing-hello-world.md#constraints)). If the enclave is deemed to be trusted by the client, then an encryption key is derived from the attestation data, and the client can continue to interact with the enclave via the host by delivering and receiving encrypted messages using the the `/deliver-mail` and `/poll-mail` endpoints. For code examples, see the hello-world sample bundled with the SDK.
+The REST API consists of several endpoints, detailed below. When using this API, clients begin an interaction with the enclave by fetching an attestation. The client will then use the Conclave SDK to examine the attestation information and make a decision whether to proceed (see [enclave-constraints](constraints.md)). If the enclave is deemed to be trusted by the client, then an encryption key is derived from the attestation data, and the client can continue to interact with the enclave via the host by delivering and receiving encrypted messages using the the `/deliver-mail` and `/poll-mail` endpoints. For code examples, see the hello-world sample bundled with the SDK.
 
 ### `/attestation (GET)`
 This endpoint accepts GET requests and returns the serialized attestation data-structure as a block of bytes.

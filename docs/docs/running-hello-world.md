@@ -100,22 +100,28 @@ which has been produced by the following sequence of events:
 9. The enclave passed the encrypted message to the host, was sent back to the client as an HTTP response to the same
    request.
 
-!!! note
-    The `--constraint` parameter of the client command-line interface contains the
-    [Enclave Constraint](writing-hello-world.md#constraints), which defines the 
-    properties of an acceptable enclave. This includes the signing key 
-    `S:0000000000000000000000000000000000000000000000000000000000000000`, which we saw in the host output in the previous
-    section.
-
-    Try rerunning the command with a different code signer:
-    `"S:2222222222222222222222222222222222222222222222222222222222222222 PROD:1 SEC:INSECURE"`
-    
-    You should see the following error:
-    > com.r3.conclave.common.InvalidEnclaveException: Enclave code signer does not match any of the acceptable code signers.
-    (key hash 0000000000000000000000000000000000000000000000000000000000000000 vs acceptable
-    2222222222222222222222222222222222222222222222222222222222222222)
-
 Congratulations on running your first enclave!
+
+### Enclave Constraint
+The `--constraint` parameter of the client command-line interface defines the 
+properties of an acceptable enclave. This includes the signing key 
+```
+S:0000000000000000000000000000000000000000000000000000000000000000
+```
+which we saw in the host output in the previous
+section.
+
+Try rerunning the command with a different code signer:
+```
+"S:2222222222222222222222222222222222222222222222222222222222222222 PROD:1 SEC:INSECURE"
+```
+
+You should see the following error:
+> com.r3.conclave.common.InvalidEnclaveException: Enclave code signer does not match any of the acceptable code signers.
+(key hash 0000000000000000000000000000000000000000000000000000000000000000 vs acceptable
+2222222222222222222222222222222222222222222222222222222222222222)
+
+For more information on how to choose a constraint, see [Enclave constraints](constraints.md).
 
 
 ## Beyond mock mode
