@@ -7,7 +7,6 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.EnclaveHostService
 import com.r3.conclave.host.internal.createMockHost
-import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException

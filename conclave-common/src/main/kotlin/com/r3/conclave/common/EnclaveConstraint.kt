@@ -226,11 +226,15 @@ class EnclaveConstraint {
          *
          * @param descriptor String specifying enclave constraints by way of the conclave constraints DSL.
          *
-         * @throws IllegalStateException If any criteria are in an incorrect state. For example, [productID] not specified
-         * when [acceptableSigners] has.
+         * @param checkValidity Boolean, when set to true, perform a validity check after parsing the descriptor.
+         *
+         * @throws IllegalArgumentException If an error occurs when parsing the descriptor.
+         *
+         * @throws IllegalStateException If criteria are in an incorrect state. For example, [productID] not specified
+         * when [acceptableSigners] has. This only occurs if checkValidity is set to true.
          */
         @JvmStatic
-        fun parse(descriptor: String): EnclaveConstraint {
+        fun parse(descriptor: String, checkValidity: Boolean): EnclaveConstraint {
             val keyValues = descriptor
                 .splitToSequence(' ')
                 .filter { it.isNotEmpty() }
@@ -258,8 +262,51 @@ class EnclaveConstraint {
             keyValues["EXPIRE"]?.let {
                 constraint.maxAttestationAge = Period.parse(it.single())
             }
-            constraint.checkCriteriaValid()
+            if (checkValidity) {
+                constraint.checkCriteriaValid()
+            }
             return constraint
+        }
+
+        /**
+         * Parses a Conclave specific textual constraint format designed to be compact and conveniently embeddable in
+         * config files, markup, source code etc.
+         *
+         * It consists of space separated tokens. Each token is a key:value pair. The following keys are defined:
+         *
+         * * `PROD:` the value of [productID].
+         * * `C:` an entry in the [acceptableCodeHashes] set.
+         * * `S:` an entry in the [acceptableSigners] set.
+         * * `REVOKE:` the value of [minRevocationLevel], optional
+         * * `SEC:` whether to accept debug/stale enclave hosts or not, optional.
+         * * `EXPIRE:` expiry duration, check if the attestation is older than the specified duration, optional.
+         *             The duration string uses the ISO-8601 duration format.
+         *
+         * `SEC` is optional. It may take values of `INSECURE`, `STALE` or `SECURE`. See the documentation for
+         * [EnclaveSecurityInfo.Summary] for information on what these mean. The default is `STALE`, which optimises for uptime.
+         *
+         * An example descriptor might look like this:
+         *
+         * `PROD:10 S:bb53e85cb86e7f1e2b7d97620e25d8d0a250c8fdbfe9b7cddf940bd08b646c88`
+         *
+         * which means, accept any enclave of product ID 10 signed by the key `bb53...`
+         *
+         * Alternatively:
+         *
+         * `C:2797b9581b9377d41a8ffc45990335048e79c976a6bbb4e7692ecad699a55317 C:f96839b2159ecf8ea80cd3c1eb6be7160b05bc0d701b115b64b7e0725d15adee`
+         *
+         * says, accept if the code/measurement hash is either `2797...` or `f968....`
+         *
+         * @param descriptor String specifying enclave constraints by way of the conclave constraints DSL.
+         *
+         * @throws IllegalArgumentException If an error occurs when parsing the descriptor.
+         *
+         * @throws IllegalStateException If criteria are in an incorrect state. For example, [productID] not specified
+         * when [acceptableSigners] has.
+         */
+        @JvmStatic
+        fun parse(descriptor: String): EnclaveConstraint {
+            return parse(descriptor, true);
         }
     }
 }

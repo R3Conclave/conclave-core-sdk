@@ -86,7 +86,7 @@ class NativeEnclaveEnvironment(enclaveProperties: Properties) : EnclaveEnvironme
             val enclave =
                     enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }
                             .newInstance()
-            val env = NativeEnclaveEnvironment(loadEnclaveProperties(enclaveClass, false))
+            val env = NativeEnclaveEnvironment(loadEnclaveProperties(enclaveClass, false, null))
             return initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
         }
     }

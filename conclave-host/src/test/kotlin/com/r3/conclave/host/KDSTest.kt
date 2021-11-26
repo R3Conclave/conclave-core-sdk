@@ -1,13 +1,8 @@
 package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.conclave.common.EnclaveConstraint
-import com.r3.conclave.common.EnclaveSecurityInfo
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
-import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.kds.KDSKeySpecification
-import com.r3.conclave.enclave.kds.PolicyConstraint
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.host.kds.KDSConfiguration
 import com.sun.net.httpserver.HttpHandler
@@ -21,20 +16,24 @@ import java.io.Closeable
 import java.io.IOException
 import java.net.*
 import java.time.Duration
+import java.util.*
 
 class KDSTest {
     companion object {
-        private val POLICY_CONSTRAINT = PolicyConstraint().apply {
-            useOwnCodeHash()
-            useOwnCodeSignerAndProductID()
-            enclaveConstraint.minSecurityLevel = EnclaveSecurityInfo.Summary.INSECURE
+        private const val PORT = 8091
+
+        // Override enclave properties to enable the KDS
+        private val ENCLAVE_PROPERTIES_OVERRIDE = Properties().apply {
+            setProperty("kds.configurationPresent", "true")
+            setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+            setProperty("kds.keySpec.masterKeyType", "debug")
+            setProperty("kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
+            setProperty("kds.keySpec.policyConstraint.useOwnCodeHash", "true")
+            setProperty("kds.keySpec.policyConstraint.constraint", "SEC:INSECURE")
         }
 
-        private const val PORT = 8091
-        val KDS_KEY_SPECIFICATION = KDSKeySpecification(MasterKeyType.DEBUG, POLICY_CONSTRAINT)
-
         private fun mockHost(): EnclaveHost {
-            return createMockHost(KDSConfiguredEnclave::class.java, null)
+            return createMockHost(KDSConfiguredEnclave::class.java, null, ENCLAVE_PROPERTIES_OVERRIDE)
         }
 
         private fun httpServer(httpHandler: HttpHandler): Closeable {
@@ -151,16 +150,5 @@ class KDSTest {
         }
     }
 
-    class KDSConfiguredEnclave : Enclave() {
-        companion object {
-            private val kdsConfiguration = initializationConfiguration()
-            private fun initializationConfiguration(): com.r3.conclave.enclave.kds.KDSConfiguration {
-                val kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-                return com.r3.conclave.enclave.kds.KDSConfiguration(KDS_KEY_SPECIFICATION, kdsEnclaveConstraint)
-            }
-        }
-
-        override val kdsConfig: com.r3.conclave.enclave.kds.KDSConfiguration
-            get() = kdsConfiguration
-    }
+    class KDSConfiguredEnclave : Enclave()
 }

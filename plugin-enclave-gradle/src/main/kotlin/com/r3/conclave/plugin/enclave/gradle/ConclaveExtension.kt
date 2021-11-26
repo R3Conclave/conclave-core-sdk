@@ -29,6 +29,8 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
+    val kds: KDSExtension = objects.newInstance(KDSExtension::class.java)
+
     fun release(action: Action<EnclaveExtension>) {
         action.execute(release)
     }
@@ -40,4 +42,43 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     fun simulation(action: Action<EnclaveExtension>) {
         action.execute(simulation)
     }
+
+    fun kds(action: Action<KDSExtension>) {
+        action.execute(kds)
+    }
+}
+
+open class KDSExtension @Inject constructor(objects: ObjectFactory) {
+    val kdsEnclaveConstraint: Property<String> = objects.property(String::class.java)
+
+    val keySpec: KeySpecExtension = objects.newInstance(KeySpecExtension::class.java)
+
+    fun keySpec(action: Action<KeySpecExtension>) {
+        action.execute(keySpec)
+    }
+
+    val isPresent: Boolean
+        get() = kdsEnclaveConstraint.isPresent or keySpec.isPresent
+}
+
+open class KeySpecExtension @Inject constructor(objects: ObjectFactory) {
+    val masterKeyType: Property<String> = objects.property(String::class.java)
+
+    val policyConstraint: PolicyConstraintExtension = objects.newInstance(PolicyConstraintExtension::class.java)
+
+    fun policyConstraint(action: Action<PolicyConstraintExtension>) {
+        action.execute(policyConstraint)
+    }
+
+    val isPresent: Boolean
+        get() = masterKeyType.isPresent or policyConstraint.isPresent
+}
+
+open class PolicyConstraintExtension @Inject constructor(objects: ObjectFactory) {
+    val useOwnCodeHash: Property<Boolean> = objects.property(Boolean::class.java)
+    val useOwnCodeSignerAndProductID: Property<Boolean> = objects.property(Boolean::class.java)
+    val constraint: Property<String> = objects.property(String::class.java)
+
+    val isPresent: Boolean
+        get() = useOwnCodeHash.isPresent or useOwnCodeSignerAndProductID.isPresent or constraint.isPresent
 }

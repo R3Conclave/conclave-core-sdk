@@ -15,12 +15,14 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
 import java.security.SecureRandom
+import java.util.*
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
     enclave: Enclave,
-    mockConfiguration: MockConfiguration?
-) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true)) {
+    mockConfiguration: MockConfiguration?,
+    enclavePropertiesOverride: Properties?
+) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true, enclavePropertiesOverride)) {
     companion object {
         private val secureRandom = SecureRandom()
 

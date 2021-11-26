@@ -16,7 +16,6 @@ import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
-import com.r3.conclave.enclave.kds.KDSConfiguration
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
@@ -155,8 +154,6 @@ abstract class Enclave {
      */
     protected open val threadSafe: Boolean get() = false
 
-    protected open val kdsConfig: KDSConfiguration? get() = null
-
     /**
      * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
      *
@@ -233,8 +230,12 @@ abstract class Enclave {
      */
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
-    private fun initialiseMock(upstream: Sender, mockConfiguration: MockConfiguration?): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, mockConfiguration), upstream)
+    private fun initialiseMock(
+            upstream: Sender,
+            mockConfiguration: MockConfiguration?,
+            enclavePropertiesOverride: Properties?
+    ): HandlerConnected<*> {
+        return initialise(MockEnclaveEnvironment(this, mockConfiguration, enclavePropertiesOverride), upstream)
     }
 
     /**
@@ -272,7 +273,7 @@ abstract class Enclave {
     }
 
     private fun getPrivateKey(): ByteArray {
-        if (kdsConfig != null) {
+        if (env.kdsConfiguration != null) {
             val kdsPrivateKey = kdsPrivateKey
             if (kdsPrivateKey != null) {
                 // The KDS key may be longer than 128 bit, so we only use the first 128 bit
@@ -335,7 +336,7 @@ abstract class Enclave {
         val sealedState = try {
             // Decrypt sealed state using KDS key when the Enclave has been configured to obtain one,
             // otherwise use the unsealing functions.
-            if (kdsConfig != null) {
+            if (env.kdsConfiguration != null) {
                 decryptSealedState(sealedStateBlob).plaintext
             } else {
                 env.unsealData(sealedStateBlob).plaintext
@@ -489,7 +490,7 @@ Received: $attestationReportBody"""
         private fun onKDSKeySpecificationRequest() {
             // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
             // defined. The host will see that we've not sent back a key spec.
-            val kdsKeySpec = enclave.kdsConfig?.kdsKeySpec ?: return
+            val kdsKeySpec = enclave.env.kdsConfiguration?.kdsKeySpec ?: return
 
             val policyConstraint = kdsKeySpec.policyConstraint.enclaveConstraint
 
@@ -522,7 +523,7 @@ Received: $attestationReportBody"""
         private fun onKDSResponse(input: ByteBuffer) {
             check(enclave.kdsEII == null) { "Enclave has already received a KDS private key" }
 
-            val kdsConfig = checkNotNull(enclave.kdsConfig) {
+            val kdsConfig = checkNotNull(enclave.env.kdsConfiguration) {
                 "Host is trying to send a KDS private key but enclave hasn't been configured for one"
             }
 
@@ -753,7 +754,7 @@ Received: $attestationReportBody"""
                 }
             }
 
-            val sealedState = if (kdsConfig != null) {
+            val sealedState = if (env.kdsConfiguration != null) {
                 encryptSealedState(PlaintextAndEnvelope(serialised))
             } else {
                 env.sealData(PlaintextAndEnvelope(serialised))

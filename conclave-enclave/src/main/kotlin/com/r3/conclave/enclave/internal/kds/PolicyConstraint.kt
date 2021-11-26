@@ -1,4 +1,4 @@
-package com.r3.conclave.enclave.kds
+package com.r3.conclave.enclave.internal.kds
 
 import com.r3.conclave.common.EnclaveConstraint
 

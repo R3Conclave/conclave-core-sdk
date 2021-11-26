@@ -9,10 +9,12 @@ import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.utilities.internal.EnclaveContext
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
+import java.util.*
 
 class MockEnclaveHandle<CONNECTION>(
         override val mockEnclave: Any,
         private val mockConfiguration: MockConfiguration?,
+        private val enclavePropertiesOverride: Properties?,
         hostHandler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
 
@@ -30,14 +32,14 @@ class MockEnclaveHandle<CONNECTION>(
             val enclaveClazz = Class.forName("com.r3.conclave.enclave.Enclave", true, mockEnclave.javaClass.classLoader)
 
             val initialiseMethod =
-                    enclaveClazz.getDeclaredMethod("initialiseMock", Sender::class.java, MockConfiguration::class.java)
+                    enclaveClazz.getDeclaredMethod("initialiseMock", Sender::class.java, MockConfiguration::class.java, Properties::class.java)
                             .apply { isAccessible = true }
 
             EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
                     .set(null, ThreadLocalEnclaveContext)
 
             initialiseMethod.invoke(
-                    mockEnclave, sender, mockConfiguration
+                    mockEnclave, sender, mockConfiguration, enclavePropertiesOverride
             ) as HandlerConnected<*>
         } catch (e: InvocationTargetException) {
             throw e.cause ?: e

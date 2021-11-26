@@ -49,6 +49,9 @@ conclave {
     reflectionConfigurationFiles.from("config.json")
     serializationConfigurationFiles.from("serialization.json")
 
+    kds {
+    }
+
     simulation {
     }
     debug {
@@ -278,6 +281,11 @@ default empty string, `"js"`, or `"python"` indicating the enclave should provid
 polyglot contexts, respectively.
 
 See [this page on running JavaScript/Python in your enclave](javascript-python.md) for details on how to use this setting.
+
+### kds
+
+This section contains the KDS (key derivation service) configuration settings. See
+[the page on KDS configuration](kds-configuration.md) for information regarding these settings.
 
 ### simulation, debug and release
 
