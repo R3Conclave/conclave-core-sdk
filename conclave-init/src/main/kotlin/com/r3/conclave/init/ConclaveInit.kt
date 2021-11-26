@@ -40,20 +40,35 @@ object ConclaveInit {
 
     private fun copyGradleWrapper(outputRoot: Path) {
         ZipResource(name = "/gradle-wrapper.zip", outputDir = outputRoot).extractFiles()
-        outputRoot.resolve("gradlew").makeExecutable()
+        makeGradlewExecutable(outputRoot)
     }
 
-    private fun Path.makeExecutable(): Path = setPosixFilePermissions(
-        setOf(
-            PosixFilePermission.OWNER_READ,
-            PosixFilePermission.OWNER_WRITE,
-            PosixFilePermission.OWNER_EXECUTE,
-            PosixFilePermission.GROUP_READ,
-            PosixFilePermission.GROUP_WRITE,
-            PosixFilePermission.GROUP_EXECUTE,
-            PosixFilePermission.OTHERS_READ,
-            PosixFilePermission.OTHERS_EXECUTE
-        )
-    )
-}
+    private fun makeGradlewExecutable(projectRoot: Path) {
+        // `setPosixFilePermissions` will throw UnsupportedOperationException if called on Windows.
+        // Windows uses `gradlew.bat` which doesn't need to be made executable, so we just return early.
+        if (System.getProperty("os.name").lowercase().contains("windows")) {
+            return
+        }
 
+        val gradlew = projectRoot.resolve("gradlew")
+
+        try {
+            gradlew.setPosixFilePermissions(
+                setOf(
+                    PosixFilePermission.OWNER_READ,
+                    PosixFilePermission.OWNER_WRITE,
+                    PosixFilePermission.OWNER_EXECUTE,
+                    PosixFilePermission.GROUP_READ,
+                    PosixFilePermission.GROUP_WRITE,
+                    PosixFilePermission.GROUP_EXECUTE,
+                    PosixFilePermission.OTHERS_READ,
+                    PosixFilePermission.OTHERS_EXECUTE
+                )
+            )
+        } catch (e: Exception) {
+            // This warning should be printed at the CLI level, but that would require adding an exception handler
+            // which propagates the error without causing the program to terminate.
+            println("WARNING: Could not make ./gradlew script executable. Try changing permissions manually with chmod.")
+        }
+    }
+}
