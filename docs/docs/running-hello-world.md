@@ -28,7 +28,8 @@ cd /path/to/conclave/sdk/hello-world
 
 The sample app, like all Conclave apps, consists of an
 [an enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
-which we provide. We can generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks, respectively.
+which is provided by the Conclave SDK. We can generate a fat JAR for the host and client using the `:bootJar` and
+`:shadowJar` tasks, respectively.
 === "Windows"
     ```bash
     gradlew.bat :host:bootJar :client:shadowJar

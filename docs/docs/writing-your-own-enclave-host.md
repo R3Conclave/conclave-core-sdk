@@ -6,10 +6,14 @@ By default, Conclave projects will use a built-in web host that manages these de
 
 ## Project Setup
 
-Start by creating a new Conclave project template using [conclave-init](conclave-init.md).
+Start by creating a new Conclave project template using [Conclave Init](conclave-init.md).
 
 ```bash
-java -jar <path to sdk>/tools/conclave-init.jar --package=com.example.tutorial --enclave-class-name=MyEnclave --target=<your project directory>
+java -jar <path to sdk>/tools/conclave-init.jar \
+    --package com.example.tutorial \
+    --enclave-class-name MyEnclave \
+    --target <your project directory>
+    
 cd <your project directory>
 ```
 

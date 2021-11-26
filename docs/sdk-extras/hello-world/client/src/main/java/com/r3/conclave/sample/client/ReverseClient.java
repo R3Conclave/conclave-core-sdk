@@ -10,18 +10,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 public class ReverseClient {
-    private static String DESCRIPTION = "Simple client that communicates with the ReverseEnclave using the web host.";
-    private static String USAGE_MESSAGE = "Usage: java -jar client.jar ENCLAVE_CONSTRAINT STRING_TO_REVERSE\n" +
-            "  ENCLAVE_CONSTRAINT: Enclave constraint which determines the enclave's identity and whether it's " +
-            "acceptable to use.\n" +
-            "  STRING_TO_REVERSE: The string to send to the enclave to reverse.";
-
-    private static String REVERSE_HOST_URL = "http://localhost:8080";
 
     public static void main(String... args) throws IOException, InvalidEnclaveException {
         if (args.length != 2) {
-            System.out.println(DESCRIPTION);
-            System.out.println(USAGE_MESSAGE);
+            System.out.println("Simple client that communicates with the ReverseEnclave using the web host.");
+            System.out.println("Usage: reverse-client ENCLAVE_CONSTRAINT STRING_TO_REVERSE\n" +
+                    "  ENCLAVE_CONSTRAINT: Enclave constraint which determines the enclave's identity and whether it's " +
+                    "acceptable to use.\n" +
+                    "  STRING_TO_REVERSE: The string to send to the enclave to reverse.");
         }
 
         EnclaveConstraint constraint = EnclaveConstraint.parse(args[0]);
@@ -31,7 +27,7 @@ public class ReverseClient {
     }
 
     public static void callEnclave(EnclaveConstraint constraint, String stringToReverse) throws IOException, InvalidEnclaveException {
-        try (WebEnclaveTransport transport = new WebEnclaveTransport(REVERSE_HOST_URL);
+        try (WebEnclaveTransport transport = new WebEnclaveTransport("http://localhost:8080");
              EnclaveClient client = new EnclaveClient(constraint)) {
 
             // Connect to the host and send the string to reverse
