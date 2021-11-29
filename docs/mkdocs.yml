@@ -17,13 +17,13 @@ nav:
         - Running your first enclave: running-hello-world.md
         - Writing your first enclave: writing-hello-world.md
         - Writing your own enclave host: writing-your-own-enclave-host.md
+        - Writing a long-lived client: writing-a-long-lived-client.md
         - Integrating an enclave with Corda: writing-cordapps.md
     - Design topics:
         - Communicating with an enclave using Mail: mail.md
         - Rapid testing and development with Mock Mode: mockmode.md
         - Maximising the security of your enclave: security.md
         - Persisting data with the Key Derivation Service: kds-detail.md
-        - Writing a long-lived client: writing-a-long-lived-client.md
     - Reference:
         - Enclave modes: enclave-modes.md
         - Enclave constraints: constraints.md

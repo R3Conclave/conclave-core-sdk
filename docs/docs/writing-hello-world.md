@@ -271,60 +271,12 @@ stopping/closing and then restarting the enclave.
 
 ## Run the host and enclave
 
-We should be ready to run the host web server from the command line.
+We should be ready to run the host web server from the command line. This is the same as when we ran the host
+in [Running your first enclave](running-hello-world.md).
 
 ```bash
 ./gradlew host:bootJar
 java -jar host/build/libs/host-mock.jar
-```
-
-!!! note
-    Mock is configured to be the default mode in `host/build.gradle`, which is why the host jar name contains the "mock"
-    string.
-
-The Conclave host web server uses Spring Boot so you will see the Spring logo as the web server starts up. Once it's
-done starting up it will be ready to communicate with the client on http://localhost:8080.
-
-!!! warning
-    Even though we use Conclave mail which does the encryption and authentication for us, when using the Conclave
-    host web server it's still important to use HTTPS for anything other than internal development. The web host
-    protocol uses a unique correlation ID per client which must be encrypted over HTTPS. Setting up a HTTPS
-    connection is beyond the scope of this tutorial but you may wish to look at configuring Spring Boot or setting
-    up a reverse proxy such as Nginx or Apache.
-
-```text
-  .   ____          _            __ _ _
- /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
-( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
- \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
-  '  |____| .__|_| |_|_| |_\__, | / / / /
- =========|_|==============|___/=/_/_/_/
- :: Spring Boot ::                (v2.4.2)
-```
-
-During the build you should see output like this:
-
-```text
-> Task :enclave:generateEnclaveMetadataSimulation
-Succeed.
-Enclave code hash:   61AE6A28838CE9EFBE16A7078F9A506D69BBA70B69FAD229F1FBDB45AA786109
-Enclave code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
-```
-
-The code hash will correspond to the value found in the `EnclaveInstanceInfo.getEnclaveInfo().getCodeHash()` property
-and the code signer will be `EnclaveInstanceInfo.getEnclaveInfo().getCodeSigningKeyHash()`.
-
-!!! tip
-    Make a note of the value of `Enclave code signer`. We will need it when we run the client to verify the enclave's identity from the client.
-
-You can switch to debug mode by specifying the `enclaveMode` property. In debug mode the real hardware is used and
-virtually everything is identical to how it will be in production, but there's a small back door that can be used
-by debuggers to read/write the enclave's memory.
-
-You will need to run this on an [Azure Confidential VM](https://docs.microsoft.com/en-us/azure/confidential-computing/).
-
-```bash
-./gradlew -PenclaveMode=debug host:bootJar
 ```
 
 ## Write the client
@@ -440,6 +392,25 @@ contains the encoded reversed string.
 !!! tip
     If you write your enclave such that it might respond back to the client later at some point then you can use the
     `pollMail` method to poll for responses. It will return `null` if there aren't any.
+
+## Run the client
+
+Our application is complete. Run the host with
+```bash
+java -jar host/build/libs/host-mock.jar
+```
+
+In a separate terminal, build and run the client:
+```bash
+./gradlew :client:shadowJar
+
+java -jar client/build/libs/client.jar \
+  "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" \
+  reverse-me
+```
+
+Please refer to [Running your first enclave](running-hello-world.md) for expected output and other information on these
+commands.
 
 ## Testing
 

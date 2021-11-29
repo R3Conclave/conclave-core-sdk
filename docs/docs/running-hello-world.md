@@ -49,8 +49,21 @@ You can run the host like any other executable JAR with the command
 java -jar host/build/libs/host-mock.jar
 ```
 
-The sample uses Conclave Web Host, a Spring Boot application which loads the enclave and waits for requests from the
-client. Amongst the output, you will see something like this:
+The sample uses Conclave web host. This is a Spring Boot application so you will see the Spring logo as the web server starts up.
+
+```text
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / /k/ /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v2.4.2)
+```
+
+
+The web server loads the enclave and waits for requests from the client. Amongst the output you will see something like this:
+
 ```bash
 [main] INFO com.r3.conclave.host.web.EnclaveWebController - Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
   - Mode: MOCK
@@ -64,11 +77,19 @@ This is the [remote attestation](enclaves.md#remote-attestation), an object whic
 enclave that has been loaded. The private key that corresponds to the "Public encryption key" (printed above) is only
 available inside the enclave. Our client will use the "Public encryption key" to encrypt data to send into the enclave.
 
+Once the server is done starting up it will be ready to communicate with the client on http://localhost:8080.
 You can proceed to [Run the client](#run-the-client) when you see the following output:
 
 ```text
 [main] INFO com.r3.conclave.host.web.EnclaveWebHost$Companion - Started EnclaveWebHost.Companion in <SECONDS> seconds 
 ```
+
+!!! warning
+    The sample uses Conclave mail which handles encryption and authentication, but the web host protocol makes use of
+    request headers which are not encrypted. Because of this, it is still important to use HTTPS for anything other than
+    internal development. Setting up an HTTPS connection is beyond the scope of this tutorial, but you may wish to look
+    at configuring Spring Boot or setting up a reverse proxy such as Nginx or Apache. See
+    [Conclave web host](conclave-web-host.md) for more information.
 
 ## Run the client
 
