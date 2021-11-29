@@ -5,14 +5,17 @@
 Writing a thread safe enclave is no different to writing any other thread safe code in Java, with one exception.
 Whilst all the same concurrency tools and utilities are available, you must opt-in to multi-threading. If you
 don't then all threads that enter the enclave will synchronize on the enclave object lock and execute serially. To opt in,
-override the `getThreadSafe` method and return true.
+override the [`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) method and return true.
 
 This is a safety mechanism. It would be easy to write an enclave that isn't thread safe without thinking about it, 
 perhaps because the additional performance isn't important. That would be hard to notice as anyone reading the code
 would be looking for the absence of something rather than its presence. The host could then multi-thread the enclave
 without it being prepared for that and corrupt your application-level data structures in ways that might be exploitable.
-When you return true from `getThreadSafe` you're asserting to Conclave that you've taken care to ensure your 
-`receiveFromUntrustedHost` and `receiveMail` methods can handle concurrent execution, so it's safe for Conclave to stop
+When you return true from [`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) 
+you're asserting to Conclave that you've taken care to ensure your 
+[`receiveFromUntrustedHost`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) and
+[`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) methods can handle
+concurrent execution, so it's safe for Conclave to stop
 locking the enclave itself. By requiring an opt-in it becomes visible to other developers and code reviewers, thus 
 reminding them that the code needs to be thread safe.
 

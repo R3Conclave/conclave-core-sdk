@@ -75,7 +75,7 @@ _Default: None. You must provide a value_
 
 The revocation level should be incremented whenever a weakness or vulnerability in the enclave code is discovered
 and fixed. Doing this will enable clients to avoid connecting to old, compromised enclaves. The client can set an
-[`EnclaveConstraint`](/api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum 
+[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum 
 revocation level when loading an enclave.
 
 The revocation level in an enclave affects the keys that are generated for 'sealing' data in an enclave. 
@@ -224,16 +224,12 @@ You can use the persisted filesystem to read/write files that needs to be availa
 after a restart of your enclaves. This is represented as a single encrypted file on the host;
 your enclave will load/save/read/write all files and directories into that file.
 
-Please remember that, in addition to the `persistentFileSystemSize`,
-you also **need to specify the host file path** in the `EnclaveHost.start` function call,
-for example:
+The enclave host must provide a file where the encrypted file system will be persisted. If using the
+[web host](conclave-web-host.md) then the `--filesystem.file` flag must be specified. If using a custom host then it 
+must be passed into [`EnclaveHost.start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html).
 
-``` enclaveHost.start(AttestationParameters.DCAP(), null, Paths.get("/home/USER/conclave_DEBUG.disk"); ```
-
-!!! tip
-    Once created with a specific enclave mode, the filesystem cannot be used by the same enclave built with a different enclave mode.  
-    You might want to add an identifier at the end of the file name to distinguish the enclave modes that has created it, 
-    as in the example above: `/home/USER/conclave_DEBUG.disk`.
+!!! note
+    Once created with a specific enclave mode, the filesystem cannot be used by the same enclave built with a different enclave mode.
 
 When this code gets executed for the first time, Conclave will create and encrypt this file using a key derived from the `MRSIGNER`.
 When the enclave restarts and if the file is present, Conclave will try to load and to prepare

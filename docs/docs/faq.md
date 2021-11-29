@@ -37,7 +37,7 @@ The host can exchange local messages with the enclave, and an encryption key is 
 Clients can use this key transparently via Conclave Mail to communicate with the enclave in an encrypted manner. 
 
 It's up to the host to route messages to and from the network. Conclave doesn't define any particular network protocol to 
-use. Mails and serialized `EnclaveInstanceInfo` objects are just byte arrays, so you can send them using REST, gRPC, 
+use. Mails and serialized [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) objects are just byte arrays, so you can send them using REST, gRPC, 
 Corda flows, raw sockets, embed them inside some other protocol, use files etc.
 
 ### What is a confidential service?
@@ -125,7 +125,7 @@ On older hardware that uses the EPID attestation protocol, to go live you'll nee
 
 !!! note
     Due to Conclave's design enclave clients don't need to interact with Intel at any point. The
-    host does it and then publishes to clients a serialised `EnclaveInstanceInfo` object. The Conclave client libraries
+    host does it and then publishes to clients a serialised [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object. The Conclave client libraries
     embed the necessary certificates to verify Intel's signature over this data, and the integrity of the object 
     is checked automatically when it's deserialized. The developer doesn't have to do anything: it's all fully automated. 
 
@@ -205,7 +205,7 @@ with some recommendations:
 * A typical frequency policy is once every 30 days. 
 
 At the moment the developer is responsible for writing code that restarts the enclave from time to time. Restarting
-the enclave will force a re-attestation and thus make the `EnclaveInstanceInfo` fresh again. How often this happens
+the enclave will force a re-attestation and thus make the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) fresh again. How often this happens
 should be synchronised between the host and client side tool (but remember to make the host server refresh more
 frequently than the client requires, to avoid synchronisation errors). 
 

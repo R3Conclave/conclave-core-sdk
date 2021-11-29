@@ -196,7 +196,8 @@ public class ReverseFlow extends FlowLogic<String> {
 ```
 
 The flow initiation starts in the usual manner for a Corda flow. Once a session with the hosting node is established, the
-flow waits for an `EnclaveInstanceInfo` to verify it against the constraint passed. If the enclave verifies successfully
+flow waits for an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) to verify it
+against the constraint passed. If the enclave verifies successfully
 and doesn't throw an exception, the flow can continue by sending the initiator party identity to the enclave for
 [authentication](writing-cordapps.md#authenticating-senders-identity). The last step is only applicable if the party wishes to
 share its identity. No party identity is not sent if the parameter `anonymous` is set to `true`.
@@ -234,8 +235,8 @@ fun initiateFlow(flow: FlowLogic<*>, receiver: Party, constraint: String,
 Once the enclave is successfully verified, and our identity is authenticated by the enclave (if we decided to share our identity),
 the flow can start securely exchanging encrypted messages with the enclave through the `EnclaveFlowInitiator` instance returned,
 which implements a simple send/receive API that encrypts and decrypts the outgoing and incoming data in the form of byte arrays.
-The send and receive methods use the PostOffice API. The `EnclaveFlowInitiator` class holds one PostOffice instance which
-has the topic set to the session's flow id.
+The send and receive methods use the [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office/index.html) API. The
+`EnclaveFlowInitiator` class holds one `PostOffice` instance which has the topic set to the session's flow id.
 
 ```kotlin
 @Suspendable
@@ -339,7 +340,8 @@ protected void receiveMail(long id, EnclaveMail mail, String routingHint, Sender
 The method `receiveMail` contains the enclave logic and therefore can contain any logic necessary to meet the business requirements.
 For the example above, the enclave simply reverses a string and returns the result back with the sender name if the party
 decided not to be anonymous. The mail parameter contains some metadata, and the data which is going to be processed by the enclave.
-The call `mail.getBodyAsBytes()` returns the data that is going to be processed by the enclave. As mention previously, the `identity`
+The call [`mail.getBodyAsBytes()`](api/-conclave/com.r3.conclave.mail/-enclave-mail/get-body-as-bytes.html) returns
+the data that is going to be processed by the enclave. As mention previously, the `identity`
 parameter object contains the identity of the sender or is set to null if the sender decided to remain anonymous.
 
 !!! important

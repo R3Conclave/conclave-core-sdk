@@ -39,9 +39,9 @@ on the command line when starting your service:
 --kds.connection.timeout.seconds=60
 ```
 
-Otherwise if you are developing your own host application you use the
-`KDSConfiguration` class to specify these parameters then pass the configuration
-to the `EnclaveHost.start()` function:
+Otherwise if you are developing your own host application you use
+[`KDSConfiguration`](api/-conclave/com.r3.conclave.host.kds/-k-d-s-configuration/index.html) to specify these 
+parameters then pass the configuration to [`EnclaveHost.start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html):
 
 ```java
 import com.r3.conclave.host.kds.KDSConfiguration;
@@ -63,7 +63,7 @@ enclaveHost.start(null, null, null, kdsConfiguration) {}
 The key specification to use within an enclave is configured in the build
 configuration for that enclave. The state of the configuration is included in
 the enclave binary and, as such, its measurement is included in the
-`EnclaveInstanceInfo` remote attestation report for the enclave. This ensures
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) remote attestation report for the enclave. This ensures
 the key specification is not tampered with.
 
 The key specification is defined in the build configuration as follows:
@@ -105,15 +105,15 @@ regarding usage of these properties.
 
 ## Defining the `PolicyConstraint`
 The key policy constraint can be thought of as similar to the
-`EnclaveConstraint` object used by clients during attestation to verify an
-`EnclaveInstanceInfo` object received from a remote enclave, and can be
+[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object used by clients during attestation to verify an
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object received from a remote enclave, and can be
 configured in much the same way by setting the `constraint` property using the
 [enclave constraint DSL](constraints.md).
 In this case however, the KDS imposes the key policy constraint on the
 `EnclaveInstanceInfo` of the requesting enclave before releasing a key to it.
 
 As noted before, the measurement of the key policy constraint is included in the
-`EnclaveInstanceInfo` for the enclave. This poses a problem as the enclave code
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) for the enclave. This poses a problem as the enclave code
 measurement and signer of the enclave are not known at build time. To get around
 this, the `policyConstraint` section allows the constraint to be defined
 programmatically using the `useOwnCodeHash` and `useOwnCodeSignerAndProductID`

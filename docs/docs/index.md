@@ -101,9 +101,10 @@ is available where you can find the development team during UK office hours (GMT
 1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
    recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
    easy to understand and does not provide roll back protection against the host. To address all these issues the 
-   `Enclave` class now exposes a simple key-value store represented as a normal `java.util.Map` object. Conclave 
-   will securely persist this map such that it survives restarts and is resilient to attempts by the host to roll it 
-   back to previous states.
+   [`Enclave`](api/-conclave/com.r3.conclave.enclave/-enclave/index.html) class now exposes a simple 
+   [key-value store](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html) represented as a normal 
+   `java.util.Map` object. Conclave will securely persist this map such that it survives restarts and is resilient 
+   to attempts by the host to roll it back to previous states.
 
 1. :jigsaw: **New feature!** We've actually introduced two forms of enclave persistence in 1.2! The rollback protection 
    provided by the persistent map above may not be needed and comes at a cost of increased overheads. As an alternative 
@@ -117,8 +118,9 @@ is available where you can find the development team during UK office hours (GMT
    world sample to see how it's used.
 
 1. :jigsaw: **New feature!** To complement the host web server, we've also introduced a client library to make it
-   super easy to write an web-based enclave client. Add `conclave-web-client` as a dependency to your client module 
-   and use make use of the new `WebEnclaveTransport` class in conjunction with the new `EnclaveClient`.
+   super easy to write a web-based enclave client. Add `conclave-web-client` as a dependency to your client module 
+   and make use of the new [`WebEnclaveTransport`](api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) class in 
+   conjunction with the new [`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html).
 
 1. :jigsaw: **New feature!** `EnclaveClient` is a new API in `conclave-client` which greatly simplies your client 
    code and handles all of the complexities when communicating with an enclave. It is agnositic to the transport 
@@ -132,12 +134,14 @@ is available where you can find the development team during UK office hours (GMT
    [Conclave Init](conclave-init.md).
 
 1. :jigsaw: **New feature!** We've added enclave lifecycle methods so that you can do any necessary enclave startup 
-   initialisation and shutdown cleanup. Override `onStartup` and `onShutdown` respectively.
+   initialisation and shutdown cleanup. Override [`onStartup`](api/-conclave/com.r3.conclave.enclave/-enclave/on-startup.html) and 
+   [`onShutdown`](api/-conclave/com.r3.conclave.enclave/-enclave/on-shutdown.html) respectively.
 
 1. :jigsaw: **New feature!** The host can now update the enclave's attestation without having to restart it. 
-   Previously restarting was the only way to force an update on the `EnclaveInstanceInfo` object. Now you can call 
-   `EnclaveHost.updateAttestation` whilst the enclave is still running and the `enclaveInstanceInfo` property will 
-   be updated.
+   Previously restarting was the only way to force an update on the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html)
+   object. Now you can call [`EnclaveHost.updateAttestation`](api/-conclave/com.r3.conclave.host/-enclave-host/update-attestation.html) 
+   whilst the enclave is still running and the [`enclaveInstanceInfo`](api/-conclave/com.r3.conclave.host/-enclave-host/get-enclave-instance-info.html)
+   property will be updated.
    
 1. :jigsaw: **New feature!** We've further improved the Conclave plugin and added more automation so that 
    you have to write less boilerplate. It's no longer necessary to add the `conclave-enclave` library as a 
@@ -167,8 +171,10 @@ is available where you can find the development team during UK office hours (GMT
    using container-gradle to develop on Mac, we strongly suggest you stop doing so and follow
    [these instructions](running-hello-world.md) for running your conclave projects instead.
 
-1. :jigsaw: **New feature!** We've added a new overload of `EnclaveHost.load` which no longer requires having to specify the enclave
-class name as a parameter. Instead, `EnclaveHost` will scan for the single matching enclave on the classpath.
+1. :jigsaw: **New feature!** We've added a new overload of [`EnclaveHost.load`](api/-conclave/com.r3.conclave.host/-enclave-host/load.html)
+   which no longer requires having to specify the enclave class name as a parameter. Instead,
+   [`EnclaveHost`](api/-conclave/com.r3.conclave.host/-enclave-host/index.html) will scan for the single matching enclave on 
+   the classpath.
 
 ### 1.1
 

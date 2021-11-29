@@ -95,7 +95,7 @@ Alternatively you can provide or [generate your own](signing.md#generating-keys-
     Only use these sample keys for the tutorial. Don't use them for signing your own enclaves!
 
 
-## Create a new subclass of `Enclave`
+## Create a new subclass of [`Enclave`](api/-conclave/com.r3.conclave.enclave/-enclave/index.html)
 
 Enclaves are similar to standalone programs and as such have an equivalent to a "main class". This class must be a
 subclass of [`Enclave`](api/-conclave/com.r3.conclave.enclave/-enclave/index.html).
@@ -138,7 +138,8 @@ public class ReverseEnclave extends Enclave {
     You'll notice that the enclave code is using the `var` syntax that was introduced in Java 10. That's because the
     enclave environment supports Java 11 by default!
 
-We override `receiveMail` so that the enclave can process the mail it receives from the remote clients via the web-based
+We override [`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) so that the enclave 
+can process the mail it receives from the remote clients via the web-based
 host server. Here we just reverse the contents of the mail body and reverse it as a string.
 
 !!! tip
@@ -162,14 +163,15 @@ gRPC API, JMS message queues, a simple TCP socket, or even files.
 
 ### Receiving and posting mail in the enclave
 
-The `receiveMail` method that we implemented above has a routing hint string parameter. It's provided by the host
-and it helps the host route replies when dealing with multiple clients. It's passed into `postMail` when the enclave
+The [`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) method that we implemented 
+above has a routing hint string parameter. It's provided by the host and it helps the host route replies when 
+dealing with multiple clients. It's passed into [`postMail`](api/-conclave/com.r3.conclave.enclave/-enclave/post-mail.html) when the enclave
 posts a reply.
 
 #### Mail headers
 
-The first parameter is an `EnclaveMail`. This object gives us access to the body bytes that the client sent, but it
-also exposes some other header fields:
+The first parameter is an [`EnclaveMail`](api/-conclave/com.r3.conclave.mail/-enclave-mail/index.html). This object gives us 
+access to the body bytes that the client sent, but it also exposes some other header fields:
 
 1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
    can be thought of as equivalent to an email subject. Topics are scoped per-sender and are not global. The
@@ -188,7 +190,7 @@ data that's unencrypted, but it's often useful for the client, host and enclave 
 to storage and routing of data. Even when the host is untrusted it may still be useful for the client to send data
 that is readable by the host and enclave simultaneously, but which the host cannot tamper with. Inside the enclave
 you can be assured that the header fields contain the values set by the client, because they're checked before
-`receiveMail` is invoked.
+[`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html)  is invoked.
 
 In addition to the headers there is also the _authenticated sender public key_. This is the public key of the client that
 sent the mail. Like the body it's encrypted so that the host cannot learn the client identities. It's called "authenticated"
@@ -196,21 +198,27 @@ because the encryption used by Conclave means you can trust that the mail was en
 key matching this public key. If your enclave recognises the public key this feature can be used as a form of user authentication.
 
 In this simple tutorial we only care about the body. We reverse the bytes in the mail body and then create a response
-mail that will be encrypted to the sender. It contains the reversed bytes. We use the `postOffice` method to do this. It
-gives us back a post office object, which is a factory for creating encrypted mail. Because we want to create a
-response, we pass in the original mail to `postOffice` and it will give us an instance which is configured to encrypt mail
-back to the sender. It will also use the same topic as the original mail. `encryptMail` will encrypt the reversed bytes
-and add on the authenticated header. The resulting mail bytes are passed to `postMail` which delivers it to the host.
-It will emerge in a callback we're about to configure.
+mail that will be encrypted to the sender. It contains the reversed bytes. We use the
+[`postOffice`](api/-conclave/com.r3.conclave.enclave/-enclave/post-office.html) method to do this. It
+gives us back a [`EnclavePostOffice`](api/-conclave/com.r3.conclave.enclave/-enclave-post-office/index.html) object, which is a 
+factory for creating encrypted mail. Because we want to create a response, we pass in the original mail to 
+`postOffice` and it will give us an instance which is configured to encrypt mail back to the sender. It will also 
+use the same topic as the original mail.
+[`encryptMail`](api/-conclave/com.r3.conclave.mail/-post-office/encrypt-mail.html) will encrypt the reversed bytes
+and add on the authenticated header. The resulting mail bytes are passed to
+[`postMail`](api/-conclave/com.r3.conclave.enclave/-enclave/post-mail.html) which delivers it to the host. It will 
+emerge in a callback we're about to configure.
 
 !!! tip
     You can post mail anytime and to anyone you like. It doesn't have to be a response to the sender, you can post
-    multiple mails at once and you can post mails inside `receiveFromUntrustedHost` (i.e. during a local call).
+    multiple mails at once and you can post mails inside
+    [`receiveFromUntrustedHost`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html)
+    (i.e. during a local call).
 
 ### Threading
 
 In this tutorial we won't write a multi-threaded enclave. If you want to do this, you'll need to override the
-`boolean isThreadSafe()` method in the `Enclave` class (use `override val threadSafe: Boolean get() = true` in Kotlin).
+[`Enclave.getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) to return `true`.
 This tells Conclave to allow multiple threads into the enclave simultaneously. You're required to opt-in to allowing
 multi-threading to avoid accidents when someone writes a simple enclave that isn't thread safe, and forgets that the host
 is malicious and can enter your code with multiple threads simultaneously even if you aren't ready for it, corrupting
@@ -227,10 +235,12 @@ prove its identity to the third parties who will upload secret data. If this par
 sense please review the [Architecture overview](architecture.md) and the [Enclaves](enclaves.md) section.
 
 Before a client can set up communication with an enclave it must first get its remote attestation object, or its
-`EnclaveInstanceInfo`. How a client gets hold of enclave's `EnclaveInstanceInfo` depends on the host. It could be a
-REST endpoint, which is what we'll be using, or as a file downloaded out of band.
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html). How a client gets 
+hold of enclave's `EnclaveInstanceInfo` depends on the host. It could be a REST endpoint, which is what we'll be 
+using, or as a file downloaded out of band.
 
-The `EnclaveInstanceInfo` has a useful `toString` function that will print out something like this:
+The [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) has a useful 
+`toString` function that will print out something like this:
 
 ```text
 Remote attestation for enclave F86798C4B12BE12073B87C3F57E66BCE7A541EE3D0DDA4FE8853471139C9393F:
@@ -250,15 +260,17 @@ the Java code inside the enclave as a fat-JAR, and all the support and JVM runti
 change any time you alter the code of your enclave, the version of Conclave in use or the mode
 (simulation/debug/release) of the enclave. The enclave measurement should be stable across builds and machines, so
 clients can audit the enclave by repeating the Gradle build and comparing the value they get in the
-`EnclaveInstanceInfo` against what the build process prints out.
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) against what the build process prints out.
 
 !!! tip
-    1. All this data is available via individual getters on the `EnclaveInstanceInfo` so you should never feel a need to
-       parse the output of `toString`.
+    1. All this data is available via individual getters on the
+       [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) so you should 
+       never feel a need to parse the output of `toString`.
     2. `EnclaveInstanceInfo` is an interface so you can easily build mock attestations in your tests.
     3. When not in simulation mode the timestamp is signed by Intel and comes from their servers.
 
-An instance has a security assessment, which can change in response to discovery of vulnerabilities in the
+An instance has a [security assessment](api/-conclave/com.r3.conclave.common/-enclave-security-info/index.html), which can 
+change in response to discovery of vulnerabilities in the
 infrastructure (i.e. without anything changing about the host or enclave itself). As we can see this enclave isn't
 actually considered secure yet because we're running in simulation mode still. An enclave can be `SECURE`, `STALE`,
 or `INSECURE`. An assessment of `STALE` means there is a software/firmware/microcode update available for the platform
@@ -266,8 +278,9 @@ that improves security in some way. The client may wish to observe when this sta
 time span in which the remote enclave operator must upgrade.
 
 An attestation doesn't inherently expire but because the SGX ecosystem is always moving, client code will typically have
-some frequency with which it expects the host code to refresh the `EnclaveInstanceInfo`. At present this is done by
-stopping/closing and then restarting the enclave.
+some frequency with which it expects the host code to refresh the
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html). At present this is 
+done by stopping/closing and then restarting the enclave.
 
 ## Run the host and enclave
 
@@ -283,16 +296,16 @@ java -jar host/build/libs/host-mock.jar
 
 The client app will do three things:
 
-1. Connect to the host web server and download the `EnclaveInstanceInfo` from it.
+1. Connect to the host web server and download the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) from it.
 1. Verify the enclave is acceptable: i.e. that it will do what's expected.
 1. Send it the command line arguments as a string to reverse and get back the answer, using encrypted mail.
 
 Actually, the first two steps are done for you when using an
-[`EnclaveClient`](/api/-conclave/com.r3.conclave.client/-enclave-client/index.html) object. `EnclaveClient` handles the encryption and 
+[`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) object. `EnclaveClient` handles the encryption and 
 decryption of Mail for you and provides a simple interface for sending and receiving Mail. However, it doesn't know 
-_how_ to transport the mail, which is where [`EnclaveTransport`](/api/-conclave/com.r3.conclave.client/-enclave-transport/index.html) 
+_how_ to transport the mail, which is where [`EnclaveTransport`](api/-conclave/com.r3.conclave.client/-enclave-transport/index.html)
 comes in. Since we're connecting to the host web server, we'll be using
-[`WebEnclaveTransport`](/api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) as our transport.
+[`WebEnclaveTransport`](api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) as our transport.
 
 Replace the client code at `client/src/.../ReverseEnclaveClient.java`
 
@@ -340,7 +353,9 @@ public class ReverseEnclaveClient {
 }
 ```
 
-The `constraint`, provided to the `EnclaveClient` constructor is the same constraint that we supplied when running the client
+The `constraint`, provided to the
+[`EnclaveClient` constructor](api/-conclave/com.r3.conclave.client/-enclave-client/-enclave-client.html) is the same 
+constraint that we supplied when running the client
 in [Running your first enclave](running-hello-world.md#run-the-client)
 
 The client wants to receive a response from the enclave, and we want that to be encrypted/tamperproofed too. That means it
@@ -358,14 +373,18 @@ EnclaveClient client = new EnclaveClient(myKey, constraint);
 
 !!! note
     Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. At the
-    moment in Conclave therefore, you must utilize our `Curve25519PublicKey` and `Curve25519PrivateKey` classes. In
+    moment in Conclave therefore, you must utilize our
+    [`Curve25519PublicKey`](api/-conclave/com.r3.conclave.mail/-curve25519-public-key/index.html) and
+    [`Curve25519PrivateKey`](api/-conclave/com.r3.conclave.mail/-curve25519-private-key/index.html) classes. In
     future we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply 32
     random bytes, which you can access using the getEncoded() method on PrivateKey.
 
 ### Sending and receiving mail
 
 Now that we've connected to the host web server and verified we're communicating with the right enclave we can now
-send it mail. This is done by calling `EnclaveClient.sendMail` and passing in the serialized bytes of the request
+send it mail. This is done by calling
+[`EnclaveClient.sendMail`](api/-conclave/com.r3.conclave.client/-enclave-client/send-mail.html) and passing in the 
+serialized bytes of the request
 message. If the enclave responds back immediately with a mail of its own then that is returned by `sendMail`. We can
 use all of this to fill in the missing piece in our client:
 
@@ -386,12 +405,14 @@ public static void callEnclave(EnclaveConstraint constraint, String stringToReve
 }
 ```
 
-The response we get back from the enclave is represented as an `EnclaveMail` object. We need the mail body which
+The response we get back from the enclave is represented as an
+[`EnclaveMail`](api/-conclave/com.r3.conclave.mail/-enclave-mail/index.html) object. We need the mail body which
 contains the encoded reversed string.
 
 !!! tip
     If you write your enclave such that it might respond back to the client later at some point then you can use the
-    `pollMail` method to poll for responses. It will return `null` if there aren't any.
+    [`pollMail`](api/-conclave/com.r3.conclave.client/-enclave-client/poll-mail.html) method to poll for responses. 
+    It will return `null` if there aren't any.
 
 ## Run the client
 
@@ -427,8 +448,8 @@ of your enclave project, the enclave classes are loaded along with the tests. Co
 configuration and automatically enables mock mode for the enclave and test host. You do not need to explicitly
 specify [mock mode](mockmode.md) for your project.
 
-To use this functionality, simply create an instance of the enclave as usual by calling `EnclaveHost.load` inside your
-test class.
+To use this functionality, simply create an instance of the enclave as usual by calling
+[`EnclaveHost.load`](api/-conclave/com.r3.conclave.host/-enclave-host/load.html) inside your test class.
 
 ```java
 EnclaveHost mockHost = EnclaveHost.load("com.r3.conclave.sample.enclave.ReverseEnclave");
@@ -436,7 +457,8 @@ mockHost.start(null, null);
 ```
 
 Conclave will detect that the enclave class is on the classpath and will start the enclave in mock mode. You
-can obtain the enclave instance using the `EnclaveHost.mockEnclave` property.
+can obtain the enclave instance using the
+[`EnclaveHost.mockEnclave`](api/-conclave/com.r3.conclave.host/-enclave-host/get-mock-enclave.html) property.
 
 ```java
 ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
@@ -457,7 +479,8 @@ dependencies {
 ```
 
 Loading and testing the enclave on real hardware or in a simulated SGX environment is straightforward: the enclave needs
-to be loaded with `EnclaveHost.load`. By default, this will run the tests in a simulated SGX environment and will require
+to be loaded with [`EnclaveHost.load`](api/-conclave/com.r3.conclave.host/-enclave-host/load.html). By default, this 
+will run the tests in a simulated SGX environment and will require
 the tests to be executed within Linux. In addition, testing on real hardware will require the tests to be executed within
 Linux on a system that supports SGX.
 
