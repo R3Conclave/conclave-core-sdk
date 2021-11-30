@@ -372,8 +372,8 @@ EnclaveClient client = new EnclaveClient(myKey, constraint);
 ```
 
 !!! note
-    Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. At the
-    moment in Conclave therefore, you must utilize our
+    Unfortunately the Java Cryptography Architecture only introduced official support for Curve25519 in Java 11. Since
+    Conclave supports Java 8, you must utilize our
     [`Curve25519PublicKey`](api/-conclave/com.r3.conclave.mail/-curve25519-public-key/index.html) and
     [`Curve25519PrivateKey`](api/-conclave/com.r3.conclave.mail/-curve25519-private-key/index.html) classes. In
     future we may offer support for using the Java 11 JCA types directly. A Curve25519 private key is simply 32
