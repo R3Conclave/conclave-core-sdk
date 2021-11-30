@@ -287,7 +287,7 @@ The enclave, host, and client are the three components in a Conclave application
     ```
 
     * Creates a task that can be used for generating signing materials. This is optional, but we use it to create a more
-    secure signature in release mode. See [Enclave signing](enclave-signing.md) for more information.
+    secure signature in release mode. See [Signing](signing.md) for more information.
     ```groovy
     tasks.register("prepareForSigning") {
         it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
@@ -341,8 +341,8 @@ The enclave, host, and client are the three components in a Conclave application
 
     !!! tip
         Since we haven't specified a signing configuration, we will use the default signing configuration for our enclave.
-        You may want to customise the signing configuration. See the [Signing tutorial](signing-tutorial.md)
-        and [Enclave Signing](enclave-signing.md) reference docs for more information.
+        You may want to customise the signing configuration. See [Signing](signing.md) for more information.
+
 === "client/build.gradle"
     The client is a simple Java application. The `client/build.gradle` file does the following:
 
