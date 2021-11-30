@@ -77,7 +77,7 @@ dependencies {
 
 Next, remove the client code provided by conclave-init, and create a blank main class like so:
 
-***client/src/main/java/com/example/tutorial/client/Main.java***
+***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java***
 ```java
 package com.example.tutorial.client;
 
@@ -97,7 +97,10 @@ Finally, check that the host and client run without any issues:
 
 ## Host Initialisation
 
-Now that the project modules have been set up, we can start implementing functionality. The Conclave SDK provides an API for querying Conclave support on the system at runtime. The following example code makes use of that API to log the status of SGX support on the system. It will also attempt to enable SGX through software if it is possible to do so. This platform support check is optional.
+Now that the project modules have been set up, we can start implementing functionality. The Conclave SDK provides an API for querying Conclave support on the system at runtime. The following example code makes use of the API to log the status of SGX support on the system. It will also attempt to enable SGX through software if it is possible to do so. This platform support check is optional.
+
+!!! note
+    Unless otherwise specified, code snippets in the following sections should be appended to the main methods of the indicated files.
 
 ***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
 ```java
