@@ -2,22 +2,24 @@
 
 ## Writing thread safe enclaves
 
-Writing a thread safe enclave is no different to writing any other thread safe code in Java, with one exception.
-Whilst all the same concurrency tools and utilities are available, you must opt-in to multi-threading. If you
-don't then all threads that enter the enclave will synchronize on the enclave object lock and execute serially. To opt in,
-override the [`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) method and return true.
+Writing a thread safe enclave is no different to writing any other thread safe code in Java as all the usual concurrency
+tools are available. However, concurrency must be manually enabled or all calls that enter the enclave will execute
+serially, blocking until the previous call has ended. To opt in to concurrency, you must override the
+[`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) method of your enclave so that it
+returns true.
 
-This is a safety mechanism. It would be easy to write an enclave that isn't thread safe without thinking about it, 
-perhaps because the additional performance isn't important. That would be hard to notice as anyone reading the code
-would be looking for the absence of something rather than its presence. The host could then multi-thread the enclave
-without it being prepared for that and corrupt your application-level data structures in ways that might be exploitable.
-When you return true from [`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) 
-you're asserting to Conclave that you've taken care to ensure your 
-[`receiveFromUntrustedHost`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) and
-[`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) methods can handle
-concurrent execution, so it's safe for Conclave to stop
-locking the enclave itself. By requiring an opt-in it becomes visible to other developers and code reviewers, thus 
-reminding them that the code needs to be thread safe.
+!!! warning
+    When you return true from [`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html),
+    you are asserting to Conclave that you've taken the appropriate steps to ensure that your implementations of
+    [`receiveFromUntrustedHost`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) and
+    [`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) are thread safe and able to be
+    entered concurrently. As such, when dealing with threaded enclaves, the usual care should be taken to avoid race
+    conditions, deadlocks or other synchronization related bugs.
+
+This opt-in requirement is a safety mechanism intended to guard against the possibility of a malicious host attempting
+to exploit user enclave code by unexpectedly entering it with multiple threads when it has not been designed for it.
+This opt-in has the additional benefit of making threading a more visible concern to other developers and to code
+reviewers.
 
 ## The enclave current context
 
