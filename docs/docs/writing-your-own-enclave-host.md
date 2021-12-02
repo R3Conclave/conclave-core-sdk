@@ -1,63 +1,37 @@
 # Writing your own enclave host
 
-Conclave projects will typically consist of three types of module; clients, hosts and enclaves. A simple project might consist of a single host, enclave and client. Host modules are responsible for instantiating enclaves, persisting data to disk, and passing messages between enclaves and their clients. Most of this functionality is managed internally by Conclave and isn't something that the user has to worry about.
+## Prerequisites
 
-By default, Conclave projects will use a built-in web host that manages these details for you and allows communication with the enclave via a REST API sufficient for simple use cases (see [conclave web host](conclave-web-host.md) for more information). If the default web host does not suit the needs of your project however, then a custom host can be implemented. The following section contains an example client and host based on the hello world sample bundled with the SDK.
+This tutorial assumes you have a good understanding of Conclave and at a minimum have gone through the 
+[introduction tutorial](writing-hello-world.md).
 
-## Project Setup
+## Introduction
 
-Start by creating a new Conclave project template using [Conclave Init](conclave-init.md).
+Conclave projects will typically consist of three modules; the client, the host and the enclave. The host is responsible for 
+instantiating the enclave, persisting data to disk, and passing messages between the enclave and its clients.
+Conclave provides a built-in web host that manages these details for you and allows communication with the enclave 
+via a REST API sufficient for simple use cases (see [Conclave web host](conclave-web-host.md) for more information).
 
-```bash
-java -jar <path to sdk>/tools/conclave-init.jar \
-    --package com.example.tutorial \
-    --enclave-class-name MyEnclave \
-    --target <your project directory>
-    
-cd <your project directory>
-```
+If however this default web host does not suit the needs of your project, a custom host can be implemented instead. The 
+following section will outline how to do that by implementing a very basic host server using raw sockets.
 
-Then implement your enclave. For the purposes of this tutorial, we will use the simple `ReverseEnclave` from the hello world sample (bundled with the SDK). This enclave simply receives an encrypted string via Conclave mail, computes its reverse, and then returns the encrypted result via Conclave mail back to the host. In real world applications, your enclave should implement any processes within your application which are required to process confidential data.
+## Project setup
 
-***enclave/src/main/java/com/example/tutorial/enclave/MyEnclave.java:***
-```java
-package com.example.tutorial.enclave;
+Start by creating a new Conclave project using [Conclave Init](conclave-init.md) and implement your enclave.
+Conclave Init generates a project which uses the [web host](conclave-web-host.md). We need to replace that with our own 
+host. Start by creating a main class:
 
-public class MyEnclave extends Enclave {
-    private static String reverse(String input) {
-        StringBuilder builder = new StringBuilder(input.length());
-        for (int i = input.length() - 1; i >= 0; i--) {
-            builder.append(input.charAt(i));
-        }
-        return builder.toString();
-    }
-
-    @Override
-    protected void receiveMail(EnclaveMail mail, String routingHint) {
-        final String stringToReverse = new String(mail.getBodyAsBytes());
-        final byte[] reversedEncodedString = reverse(stringToReverse).getBytes();
-        final byte[] responseBytes = postOffice(mail).encryptMail(reversedEncodedString);
-        postMail(responseBytes, routingHint);
-    }
-}
-```
-
-Next we create a main class for our host:
-
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
 ```java
 package com.example.tutorial.host;
 
 public class MyEnclaveHost {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
     }
 }
 ```
 
-Then we update the host build.gradle to reference the newly created main class:
-
-***host/build.gradle (application)***
+Update the host build.gradle to reference it:
 
 ```groovy hl_lines="2"
 application {
@@ -65,319 +39,470 @@ application {
 }
 ```
 
-***host/build.gradle (dependencies)***
-```groovy hl_lines="2-4"
+And replace the `runtimeOnly conclave-web-host` dependency with `implementation conclave-host`:
+
+```groovy hl_lines="3"
 dependencies {
     runtimeOnly project(path: ":enclave", configuration: mode)
-    runtimeOnly "org.slf4j:slf4j-simple:1.7.30"
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
 }
-
 ```
 
-Next, remove the client code provided by conclave-init, and create a blank main class like so:
+Next, remove the generated client code provided and create a blank main class:
 
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java***
 ```java
 package com.example.tutorial.client;
 
 class MyEnclaveClient {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
     }
 }
 ```
 
-Finally, check that the host and client run without any issues:
+Replace the `conclave-web-client` dependency with just `conclave-client`:
+
+```groovy hl_lines="2"
+dependencies {
+    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
+}
+```
+
+Check that the host and client run without any issues:
 
 ```bash
 ./gradlew :host:run
 ./gradlew :client:run
 ```
 
-## Host Initialisation
+## Implementing the client
 
-Now that the project modules have been set up, we can start implementing functionality. The Conclave SDK provides an API for querying Conclave support on the system at runtime. The following example code makes use of the API to log the status of SGX support on the system. It will also attempt to enable SGX through software if it is possible to do so. This platform support check is optional.
+Now that the project modules have been set up, we can start implementing functionality. Perhaps counterintuitively, 
+the first step is to actually write our client, as that will direct how we implement the host.
 
-!!! note
-    Unless otherwise specified, code snippets in the following sections should be appended to the main methods of the indicated files.
+We recommend clients use the [`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) 
+class for managing communication with the enclave. It deals with the encryption of mail messages and amongst other 
+things, makes dealing with enclave restarts transparent. The details of the transport layer to the host are dealt 
+with by the [`EnclaveTransport`](api/-conclave/com.r3.conclave.client/-enclave-transport/index.html) interface. An 
+implementation of this is required by [`EnclaveClient.start`](api/-conclave/com.r3.conclave.client/-enclave-client/start.html).
+For example, if the enclave is running behind the [Conclave web host](conclave-web-host.md) then the client needs to 
+use the [`WebEnclaveTransport`](api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) class.
 
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
+We will write a very simple socket based `EnclaveTransport`. Host and port parameters will be required, and it 
+should implement `Closeable` to allow the caller to close any underlying connections.
+
 ```java
-// Print platform support and attempt to software enable if possible
-if (EnclaveHost.isHardwareEnclaveSupported()) {
-    System.out.println("This platform supports enclaves in simulation, debug and release mode.");
-} else if (EnclaveHost.isSimulatedEnclaveSupported()) {
-    System.out.println("This platform does not support hardware enclaves, but does support enclaves in simulation.");
-    System.out.println("Attempting to enable hardware enclave support...");
-    try {
-        EnclaveHost.enableHardwareEnclaveSupport();
-        System.out.println("Hardware support enabled!");
-    } catch (PlatformSupportException e) {
-        System.out.println("Failed to enable hardware enclave support. Reason: ${e.message}");
+public class MyEnclaveTransport implements EnclaveTransport, Closeable {
+    private final String host;
+    private final int port;
+    private Socket socket;
+    private DataInputStream input;
+    private DataOutputStream output;
+
+    public SocketEnclaveTransport(String host, int port) {
+        this.host = host;
+        this.port = port;
     }
-} else {
-    System.out.println("This platform supports enclaves in mock mode only.");
+
+    public void start() throws IOException {
+        socket = new Socket(host, port);
+        input = new DataInputStream(socket.getInputStream());
+        output = new DataOutputStream(socket.getOutputStream());
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (socket != null) {
+            socket.close();
+        }
+    }
 }
 ```
 
-The next step is to load our enclave. In this case we have only a single enclave, so we can load it like this:
+The `input` and `output` streams are our communication channels with the host server for receiving and sending raw 
+bytes, respectively.
 
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
+### [`enclaveInstanceInfo()`](api/-conclave/com.r3.conclave.client/-enclave-transport/enclave-instance-info.html)
+
+The first `EnclaveTransport` method we'll implement is
+[`enclaveInstanceInfo`](api/-conclave/com.r3.conclave.client/-enclave-transport/enclave-instance-info.html), which 
+downloads the latest [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html)
+object from the host:
+
 ```java
-// Load the enclave
-EnclaveHost enclave = EnclaveHost.load();
+@NotNull
+@Override
+public EnclaveInstanceInfo enclaveInstanceInfo() throws IOException {
+    output.write(1);
+    output.flush();
+
+    byte[] attestationBytes = new byte[input.readInt()];
+    input.readFully(attestationBytes);
+    return EnclaveInstanceInfo.deserialize(attestationBytes);
+}
 ```
 
-!!!tip
+We'll represent the attestation request by a single byte value of 1. The byte is sent and the method blocks immediately 
+waiting for the server to respond back with the attestation bytes. Once received we
+[deserialize](api/-conclave/com.r3.conclave.common/-enclave-instance-info/deserialize.html) them into an 
+`EnclaveInstanceInfo` object.
+
+### [`connect()`](api/-conclave/com.r3.conclave.client/-enclave-transport/connect.html)
+
+Next we need to implement the methods for sending and receiving mail, but these are not defined in
+[`EnclaveTransport`](api/-conclave/com.r3.conclave.client/-enclave-transport/index.html) but are 
+represented by an interface called
+[`ClientConnection`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/index.html).
+An instance of this is created by [`EnclaveTransport.connect`](api/-conclave/com.r3.conclave.client/-enclave-transport/connect.html)
+and represents a logical `EnclaveClient` connection. This allows multiple `EnclaveClient` instances to use a single 
+`EnclaveTransport`. Our `ClientConnection` implementation will be a private inner class and `connect` will simply 
+return a new instance of one.
+
+```java
+@NotNull
+@Override
+public ClientConnection connect(@NotNull EnclaveClient client) throws IOException {
+    return new MyClientConnection();
+}
+
+private class MyClientConnection implements ClientConnection {
+    @Override
+    public void disconnect() {
+    }
+}
+```
+
+The [`disconnect`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/disconnect.html) 
+method is empty as this is a simple implementation and there's nothing to do when the `EnclaveClient`
+[closes](api/-conclave/com.r3.conclave.client/-enclave-client/close.html).
+
+### [`sendMail()`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
+
+For sending [encrypted mail](mail.md) to the host we need to implement
+[`sendMail`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html):
+
+```java
+@Nullable
+@Override
+public byte[] sendMail(@NotNull byte[] encryptedMailBytes) throws IOException, MailDecryptionException {
+    output.write(2);
+    output.writeInt(encryptedMailBytes.length);
+    output.write(encryptedMailBytes);
+    output.flush();
+
+    int responseType = input.readByte();
+    if (responseType == 1) {
+        return readMail();
+    } else if (responseType == 2) {
+        throw new MailDecryptionException();
+    } else {
+        throw new IOException("Unknown response type " + responseType);
+    }
+}
+```
+
+This request is represented by the byte value 2, followed by the size prefix mail bytes. Once that's sent we
+immediately block waiting for a response from the host. The
+[`sendMail`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
+specification states the method must block and wait for the mail to be processed by the enclave. If the enclave is 
+able to process the mail successfully then any response from it must be received and returned. This is represented 
+by the response type 1:
+
+```java
+private byte[] readMail() throws IOException {
+    int responseMailSize = input.readInt();
+    if (responseMailSize > 0) {
+        byte[] responseMail = new byte[responseMailSize];
+        input.readFully(responseMail);
+        return responseMail;
+    } else {
+        return null;
+    }
+}
+```
+
+If the enclave couldn't decrypt the sent mail then that must also be 
+indicated and a [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html) 
+must be thrown instead (which is response type 2).
+
+### [`pollMail()`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/poll-mail.html)
+
+The final method that needs to be implemented is [`pollMail`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/poll-mail.html)
+which is for polling for any extra response mail the enclave might have created for the client:
+
+```java
+@Nullable
+@Override
+public byte[] pollMail() throws IOException {
+    output.write(3);
+    output.flush();
+
+    return readMail();
+}
+```
+
+We follow the same pattern of prefixing the sent bytes with a single byte to represent a polling request. Since 
+there are no other parameters that's all that needs to be sent. The response follows the same path as `sendMail` if 
+it receives a mail response and so we can reuse the `readMail()` method from above.
+
+And that's it for the client side! We can use our socket `EnclaveTransport` implementation with an
+[`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) instance to connect to the host:
+
+```java
+public static void main(String[] args) throws InvalidEnclaveException, IOException {
+    EnclaveClient client = new EnclaveClient(EnclaveConstraint.parse(args[0]));
+    MyEnclaveTransport enclaveTransport = new MyEnclaveTransport("localhost", 8000);
+    enclaveTransport.start();
+    client.start(enclaveTransport);
+    // Send and receive mail
+}
+```
+
+Now we need to implement the corresponding logic on the host to receive and process these requests.
+
+## Implementing the host
+
+### Loading the enclave
+
+One of the first things the host does is [load the enclave](api/-conclave/com.r3.conclave.host/-enclave-host/load.html), 
+which by default it does by scanning the classpath.
+
+```java
+public class MyEnclaveHost {
+    private static EnclaveHost enclaveHost;
+    
+    public static void main(String[] args) throws EnclaveLoadException, IOException {
+        enclaveHost = EnclaveHost.load();
+    }
+}
+```
+
+!!! tip
+
     In projects containing multiple enclave modules, the enclave to load can be specified by passing the fully qualified class name like so:
 
     ```java
-    // Load the enclave
-    EnclaveHost enclave = EnclaveHost.load("com.example.tutorial.enclave.MyEnclave");
+    enclaveHost = EnclaveHost.load("com.example.tutorial.enclave.MyEnclave");
     ```
 
-After loading the enclave, we start it up. When starting the enclave, a callback is passed which the enclave will use to deliver replies to any message it receives. In the case of this example, we store these replies in a queue for later:
+### Starting the enclave
 
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
+The next thing is to start the enclave, which is done by calling
+[`EnclaveHost.start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html). It takes a series of parameters 
+which are explained in more detail in the [API docs](api/-conclave/com.r3.conclave.host/-enclave-host/start.html).
+For this tutorial most of these parameters will be passed in from the command line:
+
 ```java
-// Start the enclave, providing a callback for any replies
-Queue<byte[]> enclaveResponses = new LinkedList<>();
-try {
-    enclave.start(new AttestationParameters.DCAP(), null, null, (commands) -> {
-        for (MailCommand command : commands) {
-            if (command instanceof MailCommand.PostMail) {
-                final byte[] bytes = ((MailCommand.PostMail) command).getEncryptedBytes();
-                enclaveResponses.add(bytes);
+Path hostDir = Paths.get(args[0]);
+String kdsUrl = args[1];
+
+enclaveStateFile = hostDir.resolve("enclave.state");
+Path enclaveFileSystemFile = hostDir.resolve("enclave.fs");
+
+byte[] sealedState;
+if (Files.exists(enclaveStateFile)) {
+    sealedState = Files.readAllBytes(enclaveStateFile);
+} else {
+    sealedState = null;
+}
+```
+
+The first command line parameter is a reference to the host directory which will contain the file for the enclave's 
+encrypted file system and also a file for the enclave's "sealed state". Both of these parameters are optional and 
+don't need to be specified if it's known the enclave will not use them.
+
+!!! note
+
+    The enclave's sealed state should ideally be stored in a database and committed as part of the same transaction 
+    that processes outbound mail from the enclave, which is why the sealed state parameter is a byte array and not a 
+    file path. More information about this can be found [here](persistence.md).
+
+The second command line parameter is for the URL to the [key derivation service (KDS)](kds-configuration.md). This
+is also optional and can be left out if the enclave is not configured to use a KDS.
+
+We now have enough to call `start`:
+
+```java
+enclaveHost.start(
+        new AttestationParameters.DCAP(),
+        sealedState,
+        enclaveFileSystemFile,
+        new KDSConfiguration(kdsUrl),
+        (commands) -> {
+            try {
+                processMailCommands(commands);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
         }
-    });
-} catch (EnclaveLoadException e) {
-    throw new RuntimeException("Failed to start enclave!", e);
+);
+
+System.out.println(enclaveHost.getEnclaveInstanceInfo());
+```
+
+The last `start` parameter is a callback lambda for processing
+[mail commands](api/-conclave/com.r3.conclave.host/-mail-command/index.html) from the enclave. The commands come 
+from the enclave grouped together in a list after every
+[`callEnclave`](api/-conclave/com.r3.conclave.host/-enclave-host/call-enclave.html) or
+[`deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) call. We will 
+provide a basic implementation of these commands, which we will do shortly.
+
+Once the enclave has started, the host logs the
+[enclave's attestation report](api/-conclave/com.r3.conclave.host/-enclave-host/get-enclave-instance-info.html) 
+to the console. This is useful for debugging but also for determining the enclave constraint to use when running the 
+client. 
+
+### Accepting the client connection
+
+Now that the enclave is ready to receive mail, our host needs to listen on a port for a client to connect to. We can 
+do this by passing in a server port from the command line:
+
+```java
+int serverPort = Integer.parseInt(args[2]);
+ServerSocket serverSocket = new ServerSocket(serverPort);
+System.out.println("Listening on port " + serverPort);
+```
+
+### Implementing the request loop
+
+Next we listen for a client connection and setup the request loop:
+
+```java
+Socket clientSocket = serverSocket.accept();
+System.out.println("Client connected");
+
+DataInputStream input = new DataInputStream(clientSocket.getInputStream());
+DataOutputStream output = new DataOutputStream(clientSocket.getOutputStream());
+
+while (true) {
+    int requestType = input.read();
+    if (requestType == -1) {
+        System.out.println("Client disconnected");
+        break;
+    }
+    if (requestType == 1) {
+        sendAttestation(output);
+    } else if (requestType == 2) {
+        processInboundMail(input, output);
+    } else if (requestType == 3) {
+        sendPostedMail(output);
+    } else {
+        System.err.println("Unknown request type " + requestType);
+    }
 }
-```
 
-!!!note
-    In the case of this tutorial, the host only services a single client connection. In cases where multiple clients may connect however, care must be taken to ensure that replies are sent back to the right clients.
-
-## Host-Client communication
-
-One of the main responsibilities of the host is to pass messages between clients and enclaves. In this case we will use plain TCP sockets, though in principal any communication channel may be used.
-
-**Host:**
-
-Open a socket and wait for a client to connect:
-
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
-```java
-// Open a socket
-final int port = 9999;
-ServerSocket serverSocket = new ServerSocket(port);
-
-// Wait for client to connect
-System.out.println("Listening on port " + port + ". Use the client app to send strings for reversal.");
-Socket socket = serverSocket.accept();
-DataOutputStream toClient = new DataOutputStream(socket.getOutputStream());
-DataInputStream fromClient = new DataInputStream(socket.getInputStream());
-```
-
-**Client:**
-
-Initiate a connection with the host:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Connect to the host
-final int port = 9999;
-Socket socket = new Socket();
-System.out.println("Connecting to host on localhost:" + port);
-socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), port));
-DataInputStream fromHost = new DataInputStream(socket.getInputStream());
-DataOutputStream toHost = new DataOutputStream(socket.getOutputStream());
-```
-
-## Attestation
-
-Once communication between the client and host has been established, the next step is attestation. Attestation is the process by which clients ensure the identity of the enclave with which they are communicating, and is a core concept which must be understood in order to write secure applications using the Conclave SDK. For more information regarding attestation, see [remote attestation](architecture.md#remote-attestation).
-
-During attestation, the host first generates attestation data for the enclave in question. Then the attestation is sent to the client for interrogation. This data can be thought of as similar to an SSL certificate in that it consists of a set of facts signed by a trusted third party (in this case, the CPU manufacturer). In this case however, it verifies the identity of a specific enclave.
-
-!!!note
-    In addition to serving as proof of enclave identity, the attestation data is also used by the client to encrypt messages such that that may only be decrypted by the corresponding enclave.
-
-**Host:**
-
-In this case, our project contains only one enclave, so we simply generate attestation data for that enclave and send it directly to the client as soon as they connect:
-
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
-```java
-// Build the attestation data-structure and send it to the client.
-final EnclaveInstanceInfo attestation = enclave.getEnclaveInstanceInfo();
-final byte[] attestationBytes = attestation.serialize();
-toClient.writeInt(attestationBytes.length);
-toClient.write(attestationBytes);
-toClient.flush();
-```
-
-**Client:**
-
-On the client side, we first receive and deserialize the attestation data:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Retrieve attestation data from the host
-byte[] attestationBytes = new byte[fromHost.readInt()];
-fromHost.readFully(attestationBytes);
-EnclaveInstanceInfo attestation = EnclaveInstanceInfo.deserialize(attestationBytes);
-
-// Print attestation data in human readable format
-System.out.println(attestation);
-```
-
-!!!note
-    In this case, we serialize byte arrays by transmitting their size followed by the data they contain. This pattern is repeated throughout this tutorial. In principle however, any method of serialization can be used.
-
-Then we check that the attestation conforms to our constraints:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Check the attestation to ensure that this is the enclave we are after
-// Accept an enclave with:
-// S:000000.... - Allow the following signing key (signing key hash)
-// PROD:1 - Allow the following product ID (1..65535)
-// SEC:SECURE - Allow the following security level or better (INSECURE|STALE|SECURE)
-EnclaveConstraint.parse(
-        "S:0000000000000000000000000000000000000000000000000000000000000000 " +
-        "PROD:1 " +
-        "SEC:INSECURE"
-).check(attestation);
-```
-
-The constraints are specified using a simple string representation and the check will fail with an exception if the specified constraints are not met. In this case the constraints are as follows:
-
-* `S:0000000...` - Allow enclaves with a signing key hash of zero (all mock enclaves).
-* `PROD:1` - Allow only enclaves with a product ID of 1.
-* `SEC:INSECURE` - Allow enclaves with a security level of INSECURE or higher.
-
-!!!note
-    These constraints will only work in mock mode and do not provide any security guarantees. The process for selecting these parameters in a general way is beyond the scope of this tutorial, and will not be detailed here. For more information, please see [Constraints](constraints.md).
-
-## Enclave-Client Communication
-
-Once communication has been established with the host and the client has confirmed the identity of the enclave, encrypted messages may be exchanged between the client and enclave using the Conclave mail API.
-
-**Client:**
-
-First we retrieve a string to reverse from the command line:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Get a string to reverse from the command line
-String stringToReverse;
-if (args.length == 0) {
-    stringToReverse = "Hello world!";
-} else {
-    stringToReverse = String.join(" ", args);
-}
-```
-
-Then we create a random private key and a "PostOffice" object for use in message encryption:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Create a random private key and a post office object to use for encrypting messages
-PrivateKey myKey = Curve25519PrivateKey.random();
-PostOffice postOffice = attestation.createPostOffice(myKey, "string-reversal");
-```
-
-!!!note
-    In this case, a random key is used. However, if the key is stored and re-used, then the corresponding public key may be used by the enclave to identify specific clients.
-
-Finally, we use the post office instance to encrypt our string, then we transmit it to the host:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Create an encrypted Conclave mail object containing the string we want to reverse
-// then send it to the host.
-byte[] encryptedMailOut = postOffice.encryptMail(stringToReverse.getBytes(StandardCharsets.UTF_8));
-toHost.writeInt(encryptedMailOut.length);
-toHost.write(encryptedMailOut);
-toHost.flush();
-```
-
-**Host:**
-
-The host then receives the encrypted mail object (which only the attested to enclave can decrypt), which passes it on to the enclave.
-
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
-```java
-// Receive encrypted mail from the client (containing encrypted string to reverse)
-// and pass it on to the enclave for reversal.
-byte[] encryptedMailIn = new byte[fromClient.readInt()];
-fromClient.readFully(encryptedMailIn);
-enclave.deliverMail(encryptedMailIn, "");
-```
-
-When deliverMail is called above, the deliverMail method in the previously defined enclave will be called. The deliverMail method will then call postMail, which will trigger the enclave callback and deposit the response in the enclaveResponses queue. Next, we read the queue, and send the response back to the client.
-
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
-```java
-// Return the encrypted reversal result to the client
-byte[] encryptedMailOut = enclaveResponses.remove();
-toClient.writeInt(encryptedMailOut.length);
-toClient.write(encryptedMailOut);
-toClient.flush();
-```
-
-***Client:***
-
-Back on the client side, we receive the encrypted result, decrypt it using the post office object and print out the result:
-
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
-```java
-// Receive reply from the host
-byte[] encryptedMailIn = new byte[fromHost.readInt()];
-fromHost.readFully(encryptedMailIn);
-EnclaveMail decryptedReply = postOffice.decryptMail(encryptedMailIn);
-final String reversedString = new String(decryptedReply.getBodyAsBytes());
-
-// Print out the results
-System.out.println();
-System.out.println("Sent: " + stringToReverse);
-System.out.println("Received: " + reversedString);
-```
-
-## Termination and Cleanup
-
-Finally, clean up any open resources:
-
-**Host:**
-
-***host/src/main/java/com/example/tutorial/host/MyEnclaveHost.java:***
-```java
-// Close connection to client and shut down the enclave
-toClient.close();
-fromClient.close();
-socket.close();
 serverSocket.close();
-enclave.close();
 ```
 
-**Client:**
+!!! note
 
-***client/src/main/java/com/example/tutorial/client/MyEnclaveClient.java:***
+    This host implementation only accepts a single client connection. Once that client has disconnected the host 
+    also shuts down. The rest of this implementation works off this behaviour. Obviously this is not suitable for
+    production and necessary changes to both the host and client will need to be made to support multiple concurrent
+    clients.
+
+`input` and `output` will be used to receive and send bytes to the client respectively. The first thing we do is 
+block and wait for the first byte from the client. This represents the request type but it's also used to detect if 
+the client has disconnected. We'll implement the methods that process these requests below.
+
+#### Attestation request
+
+The attestation request is straightforward to implement as it's just sending the
+[serialised `EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/serialize.html):
+
 ```java
-// Close connection to host
-toHost.close();
-fromHost.close();
-socket.close();
+private static void sendAttestation(DataOutputStream output) throws IOException {
+    byte[] attestationBytes = enclaveHost.getEnclaveInstanceInfo().serialize();
+    output.writeInt(attestationBytes.length);
+    output.write(attestationBytes);
+    output.flush();
+}
 ```
 
-The application can then be used like so, and should reverse any string passed to is:
+#### Mail request
 
-```bash
-# Terminal 1
-./gradlew :host:run
-# Terminal 2
-./gradlew :client:run --args="String to reverse"
+The next request to implement for is [`sendMail`](#sendmail):
+
+```java
+private static void processInboundMail(DataInputStream input, DataOutputStream output) throws IOException {
+    byte[] mailBytes = new byte[input.readInt()];
+    input.readFully(mailBytes);
+    try {
+        enclaveHost.deliverMail(mailBytes, null);
+        sendPostedMail(output);
+    } catch (MailDecryptionException e) {
+        output.write(2);
+        output.flush();
+    }
+}
 ```
+
+Once the mail bytes have been received they are [delivered](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html)
+to the enclave to be decrypted and processed. A second parameter called the "routing hint" is required alongside it. 
+This is used by the enclave to correctly route responses back to clients. In this simple implementation there is 
+only one client at a time and so the routing hint isn't used. If there were multiple clients then they would each be 
+given a unique routing hint.
+
+`deliverMail` will throw a [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html)
+if the enclave could not decrypt the mail bytes. It's important the client be notified of this, so we catch it and 
+send back a response value of 2, which is what our [earlier implementation of `sendMail`](#sendmail) expects.
+
+### Mail commands
+
+After `deliverMail` has successfully returned we need to check if the enclave produced a response and if so send it to 
+the client synchronously. This is what `sendPostedMail` should do, but before we can implement that we need to go back 
+and implement the mail commands first. These were [introduced earlier](#starting-the-enclave) where the call to 
+`EnclaveHost.start` referenced a `processMailCommands` method. We can implement this now:
+
+```java
+private static final Queue<byte[]> postedMail = new LinkedList<>();
+
+private static void processMailCommands(List<MailCommand> commands) throws IOException {
+    for (MailCommand command : commands) {
+        if (command instanceof MailCommand.PostMail) {
+            MailCommand.PostMail postMail = (MailCommand.PostMail) command;
+            postedMail.add(postMail.getEncryptedBytes());
+        } else if (command instanceof MailCommand.StoreSealedState) {
+            MailCommand.StoreSealedState storeSealedState = (MailCommand.StoreSealedState) command;
+            Files.write(enclaveStateFile, storeSealedState.getSealedState());
+        }
+    }
+}
+```
+
+Mail responses from the enclave are emitted through the [`PostMail`](api/-conclave/com.r3.conclave.host/-mail-command/-post-mail/index.html)
+command. We store them in a queue for retrieval later. We ignore the
+[routing hint](api/-conclave/com.r3.conclave.host/-mail-command/-post-mail/get-routing-hint.html) here for the same 
+reason we didn't use it earlier. To support multiple clients the the routing hint would be used to assign the posted 
+mail to the correct client connection.
+
+We also implement the other command, [`StoreSealedState`](api/-conclave/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html).
+The new sealed state is written to disk, overwriting the previous one. 
+
+!!! note
+
+    To reiterate the point from earlier, the mail commands should be actioned inside a transaction such that the 
+    delivery of response mail (or at least their storage for later processing) and the storing of the sealed state are 
+    done atomically. Storing the response mail in memory is obviously not safe for production!
+
+We can now implement `sendPostedMail`, which simply takes the first response mail from the queue, if one exists, and 
+sends it to the client:
+
+```java
+private static void sendPostedMail(DataOutputStream output) throws IOException {
+    byte[] mailResponse = postedMail.poll();
+    output.write(1);
+    if (mailResponse != null) {
+        output.writeInt(mailResponse.length);
+        output.write(mailResponse);
+    } else {
+        output.writeInt(0);
+    }
+    output.flush();
+}
+```
+
+This also happens to be the logic needed for the `pollMail` request, and so the [request loop above](#implementing-the-request-loop)
+also calls `sendPostedMail` if it receives a request type 3.
+
+And that's it for host!

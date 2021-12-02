@@ -6,7 +6,7 @@ import com.r3.conclave.mail.MailDecryptionException
 import java.io.IOException
 
 /**
- * Represents a network transport layer between the client and enclave host. [EnclaveTransport] defines how a host needs
+ * Represents a transport layer between the client and enclave host. [EnclaveTransport] defines how a host needs
  * to behave to be able to support [EnclaveClient] objects that connect to it. It is responsible for transporting
  * encrypted bytes between the host and client, whilst [EnclaveClient] deals with the encryption and decryption and
  * retry attempts if the enclave is restarted.
@@ -14,7 +14,7 @@ import java.io.IOException
  * Details such as how to start and shutdown the transport are implementation specific.
  *
  * The Conclave SDK provides [com.r3.conclave.client.web.WebEnclaveTransport] as an implementation for connecting the
- * client to a host which is using `conclave-web-host`.
+ * client to a host which is using the `conclave-web-host`.
  *
  * @see EnclaveClient
  * @see com.r3.conclave.client.web.WebEnclaveTransport

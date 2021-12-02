@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-* This tutorial assumes you have read and understood [Writing your first enclave](writing-hello-world.md).
+This tutorial assumes you have read and understood [Writing your first enclave](writing-hello-world.md).
 
 ## Introduction
 
