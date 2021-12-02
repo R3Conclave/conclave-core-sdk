@@ -359,7 +359,7 @@ system.
         run.dependsOn(":enclave:untarGraalVM")
         if (project.hasProperty("generateConfigFiles") && properties.get("enclaveMode").toString().toLowerCase() == "mock" != null) {
             applicationDefaultJvmArgs = [
-                    "-agentpath:$graalVMDir/jre/lib/amd64/libnative-image-agent.so=config-output-dir=$configurationDir," +
+                    "-agentpath:$graalVMDir/lib/libnative-image-agent.so=config-output-dir=$configurationDir," +
                     "caller-filter-file=$filterFile"
             ]
         }
