@@ -300,6 +300,11 @@ will be available at run time.
 
 The path should be absolute or relative to the root of the enclave module.
 
+!!!warning
+    Due to a [known issue](known-issues.md), reflection configuration files must be specified using relative paths when
+    building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than the
+    usual backslashes.
+
 ### serializationConfigurationFiles
 _Default:_ empty list
 
@@ -310,6 +315,11 @@ documentation file.
 This allows to specify classes which are expected to be serialized using Java serialization.
 
 The path should be absolute or relative to the root of the enclave module.
+
+!!!warning
+    Due to a [known issue](known-issues.md), serialization configuration files must be specified using relative paths
+    when building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than
+    the usual backslashes.
 
 ## Assisted Configuration of Native Image Builds
 
@@ -392,7 +402,7 @@ system.
 
     === "macOS"
         !!! note
-            On MacOS, you will need an installation of docker desktop or these instructions will not work!
+            On macOS, you will need an installation of docker desktop or these instructions will not work!
             Run the following commands to create a linux execution environment and open a shell:
 
         ```
@@ -412,13 +422,13 @@ system.
     === "Windows"
         !!! note
             On Windows, you will need an installation of docker desktop or these instructions will not work!
-            Run the following commands in windows powershell to create a linux execution environment and open a shell:
+            Run the following commands in Windows powershell to create a linux execution environment and open a shell:
 
         ```
         .\gradlew.bat enclave:setupLinuxExecEnvironment
         docker run -it --rm -p 9999:9999 -v ${HOME}:/home/${env:UserName} -w /home/${env:UserName} conclave-build /bin/bash
         ```
-        The shell will place you at the root of your windows user directory. From here you can navigate to your project
+        The shell will place you at the root of your Windows user directory. From here you can navigate to your project
         directory and build/run the project as you would in a native linux environment:
         ```bash
         cd <project-directory>
@@ -430,7 +440,7 @@ system.
             project, see the [Running hello world](running-hello-world.md#appendix-summary-of-docker-command-options)tutorial.
         !!! note
             Alternatively, for a more streamlined development experience, you may also be able to use Ubuntu 18.04 via
-            the [windows subsystem for linux](https://docs.microsoft.com/en-us/windows/wsl/install), though this method
+            the [Windows subsystem for linux](https://docs.microsoft.com/en-us/windows/wsl/install), though this method
             has not been extensively tested.
 
     !!! tip
