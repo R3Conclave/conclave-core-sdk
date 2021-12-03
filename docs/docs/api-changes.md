@@ -38,11 +38,11 @@ enclave.deliverMail(mail, routingHint)
 If you have used `acknowledgeMail` then you will need to remove those calls. You may also need to redesign your
 enclave to _not_ think about redelivery of mail, but this may actually make your code simpler!
 
-Another consequence of no longer having mail redelivery is that the the mail-to-self pattern to persist data across
+Another consequence of no longer having mail redelivery is that the mail-to-self pattern to persist data across
 enclave restarts is no longer valid. However, this has been replaced by a more secure and easier to use API with
 the introduction of a [`persistentMap`](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html)
 inside the enclave. This is a normal `java.util.Map` object which stores
-key strings to arbitrary byte arrays. Use this map to persistent data that you need available across restarts.
+key strings to arbitrary byte arrays. Use this map to persist data that you need available across restarts.
 [Learn more about enclave persistence](persistence.md).
 
 On the host side the API has changed slightly as well. Since mail acknowledgement no longer exists then the mail
@@ -63,7 +63,7 @@ and trying to manipulate their state by replaying old mail.
 
 As a consequence, when the enclave restarts, clients will need to download the new
 [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) and use this to 
-create a new post office with the enclave's new key. The new post office must be used to send all subsequent mail.
+create a new post office with the enclave's new key. The new post office must be used to send all subsequent mails.
 
 How can a client detect when the enclave restarts? We've updated [`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html)
 to throw a new checked exception [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html)
@@ -89,7 +89,7 @@ easier to determine what level of hardware support is provided by the platform:
 [`EnclaveHost.isHardwareEnclaveSupported`](api/-conclave/com.r3.conclave.host/-enclave-host/is-hardware-enclave-supported.html),
 [`EnclaveHost.enableHardwareEnclaveSupport`](api/-conclave/com.r3.conclave.host/-enclave-host/enable-hardware-enclave-support.html),
 
-Example usage of the the new API:
+Example usage of the new API:
 
 ```java
 public static void main(String args[]) {
@@ -115,7 +115,7 @@ Note that `MockOnlySupportedException` is no longer a part of the API, and has b
 
 ## Java 11
 
-Now, an existing enclave will require java 11. So either the developer has to manually set it to java 8, or use jdk 11 at `enclave/build.gradle`:
+Now, an existing enclave will use Java 11 by default. To continue using Java8, `enclave/build.gradle` file needs to be manually updated with:
 ```
 compileJava {
     sourceCompatibility = JavaVersion.VERSION_1_8
