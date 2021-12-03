@@ -92,6 +92,10 @@ contains all KDS related configuration. This section contains the
 [enclave constraints](constraints.md) to use during
 attestation when getting a key from the KDS enclave.
 
+!!! Warning
+    A sample key is intentionally being used to sign the KDS as it is not ready for production. The sample key used 
+    is the same signing key that is used in the hello-world sample but this will change when the KDS goes into production.
+
 Next we have the `keySpec {}` section. This section contains parameters which
 define how the KDS generates keys. This section contains the `masterKeyType`
 property, which defines the type of master key to use (for now, only
