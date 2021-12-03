@@ -35,7 +35,7 @@ If you are using the web host then you can specify the KDS connection parameters
 on the command line when starting your service:
 
 ```
---kds.url=https://kds.dev.conclave.r3trade.io
+--kds.url=https://kds.dev.conclave.cloud
 --kds.connection.timeout.seconds=60
 ```
 
@@ -48,7 +48,7 @@ import com.r3.conclave.host.kds.KDSConfiguration;
 
 ...
 
-KDSConfiguration kdsConfiguration = new KDSConfiguration("https://kds.dev.conclave.r3trade.io");
+KDSConfiguration kdsConfiguration = new KDSConfiguration("https://kds.dev.conclave.cloud");
 EnclaveHost enclaveHost = EnclaveHost.load("com.example.MyEnclave");
 enclaveHost.start(null, null, null, kdsConfiguration) {}
 
@@ -56,7 +56,7 @@ enclaveHost.start(null, null, null, kdsConfiguration) {}
 
 !!!Note
     The URL for the public preview of the R3 hosted KDS is
-    `https://kds.dev.conclave.r3trade.io`. This is URL might be changed in a later
+    `https://kds.dev.conclave.cloud`. This is URL might be changed in a later
     deployment of the KDS.
 
 ## Configuring the key specification
