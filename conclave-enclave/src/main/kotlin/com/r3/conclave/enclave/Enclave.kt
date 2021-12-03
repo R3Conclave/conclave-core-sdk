@@ -56,14 +56,10 @@ import kotlin.concurrent.withLock
  *
  * The enclave also provides a persistent key-value store ([persistentMap]) which is resistant to rollback attacks by
  * the host. Use this to persist data that needs to exist across enclave restarts. Any data stored just in local
- * variables will be reset on restart.
+ * variables will be reset on restart. The default file system can also be used both as a temporary scratchpad but also
+ * for persistence.
  */
 abstract class Enclave {
-
-    /**
-     * Suppress kotlin specific companion objects from our API documentation.
-     * @suppress
-     */
     private companion object {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
@@ -104,13 +100,14 @@ abstract class Enclave {
      * re-initialise the enclave. Conclave makes a best-effort attempt at preventing the host from being able to rewind
      * map, i.e. using an older version instead of the latest.
      *
-     * The map is also not available if the enclave is multi-threaded (i.e. [threadSafe] is overridden to return
-     * `true`). Support for this maybe added in a future version.
+     * The persistent map is not enabled by default. This is done by setting the
+     * [`enablePersistentMap`](https://docs.conclave.net/enclave-configuration.html#enablepersistentmap-maxpersistentmapsize)
+     * configuration in the enclave's build.gradle to true. The map is also not available if the enclave is multi-threaded
+     * (i.e. [threadSafe] is overridden to return `true`). Support for this maybe added in a future version.
      *
      * Note, the keys are encoded using UTF-8 and the encoded size of each key cannot be more than 65535 bytes.
      *
-     * @throws IllegalStateException If [threadSafe] returns `true` or if the persistent map was not enabled in the
-     * build file.
+     * @throws IllegalStateException If the persistent map is not enabled.
      */
     val persistentMap: MutableMap<String, ByteArray> get() {
         check(env.enablePersistentMap) {
@@ -143,6 +140,10 @@ abstract class Enclave {
     /** The serializable remote attestation object for this enclave instance. */
     protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
 
+    /**
+     * The remote attestation object for the KDS enclave this enclave is using. This will be null if this enclave is
+     * configured to use a KDS or if the KDS hasn't connected to one.
+     */
     protected val kdsEnclaveInstanceInfo: EnclaveInstanceInfo? get() = kdsEII
 
     /**

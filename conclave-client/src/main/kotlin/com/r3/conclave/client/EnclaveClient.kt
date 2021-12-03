@@ -242,7 +242,7 @@ open class EnclaveClient private constructor(
      *
      * This method will block until the enclave has processed the mail successfully. If the enclave synchronously
      * responds back with mail then they will be decrypted and returned back here. Any responses the enclave produces
-     * asychronously after the mail has been produced will be picked up by the asynchronous callback provided in [start].
+     * asychronously after the mail has been produced will be returned by [pollMail].
      *
      * If the enclave throws an exception during the processing of the request mail then this method will throw an
      * [EnclaveException]. The message from the original enclave exception may or may not be present. In particular, if
