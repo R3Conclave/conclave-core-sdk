@@ -105,11 +105,11 @@ regarding usage of these properties.
 
 ## Defining the `PolicyConstraint`
 The key policy constraint can be thought of as similar to the
-[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object used by clients during attestation to verify an
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object received from a remote enclave, and can be
-configured in much the same way by setting the `constraint` property using the
-[enclave constraint DSL](constraints.md).
-In this case however, the KDS imposes the key policy constraint on the
+[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object which is used during
+attestation to define the minimum security attributes of an enclave's
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object before
+initiating communication. It can be configured in much the same way by setting the `constraint` property using the
+[enclave constraint DSL](constraints.md). In this case however, the KDS imposes the key policy constraint on the
 `EnclaveInstanceInfo` of the requesting enclave before releasing a key to it.
 
 As noted before, the measurement of the key policy constraint is included in the
@@ -127,7 +127,9 @@ want subsequent versions of an enclave to be able to access data persisted by
 previous versions of that enclave, then you can set
 `useOwnCodeSignerAndProductID` to true instead. This will effectively tie the
 key to a specific product and signer, but not to a specific version of the
-enclave code. Only one of these constraints should be specified at a time.
+enclave code. These parameters may be used together to generate keys which are
+unique to both the enclave signer & product ID, and the specific version of
+the enclave.
 
 ## What `PolicyConstraint` should I specify?
 The `policyConstraint` section defines exactly which enclaves can access the key
