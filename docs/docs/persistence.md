@@ -163,6 +163,17 @@ the in-memory temporary filesystem when working with the file inside the
 enclave, writing the file back to the persistent filesystem only after it has
 been bound to the persistent map using a hash.
 
+## Sharing persistence between machines
+
+Both persisted filesystem and persistent map are by default encrypted with a key derived from the `MRSIGNER`.
+That means they can be only decryted by the enclave running on the same physical machine. To allow migration
+of persistent filesystem and persistent map between machines, a key derived from the [Key Derivation Service](kds-configuration.md)
+should be used. This must be configured before the enclave starts.
+
+Using a key derived from a KDS is particularly important when running in the cloud, such as Microsoft Azure.
+There is no guarantee that if the virtual machine restarts, it will be given the same physical machine, in which
+case, without a shared key, any persisted data is effectively lost.
+
 ## Additional information - How the persistent filesystem works
 The persistent filesystem within the enclave provides the developer with access
 to the full set of Java filesystem operations. Rather than delegating the
