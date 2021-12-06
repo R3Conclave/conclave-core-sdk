@@ -59,7 +59,7 @@ interface EnclaveInstanceInfo {
     fun serialize(): ByteArray
 
     /**
-     * Returns a new [PostOffice] instance far encrypting mail to this target enclave on the given topic.
+     * Returns a new [PostOffice] instance for encrypting mail to this target enclave on the given topic.
      *
      * Each mail created by this post office will be authenticated with the given private key, and will act as the client's
      * authenticated identity to the enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is
