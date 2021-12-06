@@ -113,10 +113,11 @@ public static void main(String args[]) {
 Note that `MockOnlySupportedException` is no longer a part of the API, and has been entirely superseded by
 [`PlatformSupportException`](api/-conclave/com.r3.conclave.host/-platform-support-exception/index.html).
 
-## Java 11
+### Java 11
 
-Now, an existing enclave will use Java 11 by default. To continue using Java8, `enclave/build.gradle` file needs to be manually updated with:
-```
+Enclaves will now use Java 11 by default. To revert back to Java 8 update the enclave's build.gradle:
+
+```groovy
 compileJava {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
@@ -134,8 +135,7 @@ code to use `EnclaveHost.load` instead of `MockHost.loadMock`. So the pre-1.1 co
 ```java
 if (mode == "mock") {
     enclave = MockHost.loadMock(className);
-}
-else {
+} else {
     enclave = EnclaveHost.load(className);
 }
 ```

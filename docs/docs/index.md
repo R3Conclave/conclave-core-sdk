@@ -26,11 +26,12 @@ but can also be used to secure your infrastructure against attack.
 - Develop gracefully on all operating systems, not just Linux: Windows and macOS are fully supported as well.
 - Full support for auditing enclaves over the internet, including remote attestation. A user can verify what the 
   source code of the remotely running enclave is, to ensure it will behave as they expect.
-- A [message oriented communication](mail.md) system that eliminates size-based side channel attack.
+- An [end-to-end encrypted communication](mail.md) system that eliminates size-based side channel attacks and makes 
+  communicating with an enclave super easy.
 - Simple to use persistence API for securely storing data inside an enclave which is resistant to rollback attacks.
-- A cloud based [Key Derivation Service](kds-detail.md), which enables you to deploy your application not tied to 
-  any one machine, so you easily migrate enclave data from one VM to another, unlock clusters and high-availability 
-  architectures, and enable seamless redeployment of VMs by cloud service providers.
+- A cloud based [Key Derivation Service](kds-detail.md), which enables applications not be tied down to a single 
+  machine. This enables seemless migration of enclave data from one VM to another, high-availability architectures, 
+  and seamless redeployment of VMs by cloud service providers.
 - A Gradle plugin to automate compiling, signing and calculating the code hash of your enclave. No need to use the Intel
   SDK - everything needed is included.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
@@ -43,7 +44,7 @@ but can also be used to secure your infrastructure against attack.
 - [Tutorials](running-hello-world.md), guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our
   [discord server](https://discord.com/invite/dDaBGqGPre) and mailing list, even if you don't have a proper support contract!
   
-Finally, **Conclave is free for individuals and early-stage startups!**
+**Get started for free today!**
 
 ## Documentation
 
@@ -86,11 +87,12 @@ blockchain platform that offers many useful features when you progress beyond en
 
 R3 offers [full ticket based commercial support](https://conclave.net/get-conclave/).
 
-There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
-is available where you can find the development team during UK office hours (GMT 0900-1700).
+There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. You can also 
+find the development team during UK office hours (GMT 0900-1700) on Discord.
 
-[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
-
+[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button }
+[:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button }
+[:fontawesome-brands-discord: Join us on Discord](https://discord.com/invite/dDaBGqGPre){: .md-button }
 
 
 ## Release notes
@@ -98,8 +100,8 @@ is available where you can find the development team during UK office hours (GMT
 ### 1.2
 
 !!! important
-    There have been some breaking changes in this version of Conclave. Be sure to read the [API changes page](api-changes.md)
-    for the information you need to get your existing project building with Conclave 1.2.
+    There have been some breaking changes in 1.2. Be sure to read the [API changes page](api-changes.md) on how to 
+    migrate your existing project.
 
 !!! important
     In our previous release we had deprecated Avian support. This has now been removed completely in 1.2. Enclaves built
@@ -109,21 +111,21 @@ is available where you can find the development team during UK office hours (GMT
 1. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) elimates the restriction of the enclave 
    sealing key being tied to a single physical CPU and thus unlocking cloud deployments. You can now easily migrate 
    data from one VM to another, unlock clusters and high-availability architectures, and enable seamless 
-   redeployment of VMs by cloud service providers. [Learn more about the KDS and how to start using our pre-release
-   service.](kds-configuration.md).
+   redeployment of VMs by cloud service providers. [Learn more about the KDS and how to start using the 
+   public preview](kds-configuration.md).
 
 1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
    recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
-   easy to understand and does not provide roll back protection against the host. To address all these issues the 
-   [`Enclave`](api/-conclave/com.r3.conclave.enclave/-enclave/index.html) class now exposes a simple 
-   [key-value store](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html) represented as a normal 
-   `java.util.Map` object. Conclave will securely persist this map such that it survives restarts and is resilient 
-   to attempts by the host to roll it back to previous states.
+   easy to understand and does not provide rollback protection against the host. To address all these issues the 
+   the enclave has a simple [key-value store](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html)
+   represented as a `java.util.Map` object. Conclave will securely persist this map such that it survives 
+   restarts and is resilient to attempts by the host to roll it back to previous states. Find out more 
+   [here](persistence.md#persistent-map).
 
 1. :jigsaw: **New feature!** We've actually introduced two forms of enclave persistence in 1.2! The rollback protection 
    provided by the persistent map above may not be needed and comes at a cost of increased overheads. As an alternative 
    the in-memory file system inside the enclave can be persisted directly to disk as an encrypted file on the host 
-   for faster performance. [Learn more about these two enclave persistence features](persistence.md).
+   for faster performance. [Find out more here](persistence.md#conclave-filesystems).
 
 1. :jigsaw: **New feature!** To elimate the need to write the same boilerplate code for the host we've introduced a 
    simple new host web server which exposes a REST API for sending and receiving mail and which implements the 
