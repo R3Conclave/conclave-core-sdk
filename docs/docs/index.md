@@ -14,6 +14,7 @@ but can also be used to secure your infrastructure against attack.
 * **[Get Conclave](https://conclave.net/get-conclave/)**
     * Conclave 1.0 SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`
     * Conclave 1.1 SHA2: `3d47ae8a9fb944d75fb4ee127cd9874c04343643c830e1fe68898c3c93891ca2`
+    * Conclave 1.2 SHA2: `072642ce92e277567794739c4a080414a3313f186208d0cb118945cbcc859682`
 
 ## Why Conclave?
 
