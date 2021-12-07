@@ -2,9 +2,9 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.MailCommand
 import com.r3.conclave.host.MailCommand.PostMail
 import com.r3.conclave.host.MailCommand.StoreSealedState
+import com.r3.conclave.host.kds.KDSConfiguration
 import java.nio.file.Path
 import java.util.*
 
@@ -29,10 +29,14 @@ abstract class EnclaveHostService : AutoCloseable {
     private val asynchronousResponses = HashMap<String, Queue<ByteArray>>()
 
     abstract val enclaveHost: EnclaveHost
-    abstract val enclaveFileSystemFile: Path?
 
-    fun start(attestationParameters: AttestationParameters?, sealedState: ByteArray?) {
-        enclaveHost.start(attestationParameters, sealedState, enclaveFileSystemFile) { commands: List<MailCommand> ->
+    fun start(
+        attestationParameters: AttestationParameters?,
+        sealedState: ByteArray?,
+        enclaveFileSystemFile: Path?,
+        kdsConfiguration: KDSConfiguration?
+    ) {
+        enclaveHost.start(attestationParameters, sealedState, enclaveFileSystemFile, kdsConfiguration) { commands ->
             for (command in commands) {
                 when (command) {
                     is PostMail -> processPostMail(command.routingHint, command.encryptedBytes)

@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include <vector>
+#include <algorithm>
 
 #include "vm_enclave_layer.h"
 #include "common.hpp"
@@ -99,8 +100,13 @@ namespace conclave {
     void PersistentDisk::prepareSectorTables() {
         const unsigned long num_sectors = getNumSectors();
         const unsigned long square_root = std::ceil(std::sqrt(num_sectors));
-        const unsigned long size_table_1 = square_root - (square_root % SECTOR_SIZE) + SECTOR_SIZE;
-        const unsigned long size_table_2 = num_sectors / size_table_1;
+
+        //  The number of sectors can't be bigger than 2^32 - 1 (see GET_SECTOR_COUNT in diskIoCtl below)
+        //  Hence the sector tables can just be of LBA_t type (currently "unsigned int").
+        //  This is to save memory when the tables are big.
+        const LBA_t size_table_1 = square_root - (square_root % SECTOR_SIZE) + SECTOR_SIZE;
+        //  We do not want this value to be zero in case the number of sectors is very small
+        const LBA_t size_table_2 = std::max(num_sectors / size_table_1, 1ul);
         sectors_table_1_.reserve(size_table_1);
         sectors_table_2_.reserve(size_table_2);
 
@@ -113,11 +119,11 @@ namespace conclave {
                        &hash_seed);
         memcpy(&seed, &hash_seed, sizeof(unsigned long));
 
-        for (unsigned long i = 0; i < size_table_1; ++i) {
+        for (LBA_t i = 0; i < size_table_1; ++i) {
             sectors_table_1_.push_back(i);
         }
 
-        for (unsigned long i = 0; i < size_table_2; ++i) {
+        for (LBA_t i = 0; i < size_table_2; ++i) {
             sectors_table_2_.push_back(i);
         }   
         std::shuffle(sectors_table_1_.begin(), sectors_table_1_.end(), std::default_random_engine(seed));
@@ -291,6 +297,10 @@ namespace conclave {
             break;
 
         case GET_SECTOR_COUNT:
+            //  As LBA_t is currently a 4 bytes value, getNumSectors should not return a value bigger than
+            //    2 ^ 32 - 1. This is currently always the case as we throw an exception in
+            //    case the related filesystem size requires a bigger number of sectors.
+            //  See the const kMaxInMemorySize, kMaxPersistentSize and the JNI setupFileSystems function in api.cpp
             *((LBA_t*)buf) = getNumSectors();
             result = RES_OK;
             break;

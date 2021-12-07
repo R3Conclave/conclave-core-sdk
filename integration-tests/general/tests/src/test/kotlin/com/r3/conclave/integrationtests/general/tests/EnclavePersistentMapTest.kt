@@ -6,15 +6,21 @@ import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveAction
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import org.junitpioneer.jupiter.CartesianEnumSource
+import org.junitpioneer.jupiter.CartesianProductTest
+import org.junitpioneer.jupiter.CartesianValueSource
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
 class EnclavePersistentMapTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave") {
-    @ParameterizedTest
-    @EnumSource(CallType::class)
-    fun `persistent map updated by several threads, with enclave restarts`(type: CallType) {
+    @CartesianProductTest
+    @CartesianEnumSource
+    @CartesianValueSource(booleans = [false, true])
+    fun `persistent map updated by several threads, with enclave restarts`(type: CallType, useKds: Boolean) {
+        this.useKds = useKds
+
         val threads = 10
         val mailClients = if (type == CallType.MAIL) Array(threads) { newMailClient() } else null
         val count = 200

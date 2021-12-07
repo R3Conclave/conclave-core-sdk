@@ -170,7 +170,7 @@ subprojects {
 
 import org.jetbrains.dokka.gradle.DokkaTask
 tasks.withType(DokkaTask).configureEach {
-    moduleName.set("Conclave $conclave_version")
+    moduleName.set("Conclave")
     dokkaSourceSets {
         register("conclave") {
             displayName.set("Conclave")
@@ -558,7 +558,7 @@ task sdkCopyExtras(type: Copy) {
 task sdkCopyConclaveInit(type: Copy, dependsOn: "conclave-init:shadowJar") {
     from file("conclave-init/build/libs/conclave-init-shadow.jar")
     into "$buildDir/sdk"
-    rename { "conclave-init.jar" }
+    rename { "tools/conclave-init.jar" }
 }
 
 // This task doesn't actually copy all the files, despite being called `sdkFiles`. It copies `docs/build` into the

@@ -12,7 +12,8 @@ upgrading your code.
 Firstly, mail acknowledgement no longer exists. Mail will no longer be replayed on enclave startup and so you no longer
 need to think about having to acknowledge any mail. That means the `acknowledgeMail` method in `Enclave` has been
 removed. This also means the mail ID parameter that's used for acknowledgement is no longer needed and has been
-removed as a parameter to the methods `EnclaveHost.deliverMail` and `Enclave.receiveMail`.
+removed as a parameter to the methods [`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) 
+and [`Enclave.receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html).
 
 You will need to change the signature of your `receiveMail` method in your enclave class:
 
@@ -37,15 +38,18 @@ enclave.deliverMail(mail, routingHint)
 If you have used `acknowledgeMail` then you will need to remove those calls. You may also need to redesign your
 enclave to _not_ think about redelivery of mail, but this may actually make your code simpler!
 
-Another consequence of no longer having mail redelivery is that the the mail-to-self pattern to persist data across
+Another consequence of no longer having mail redelivery is that the mail-to-self pattern to persist data across
 enclave restarts is no longer valid. However, this has been replaced by a more secure and easier to use API with
-the introduction of a `persistentMap` inside the enclave. This is a normal `java.util.Map` object which stores
-key strings to arbitrary byte arrays. Use this map to persistent data that you need available across restarts.
+the introduction of a [`persistentMap`](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html)
+inside the enclave. This is a normal `java.util.Map` object which stores
+key strings to arbitrary byte arrays. Use this map to persist data that you need available across restarts.
 [Learn more about enclave persistence](persistence.md).
 
 On the host side the API has changed slightly as well. Since mail acknowledgement no longer exists then the mail
 commands `AcknowledgeMail` and `AcknowledgementReceipt` have also been removed. They have been replaced by a new
-command `StoreSealedState`. These changes have a small knock-on effect with the `start` method. The second byte array
+command [`StoreSealedState`](api/-conclave/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html). These 
+changes have a small knock-on effect with the
+[`start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html) method. The second byte array
 parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob.
 Also, the mail commands callback is no longer optional and must be specified.
 
@@ -57,56 +61,35 @@ enclave restarts. In other words, a new random key is created each time an encla
 ever have the same encryption key, a malicious host is prevented from spinning up multiple copies of the same enclave
 and trying to manipulate their state by replaying old mail.
 
-As a consequence, when the enclave restarts, clients will need to download the new `EnclaveInstanceInfo`
-and use this to create a new post office with the enclave's new key. The new post office must be used to send all
-subsequent mail.
+As a consequence, when the enclave restarts, clients will need to download the new
+[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) and use this to 
+create a new post office with the enclave's new key. The new post office must be used to send all subsequent mails.
 
-How can a client detect when the enclave restarts? We've updated `EnclaveHost.deliverMail` to throw a new checked
-exception `MailDecryptionException` if the enclave was unable to decrypt the mail message. Since now the most likely
+How can a client detect when the enclave restarts? We've updated [`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html)
+to throw a new checked exception [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html)
+if the enclave was unable to decrypt the mail message. Since now the most likely
 explanation for this decryption error is that the enclave was restarted and is using a new key, the host should 
 catch this exception and use it to inform the client.
 
 ### Attestation check functionality moved from client to common
 
-To facilitate enclave to enclave communication, the following classes have been moved from `com.r3.conclave.client`
-to `com.r3.conclave.common`:
-
-* `EnclaveConstraint`
-* `InvalidEnclaveException`
+To facilitate enclave to enclave communication,
+[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) and
+[`InvalidEnclaveException`](api/-conclave/com.r3.conclave.common/-invalid-enclave-exception/index.html) have moved from
+`com.r3.conclave.client` to `com.r3.conclave.common`.
 
 Client code should be updated appropriately.
 
 ### Streamlined API for platform support checks
 
-Previously, to determine the level of platform support for enclaves you would have needed to use the following API
-method: `EnclaveHost.checkPlatformSupportsEnclaves()` (code example below). You could also pass `true` to this method
-to tell the SDK to attempt to software enable SGX on the system.
+`EnclaveHost.checkPlatformSupportsEnclaves()` has been removed and replaced by several smaller methods to make it 
+easier to determine what level of hardware support is provided by the platform:
+[`EnclaveHost.getSupportedModes`](api/-conclave/com.r3.conclave.host/-enclave-host/get-supported-modes.html),
+[`EnclaveHost.isSimulatedEnclaveSupported`](api/-conclave/com.r3.conclave.host/-enclave-host/is-simulated-enclave-supported.html),
+[`EnclaveHost.isHardwareEnclaveSupported`](api/-conclave/com.r3.conclave.host/-enclave-host/is-hardware-enclave-supported.html),
+[`EnclaveHost.enableHardwareEnclaveSupport`](api/-conclave/com.r3.conclave.host/-enclave-host/enable-hardware-enclave-support.html),
 
-```java
-public static void main(String args[]) {
-    try {
-        EnclaveHost.checkPlatformSupportsEnclaves(true);
-        // All modes supported
-    } catch (MockOnlySupportedException e) {
-        // Only mock mode supported
-    } catch (EnclaveLoadException e) {
-        // Hardware enclaves (release/debug) not supported
-    }
-}
-```
-
-In Conclave 1.2, this functionality has been split into separate methods to improve code readability:
-
-* `EnclaveHost.getSupportedModes()` returns a set (`Set<EnclaveMode>`) of enclave modes supported
-by the current platform.
-* `EnclaveHost.isSimulatedEnclaveSupported()` returns true if the host supports simulated enclaves, false
-otherwise.
-* `EnclaveHost.isHardwareEnclaveSupported()` returns true if the host supports hardware enclaves, false
-otherwise.
-* `EnclaveHost.enableHardwareEnclaveSupport()` attempts to software enable SGX. On failure, throws
-`com.r3.conclave.host.PlatformSupportException` with an appropriate error message.
-
-Example usage of the the new API functions:
+Example usage of the new API:
 
 ```java
 public static void main(String args[]) {
@@ -128,15 +111,13 @@ public static void main(String args[]) {
 ```
 
 Note that `MockOnlySupportedException` is no longer a part of the API, and has been entirely superseded by
-`PlatformSupportException`.
+[`PlatformSupportException`](api/-conclave/com.r3.conclave.host/-platform-support-exception/index.html).
 
-For more information, please consult the [updated tutorial documentation](writing-hello-world.md#write-a-simple-host-program).
-Alternatively, for working examples of usage, check the sample projects bundled with the SDK.
+### Java 11
 
-## Java 11
+Enclaves will now use Java 11 by default. To revert back to Java 8 update the enclave's build.gradle:
 
-Now, an existing enclave will require java 11. So either the developer has to manually set it to java 8, or use jdk 11 at `enclave/build.gradle`:
-```
+```groovy
 compileJava {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
@@ -154,8 +135,7 @@ code to use `EnclaveHost.load` instead of `MockHost.loadMock`. So the pre-1.1 co
 ```java
 if (mode == "mock") {
     enclave = MockHost.loadMock(className);
-}
-else {
+} else {
     enclave = EnclaveHost.load(className);
 }
 ```

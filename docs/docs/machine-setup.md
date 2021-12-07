@@ -14,7 +14,7 @@ When using Azure, everything is fully automatic.
 
 To deploy an enclave using real SGX hardware you need to configure the host system, and if your hardware
 does not support DCAP attestation also get access to the [Intel Attestation Service (IAS)](ias.md). At this time
-the host must be [Linux](system-requirements.md#linux-distros-and-versions) and requires the following steps:
+the host must be [Linux](machine-setup.md#distribution-support) and requires the following steps:
 
 1. Installing the SGX kernel driver, which isn't yet included in upstream kernels.
 2. Installing the Intel platform services software.
@@ -116,7 +116,7 @@ Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an e
 
 ## Renewing machine security  
 
-After following the above instructions, you may discover your `EnclaveInstanceInfo` objects report the enclave as 
+After following the above instructions, you may discover your [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) objects report the enclave as 
 `STALE`. This means the machine requires software updates. Applying all available updates and
 rebooting should make the security evaluation of `STALE` go away. See ["Renewability"](renewability.md) to learn more
 about this topic and what exactly is involved.

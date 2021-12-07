@@ -167,7 +167,7 @@ docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
     let us and the community know if it works (conclave-discuss@groups.io)
 
 ## Running a Conclave Application
-Once the machine is set up, you can follow the [Compiling and running](tutorial.md) tutorial to run the `hello-world` sample.
+Once the machine is set up, you can follow the [Compiling and running](running-hello-world.md) tutorial to run the `hello-world` sample.
 
 The sample is configured to use DCAP attestation with the
 following line in `Host.java`

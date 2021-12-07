@@ -7,7 +7,6 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.EnclaveHostService
 import com.r3.conclave.host.internal.createMockHost
-import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
@@ -23,7 +22,7 @@ class MockEnclaveTransport(
     private var enclaveHostService = MockEnclaveHostService(enclaveClass, configuration)
 
     fun startEnclave() {
-        enclaveHostService.start(null, null)
+        enclaveHostService.start(null, null, null, null)
     }
 
     val enclaveHost: EnclaveHost get() = enclaveHostService.enclaveHost
@@ -35,7 +34,7 @@ class MockEnclaveTransport(
 
         val index = sealedStates.lastIndex - rollBackNumberOfStates
         val sealedStateToRestore = if (index != -1) sealedStates[index] else null
-        enclaveHostService.start(null, sealedStateToRestore)
+        enclaveHostService.start(null, sealedStateToRestore, null, null)
     }
 
     fun startNewClient(): EnclaveClient {
@@ -91,7 +90,6 @@ class MockEnclaveTransport(
         mockConfiguration: MockConfiguration?
     ) : EnclaveHostService() {
         override val enclaveHost: EnclaveHost = createMockHost(enclaveClass.java, mockConfiguration)
-        override val enclaveFileSystemFile: Path? get() = null
         override fun storeSealedState(sealedState: ByteArray) {
             sealedStates += sealedState
         }

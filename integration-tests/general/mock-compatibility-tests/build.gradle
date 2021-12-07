@@ -2,6 +2,10 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
 }
 
+configurations {
+    kds
+}
+
 dependencies {
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
@@ -19,8 +23,12 @@ dependencies {
     // onto the classpath and thus available in the non-mock modes as well.
     testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
+    kds "com.r3.conclave:kds:$kds_version:simulation" // Use the simulation KDS for testing
 }
 
 test {
-    systemProperty 'enclaveMode', enclaveMode
+    doFirst {
+        systemProperty "enclaveMode", enclaveMode
+        systemProperty "kdsJar", configurations.kds.asPath
+    }
 }

@@ -18,7 +18,7 @@ evidence from an enclave and returns:
 
 ... along with various other pieces of data. The response is signed by Intel. Because it's signed it can be hosted and
 passed around by anyone, thus when an enclave is started in debug or production mode IAS is contacted and an attestation
-calculated. It's a part of a serialized `EnclaveInstanceInfo` object and can be passed to clients from the server. This
+calculated. It's a part of a serialized [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object and can be passed to clients from the server. This
 means clients don't need to contact Intel's servers themselves and thus don't need authorisation to use IAS.
 
 ## Getting access

@@ -12,11 +12,8 @@ package com.r3.conclave.host
 sealed class MailCommand {
     /**
      * A [MailCommand] which is emitted when the enclave wants to send an encrypted message over the network
-     * to a client (via `Enclave.postMail`). The host should examine the public key and/or the
-     * [routingHint] parameter to decide where the enclave wants it to be sent.
-     *
-     * The routing hint may be "self". In that case you are expected to send the mail
-     * back to the enclave when the enclave is restarted.
+     * to a client (via `Enclave.postMail`). The host should examine the [routingHint] parameter to decide where the
+     * enclave wants it to be sent.
      *
      * You don't have to perform the actual send synchronously if that's inappropriate
      * for your app. However, the mail must be recorded for delivery synchronously, so

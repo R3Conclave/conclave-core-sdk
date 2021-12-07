@@ -14,6 +14,7 @@ but can also be used to secure your infrastructure against attack.
 * **[Get Conclave](https://conclave.net/get-conclave/)**
     * Conclave 1.0 SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`
     * Conclave 1.1 SHA2: `3d47ae8a9fb944d75fb4ee127cd9874c04343643c830e1fe68898c3c93891ca2`
+    * Conclave 1.2 SHA2: `072642ce92e277567794739c4a080414a3313f186208d0cb118945cbcc859682`
 
 ## Why Conclave?
 
@@ -26,8 +27,12 @@ but can also be used to secure your infrastructure against attack.
 - Develop gracefully on all operating systems, not just Linux: Windows and macOS are fully supported as well.
 - Full support for auditing enclaves over the internet, including remote attestation. A user can verify what the 
   source code of the remotely running enclave is, to ensure it will behave as they expect.
-- A [message oriented communication and storage](mail.md) system that eliminates size-based side channel attacks and 
-  integrates with the Intel SGX secure upgrade mechanisms. Roll forward through security upgrades without clients being aware of it.
+- An [end-to-end encrypted communication](mail.md) system that eliminates size-based side channel attacks and makes 
+  communicating with an enclave super easy.
+- Simple to use persistence API for securely storing data inside an enclave which is resistant to rollback attacks.
+- A cloud based [Key Derivation Service](kds-detail.md), which enables applications not be tied down to a single 
+  machine. This enables seemless migration of enclave data from one VM to another, high-availability architectures, 
+  and seamless redeployment of VMs by cloud service providers.
 - A Gradle plugin to automate compiling, signing and calculating the code hash of your enclave. No need to use the Intel
   SDK - everything needed is included.
 - API designs that guide you towards SGX best practices and avoidance of security pitfalls.
@@ -37,10 +42,10 @@ but can also be used to secure your infrastructure against attack.
   using just JUnit.
 - Integrate and benefit from [Corda](https://www.corda.net), an open source peer-to-peer network for business uses with
   enterprise support.
-- [Tutorials](tutorial.md), guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our Slack 
-  channel and mailing list, even if you don't have a proper support contract!
+- [Tutorials](running-hello-world.md), guides, design assistance and commercial support from the SGX experts at R3. Friendly devs on our
+  [discord server](https://discord.com/invite/dDaBGqGPre) and mailing list, even if you don't have a proper support contract!
   
-Finally, **Conclave is free for individuals and early-stage startups!**
+**Get started for free today!**
 
 ## Documentation
 
@@ -55,7 +60,7 @@ design. This will explain the concepts referred to in the rest of the documentat
 
 * **Writing and Running your First Conclave Application**
   
-    * [**Tutorial.**](tutorial.md) Once you understand the concepts go straight to writing your first enclave.
+    * [**Tutorial.**](running-hello-world.md) Once you understand the concepts go straight to writing your first enclave.
 
     * [**Enclave Configuration.**](enclave-configuration.md) Now you've created your first enclave, take a deeper look at the configuration options
 available for creating enclaves.
@@ -83,11 +88,12 @@ blockchain platform that offers many useful features when you progress beyond en
 
 R3 offers [full ticket based commercial support](https://conclave.net/get-conclave/).
 
-There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. A Slack channel
-is available where you can find the development team during UK office hours (GMT 0900-1700).
+There's a public mailing list for discussion of using Conclave and we also welcome general SGX talk. You can also 
+find the development team during UK office hours (GMT 0900-1700) on Discord.
 
-[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button } [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button } [:fontawesome-brands-slack: Slack us in #conclave](https://slack.corda.net/){: .md-button } 
-
+[:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button }
+[:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button }
+[:fontawesome-brands-discord: Join us on Discord](https://discord.com/invite/dDaBGqGPre){: .md-button }
 
 
 ## Release notes
@@ -95,20 +101,32 @@ is available where you can find the development team during UK office hours (GMT
 ### 1.2
 
 !!! important
-    There have been some breaking changes in this version of Conclave. Be sure to read the [API changes page](api-changes.md)
-    for the information you need to get your existing project building with Conclave 1.2.
+    There have been some breaking changes in 1.2. Be sure to read the [API changes page](api-changes.md) on how to 
+    migrate your existing project.
+
+!!! important
+    In our previous release we had deprecated Avian support. This has now been removed completely in 1.2. Enclaves built
+    with GraalVM native image had many benefits over Avian enclaves, including enhanced security, performance and 
+    capabilities.
+
+1. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) elimates the restriction of the enclave 
+   sealing key being tied to a single physical CPU and thus unlocking cloud deployments. You can now easily migrate 
+   data from one VM to another, unlock clusters and high-availability architectures, and enable seamless 
+   redeployment of VMs by cloud service providers. [Learn more about the KDS and how to start using the 
+   public preview](kds-configuration.md).
 
 1. :jigsaw: **New feature!** We've vastly improved how data is persisted inside the enclave. Previously we 
    recommended the "mail-to-self" pattern for storing data across enclave restarts. This is cumbersome to write, not 
-   easy to understand and does not provide roll back protection against the host. To address all these issues the 
-   `Enclave` class now exposes a simple key-value store represented as a normal `java.util.Map` object. Conclave 
-   will securely persist this map such that it survives restarts and is resilient to attempts by the host to roll it 
-   back to previous states.
+   easy to understand and does not provide rollback protection against the host. To address all these issues the 
+   the enclave has a simple [key-value store](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html)
+   represented as a `java.util.Map` object. Conclave will securely persist this map such that it survives 
+   restarts and is resilient to attempts by the host to roll it back to previous states. Find out more 
+   [here](persistence.md#persistent-map).
 
 1. :jigsaw: **New feature!** We've actually introduced two forms of enclave persistence in 1.2! The rollback protection 
    provided by the persistent map above may not be needed and comes at a cost of increased overheads. As an alternative 
    the in-memory file system inside the enclave can be persisted directly to disk as an encrypted file on the host 
-   for faster performance. [Learn more about these two enclave persistence features](persistence.md).
+   for faster performance. [Find out more here](persistence.md#conclave-filesystems).
 
 1. :jigsaw: **New feature!** To elimate the need to write the same boilerplate code for the host we've introduced a 
    simple new host web server which exposes a REST API for sending and receiving mail and which implements the 
@@ -117,12 +135,14 @@ is available where you can find the development team during UK office hours (GMT
    world sample to see how it's used.
 
 1. :jigsaw: **New feature!** To complement the host web server, we've also introduced a client library to make it
-   super easy to write an web-based enclave client. Add `conclave-web-client` as a dependency to your client module 
-   and use make use of the new `WebEnclaveTransport` class in conjunction with the new `EnclaveClient`.
+   super easy to write a web-based enclave client. Add `conclave-web-client` as a dependency to your client module 
+   and make use of the new [`WebEnclaveTransport`](api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) class in 
+   conjunction with the new [`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html).
 
-1. :jigsaw: **New feature!** `EnclaveClient` is a new API in `conclave-client` which greatly simplies your client 
-   code and handles all of the complexities when communicating with an enclave. It is agnositic to the transport 
-   layer between it and the host and support for other network protocols beside HTTP can be added. 
+1. :jigsaw: **New feature!** [`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) is a 
+   new API in `conclave-client` which greatly simplies your client code and handles all of the complexities when 
+   communicating with an enclave. It is agnositic to the transport layer between it and the host and support for 
+   other network protocols beside HTTP can be added. 
 
 1. :jigsaw: **Java 11** is now the default JDK version inside the enclave. You can make use of the new APIs and 
    features introduced since Java 8 when writing your enclave code! For compatibility the Conclave libraries are still 
@@ -132,12 +152,14 @@ is available where you can find the development team during UK office hours (GMT
    [Conclave Init](conclave-init.md).
 
 1. :jigsaw: **New feature!** We've added enclave lifecycle methods so that you can do any necessary enclave startup 
-   initialisation and shutdown cleanup. Override `onStartup` and `onShutdown` respectively.
+   initialisation and shutdown cleanup. Override [`onStartup`](api/-conclave/com.r3.conclave.enclave/-enclave/on-startup.html) and 
+   [`onShutdown`](api/-conclave/com.r3.conclave.enclave/-enclave/on-shutdown.html) respectively.
 
 1. :jigsaw: **New feature!** The host can now update the enclave's attestation without having to restart it. 
-   Previously restarting was the only way to force an update on the `EnclaveInstanceInfo` object. Now you can call 
-   `EnclaveHost.updateAttestation` whilst the enclave is still running and the `enclaveInstanceInfo` property will 
-   be updated.
+   Previously restarting was the only way to force an update on the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html)
+   object. Now you can call [`EnclaveHost.updateAttestation`](api/-conclave/com.r3.conclave.host/-enclave-host/update-attestation.html) 
+   whilst the enclave is still running and the [`enclaveInstanceInfo`](api/-conclave/com.r3.conclave.host/-enclave-host/get-enclave-instance-info.html)
+   property will be updated.
    
 1. :jigsaw: **New feature!** We've further improved the Conclave plugin and added more automation so that 
    you have to write less boilerplate. It's no longer necessary to add the `conclave-enclave` library as a 
@@ -145,6 +167,11 @@ is available where you can find the development team during UK office hours (GMT
    `testImplementation` dependency to enable mock testing. And finally the plugin will make sure any enclave
    resource files in `src/main/resources` are automatically added. Previously resource files had to be specified 
    manually.
+
+1. :jigsaw: **New feature!** We've added a new overload of [`EnclaveHost.load`](api/-conclave/com.r3.conclave.host/-enclave-host/load.html)
+   which no longer requires having to specify the enclave class name as a parameter. Instead,
+   [`EnclaveHost`](api/-conclave/com.r3.conclave.host/-enclave-host/index.html) will scan for the single matching
+   enclave on the classpath.
 
 1. :jigsaw: New experimental feature! Easily enable and use Python. It is JIT compiled inside the enclave and can 
    interop with JVM bytecode. Use this feature with care. Python support is still in an experimental state. While it 
@@ -165,10 +192,7 @@ is available where you can find the development team during UK office hours (GMT
 
 1. The container gradle script has been removed due to stability issues and will no longer be supported. If you are 
    using container-gradle to develop on Mac, we strongly suggest you stop doing so and follow
-   [these instructions](system-requirements.md#running-conclave-projects) for running your conclave projects instead.
-
-1. :jigsaw: **New feature!** We've added a new overload of `EnclaveHost.load` which no longer requires having to specify the enclave
-class name as a parameter. Instead, `EnclaveHost` will scan for the single matching enclave on the classpath.
+   [these instructions](running-hello-world.md) for running your conclave projects instead.
 
 ### 1.1
 
@@ -253,89 +277,3 @@ class name as a parameter. Instead, `EnclaveHost` will scan for the single match
 1. Security improvements and fixes.
 
 Please read the list of [known issues](known-issues.md).
-
-### Beta 4
-
-1. :jigsaw: **New feature!** Conclave now supports building [GraalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/)
-   enclaves on macOS and Windows! [GraalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/)
-   support was added in Beta 3 but required a Linux build system. Now, by installing Docker on Windows or macOS you
-   can configure your enclaves to use the `graalvm_native_image` runtime and let Conclave simply manage the build process
-   for you. Creating and managing the container is automated for you.
-1. :jigsaw: **New feature!** Conclave now supports a new remote attestation protocol. That means it now works 
-   out of the box on [Azure Confidential Compute VMs](https://docs.microsoft.com/en-us/azure/confidential-computing/),
-   without any need to get an approved signing key: you can self sign enclaves and go straight to 'release mode' on
-   Azure. Follow our tutorial on [how to deploy your app to Azure](azure.md) to learn more.
-1. :jigsaw: **New feature!** [Easily enable and use JavaScript](javascript-python.md). It is JIT compiled inside the enclave, 
-   warms up to be as fast as V8 and can interop with JVM bytecode. Full support for the latest ECMAScript standards.
-1. :jigsaw: **New feature!** Mail is now integrated with the SGX data sealing and TCB recovery features. If a version of 
-   the CPU microcode, SGX architectural enclaves or the enclave itself is revoked, old mail will be readable by the newly
-   upgraded system, but downgrade attacks are blocked (old versions cannot be exploited to read new mail). This support
-   is fully automatic and especially useful when using the 'mail to self' pattern for storage.
-1. :jigsaw: **New feature!** The new `EnclaveHost.capabilitiesDiagnostics` API prints a wealth of detailed technical
-   information about the host platform, useful for diagnostics and debugging.
-1. `System.currentTimeMillis` now provides high performance, side-channel free access to the host's clock. The host
-   copies the current time to a memory location the enclave can read, thus avoiding a call out of the enclave that
-   could give away information about where in the program the enclave is. Remember however that as per usual, 
-   the host can change the time to whatever it wants, or even make it go backwards.
-1. Significantly improved multi-threading support. [Learn more about threads inside the enclave](threads.md). Write
-   scalable, thread safe enclaves and use thread-pools of different sizes inside and outside the enclave.
-1. Conclave's internal dependencies are better isolated. As a consequence it's now loadable from inside an app designed 
-   for [R3's Corda platform](https://www.corda.net). Corda is one of the world's leading blockchain platforms and its 
-   privacy needs are what drove development of Conclave. We plan to release a sample app showing Corda/Conclave 
-   integration soon.  
-1. API improvements! The API for receiving local calls into an enclave has been simplified, the mail API lets the host
-   provide a routing hint when delivering, and the API for passing attestation parameters has been simplified due to the
-   introduction of support for the new DCAP attestation protocol. [Learn more about the API changes](api-changes.md).
-1. Mail has been optimised to reduce the size overhead and do fewer memory copies.
-1. Bug fixes, usability and security improvements. Upgrade to ensure your enclave is secure. We've improved error 
-   messages for a variety of situations where Conclave isn't being used correctly.
-
-### Beta 3
-
-1. :jigsaw: **New feature!** The Mail API makes it easy to deliver encrypted messages to the enclave that only it can
-   read, with sequencing and separation of different mail streams by topic. Mail can also be used by an enclave to
-   persist (sealed) data. [Learn more](architecture.md#mail)
-1. :jigsaw: **New feature!** You can now compile your entire enclave ahead of time using 
-   [GraaalVM Native Image](https://www.graalvm.org/docs/reference-manual/native-image/). This gives you access to a
-   much better JVM than in prior releases, with faster enclaves that use less RAM. The performance improvement can be
-   between 4x and 12x faster than in prior releases and memory usage can be up to 5x lower.
-1. :jigsaw: **New feature!** New mock API for easy debugging between the host and enclave, fast unit testing and easy
-   development of enclaves on machines that don't support the technology. [Learn more](writing-hello-world.md#mock). 
-1. :jigsaw: **New feature!** You can now produce enclaves on macOS! Just follow the instructions as you would on a Linux
-   developer machine, and a JAR with an embedded Linux enclave .so file will be produced automatically. You can then take
-   that JAR and upload it to a Linux host for execution, e.g. via a Docker or webapp container (e.g. Tomcat). Combined
-   with the equivalent Windows support we added in beta 2 and the easy to use mock enclave API, this completes our 
-   developer platform support and allows mixed teams of people working on their preferred OS to build enclave-oriented
-   apps together. Please note: at this time only the Avian runtime can be cross-compiled from Windows and macOS.
-1. :jigsaw: **New feature!** You may now make concurrent calls into the enclave using multiple threads,.  
-1. Remote attestations (serialized `EnclaveInstanceInfo` objects) now remain valid across enclave restarts. They may
-   still be invalidated by changes to the SGX TCB, for example, microcode updates applied as part of an operating
-   system upgrade.
-1. Enclave/host communication now handles exceptions thrown across the boundary properly.
-1. In order to prevent accidental leakage of information from inside enclaves, release builds of enclaves no 
-   longer propagate console output across the enclave boundary. Calls to `System.out.println()` and related methods 
-   will now only print to the console on simulation and debug builds of enclaves.
-
-### Beta 2
-
-1. :jigsaw: **New feature!** Build enclaves on Windows without any special emulators, virtual machines or other setup.
-1. :jigsaw: **New feature!** Specify an enclave's product ID and revocation level in the enclave build file. There's a new
-   `conclave` block which lets you do this. These values are enforced in any relevant `EnclaveConstraint` object.
-1. :jigsaw: **New feature!** A new `EnclaveHost.checkPlatformSupportsEnclaves` API allows you to probe the host
-   operating system to check if enclaves are loadable, before you try to actually do so. Additionally, if SGX is disabled
-   in the BIOS but can be enabled by software request, Conclave can now do this for you. If the host machine needs
-   extra configuration a useful error message is now provided in the exception. 
-1. :jigsaw: **New feature!** Better support for enclave signing in the Gradle plugin. New documentation has been added showing how to
-   sign with externally managed keys. 
-1. You can now use the Conclave host API from Java 11. The version of Java inside the enclave remains at Java 8.
-1. We've upgraded to use the version 2.9.1 of the Intel SGX SDK, which brings security improvements and lays the groundwork for new 
-   features. Make sure your host system is also running version 2.9.1. We've also upgraded to the latest version of the Intel
-   Attestation Service (IAS).
-1. The ID for the enclave plugin is now `com.r3.conclave.enclave`. You will need to change this in your enclave's
-   build.gradle file.
-1. `enclave.xml` files are no longer needed. You can safely delete them, as they're now generated for you by Conclave.
-1. The enclave measurement is now stable when built using different versions of the JDK.
-1. The format of an `EnclaveInstanceInfo` has been optimised. Old `EnclaveInstanceInfo` objects won't work with the beta 2
-   client libraries and vice-versa.
-1. Java serialization is now formally blocked inside the enclave using a filter. Unfiltered deserialization has a history
-   of leading to exploits in programs written in high level managed languages.

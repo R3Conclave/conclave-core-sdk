@@ -4,15 +4,20 @@ A mail is an authenticated byte array with an encrypted body and a cleartext env
 gigabytes in size, however, it must at this time fit into memory when loaded all at once. In practice mails will
 usually be much smaller than that. 
 
-Conclave Mail unifies messaging and data storage. It provides a variety of features that are useful when building 
-applications:
+## Mail features
 
-**Encryption.** The encryption key used by the enclave is private to that enclave but stable across restarts and
+Conclave Mail provides a variety of features that are useful when building secure applications.
+
+### Encryption
+
+The encryption key used by the enclave is private to that enclave but stable across restarts and
 enclave upgrades. This means messages encrypted and delivered by older clients can still be decrypted. The format
 uses the respected [Noise protocol framework](https://noiseprotocol.org/) (with AES/GCM and SHA-256), which is
 the same cryptographic framework used by WhatsApp, the Linux kernel WireGuard protocol and I2P.
 
-**Authentication.** Mail allows a message to prove it came from the owner of a particular key, as well as being
+### Authentication
+
+Mail allows a message to prove it came from the owner of a particular key, as well as being
 encrypted to a destination public key. Because of this it's easy to encrypt a reply to the sender,
 although how a public key is mapped to a physical computer is up to the app developer. This capability is useful
 for another reason: if an enclave has a notion of a user identifiable by public key, mail can be cryptographically
@@ -20,48 +25,64 @@ authenticated as having come from that user. This avoids the need for complex us
 process can be handled outside of the enclave, without compromising security. The envelope is protected this way
 along with the encrypted body.
 
-**Headers.** Mail has unencrypted but authenticated (tamperproof) headers that can be used to link messages together.
+### Message headers
+
+Mail has unencrypted but authenticated (tamperproof) headers that can be used to link messages together.
 This allows clients to structure a conversation as if they were using a socket, but also hold multiple conversations
 simultaneously. This can be used to implement usage tracking, prioritisation, or other tasks not directly 
-relevant to data processing that the host can assist with (despite its untrusted nature).
+relevant to data processing that the host can assist with (despite its untrusted nature). The mail headers contain the
+following fields:
 
-Headers provide strong sequence numbers that are set by the sender and prevent the host re-ordering messages, a 
-"topic" string field that is more useful than a port number (e.g. can identify what it's about, be mapped to
-message queue names), and applications can put their own data in the envelope part of the headers thus enabling 
-hosts to see part of the messages. This can frequently be a useful design pattern.
+1. A _topic_. This can be used to distinguish between different streams of mail from the same client. It's a string and
+   can be thought of as equivalent to an email subject. Topics are scoped per-sender and are not global. The client can
+   send multiple streams of related mail by using a different topic for each stream, and it can do this concurrently.
+   The topic is not parsed by Conclave and, to avoid replay attacks, should never be reused for an unrelated set of
+   mail items in the future. A good value might thus contain a random UUID. Topics may be logged and used by your
+   software to route or split mail streams in useful ways.
+1. The _sequence number_. Starting from zero, this is incremented by one for every mail delivered on a topic. Conclave will
+   automatically reject messages if this doesn't hold true, thus ensuring to the client that the stream of related
+   mail is received by the enclave in the order they were sent, and that the host is unable to re-order or drop them.
+1. The _envelope_. This is a slot that can hold any arbitrary byte array the sender likes. It's a holding zone for
+   app specific data that should be authenticated but unencrypted.
 
-The headers are described in more detail in the [tutorial](writing-hello-world.md#mail-headers).
+**These header fields are available to the host and therefore should not contain secrets**. It may seem odd to have
+data that's unencrypted, but it's often useful for the client, host and enclave to collaborate in various ways related
+to storage and routing of data. Even when the host is untrusted it may still be useful for the client to send data
+that is readable by the host and enclave simultaneously, but which the host cannot tamper with. Inside the enclave
+you can be assured that the header fields contain the values set by the client, because they're checked before
+[`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) is invoked.
 
-**Framing.** A typical need with any socket or stream based transport is to add framing on top, because the application
+In addition to the headers there is also the _authenticated sender public key_. This is the public key of the client
+that sent the mail. Like the body it's encrypted so that the host cannot learn the client identities. It's called
+"authenticated" because the encryption used by Conclave means you can trust that the mail was encrypted by an entity
+holding the private key matching this public key. If your enclave recognises the public key this feature can be used as
+a form of user authentication.
+
+### Framing
+
+A typical need with any socket or stream based transport is to add framing on top, because the application
 really needs to work with messages. In textual protocols framing can be remarkably tricky to get right, as user 
 or attacker controlled data may be placed inside a message, meaning any characters that mark the end of a message need
 to be escaped. This can go wrong in [a variety of interesting ways](https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf). Mail by its nature delimits
 messages such that you can always tell where they begin and end, without needing to impose your own framing on top.
 
-## Future features
-
-We plan to add additional features to the mail API in upcoming releases:
-
-**Atomicity.** Mail should be delivered by the host to an enclave on each startup, until the mail is acknowledged.
-Acknowledgement and posting mail will become transactional, thus can be performed atomically with other acknowledgements
-and sending other replies.  In this way enclaves can ensure that restarting an enclave doesn't produce duplicate 
-messages, perform the same actions twice or cause service interruptions to users.
-
-!!! notice
-
-    More sophisticated database solutions may be added in future releases.
-
 ## Attacks on messaging
 
 Mail is designed to block a variety of attacks the host can mount on the enclave.
 
-**Observation.** The body of the mail is encrypted with industry standard AES/GCM. The host can't see what the client
+### Observation
+
+The body of the mail is encrypted with industry standard AES/GCM. The host can't see what the client
 is sending to the enclave.
 
-**Tampering.** All the encrypted body, the plaintext headers and the user-specifiable envelope header are
+### Tampering
+
+All the encrypted body, the plaintext headers and the user-specifiable envelope header are
 authenticated such that the enclave can detect if they were tampered with. See below for more information on this.  
 
-**Reordering.** The enclave can't directly access any hardware other than the CPU and RAM. That means it can't know
+### Reordering
+
+The enclave can't directly access any hardware other than the CPU and RAM. That means it can't know
 that messages came from the network card or hard disk in the right order, or that no messages were dropped. 
 Mails include a sequence number and topic in the headers, meaning it is *visible* to the host but can't be tampered with. This
 enlists the client as an ally in the enclave's war against the host: the client wants its messages to be delivered in
@@ -74,7 +95,9 @@ increment, on a per-topic basis, before passing the mail to your code.
     deliver mail that would imply it had actually taken over the computer somehow and was forcing it to provide services
     to the enclave. SGX isn't a form of remote control and nobody can force a host to run enclaves against its will.
 
-**Size side channels.** Simply knowing how big a message is can be [surprisingly powerful](https://www.schneier.com/blog/archives/2010/03/side-channel_at.html). 
+### Size side channels
+
+Simply knowing how big a message is can be [surprisingly powerful](https://www.schneier.com/blog/archives/2010/03/side-channel_at.html).
 Mail is automatically padded by Conclave to give messages a uniform size. This blocks attempts to infer the contents of
 the message based on the precise size. By default Mail uses a moving average but the policy is configurable and so if
 you know a reasonable upper limit on the size of your messages, you can pad every message to be that size. The host will
@@ -116,7 +139,7 @@ key and can be encoded in another 256 bits (32 bytes). We write this public key 
 key is an *ephemeral* key - we picked it just for the purposes of creating this mail. 
 
 We know the target's public key either because the enclave puts it public key into the remote attestation, represented 
-by an `EnclaveInstanceInfo` object, or because the enclave is replying and obtained the key to reply to from an earlier
+by an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object, or because the enclave is replying and obtained the key to reply to from an earlier
 mail. Two public keys is all that's needed for both parties to compute the same AES key, without any man-in-the-middle
 being able to calculate the same value.
 
@@ -195,7 +218,7 @@ so fake pseudo-certificates can end up harder to deploy and work with than a pur
 Noise is more modular - you can provide any arbitrary byte array as part of the handshake, which can thus 
 include a certificate (of any format) if you want that, but it isn't necessary.
 
-In Conclave the "certificate" is the remote attestation data represented as an `EnclaveInstanceInfo` object. 
+In Conclave the "certificate" is the remote attestation data represented as an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object. 
 It will usually make sense to expose this to the client via some app-specific mechanism, for example, returning it
 in some other API, publishing it on a web server, a network drive, a message queue, even putting it into a 
 distributed hash table. Noise and by extension Conclave doesn't care how you get this data, only that you have it.

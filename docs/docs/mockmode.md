@@ -1,6 +1,6 @@
 # Building enclaves in Mock Mode
 
-Conclave provides a number of different [modes](tutorial.html#enclave-modes) when building your enclave, supporting different stages of the development
+Conclave provides a number of different [modes](enclave-modes.md) when building your enclave, supporting different stages of the development
 cycle. Release, debug and simulation modes all require a Linux environment in order to run. This does not prevent
 running a simulation enclave on MacOS or Windows if you load and run you project in a Docker container, but for
 convenience it is useful to be able to run your enclave code directly within the host environment. In addition, 
@@ -15,10 +15,22 @@ and enjoy the regular Java development experience.
 
 ## Using mock mode
 
-Mock mode can be used in two different ways. Firstly, you can compile your enclave in mock mode using the
-[`-PenclaveMode` flag](tutorial.md#selecting-your-mode) for fast, iterative development. 
+Mock mode can be used in two different ways, depending on whether the enclave is being loaded from outside or inside
+the enclave module.
 
-Secondly, when creating an `EnclaveHost` inside the enclave module, Conclave will automatically create it in mock mode.
+### Outside the enclave module
+Outside enclave module, The mode can be set when adding a Gradle dependency, just like any other mode:
+```groovy
+dependencies {
+    runtimeOnly project(path: ":enclave", configuration: "mock")
+}
+```
+
+See [Setting the enclave mode](enclave-modes.md#set-the-enclave-mode) for more details.
+
+### Inside the enclave module
+When creating an [`EnclaveHost`](api/-conclave/com.r3.conclave.host/-enclave-host/index.html) inside the enclave module, 
+Conclave will automatically create it in mock mode.
 This means any tests you define in the enclave module will automatically use mock mode - you can write your tests to load 
 and call the enclave without having to explicitly configure a mock enclave.
 For tests to use any other mode, they must be defined outside the enclave module, for example in the host.
@@ -59,7 +71,8 @@ if (mode == "mock") {
 
 ## Accessing the enclave from the mock host
 
-When using mock mode, the host provides access to the enclave instance via the `EnclaveHost.mockEnclave` property. If you
+When using mock mode, the host provides access to the enclave instance via the
+[`EnclaveHost.mockEnclave`](api/-conclave/com.r3.conclave.host/-enclave-host/get-mock-enclave.html) property. If you
 want to look at the internal state of your enclave you can cast this property to your actual enclave class type.
 
 ```java
@@ -77,8 +90,10 @@ ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
 When you build an enclave in release, debug mode or simulation mode, there are certain environmental parameters
 that are defined by the trusted computing base and the Conclave configuration.
 
-In mock mode, instead of being defined by the platform, these parameters are defined using the `MockConfiguration`
-class which is subsequently passed to `EnclaveHost.load()`. This class can be used to configure these parameters for use 
+In mock mode, instead of being defined by the platform, these parameters are defined using the
+[`MockConfiguration`](api/-conclave/com.r3.conclave.common/-mock-configuration/index.html)
+class which is subsequently passed to [`EnclaveHost.load`](api/-conclave/com.r3.conclave.host/-enclave-host/load.html).
+This class can be used to configure these parameters for use 
 when the mock enclave is loaded. This is useful to allow test cases to be written for checking correct enclave operation around
 version increments and rollbacks.
 
@@ -87,7 +102,8 @@ version increments and rollbacks.
     then it is ignored.
  
 
-The `MockConfiguration` class allows configuration of the following properties. The table below describes each property and
+The [`MockConfiguration`](api/-conclave/com.r3.conclave.common/-mock-configuration/index.html) class allows configuration of 
+the following properties. The table below describes each property and
 shows the SGX equivalent parameter for information.
 
 | Property | SGX Equivalent | Allowed values | Default Value | Description |
@@ -98,7 +114,8 @@ shows the SGX equivalent parameter for information.
 | revocationLevel | ISVSVN | 0-65534 | 0 | The mock revocation level of the enclave. |
 | tcbLevel | CPUSVN | 1-65535 | 1 | A mock version number that defines the TCB level, or version number of the TCB. This is equivalent to the SGX CPUSVN but because Conclave uses an integer, the tcbLevel is ordered allowing for easy testing of [TCB recovery](renewability.md#mock-mode-and-the-sgx-cpusvn). |
 
-If you do not provide a `MockConfiguration` when loading a mock enclave then the default values are used. 
+If you do not provide a [`MockConfiguration`](api/-conclave/com.r3.conclave.common/-mock-configuration/index.html) when loading 
+a mock enclave then the default values are used. 
 If you want to specify your own `MockConfiguration` you can configure these properties when loading the
 enclave via the host using code similar to this:
 

@@ -8,11 +8,22 @@ dependencies {
 }
 
 /**
- * This enclave should be representative of a use case which involves the persistent map.
- * Do not disable the persistent map.
+ * This enclave is used to test the various persistence features and so they should not be turned off.
  */
 conclave {
     productID = 1
     revocationLevel = 0
     enablePersistentMap = true
+    persistentFileSystemSize = "32m"
+
+    kds {
+        kdsEnclaveConstraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE"
+        keySpec {
+            masterKeyType = "debug"
+            policyConstraint {
+                constraint = "SEC:INSECURE"
+                useOwnCodeSignerAndProductID = true
+            }
+        }
+    }
 }

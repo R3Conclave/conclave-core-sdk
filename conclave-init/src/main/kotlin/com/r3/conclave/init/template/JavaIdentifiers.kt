@@ -1,5 +1,7 @@
 package com.r3.conclave.init.template
 
+import kotlin.io.path.Path
+
 class JavaPackage(val name: String) {
     init {
         // Does not check for reserved words. See [JavaPckageValidationTest.kt] for allowed names.
@@ -8,7 +10,8 @@ class JavaPackage(val name: String) {
         require(allowed.matches(name)) { "Could not parse '$name' as a valid package name." }
     }
 
-    val dirs by lazy { name.replace(".", "/") }
+    // Cast to a Path and back to a String to handle backslashes on Windows
+    val dirs by lazy { name.replace(".", "/").let(::Path).toString() }
 }
 
 val templateEnclavePackage = JavaPackage("com.r3.conclave.template")

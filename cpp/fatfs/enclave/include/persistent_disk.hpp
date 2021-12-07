@@ -38,8 +38,8 @@ namespace conclave {
     class PersistentDisk : public FatFsDisk {
 
     private:
-        std::vector<unsigned long> sectors_table_1_;
-        std::vector<unsigned long> sectors_table_2_;
+        std::vector<LBA_t> sectors_table_1_;
+        std::vector<LBA_t> sectors_table_2_;
 
         sgx_aes_gcm_128bit_key_t encryption_key_ = {0};
 

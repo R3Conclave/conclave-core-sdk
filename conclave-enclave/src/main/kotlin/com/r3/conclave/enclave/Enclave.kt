@@ -16,7 +16,6 @@ import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
-import com.r3.conclave.enclave.kds.KDSConfiguration
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
@@ -34,12 +33,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
-import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 
 /**
@@ -63,14 +56,10 @@ import kotlin.concurrent.withLock
  *
  * The enclave also provides a persistent key-value store ([persistentMap]) which is resistant to rollback attacks by
  * the host. Use this to persist data that needs to exist across enclave restarts. Any data stored just in local
- * variables will be reset on restart.
+ * variables will be reset on restart. The default file system can also be used both as a temporary scratchpad but also
+ * for persistence.
  */
 abstract class Enclave {
-
-    /**
-     * Suppress kotlin specific companion objects from our API documentation.
-     * @suppress
-     */
     private companion object {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
@@ -111,13 +100,14 @@ abstract class Enclave {
      * re-initialise the enclave. Conclave makes a best-effort attempt at preventing the host from being able to rewind
      * map, i.e. using an older version instead of the latest.
      *
-     * The map is also not available if the enclave is multi-threaded (i.e. [threadSafe] is overridden to return
-     * `true`). Support for this maybe added in a future version.
+     * The persistent map is not enabled by default. This is done by setting the
+     * [`enablePersistentMap`](https://docs.conclave.net/enclave-configuration.html#enablepersistentmap-maxpersistentmapsize)
+     * configuration in the enclave's build.gradle to true. The map is also not available if the enclave is multi-threaded
+     * (i.e. [threadSafe] is overridden to return `true`). Support for this maybe added in a future version.
      *
      * Note, the keys are encoded using UTF-8 and the encoded size of each key cannot be more than 65535 bytes.
      *
-     * @throws IllegalStateException If [threadSafe] returns `true` or if the persistent map was not enabled in the
-     * build file.
+     * @throws IllegalStateException If the persistent map is not enabled.
      */
     val persistentMap: MutableMap<String, ByteArray> get() {
         check(env.enablePersistentMap) {
@@ -150,6 +140,10 @@ abstract class Enclave {
     /** The serializable remote attestation object for this enclave instance. */
     protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
 
+    /**
+     * The remote attestation object for the KDS enclave this enclave is using. This will be null if this enclave is
+     * configured to use a KDS or if the KDS hasn't connected to one.
+     */
     protected val kdsEnclaveInstanceInfo: EnclaveInstanceInfo? get() = kdsEII
 
     /**
@@ -160,8 +154,6 @@ abstract class Enclave {
      * for your own thread safety.
      */
     protected open val threadSafe: Boolean get() = false
-
-    protected open val kdsConfig: KDSConfiguration? get() = null
 
     /**
      * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
@@ -216,9 +208,6 @@ abstract class Enclave {
         return if (this is InternalEnclave) {
             this.internalInitialise(env, upstream)
         } else {
-            check (!(env.enablePersistentMap && threadSafe)) {
-                "The persistent map is not available in multi-threaded enclaves."
-            }
             initCryptography()
             /*
             Here we should not add any code that throws exceptions. This is because the handler mechanisms haven't
@@ -242,8 +231,12 @@ abstract class Enclave {
      */
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
-    private fun initialiseMock(upstream: Sender, mockConfiguration: MockConfiguration?): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, mockConfiguration), upstream)
+    private fun initialiseMock(
+            upstream: Sender,
+            mockConfiguration: MockConfiguration?,
+            enclavePropertiesOverride: Properties?
+    ): HandlerConnected<*> {
+        return initialise(MockEnclaveEnvironment(this, mockConfiguration, enclavePropertiesOverride), upstream)
     }
 
     /**
@@ -281,7 +274,7 @@ abstract class Enclave {
     }
 
     private fun getPrivateKey(): ByteArray {
-        if (kdsConfig != null) {
+        if (env.kdsConfiguration != null) {
             val kdsPrivateKey = kdsPrivateKey
             if (kdsPrivateKey != null) {
                 // The KDS key may be longer than 128 bit, so we only use the first 128 bit
@@ -344,7 +337,7 @@ abstract class Enclave {
         val sealedState = try {
             // Decrypt sealed state using KDS key when the Enclave has been configured to obtain one,
             // otherwise use the unsealing functions.
-            if (kdsConfig != null) {
+            if (env.kdsConfiguration != null) {
                 decryptSealedState(sealedStateBlob).plaintext
             } else {
                 env.unsealData(sealedStateBlob).plaintext
@@ -404,6 +397,7 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
+        private lateinit var generatedPolicyConstraint: EnclaveConstraint
 
         override fun connect(upstream: Sender): AdminHandler {
             sender = upstream
@@ -456,6 +450,9 @@ Received: $attestationReportBody"""
                 Specifically, setupFileSystems can throw an exception in case the Host does not provide a
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
+                check (!(env.enablePersistentMap && enclave.threadSafe)) {
+                    "The persistent map is not available in multi-threaded enclaves."
+                }
 
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
                 val sealedStateBlob = input.getNullable { getRemainingBytes() }
@@ -494,7 +491,7 @@ Received: $attestationReportBody"""
         private fun onKDSKeySpecificationRequest() {
             // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
             // defined. The host will see that we've not sent back a key spec.
-            val kdsKeySpec = enclave.kdsConfig?.kdsKeySpec ?: return
+            val kdsKeySpec = enclave.env.kdsConfiguration?.kdsKeySpec ?: return
 
             val policyConstraint = kdsKeySpec.policyConstraint.enclaveConstraint
 
@@ -509,7 +506,14 @@ Received: $attestationReportBody"""
                 policyConstraint.productID = report[body][isvProdId].read()
             }
 
-            val policyConstraintBytes = policyConstraint.toString().toByteArray()
+            val generatedPolicyConstraintString = policyConstraint.toString()
+            try {
+                generatedPolicyConstraint = EnclaveConstraint.parse(generatedPolicyConstraintString)
+            } catch (e: IllegalStateException) {
+                throw IllegalArgumentException("Enclave has an invalid KDS policy constraint: ${e.message}")
+            }
+
+            val policyConstraintBytes = generatedPolicyConstraintString.toByteArray()
             sender.send(2 + policyConstraintBytes.size) { buffer ->
                 buffer.put(AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal.toByte())
                 buffer.put(kdsKeySpec.masterKeyType.ordinal.toByte())
@@ -520,7 +524,7 @@ Received: $attestationReportBody"""
         private fun onKDSResponse(input: ByteBuffer) {
             check(enclave.kdsEII == null) { "Enclave has already received a KDS private key" }
 
-            val kdsConfig = checkNotNull(enclave.kdsConfig) {
+            val kdsConfig = checkNotNull(enclave.env.kdsConfiguration) {
                 "Host is trying to send a KDS private key but enclave hasn't been configured for one"
             }
 
@@ -533,7 +537,11 @@ Received: $attestationReportBody"""
             val kdsEII = EnclaveInstanceInfo.deserialize(kdsEEIBytes)
 
             // Verify the KDS attestation report
-            kdsConfig.kdsEnclaveConstraint.check(kdsEII)
+            try {
+                kdsConfig.kdsEnclaveConstraint.check(kdsEII)
+            } catch (e: InvalidEnclaveException) {
+                throw IllegalArgumentException("The KDS does not match the enclave's configured KDS constraint", e)
+            }
 
             // Verify KDS encryption key is the same key which encrypted the mail.
             require(kdsEII.encryptionKey == mail.authenticatedSender) {
@@ -543,7 +551,7 @@ Received: $attestationReportBody"""
             // Verify key policy constraint
             val privateKeyResponse = objectMapper.readValue(mail.bodyAsBytes, PrivateKeyResponse::class.java)
             val privateKeyPolicyConstraint = EnclaveConstraint.parse(privateKeyResponse.policyConstraint)
-            check(privateKeyPolicyConstraint == kdsConfig.kdsKeySpec.policyConstraint.enclaveConstraint) {
+            require(privateKeyPolicyConstraint == generatedPolicyConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
             enclave.kdsEII = kdsEII
@@ -747,7 +755,7 @@ Received: $attestationReportBody"""
                 }
             }
 
-            val sealedState = if (kdsConfig != null) {
+            val sealedState = if (env.kdsConfiguration != null) {
                 encryptSealedState(PlaintextAndEnvelope(serialised))
             } else {
                 env.sealData(PlaintextAndEnvelope(serialised))

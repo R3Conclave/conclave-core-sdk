@@ -590,24 +590,33 @@ open class EnclaveHost protected constructor() : AutoCloseable {
      * in mock or simulation mode and a mock attestation is used instead. Likewise, null can also be used for development
      * purposes.
      *
-     * @param sealedState The last sealed state that was emitted by the enclave via [MailCommand.StoreSealedState].
+     * @param sealedState The last sealed state that was emitted by the enclave via [MailCommand.StoreSealedState]. The
+     * sealed state is an encrypted blob of the enclave's internal state and it's updated by the enclave as it processes
+     * mail (the contents of `Enclave.getPersistentMap()` is also part of this state). Each new sealed state that is
+     * emitted via [MailCommand.StoreSealedState] supercedes the previous one and must be securely persisted. Failure
+     * to do this will result in the enclave's clients detecting a "rollback" attack if the enclave is restarted.
+     * Typically the sealed state should be stored in a database, inside the same database transaction that
+     * processes thhe other mail commands, such as [MailCommand.PostMail]. More information can be found
+     * [here](https://docs.conclave.net/persistence.html).
      *
-     * @param enclaveFileSystemFile Path of the file in the host that represents an encrypted
-     * persistent filesystem to be used by the Enclave.
-     * If a null path is provided, the file is not generated.
-     * In addition to this, the user needs to provide the persistent filesystem size
-     * in the enclave build.gradle file.
+     * @param enclaveFileSystemFile File where the enclave's encrypted file system will be persisted to. This can be null
+     * if the enclave's configured to use one. If it is then a file path must be provided. More information can be found
+     * [here](https://docs.conclave.net/persistence.html).
      *
-     * @param commandsCallback A callback that will be invoked when the enclave requires the host to carry out
-     * actions, such as requesting delivery of mail to the client or storing the enclave's sealed state. These actions, or [MailCommand]s, are
-     * grouped together within the scope of a [deliverMail] or [callEnclave] call. This enables the host to action these
-     * commands within the same transaction.
+     * @param kdsConfiguration Configuration for connecting to a key derivation service (KDS) in case the enclave needs
+     * to use one for encrypting persisted data. More information can be found [here](https://docs.conclave.net/kds-configuration.html).
+     *
+     * @param commandsCallback A callback that is automatically invoked after the end of every [callEnclave] and
+     * [deliverMail] call. The callback returns a list of actions, or [MailCommand]s, which need to be actioned together,
+     * ideally within the scope single transaction.
      *
      * The callback is invoked serially, never concurrently, and in the order that they need to be actioned. This
      * means there's no need to do any external synchronization.
      *
      * @throws IllegalArgumentException If the [enclaveMode] is either release or debug and no attestation parameters
      * are provided.
+     * @throws IllegalStateException If the enclave has been configured to use the persisted file system but no
+     * [enclaveFileSystemFile] value was provided.
      * @throws IllegalStateException If the host has been closed.
      */
     @Throws(EnclaveLoadException::class)
@@ -655,8 +664,10 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             log.debug { enclaveInstanceInfo.toString() }
 
+            if (enclaveFileSystemFile != null) log.info("Setting up persistent enclave file system...")
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
             adminHandler.sendOpen(sealedState)
+            if (enclaveFileSystemFile != null) log.info("Setup of the file system completed successfully.")
 
             hostStateManager.state = Started
         } catch (e: Exception) {
@@ -981,11 +992,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         private fun onKDSKeySpecification(byteBuffer: ByteBuffer) {
             val masterKeyType = MasterKeyType.values()[byteBuffer.get().toInt()]
             val policyConstraintString = String(byteBuffer.getRemainingBytes())
-            val policyConstraint = try {
-                EnclaveConstraint.parse(policyConstraintString)
-            } catch (e: IllegalStateException) {
-                throw IllegalStateException("Enclave has an invalid KDS policy constraint: ${e.message}")
-            }
+            val policyConstraint = EnclaveConstraint.parse(policyConstraintString)
             enclaveKDSConfig = EnclaveKDSConfig(masterKeyType, policyConstraint)
         }
     }

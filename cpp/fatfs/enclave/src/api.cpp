@@ -26,6 +26,13 @@
 #include "fatfs_result.hpp"
 
 static const int kMaxNumFiles = 500000;
+
+//  The size of the filesystems is currently limited to Fat32 max size, which is 2T.
+//  Note that this value of 2T comes from the maximum value of the number of sectors
+//    that we can specify on 32 bits (4G) times the bytes for each sector (512).
+static const unsigned long kMaxInMemorySize = ((unsigned long)UINT_MAX * SECTOR_SIZE);
+static const unsigned long kMaxPersistentSize = ((unsigned long)UINT_MAX * SECTOR_SIZE);
+
 static int currentFirstAvailableHandle  = 100000;
 static int currentDummyHandle = currentFirstAvailableHandle;
 static std::unordered_set<int> dummyHandles;
@@ -137,21 +144,29 @@ static conclave::DiskInitialization getInitializationType(JNIEnv* env, const uns
 }
 
 
-static void handleInitException(JNIEnv* env, const FatFsResult result) {
+static void handleInitException(JNIEnv* env, const FatFsResult result, const std::string& fsType) {
     switch (result) {
         //  These are errors for which the user can't do much, so it is not
         //    useful to provide more info
     case FatFsResult::MKFS_ABORTED:
-        raiseException(env, "Wrong persistent filesystem's sizes have been provided, limits have been exceeded");
-        return;
+        {
+            //  The minimum number of sectors in FatFs is 128 for the Fat12 type + 63 header of reserved sectors.
+            //  Being the size of the sector equal to 512 bytes, we have (128 + 63) * 512 - 1 = 97791 
+            const std::string msg("Wrong " + fsType + " filesystem's sizes have been provided, please choose a value bigger than 97791 bytes");
+            raiseException(env, msg.c_str());
+            return;
+        }
     case FatFsResult::WRONG_DRIVE_ID:
     case FatFsResult::MOUNT_FAILED:
     case FatFsResult::DRIVE_REGISTRATION_FAILED:
     case FatFsResult::MKFS_GENERIC_ERROR:
     case FatFsResult::ROOT_DIRECTORY_MOUNT_FAILED:
     default:
-        raiseException(env, "Unable to initialize the enclave's persistent filesystem");
-        return;        
+        {
+            const std::string msg("Unable to initialize the enclave's "+ fsType + " filesystem");
+            raiseException(env, msg.c_str());
+            return;
+        }
     }
 }
 
@@ -186,6 +201,20 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_setupFileSys
         raiseException(env, "Filesystems not initialized, key not retrieved");
         return;
     }
+
+    if ((unsigned long)in_memory_size > kMaxInMemorySize) {
+        const std::string msg("Wrong in-memory filesystem's sizes have been provided, "
+                              "please choose a value smaller than " + std::to_string(kMaxInMemorySize + 1) + " bytes");
+        raiseException(env, msg.c_str());
+        return;
+    }
+
+    if ((unsigned long)persistent_size > kMaxPersistentSize) {
+        const std::string msg("Wrong persistent filesystem's sizes have been provided, "
+                              "please choose a value smaller than " + std::to_string(kMaxPersistentSize + 1) + " bytes");
+        raiseException(env, msg.c_str());
+        return;
+    }
     unsigned char drive = 0;
     /*
       Note: the persistent filesystem, when present, needs to be the first one. This is because
@@ -212,7 +241,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_setupFileSys
         FatFsResult initResult = filesystem->init(initialization);
 
         if (initResult != FatFsResult::OK) {
-            handleInitException(env, initResult);
+            handleInitException(env, initResult, "persistent");
             return;
         }
         filesystems.push_back(filesystem);
@@ -224,7 +253,12 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_setupFileSys
                                            in_memory_size,
                                            encryption_key,
                                            in_memory_mount_path);
-        filesystem->init(conclave::DiskInitialization::FORMAT);
+        FatFsResult initResult = filesystem->init(conclave::DiskInitialization::FORMAT);
+
+        if (initResult != FatFsResult::OK) {
+            handleInitException(env, initResult, "in-memory");
+            return;
+        }
         filesystems.push_back(filesystem);
     }
 

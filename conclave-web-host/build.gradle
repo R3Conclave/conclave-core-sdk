@@ -10,14 +10,11 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
-    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
+    testImplementation(project(":internal-testing")) {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
 
-    testImplementation project(":internal-testing")
     testImplementation "org.springframework.boot:spring-boot-starter-test:$spring_boot_version"
     testImplementation "org.apache.httpcomponents.client5:httpclient5:$httpclient5_version"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-}
-
-configurations {
-    compile.exclude module: "spring-boot-starter-logging"
 }

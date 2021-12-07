@@ -1,6 +1,5 @@
 package com.r3.conclave.init
 
-import com.r3.conclave.init.common.copyRecursively
 import com.r3.conclave.init.common.deleteRecursively
 import com.r3.conclave.init.common.walkTopDown
 import com.r3.conclave.init.template.*
@@ -15,8 +14,6 @@ object ConclaveInit {
         basePackage: JavaPackage,
         enclaveClass: JavaClass,
         outputRoot: Path,
-        sdkRepo: Path,
-        conclaveVersion: String,
     ) {
         val templateRoot = ZipResource(name = "/template.zip").extractFiles()
         val templateFiles = templateRoot.walkTopDown()
@@ -27,7 +24,7 @@ object ConclaveInit {
             TemplatePathTransformer(basePackage, templateRoot, outputRoot, enclaveClass)
                 .transform(templateFiles)
 
-        val textTransformer = TemplateTextTransformer(basePackage, enclaveClass, conclaveVersion)
+        val textTransformer = TemplateTextTransformer(basePackage, enclaveClass)
         (templateFiles zip outputFiles).forEach { (source, destination) ->
             with(destination.parent) { if (!exists()) createDirectories() }
 
@@ -36,32 +33,42 @@ object ConclaveInit {
             destination.writeText(contents)
         }
 
-        copySdkRepo(sdkRepo, outputRoot)
         copyGradleWrapper(outputRoot)
 
         templateRoot.deleteRecursively()
     }
 
-    private fun copySdkRepo(conclaveSdk: Path, outputRoot: Path) {
-        conclaveSdk.copyRecursively(outputRoot.resolve("conclave-repo"))
-    }
-
     private fun copyGradleWrapper(outputRoot: Path) {
         ZipResource(name = "/gradle-wrapper.zip", outputDir = outputRoot).extractFiles()
-        outputRoot.resolve("gradlew").makeExecutable()
+        makeGradlewExecutable(outputRoot)
     }
 
-    private fun Path.makeExecutable(): Path = setPosixFilePermissions(
-        setOf(
-            PosixFilePermission.OWNER_READ,
-            PosixFilePermission.OWNER_WRITE,
-            PosixFilePermission.OWNER_EXECUTE,
-            PosixFilePermission.GROUP_READ,
-            PosixFilePermission.GROUP_WRITE,
-            PosixFilePermission.GROUP_EXECUTE,
-            PosixFilePermission.OTHERS_READ,
-            PosixFilePermission.OTHERS_EXECUTE
-        )
-    )
-}
+    private fun makeGradlewExecutable(projectRoot: Path) {
+        // `setPosixFilePermissions` will throw UnsupportedOperationException if called on Windows.
+        // Windows uses `gradlew.bat` which doesn't need to be made executable, so we just return early.
+        if (System.getProperty("os.name").lowercase().contains("windows")) {
+            return
+        }
 
+        val gradlew = projectRoot.resolve("gradlew")
+
+        try {
+            gradlew.setPosixFilePermissions(
+                setOf(
+                    PosixFilePermission.OWNER_READ,
+                    PosixFilePermission.OWNER_WRITE,
+                    PosixFilePermission.OWNER_EXECUTE,
+                    PosixFilePermission.GROUP_READ,
+                    PosixFilePermission.GROUP_WRITE,
+                    PosixFilePermission.GROUP_EXECUTE,
+                    PosixFilePermission.OTHERS_READ,
+                    PosixFilePermission.OTHERS_EXECUTE
+                )
+            )
+        } catch (e: Exception) {
+            // This warning should be printed at the CLI level, but that would require adding an exception handler
+            // which propagates the error without causing the program to terminate.
+            println("WARNING: Could not make ./gradlew script executable. Try changing permissions manually with chmod.")
+        }
+    }
+}

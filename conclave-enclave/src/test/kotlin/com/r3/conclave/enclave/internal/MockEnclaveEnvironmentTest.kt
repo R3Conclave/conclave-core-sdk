@@ -120,6 +120,6 @@ class MockEnclaveEnvironmentTest {
     private inline fun <reified E : Enclave> createMockEnclaveEnvironment(
             mockConfiguration: MockConfiguration? = null
     ): MockEnclaveEnvironment {
-        return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance(), mockConfiguration)
+        return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance(), mockConfiguration, null)
     }
 }

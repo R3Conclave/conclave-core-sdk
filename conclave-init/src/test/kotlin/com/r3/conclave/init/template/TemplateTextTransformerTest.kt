@@ -40,8 +40,7 @@ internal class TemplateTextTransformerTest {
 
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
-            JavaClass("MegaEnclave"),
-            "version-string"
+            JavaClass("MegaEnclave")
         ).transform(templateFileContents)
         assertEquals(expected, transformed)
 
@@ -95,8 +94,7 @@ internal class TemplateTextTransformerTest {
 
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
-            JavaClass("MegaEnclave"),
-            "version-string"
+            JavaClass("MegaEnclave")
         ).transform(templateFileContents)
         assertEquals(expected, transformed)
     }
@@ -104,27 +102,18 @@ internal class TemplateTextTransformerTest {
     @Test
     fun `transform gradle properties`() {
         val templateFileContents = """
-        # Required properties for Conclave
-        conclaveRepo=./conclave-repo
-        conclaveVersion={{ CONCLAVE_VERSION }}
-
         # Dependency versions
         jupiterVersion=5.6.0
         """.trimIndent()
 
         val expected = """
-        # Required properties for Conclave
-        conclaveRepo=./conclave-repo
-        conclaveVersion=version-string
-
         # Dependency versions
         jupiterVersion=5.6.0
         """.trimIndent()
 
         val transformed = TemplateTextTransformer(
             JavaPackage("com.megacorp"),
-            JavaClass("MegaEnclave"),
-            "version-string"
+            JavaClass("MegaEnclave")
         ).transform(templateFileContents)
         assertEquals(expected, transformed)
     }

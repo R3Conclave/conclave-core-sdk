@@ -1,7 +1,7 @@
 # Architecture overview
 
-If you are new to the concept of Confidential Computing, you may also find the [introduction
-to enclaves](enclaves.md) document helpful.
+If you are new to the concept of Confidential Computing, you may also find the [introduction to enclaves](enclaves.md)
+document helpful.
 
 ## Primary entities
 
@@ -68,7 +68,7 @@ Clients need to be sure they really are communicating with a real enclave. They 
 _assert_ that this is the case because the host could be malicious. Instead, a process of 'remote attestion' is employed.
 Here is how it works.
 
-First, clients need to obtain an `EnclaveInstanceInfo` object. This could be downloaded on demand from the host, 
+First, clients need to obtain an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object. This could be downloaded on demand from the host, 
 or it could be published somewhere. This object encapsulates a _remote attestation_, which includes information
 such as the hash of the code inside the enclave, the hash of the key of any party who has signed that code, 
 the security status of the machine on which the enclave is running, and a public key whose private counterpart 
@@ -77,18 +77,18 @@ is a signed data structure, with the CPU manufacturer (Intel in the case of SGX)
 the client can have confidence about the nature of the enclave with which they are interacting even though the party
 from whom they obtain the `EnclaveInstanceInfo` is the untrusted host.
 
-The client tests the `EnclaveInstanceInfo` against a set of _constraints_, depending on how flexible they want to be 
-about software upgrades to the enclave. Constraints are represented by an
-[`EnclaveConstraint`](/api/com/r3/conclave/client/EnclaveConstraint.html) object, which can be read from/written to
+The client tests the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) against a
+set of _constraints_, depending on how flexible they want to be about software upgrades to the enclave. Constraints are represented by an
+[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object, which can be read from/written to
 a small domain specific language suitable for embedding in config files, command line options and so on. A
 constraint may specify that a specific set of code hashes is required i.e. every version is whitelisted and no
 upgrade is possible until the constraint is adjusted. Or, it may specify a set of allowed signing keys, enabling
 enclave authors to release new versions whenever they want. In that scenario the enclave creator is trusted, 
 but the entity hosting the enclave instance may not be.
 
-When they're happy, they create encrypted messages using the key in the `EnclaveInstanceInfo`. By sending and
-receiving such messages to the host (and from there to the enclave), communication is established. See the [Mail
-](#mail) section below for further discussion of this.
+When they're happy, they create encrypted messages using the key in the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html). By sending and
+receiving such messages to the host (and from there to the enclave), communication is established. See the
+[Mail](#mail) section below for further discussion of this.
 
 Whilst the high level setup has just those three entities, real deployments have more:
 
@@ -170,7 +170,7 @@ sequenceDiagram
 ![sequence diagram](images/sequence.png)
 
 The first time SGX is used on a machine there are interactions with either the cloud provider or Intel to retrieve
-machine certificates proving authenticity. The host then gets a remote attestation (`EnclaveInstanceInfo`) to the
+machine certificates proving authenticity. The host then gets a remote attestation ([`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html)) to the
 client somehow, the client verifies it and optionally asks Intel if the hardware setup of the machine is still
 considered to be secure, or if there are known vulnerabilities (see [renewability](renewability.md)). This can be
 repeated as often as the client wants, e.g. every day. Once this is done the client can send messages to the enclave

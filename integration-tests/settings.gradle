@@ -3,23 +3,17 @@ pluginManagement {
 
     repositories {
         gradlePluginPortal()
-        mavenCentral()
-        switch (System.getenv('USE_MAVEN_REPO')?.toLowerCase()) {
-            case "artifactory":
-                maven {
-                    url = "https://software.r3.com/artifactory/sgxjvm"
-                    credentials {
-                        username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-                        password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
-                    }
-                }
-                break
-            default:
-                maven {
-                    url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
-                }
-                break
+        maven {
+            url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
         }
+        maven {
+            url = "https://software.r3.com/artifactory/sgxjvm"
+            credentials {
+                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
+                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+            }
+        }
+        mavenCentral()
     }
 
     plugins {
@@ -36,15 +30,12 @@ include 'general:common'
 include 'general:common-enclave'
 include 'general:common-test'
 include 'general:default-enclave'
-include 'general:filesystem-enclave'
 include 'general:filesystem-db-enclave'
 include 'general:persisting-enclave'
 include 'general:threadsafe-enclave'
 include 'general:threadsafe-enclave-same-signer'
 include 'general:tests'
 include 'general:mock-compatibility-tests'
-include ':persistent-key:enclave'
-include ':persistent-key:host'
 include 'tribuo:client'
 include 'tribuo:common'
 include 'tribuo:enclave'

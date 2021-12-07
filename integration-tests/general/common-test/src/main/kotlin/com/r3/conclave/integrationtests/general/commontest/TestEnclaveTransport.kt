@@ -9,6 +9,7 @@ import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.EnclaveHostService
+import com.r3.conclave.host.kds.KDSConfiguration
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
@@ -17,16 +18,24 @@ import java.util.concurrent.Executors
 // This is largely a copy of com.r3.conclave.internaltesting.MockEnclaveTransport
 open class TestEnclaveTransport(
     private val enclaveClassName: String,
-    private val enclaveFileSystemFile: Path?
+    private val enclaveFileSystemFile: Path?,
+    private val kdsUrl: String?
 ) : EnclaveTransport, AutoCloseable {
     private val executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
     private var sealedState: ByteArray? = null
-    var enclaveHostService = TestEnclaveHostService(enclaveClassName, enclaveFileSystemFile)
+
+    private var _enclaveHostService = TestEnclaveHostService(enclaveClassName)
+    val enclaveHostService: EnclaveHostService get() = _enclaveHostService
 
     open val attestationParameters: AttestationParameters? get() = null
 
     fun startEnclave() {
-        enclaveHostService.start(attestationParameters, sealedState)
+        _enclaveHostService.start(
+            attestationParameters,
+            sealedState,
+            enclaveFileSystemFile,
+            kdsUrl?.let(::KDSConfiguration)
+        )
     }
 
     val enclaveHost: EnclaveHost get() = enclaveHostService.enclaveHost
@@ -34,7 +43,7 @@ open class TestEnclaveTransport(
     @Synchronized
     fun restartEnclave() {
         enclaveHostService.close()
-        enclaveHostService = TestEnclaveHostService(enclaveClassName, enclaveFileSystemFile)
+        _enclaveHostService = TestEnclaveHostService(enclaveClassName)
         startEnclave()
     }
 
@@ -86,13 +95,9 @@ open class TestEnclaveTransport(
         override fun disconnect() = Unit
     }
 
-    inner class TestEnclaveHostService(
-        enclaveClassName: String,
-        private val enclaveFileSystemFile: Path?,
-    ) : EnclaveHostService() {
+    private inner class TestEnclaveHostService(enclaveClassName: String) : EnclaveHostService() {
         private val enclaveHost: EnclaveHost = EnclaveHost.load(enclaveClassName)
         override fun getEnclaveHost(): EnclaveHost = enclaveHost
-        override fun getEnclaveFileSystemFile(): Path? = enclaveFileSystemFile
         override fun storeSealedState(sealedState: ByteArray) {
             this@TestEnclaveTransport.sealedState = sealedState
         }

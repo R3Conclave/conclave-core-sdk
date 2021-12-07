@@ -1,6 +1,6 @@
 # Known issues
 
-The Conclave API is by now mostly stable, but small changes may still occur. In particular we may adjust mail to support streaming access. 
+The Conclave API is by now mostly stable, but small changes may still occur. In particular we may adjust mail to support streaming access.
 You should expect to spend a few minutes updating your code between releases, but not more.
 
 This release ships with the following known issues that we plan to address in future versions:
@@ -13,3 +13,7 @@ This release ships with the following known issues that we plan to address in fu
 1. Enclaves built using Conclave currently do not have a stable measurement, meaning that each time you build your enclave you will end up with a different MRSIGNER value.
 1. JavaDocs don't integrate with IntelliJ properly. This is due to a bug in IntelliJ when loading modules from
    on disk repositories.
+1. On Windows and macOS, serialization and reflection configuration files configured as described on
+   [enclave configuration](enclave-configuration.md) must use non-relative paths. Additionally, on Windows, the paths
+   must use forwardslashes rather than Windows standard backslashes.
+1. The enclave filesystem does not currently support renaming of files and directories. This includes the `java.io.File.renameTo` call, which will trigger an enclave crash.

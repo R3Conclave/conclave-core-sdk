@@ -25,8 +25,8 @@ package com.r3.conclave.common
  * Note that this is not the SGX notion of a "CPU SVN", but rather the enclave-specific security version number. We call
  * it revocationLevel here to make it clearer what this actually does.
  *
- * @property enclaveMode The mode the enclave runs in, which is either release, debug or simulation. Only release mode
- * provides enclave security. The other two are only for testing and development purposes.
+ * @property enclaveMode The mode the enclave runs in, which is either release, debug, simulation or mock. Only release
+ * mode provides enclave security. The other three are only for testing and development purposes.
  */
 class EnclaveInfo(
     val codeHash: SecureHash,

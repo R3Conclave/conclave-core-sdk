@@ -27,9 +27,9 @@ abilities. Enclave memory is protected both from the rest of the code in that pr
 kernel or BIOS, and because the RAM itself is encrypted even physical attackers. This means a remote computer can
 trust that an enclave will operate correctly even if the owner of the computer is malicious.
 
-In Conclave, an enclave is a subclass of the [`Enclave`](api/com/r3/conclave/enclave/Enclave.html) class, which is 
+In Conclave, an enclave is a subclass of the [`Enclave`](api/-conclave/com.r3.conclave.enclave/-enclave/index.html) class, which is 
 automatically combined by Conclave with an embedded JVM and compiled into a native shared library (ending in .so), and
-bundled into a JAR. The host program then uses the [`EnclaveHost`](api/com/r3/conclave/host/EnclaveHost.html) class to
+bundled into a JAR. The host program then uses the [`EnclaveHost`](api/-conclave/com.r3.conclave.host/-enclave-host/index.html) class to
 load the enclave class from this JAR and automatically instantiate the enclave.
 
 !!! note
@@ -96,7 +96,7 @@ messages to the enclave using the public key P after checking what kind of encla
 list of known code hashes, or verifying that the enclave was signed by a party whom they trust, 
 clients can effectively whitelist particular enclaves and treat them as trustworthy servers.
 
-In Conclave, a remote attestation is an instance of the [`EnclaveInstanceInfo`](api/com/r3/conclave/common/EnclaveInstanceInfo.html) class.
+In Conclave, a remote attestation is an instance of the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) class.
 
 ## Applications of Enclaves
 

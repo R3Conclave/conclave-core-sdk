@@ -23,7 +23,7 @@ class ZipResource(
         while (true) {
             val entry = nextEntry ?: break
             val file = target.resolve(entry.name)
-            if (!file.normalize().startsWith(target)) throw IOException("Bad zip entry")
+            if (!file.normalize().startsWith(target.normalize())) throw IOException("Bad zip entry")
             if (entry.isDirectory) continue
 
             file.parent.createDirectories()
