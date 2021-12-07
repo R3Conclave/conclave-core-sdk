@@ -170,3 +170,15 @@ for detailed instructions on how to use this capability.
 !!! warning
     The processor of the host system must support the SSE and SSE2 instruction set extensions. If these extensions
     are not present, the enclave may abort unexpectedly.
+
+!!! warning
+    Python support is limited and there are known vulnerabilities in the `pip` version used by our GraalVM version.
+    At this point, there are no known versions of `pip` that have those vulnerabilities fixed, so it should be
+    used at the user's risk.
+
+    | Vulnerabilities |
+    |-----------------|
+    | [CVE-2018-20225](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2018-20225)|
+    | [CVE-2019-20907](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2019-20907)|
+    | [CVE-2020-26137](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2020-26137)|
+    | [CVE-2021-3572](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2021-3572)  |
