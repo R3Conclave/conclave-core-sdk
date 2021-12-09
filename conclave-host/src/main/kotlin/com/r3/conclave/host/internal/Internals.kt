@@ -3,23 +3,26 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.host.EnclaveHost
-import java.nio.file.Path
+import java.net.URL
 import java.util.*
 
-fun createHost(enclaveMode: EnclaveMode, enclaveFile: Path, enclaveClassName: String, tempFile: Boolean): EnclaveHost {
-    val enclaveHandle =
-        NativeEnclaveHandle(enclaveMode, enclaveFile, tempFile, enclaveClassName, ErrorHandler())
-    return EnclaveHost.__internal_create(enclaveHandle)
+/**
+ * [EnclaveHost.internalCreateNative] is internal and so isn't visible to the rest of the codebase. This exists as a
+ * public wrapper so that the rest of the codebase has access to it.
+ */
+@Suppress("unused")  // Used in integration tests
+fun createNativeHost(enclaveMode: EnclaveMode, enclaveFileUrl: URL, enclaveClassName: String): EnclaveHost {
+    return EnclaveHost.internalCreateNative(enclaveMode, enclaveFileUrl, enclaveClassName)
 }
 
-fun createMockHost(enclaveClass: Class<*>, mockConfiguration: MockConfiguration? = null, enclavePropertiesOverride: Properties? = null): EnclaveHost {
-    // For mock mode ensure the host can access the enclave constructor. It may have been set as private.
-    val constructor = enclaveClass.getDeclaredConstructor()
-    constructor.isAccessible = true
-    val enclaveHandle = MockEnclaveHandle(constructor.newInstance(), mockConfiguration, enclavePropertiesOverride, ErrorHandler())
-    return EnclaveHost.__internal_create(enclaveHandle)
-}
-
-fun initHost(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
-    EnclaveHost.__internal_init(host, enclaveHandle)
+/**
+ * [EnclaveHost.internalCreateMock] is internal and so isn't visible to the rest of the codebase. This exists as a
+ * public wrapper so that the rest of the codebase has access to it.
+ */
+fun createMockHost(
+    enclaveClass: Class<*>,
+    mockConfiguration: MockConfiguration? = null,
+    enclavePropertiesOverride: Properties? = null
+): EnclaveHost {
+    return EnclaveHost.internalCreateMock(enclaveClass, mockConfiguration, enclavePropertiesOverride)
 }

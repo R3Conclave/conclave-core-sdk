@@ -26,24 +26,18 @@ import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
 import io.github.classgraph.ClassGraph
-import io.github.classgraph.ClassInfo
-import io.github.classgraph.Resource
 import java.io.DataOutputStream
 import java.io.IOException
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
 import java.util.regex.Pattern
-import kotlin.io.path.deleteIfExists
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -60,25 +54,17 @@ import kotlin.io.path.deleteIfExists
  * Although the enclave must currently run against Java 8, the host can use any
  * version of Java that is supported.
  */
-// The constructor is only protected to make it harder for a user to accidentally create a host via "new".
-open class EnclaveHost protected constructor() : AutoCloseable {
+class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
      * The public items within the object are still published in the documentation.
      * @suppress
      */
     companion object {
-
         private const val ENV_VAR_SGX_AESM_ADDR = "SGX_AESM_ADDR"
 
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
-        private val nativeSoFilePattern: Pattern = Pattern.compile("^.*(simulation|debug|release)\\.signed\\.so$")
-
-        private sealed class EnclaveScanResult {
-            class Mock(val enclaveClassName: String) : EnclaveScanResult()
-            class Native(val fileResource: Resource) : EnclaveScanResult()
-        }
 
         /**
          * Diagnostics output outlining CPU capabilities. This is a free text field and should only be used for
@@ -87,23 +73,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         val capabilitiesDiagnostics: String
             get() = Native.getCpuCapabilitiesSummary()
-
-        // The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
-        // thus effectively converting them into Java classes. Making it synthetic hides it from the compiler.
-        // TODO: Fold mock mode into the conclave-host module and make it a 'first class' mode. It will eliminate the need for this.
-        @JvmSynthetic
-        internal fun __internal_create(enclaveHandle: EnclaveHandle<ErrorHandler.Connection>): EnclaveHost {
-            val host = EnclaveHost()
-            __internal_init(host, enclaveHandle)
-            return host
-        }
-
-        // The internal modifier has no effect on Kotlin end users because we are shading Kotlin and the metadata,
-        // thus effectively converting them into Java classes. Making it synthetic hides it from the compiler.
-        @JvmSynthetic
-        internal fun __internal_init(host: EnclaveHost, enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) {
-            host.enclaveHandle = enclaveHandle
-        }
 
         /**
          * Load the signed enclave for the given enclave class name.
@@ -119,9 +88,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          */
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
-        fun load(enclaveClassName: String): EnclaveHost {
-            return load(enclaveClassName, null)
-        }
+        fun load(enclaveClassName: String): EnclaveHost = load(enclaveClassName, null)
 
         /**
          * Scan the classpath and load the single signed enclave that is found.
@@ -134,9 +101,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          */
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
-        fun load(): EnclaveHost {
-            return load(null)
-        }
+        fun load(): EnclaveHost = load(null)
 
         /**
          * Load the signed enclave for the given enclave class name.
@@ -158,12 +123,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
-            val (stream, enclaveMode) = findEnclave(enclaveClassName)
-
-            // Check that the platform supports the required enclave modes
-            checkPlatformEnclaveSupport(enclaveMode)
-
-            return createEnclaveHost(enclaveMode, enclaveClassName, stream, mockConfiguration)
+            return createEnclaveHost(findEnclave(enclaveClassName), mockConfiguration)
         }
 
         /**
@@ -183,267 +143,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(mockConfiguration: MockConfiguration?): EnclaveHost {
-            val scanResult = findEnclave()
-
-            val enclaveClassName: String
-
-            when (scanResult) {
-                // Here we do not call checkPlatformSupport as mock mode is supported in any platform
-                is EnclaveScanResult.Mock -> {
-                    enclaveClassName = scanResult.enclaveClassName
-                    return createEnclaveHost(EnclaveMode.MOCK, enclaveClassName, null, mockConfiguration)
-                }
-                is EnclaveScanResult.Native -> {
-                    val resourcePath = scanResult.fileResource.pathRelativeToClasspathElement
-                    val enclaveMode = getEnclaveModeFromResourcePath(resourcePath)
-                    val stream = scanResult.fileResource.url.openStream()
-                    enclaveClassName = resourcePath
-                        .replace("/", ".")
-                        .removeSuffix("-${enclaveMode.name.lowercase()}.signed.so")
-
-                    scanResult.fileResource.close()
-
-                    checkPlatformEnclaveSupport(enclaveMode)
-                    return createEnclaveHost(enclaveMode, enclaveClassName, stream, mockConfiguration)
-                }
-            }
-        }
-
-        /**
-         * Searches for an enclave. There are two places where an enclave can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class named 'className' in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
-         * For example, it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
-         *
-         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         */
-        private fun findEnclave(className: String): Pair<InputStream?, EnclaveMode> {
-            // Look for an SGX enclave image.
-            val found = EnclaveMode.values().mapNotNull { mode ->
-                val resourceName = "/${className.replace('.', '/')}-${mode.name.lowercase()}.signed.so"
-                val url = EnclaveHost::class.java.getResource(resourceName)
-                url?.let { Pair(it, mode) }
-            }
-
-            // Also look to see if a Mock enclave object is present
-            val mockEnclaveExists = try {
-                Class.forName(className)
-                true
-            } catch (e: ClassNotFoundException) {
-                false
-            }
-
-            // Make sure we only have a single enclave image.
-            if (found.isEmpty() && !mockEnclaveExists) {
-                throw IllegalArgumentException(
-                        """Enclave file for $className does not exist on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
-                    |    runtimeOnly project(path: ":enclave project", configuration: mode)
-                    |    
-                    |    where:
-                    |      mode is either "release", "debug", "simulation" or "mock"
-                    """.trimMargin()
-                )
-            } else if (found.isNotEmpty() && mockEnclaveExists) {
-                throw IllegalStateException("Multiple enclave files were found: $found and mock enclave: $className")
-            } else if (found.size > 1) {
-                throw IllegalStateException("Multiple enclave files were found: $found")
-            }
-
-            // At this point we know we only have a single enclave present.
-            if (mockEnclaveExists) {
-                return Pair(null, EnclaveMode.MOCK)
-            } else {
-                return Pair(found[0].first.openStream(), found[0].second)
-            }
-        }
-
-        /**
-         * Performs a search for an enclave by performing a classpath and module scan. There are two places where an enclave
-         * can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath and search for a file name that matches the pattern
-         * ^.*(simulation|debug|release)\.signed\.so$.
-         *
-         * For mock enclaves, the function searches for classes that extend com.r3.conclave.enclave.Enclave.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         *
-         * @return Pair with the class name and URL (if not a mock enclave) of the enclave found.
-         */
-        private fun findEnclave(): EnclaveScanResult {
-            val classGraph = ClassGraph()
-            val sgxEnclaves = findNativeSoEnclaveFile(classGraph)
-            val mockEnclaves = findMockEnclaveFile(classGraph)
-
-            // Make sure we only have a single enclave image.
-            checkEnclaveExceptions(sgxEnclaves, mockEnclaves)
-
-            // At this point we know we only have a single enclave present.
-            return if (mockEnclaves.isNotEmpty()) {
-                val mockEnclave = mockEnclaves.first()
-                EnclaveScanResult.Mock(mockEnclave.name)
-            } else {
-                val sgxEnclave = sgxEnclaves.first()
-                EnclaveScanResult.Native(sgxEnclave)
-            }
-        }
-
-        /**
-         * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph. The search is performed by matching
-         * the file name with the pattern ^.*(simulation|debug|release)\.signed\.so$.
-         *
-         * @return List of resources that match the pattern.
-         */
-        private fun findNativeSoEnclaveFile(classGraph: ClassGraph): List<Resource> {
-            classGraph
-                .scan().use { scan ->
-                    // Search for all the .signed.so files and return
-                    return scan.getResourcesMatchingPattern(nativeSoFilePattern)
-                }
-        }
-
-        /**
-         * Performs a search for mock enclave files using ClassGraph. The search is performed by looking for classes that
-         * extend com.r3.conclave.enclave.Enclave.
-         *
-         * @return List of ClassInfo that extend the Enclave superclass.
-         */
-        private fun findMockEnclaveFile(classGraph: ClassGraph): List<ClassInfo> {
-            classGraph
-                .enableClassInfo()
-                .scan().use { scan ->
-                    // Search for all the mockEnclaves that subclasses of Enclave and return
-                    return scan.getSubclasses("com.r3.conclave.enclave.Enclave")
-                        .filterNot { subclass -> subclass.isAbstract }
-                }
-        }
-
-        /**
-         * Creates an enclave host.
-         *
-         * @return Enclave host, if successful.
-         *
-         * @throws EnclaveLoadException
-         */
-        private fun createEnclaveHost(
-            enclaveMode: EnclaveMode,
-            enclaveClassName: String,
-            stream: InputStream?,
-            mockConfiguration: MockConfiguration?
-        ): EnclaveHost {
-            if (enclaveMode == EnclaveMode.MOCK) {
-                try {
-                    val clazz = Class.forName(enclaveClassName)
-                    return createMockHost(clazz, mockConfiguration)
-                } catch (e: Exception) {
-                    throw EnclaveLoadException("Unable to create mock host", e)
-                }
-            } else {
-                val enclaveFile = try {
-                    Files.createTempFile(enclaveClassName, "signed.so")
-                } catch (e: Exception) {
-                    throw EnclaveLoadException("Unable to load enclave", e)
-                }
-                try {
-                    stream.use { Files.copy(it!!, enclaveFile, REPLACE_EXISTING) }
-                    return createHost(enclaveMode, enclaveFile, enclaveClassName, tempFile = true)
-                } catch (e: Exception) {
-                    enclaveFile.deleteQuietly()
-                    throw if (e is EnclaveLoadException) e else EnclaveLoadException("Unable to load enclave", e)
-                }
-            }
-        }
-
-        private fun checkEnclaveExceptions(
-            sgxEnclaves: List<Resource>,
-            mockEnclaves: List<ClassInfo>
-        ) {
-            if (sgxEnclaves.isEmpty() && mockEnclaves.isEmpty()) {
-                throw IllegalStateException(
-                    """No enclave files found on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
-                    |    runtimeOnly project(path: ":enclave project", configuration: mode)
-                    |    
-                    |    where:
-                    |      mode is either "release", "debug", "simulation" or "mock"
-                    """.trimMargin()
-                )
-            } else if (sgxEnclaves.isNotEmpty() && mockEnclaves.isNotEmpty()) {
-                throw IllegalStateException("Multiple enclave files were found: $sgxEnclaves and mock enclave: $mockEnclaves")
-            } else if (sgxEnclaves.size > 1) {
-                throw IllegalStateException("Multiple enclave files were found: $sgxEnclaves")
-            } else if (mockEnclaves.size > 1) {
-                throw IllegalStateException("Multiple mock enclaves were found: $mockEnclaves")
-            }
-        }
-
-        /**
-         * Gets the enclave mode based on the class name. If the file is not an .so file, it will return MOCK by default.
-         *
-         * @return EnclaveMode
-         */
-        private fun getEnclaveModeFromResourcePath(resourcePath: String): EnclaveMode {
-            val mode = EnclaveMode.values().first { mode ->
-                val comparisonString = "-${mode.name.lowercase()}.signed.so"
-                resourcePath.contains(comparisonString)
-            }
-
-            return mode
-        }
-
-        private fun Path.deleteQuietly() {
-            try {
-                deleteIfExists()
-            } catch (e: IOException) {
-                // Ignore
-            }
-        }
-
-        /**
-         * Checks to see if the platform supports enclaves in a given mode and throws an exception if not.
-         *
-         * @throws PlatformSupportException if the requested mode is not supported on the system.
-         */
-        private fun checkPlatformEnclaveSupport(enclaveMode: EnclaveMode) {
-            // All platforms support MOCK mode
-            if (enclaveMode == EnclaveMode.MOCK)
-                return
-
-            checkNotLinux()
-
-            val requireHardwareSupport = enclaveMode.isHardware
-            try {
-                NativeShared.checkPlatformEnclaveSupport(requireHardwareSupport)
-            } catch (e: PlatformSupportException) {
-                // Improve error message in case that SSE4.1 is missing
-                val features = NativeApi.cpuFeatures
-                if (!features.contains(CpuFeature.SSE4_1)) {
-                    val sb = StringBuilder()
-                    sb.append(e.message)
-                    sb.append(
-                            features.joinToString(
-                                    prefix = "\nCPU features: ", separator = ", ",
-                                    postfix = "\nReason: SSE4.1 is required but was not found."
-                            )
-                    )
-                    throw PlatformSupportException(sb.toString(), e)
-                } else {
-                    throw e
-                }
-            } catch (e: Exception) {
-                throw IllegalStateException("Unable to check platform support", e)
-            }
+            return createEnclaveHost(findEnclave(), mockConfiguration)
         }
 
         /**
@@ -453,17 +153,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * @return Boolean true if simulated enclaves are supported, false otherwise.
          */
         @JvmStatic
-        fun isSimulatedEnclaveSupported(): Boolean {
-            if (!UtilsOS.isLinux())
-                return false
-
-            try {
-                NativeShared.checkPlatformEnclaveSupport(false)
-            } catch (e: PlatformSupportException) {
-                return false
-            }
-            return true
-        }
+        fun isSimulatedEnclaveSupported(): Boolean = isNativeEnclaveSupported(requireHardwareSupport = false)
 
         /**
          * Determine whether hardware enclaves are supported on the current platform. Irrespective of the
@@ -473,17 +163,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
          * @return Boolean true if hardware enclaves are supported, false otherwise.
          */
         @JvmStatic
-        fun isHardwareEnclaveSupported(): Boolean {
-            if (!UtilsOS.isLinux())
-                return false
-
-            try {
-                NativeShared.checkPlatformEnclaveSupport(true)
-            } catch (e: PlatformSupportException) {
-                return false
-            }
-            return true
-        }
+        fun isHardwareEnclaveSupported(): Boolean = isNativeEnclaveSupported(requireHardwareSupport = true)
 
         /**
          * Determine which enclave modes are supported on the current platform. Irrespective of the current
@@ -518,8 +198,220 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             NativeShared.enablePlatformHardwareEnclaveSupport()
         }
 
+        // The internal modifier prevents this from appearing in the API docs, however because we shade Kotlin it will
+        // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
+        @JvmSynthetic
         @JvmStatic
-        @Throws(PlatformSupportException::class)
+        internal fun internalCreateNative(
+            enclaveMode: EnclaveMode,
+            enclaveFileUrl: URL,
+            enclaveClassName: String,
+        ): EnclaveHost {
+            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ErrorHandler())
+            return EnclaveHost(enclaveHandle)
+        }
+
+        // The internal modifier prevents this from appearing in the API docs, however because we shade Kotlin it will
+        // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
+        @JvmSynthetic
+        @JvmStatic
+        internal fun internalCreateMock(
+            enclaveClass: Class<*>,
+            mockConfiguration: MockConfiguration? = null,
+            enclavePropertiesOverride: Properties? = null
+        ): EnclaveHost {
+            // For mock mode ensure the host can access the enclave constructor. It may have been set as private.
+            val constructor = enclaveClass.getDeclaredConstructor().apply { isAccessible = true }
+            val enclaveHandle = MockEnclaveHandle(
+                constructor.newInstance(),
+                mockConfiguration,
+                enclavePropertiesOverride,
+                ErrorHandler()
+            )
+            return EnclaveHost(enclaveHandle)
+        }
+
+        /**
+         * Searches for an enclave. There are two places where an enclave can be found.
+         * 1) In an SGX signed enclave file (.so)
+         * 2) For mock enclaves, an existing class named 'className' in the classpath
+         *
+         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
+         * For example, it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
+         *
+         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
+         *
+         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
+         *
+         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
+         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
+         */
+        private fun findEnclave(enclaveClassName: String): EnclaveScanResult {
+            val results = ArrayList<EnclaveScanResult>()
+            EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
+            findMockEnclave(enclaveClassName)?.let { results += it }
+            return getSingleResult(results, enclaveClassName)
+        }
+
+        private fun findNativeEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): EnclaveScanResult.Native? {
+            val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
+            val url = EnclaveHost::class.java.getResource(resourceName)
+            return url?.let { EnclaveScanResult.Native(enclaveClassName, enclaveMode, url) }
+        }
+
+        private fun findMockEnclave(enclaveClassName: String): EnclaveScanResult.Mock? {
+            return try {
+                Class.forName(enclaveClassName)
+                EnclaveScanResult.Mock(enclaveClassName)
+            } catch (e: ClassNotFoundException) {
+                null
+            }
+        }
+
+        /**
+         * Performs a search for an enclave by performing a classpath and module scan. There are two places where an enclave
+         * can be found.
+         * 1) In an SGX signed enclave file (.so)
+         * 2) For mock enclaves, an existing class in the classpath
+         *
+         * For a .so enclave file the function looks in the classpath and search for a file name that matches the pattern
+         * ^.*(simulation|debug|release)\.signed\.so$.
+         *
+         * For mock enclaves, the function searches for classes that extend com.r3.conclave.enclave.Enclave.
+         *
+         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
+         *
+         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
+         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
+         *
+         * @return Pair with the class name and URL (if not a mock enclave) of the enclave found.
+         */
+        private fun findEnclave(): EnclaveScanResult {
+            val classGraph = ClassGraph()
+            val results = ArrayList<EnclaveScanResult>()
+            findNativeEnclaves(classGraph, results)
+            findMockEnclaves(classGraph, results)
+            return getSingleResult(results, null)
+        }
+
+        /**
+         * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
+         */
+        private fun findNativeEnclaves(classGraph: ClassGraph, results: MutableList<EnclaveScanResult>) {
+            val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
+
+            classGraph.scan().use {
+                for (resource in it.allResources) {
+                    val pathMatcher = nativeSoFilePattern.matcher(resource.path)
+                    if (pathMatcher.matches()) {
+                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
+                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
+                        results += EnclaveScanResult.Native(enclaveClassName, enclaveMode, resource.url)
+                    }
+                }
+            }
+        }
+
+        /**
+         * Performs a search for mock enclave files using ClassGraph. The search is performed by looking for classes that
+         * extend com.r3.conclave.enclave.Enclave.
+         */
+        private fun findMockEnclaves(classGraph: ClassGraph, results: MutableList<EnclaveScanResult>) {
+            classGraph.enableClassInfo().scan().use {
+                for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
+                    if (!classInfo.isAbstract) {
+                        results += EnclaveScanResult.Mock(classInfo.name)
+                    }
+                }
+            }
+        }
+
+        private fun getSingleResult(results: List<EnclaveScanResult>, className: String?): EnclaveScanResult {
+            when (results.size) {
+                1 -> return results[0]
+                0 -> {
+                    val beginning = if (className != null) "Enclave $className does not exist" else "No enclaves found"
+                    throw IllegalArgumentException(
+                        """$beginning on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
+                            |    runtimeOnly project(path: ":enclave project", configuration: mode)
+                            |    
+                            |    where:
+                            |      mode is either "release", "debug", "simulation" or "mock"
+                            """.trimMargin()
+                    )
+                }
+                else -> throw IllegalStateException("Multiple enclaves were found: $results")
+            }
+        }
+
+        private fun createEnclaveHost(result: EnclaveScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
+            try {
+                return when (result) {
+                    is EnclaveScanResult.Mock -> {
+                        // Here we do not call checkPlatformEnclaveSupport as mock mode is supported on any platform
+                        val enclaveClass = Class.forName(result.enclaveClassName)
+                        internalCreateMock(enclaveClass, mockConfiguration)
+                    }
+                    is EnclaveScanResult.Native -> {
+                        checkPlatformEnclaveSupport(result.enclaveMode)
+                        internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
+                    }
+                }
+            } catch (e: EnclaveLoadException) {
+                throw e
+            } catch (e: Exception) {
+                throw EnclaveLoadException("Unable to load enclave", e)
+            }
+        }
+
+        private fun isNativeEnclaveSupported(requireHardwareSupport: Boolean): Boolean {
+            if (!UtilsOS.isLinux()) {
+                return false
+            }
+            return try {
+                NativeShared.checkPlatformEnclaveSupport(requireHardwareSupport)
+                true
+            } catch (e: PlatformSupportException) {
+                false
+            }
+        }
+
+        /**
+         * Checks to see if the platform supports enclaves in a given mode and throws an exception if not.
+         *
+         * @throws PlatformSupportException if the requested mode is not supported on the system.
+         */
+        private fun checkPlatformEnclaveSupport(enclaveMode: EnclaveMode) {
+            // All platforms support MOCK mode
+            if (enclaveMode == EnclaveMode.MOCK)
+                return
+
+            checkNotLinux()
+
+            val requireHardwareSupport = enclaveMode.isHardware
+            try {
+                NativeShared.checkPlatformEnclaveSupport(requireHardwareSupport)
+            } catch (e: PlatformSupportException) {
+                // Improve error message in case that SSE4.1 is missing
+                val features = NativeApi.cpuFeatures
+                if (!features.contains(CpuFeature.SSE4_1)) {
+                    val sb = StringBuilder()
+                    sb.append(e.message)
+                    sb.append(
+                        features.joinToString(
+                            prefix = "\nCPU features: ", separator = ", ",
+                            postfix = "\nReason: SSE4.1 is required but was not found."
+                        )
+                    )
+                    throw PlatformSupportException(sb.toString(), e)
+                } else {
+                    throw e
+                }
+            } catch (e: Exception) {
+                throw IllegalStateException("Unable to check platform support", e)
+            }
+        }
+
         private fun checkNotLinux() {
             if (!UtilsOS.isLinux()) {
                 val message =
@@ -534,8 +426,6 @@ open class EnclaveHost protected constructor() : AutoCloseable {
 
     private var fileSystemHandler: FileSystemHandler? = null
 
-    // EnclaveHandle is an internal class and thus to prevent it from leaking into the public API this is not a c'tor parameter.
-    private lateinit var enclaveHandle: EnclaveHandle<ErrorHandler.Connection>
     private val hostStateManager = StateManager<HostState>(New)
     private lateinit var adminHandler: AdminHandler
 
@@ -680,7 +570,7 @@ open class EnclaveHost protected constructor() : AutoCloseable {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
-            null;
+            null
         }
     }
 
@@ -1172,6 +1062,23 @@ open class EnclaveHost protected constructor() : AutoCloseable {
         object New : HostState()
         object Started : HostState()
         object Closed : HostState()
+    }
+
+    private sealed class EnclaveScanResult {
+        class Mock(val enclaveClassName: String) : EnclaveScanResult() {
+            override fun toString(): String = "mock $enclaveClassName"
+        }
+
+        class Native(
+            val enclaveClassName: String,
+            val enclaveMode: EnclaveMode,
+            val soFileUrl: URL
+        ) : EnclaveScanResult() {
+            init {
+                require(enclaveMode != EnclaveMode.MOCK)
+            }
+            override fun toString(): String = "${enclaveMode.name.lowercase()} $enclaveClassName"
+        }
     }
 }
 
