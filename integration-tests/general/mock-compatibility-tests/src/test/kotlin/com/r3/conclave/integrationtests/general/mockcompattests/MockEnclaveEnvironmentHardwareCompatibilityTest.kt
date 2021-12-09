@@ -7,7 +7,7 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.internal.InternalsKt.createHost
+import com.r3.conclave.host.internal.InternalsKt.createNativeHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave
@@ -127,11 +127,8 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         // Look for an SGX enclave image.
         val enclaveMode = EnclaveMode.DEBUG
         val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
-        val stream = EnclaveHost::class.java.getResource(resourceName)!!.openStream()
-
-        val enclaveFile = Files.createTempFile(enclaveClassName, "signed.so")
-        stream.use { copy(it, enclaveFile, REPLACE_EXISTING) }
-        return createHost(enclaveMode, enclaveFile, enclaveClassName, true)
+        val enclaveFileUrl = EnclaveHost::class.java.getResource(resourceName)!!
+        return createNativeHost(enclaveMode, enclaveFileUrl, enclaveClassName)
     }
 
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {

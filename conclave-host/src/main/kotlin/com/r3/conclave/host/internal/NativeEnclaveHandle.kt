@@ -4,27 +4,31 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.LeafSender
-import com.r3.conclave.host.internal.fatfs.FileSystemHandler
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.io.IOException
+import java.net.URL
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import kotlin.io.path.deleteIfExists
 
 class NativeEnclaveHandle<CONNECTION>(
     override val enclaveMode: EnclaveMode,
-    private val enclaveFile: Path,
-    private val tempFile: Boolean,
+    enclaveFileUrl: URL,
     override val enclaveClassName: String,
     handler: Handler<CONNECTION>
 ) : EnclaveHandle<CONNECTION>, LeafSender() {
+    private val enclaveFile: Path
     private val enclaveId: Long
     override val connection: CONNECTION = handler.connect(this)
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
         NativeLoader.loadHostLibraries(enclaveMode)
-        enclaveId = Native.createEnclave(enclaveFile.toAbsolutePath().toString(), enclaveMode != EnclaveMode.RELEASE)
+        enclaveFile = Files.createTempFile(enclaveClassName, "signed.so").toAbsolutePath()
+        enclaveFileUrl.openStream().use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
+        enclaveId = Native.createEnclave(enclaveFile.toString(), enclaveMode != EnclaveMode.RELEASE)
         NativeApi.registerOcallHandler(enclaveId, HandlerConnected(handler, connection))
     }
 
@@ -45,17 +49,19 @@ class NativeEnclaveHandle<CONNECTION>(
     }
 
     override fun destroy() {
-        if (tempFile) {
-            try {
-                enclaveFile.deleteIfExists()
-            } catch (e: IOException) {
-                // Ignore
-            }
-        }
         Native.destroyEnclave(enclaveId)
+        try {
+            enclaveFile.deleteIfExists()
+        } catch (e: IOException) {
+            logger.debug("Unable to delete temp file $enclaveFile", e)
+        }
     }
 
     override val mockEnclave: Any get() {
         throw IllegalStateException("The enclave instance can only be accessed in mock mode.")
+    }
+
+    private companion object {
+        private val logger = loggerFor<NativeEnclaveHandle<*>>()
     }
 }
