@@ -130,7 +130,7 @@ index 5656dec..1e39f62 100644
 @@ -110,6 +110,15 @@ int get_cpuid (unsigned int leaf, unsigned int *eax, unsigned int *ebx, unsigned
  #define bit_SHA_compat           0x20000000
  #define bit_FMA_compat           0x00001000
- 
+
 +/*
 + * CPUID is not available inside an SGX enclave.
 + * If a clean method that we could use to determine whether or not we were inside
@@ -141,13 +141,12 @@ index 5656dec..1e39f62 100644
 +}
 +
  /*
-  * Extracts the CPU features by using cpuid.h.
-  * Note: This function is implemented in C as cpuid.h
-@@ -117,6 +126,26 @@ int get_cpuid (unsigned int leaf, unsigned int *eax, unsigned int *ebx, unsigned
-  * difficult to keep track of this in Java.
-  */
- void determineCPUFeatures(CPUFeatures* features) {
-+
+ * Extracts the CPU features by using cpuid.h.
+ * Note: This function is implemented in C as cpuid.h
+@@ -528,6 +537,24 @@ static void set_cpufeatures(CPUFeatures *features, CpuidInfo *_cpuid_info)
+ void determineCPUFeatures(CPUFeatures *features)
+ {
+
 +  // Return a minimal hard coded set of features
 +  // TODO: Find a way to safely perform proper feature detection. Alternatively, find a way to
 +  // determine if we are in an enclave and steer feature detection appropriately.
@@ -166,7 +165,7 @@ index 5656dec..1e39f62 100644
 +
 +    return;
 +  }
-+
-   unsigned int eax, ebx, ecx, edx;
-   unsigned int max_level, ext_level;
-   unsigned int vendor;
+
+   CpuidInfo cpuid_info_data = {0};
+   CpuidInfo *_cpuid_info = &cpuid_info_data;
+

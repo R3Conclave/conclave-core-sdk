@@ -54,6 +54,7 @@ add_library(jvm_enclave_common
         stubs/arpa_inet.cpp
         stubs/sys_mman.cpp
         stubs/sched.cpp
+        stubs/sched_cpucount.cpp
         stubs/netdb.cpp
         stubs/sys_socket.cpp
         stubs/sys_poll.cpp

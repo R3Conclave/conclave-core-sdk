@@ -90,7 +90,7 @@ RUN apt-get update -y && apt-get install -y \
 ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
-ENV MX_VERSION          5.301.0
+ENV MX_VERSION          5.316.15
 ENV JAVA_HOME           /usr/lib/jvm/java-11-openjdk-amd64
 ENV JVMCI_VERSION       21.0-b03
 ENV LABSJDK_VERSION     11.0.9
@@ -109,7 +109,7 @@ RUN tar -zxf /opt/as.ld.objdump.gold.r3.tar.gz -C /usr/local/bin external/toolse
 # Download the right MX version
 RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git /opt/mx-$MX_VERSION
 # Checkout the exact commit to ensure the same code is always used even if the branch is updated
-RUN git -C /opt/mx-$MX_VERSION checkout 5e0efda
+RUN git -C /opt/mx-$MX_VERSION checkout 1d0c0ef
 RUN chmod -R a+wx /opt/mx-$MX_VERSION
 
 # labs-openjdk-11
