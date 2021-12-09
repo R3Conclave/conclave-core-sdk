@@ -98,6 +98,10 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 
 ## Release notes
 
+### 1.3
+
+1. GraalVM has been updated to version 21.3.
+
 ### 1.2
 
 !!! important
