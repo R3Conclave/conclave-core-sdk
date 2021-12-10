@@ -27,7 +27,6 @@ import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
 import javax.inject.Inject
 
-@Suppress("UnstableApiUsage")
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     override fun apply(target: Project) {
         checkGradleVersionCompatibility(target)
@@ -59,7 +58,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             }
             // If language support is enabled then automatically add the required dependency.
-            if (conclaveExtension.supportLanguages.get().length > 0) {
+            if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // Please ensure the version number matches the version number set in versions.gradle to avoid
                 // incompatibilities
                 target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:21.3.0")
@@ -112,7 +111,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         // Create configurations for each of the build types.
         for (type in BuildType.values()) {
             // https://docs.gradle.org/current/userguide/cross_project_publications.html
-            target.configurations.create(type.name.toLowerCase()) {
+            target.configurations.create(type.name.lowercase()) {
                 it.isCanBeConsumed = true
                 it.isCanBeResolved = false
             }
@@ -197,13 +196,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private fun createEnclaveArtifacts(
-            target: Project,
-            sdkVersion: String,
-            conclaveExtension: ConclaveExtension,
-            shadowJarTask: ShadowJar,
-            generateEnclavePropertiesTask: GenerateEnclaveProperties,
-            enclaveClassNameTask: EnclaveClassName) {
-
+        target: Project,
+        sdkVersion: String,
+        conclaveExtension: ConclaveExtension,
+        shadowJarTask: ShadowJar,
+        generateEnclavePropertiesTask: GenerateEnclaveProperties,
+        enclaveClassNameTask: EnclaveClassName
+    ) {
         val baseDirectory = target.buildDir.toPath().resolve("conclave")
         val conclaveDependenciesDirectory = "$baseDirectory/com/r3/conclave"
 
@@ -280,13 +279,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         for (type in BuildType.values().filter { it != BuildType.Mock }) {
-            val typeLowerCase = type.name.toLowerCase()
+            val typeLowerCase = type.name.lowercase()
 
             val enclaveExtension = when (type) {
                 BuildType.Release -> conclaveExtension.release
                 BuildType.Debug -> conclaveExtension.debug
                 BuildType.Simulation -> conclaveExtension.simulation
-                else -> throw GradleException("Internal Conclave plugin error. Please contact R3 for help.");
+                else -> throw GradleException("Internal Conclave plugin error. Please contact R3 for help.")
             }
 
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
@@ -324,10 +323,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.jarFile.set(shadowJarTask.archiveFile)
                 task.includePaths.from(
                         "$conclaveDependenciesDirectory/include"
-// There can be conflicts between the host system headers and the ones provided by Intel's SDK.
-// The lines bellow should be reintroduced as part of CON-284.
-//                        "$sgxDirectory/tlibc",
-//                        "$sgxDirectory/libcxx"
                 )
                 task.libraryPath.set(target.file(sgxDirectory))
                 task.libraries.from(
@@ -388,7 +383,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>("generateEnclaveSigningMaterial$type", linuxExec) { task ->
                 task.group = CONCLAVE_GROUP
-                task.description = "Generate standalone signing material for a ${type} mode enclave that can be used with a HSM."
+                task.description = "Generate standalone signing material for a $type mode enclave that can be used with a HSM."
                 task.dependsOn(copySgxToolsTask)
                 task.inputs.files(signToolFile.parent, buildUnsignedEnclaveTask.outputEnclave, generateEnclaveConfigTask.outputConfigFile, enclaveExtension.signingMaterial)
                 task.signTool.set(signToolFile)

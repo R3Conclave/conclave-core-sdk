@@ -102,6 +102,8 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 
 1. GraalVM has been updated to version 21.3.
 
+1. Gradle 7 is now supported.
+
 ### 1.2
 
 !!! important

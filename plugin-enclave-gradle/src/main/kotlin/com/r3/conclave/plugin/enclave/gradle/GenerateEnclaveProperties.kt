@@ -65,7 +65,7 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
         if (conclave.kds.keySpec.masterKeyType.isPresent) {
             val masterKeyTypeString = conclave.kds.keySpec.masterKeyType.get()
             val masterKeyType = try {
-                MasterKeyType.valueOf(masterKeyTypeString.toUpperCase())
+                MasterKeyType.valueOf(masterKeyTypeString.uppercase())
             } catch (e: IllegalArgumentException) {
                 throw GradleException(
                         "Invalid KDS master key type '$masterKeyTypeString'. Valid values are: " +

@@ -10,7 +10,7 @@ class ProjectUtils {
     companion object {
         @JvmStatic
         fun loadEnclaveConfigurationFromFile(projectDirectory: Path, buildType: BuildType): GenerateEnclaveConfigTest.EnclaveConfiguration {
-            val enclaveConfigurationFile = projectDirectory.resolve("build/conclave/${buildType.name.toLowerCase()}/enclave.xml")
+            val enclaveConfigurationFile = projectDirectory.resolve("build/conclave/${buildType.name.lowercase()}/enclave.xml")
             return XmlMapper().readValue(enclaveConfigurationFile.toFile(), GenerateEnclaveConfigTest.EnclaveConfiguration::class.java)
         }
 

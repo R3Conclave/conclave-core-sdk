@@ -64,7 +64,6 @@ object EnclaveClientHelper {
     @Suspendable
     @Throws(FlowException::class)
     @JvmStatic
-    @JvmOverloads
     fun <T : EnclaveHostService> initiateResponderFlow(flow: FlowLogic<*>, counterPartySession: FlowSession,
                                                        serviceType: Class<T>): EnclaveFlowResponder {
         // Start an instance of the enclave hosting service

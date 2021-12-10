@@ -268,7 +268,7 @@ The enclave, host, and client are the three components in a Conclave application
         ```groovy
         plugins {
             id 'application'
-            id 'org.springframework.boot' version '2.0.1.RELEASE'
+            id 'org.springframework.boot' version '2.6.1'
         }
         ```
 

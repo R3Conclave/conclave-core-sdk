@@ -44,7 +44,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
         logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
 
-        val buildTypeString = buildType.toString().toUpperCase()
+        val buildTypeString = buildType.toString().uppercase()
         val buildSecurityString = when(buildType) {
             BuildType.Release -> "SECURE"
             else -> "INSECURE"

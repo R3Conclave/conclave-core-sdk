@@ -15,6 +15,3 @@ The user can change their enclave to be built in Java 8 by specifying Java sourc
 ### Host and Client
 The host and client are normal Java libraries targeting Java 8, so all code outside the enclave module can be written
 and built with any Java version that is 8 or higher.
-
-## Gradle
-The tool used to build Conclave is Gradle. The recommended version is 6.6.1.
