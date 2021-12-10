@@ -49,7 +49,26 @@ object NativeLoader {
             .use {
                 it.allResources.forEachInputStream { resource, stream ->
                     val name = resource.path.substringAfterLast('/')
+                    println("Filipe: $name")
                     val destination = libsPath.resolve(name)
+                    println("Filipe: ${destination.toAbsolutePath()}")
+                    // REPLACE_EXISTING is a hack to work around an issue observed by IntellectEU that has not
+                    // yet been diagnosed. See bug CON-239.
+                    Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+
+        val hostSharedLibrariesResourcePath = "com/r3/conclave/host-libraries/shared"
+
+        ClassGraph()
+            .whitelistPaths(hostSharedLibrariesResourcePath)
+            .scan()
+            .use {
+                it.allResources.forEachInputStream { resource, stream ->
+                    val name = resource.path.substringAfterLast('/')
+                    println("Filipe: $name")
+                    val destination = libsPath.resolve(name)
+                    println("Filipe: ${destination.toAbsolutePath()}")
                     // REPLACE_EXISTING is a hack to work around an issue observed by IntellectEU that has not
                     // yet been diagnosed. See bug CON-239.
                     Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING)

@@ -44,15 +44,11 @@ subprojects { Project project ->
                 rename "libsgx_launch${simSuffix}.so", "libsgx_launch${simSuffix}.so.1"
                 include "libsgx_urts${simSuffix}.so"
                 include "libsgx_uae_service${simSuffix}.so"
-                include "libsgx_capable.so"
                 include "libsgx_qe3.signed.so"
                 include "libsgx_pce.signed.so"
             }
             from (hostBuildDir) {
                 include "libjvm_host.so"
-            }
-            from (hostSharedBuildDir) {
-                include "libjvm_host_shared.so"
             }
             from (libDir) {
                 include "libcrypto.so"
