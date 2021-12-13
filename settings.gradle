@@ -50,8 +50,6 @@ if (includeNative) {
     include 'cpp:linux-sgx:linux-sgx-simulation'
     include 'cpp:linux-sgx:linux-sgx-debug'
     include 'cpp:linux-sgx:linux-sgx-release'
-    include 'cpp:macos-binutils'
-    include 'cpp:macos-sign-tool'
 }
 
 include 'conclave-mail'
@@ -61,16 +59,10 @@ include 'conclave-host'
 include 'conclave-web-host'
 include 'conclave-client'
 include 'conclave-web-client'
-
 include 'conclave-init'
-
 include 'internal-testing'
-
 include 'containers:conclave-build'
-
 include 'hsm-tool'
-
 include 'plugin-enclave-gradle'
-
 include 'graal'
 include 'graal:cap-cache'

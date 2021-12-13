@@ -56,11 +56,3 @@ task setupSignToolCMakeBuild(type: Exec) {
             "-DCMAKE_BUILD_TYPE=Release", projectDir
     outputs.file("$buildDir/Makefile")
 }
-
-task buildSgxSign(type: Exec) {
-    dependsOn setupSignToolCMakeBuild
-    workingDir buildDir
-    commandLine "/usr/bin/env", "cmake",
-            "--build", buildDir,
-            "--target", "macos-sign-tool"
-}
