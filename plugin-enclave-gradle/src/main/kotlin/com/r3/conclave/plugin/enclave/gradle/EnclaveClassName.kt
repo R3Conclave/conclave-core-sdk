@@ -27,7 +27,8 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
                 .use {
                     val enclaveClasses = it.getSubclasses("com.r3.conclave.enclave.Enclave").filter { !it.isAbstract }
                     when (enclaveClasses.size) {
-                        0 -> throw GradleException("There are no classes that extend com.r3.conclave.enclave.Enclave")
+                        0 -> throw GradleException("Could not detect a class that extends com.r3.conclave.enclave.Enclave. " +
+                                "Please implement the enclave class and ensure that its visibility is public.")
                         1 -> enclaveClasses[0].name
                         else -> throw GradleException("There can only be one Enclave class in a Gradle module but multiple " +
                                 "were found (${enclaveClasses.joinToString { it.name }}). See " +
