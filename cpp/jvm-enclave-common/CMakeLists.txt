@@ -37,6 +37,7 @@ add_library(jvm_enclave_common
         stubs/libc.cpp
         stubs/locale.cpp
         stubs/pwd.cpp
+        stubs/spawn.cpp
         stubs/signal.cpp
         stubs/stdio.cpp
         stubs/stdlib.cpp
