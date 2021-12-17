@@ -33,7 +33,7 @@ dependencies {
     compile "com.r3.conclave:conclave-mail:$conclaveVersion"
 
     // Corda dependencies.
-    cordaCompile "$corda_core_release_group:corda-core:$corda_core_release_version"
+    cordaCompile "$corda_release_group:corda-core:$corda_release_version"
     cordaRuntime "$corda_release_group:corda:$corda_release_version"
     testCompile "$corda_release_group:corda-node-driver:$corda_release_version"
 }
