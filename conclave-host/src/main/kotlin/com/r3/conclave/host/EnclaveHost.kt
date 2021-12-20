@@ -8,11 +8,9 @@ import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
-import com.r3.conclave.common.internal.handler.AdminHandlerRequestTypes
-import com.r3.conclave.common.internal.handler.Handler
-import com.r3.conclave.common.internal.handler.Sender
-import com.r3.conclave.common.internal.handler.SimpleMuxingHandler
+import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
+import com.r3.conclave.common.internal.kds.KDSResponse
 import com.r3.conclave.common.internal.kds.PrivateKeyRequest
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.host.EnclaveHost.CallState.*
@@ -544,20 +542,24 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
             // for us to query.
             updateAttestation()
+            log.debug { enclaveInstanceInfo.toString() }
 
             // Once the EnclaveInstanceInfo has been updated, we can do a KDS request.
             if (kdsConfiguration != null) {
-                kdsRequest(kdsConfiguration)
+                requestKdsPrivateKey(kdsConfiguration)
             }
 
             // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
-            log.debug { enclaveInstanceInfo.toString() }
 
-            if (enclaveFileSystemFile != null) log.info("Setting up persistent enclave file system...")
+            if (enclaveFileSystemFile != null) {
+                log.info("Setting up persistent enclave file system...")
+            }
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
             adminHandler.sendOpen(sealedState)
-            if (enclaveFileSystemFile != null) log.info("Setup of the file system completed successfully.")
+            if (enclaveFileSystemFile != null) {
+                log.info("Setup of the file system completed successfully.")
+            }
 
             hostStateManager.state = Started
         } catch (e: Exception) {
@@ -574,18 +576,17 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
     }
 
-    private fun kdsRequest(kdsConfiguration: KDSConfiguration) {
-        adminHandler.requestKDSKeySpecification()
-
+    private fun requestKdsPrivateKey(kdsConfiguration: KDSConfiguration) {
+        val enclaveKdsKeySpec = adminHandler.requestKdsKeySpec()
         // Return if the enclave wasn't configured with any KDS constraint
-        val enclaveKDSConfig = adminHandler.enclaveKDSConfig ?: return
+        if (enclaveKdsKeySpec == null) return
 
         val mapper = ObjectMapper()
         val privateKeyRequest = PrivateKeyRequest(
-                appReport = Base64.getEncoder().encodeToString(enclaveInstanceInfo.serialize()),
-                name = "KDSKeySpecName",
-                mkType = enclaveKDSConfig.masterKeyType.name.lowercase(),
-                policyConstraint = enclaveKDSConfig.policyConstraint.toString()
+            appReport = enclaveInstanceInfo.serialize(),
+            name = "KDSKeySpecName",
+            mkType = enclaveKdsKeySpec.masterKeyType.name.lowercase(),
+            policyConstraint = enclaveKdsKeySpec.policyConstraint.toString()
         )
 
         val url = URL("${kdsConfiguration.url}/private")
@@ -596,9 +597,8 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         con.setRequestProperty("Content-Type", "application/json; utf-8")
         con.doOutput = true
 
-        con.outputStream.use { os ->
-            val input: ByteArray = mapper.writeValueAsBytes(privateKeyRequest)
-            os.write(input, 0, input.size)
+        con.outputStream.use {
+            mapper.writeValue(it, privateKeyRequest)
         }
 
         if (con.responseCode != HttpURLConnection.HTTP_OK) {
@@ -606,10 +606,10 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             throw IOException(kdsErrorResponse.reason)
         }
 
-        con.inputStream.use {
-            val response = it.readBytes()
-            adminHandler.sendKDSResponse(response)
+        val kdsResponse = con.inputStream.use {
+            mapper.readValue(it, KDSResponse::class.java)
         }
+        adminHandler.sendKdsResponse(kdsResponse)
     }
 
     /**
@@ -819,7 +819,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
     }
 
     private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
-    private class EnclaveKDSConfig(val masterKeyType: MasterKeyType, val policyConstraint: EnclaveConstraint)
+    private class EnclaveKdsKeySpec(val masterKeyType: MasterKeyType, val policyConstraint: EnclaveConstraint)
 
     /** Deserializes keys and other info from the enclave during initialisation. */
     private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
@@ -827,63 +827,71 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
 
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
-        var enclaveKDSConfig: EnclaveKDSConfig? = null
+
+        private var enclaveKdsKeySpec: EnclaveKdsKeySpec? = null
+
+        private val messageTypes = EnclaveToHost.values()
 
         override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            when (val type = input.get().toInt()) {
-                AdminHandlerRequestTypes.Host.ENCLAVE_INFO.ordinal -> {  // Enclave info
-                    check(_enclaveInfo == null) { "Already received enclave info" }
-                    val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
-                    val encryptionKey = Curve25519PublicKey(input.getBytes(32))
-                    _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
-                }
-                AdminHandlerRequestTypes.Host.ATTESTATION.ordinal -> {  // Attestation request
-                    val attestationBytes = writeData { host._enclaveInstanceInfo!!.attestation.writeTo(this) }
-                    sender.send(1 + attestationBytes.size) { buffer ->
-                        buffer.put(AdminHandlerRequestTypes.Enclave.ATTESTATION.ordinal.toByte())
-                        buffer.put(attestationBytes)
-                    }
-                }
-                AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal -> {
-                    onKDSKeySpecification(input)
-                }
-                else -> throw IllegalStateException("Unknown type $type")
+            when (messageTypes[input.get().toInt()]) {
+                EnclaveToHost.ENCLAVE_INFO -> onEnclaveInfo(input)
+                EnclaveToHost.ATTESTATION -> onAttestation()
+                EnclaveToHost.KDS_KEY_SPEC_RESPONSE -> onKdsKeySpec(input)
+            }
+        }
+
+        private fun onEnclaveInfo(input: ByteBuffer) {
+            check(_enclaveInfo == null) { "Already received enclave info" }
+            val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
+            val encryptionKey = Curve25519PublicKey(input.getBytes(32))
+            _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
+        }
+
+        private fun onAttestation() {
+            val attestationBytes = writeData { host._enclaveInstanceInfo!!.attestation.writeTo(this) }
+            sendToEnclave(HostToEnclave.ATTESTATION, attestationBytes.size) { buffer ->
+                buffer.put(attestationBytes)
             }
         }
 
         fun sendOpen(sealedState: ByteArray?) {
-            sender.send(1 + nullableSize(sealedState) { it.size }) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Enclave.OPEN.ordinal.toByte())
+            val payloadSize = nullableSize(sealedState) { it.size }
+            sendToEnclave(HostToEnclave.OPEN, payloadSize) { buffer ->
                 buffer.putNullable(sealedState) { put(it) }
             }
         }
 
         fun sendClose() {
-            sender.send(1) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Enclave.CLOSE.ordinal.toByte())
+            sendToEnclave(HostToEnclave.CLOSE, 0) { }
+        }
+
+        fun sendKdsResponse(kdsResponse: KDSResponse) {
+            val payloadSize = kdsResponse.data.intLengthPrefixSize + kdsResponse.kdsEnclaveInstanceInfo.size
+            sendToEnclave(HostToEnclave.KDS_RESPONSE, payloadSize) { buffer ->
+                buffer.putIntLengthPrefixBytes(kdsResponse.data)
+                buffer.put(kdsResponse.kdsEnclaveInstanceInfo)
             }
         }
 
-        fun sendKDSResponse(kdsResponseJSON: ByteArray) {
-            sender.send(1 + kdsResponseJSON.size) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Enclave.KDS_RESPONSE.ordinal.toByte())
-                buffer.put(kdsResponseJSON)
-            }
+        fun requestKdsKeySpec(): EnclaveKdsKeySpec? {
+            sendToEnclave(HostToEnclave.KDS_KEY_SPEC_REQUEST, 0) { }
+            return enclaveKdsKeySpec
         }
 
-        fun requestKDSKeySpecification() {
-            sender.send(1) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Enclave.KDS_KEY_SPECIFICATION.ordinal.toByte())
-            }
-        }
-
-        private fun onKDSKeySpecification(byteBuffer: ByteBuffer) {
+        private fun onKdsKeySpec(byteBuffer: ByteBuffer) {
             val masterKeyType = MasterKeyType.values()[byteBuffer.get().toInt()]
             val policyConstraintString = String(byteBuffer.getRemainingBytes())
             val policyConstraint = EnclaveConstraint.parse(policyConstraintString)
-            enclaveKDSConfig = EnclaveKDSConfig(masterKeyType, policyConstraint)
+            enclaveKdsKeySpec = EnclaveKdsKeySpec(masterKeyType, policyConstraint)
+        }
+
+        private fun sendToEnclave(type: HostToEnclave, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
+            sender.send(1 + payloadSize) { buffer ->
+                buffer.put(type.ordinal.toByte())
+                payload(buffer)
+            }
         }
     }
 

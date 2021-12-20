@@ -10,8 +10,6 @@ import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
-import com.r3.conclave.common.internal.kds.KDSResponse
-import com.r3.conclave.common.internal.kds.PrivateKeyResponse
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
@@ -64,7 +62,7 @@ abstract class Enclave {
         private val signatureScheme = SignatureSchemeEdDSA()
     }
 
-    private var kdsEII: EnclaveInstanceInfo? = null
+    private var _kdsEnclaveInstanceInfo: EnclaveInstanceInfo? = null
     private lateinit var env: EnclaveEnvironment
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
@@ -144,7 +142,7 @@ abstract class Enclave {
      * The remote attestation object for the KDS enclave this enclave is using. This will be null if this enclave is
      * configured to use a KDS or if the KDS hasn't connected to one.
      */
-    protected val kdsEnclaveInstanceInfo: EnclaveInstanceInfo? get() = kdsEII
+    protected val kdsEnclaveInstanceInfo: EnclaveInstanceInfo? get() = _kdsEnclaveInstanceInfo
 
     /**
      * If this property is false (the default) then a lock will be taken and the enclave will process mail and calls
@@ -399,6 +397,8 @@ abstract class Enclave {
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
         private lateinit var generatedPolicyConstraint: EnclaveConstraint
 
+        private val messageTypes = HostToEnclave.values()
+
         override fun connect(upstream: Sender): AdminHandler {
             sender = upstream
             // At the time we send upstream the mux handler hasn't been configured for receiving, but that's OK.
@@ -409,13 +409,12 @@ abstract class Enclave {
         }
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            when (val type = input.get().toInt()) {
-                AdminHandlerRequestTypes.Enclave.ATTESTATION.ordinal -> onAttestation(input)
-                AdminHandlerRequestTypes.Enclave.OPEN.ordinal -> onOpen(input)
-                AdminHandlerRequestTypes.Enclave.CLOSE.ordinal -> onClose()
-                AdminHandlerRequestTypes.Enclave.KDS_KEY_SPECIFICATION.ordinal -> onKDSKeySpecificationRequest()
-                AdminHandlerRequestTypes.Enclave.KDS_RESPONSE.ordinal -> onKDSResponse(input)
-                else -> throw IllegalStateException("Unknown type $type")
+            when (messageTypes[input.get().toInt()]) {
+                HostToEnclave.ATTESTATION -> onAttestation(input)
+                HostToEnclave.OPEN -> onOpen(input)
+                HostToEnclave.CLOSE -> onClose()
+                HostToEnclave.KDS_KEY_SPEC_REQUEST -> onKdsKeySpecRequest()
+                HostToEnclave.KDS_RESPONSE -> onKdsResponse(input)
             }
         }
 
@@ -481,14 +480,14 @@ Received: $attestationReportBody"""
         private fun sendEnclaveInfo() {
             val encodedSigningKey = enclave.signatureKey.encoded   // 44 bytes
             val encodedEncryptionKey = enclave.encryptionKeyPair.public.encoded   // 32 bytes
-            sender.send(1 + encodedSigningKey.size + encodedEncryptionKey.size) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Host.ENCLAVE_INFO.ordinal.toByte())  // Enclave info
+            val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
+            sendToHost(EnclaveToHost.ENCLAVE_INFO, payloadSize) { buffer ->
                 buffer.put(encodedSigningKey)
                 buffer.put(encodedEncryptionKey)
             }
         }
 
-        private fun onKDSKeySpecificationRequest() {
+        private fun onKdsKeySpecRequest() {
             // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
             // defined. The host will see that we've not sent back a key spec.
             val kdsKeySpec = enclave.env.kdsConfiguration?.kdsKeySpec ?: return
@@ -514,48 +513,49 @@ Received: $attestationReportBody"""
             }
 
             val policyConstraintBytes = generatedPolicyConstraintString.toByteArray()
-            sender.send(2 + policyConstraintBytes.size) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Host.KDS_KEY_SPECIFICATION.ordinal.toByte())
+            sendToHost(EnclaveToHost.KDS_KEY_SPEC_RESPONSE, 1 + policyConstraintBytes.size) { buffer ->
                 buffer.put(kdsKeySpec.masterKeyType.ordinal.toByte())
                 buffer.put(policyConstraintBytes)
             }
         }
 
-        private fun onKDSResponse(input: ByteBuffer) {
-            check(enclave.kdsEII == null) { "Enclave has already received a KDS private key" }
+        private fun onKdsResponse(input: ByteBuffer) {
+            check(enclave._kdsEnclaveInstanceInfo == null) { "Enclave has already received a KDS private key" }
 
             val kdsConfig = checkNotNull(enclave.env.kdsConfiguration) {
                 "Host is trying to send a KDS private key but enclave hasn't been configured for one"
             }
 
-            val objectMapper = ObjectMapper()
-            val kdsResponse = objectMapper.readValue(input.inputStream(), KDSResponse::class.java)
-
-            val mailBytes = Base64.getDecoder().decode(kdsResponse.data)
-            val mail = enclave.decryptMail(ByteBuffer.wrap(mailBytes))
-            val kdsEEIBytes = Base64.getDecoder().decode(kdsResponse.kdsEnclaveInstanceInfo)
-            val kdsEII = EnclaveInstanceInfo.deserialize(kdsEEIBytes)
+            val kdsResponseMail = enclave.decryptMail(input.getIntLengthPrefixSlice())
+            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getRemainingBytes())
 
             // Verify the KDS attestation report
             try {
-                kdsConfig.kdsEnclaveConstraint.check(kdsEII)
+                kdsConfig.kdsEnclaveConstraint.check(kdsEnclaveInstanceInfo)
             } catch (e: InvalidEnclaveException) {
                 throw IllegalArgumentException("The KDS does not match the enclave's configured KDS constraint", e)
             }
 
             // Verify KDS encryption key is the same key which encrypted the mail.
-            require(kdsEII.encryptionKey == mail.authenticatedSender) {
+            require(kdsEnclaveInstanceInfo.encryptionKey == kdsResponseMail.authenticatedSender) {
                 "Mail authenticated sender does not match the KDS EnclaveInstanceInfo encryption key."
             }
 
-            // Verify key policy constraint
-            val privateKeyResponse = objectMapper.readValue(mail.bodyAsBytes, PrivateKeyResponse::class.java)
-            val privateKeyPolicyConstraint = EnclaveConstraint.parse(privateKeyResponse.policyConstraint)
-            require(privateKeyPolicyConstraint == generatedPolicyConstraint) {
+            val policyConstraintFromKds: EnclaveConstraint
+            val kdsPrivateKey: ByteArray
+            try {
+                val jsonResponse = ObjectMapper().readTree(kdsResponseMail.bodyAsBytes)
+                policyConstraintFromKds = EnclaveConstraint.parse(jsonResponse["policyConstraint"].textValue())
+                kdsPrivateKey = jsonResponse["privateKey"].binaryValue()
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Invalid KDS response", e)
+            }
+
+            require(policyConstraintFromKds == generatedPolicyConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
-            enclave.kdsEII = kdsEII
-            enclave.kdsPrivateKey = Base64.getDecoder().decode(privateKeyResponse.privateKey)
+            enclave._kdsEnclaveInstanceInfo = kdsEnclaveInstanceInfo
+            enclave.kdsPrivateKey = kdsPrivateKey
         }
 
         /**
@@ -578,8 +578,13 @@ Received: $attestationReportBody"""
          * needs to be done.
          */
         private fun sendAttestationRequest() {
-            sender.send(1) { buffer ->
-                buffer.put(AdminHandlerRequestTypes.Host.ATTESTATION.ordinal.toByte())
+            sendToHost(EnclaveToHost.ATTESTATION, 0) { }
+        }
+
+        private fun sendToHost(type: EnclaveToHost, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
+            sender.send(1 + payloadSize) { buffer ->
+                buffer.put(type.ordinal.toByte())
+                payload(buffer)
             }
         }
     }
