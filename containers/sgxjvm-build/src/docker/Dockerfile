@@ -128,8 +128,8 @@ RUN rm -v /opt/dokka.zip
 # Nexus IQ
 ENV NEXUS_IQ_HOME /opt/nexus-iq/
 RUN mkdir -p $NEXUS_IQ_HOME
-RUN wget -O $NEXUS_IQ_HOME/nexus-iq-cli.jar https://download.sonatype.com/clm/scanner/nexus-iq-cli-1.125.0-01.jar
-RUN echo "944e776e8acb3f4018a0b184c62ff6833e54241f  $NEXUS_IQ_HOME/nexus-iq-cli.jar" | shasum -c -
+RUN wget -O $NEXUS_IQ_HOME/nexus-iq-cli.jar https://download.sonatype.com/clm/scanner/nexus-iq-cli-1.131.0-01.jar
+RUN echo "f9159984056cee4576f34fcfa6f33ccab42b070e  $NEXUS_IQ_HOME/nexus-iq-cli.jar" | shasum -c -
 
 # Some incantation that's necessary to get rid of some Python errors that appear when building docs.
 # https://stackoverflow.com/a/59596814/2248578
