@@ -101,8 +101,10 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 ### 1.3
 
 1. GraalVM has been updated to version 21.3.
-
 1. Gradle 7 is now supported.
+1. :jigsaw: **Java 16** is now the default JDK version inside the enclave. You can make use of the new APIs and
+   features introduced since Java 11 when writing your enclave code! For compatibility the Conclave libraries are still
+   compiled using Java 8, so you can continue to use Java 8 (or above) outside the enclave.
 
 ### 1.2
 

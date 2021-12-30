@@ -16,8 +16,8 @@ cd -
 
 rm -fr "${script_dir}/../build/nexus-iq"
 mkdir -p "${script_dir}/../build/nexus-iq"
-# Note: Add [-w] to the command line to fain on any warning.
-java -jar $NEXUS_IQ_HOME/nexus-iq-cli.jar \
+# Note: Add [-w] to the command line to fail on any warning.
+java --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -jar $NEXUS_IQ_HOME/nexus-iq-cli.jar \
     -s https://nexusiq.dev.r3.com \
     -i conclave_sdk_${version%-*} \
     -a $1:$2 \

@@ -66,7 +66,7 @@ RUN apt-get update -y && apt-get install -y \
     ocaml \
     ocamlbuild \
     openjdk-8-jdk \
-    openjdk-11-jdk \
+    openjdk-17-jdk \
     openssl \
     patch \
     protobuf-compiler \
@@ -91,10 +91,12 @@ ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV MX_VERSION          5.316.15
-ENV JAVA_HOME           /usr/lib/jvm/java-11-openjdk-amd64
-ENV JVMCI_VERSION       21.0-b03
-ENV LABSJDK_VERSION     11.0.9
-ENV LABSJDK_CE_11_FILE  labsjdk-ce-$LABSJDK_VERSION+10-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
+ENV JAVA_HOME           /usr/lib/jvm/java-17-openjdk-amd64
+ENV JVMCI_VERSION       21.3-b05
+ENV LABSJDK_VERSION     17.0.1
+ENV LABSJDK_MAJOR       17
+ENV LABSJDK_BUILD       12
+ENV LABSJDK_CE_FILE     labsjdk-ce-$LABSJDK_VERSION+$LABSJDK_BUILD-jvmci-$JVMCI_VERSION-linux-amd64.tar.gz
 ENV LABSJDK_HOME        /opt/labsjdk-ce-$LABSJDK_VERSION-jvmci-$JVMCI_VERSION
 ENV JVMCI_HOME          $LABSJDK_HOME
 ENV MX_HOME             /opt/mx-$MX_VERSION
@@ -112,11 +114,10 @@ RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git 
 RUN git -C /opt/mx-$MX_VERSION checkout 1d0c0ef
 RUN chmod -R a+wx /opt/mx-$MX_VERSION
 
-# labs-openjdk-11
-RUN curl -sSL -o /opt/$LABSJDK_CE_11_FILE https://github.com/graalvm/labs-openjdk-11/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_11_FILE
-RUN echo "1dd78393a9bf9084d3508e911476ae4c28932627  /opt/$LABSJDK_CE_11_FILE" | shasum -c -
-RUN tar -xaf /opt/$LABSJDK_CE_11_FILE -C /opt
-RUN rm -v /opt/$LABSJDK_CE_11_FILE
+# labs-openjdk-17
+RUN curl -sSL -o /opt/$LABSJDK_CE_FILE https://github.com/graalvm/labs-openjdk-$LABSJDK_MAJOR/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_FILE
+RUN tar -xaf /opt/$LABSJDK_CE_FILE -C /opt
+RUN rm -v /opt/$LABSJDK_CE_FILE
 
 # Our custom version of dokka
 RUN curl -sSL -o /opt/dokka.zip https://github.com/R3Conclave/dokka/releases/download/r3-1.5.0-4/dokka.zip

@@ -131,7 +131,9 @@ open class NativeImage @Inject constructor(
             "--enable-all-security-services",
             "-H:-AddAllFileSystemProviders",
             "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
-            "-H:+UseCAPCache")
+            "-H:+UseCAPCache",
+            "-J--add-exports=java.management/sun.management=ALL-UNNAMED",
+        )
     }
 
     private val compilerOptions get() = listOf(

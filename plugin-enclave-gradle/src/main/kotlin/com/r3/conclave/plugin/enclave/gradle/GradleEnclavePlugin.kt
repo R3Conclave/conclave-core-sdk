@@ -161,17 +161,25 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             }
         } catch (ex: Exception) {
-            throw GradleException("Attempt to automatically set Kotlin JVM target to Java 11 failed. " +
-                    "Please manually set your enclave's build target to Java 11.", ex)
+            throw GradleException("Attempt to automatically set Kotlin JVM target to $javaVersion failed. " +
+                    "Please manually set your enclave's build target to $javaVersion.", ex)
         }
     }
 
-    private fun calculateCompatibilityJavaVersion(): String =
-        if (JavaVersion.current() >= JavaVersion.VERSION_11) {
-            JavaVersion.VERSION_11.toString()
-        } else {
-            JavaVersion.VERSION_1_8.toString()
+    private fun calculateCompatibilityJavaVersion(): String {
+        // We have to compare the string versions because we are supporting Gradle 5.6.4 (used in the CorDapp
+        // sample), and JavaVersion.VERSION_17 is not defined for this version of Gradle.
+        val current = JavaVersion.current().toString().removePrefix("1.").toInt()
+
+        val version = when {
+            // TODO: bump to 17 once we have upgraded to Kotlin 1.6
+            current >= 16 -> "16"
+            current >= 11 -> "11"
+            else -> "1.8"
         }
+        return version
+    }
+
     /**
      * sometimes you have to query a superclass for declared methods
      */

@@ -65,6 +65,7 @@ add_library(jvm_enclave_common
         stubs/semaphore.cpp
         stubs/sys_epoll.cpp
         stubs/sys_vfs.cpp
+        stubs/sys_xattr.cpp
 )
 add_dependencies(jvm_enclave_common linux-sgx-ext)
 

@@ -4,36 +4,24 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.5.31' apply false
 }
 
-idea {
-    module {
-        downloadJavadoc = true
+
+allprojects {
+    idea {
+        module {
+            downloadJavadoc = true
+        }
     }
 }
 
 subprojects {
     apply plugin: 'idea'
     apply plugin: "org.jetbrains.kotlin.jvm"
-    idea {
-        module {
-            downloadJavadoc = true
-        }
-    }
 
     repositories {
         maven {
             url = rootProject.file(conclaveRepo)
         }
         mavenCentral()
-    }
-
-    tasks.withType(AbstractCompile) {
-        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
-            kotlinOptions {
-                jvmTarget = "11"
-                apiVersion = '1.5'
-                languageVersion = '1.5'
-            }
-        }
     }
 
     tasks.withType(Test) {
