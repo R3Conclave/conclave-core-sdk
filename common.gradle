@@ -1,9 +1,9 @@
-version = conclave_version
+allprojects {
+    group = "com.r3.conclave"
+    version = conclave_version
+}
 
 subprojects {
-    group = "com.r3.conclave"
-    version = rootProject.version
-
     ext.conclave_spid = '***REMOVED***'
     ext.attestation_key = '***REMOVED***'
 
@@ -19,8 +19,6 @@ subprojects {
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
                 jvmTarget = JavaVersion.VERSION_1_8
-                apiVersion = '1.5'
-                languageVersion = '1.5'
             }
         }
     }

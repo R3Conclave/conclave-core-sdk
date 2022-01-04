@@ -104,8 +104,6 @@ where `MODE` is the [enclave mode](enclave-modes.md).
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
                 jvmTarget = "11"
-                apiVersion = '1.5'
-                languageVersion = '1.5'
             }
         }
     }
@@ -200,7 +198,7 @@ In later sections, we will be modifying the generated Java source files to imple
       plugins {
           id 'java'
           id 'idea'
-          id 'org.jetbrains.kotlin.jvm' version '1.5.31' apply false
+          id 'org.jetbrains.kotlin.jvm' version '1.6.10' apply false
       }
 
       allprojects {
