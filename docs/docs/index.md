@@ -98,6 +98,14 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 
 ## Release notes
 
+### 1.2.1
+
+This is a small release with some minor improvements:
+
+1. Compatibility with some libraries (such as [Tribuo](https://github.com/oracle/tribuo)) has been improved.
+2. The CorDapp sample has been updated to use Corda v4.8.5, which is patched against the "Log4Shell" vulnerability.
+3. Better error message by the plugin if no enclave class is found.
+
 ### 1.2
 
 !!! important
