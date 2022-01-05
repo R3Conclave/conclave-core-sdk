@@ -23,7 +23,7 @@ From inside the development container, you can build the SDK and run tests by ru
 Due to the large number of native components, the build may take some time.
 
 It is worth noting that while development is (mostly) limited to linux, enclaves can
-still be created using the SDK on Windows and MacOS.
+still be created using the SDK on Windows and macOS.
 
 ### IntelliJ and CLion (Linux only)
 

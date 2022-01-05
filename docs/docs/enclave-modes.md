@@ -28,7 +28,7 @@ The table below summarizes which modes can be used in which environments.
     instructions on running simulation mode enclaves on Windows or macOS using Docker, see the
     [Running hello world tutorial](running-hello-world.md#beyond-mock-mode).
 
-    Due to overheads involved with file IO in docker, Windows and MacOS builds using docker may run slower than those in
+    Due to overheads involved with file IO in docker, Windows and macOS builds using docker may run slower than those in
     native Linux environments.
 
 The requirements for building and running enclaves in each mode are described below.
@@ -38,7 +38,7 @@ All that is required to build and run Conclave projects in mock mode is a Java 8
 [JDK Compatibility](system-requirements.md#jdk-compatibility) for more details.
 
 ### Simulation mode
-=== "MacOS / Windows"
+=== "macOS / Windows"
     * **Install Docker** and ensure it has been added to the `PATH` environment variable.
     * Conclave automatically uses Docker to create a Linux build environment for *building enclaves*.
     * We recommend allocating **at least 6GB of memory** to Docker.
@@ -66,8 +66,8 @@ There are no additional requirements for **building** debug and release mode enc
 
 We test building and running release-mode enclaves on Ubuntu 18.04 LTS Server x86-64.
 
-=== "MacOS / Windows"
-    **Running** debug and release mode enclaves is not possible on MacOS or Windows.
+=== "macOS / Windows"
+    **Running** debug and release mode enclaves is not possible on macOS or Windows.
 === "Linux"
     **Running** debug and release mode enclaves requires SGX hardware and an installation of the intel
     SGX driver stack. See [machine setup](machine-setup.md) for instructions.

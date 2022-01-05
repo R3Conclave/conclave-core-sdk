@@ -2,7 +2,7 @@
 
 Conclave provides a number of different [modes](enclave-modes.md) when building your enclave, supporting different stages of the development
 cycle. Release, debug and simulation modes all require a Linux environment in order to run. This does not prevent
-running a simulation enclave on MacOS or Windows if you load and run you project in a Docker container, but for
+running a simulation enclave on macOS or Windows if you load and run you project in a Docker container, but for
 convenience it is useful to be able to run your enclave code directly within the host environment. In addition, 
 the build time for simulation, debug and release enclaves can be quite high.
 
