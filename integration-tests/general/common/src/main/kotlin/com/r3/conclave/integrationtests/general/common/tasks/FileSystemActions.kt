@@ -14,8 +14,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.readBytes
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 
 @Serializable
 abstract class FileSystemAction<R> : EnclaveTestAction<R>() {
@@ -56,6 +55,40 @@ class DeleteFile(private val path: String, private val nioApi: Boolean) : FileSy
         }
     }
     override fun resultSerializer(): KSerializer<Boolean> = Boolean.serializer()
+}
+
+@Serializable
+class RenameFile(private val oldPath: String, private val newPath: String) : FileSystemAction<Boolean>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) : Boolean {
+        return File(oldPath).renameTo(File(newPath))
+    }
+    override fun resultSerializer(): KSerializer<Boolean> = Boolean.serializer()
+}
+
+@Serializable
+class MovePath(private val oldPath: String, private val newPath: String) : FileSystemAction<Unit>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) {
+        Files.move(Paths.get(oldPath), Paths.get(newPath)).toString()
+    }
+    override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
+}
+
+
+@Serializable
+class WalkPath(private val path: String) : FileSystemAction<String>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) : String {
+        var res = ""
+
+        File(path).walk().forEach {
+            res += "$it\n"
+
+            if (it.isFile) {
+                res += " ${it.readText()}\n"
+            }
+        }
+        return res
+    }
+    override fun resultSerializer(): KSerializer<String> = String.serializer()
 }
 
 @Serializable
@@ -104,7 +137,7 @@ class NewDeleteOnCloseOutputStream(private val path: String, private val uid: In
 }
 
 @Serializable
-class NewFileOuputStream(
+class NewFileOutputStream(
     private val path: String,
     private val append: Boolean,
     private val uid: Int

@@ -9,7 +9,7 @@ import java.io.FileOutputStream
 class FileOutputStreamTest : FileSystemEnclaveTest() {
     private inner class Handler(private val uid: Int, path: String, append: Boolean) : AutoCloseable {
         init {
-            val reply = callEnclave(NewFileOuputStream(path, append, uid))
+            val reply = callEnclave(NewFileOutputStream(path, append, uid))
             assertThat(reply).startsWith(FileOutputStream::class.java.name + "@")
         }
 

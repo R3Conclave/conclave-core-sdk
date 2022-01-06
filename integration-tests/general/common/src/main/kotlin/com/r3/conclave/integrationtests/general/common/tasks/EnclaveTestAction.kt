@@ -105,7 +105,7 @@ private val protoBuf = ProtoBuf {
             subclass(ResetInputStream::class, ResetInputStream.serializer())
             subclass(IsFileInputStreamFDValid::class, IsFileInputStreamFDValid.serializer())
             subclass(OpenUrlFileInputStream::class, OpenUrlFileInputStream.serializer())
-            subclass(NewFileOuputStream::class, NewFileOuputStream.serializer())
+            subclass(NewFileOutputStream::class, NewFileOutputStream.serializer())
             subclass(WriteByteToOuputStream::class, WriteByteToOuputStream.serializer())
             subclass(WriteBytesToOuputStream::class, WriteBytesToOuputStream.serializer())
             subclass(WriteOffsetBytesToOuputStream::class, WriteOffsetBytesToOuputStream.serializer())
@@ -119,6 +119,9 @@ private val protoBuf = ProtoBuf {
             subclass(ReadFiles::class, ReadFiles.serializer())
             subclass(SqlQuery::class, SqlQuery.serializer())
             subclass(ExecuteSql::class, ExecuteSql.serializer())
+            subclass(RenameFile::class, RenameFile.serializer())
+            subclass(MovePath::class, MovePath.serializer())
+            subclass(WalkPath::class, WalkPath.serializer())
         }
     }
 }

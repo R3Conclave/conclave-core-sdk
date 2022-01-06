@@ -5,8 +5,14 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
-STUB(utimes);
 
 extern "C" {
-
+    
+    int utimes(const char *filename, const struct timeval times[2]) {
+        enclave_trace("utimes(%s)\n", filename);
+        int err = 0;
+        const int res = utimes_impl(filename, times, err);
+        errno = err;
+        return res;
+    }
 }

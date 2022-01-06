@@ -99,6 +99,8 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 ## Release notes
 
 ### 1.3
+1. We have fixed a known issue related to renaming files and directories in the enclave's filesystem. Function calls such as
+   `java.io.File.renameTo` are now supported and working correctly.
 
 1. GraalVM has been updated to version 21.3.
 1. Gradle 7 is now supported.

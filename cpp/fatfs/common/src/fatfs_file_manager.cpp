@@ -343,8 +343,7 @@ namespace conclave {
             return -1;
         }
     }
-
-
+    
     int FatFsFileManager::statInternal64(const char* path_in,
                                          struct stat64* stat_buf,
                                          int& err) {
@@ -745,6 +744,119 @@ namespace conclave {
         return this->statInternal(path_in, stat_buf, err);
     }
 
+
+    int FatFsFileManager::isDirOpen(const std::string& path) {
+        DEBUG_PRINT_FUNCTION;
+        const auto it = dir_paths_.find(path);
+        
+        if (it != dir_paths_.end()) {
+            FATFS_DEBUG_PRINT("The directory %s is currently opened\n", path.c_str());
+            return -1;
+        }        
+        return 0;
+    }
+
+
+    int FatFsFileManager::isFileOpen(const std::string& path) {
+        DEBUG_PRINT_FUNCTION;
+        const auto it = file_paths_.find(path);
+
+        if (it != file_paths_.end()) {
+            FATFS_DEBUG_PRINT("The file %s is currently opened\n", path.c_str());
+            return -1;
+        }
+        return 0;
+    }
+        
+
+    int FatFsFileManager::isFileInDirOpen(const std::string& path) {
+        DEBUG_PRINT_FUNCTION;
+        std::string path_dir = path;
+        //  We add a '/' at the end, as this is needed in the find here below  file_path.first.find(path_dir)
+        //    Specifically, we do not want that a file_path like "/tmpmyfile" and a path_dir "/tmp"
+        //      match the condition and return an unexpected error. Therefore we want
+        //  "/tmpmyfile" to be validated against "/tmp/" and not "/tmp", so that this does not happen.
+        if (path_dir.back() != '/') {
+            path_dir = path + "/";
+        }
+        
+        for (auto& file_path: file_paths_) {
+            // We check if a file contained in our dir is open. In that case we refuse to rename.
+            if (file_path.first.find(path_dir) != std::string::npos) {
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    int FatFsFileManager::renameFileInternal(const std::string& oldpath, const std::string& newpath, int& err) {
+        DEBUG_PRINT_FUNCTION;
+
+        if (isFileOpen(oldpath) != 0 || isFileOpen(newpath) != 0) {
+            err = EBUSY;
+            return -1;
+        }        
+        const FRESULT res = f_rename(oldpath.c_str(), newpath.c_str());
+        
+        if (res != FR_OK) {
+            FATFS_DEBUG_PRINT("File not renamed, with failure: %d\n", res);
+            err = ENOENT;
+            return -1;
+        };    
+        return 0;
+    }
+
+    int FatFsFileManager::renameDirInternal(const std::string& oldpath, const std::string& newpath, int& err) {
+        DEBUG_PRINT_FUNCTION;
+
+        if (isDirOpen(oldpath) != 0 || isDirOpen(newpath) != 0 ||
+            isFileInDirOpen(oldpath) != 0 || isFileInDirOpen(newpath) != 0) {
+            err = EBUSY;
+            return -1;
+        }        
+        const FRESULT res = f_rename(oldpath.c_str(), newpath.c_str());
+        
+        if (res != FR_OK) {
+            FATFS_DEBUG_PRINT("Dir not renamed, with failure: %d\n", res);
+            err = ENOENT;
+            return -1;
+        };
+        FATFS_DEBUG_PRINT("Dir renamed successfully with result %d\n", res);
+        return 0;
+    }
+    
+    int FatFsFileManager::rename(const char* oldcpath, const char* newcpath, int& err) {
+        DEBUG_PRINT_FUNCTION;
+        std::lock_guard<std::mutex> lock(file_mutex_);
+
+        const std::string oldpath = generateFatFsPath(oldcpath);
+        const std::string newpath = generateFatFsPath(newcpath);
+
+        if (oldpath.empty() || newpath.empty()) {
+            err = ENOENT;
+            return -1;
+        }
+        int stat_err = 0;
+        struct stat64 result_stat;
+        const int stat_res_old = this->statInternal64(oldcpath, &result_stat, stat_err);
+        
+        const bool is_file = (stat_res_old == 0 && result_stat.st_mode == S_IFREG);
+        const bool is_dir = (stat_res_old == 0 && result_stat.st_mode == S_IFDIR);
+    
+        FATFS_DEBUG_PRINT("Renaming from %s to %s, %d %d \n", oldpath.c_str(), newpath.c_str(), is_file, is_dir);
+        int res = 0;
+        
+        if (is_file) {
+            res = renameFileInternal(oldpath, newpath, err);
+            FATFS_DEBUG_PRINT("Renaming completed with result %d\n", res);
+        } else if (is_dir) {
+            res = renameDirInternal(oldpath, newpath, err);
+            FATFS_DEBUG_PRINT("Renaming completed with result %d\n", res);
+        } else {
+            res = ENOENT;
+        }
+        return res;
+    }   
     
     int FatFsFileManager::lstat64(const char* path_in, struct stat64* stat_buf, int& err) {
         DEBUG_PRINT_FUNCTION;
@@ -836,12 +948,12 @@ namespace conclave {
             return -1;
         }
     };
-
+    
 
     int FatFsFileManager::access(const char* path_in, mode_t mode, int& err) {
         FATFS_DEBUG_PRINT("Accessing path %s with mode %d\n", path_in, mode);
         std::lock_guard<std::mutex> lock(file_mutex_);
-        
+
         if (strcmp(path_in, kRootPath.c_str()) == 0) {
             //  FatFs does not accept f_stat to be called with the root directory as input.
             //    So we return successfully anyway and prevent the call.
@@ -975,7 +1087,7 @@ namespace conclave {
         addDirHandle(dir_ptr, path);
         return dir_ptr;
     }
-
+    
 #define DT_DIR  0040000 /* Directory.  */
 #define DT_REG  0100000 /* Regular file.  */
 
@@ -1059,6 +1171,7 @@ namespace conclave {
     
     int FatFsFileManager::closedir(void* dirp, int& err) {
         DEBUG_PRINT_FUNCTION;
+        std::lock_guard<std::mutex> lock(file_mutex_);
 
         if (dirp == nullptr) {
             err = EBADF;
@@ -1118,5 +1231,73 @@ namespace conclave {
             return -1;
         };
         return 0;
+    }
+
+    
+    int FatFsFileManager::fchown(int fd, uid_t owner, gid_t group, int& err) {
+        FATFS_DEBUG_PRINT("fchown fd: %d %ul\n", fd, owner);
+        std::lock_guard<std::mutex> lock(file_mutex_);
+
+        const FileHandle handle = fd;
+        const auto it = files_.find(handle);
+
+        if (it == files_.end()) {
+            FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
+            err = EBADF;
+            return -1;
+        }
+        //  We do not change ownership here, as the Conclave user is the only
+        //    user of the filesystem in the Enclave.
+        //  Hence if the file descriptor is opened, we always succeed.
+        return 0;
+    }
+
+
+    int FatFsFileManager::fchmod(int fd, mode_t mode, int& err) {
+        FATFS_DEBUG_PRINT("fchmod fd: %d %ul\n", fd, mode);
+        std::lock_guard<std::mutex> lock(file_mutex_);
+
+        const FileHandle handle = fd;
+        const auto it = files_.find(handle);
+
+        if (it == files_.end()) {
+            FATFS_DEBUG_PRINT("Error: handle not found: %d\n", handle);
+            err = EBADF;
+            return -1;
+        }
+        //  We do not change permissions, as the Conclave user is the only
+        //    user of the filesystem in the Enclave.
+        //  Hence if the file descriptor is opened, we always succeed.
+        //  Note that the f_chmod call in FatFs is currently disabled with a flag,
+        //    we are currently not using it.
+        return 0;
+    }
+
+    
+    int FatFsFileManager::utimes(const char* path_in, const struct timeval times[2], int& err) {
+        FATFS_DEBUG_PRINT("utimes %s\n", path_in);
+        std::lock_guard<std::mutex> lock(file_mutex_);
+        
+        const std::string path = generateFatFsPath(path_in);
+
+        if (path.empty()) {
+            err = ENOENT;
+            return -1;
+        }
+
+        //  We currently do not support any time modification, then we do not modify the
+        //  times structure as input
+        //  Note that the f_utime call in FatFs is currently disabled with a flag,
+        //    we are currently not using it.
+        //  Here we just check that the file exists and we return accordingly
+        FILINFO info;
+        const FRESULT res = f_stat(path.c_str(), &info);
+
+        if (res == FR_OK) {
+            return 0;
+        } else {
+            err = ENOENT;
+            return -1;            
+        }
     }
 };

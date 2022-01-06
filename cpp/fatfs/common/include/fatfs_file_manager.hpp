@@ -68,7 +68,11 @@ namespace conclave {
         int statInternal(const char* path, struct stat* stat_buf, int& err);
 
         int statInternal64(const char* path, struct stat64* stat_buf, int& err);
-        
+
+        int renameDirInternal(const std::string& oldpath, const std::string& newpath, int& err);
+
+        int renameFileInternal(const std::string& oldpath, const std::string& newpath, int& err);
+
         off_t lseekInternal(int fd, off_t offset, int whence);
 
         FileHandle getNewHandle();
@@ -93,7 +97,7 @@ namespace conclave {
         std::string getMountPath();
 
         FatFsResult init(const DiskInitialization init_type);
-
+       
         //  These couple of functions uses the file/handle maps above
         //    to determine if the path/handle is managed by this file manager
         bool isPathOwner(const std::string& path);
@@ -103,7 +107,13 @@ namespace conclave {
         //  This is to determine if the file manager is the owner of the directory
         //    represented by the DIR pointer.
         bool isDirOwner(const DIR* dir);        
+        
+        int isDirOpen(const std::string& path);
 
+        int isFileOpen(const std::string& path);
+
+        int isFileInDirOpen(const std::string& path);
+        
         //  Posix calls
         int open(const char* path, int oflag, int& err);
        
@@ -146,7 +156,9 @@ namespace conclave {
         int rmdir(const char* path, int& res);
 
         int remove(const char* path, int& res);
-        
+
+        int rename(const char* oldpath, const char* newpath, int& err);
+    
         int chdir(const char* path);
 
         char *getcwd(char* buf, size_t size);
@@ -162,6 +174,12 @@ namespace conclave {
         int closedir(void* dirp, int& err);
 
         int ftruncate(int fd, off_t length, int& err);
+
+        int fchown(int fd, uid_t owner, gid_t group, int& err);
+
+        int fchmod(int fd, mode_t mode, int& err);
+
+        int utimes(const char *filename, const struct timeval times[2], int& err);
     };
 };
 
