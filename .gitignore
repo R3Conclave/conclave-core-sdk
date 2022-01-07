@@ -31,4 +31,6 @@ cpp/jvm-host-shared/include/host_jni_shared.h
 stale_outputs_checked
 dokka/dokka/
 
-graal/cap-cache.build_artifacts.txt
+graal-cap-cache/cap-cache.build_artifacts.txt
+containers/sgxjvm-build/src/docker/root/downloads
+graal/containers/graalvm-build/docker/root

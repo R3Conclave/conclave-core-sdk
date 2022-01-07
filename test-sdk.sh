@@ -17,7 +17,7 @@ pushd build/distributions/conclave-sdk-*/hello-world
 # start the web server
 $JAVA_HOME/bin/java -jar $(ls host/build/libs/host-*.jar) & _PID=$!
 # wait for the web server to be ready
-sleep 5
+sleep 20
 # client sends two requests, using the same state file
 for ((i=0;i<2;i++));
 do

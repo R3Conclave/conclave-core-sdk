@@ -10,7 +10,7 @@ function teardownAESM() {
 
 function loadAESMImage() {
     if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
-        docker load -i $code_host_dir/containers/aesmd/build/aesmd-docker-image.tar
+        docker load -i $code_host_dir/containers/aesmd/build/aesmd-docker-image.tar.gz
     fi
 }
 
