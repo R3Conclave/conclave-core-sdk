@@ -41,6 +41,7 @@ add_library(jvm_enclave_common
         stubs/stdio.cpp
         stubs/stdlib.cpp
         stubs/string.cpp
+        stubs/sys_sendfile.cpp
         stubs/sys_resource.cpp
         stubs/sys_stat.cpp
         stubs/sys_time.cpp

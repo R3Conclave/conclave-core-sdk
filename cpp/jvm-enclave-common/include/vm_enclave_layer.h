@@ -56,7 +56,8 @@ extern "C" {
     typedef int uid_t;
     typedef unsigned int gid_t;
     typedef unsigned int mode_t;
-
+    typedef unsigned long long off64_t;
+    
 #undef stdout
 #undef stderr
     extern FILE *stdout;
@@ -236,6 +237,14 @@ extern "C" {
     int getrlimit(int resource, struct rlimit *rlim);
     int setrlimit(int resource, const struct rlimit *rlim);
 
+    // sys/sendfile.h
+    ssize_t sendfile64(int out_fd, int in_fd, off64_t * offset, size_t count);
+
+    // sys/.h
+    int fsetxattr(int fd, const char *name, const void *value, size_t size, int flags);
+
+    ssize_t flistxattr(int fd, char *list, size_t size);
+
     // pwd.h
     struct passwd *getpwuid(uid_t uid);
 
@@ -248,9 +257,6 @@ extern "C" {
 		    struct addrinfo **res);
     void freeaddrinfo(struct addrinfo *res);
     const char *gai_strerror(int errcode);
-
-    // sys/mman.h
-    typedef unsigned long long off64_t;
 
     // dlfcn.h
     typedef struct {
