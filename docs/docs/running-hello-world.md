@@ -34,7 +34,7 @@ which is provided by the Conclave SDK. We can generate a fat JAR for the host an
     ```bash
     gradlew.bat :host:bootJar :client:shadowJar
     ```
-=== "MacOS / Linux"
+=== "macOS / Linux"
     ```bash
     ./gradlew :host:bootJar :client:shadowJar
     ```
@@ -160,7 +160,7 @@ via the `enclaveMode` Gradle parameter. For example, you could compile the host 
     ```bash
     gradlew.bat :host:bootJar -PenclaveMode=simulation
     ```
-=== "MacOS / Linux"
+=== "macOS / Linux"
     ```bash
     ./gradlew :host:bootJar -PenclaveMode=simulation
     ```
@@ -190,7 +190,7 @@ You can generate `host-release.jar` like this:
     // Finally build the signed enclave:
     gradlew.bat :host:bootJar -PenclaveMode="release"
     ```
-=== "MacOS / Linux"
+=== "macOS / Linux"
     ```bash
     // Firstly, build the signing material:
     ./gradlew prepareForSigning -PenclaveMode=release
@@ -298,7 +298,7 @@ If you haven't built the client already, build it the same way as you would for 
     ```bash
     gradlew.bat :client:shadowJar
     ```
-=== "MacOS / Linux"
+=== "macOS / Linux"
     ```bash
     ./gradlew :client:shadowJar
     ```

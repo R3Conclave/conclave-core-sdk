@@ -15,6 +15,7 @@ but can also be used to secure your infrastructure against attack.
     * Conclave 1.0 SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`
     * Conclave 1.1 SHA2: `3d47ae8a9fb944d75fb4ee127cd9874c04343643c830e1fe68898c3c93891ca2`
     * Conclave 1.2 SHA2: `072642ce92e277567794739c4a080414a3313f186208d0cb118945cbcc859682`
+    * Conclave 1.2.1 SHA2: `06cb37bb9b8b36275322b7eeda2fec3ab2cd5d0f23192841c6efd5320e9c2026`
 
 ## Why Conclave?
 
@@ -107,6 +108,14 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 1. :jigsaw: **Java 16** is now the default JDK version inside the enclave. You can make use of the new APIs and
    features introduced since Java 11 when writing your enclave code! For compatibility the Conclave libraries are still
    compiled using Java 8, so you can continue to use Java 8 (or above) outside the enclave.
+
+### 1.2.1
+
+This is a small release with some minor improvements:
+
+1. Compatibility with some libraries (such as [Tribuo](https://github.com/oracle/tribuo)) has been improved.
+2. The CorDapp sample has been updated to use Corda v4.8.5, which is patched against the "Log4Shell" vulnerability.
+3. Better error message by the plugin if no enclave class is found.
 
 ### 1.2
 
