@@ -252,7 +252,7 @@ namespace conclave {
             info->fattrib = AM_DIR;
             return FR_OK;
         } else {
-            std::string path = generateFatFsPath(path_in); 
+            const std::string path = generateFatFsPath(path_in); 
             return f_stat(path.c_str(), info);
         }
     }

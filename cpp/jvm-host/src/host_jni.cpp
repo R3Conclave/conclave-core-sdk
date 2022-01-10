@@ -319,12 +319,9 @@ void host_encrypted_read_ocall(int* res,
 void host_encrypted_write_ocall(int* res,
                                 const unsigned char drive,
                                 const unsigned char* buf,
-                                const unsigned int buf_size,
-                                const unsigned int num_writes,
                                 const unsigned int sector_size,
-                                const unsigned long* indices,
-                                const unsigned int indices_buf_size) {
-    const int res_f = host_disk_write(drive, buf, num_writes, sector_size, indices);
+                                const unsigned long sector) {
+    const int res_f = host_disk_write(drive, buf, sector_size, sector);
     *res = res_f;
 }
 

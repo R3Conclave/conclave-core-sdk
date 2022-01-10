@@ -51,22 +51,22 @@ DSTATUS disk_status(BYTE drive) {
 }
 
 
-DRESULT disk_read(BYTE drive, BYTE* buf, DWORD start, BYTE num) {
+DRESULT disk_read(BYTE drive, BYTE* buf, LBA_t sector, BYTE num) {
 
     if (drive >= FF_VOLUMES) {
         return RES_PARERR;
     } else {
-        return disks.at(drive)->diskRead(buf, start, num);
+        return disks.at(drive)->diskRead(buf, sector, num);
     }
 }
 
 #if _READONLY == 0
-DRESULT disk_write(BYTE drive, const BYTE* buf, DWORD start, BYTE num) {
+DRESULT disk_write(BYTE drive, const BYTE* buf, LBA_t sector, BYTE num) {
 
     if (drive >= FF_VOLUMES) {
         return RES_PARERR;
     } else {
-        return disks.at(drive)->diskWrite(buf, start, num);
+        return disks.at(drive)->diskWrite(buf, sector, num);
     }
 }
 #endif
