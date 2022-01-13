@@ -1,7 +1,3 @@
-plugins {
-    id 'java'
-}
-
 def cppBuildDir = project(":cpp").buildDir
 
 jar {

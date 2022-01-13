@@ -22,8 +22,6 @@ test {
 def cppBuildDir = project(":cpp").buildDir
 
 subprojects {
-    apply plugin: 'java'
-
     def type = name.drop("linux-sgx-".size()).capitalize()
     tasks.getByName("jar") { Jar task ->
         task.dependsOn(":cpp:compileLinuxSgx$type")

@@ -7,18 +7,11 @@ subprojects {
     ext.conclave_spid = '***REMOVED***'
     ext.attestation_key = '***REMOVED***'
 
-    tasks.withType(JavaCompile) {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-        options.encoding = 'UTF-8'
-    }
-
     tasks.withType(AbstractCompile) {
-        // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
-        // as it does the built-in JavaCompile task.
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_1_8
+                freeCompilerArgs = ['-Xjvm-default=all']
+                javaParameters = true
             }
         }
     }

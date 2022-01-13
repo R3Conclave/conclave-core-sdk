@@ -1,7 +1,3 @@
-plugins {
-    id 'java'
-}
-
 dependencies {
     // Add all the Conclave libraries as direct dependencies and then make sure Kotlin and Jackson are not pulled in as
     // transitive dependencies. Obviously this means Kotlin and Jackson cannot be used in this module.

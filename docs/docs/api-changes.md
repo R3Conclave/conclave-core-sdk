@@ -1,13 +1,5 @@
 # API changes
 
-## 1.1 to 1.2.1
-
-### Java 16
-Enclaves will now be built to target Java 16 by default. If you are using Java 11, you don't need to make any changes.
-
-To revert to Java 8, update the enclave's build.gradle. See [JDK Compatibility](system-requirements.md#jdk-compatibility)
-for more information.
-
 ## 1.1 to 1.2
 
 ### Improvements to mail and persistence

@@ -100,6 +100,9 @@ allprojects {
 }
 
 subprojects {
+    // All modules pull in the Java plugin
+    apply plugin: 'java'
+
     repositories {
         mavenCentral()
         jcenter()
@@ -112,19 +115,12 @@ subprojects {
         }
     }
 
-    tasks.withType(AbstractCompile) {
-        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
-            kotlinOptions {
-                freeCompilerArgs = ['-Xjvm-default=all', '-java-parameters']
-            }
+    // The default Java version is 8. Specific modules may override this.
+    // This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
         }
-    }
-
-    tasks.withType(JavaCompile) {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-        options.encoding = 'UTF-8'
-        options.release = 8
     }
 
     // To create deterministic builds we want to ensure all archive tasks

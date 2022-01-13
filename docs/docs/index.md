@@ -100,14 +100,13 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 ## Release notes
 
 ### 1.3
-1. We have fixed a known issue related to renaming files and directories in the enclave's filesystem. Function calls such as
-   `java.io.File.renameTo` are now supported and working correctly.
 
+1. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using 
+   JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave 
+   libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
+1. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
 1. GraalVM has been updated to version 21.3.
 1. Gradle 7 is now supported.
-1. :jigsaw: **Java 16** is now the default JDK version inside the enclave. You can make use of the new APIs and
-   features introduced since Java 11 when writing your enclave code! For compatibility the Conclave libraries are still
-   compiled using Java 8, so you can continue to use Java 8 (or above) outside the enclave.
 
 ### 1.2.1
 

@@ -229,9 +229,9 @@ Please see the discussion of [side channel attacks](security.md#side-channel-att
 
 ## Development and deployment
 
-### What Java versions are usable?
+### What Java versions are supported?
 
-Please see [System Requirements](system-requirements.md#jdk-compatibility) for documentation on supported JDKs.
+Conclave requires at least Java 8 to build and run an enclave application. Java 17 (LTS) is recommended.
 
 ### At which points in time is a connection with Intel needed?
 

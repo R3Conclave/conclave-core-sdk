@@ -21,8 +21,6 @@ test {
 def cppBuildDir = project(":cpp").buildDir
 
 subprojects {
-    apply plugin: 'java'
-
     def type = name.drop("native-substratevm-".size()).capitalize()
     tasks.getByName("jar") { Jar task ->
         task.dependsOn(":cpp:compileSubstrateVMLib$type", ":cpp:compileFatFsEnclave$type")

@@ -34,8 +34,8 @@ The table below summarizes which modes can be used in which environments.
 The requirements for building and running enclaves in each mode are described below.
 
 ### Mock mode
-All that is required to build and run Conclave projects in mock mode is a Java 8 or 11 JDK. See
-[JDK Compatibility](system-requirements.md#jdk-compatibility) for more details.
+
+As mock mode is pure Java this will run on any system with a JDK installed.
 
 ### Simulation mode
 === "macOS / Windows"

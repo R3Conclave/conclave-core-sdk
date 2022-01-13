@@ -3,12 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
 }
 
-// TODO Use Zulu build with EC bug fix, or wait until they release their next JDK 11 version
-//compileJava {
-//    sourceCompatibility = JavaVersion.VERSION_11
-//    targetCompatibility = JavaVersion.VERSION_11
-//}
-
 dependencies {
     api project(":conclave-common")
 

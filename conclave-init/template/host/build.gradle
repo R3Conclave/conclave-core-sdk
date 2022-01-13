@@ -3,14 +3,17 @@ plugins {
     id 'org.springframework.boot' version '2.6.1'
 }
 
+// Use the provided main method for the web host.
 application {
     mainClassName = "com.r3.conclave.host.web.EnclaveWebHost"
 }
 
-// Override the default (mock) with -PenclaveMode=
+// Define a Gradle flag "enclaveMode" which controls which enclave mode to use when building the host. The default is
+// mock. See https://docs.conclave.net/running-hello-world.html#beyond-mock-mode for more details.
 def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "mock"
 
-// Create a task that can be used for generating signing materials
+// Creates a task that can be used for generating signing materials. This is optional, but we use it to create a more
+// secure signature in release mode. See https://docs.conclave.net/signing.html for more information.
 tasks.register("prepareForSigning") {
     it.dependsOn(":enclave:generateEnclaveSigningMaterial${mode.capitalize()}")
 }

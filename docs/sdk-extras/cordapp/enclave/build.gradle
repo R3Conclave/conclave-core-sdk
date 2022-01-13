@@ -3,15 +3,6 @@ plugins {
     id 'com.r3.conclave.enclave'
 }
 
-/**
- * The default Java version for enclaves is 16 so we need to set it to 8 for the CorDapp to work.
- */
-tasks.withType(JavaCompile) {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-    options.encoding = 'UTF-8'
-}
-
 dependencies {
     implementation project(':common')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"

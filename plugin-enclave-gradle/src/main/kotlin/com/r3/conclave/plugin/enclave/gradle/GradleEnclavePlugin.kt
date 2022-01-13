@@ -3,7 +3,10 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
-import org.gradle.api.*
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.DuplicatesStrategy
@@ -14,7 +17,6 @@ import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
-import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.Callable
@@ -34,8 +36,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         target.pluginManager.apply(JavaPlugin::class.java)
         target.pluginManager.apply(ShadowPlugin::class.java)
-
-        updateJvmTargetVersion(target)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
@@ -130,66 +130,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
      */
     private fun getMainSourceSet(project: Project): SourceSet {
         return (project.properties["sourceSets"] as SourceSetContainer).getByName("main")
-    }
-
-    /**
-     * Update if necessary the Java version for JavaCompile and KotlinCompile tasks
-     */
-    private fun updateJvmTargetVersion(project: Project) {
-        val javaVersion = calculateCompatibilityJavaVersion()
-
-        project.tasks.withType(JavaCompile::class.java) { task ->
-            task.sourceCompatibility = javaVersion
-            task.targetCompatibility = task.sourceCompatibility
-        }
-
-        try {
-            // Using reflection here as Gradle does not know anything about Jetbrains tasks.
-            project.tasks.forEach {
-                if (it.javaClass.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
-                    /**
-                     * JvmTarget for KotlinCompile tasks is hidden under KotlinOptions
-                     *
-                     * compileKotlin {
-                     *    kotlinOptions {
-                     *        jvmTarget = JavaVersion.VERSION_11
-                     *    }
-                     * }
-                     */
-                    val kotlinOptions = it.getMethod("getKotlinOptions", false).invoke(it)
-                    kotlinOptions.getMethod("setJvmTarget", true, String::class.java).invoke(kotlinOptions, javaVersion)
-                }
-            }
-        } catch (ex: Exception) {
-            throw GradleException("Attempt to automatically set Kotlin JVM target to $javaVersion failed. " +
-                    "Please manually set your enclave's build target to $javaVersion.", ex)
-        }
-    }
-
-    private fun calculateCompatibilityJavaVersion(): String {
-        // We have to compare the string versions because we are supporting Gradle 5.6.4 (used in the CorDapp
-        // sample), and JavaVersion.VERSION_17 is not defined for this version of Gradle.
-        val current = JavaVersion.current().toString().removePrefix("1.").toInt()
-
-        val version = when {
-            // TODO: bump to 17 once we have upgraded to Kotlin 1.6
-            current >= 16 -> "16"
-            current >= 11 -> "11"
-            else -> "1.8"
-        }
-        return version
-    }
-
-    /**
-     * sometimes you have to query a superclass for declared methods
-     */
-    private fun Any.getMethod(methodName: String, superclass: Boolean, vararg parameterType: Class<*>): Method {
-        return when(superclass) {
-            false -> javaClass.getDeclaredMethod(methodName, *parameterType)
-                .apply { isAccessible = true }
-            true -> javaClass.superclass.getDeclaredMethod(methodName, *parameterType)
-                .apply { isAccessible = true }
-        }
     }
 
     private fun createMockArtifact(target: Project, shadowJarTask: ShadowJar) {

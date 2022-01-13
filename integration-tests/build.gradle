@@ -2,8 +2,11 @@ apply from: '../versions.gradle'
 apply from: '../common.gradle'
 
 subprojects {
+    apply plugin: 'java'
+
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
     ext.attestationMode = findProperty("attestationMode") ?: "epid"
+
     repositories {
         maven {
             url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
@@ -16,6 +19,13 @@ subprojects {
             }
         }
         mavenCentral()
+    }
+
+    // This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
     }
 
     tasks.withType(Test) {
