@@ -10,7 +10,6 @@ import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import javax.inject.Inject
