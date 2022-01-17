@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 class KDSResponse @JsonCreator constructor(
         @JsonProperty("id")
         val id: String,
-        @JsonProperty("kmsReport")
-        val kdsEnclaveInstanceInfo: ByteArray,
+        @JsonProperty("kdsAttestationReport")
+        val kdsAttestationReport: ByteArray,
         @JsonProperty("data")
         val data: ByteArray
 )
