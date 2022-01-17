@@ -35,9 +35,8 @@ abstract class AbstractEnclaveActionTest(
         private fun startKds(): Int {
             val java = Paths.get(System.getProperty("java.home"), "bin", "java").toString()
             val kdsJar = checkNotNull(System.getProperty("kdsJar"))
-            val kdsDataDir = Files.createTempDirectory("kds")
             val randomPort = ServerSocket(0).use { it.localPort }
-            val kdsCmd = listOf(java, "-jar", kdsJar, "--kms.data-directory=$kdsDataDir", "--server.port=$randomPort")
+            val kdsCmd = listOf(java, "-jar", kdsJar, "--server.port=$randomPort")
             println("Starting KDS: $kdsCmd")
             val process = ProcessBuilder(kdsCmd).redirectErrorStream(true).start()
 
@@ -55,13 +54,14 @@ abstract class AbstractEnclaveActionTest(
                         println("KDS EOF")
                         break
                     }
-                    if ("Started KeyServiceApplication.Companion in " in line) {
+                    println("KDS> $line")
+                    if ("Started KdsApplication.Companion in " in line) {
                         kdsReadySignal.countDown()
                     }
-                    println("KDS> $line")
                 }
             }
 
+            println("Waiting for KDS to be ready...")
             kdsReadySignal.await()
             println("KDS ready")
             return randomPort

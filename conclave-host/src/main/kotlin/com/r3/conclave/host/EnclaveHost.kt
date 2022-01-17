@@ -583,9 +583,9 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
 
         val mapper = ObjectMapper()
         val privateKeyRequest = PrivateKeyRequest(
-            appReport = enclaveInstanceInfo.serialize(),
+            appAttestationReport = enclaveInstanceInfo.serialize(),
             name = "KDSKeySpecName",
-            mkType = enclaveKdsKeySpec.masterKeyType.name.lowercase(),
+            masterKeyType = enclaveKdsKeySpec.masterKeyType.name.lowercase(),
             policyConstraint = enclaveKdsKeySpec.policyConstraint.toString()
         )
 
@@ -868,10 +868,10 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
 
         fun sendKdsResponse(kdsResponse: KDSResponse) {
-            val payloadSize = kdsResponse.data.intLengthPrefixSize + kdsResponse.kdsEnclaveInstanceInfo.size
+            val payloadSize = kdsResponse.data.intLengthPrefixSize + kdsResponse.kdsAttestationReport.size
             sendToEnclave(HostToEnclave.KDS_RESPONSE, payloadSize) { buffer ->
                 buffer.putIntLengthPrefixBytes(kdsResponse.data)
-                buffer.put(kdsResponse.kdsEnclaveInstanceInfo)
+                buffer.put(kdsResponse.kdsAttestationReport)
             }
         }
 

@@ -5,7 +5,7 @@ ext {
     // * containers/aesmd/src/docker/Dockerfile
     // * containers/sgxjvm-build/src/docker/Dockerfile
     conclave_version = '1.3-SNAPSHOT'
-    kds_version = '0.1-RC1'
+    kds_version = '0.2-20220113.133930-43' //The SNAPSHOT version does not work because the integration tests are using classifiers for the kds version.
     kotlin_version = '1.5.30'
     kotlinx_serialization_json_version = '1.3.1'
     kotlinx_serialization_protobuf_version = '1.3.1'
