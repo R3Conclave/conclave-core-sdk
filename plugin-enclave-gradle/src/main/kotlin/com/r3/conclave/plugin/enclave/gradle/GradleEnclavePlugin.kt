@@ -3,10 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
-import org.gradle.api.GradleException
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.Task
+import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.DuplicatesStrategy
@@ -200,6 +197,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
+            /////////////////////////////////////////////////////////
+            // linuxExec does not have a dependency on the following tasks.
+            // These dependencies were defined to remove a false positive warning message from Graal
+            // which disables execution optimizations.
+            // Graal gets confused because linuxExec targets Dockerfile as an input file which lives
+            // under the folder "conclave" and the following dependencies target the "conclave" folder as an output
+            // directory. The file Dockerfile is created by copyGraalVM task which untarGraalVM linuxExec depends on.
+            task.dependsOn(copyEnclaveCommonHeaders)
+            task.dependsOn(copySgxToolsTask)
+            /////////////////////////////////////////////////////////
+
             task.dependsOn(copyGraalVM)
             task.inputs.file("$conclaveDependenciesDirectory/docker/Dockerfile")
             task.dockerFile.set(target.file("$conclaveDependenciesDirectory/docker/Dockerfile"))
@@ -214,6 +222,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val graalVMDistributionPath = "$graalVMPath/distribution"
         val capCachePath = "$graalVMPath/cap-cache"
         val untarGraalVM = target.createTask<Exec>("untarGraalVM") { task ->
+            /////////////////////////////////////////////////////////
+            // untarGraalVM does not have a dependency on the following tasks.
+            // These dependencies were defined to remove a false positive warning message from Graal
+            // which disables execution optimizations.
+            // Graal gets confused because untarGraalVM targets graalvm.tar as an input file which lives
+            // under the folder "conclave" and the following dependencies target the "conclave" folder as an output
+            // directory. The file graalvm.tar is created by copyGraalVM task which untarGraalVM correctly depends on.
+            task.dependsOn(copyEnclaveCommonHeaders)
+            task.dependsOn(copySgxToolsTask)
+            /////////////////////////////////////////////////////////
+
             task.dependsOn(copyGraalVM)
             Files.createDirectories(Paths.get(graalVMDistributionPath))
             val graalVMTarPath = "$graalVMPath/graalvm.tar"
@@ -441,7 +460,19 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputSignedEnclave.set(generateEnclaveMetadataTask.inputSignedEnclave)
             }
 
-            val signedEnclaveJarTask = target.createTask<Jar>("signedEnclave${type}Jar") { task ->
+            class RenameSignedEnclaveJarTask() : Action<Task>{
+
+                override fun execute(task: Task) {
+                    val jarTask = task as Jar
+                    val enclaveClassName = enclaveClassNameTask.outputEnclaveClassName.get()
+                    jarTask.into(enclaveClassName.substringBeforeLast('.').replace('.', '/'))  // Package location
+                    jarTask.rename {
+                        "${enclaveClassName.substringAfterLast('.')}-$typeLowerCase.signed.so"
+                    }
+                }
+            }
+
+            val signedEnclaveJarTask = target.tasks.register("signedEnclave${type}Jar", Jar::class.java) { task ->
                 task.group = CONCLAVE_GROUP
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
                 task.dependsOn(enclaveClassNameTask)
@@ -450,16 +481,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                 // to use to sign the enclave and invokes the correct task accordingly.
                 task.from(buildSignedEnclaveTask.outputSignedEnclave)
-                task.doFirst {
-                    val enclaveClassName = enclaveClassNameTask.outputEnclaveClassName.get()
-                    task.into(enclaveClassName.substringBeforeLast('.').replace('.', '/'))  // Package location
-                    task.rename {
-                        "${enclaveClassName.substringAfterLast('.')}-$typeLowerCase.signed.so"
-                    }
-                }
+                task.doFirst(RenameSignedEnclaveJarTask())
             }
 
-            target.artifacts.add(typeLowerCase, signedEnclaveJarTask.archiveFile)
+            target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
         }
     }
 
