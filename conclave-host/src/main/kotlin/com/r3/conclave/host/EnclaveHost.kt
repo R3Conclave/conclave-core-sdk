@@ -1,10 +1,7 @@
 package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.conclave.common.EnclaveConstraint
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockConfiguration
+import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
@@ -679,6 +676,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
     fun callEnclave(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>): ByteArray? {
         return callEnclaveInternal(bytes, callback)
@@ -705,6 +703,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
@@ -740,8 +739,8 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
-    // TODO This should throw EnclaveException
     @Throws(MailDecryptionException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
         deliverMailInternal(mail, routingHint, callback)
@@ -775,8 +774,8 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
-    // TODO This should throw EnclaveException
     @Throws(MailDecryptionException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?) = deliverMailInternal(mail, routingHint, null)
 
@@ -1009,7 +1008,6 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             val previousCallState = callStateManager.transitionStateFrom<CallState>(to = intoEnclaveState)
             // Going into a callEnclave, the call state should only be Ready or IntoEnclave.
             check(previousCallState !is Response)
-
             var response: Response? = null
             try {
                 body(threadID)
@@ -1019,12 +1017,9 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
                     is RuntimeException, is Error -> t
                     // MailDecryptionException needs to propagate as is for deliverMail.
                     is MailDecryptionException -> t
-                    // Checked exceptions are wrapped in a RuntimeException to avoid inconsistent throws declaration on
-                    // callEnclave and deliverMail for Java users.
-                    // TODO This should probably be a specific exception class so that the caller can determine more
-                    //  easily if the exception came from the enclave. callEnclave above would also need to be updated
-                    //  as well.
-                    else -> RuntimeException(t)
+                    // No need to wrap an Enclave exception inside another Enclave exception
+                    is EnclaveException -> t
+                    else -> EnclaveException(null, t)
                 }
             } finally {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have

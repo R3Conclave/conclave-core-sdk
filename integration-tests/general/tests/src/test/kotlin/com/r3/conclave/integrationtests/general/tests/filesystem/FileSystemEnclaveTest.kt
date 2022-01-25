@@ -81,7 +81,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
             assertThatThrownBy { callEnclaveRename(oldPath, newPath, true) }
                 .isInstanceOf(RuntimeException::class.java)
                 .hasCauseExactlyInstanceOf(NoSuchFileException::class.java)
-                .hasMessageContaining(oldPath)
+                .cause.hasMessageContaining(oldPath)
         } else {
             callEnclaveRename(oldPath, newPath, false)
         }
@@ -94,7 +94,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
             assertThatThrownBy { callEnclave(DeleteFile(path, true)) }
                 .isInstanceOf(RuntimeException::class.java)
                 .hasCauseExactlyInstanceOf(NoSuchFileException::class.java)
-                .hasMessageContaining(path)
+                .cause.hasMessageContaining(path)
         } else {
             assertThat(callEnclave(DeleteFile(path, false))).isFalse
         }
@@ -105,7 +105,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
             assertThatThrownBy { callEnclave(DeleteFile(path, true)) }
                 .isInstanceOf(RuntimeException::class.java)
                 .hasCauseExactlyInstanceOf(DirectoryNotEmptyException::class.java)
-                .hasMessageContaining(path)
+                .cause.hasMessageContaining(path)
         } else {
             assertThat(callEnclave(DeleteFile(path, false))).isFalse
         }
@@ -115,7 +115,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
         assertThatThrownBy { callEnclave(FilesCreateDirectory(path)) }
             .isInstanceOf(RuntimeException::class.java)
             .hasCauseInstanceOf(IOException::class.java)
-            .hasMessageContaining(path)
+            .cause.hasMessageContaining(path)
     }
 
     fun createDirectory(path: String) {
@@ -147,6 +147,6 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
         }
             .isInstanceOf(RuntimeException::class.java)
             .hasCauseExactlyInstanceOf(exception)
-            .hasMessageContaining(path)
+            .cause.hasMessageContaining(path)
     }
 }

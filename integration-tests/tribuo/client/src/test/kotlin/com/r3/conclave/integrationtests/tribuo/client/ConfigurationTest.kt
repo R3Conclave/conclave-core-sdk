@@ -168,16 +168,16 @@ class ConfigurationTest : TribuoTest() {
     fun lrEvaluatorConfusionMatrix() {
         val lrEvaluatorConfusionMatrix = configuration.lrEvaluatorConfusionMatrix()
         val expectedResult = arrayOf(
-                arrayOf(904.0, 0.0, 2.0, 3.0, 1.0, 20.0, 26.0, 4.0, 18.0, 2.0),
-                arrayOf(0.0, 1072.0, 7.0, 3.0, 0.0, 2.0, 6.0, 2.0, 43.0, 0.0),
-                arrayOf(3.0, 6.0, 856.0, 26.0, 5.0, 7.0, 39.0, 8.0, 80.0, 2.0),
-                arrayOf(1.0, 0.0, 13.0, 844.0, 2.0, 64.0, 7.0, 14.0, 62.0, 3.0),
-                arrayOf(0.0, 0.0, 7.0, 2.0, 888.0, 1.0, 22.0, 15.0, 20.0, 27.0),
-                arrayOf(9.0, 1.0, 1.0, 27.0, 6.0, 751.0, 18.0, 7.0, 68.0, 4.0),
-                arrayOf(3.0, 1.0, 2.0, 1.0, 1.0, 9.0, 938.0, 1.0, 2.0, 0.0),
-                arrayOf(1.0, 5.0, 18.0, 6.0, 4.0, 1.0, 0.0, 963.0, 9.0, 21.0),
-                arrayOf(1.0, 3.0, 6.0, 9.0, 9.0, 25.0, 20.0, 6.0, 892.0, 3.0),
-                arrayOf(3.0, 2.0, 0.0, 7.0, 44.0, 14.0, 1.0, 76.0, 61.0, 801.0),
+            doubleArrayOf(904.0, 0.0, 2.0, 3.0, 1.0, 20.0, 26.0, 4.0, 18.0, 2.0),
+            doubleArrayOf(0.0, 1072.0, 7.0, 3.0, 0.0, 2.0, 6.0, 2.0, 43.0, 0.0),
+            doubleArrayOf(3.0, 6.0, 856.0, 26.0, 5.0, 7.0, 39.0, 8.0, 80.0, 2.0),
+            doubleArrayOf(1.0, 0.0, 13.0, 844.0, 2.0, 64.0, 7.0, 14.0, 62.0, 3.0),
+            doubleArrayOf(0.0, 0.0, 7.0, 2.0, 888.0, 1.0, 22.0, 15.0, 20.0, 27.0),
+            doubleArrayOf(9.0, 1.0, 1.0, 27.0, 6.0, 751.0, 18.0, 7.0, 68.0, 4.0),
+            doubleArrayOf(3.0, 1.0, 2.0, 1.0, 1.0, 9.0, 938.0, 1.0, 2.0, 0.0),
+            doubleArrayOf(1.0, 5.0, 18.0, 6.0, 4.0, 1.0, 0.0, 963.0, 9.0, 21.0),
+            doubleArrayOf(1.0, 3.0, 6.0, 9.0, 9.0, 25.0, 20.0, 6.0, 892.0, 3.0),
+            doubleArrayOf(3.0, 2.0, 0.0, 7.0, 44.0, 14.0, 1.0, 76.0, 61.0, 801.0),
         )
         assertThat(lrEvaluatorConfusionMatrix.matrix).isEqualTo(expectedResult)
     }
@@ -226,16 +226,16 @@ class ConfigurationTest : TribuoTest() {
     fun newEvaluatorConfusionMatrix() {
         val newEvaluatorConfusionMatrix = configuration.newEvaluatorConfusionMatrix()
         val expectedResult = arrayOf(
-                arrayOf(904.0, 0.0, 2.0, 3.0, 1.0, 20.0, 26.0, 4.0, 18.0, 2.0),
-                arrayOf(0.0, 1072.0, 7.0, 3.0, 0.0, 2.0, 6.0, 2.0, 43.0, 0.0),
-                arrayOf(3.0, 6.0, 856.0, 26.0, 5.0, 7.0, 39.0, 8.0, 80.0, 2.0),
-                arrayOf(1.0, 0.0, 13.0, 844.0, 2.0, 64.0, 7.0, 14.0, 62.0, 3.0),
-                arrayOf(0.0, 0.0, 7.0, 2.0, 888.0, 1.0, 22.0, 15.0, 20.0, 27.0),
-                arrayOf(9.0, 1.0, 1.0, 27.0, 6.0, 751.0, 18.0, 7.0, 68.0, 4.0),
-                arrayOf(3.0, 1.0, 2.0, 1.0, 1.0, 9.0, 938.0, 1.0, 2.0, 0.0),
-                arrayOf(1.0, 5.0, 18.0, 6.0, 4.0, 1.0, 0.0, 963.0, 9.0, 21.0),
-                arrayOf(1.0, 3.0, 6.0, 9.0, 9.0, 25.0, 20.0, 6.0, 892.0, 3.0),
-                arrayOf(3.0, 2.0, 0.0, 7.0, 44.0, 14.0, 1.0, 76.0, 61.0, 801.0),
+            doubleArrayOf(904.0, 0.0, 2.0, 3.0, 1.0, 20.0, 26.0, 4.0, 18.0, 2.0),
+            doubleArrayOf(0.0, 1072.0, 7.0, 3.0, 0.0, 2.0, 6.0, 2.0, 43.0, 0.0),
+            doubleArrayOf(3.0, 6.0, 856.0, 26.0, 5.0, 7.0, 39.0, 8.0, 80.0, 2.0),
+            doubleArrayOf(1.0, 0.0, 13.0, 844.0, 2.0, 64.0, 7.0, 14.0, 62.0, 3.0),
+            doubleArrayOf(0.0, 0.0, 7.0, 2.0, 888.0, 1.0, 22.0, 15.0, 20.0, 27.0),
+            doubleArrayOf(9.0, 1.0, 1.0, 27.0, 6.0, 751.0, 18.0, 7.0, 68.0, 4.0),
+            doubleArrayOf(3.0, 1.0, 2.0, 1.0, 1.0, 9.0, 938.0, 1.0, 2.0, 0.0),
+            doubleArrayOf(1.0, 5.0, 18.0, 6.0, 4.0, 1.0, 0.0, 963.0, 9.0, 21.0),
+            doubleArrayOf(1.0, 3.0, 6.0, 9.0, 9.0, 25.0, 20.0, 6.0, 892.0, 3.0),
+            doubleArrayOf(3.0, 2.0, 0.0, 7.0, 44.0, 14.0, 1.0, 76.0, 61.0, 801.0),
         )
         assertThat(newEvaluatorConfusionMatrix.matrix).isEqualTo(expectedResult)
     }
@@ -372,16 +372,16 @@ class ConfigurationTest : TribuoTest() {
     fun transformedEvaluatorConfusionMatrix() {
         val transformedEvaluatorConfusionMatrix = configuration.transformedEvaluatorConfusionMatrix()
         val expectedValue = arrayOf(
-                arrayOf(957.0, 0.0, 1.0, 2.0, 1.0, 12.0, 4.0, 2.0, 1.0, 0.0),
-                arrayOf(0.0, 1109.0, 10.0, 3.0, 0.0, 2.0, 3.0, 2.0, 6.0, 0.0),
-                arrayOf(4.0, 9.0, 940.0, 18.0, 9.0, 7.0, 11.0, 11.0, 19.0, 4.0),
-                arrayOf(6.0, 0.0, 25.0, 927.0, 0.0, 26.0, 2.0, 7.0, 9.0, 8.0),
-                arrayOf(1.0, 1.0, 7.0, 4.0, 914.0, 0.0, 9.0, 7.0, 4.0, 35.0),
-                arrayOf(7.0, 1.0, 2.0, 30.0, 8.0, 813.0, 9.0, 3.0, 18.0, 1.0),
-                arrayOf(8.0, 2.0, 14.0, 3.0, 8.0, 27.0, 892.0, 2.0, 2.0, 0.0),
-                arrayOf(1.0, 7.0, 17.0, 19.0, 8.0, 1.0, 0.0, 918.0, 1.0, 56.0),
-                arrayOf(7.0, 9.0, 13.0, 46.0, 11.0, 93.0, 7.0, 10.0, 753.0, 25.0),
-                arrayOf(6.0, 7.0, 1.0, 16.0, 28.0, 15.0, 0.0, 10.0, 0.0, 926.0),
+            doubleArrayOf(957.0, 0.0, 1.0, 2.0, 1.0, 12.0, 4.0, 2.0, 1.0, 0.0),
+            doubleArrayOf(0.0, 1109.0, 10.0, 3.0, 0.0, 2.0, 3.0, 2.0, 6.0, 0.0),
+            doubleArrayOf(4.0, 9.0, 940.0, 18.0, 9.0, 7.0, 11.0, 11.0, 19.0, 4.0),
+            doubleArrayOf(6.0, 0.0, 25.0, 927.0, 0.0, 26.0, 2.0, 7.0, 9.0, 8.0),
+            doubleArrayOf(1.0, 1.0, 7.0, 4.0, 914.0, 0.0, 9.0, 7.0, 4.0, 35.0),
+            doubleArrayOf(7.0, 1.0, 2.0, 30.0, 8.0, 813.0, 9.0, 3.0, 18.0, 1.0),
+            doubleArrayOf(8.0, 2.0, 14.0, 3.0, 8.0, 27.0, 892.0, 2.0, 2.0, 0.0),
+            doubleArrayOf(1.0, 7.0, 17.0, 19.0, 8.0, 1.0, 0.0, 918.0, 1.0, 56.0),
+            doubleArrayOf(7.0, 9.0, 13.0, 46.0, 11.0, 93.0, 7.0, 10.0, 753.0, 25.0),
+            doubleArrayOf(6.0, 7.0, 1.0, 16.0, 28.0, 15.0, 0.0, 10.0, 0.0, 926.0),
         )
         assertThat(transformedEvaluatorConfusionMatrix.matrix).isEqualTo(expectedValue)
     }

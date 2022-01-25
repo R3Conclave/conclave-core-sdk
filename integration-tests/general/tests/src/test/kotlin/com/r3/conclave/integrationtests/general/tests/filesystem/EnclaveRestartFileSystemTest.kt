@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.host.EnclaveLoadException
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.integrationtests.general.common.tasks.ReadAndWriteFiles
 import com.r3.conclave.integrationtests.general.common.tasks.ReadFiles
 import org.assertj.core.api.Assertions.assertThat
@@ -21,8 +22,9 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
         assertThatThrownBy {
             restartEnclaveBetweenWriteAndRead("/tmp")
         }
-            .isInstanceOf(RuntimeException::class.java)
-            .hasMessageContaining("java.nio.file.NoSuchFileException: /tmp/test_file_0.txt")
+            .isInstanceOf(EnclaveException::class.java)
+            .hasCauseExactlyInstanceOf(java.nio.file.NoSuchFileException::class.java)
+            .cause.hasMessage("/tmp/test_file_0.txt")
     }
 
     @ParameterizedTest
@@ -46,8 +48,7 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
         }
             .isInstanceOf(EnclaveLoadException::class.java)
             .hasMessageContaining("Unable to start enclave")
-            .hasStackTraceContaining("Caused by: java.lang.IllegalStateException: The enclave has been configured to use" +
-                    " the persistent filesystem but no storage file was provided in EnclaveHost.start")
+            .cause.hasMessageContaining("The enclave has been configured to use the persistent filesystem but no storage file was provided in EnclaveHost.start")
     }
 
     private fun restartEnclaveBetweenWriteAndRead(parentDir: String): String {

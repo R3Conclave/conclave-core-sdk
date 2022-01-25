@@ -110,9 +110,9 @@ class ClassificationTest : TribuoTest() {
                 "Iris-setosa"
         )
         assertThat(confusionMatrix.matrix).isEqualTo(arrayOf(
-                arrayOf(16.0, 0.0, 0.0),
-                arrayOf(1.0, 14.0, 0.0),
-                arrayOf(0.0, 0.0, 14.0),
+            doubleArrayOf(16.0, 0.0, 0.0),
+            doubleArrayOf(1.0, 14.0, 0.0),
+            doubleArrayOf(0.0, 0.0, 14.0),
         ))
     }
 

@@ -1,6 +1,7 @@
 package com.r3.conclave.host.web
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
@@ -203,7 +204,7 @@ class EnclaveWebControllerTest {
                 postMail(postOffice(mail).encryptMail("first".toByteArray()), routingHint)
                 postMail(postOffice(mail).encryptMail("second".toByteArray()), routingHint)
             } else if (request == "throw") {
-                throw RuntimeException("bang!")
+                throw EnclaveException("bang!")
             }
             previousRequest = request
             previousSender = mail.authenticatedSender

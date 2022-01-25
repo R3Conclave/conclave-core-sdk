@@ -21,7 +21,7 @@ ext {
     classgraph_version = '4.8.132'
     junit_jupiter_version = '5.8.1'
     junit_pioneer_version = '1.5.0'
-    assertj_version = '3.15.0'
+    assertj_version = '3.22.0'
     guava_version = '31.0.1-jre'
     // TODO: When updating GraalVM, try to remove "-J--add-exports=java.management/sun.management=ALL-UNNAMED"
     // from defaultOptions() in NativeImage.kt. This was added as a workaround for a bug which should

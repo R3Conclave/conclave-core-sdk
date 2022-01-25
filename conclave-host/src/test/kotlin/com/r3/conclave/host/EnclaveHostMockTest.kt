@@ -1,5 +1,6 @@
 package com.r3.conclave.host
 
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.SHA256Hash
@@ -544,9 +545,10 @@ class EnclaveHostMockTest {
     fun `calling callUntrustedHost from a separate thread throws exception`() {
         host = createMockHost(CallUntrustedHostInSeparateThreadEnclave::class.java)
         host.start(null, null, null) { }
-        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+        assertThatThrownBy {
             host.callEnclave(byteArrayOf()) { it }
-        }.withMessageEndingWith("may not attempt to call out to the host outside the context of a call.")
+        }.isExactlyInstanceOf(EnclaveException::class.java)
+         .cause.hasMessageContaining("may not attempt to call out to the host outside the context of a call.")
     }
 
     class CallUntrustedHostInSeparateThreadEnclave : Enclave() {
