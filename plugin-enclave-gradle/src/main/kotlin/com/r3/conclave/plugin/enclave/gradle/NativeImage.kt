@@ -129,7 +129,6 @@ open class NativeImage @Inject constructor(
             "-R:MaxHeapSize=" + calculateMaxHeapSize(maxHeapSizeBytes),
             "-R:StackSize=" + calculateMaxStackSize(),
             "--enable-all-security-services",
-            "-H:-AddAllFileSystemProviders",
             "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
             "-H:+UseCAPCache")
     }

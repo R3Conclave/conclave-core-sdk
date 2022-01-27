@@ -119,6 +119,7 @@ private val protoBuf = ProtoBuf {
             subclass(ReadFiles::class, ReadFiles.serializer())
             subclass(SqlQuery::class, SqlQuery.serializer())
             subclass(ExecuteSql::class, ExecuteSql.serializer())
+            subclass(ReadAndWriteFilesToDefaultFileSystem::class, ReadAndWriteFilesToDefaultFileSystem.serializer())
         }
     }
 }
