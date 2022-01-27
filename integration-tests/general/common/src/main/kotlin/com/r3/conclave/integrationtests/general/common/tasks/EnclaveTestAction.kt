@@ -122,6 +122,7 @@ private val protoBuf = ProtoBuf {
             subclass(RenameFile::class, RenameFile.serializer())
             subclass(MovePath::class, MovePath.serializer())
             subclass(WalkPath::class, WalkPath.serializer())
+            subclass(ReadAndWriteFilesToDefaultFileSystem::class, ReadAndWriteFilesToDefaultFileSystem.serializer())
         }
     }
 }
