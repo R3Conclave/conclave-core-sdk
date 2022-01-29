@@ -21,8 +21,10 @@ import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
 import io.github.classgraph.ClassGraph
+import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.IOException
+import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
@@ -599,7 +601,15 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
 
         if (con.responseCode != HttpURLConnection.HTTP_OK) {
-            val kdsErrorResponse = mapper.readValue(con.errorStream, KDSErrorResponse::class.java)
+            val dataText = con.errorStream.use { inputStream -> inputStream.reader().readText() }
+            val kdsErrorResponse =  try {
+                 mapper.readValue(dataText, KDSErrorResponse::class.java)
+            } catch (exception: Exception) {
+                // It is likely that the error response is not a KDSErrorResponse if an exception is raised
+                // The best thing to do in those cases is to return the response code
+
+                throw IOException("HTTP response code: ${con.responseCode}, HTTP response message: $dataText")
+            }
             throw IOException(kdsErrorResponse.reason)
         }
 
