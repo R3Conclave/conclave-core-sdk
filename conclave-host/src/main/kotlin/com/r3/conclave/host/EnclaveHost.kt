@@ -594,6 +594,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         con.readTimeout = kdsConfiguration.timeout.toMillis().toInt()
         con.requestMethod = "POST"
         con.setRequestProperty("Content-Type", "application/json; utf-8")
+        con.setRequestProperty("API-VERSION", "1")
         con.doOutput = true
 
         con.outputStream.use {
