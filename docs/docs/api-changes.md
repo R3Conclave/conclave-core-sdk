@@ -1,5 +1,15 @@
 # API changes
 
+## 1.2 to 1.3
+
+### KDS - beta API
+The beta API for the dev KDS has changed. The request format for both ```/public``` and ```/private``` endpoints has
+been updated. The updates are backwards compatible so no changes are required for enclaves built using an older version of Conclave. But
+developers are encouraged to use the new request formats since the older ones have been marked as deprecated.
+
+The HTTP header ```API-VERSION``` has been added to the beta API for backwards compatibility reasons. The HTTP header ```API-VERSION``` must be set to 1 in 
+order to use the new request formats.
+
 ## 1.1 to 1.2
 
 ### Improvements to mail and persistence
