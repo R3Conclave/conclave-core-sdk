@@ -8,5 +8,9 @@ enum class MasterKeyType {
      * A debug master key is used for key derivation which is only suitable for development and testing. Release
      * enclaves cannot use this key type and the KDS will reject any such request.
      */
-    DEBUG
+    DEBUG,
+    /**
+     * A release master key suitable for applications running in production environments.
+     */
+    RELEASE
 }

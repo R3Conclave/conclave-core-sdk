@@ -104,9 +104,10 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 1. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using 
    JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave 
    libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
-1. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
-1. GraalVM has been updated to version 21.3.
-1. Gradle 7 is now supported.
+2. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
+3. GraalVM has been updated to version 21.3.
+4. Gradle 7 is now supported.
+5. The Conclave Key Derivation Service (KDS) now supports release enclave with the new RELEASE master key type.
 
 ### 1.2.1
 
