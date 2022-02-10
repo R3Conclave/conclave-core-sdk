@@ -1,7 +1,7 @@
 package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.conclave.common.internal.kds.KDSErrorResponse
+import com.r3.conclave.mail.internal.kds.KDSErrorResponse
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.host.kds.KDSConfiguration

@@ -8,6 +8,7 @@ import com.r3.conclave.common.InvalidEnclaveException
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.*
+import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
 import com.r3.conclave.utilities.internal.*
 import java.io.Closeable
 import java.io.IOException

@@ -3,10 +3,10 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.internal.kds.KDSConfiguration
-import com.r3.conclave.enclave.internal.kds.KDSKeySpecification
-import com.r3.conclave.enclave.internal.kds.PolicyConstraint
+import com.r3.conclave.common.internal.kds.KDSKeySpecification
+import com.r3.conclave.common.internal.kds.PolicyConstraint
+import com.r3.conclave.common.kds.MasterKeyType
 import java.util.*
 
 abstract class EnclaveEnvironment(enclaveProperties: Properties) {

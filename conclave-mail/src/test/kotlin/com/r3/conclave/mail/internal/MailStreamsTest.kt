@@ -2,8 +2,6 @@ package com.r3.conclave.mail.internal
 
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.MailDecryptionException
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PAYLOAD_LENGTH
-import com.r3.conclave.mail.internal.MailEncryptingStream.Companion.MAX_PACKET_PLAINTEXT_LENGTH
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.utilities.internal.readFully
 import org.assertj.core.api.Assertions.*

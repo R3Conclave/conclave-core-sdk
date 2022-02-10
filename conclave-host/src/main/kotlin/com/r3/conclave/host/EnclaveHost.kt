@@ -9,7 +9,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
-import com.r3.conclave.common.internal.kds.KDSErrorResponse
+import com.r3.conclave.mail.internal.kds.KDSErrorResponse
 import com.r3.conclave.common.internal.kds.KDSResponse
 import com.r3.conclave.common.internal.kds.PrivateKeyRequest
 import com.r3.conclave.common.kds.MasterKeyType
@@ -24,10 +24,8 @@ import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
 import io.github.classgraph.ClassGraph
-import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.IOException
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
