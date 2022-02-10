@@ -1,12 +1,13 @@
 package com.r3.conclave.mail
 
-import com.r3.conclave.mail.internal.AbstractPostOffice
-import com.r3.conclave.mail.internal.MailDecryptingStream
+import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
 import com.r3.conclave.mail.internal.privateCurve25519KeyToPublic
 import com.r3.conclave.utilities.internal.EnclaveContext
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
+
+import com.r3.conclave.mail.internal.MailDecryptingStream
 
 // TODO: Add sample demo code with a simple HTTP binding, document.
 // TODO: Key types probably need to be public or properly wired to JCA - cannot assume they are only retrieved from
@@ -162,7 +163,7 @@ abstract class PostOffice(
          */
         @JvmStatic
         fun create(destinationPublicKey: PublicKey, senderPrivateKey: PrivateKey, topic: String): PostOffice {
-            return Default(destinationPublicKey, senderPrivateKey, topic)
+            return DefaultPostOffice(destinationPublicKey, senderPrivateKey, topic)
         }
 
         /**
@@ -296,7 +297,7 @@ abstract class PostOffice(
         return decryptMail(encryptedEnclaveMail, senderPrivateKey, destinationPublicKey)
     }
 
-    private class Default(
+    private class DefaultPostOffice(
         override val destinationPublicKey: PublicKey,
         senderPrivateKey: PrivateKey,
         topic: String

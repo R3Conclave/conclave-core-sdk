@@ -1,6 +1,7 @@
-package com.r3.conclave.enclave.internal.kds
+package com.r3.conclave.common.internal.kds
 
 import com.r3.conclave.common.kds.MasterKeyType
+
 
 class KDSKeySpecification(val masterKeyType: MasterKeyType, val policyConstraint: PolicyConstraint) {
     override fun equals(other: Any?): Boolean {

@@ -4,7 +4,7 @@ import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMailHeader
 import com.r3.conclave.mail.MinSizePolicy
 import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.mail.internal.AbstractPostOffice
+import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
 import java.security.PublicKey
 
 /**

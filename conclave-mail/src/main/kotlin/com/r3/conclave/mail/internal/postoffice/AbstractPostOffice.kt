@@ -1,6 +1,7 @@
-package com.r3.conclave.mail.internal
+package com.r3.conclave.mail.internal.postoffice
 
 import com.r3.conclave.mail.MinSizePolicy
+import com.r3.conclave.mail.internal.*
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import java.io.ByteArrayOutputStream
 import java.security.PrivateKey
@@ -42,13 +43,13 @@ abstract class AbstractPostOffice {
         // The 1 is for the single byte protocol ID.
         val prologueSize = 1 + header.encodedSize()
         val payloadSize = maxOf(body.size, minSize)
-        val packetCount = (payloadSize / MailEncryptingStream.MAX_PACKET_PAYLOAD_LENGTH) + 1
+        val packetCount = (payloadSize / MAX_PACKET_PAYLOAD_LENGTH) + 1
         // The 2 is for the prologue size field.
         return 2 + prologueSize + MailProtocol.SENDER_KEY_TRANSMITTED_V2.handshakeLength + (packetCount * PACKET_OVERHEAD) + payloadSize
     }
 
     companion object {
-        private const val PACKET_OVERHEAD = Noise.MAX_PACKET_LEN - MailEncryptingStream.MAX_PACKET_PAYLOAD_LENGTH
+        private const val PACKET_OVERHEAD = Noise.MAX_PACKET_LEN - MAX_PACKET_PAYLOAD_LENGTH
 
         fun checkTopic(topic: String) {
             require(topic.isNotBlank()) { "Topic must not be blank" }
