@@ -10,6 +10,7 @@ import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
@@ -542,10 +543,12 @@ Received: $attestationReportBody"""
             }
 
             val policyConstraintFromKds: EnclaveConstraint
+            val masterKeyTypeFromKds: MasterKeyType
             val kdsPrivateKey: ByteArray
             try {
                 val jsonResponse = ObjectMapper().readTree(kdsResponseMail.bodyAsBytes)
                 policyConstraintFromKds = EnclaveConstraint.parse(jsonResponse["policyConstraint"].textValue())
+                masterKeyTypeFromKds = MasterKeyType.valueOf(jsonResponse["masterKeyType"].textValue().uppercase())
                 kdsPrivateKey = jsonResponse["privateKey"].binaryValue()
             } catch (e: Exception) {
                 throw IllegalArgumentException("Invalid KDS response", e)
@@ -553,6 +556,10 @@ Received: $attestationReportBody"""
 
             require(policyConstraintFromKds == generatedPersistenceKdsPolicyConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
+            }
+
+            require(kdsConfig.kdsKeySpec.masterKeyType == masterKeyTypeFromKds) {
+                "KDS response was generated using a different master key type from the one configured in the enclave."
             }
             enclave._kdsEnclaveInstanceInfo = kdsEnclaveInstanceInfo
             enclave.persistenceKdsPrivateKey = kdsPrivateKey
