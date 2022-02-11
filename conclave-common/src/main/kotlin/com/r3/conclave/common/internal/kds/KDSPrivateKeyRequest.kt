@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-class PrivateKeyRequest @JsonCreator constructor(
+class KDSPrivateKeyRequest @JsonCreator constructor(
         @JsonProperty("appAttestationReport")
         val appAttestationReport: ByteArray,
 
