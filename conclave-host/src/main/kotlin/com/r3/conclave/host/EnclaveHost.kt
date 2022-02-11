@@ -9,9 +9,9 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.common.internal.kds.KDSPrivateKeyRequest
+import com.r3.conclave.common.internal.kds.KDSPrivateKeyResponse
 import com.r3.conclave.mail.internal.kds.KDSErrorResponse
-import com.r3.conclave.common.internal.kds.KDSResponse
-import com.r3.conclave.common.internal.kds.PrivateKeyRequest
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
@@ -577,12 +577,11 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
     }
 
     private fun requestKdsPrivateKey(kdsConfiguration: KDSConfiguration) {
-        val enclaveKdsKeySpec = adminHandler.requestKdsKeySpec()
         // Return if the enclave wasn't configured with any KDS constraint
-        if (enclaveKdsKeySpec == null) return
+        val enclaveKdsKeySpec = adminHandler.requestKdsKeySpec() ?: return
 
         val mapper = ObjectMapper()
-        val privateKeyRequest = PrivateKeyRequest(
+        val kdsPrivateKeyRequest = KDSPrivateKeyRequest(
             appAttestationReport = enclaveInstanceInfo.serialize(),
             name = "KDSKeySpecName",
             masterKeyType = enclaveKdsKeySpec.masterKeyType.name.lowercase(),
@@ -599,7 +598,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         con.doOutput = true
 
         con.outputStream.use {
-            mapper.writeValue(it, privateKeyRequest)
+            mapper.writeValue(it, kdsPrivateKeyRequest)
         }
 
         if (con.responseCode != HttpURLConnection.HTTP_OK) {
@@ -615,10 +614,10 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             throw IOException(kdsErrorResponse.reason)
         }
 
-        val kdsResponse = con.inputStream.use {
-            mapper.readValue(it, KDSResponse::class.java)
+        val kdsPrivateKeyResponse = con.inputStream.use {
+            mapper.readValue(it, KDSPrivateKeyResponse::class.java)
         }
-        adminHandler.sendKdsResponse(kdsResponse)
+        adminHandler.sendKdsResponse(kdsPrivateKeyResponse)
     }
 
     /**
@@ -876,11 +875,11 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             sendToEnclave(HostToEnclave.CLOSE, 0) { }
         }
 
-        fun sendKdsResponse(kdsResponse: KDSResponse) {
-            val payloadSize = kdsResponse.data.intLengthPrefixSize + kdsResponse.kdsAttestationReport.size
+        fun sendKdsResponse(kdsPrivateKeyResponse: KDSPrivateKeyResponse) {
+            val payloadSize = kdsPrivateKeyResponse.data.intLengthPrefixSize + kdsPrivateKeyResponse.kdsAttestationReport.size
             sendToEnclave(HostToEnclave.KDS_RESPONSE, payloadSize) { buffer ->
-                buffer.putIntLengthPrefixBytes(kdsResponse.data)
-                buffer.put(kdsResponse.kdsAttestationReport)
+                buffer.putIntLengthPrefixBytes(kdsPrivateKeyResponse.data)
+                buffer.put(kdsPrivateKeyResponse.kdsAttestationReport)
             }
         }
 

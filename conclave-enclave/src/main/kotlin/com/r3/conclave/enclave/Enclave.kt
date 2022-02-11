@@ -70,7 +70,7 @@ abstract class Enclave {
     private lateinit var adminHandler: AdminHandler
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
-    private var kdsPrivateKey: ByteArray? = null
+    private var persistenceKdsPrivateKey: ByteArray? = null
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, EnclavePostOffice>()
@@ -271,12 +271,12 @@ abstract class Enclave {
         }
     }
 
-    private fun getPrivateKey(): ByteArray {
+    private fun getPersistencePrivateKey(): ByteArray {
         if (env.kdsConfiguration != null) {
-            val kdsPrivateKey = kdsPrivateKey
-            if (kdsPrivateKey != null) {
+            val kdsPrivateKeyForPersistence = persistenceKdsPrivateKey
+            if (kdsPrivateKeyForPersistence != null) {
                 // The KDS key may be longer than 128 bit, so we only use the first 128 bit
-                return kdsPrivateKey.copyOf(16)
+                return kdsPrivateKeyForPersistence.copyOf(16)
             }
             // TODO There's no exception message as these are not propageted in release mode. However, from this example
             //  and others we need a very special and privileged exception that will carry any necessary information
@@ -296,7 +296,7 @@ abstract class Enclave {
     }
 
     private fun setupFileSystems() {
-        val privateKey = getPrivateKey()
+        val privateKey = getPersistencePrivateKey()
         val inMemorySize = env.inMemoryFileSystemSize
         val persistentSize = env.persistentFileSystemSize
 
@@ -367,7 +367,7 @@ abstract class Enclave {
     }
 
     private fun decryptSealedState(sealedBlob: ByteArray): PlaintextAndEnvelope {
-        return EnclaveUtils.aesDecrypt(getPrivateKey(), sealedBlob)
+        return EnclaveUtils.aesDecrypt(getPersistencePrivateKey(), sealedBlob)
     }
 
     /**
@@ -395,7 +395,7 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
-        private lateinit var generatedPolicyConstraint: EnclaveConstraint
+        private lateinit var generatedPersistenceKdsPolicyConstraint: EnclaveConstraint
 
         private val messageTypes = HostToEnclave.values()
 
@@ -507,7 +507,7 @@ Received: $attestationReportBody"""
 
             val generatedPolicyConstraintString = policyConstraint.toString()
             try {
-                generatedPolicyConstraint = EnclaveConstraint.parse(generatedPolicyConstraintString)
+                generatedPersistenceKdsPolicyConstraint = EnclaveConstraint.parse(generatedPolicyConstraintString)
             } catch (e: IllegalStateException) {
                 throw IllegalArgumentException("Enclave has an invalid KDS policy constraint: ${e.message}")
             }
@@ -551,11 +551,11 @@ Received: $attestationReportBody"""
                 throw IllegalArgumentException("Invalid KDS response", e)
             }
 
-            require(policyConstraintFromKds == generatedPolicyConstraint) {
+            require(policyConstraintFromKds == generatedPersistenceKdsPolicyConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
             enclave._kdsEnclaveInstanceInfo = kdsEnclaveInstanceInfo
-            enclave.kdsPrivateKey = kdsPrivateKey
+            enclave.persistenceKdsPrivateKey = kdsPrivateKey
         }
 
         /**
@@ -644,7 +644,7 @@ Received: $attestationReportBody"""
         // This method can be called concurrently by the host.
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
             val type = callTypeValues[input.get().toInt()]
-            val hostThreadId = input.getLong()
+            val hostThreadId = input.long
             // Assign the host thread ID to the current thread so that callUntrustedHost/postMail/etc can pick up the
             // right state for the thread.
             currentEnclaveCall.set(hostThreadId)
@@ -772,7 +772,7 @@ Received: $attestationReportBody"""
         }
 
         private fun encryptSealedState(toBeSealed: PlaintextAndEnvelope): ByteArray {
-            return EnclaveUtils.aesEncrypt(getPrivateKey(), toBeSealed)
+            return EnclaveUtils.aesEncrypt(getPersistencePrivateKey(), toBeSealed)
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {

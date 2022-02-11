@@ -144,7 +144,7 @@ fun ByteBuffer.getSlice(size: Int, index: Int): ByteBuffer {
  * Create a slice out of the buffer of size defined by the next int in the buffer. The slice immediately follows the size
  * field. The position is advanced by [Int.SIZE_BYTES] plus the size of the slice itself.
  */
-fun ByteBuffer.getIntLengthPrefixSlice(): ByteBuffer = getSlice(getInt())
+fun ByteBuffer.getIntLengthPrefixSlice(): ByteBuffer = getSlice(int)
 
 val ByteArray.intLengthPrefixSize: Int get() = Int.SIZE_BYTES + size
 
