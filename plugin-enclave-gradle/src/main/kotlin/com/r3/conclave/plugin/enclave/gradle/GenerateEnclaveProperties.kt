@@ -62,36 +62,45 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
             throwKDSPropertyMissingException("kds.kdsEnclaveConstraint")
         }
 
-        if (conclave.kds.keySpec.masterKeyType.isPresent) {
-            val masterKeyTypeString = conclave.kds.keySpec.masterKeyType.get()
+        if (conclave.kds.keySpec.isPresent) {
+            logger.warn("kds.keySpec has been replaced by kds.persistenceKeySpec and it is now deprecated")
+            applyKDSConfigPersistenceKeySpec(properties, conclave.kds.keySpec)
+        } else {
+            applyKDSConfigPersistenceKeySpec(properties, conclave.kds.persistenceKeySpec)
+        }
+    }
+
+    private fun applyKDSConfigPersistenceKeySpec(properties: SortedMap<String, String>, keySpec: KeySpecExtension) {
+        if (keySpec.masterKeyType.isPresent) {
+            val masterKeyTypeString = keySpec.masterKeyType.get()
             val masterKeyType = try {
                 MasterKeyType.valueOf(masterKeyTypeString.toUpperCase())
             } catch (e: IllegalArgumentException) {
                 throw GradleException(
-                        "Invalid KDS master key type '$masterKeyTypeString'. Valid values are: " +
-                        MasterKeyType.values().joinToString(", "))
+                    "Invalid KDS master key type '$masterKeyTypeString'. Valid values are: " +
+                            MasterKeyType.values().joinToString(", "))
             }
-            properties["kds.keySpec.masterKeyType"] = masterKeyType.toString()
+            properties["kds.persistenceKeySpec.masterKeyType"] = masterKeyType.toString()
         } else {
-            throwKDSPropertyMissingException("kds.keySpec.masterKeyType")
+            throwKDSPropertyMissingException("kds.persistenceKeySpec.masterKeyType")
         }
 
-        if (conclave.kds.keySpec.policyConstraint.constraint.isPresent) {
-            val constraintsString = conclave.kds.keySpec.policyConstraint.constraint.get()
+        if (keySpec.policyConstraint.constraint.isPresent) {
+            val constraintsString = keySpec.policyConstraint.constraint.get()
             try {
                 EnclaveConstraint.parse(constraintsString, false)
             } catch (e: Exception) {
-                throw GradleException("Error parsing kds.keySpec.policyConstraint.constraint: ${e.message}", e)
+                throw GradleException("Error parsing kds.persistenceKeySpec.policyConstraint.constraint: ${e.message}", e)
             }
-            properties["kds.keySpec.policyConstraint.constraint"] = constraintsString
+            properties["kds.persistenceKeySpec.policyConstraint.constraint"] = constraintsString
         } else {
-            throwKDSPropertyMissingException("kds.keySpec.policyConstraint.constraint")
+            throwKDSPropertyMissingException("kds.persistenceKeySpec.policyConstraint.constraint")
         }
 
-        val useOwnCodeHash = conclave.kds.keySpec.policyConstraint.useOwnCodeHash.getOrElse(false)
-        val useOwnCodeSignerAndProductID = conclave.kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID.getOrElse(false)
-        properties["kds.keySpec.policyConstraint.useOwnCodeHash"] = useOwnCodeHash.toString()
-        properties["kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID"] = useOwnCodeSignerAndProductID.toString()
+        val useOwnCodeHash = keySpec.policyConstraint.useOwnCodeHash.getOrElse(false)
+        val useOwnCodeSignerAndProductID = keySpec.policyConstraint.useOwnCodeSignerAndProductID.getOrElse(false)
+        properties["kds.persistenceKeySpec.policyConstraint.useOwnCodeHash"] = useOwnCodeHash.toString()
+        properties["kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID"] = useOwnCodeSignerAndProductID.toString()
     }
 
     override fun action() {

@@ -26,10 +26,10 @@ class KDSTest {
         private val ENCLAVE_PROPERTIES_OVERRIDE = Properties().apply {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-            setProperty("kds.keySpec.masterKeyType", "debug")
-            setProperty("kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
-            setProperty("kds.keySpec.policyConstraint.useOwnCodeHash", "true")
-            setProperty("kds.keySpec.policyConstraint.constraint", "SEC:INSECURE")
+            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
+            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
+            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")
+            setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
         }
 
         private fun mockHost(): EnclaveHost {

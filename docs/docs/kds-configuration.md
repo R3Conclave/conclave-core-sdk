@@ -73,7 +73,7 @@ conclave {
   ...
   kds {
     kdsEnclaveConstraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:STALE"
-    keySpec {
+    persistencekeySpec {
       masterKeyType = "debug"
       policyConstraint {
         constraint = "<your policy constraints>"
@@ -96,7 +96,7 @@ attestation when getting a key from the KDS enclave.
     A sample key is intentionally being used to sign the KDS as it is not ready for production. The sample key used 
     is the same signing key that is used in the hello-world sample but this will change when the KDS goes into production.
 
-Next we have the `keySpec {}` section. This section contains parameters which
+Next we have the `persistenceKeySpec {}` section. This section contains parameters which
 define how the KDS generates keys. This section contains the `masterKeyType`
 property, which defines the type of master key to use (for now, only
 `"debug"` is supported).
@@ -174,7 +174,7 @@ original enclave to explicitly export data encrypted using a different key.
 
 ```groovy
 kds {
-  keySpec {
+  persistenceKeySpec {
     policyConstraint {
       constraint = "SEC:SECURE"
       useOwnCodeHash = true
@@ -192,12 +192,12 @@ to deploy the patch to the system, bringing it back to the `SECURE` state.
 
 ```groovy
 kds {
-  keySpec {
-    policyConstraint {
-      constraint = "SEC:STALE"
-      useOwnCodeHash = true
+    persistenceKeySpec {
+        policyConstraint {
+            constraint = "SEC:STALE"
+            useOwnCodeHash = true
+        }
     }
-  }
 }
 ```
 
@@ -207,7 +207,7 @@ is signed with the same signing key, is part of the same product and is running
 on a secure platform.
 
 The combination of a signing key and a product ID allows for unique keys to be
-generated per product, but shared with all versions of enclaves within an single
+generated per product, but shared with all versions of enclaves within a single
 product.
 
 This makes it easy to release new versions of enclaves, or allows multiple
@@ -222,11 +222,11 @@ the developer's behalf.
 
 ```groovy
 kds {
-  keySpec {
-    policyConstraint {
-      constraint = "SEC:SECURE"
-      useOwnCodeSignerAndProductID = true
+    persistenceKeySpec {
+        policyConstraint {
+            constraint = "SEC:SECURE"
+            useOwnCodeSignerAndProductID = true
+        }
     }
-  }
 }
 ```

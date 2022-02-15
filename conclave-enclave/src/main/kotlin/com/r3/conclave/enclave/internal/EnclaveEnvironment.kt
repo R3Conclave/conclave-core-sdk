@@ -56,31 +56,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties) {
     open val persistentFileSystemSize: Long = enclaveProperties.getProperty("persistentFileSystemSize").toLong()
 
     // KDS configuration from build system
-    open val kdsConfiguration: KDSConfiguration? = run {
-        val kdsEnabled = enclaveProperties.getProperty("kds.configurationPresent").toBoolean()
-        if (!kdsEnabled) {
-            // If the KDS is not enabled, do nothing
-            null
-        } else {
-            // Otherwise, assemble KDS configuration from other properties
-            val useOwnCodeHash =
-                    enclaveProperties.getProperty("kds.keySpec.policyConstraint.useOwnCodeHash").toBoolean()
-            val useOwnCodeSignerAndProductID =
-                    enclaveProperties.getProperty("kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID").toBoolean()
-            val constraint =
-                    enclaveProperties.getProperty("kds.keySpec.policyConstraint.constraint").toString()
-            val kdsEnclaveConstraint =
-                    EnclaveConstraint.parse(enclaveProperties.getProperty("kds.kdsEnclaveConstraint").toString())
-            val masterKeyType =
-                    MasterKeyType.valueOf(enclaveProperties.getProperty("kds.keySpec.masterKeyType").toString().uppercase())
-            val policyConstraint = PolicyConstraint().apply {
-                ownCodeHash = useOwnCodeHash
-                ownCodeSignerAndProductID = useOwnCodeSignerAndProductID
-                enclaveConstraint = EnclaveConstraint.parse(constraint, false)
-            }
-            KDSConfiguration(KDSKeySpecification(masterKeyType, policyConstraint), kdsEnclaveConstraint)
-        }
-    }
+    open val kdsConfiguration: KDSConfiguration? = KDSConfiguration.loadConfiguration(enclaveProperties)
 
     /**
      * Create an [SgxReport] of the enclave.
