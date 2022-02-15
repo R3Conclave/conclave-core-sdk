@@ -10,6 +10,10 @@ developers are encouraged to use the new request formats since the older ones ha
 The HTTP header ```API-VERSION``` has been added to the beta API for backwards compatibility reasons. The HTTP header ```API-VERSION``` must be set to 1 in 
 order to use the new request formats.
 
+### KDS Configuration
+The KDS configuration which is specified in the enclave's Gradle file has been updated. The property `keySpec` has been replaced by `persistenceKeySpec` and
+it is now deprecated.
+
 ## 1.1 to 1.2
 
 ### Improvements to mail and persistence

@@ -57,8 +57,14 @@ open class KDSExtension @Inject constructor(objects: ObjectFactory) {
         action.execute(keySpec)
     }
 
+    val persistenceKeySpec: KeySpecExtension = objects.newInstance(KeySpecExtension::class.java)
+
+    fun persistenceKeySpec(action: Action<KeySpecExtension>) {
+        action.execute(persistenceKeySpec)
+    }
+
     val isPresent: Boolean
-        get() = kdsEnclaveConstraint.isPresent or keySpec.isPresent
+        get() = kdsEnclaveConstraint.isPresent or keySpec.isPresent or persistenceKeySpec.isPresent
 }
 
 open class KeySpecExtension @Inject constructor(objects: ObjectFactory) {
