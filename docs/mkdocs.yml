@@ -39,6 +39,7 @@ nav:
     - API:
         - JavaDocs: api/index.html
         - Configuration options for enclaves: enclave-configuration.md
+        - KDS REST API: kds-rest-api.md
         - Migration notes: api-changes.md
         - Known issues: known-issues.md
   - Operations:
