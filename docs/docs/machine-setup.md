@@ -40,7 +40,7 @@ permissions.
 ## Hosting providers
 
 * Microsoft Azure offers [virtual machines with SGX hardware](https://azure.microsoft.com/en-us/solutions/confidential-compute/)
-* OVH offers [rentable SGX hardware](https://www.ovh.com/world/dedicated-servers/software-guard-extensions/)
+* OVH offers [rentable SGX hardware](https://www.ovhcloud.com/en-gb/bare-metal/intel-software-guard-extensions/)
 
 ## Distribution support
 
