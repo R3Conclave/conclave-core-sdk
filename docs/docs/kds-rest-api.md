@@ -13,9 +13,9 @@ Returns a Curve25519 public key corresponding to a private key that was created 
 key specification. Access to a public key is not subject to constraints. 
 
 This allows a client to firstly attest to the
-validity of the KDS to obtain trust in the KDS, then to request a public key whereby an Application Enclave can only get 
-the private key material for the same key specification if it meets the constraints defined by the client. An Application
-Enclave that obtains the key material can then generate a Curve25519 private key corresponding to the public key, establishing
+validity of the KDS to obtain trust in the KDS, then to request a public key whereby an application enclave can only get 
+the private key material for the same key specification if it meets the constraints defined by the client. An application
+enclave that obtains the key material can then generate a Curve25519 private key corresponding to the public key, establishing
 a cryptographic link between the client and the enclave.
 
 `PUT /public`
@@ -55,7 +55,7 @@ a cryptographic link between the client and the enclave.
 
 
 
-#### Example Request
+#### Request Example
 
 ```bash
 curl --location --request POST 'localhost:8090/public' \
@@ -67,7 +67,7 @@ curl --location --request POST 'localhost:8090/public' \
 }'
 ```
 
-#### Example Response
+#### Response Example
 ```JSON
 {
     "publicKey": "oCBCwBelzlEOPskvmSF/Dy8uZLPRmssAyjFAXlg4a1I=",
@@ -131,7 +131,7 @@ cannot be accessed by the altered key specification.
 | Field | Description |
 | ----- | ----------- |
 | kdsAttestationReport | The `EnclaveInstanceInfo` in Base64 of the KDS enclave. The application enclave should validate this report before trusting the private key returned by the KDS enclave. |
-| data | A Base64 field that contains a JSON object packaged as a Mail object encrypted using the application enclave key. The application enclave will decrypt the Mail object to extract the JSON object which is defined above. The requested private key. The private key is provided as part of the encrypted `data` field so can only be accessed in the application enclave. The key is Base64 encoded. |
+| data | A Base64 field that contains a JSON object packaged as a Mail object encrypted using the application enclave key. The application enclave will decrypt the Mail object to extract the JSON object which is defined above. The private key is provided as part of the encrypted `data` field so can only be accessed in the application enclave. The key is Base64 encoded. |
 
 
 Decrypted contents of `data` field
@@ -144,7 +144,7 @@ Decrypted contents of `data` field
 }
 ```
 
-#### Example Request
+#### Request Example
 
 ```bash
 curl --location --request POST 'localhost:8090/private' \
@@ -158,7 +158,7 @@ curl --location --request POST 'localhost:8090/private' \
 }'
 ```
 
-#### Example Response
+#### Response Example
 ```JSON
 {
     "kdsAttestationReport": "RUlJAAAALDAqMAUGAytlcAMhAOONDzHLUMilE8HfIDnIU6+3iO+x24l29LxuzVyd+RKtAAAAIHHHePxfmrr5h1brrQZQN5+3qkuk4y+LxU3pX5cEsP11AgAAAY0AAAAAYgOK2Sw4VK5IIPM3auay8gNNO3pLSKd4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAcAAAAAAAAA46JQJHO6suPiR3b0zz2/68OefYXXgaKx7MdLexDi9GUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEkkyjqcgkGjwKoaJKQHqoZAHSt5+p/4STLaeYqUIWbUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEcd1TchJASf1ztwUwtw1fIUL4HgBw6OYCP0nXg8LIBw7KTOCDG8PefON6lPrJ3WrIbJ1WCzE2eqHC2OODODGZMB",
@@ -169,7 +169,7 @@ curl --location --request POST 'localhost:8090/private' \
 !!! note
 
     The key specification is passed in an unencrypted, unauthenticated form from
-    the Application Enclave to the KDS Enclave. The reason for this is that it might not
+    the application enclave to the KDS Enclave. The reason for this is that it might not
     be possible for the application enclave to know the constraints at build time (for
     example if the constraint includes a MRSIGNER measurement). Therefore, it is imperative
     that an application using the KDS is designed to ensure that the key being used by
@@ -201,7 +201,6 @@ The integrity of the public key present in the response can be verified as follo
 
 1. Create a byte array as described in the diagram below. The name, master key type, and policy constraint come from the
 fields in the request sent. Whereas the public key comes from the response after being decoded from Base64.
-
 ```
          Name            Master key type     Policy constraint   Public key           
  +------------------+ +------------------+  +----------------+   +--------+              
@@ -213,21 +212,20 @@ fields in the request sent. Whereas the public key comes from the response after
           sized field          sized field          sized field
 ```
 
-
 2. Deserialize the `kdsAttestationReport` in the response by calling the method `deserialize` in `EnclaveInstanceInfo`:
 ```Java
-    eii = EnclaveInstanceInfo.deserialize(kdsAttestationReport)
+eii = EnclaveInstanceInfo.deserialize(kdsAttestationReport)
 ```
 
 3. Decode the Base64 signature in the response message:
 ```Java
-    signature = Base64.getDecoder().decode(base64EncodedSignature);
+signature = Base64.getDecoder().decode(base64EncodedSignature);
 ```
 
 4. Create an instance of `net.i2p.crypto.eddsa.EdDSAEngine` and initialise it with `eii.dataSigningKey`:
 ```Java
-    EdDSAEngine sig = new EdDSAEngine();
-    sig.initVerify(eii.getDataSigningKey());
+EdDSAEngine sig = new EdDSAEngine();
+sig.initVerify(eii.getDataSigningKey());
 ```
 
 5. Call the method `sig.update` with the byte array created in step 1.
