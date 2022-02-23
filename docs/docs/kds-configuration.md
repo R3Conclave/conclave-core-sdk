@@ -72,7 +72,7 @@ The key specification is defined in the build configuration as follows:
 conclave {
   ...
   kds {
-    kdsEnclaveConstraint = "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:STALE"
+    kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE"
     persistencekeySpec {
       masterKeyType = "debug"
       policyConstraint {
