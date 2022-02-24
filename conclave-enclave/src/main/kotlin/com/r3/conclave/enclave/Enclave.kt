@@ -1,6 +1,5 @@
 package com.r3.conclave.enclave
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
@@ -10,18 +9,19 @@ import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
-import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
+import com.r3.conclave.enclave.internal.kds.KDSConfiguration
+import com.r3.conclave.enclave.internal.kds.PrivateKeyEnvelope
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
-import java.io.UTFDataFormatException
+import java.io.*
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -530,39 +530,41 @@ Received: $attestationReportBody"""
             val kdsResponseMail = enclave.decryptMail(input.getIntLengthPrefixSlice())
             val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getRemainingBytes())
 
-            // Verify the KDS attestation report
-            try {
-                kdsConfig.kdsEnclaveConstraint.check(kdsEnclaveInstanceInfo)
-            } catch (e: InvalidEnclaveException) {
-                throw IllegalArgumentException("The KDS does not match the enclave's configured KDS constraint", e)
-            }
+            verifyKDSAttestationReport(kdsConfig, kdsEnclaveInstanceInfo)
 
             // Verify KDS encryption key is the same key which encrypted the mail.
             require(kdsEnclaveInstanceInfo.encryptionKey == kdsResponseMail.authenticatedSender) {
                 "Mail authenticated sender does not match the KDS EnclaveInstanceInfo encryption key."
             }
 
-            val policyConstraintFromKds: EnclaveConstraint
-            val masterKeyTypeFromKds: MasterKeyType
-            val kdsPrivateKey: ByteArray
+            verifyKdsPrivateKeyRequestParameters(kdsResponseMail, kdsConfig)
+
+            enclave._kdsEnclaveInstanceInfo = kdsEnclaveInstanceInfo
+            enclave.persistenceKdsPrivateKey = kdsResponseMail.bodyAsBytes
+        }
+
+        private fun verifyKDSAttestationReport(kdsConfig: KDSConfiguration, kdsEnclaveInstanceInfo: EnclaveInstanceInfo) {
             try {
-                val jsonResponse = ObjectMapper().readTree(kdsResponseMail.bodyAsBytes)
-                policyConstraintFromKds = EnclaveConstraint.parse(jsonResponse["policyConstraint"].textValue())
-                masterKeyTypeFromKds = MasterKeyType.valueOf(jsonResponse["masterKeyType"].textValue().uppercase())
-                kdsPrivateKey = jsonResponse["privateKey"].binaryValue()
-            } catch (e: Exception) {
-                throw IllegalArgumentException("Invalid KDS response", e)
+                kdsConfig.kdsEnclaveConstraint.check(kdsEnclaveInstanceInfo)
+            } catch (e: InvalidEnclaveException) {
+                throw IllegalArgumentException("The KDS does not match the enclave's configured KDS constraint", e)
+            }
+        }
+
+        private fun verifyKdsPrivateKeyRequestParameters(enclaveMail: EnclaveMail, kdsConfig: KDSConfiguration) {
+            val envelope = requireNotNull(enclaveMail.envelope) {
+                "Mail missing envelope containing request parameters."
             }
 
-            require(policyConstraintFromKds == generatedPersistenceKdsPolicyConstraint) {
+            val privateKeyEnvelope = PrivateKeyEnvelope.deserialize(envelope)
+
+            require(privateKeyEnvelope.policyConstraint == generatedPersistenceKdsPolicyConstraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
             }
 
-            require(kdsConfig.kdsKeySpec.masterKeyType == masterKeyTypeFromKds) {
+            require(privateKeyEnvelope.masterKeyType == kdsConfig.kdsKeySpec.masterKeyType) {
                 "KDS response was generated using a different master key type from the one configured in the enclave."
             }
-            enclave._kdsEnclaveInstanceInfo = kdsEnclaveInstanceInfo
-            enclave.persistenceKdsPrivateKey = kdsPrivateKey
         }
 
         /**

@@ -6,6 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 class KDSPrivateKeyResponse @JsonCreator constructor(
         @JsonProperty("kdsAttestationReport")
         val kdsAttestationReport: ByteArray,
-        @JsonProperty("data")
-        val data: ByteArray
+        @JsonProperty("encryptedPrivateKey")
+        val encryptedPrivateKey: ByteArray
 )
