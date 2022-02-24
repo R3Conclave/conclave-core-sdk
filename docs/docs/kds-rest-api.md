@@ -124,25 +124,29 @@ cannot be accessed by the altered key specification.
 ```JSON
 {
     "kdsAttestationReport": string,
-    "data": string
+    "encryptedPrivateKey": string
 }
 ```
 
 | Field | Description |
 | ----- | ----------- |
 | kdsAttestationReport | The `EnclaveInstanceInfo` in Base64 of the KDS enclave. The application enclave should validate this report before trusting the private key returned by the KDS enclave. |
-| data | A Base64 field that contains a JSON object packaged as a Mail object encrypted using the application enclave key. The application enclave will decrypt the Mail object to extract the JSON object which is defined above. The private key is provided as part of the encrypted `data` field so can only be accessed in the application enclave. The key is Base64 encoded. |
+| encryptedPrivateKey | A Base64 field that contains the private key packaged as a Mail object encrypted using the application enclave key. The application enclave will decrypt the Mail object to extract the private key. The envelope in the Mail contains the name, masterKeyType, and policyConstraint parameters of the KDS request. These parameters must be checked against the original. See below how to deserialize the envelope.|
 
-
-Decrypted contents of `data` field
-```JSON
-{
-    "name": string
-    "masterKeyType": string,
-    "policyConstraint": string,
-    "privateKey": string
-}
+#### How to Deserialize the Envelope
+The envelope present in the private key mail is a byte array structured as illustrated below. The master key type field
+can only contain one of the values 0 for a debug private key and 1 for a release private key.
 ```
+         Name            Master key type     Policy constraint              
+ +------------------+ +------------------+  +------------------+                 
+ v                  v v                  v  v                  v          
++--------+-----------+--------+-----------+--------+-----------+      
+| length |UTF-8 bytes|       byte         | length |UTF-8 bytes|     
++--------+-----------+--------+-----------+--------+-----------+
+4 bytes    variable         1 byte          4 bytes   variable     
+          sized field                                sized field
+```
+
 
 #### Request Example
 
@@ -162,7 +166,7 @@ curl --location --request POST 'localhost:8090/private' \
 ```JSON
 {
     "kdsAttestationReport": "RUlJAAAALDAqMAUGAytlcAMhAOONDzHLUMilE8HfIDnIU6+3iO+x24l29LxuzVyd+RKtAAAAIHHHePxfmrr5h1brrQZQN5+3qkuk4y+LxU3pX5cEsP11AgAAAY0AAAAAYgOK2Sw4VK5IIPM3auay8gNNO3pLSKd4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAcAAAAAAAAA46JQJHO6suPiR3b0zz2/68OefYXXgaKx7MdLexDi9GUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEkkyjqcgkGjwKoaJKQHqoZAHSt5+p/4STLaeYqUIWbUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEcd1TchJASf1ztwUwtw1fIUL4HgBw6OYCP0nXg8LIBw7KTOCDG8PefON6lPrJ3WrIbJ1WCzE2eqHC2OODODGZMB",
-    "data": "AEUBAAAAAAAAAAAAJDZhNmRjNzQwLTc0OTMtNDU4ZS05YmE3LTUxYjQ4Y2M2Y2VhYQAAABJIIPM3auay8gNNO3pLSKd4AAEMrNGNaJSbsWaWiU6FVtGHajFWwE6uNrLkRYyahTIjZDph+/vTxBrmorAPlf+XFX5Vn6aOyKk0KMZVyShF9UYNcgMQZArC49jf2pmuc7RCXpZuRlDzqMBXDSYrMe8Xu1fdAc9qiLEt5L/krshouoe2MLjqbU2PExTfVtShxaPCIbquQNXku0Wc8Oc5YdB7gyvkA66H8L6oRue9ikg4ER0lbutHksGKwVP7BnWYYBPsfvbwmbVCOUa/sUBdcyBGXZaUSaaGanIfjBbaLiBNptrvpK2DFzh54ZFOyZ93+FjSTVJcOxDO/7/ifo5dU79WiKoJEOvoBFxpcWAFUz9SlfFaMIVAXCHmR5h4RBQGbJf95LUXuPej4tcoV4u0WtNkFrlhic4+cIJg7niS6bJ7mQifrnPCHGFJNe4jZ+TArfH9Gqpf8r0BR47M26lSTBqRrSJDZm2DxR7T2DOwZ8NvqW+88J3MAe8PdlgdgkZQhUL6UTPZUZh5I2s1iVJ83miF54nR9PMJ8ZHzC07FzUuV9am/fP9YiLKBbaSfEFgyaNhm7pbHbGO+Z4adneWnd3LWroV1TwfTPcDiEjPhRrMTlHS72K2BWzMCQh5yW4Z1YhrugdYwGtLqlGLWgWALX4TOW5Xh6qA0W9ajWAAcvXJIaiE2d6ddJFA5CWEiX2pd0IhNfkowzPwuNA/QNdiZHhEWikN8Bzc/RcnngFRkALkGheUAulZ3S1fvO4PauAQdbtQ4i0p0ABLAvskzLF8p1K4zhGy/ppVRnFk="
+    "encryptedPrivateKey": "ALcBAAAAAAAAAAAAJDFiNTM5ZmU1LTEwM2ItNGU3Ni04MjA3LTBiMjNmNmZlZjg2YwByAAAAE01hc3RlcktleUZvclRlc3RpbmcBAAAAVlM6NDkyNENBM0E5QzgyNDFBM0MwQUExQTI0QTQwN0FBODY0MDFEMkI3OUZBOUZGODQ5MzJEQTc5OEE5NDIxNjZENCBQUk9EOjEgU0VDOklOU0VDVVJFABJIIPM3auay8gNNO3pLSKd4AAFcCteYfWjtqXiY5X59P7ZeUzAU2plPazMtWQHRDxAIb06QhAIUFdgiCpcj3+3Qhj+lAxtxY0BeWqB6LEhCcaiWlXBzRVgIPhqMCbghpIR2ozj02XlKbqoqT62VvwtJyA2HAFbXt5t8MtPvtIKnQNzahkbcrFtc83TQa9j4zUH+uLfgM69Pb1Lg10VR9V1bwfWYgZ40IrybQkMtFDd132nW8PkIzgDw1xj/uasOMpOZLbdA5xj4w0zT/AASmfjJMsJ+qye6AjAkJllBW7Ow"
 }
 ```
 
@@ -239,4 +243,3 @@ sig.initVerify(eii.getDataSigningKey());
     The integrity check ensures that the public key has not been tampered with or altered inside the response. But it does not guarantee 
     the authenticity of the sender, i.e., the integrity check does not guarantee that the message was sent by the KDS. To ensure the authenticity
     of the sender, the `kdsAttestationReport` field in the response must be validated.
-

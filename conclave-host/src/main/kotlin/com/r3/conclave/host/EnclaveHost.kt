@@ -876,9 +876,9 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
 
         fun sendKdsResponse(kdsPrivateKeyResponse: KDSPrivateKeyResponse) {
-            val payloadSize = kdsPrivateKeyResponse.data.intLengthPrefixSize + kdsPrivateKeyResponse.kdsAttestationReport.size
+            val payloadSize = kdsPrivateKeyResponse.encryptedPrivateKey.intLengthPrefixSize + kdsPrivateKeyResponse.kdsAttestationReport.size
             sendToEnclave(HostToEnclave.KDS_RESPONSE, payloadSize) { buffer ->
-                buffer.putIntLengthPrefixBytes(kdsPrivateKeyResponse.data)
+                buffer.putIntLengthPrefixBytes(kdsPrivateKeyResponse.encryptedPrivateKey)
                 buffer.put(kdsPrivateKeyResponse.kdsAttestationReport)
             }
         }
