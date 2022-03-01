@@ -13,6 +13,7 @@ class KDSConfigurationTest {
         private val enclavePropertiesDeprecatedVersion = Properties().apply {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
             setProperty("kds.keySpec.masterKeyType", "debug")
             setProperty("kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
             setProperty("kds.keySpec.policyConstraint.useOwnCodeHash", "true")
@@ -22,6 +23,7 @@ class KDSConfigurationTest {
         private val enclaveProperties = Properties().apply {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
             setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")
@@ -43,10 +45,10 @@ class KDSConfigurationTest {
 
     private fun validateConfiguration(kdsConfiguration: KDSConfiguration) {
         assertThat(kdsConfiguration.kdsEnclaveConstraint.toString()).isEqualTo("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-        assertThat(kdsConfiguration.kdsKeySpec.masterKeyType).isEqualTo(MasterKeyType.DEBUG)
-        assertThat(kdsConfiguration.kdsKeySpec.policyConstraint.enclaveConstraint).isEqualTo(EnclaveConstraint.parse("SEC:INSECURE", false))
-        assertThat(kdsConfiguration.kdsKeySpec.policyConstraint.ownCodeHash).isEqualTo(true)
-        assertThat(kdsConfiguration.kdsKeySpec.policyConstraint.ownCodeSignerAndProductID).isEqualTo(true)
+        assertThat(kdsConfiguration.persistenceKeySpec!!.masterKeyType).isEqualTo(MasterKeyType.DEBUG)
+        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.enclaveConstraint).isEqualTo(EnclaveConstraint.parse("SEC:INSECURE", false))
+        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.ownCodeHash).isEqualTo(true)
+        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.ownCodeSignerAndProductID).isEqualTo(true)
     }
 
     @Test

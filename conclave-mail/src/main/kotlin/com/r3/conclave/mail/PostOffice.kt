@@ -1,13 +1,12 @@
 package com.r3.conclave.mail
 
+import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
 import com.r3.conclave.mail.internal.privateCurve25519KeyToPublic
 import com.r3.conclave.utilities.internal.EnclaveContext
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
-
-import com.r3.conclave.mail.internal.MailDecryptingStream
 
 // TODO: Add sample demo code with a simple HTTP binding, document.
 // TODO: Key types probably need to be public or properly wired to JCA - cannot assume they are only retrieved from
@@ -153,7 +152,7 @@ abstract class PostOffice(
      */
     companion object {
         /**
-         * Create a new post office instance far encrypting mail to the given recipient. Each mail will be authenticated
+         * Create a new post office instance for encrypting mail to the given recipient. Each mail will be authenticated
          * with the given private key and will have the given topic.
          *
          * A new random sender key can be created using [Curve25519PrivateKey.random].
@@ -167,7 +166,7 @@ abstract class PostOffice(
         }
 
         /**
-         * Create a new post office instance far encrypting mail to the given recipient. A random sender private key will
+         * Create a new post office instance for encrypting mail to the given recipient. A random sender private key will
          * be created and each mail will be authenticated with it (it can be retrieved using [senderPrivateKey]). The mail
          * topic will be "default".
          *

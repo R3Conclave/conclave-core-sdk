@@ -5,8 +5,6 @@ import java.lang.reflect.Modifier
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashMap
 
 sealed class Encoder<R> {
     /**

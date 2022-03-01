@@ -13,16 +13,16 @@ conclave {
 
     simulation {
         signingType = privateKey
-        signingKey = file("../threadsafe-enclave/signing-private-key.pem")
+        signingKey = file("../threadsafe-enclave/thread_safe_enclave_private_key.pem")
     }
 
     debug {
         signingType = privateKey
-        signingKey = file("../threadsafe-enclave/signing-private-key.pem")
+        signingKey = file("../threadsafe-enclave/thread_safe_enclave_private_key.pem")
     }
 
     release {
         signingType = privateKey
-        signingKey = file("../threadsafe-enclave/signing-private-key.pem")
+        signingKey = file("../threadsafe-enclave/thread_safe_enclave_private_key.pem")
     }
 }

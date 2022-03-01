@@ -1,4 +1,4 @@
-package com.r3.conclave.mail.internal.kds
+package com.r3.conclave.common.internal.kds
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty

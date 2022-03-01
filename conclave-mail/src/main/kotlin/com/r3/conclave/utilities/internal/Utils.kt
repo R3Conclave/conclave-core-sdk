@@ -174,9 +174,15 @@ fun InputStream.readExactlyNBytes(buffer: ByteArray, n: Int) {
 
 fun DataInputStream.readIntLengthPrefixBytes(): ByteArray = readExactlyNBytes(readInt())
 
+fun DataInputStream.readIntLengthPrefixString(): String = readIntLengthPrefixBytes().decodeToString()
+
 fun DataOutputStream.writeIntLengthPrefixBytes(bytes: ByteArray) {
     writeInt(bytes.size)
     write(bytes)
+}
+
+fun DataOutputStream.writeIntLengthPrefixString(string: String) {
+    writeIntLengthPrefixBytes(string.toByteArray())
 }
 
 inline fun <T> DataOutputStream.nullableWrite(value: T?, block: DataOutputStream.(T) -> Unit) {

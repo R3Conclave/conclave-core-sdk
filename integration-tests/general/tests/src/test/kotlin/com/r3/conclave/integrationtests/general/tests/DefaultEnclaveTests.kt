@@ -1,10 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests
 
-import com.r3.conclave.integrationtests.general.common.tasks.CheckNotMultiThreadedAction
-import com.r3.conclave.integrationtests.general.common.tasks.Echo
-import com.r3.conclave.integrationtests.general.common.tasks.EchoWithCallback
-import com.r3.conclave.integrationtests.general.common.tasks.SpinAction
-import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
+import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat

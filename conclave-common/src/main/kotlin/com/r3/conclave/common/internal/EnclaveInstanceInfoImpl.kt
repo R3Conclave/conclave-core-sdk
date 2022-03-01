@@ -10,11 +10,10 @@ import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.utilities.internal.putUnsignedShort
+import com.r3.conclave.mail.internal.MailKeyDerivationType
 import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
-import java.nio.ByteBuffer
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
@@ -68,10 +67,9 @@ class EnclaveInstanceInfoImpl(
     }
 
     val keyDerivation: ByteArray by lazy {
-        val buffer = ByteBuffer.allocate(SgxCpuSvn.size + SgxIsvSvn.size)
-        securityInfo.cpuSVN.putTo(buffer)
-        buffer.putUnsignedShort(enclaveInfo.revocationLevel + 1)
-        buffer.array()
+        writeData {
+            writeByte(MailKeyDerivationType.RANDOM_SESSION_KEY.ordinal)
+        }
     }
 
     override fun createPostOffice(senderPrivateKey: PrivateKey, topic: String): PostOffice {

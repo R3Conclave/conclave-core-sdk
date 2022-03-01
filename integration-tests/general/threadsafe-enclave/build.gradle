@@ -11,18 +11,22 @@ conclave {
     productID = 1
     revocationLevel = 0
 
+    kds {
+        kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"
+    }
+
     simulation {
         signingType = privateKey
-        signingKey = file("signing-private-key.pem")
+        signingKey = file("thread_safe_enclave_private_key.pem")
     }
 
     debug {
         signingType = privateKey
-        signingKey = file("signing-private-key.pem")
+        signingKey = file("thread_safe_enclave_private_key.pem")
     }
 
     release {
         signingType = privateKey
-        signingKey = file("signing-private-key.pem")
+        signingKey = file("thread_safe_enclave_private_key.pem")
     }
 }

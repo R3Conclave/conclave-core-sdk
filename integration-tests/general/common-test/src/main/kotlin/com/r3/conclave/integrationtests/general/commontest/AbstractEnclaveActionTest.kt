@@ -9,12 +9,8 @@ import com.r3.conclave.integrationtests.general.common.tasks.encode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
-import java.net.ServerSocket
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.CountDownLatch
-import kotlin.concurrent.thread
 import kotlin.io.path.exists
 
 abstract class AbstractEnclaveActionTest(
@@ -30,42 +26,6 @@ abstract class AbstractEnclaveActionTest(
     var useKds = false
 
     companion object {
-        private val kdsPort by lazy(::startKds)
-
-        private fun startKds(): Int {
-            val java = Paths.get(System.getProperty("java.home"), "bin", "java").toString()
-            val kdsJar = checkNotNull(System.getProperty("kdsJar"))
-            val randomPort = ServerSocket(0).use { it.localPort }
-            val kdsCmd = listOf(java, "-jar", kdsJar, "--server.port=$randomPort")
-            println("Starting KDS: $kdsCmd")
-            val process = ProcessBuilder(kdsCmd).redirectErrorStream(true).start()
-
-            // Kill the KDS sub-process when the test worker process is done.
-            Runtime.getRuntime().addShutdownHook(Thread(process::destroyForcibly))
-
-            // Start a background thread that prints the KDS's log output to help with debugging and signals when it's
-            // ready to accept requests.
-            val kdsReadySignal = CountDownLatch(1)
-            thread(isDaemon = true) {
-                val kdsOutput = process.inputStream.bufferedReader()
-                while (true) {
-                    val line = kdsOutput.readLine()
-                    if (line == null) {
-                        println("KDS EOF")
-                        break
-                    }
-                    println("KDS> $line")
-                    if ("Started KdsApplication.Companion in " in line) {
-                        kdsReadySignal.countDown()
-                    }
-                }
-            }
-
-            println("Waiting for KDS to be ready...")
-            kdsReadySignal.await()
-            println("KDS ready")
-            return randomPort
-        }
 
         fun getAttestationParams(enclaveHost: EnclaveHost): AttestationParameters? {
             return if (enclaveHost.enclaveMode.isHardware) getHardwareAttestationParams() else null
@@ -145,7 +105,7 @@ abstract class AbstractEnclaveActionTest(
         return synchronized(enclaveTransports) {
             enclaveTransports.computeIfAbsent(enclaveClassName) {
                 val enclaveFileSystemFile = fileSystemFileTempDir?.resolve("$enclaveClassName.disk")
-                val kdsUrl = if (useKds) "http://localhost:$kdsPort" else null
+                val kdsUrl = if (useKds) "http://localhost:${TestKds.testKdsPort}" else null
                 val transport = object : TestEnclaveTransport(enclaveClassName, enclaveFileSystemFile, kdsUrl) {
                     override val attestationParameters: AttestationParameters? get() = getAttestationParams(enclaveHost)
                 }

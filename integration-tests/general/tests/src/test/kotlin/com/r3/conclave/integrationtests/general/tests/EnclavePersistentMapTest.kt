@@ -4,8 +4,6 @@ import com.r3.conclave.integrationtests.general.common.tasks.GetPersistentMap
 import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
 import org.junitpioneer.jupiter.CartesianEnumSource
 import org.junitpioneer.jupiter.CartesianProductTest
 import org.junitpioneer.jupiter.CartesianValueSource
