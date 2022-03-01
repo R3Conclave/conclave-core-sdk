@@ -1,6 +1,5 @@
 package com.r3.conclave.integrationtests.general.tests
 
-import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.common.threadWithFuture

@@ -17,8 +17,10 @@ import javax.inject.Inject
 open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @Input
     val conclaveExtension: Property<ConclaveExtension> = objects.property(ConclaveExtension::class.java)
+
     @Input
     val resourceDirectory: Property<String> = objects.property(String::class.java)
+
     @Input
     val mainClassName: Property<String> = objects.property(String::class.java)
 
@@ -27,9 +29,9 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
 
     private fun throwKDSPropertyMissingException(propertyName: String) {
         throw GradleException(
-                "KDS integration was enabled for this project, but $propertyName is missing from your enclave build " +
-                "configuration. Please set a value for the missing property. If you don't know what this error " +
-                "message is referring to, please consult the Conclave documentation and/or change notes."
+            "KDS integration was enabled for this project, but $propertyName is missing from your enclave build " +
+                    "configuration. Please set a value for the missing property. If you don't know what this error " +
+                    "message is referring to, please consult the Conclave documentation and/or change notes."
         )
     }
 
@@ -62,45 +64,59 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
             throwKDSPropertyMissingException("kds.kdsEnclaveConstraint")
         }
 
+        val persistenceKeySpecPropertyName = "kds.persistenceKeySpec.configurationPresent"
+
         if (conclave.kds.keySpec.isPresent) {
             logger.warn("kds.keySpec has been replaced by kds.persistenceKeySpec and it is now deprecated")
             applyKDSConfigPersistenceKeySpec(properties, conclave.kds.keySpec)
-        } else {
+            properties[persistenceKeySpecPropertyName] = "true"
+        } else if (conclave.kds.persistenceKeySpec.isPresent) {
             applyKDSConfigPersistenceKeySpec(properties, conclave.kds.persistenceKeySpec)
+            properties[persistenceKeySpecPropertyName] = "true"
+        } else {
+            properties[persistenceKeySpecPropertyName] = "false"
         }
     }
 
-    private fun applyKDSConfigPersistenceKeySpec(properties: SortedMap<String, String>, keySpec: KeySpecExtension) {
-        if (keySpec.masterKeyType.isPresent) {
-            val masterKeyTypeString = keySpec.masterKeyType.get()
+    private fun applyKDSConfigPersistenceKeySpec(
+        properties: SortedMap<String, String>,
+        persistenceKeySpec: KeySpecExtension
+    ) {
+        if (persistenceKeySpec.masterKeyType.isPresent) {
+            val masterKeyTypeString = persistenceKeySpec.masterKeyType.get()
             val masterKeyType = try {
                 MasterKeyType.valueOf(masterKeyTypeString.uppercase())
             } catch (e: IllegalArgumentException) {
                 throw GradleException(
                     "Invalid KDS master key type '$masterKeyTypeString'. Valid values are: " +
-                            MasterKeyType.values().joinToString(", "))
+                            MasterKeyType.values().joinToString(", ")
+                )
             }
             properties["kds.persistenceKeySpec.masterKeyType"] = masterKeyType.toString()
         } else {
             throwKDSPropertyMissingException("kds.persistenceKeySpec.masterKeyType")
         }
 
-        if (keySpec.policyConstraint.constraint.isPresent) {
-            val constraintsString = keySpec.policyConstraint.constraint.get()
+        if (persistenceKeySpec.policyConstraint.constraint.isPresent) {
+            val constraintsString = persistenceKeySpec.policyConstraint.constraint.get()
             try {
                 EnclaveConstraint.parse(constraintsString, false)
             } catch (e: Exception) {
-                throw GradleException("Error parsing kds.persistenceKeySpec.policyConstraint.constraint: ${e.message}", e)
+                throw GradleException(
+                    "Error parsing kds.persistenceKeySpec.policyConstraint.constraint: ${e.message}",
+                    e
+                )
             }
             properties["kds.persistenceKeySpec.policyConstraint.constraint"] = constraintsString
         } else {
             throwKDSPropertyMissingException("kds.persistenceKeySpec.policyConstraint.constraint")
         }
-
-        val useOwnCodeHash = keySpec.policyConstraint.useOwnCodeHash.getOrElse(false)
-        val useOwnCodeSignerAndProductID = keySpec.policyConstraint.useOwnCodeSignerAndProductID.getOrElse(false)
+        val useOwnCodeHash = persistenceKeySpec.policyConstraint.useOwnCodeHash.getOrElse(false)
+        val useOwnCodeSignerAndProductID =
+            persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID.getOrElse(false)
         properties["kds.persistenceKeySpec.policyConstraint.useOwnCodeHash"] = useOwnCodeHash.toString()
-        properties["kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID"] = useOwnCodeSignerAndProductID.toString()
+        properties["kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID"] =
+            useOwnCodeSignerAndProductID.toString()
     }
 
     override fun action() {
@@ -112,9 +128,12 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
         properties["productID"] = conclave.productID.get().toString()
         properties["revocationLevel"] = conclave.revocationLevel.get().toString()
         properties["enablePersistentMap"] = conclave.enablePersistentMap.get().toString()
-        properties["maxPersistentMapSize"] = GenerateEnclaveConfig.getSizeBytes(conclave.maxPersistentMapSize.get()).toString()
-        properties["inMemoryFileSystemSize"] = GenerateEnclaveConfig.getSizeBytes(conclave.inMemoryFileSystemSize.get()).toString()
-        properties["persistentFileSystemSize"] = GenerateEnclaveConfig.getSizeBytes(conclave.persistentFileSystemSize.get()).toString()
+        properties["maxPersistentMapSize"] =
+            GenerateEnclaveConfig.getSizeBytes(conclave.maxPersistentMapSize.get()).toString()
+        properties["inMemoryFileSystemSize"] =
+            GenerateEnclaveConfig.getSizeBytes(conclave.inMemoryFileSystemSize.get()).toString()
+        properties["persistentFileSystemSize"] =
+            GenerateEnclaveConfig.getSizeBytes(conclave.persistentFileSystemSize.get()).toString()
 
         applyKDSConfig(properties)
 

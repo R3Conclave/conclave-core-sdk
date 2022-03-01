@@ -11,6 +11,7 @@ compileKotlin {
 
 dependencies {
     api "com.r3.conclave:conclave-common:$conclave_version"
+    api "com.r3.conclave:conclave-client:$conclave_version"
     api "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     api "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlinx_serialization_protobuf_version"
     implementation "org.ow2.asm:asm:$asm_version"

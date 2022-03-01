@@ -1,7 +1,7 @@
 package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.conclave.mail.internal.kds.KDSErrorResponse
+import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.host.kds.KDSConfiguration
@@ -26,6 +26,7 @@ class KDSTest {
         private val ENCLAVE_PROPERTIES_OVERRIDE = Properties().apply {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
             setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")

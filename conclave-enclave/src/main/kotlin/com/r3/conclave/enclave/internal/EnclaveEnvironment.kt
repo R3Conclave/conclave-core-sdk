@@ -1,12 +1,8 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.kds.KDSConfiguration
-import com.r3.conclave.common.internal.kds.KDSKeySpecification
-import com.r3.conclave.common.internal.kds.PolicyConstraint
-import com.r3.conclave.common.kds.MasterKeyType
 import java.util.*
 
 abstract class EnclaveEnvironment(enclaveProperties: Properties) {
@@ -18,13 +14,14 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties) {
         private val defaultProperties: Properties = Properties().apply {
             setProperty("productID", 1.toString())
             setProperty("revocationLevel", 0.toString())
-            setProperty("enablePersistentMap", false.toString())
+            setProperty("enablePersistentMap", "false")
             setProperty("maxPersistentMapSize", (16 * 1024 * 1024).toString())
             setProperty("inMemoryFileSystemSize", (64 * 1024 * 1024).toString())
             setProperty("persistentFileSystemSize", 0.toString())
             // If this property is not set to true, then the kds is assumed not to be in use, and won't be configured
             // during enclave startup. By default, the KDS is not enabled.
-            setProperty("kds.configurationPresent", false.toString())
+            setProperty("kds.configurationPresent", "false")
+            setProperty("kds.persistentKeySpec.configurationPresent", "false")
         }
 
         // Load enclave properties or optionally get defaults, throw an error if this was unsuccessful
