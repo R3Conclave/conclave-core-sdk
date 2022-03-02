@@ -151,6 +151,7 @@ class MailKdsPrivateKeyTests {
         con.readTimeout = Duration.ofSeconds(10).toMillis().toInt()
         con.requestMethod = "POST"
         con.setRequestProperty("Content-Type", "application/json; utf-8")
+        con.setRequestProperty("API-VERSION", "1")
         con.doOutput = true
 
         con.outputStream.use {

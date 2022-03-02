@@ -22,6 +22,8 @@ a cryptographic link between the client and the enclave.
 
 `Content-Type: application/json`
 
+`API-VERSION: 1`
+
 `Request body`
 ```JSON
 {
@@ -59,6 +61,7 @@ a cryptographic link between the client and the enclave.
 
 ```bash
 curl --location --request POST 'localhost:8090/public' \
+--header 'API-version: 1' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "name": "MasterKeyForTesting",
