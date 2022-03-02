@@ -121,6 +121,7 @@ class KDSPostOfficeBuilder private constructor(
             val publicUrl = uri.toURL()
             val con: HttpURLConnection = publicUrl.openConnection() as HttpURLConnection
             con.requestMethod = "POST"
+            con.setRequestProperty("API-VERSION", "1")
             con.setRequestProperty("Content-Type", "application/json; utf-8")
             con.doOutput = true
 
