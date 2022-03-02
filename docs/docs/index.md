@@ -108,7 +108,8 @@ find the development team during UK office hours (GMT 0900-1700) on Discord.
 3. GraalVM has been updated to version 21.3.
 4. Gradle 7 is now supported.
 5. The Conclave Key Derivation Service (KDS) now supports release enclave with the new RELEASE master key type.
-
+6. We have simplified the usage of the KDS by providing Java/Kotlin builders that accept the 
+   URL (or InputStream) of the KDS. We have also given the possibility of using a previously obtained Public Key.
 ### 1.2.1
 
 This is a small release with some minor improvements:

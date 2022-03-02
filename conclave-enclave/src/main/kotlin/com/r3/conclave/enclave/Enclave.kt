@@ -1114,7 +1114,7 @@ Received: $attestationReportBody"""
 
     /**
      * Returns a post office for mail targeted at the given destination key, and having the topic "default". The post office
-     * is setup with the enclave's private encryption key so the receipient can be sure mail originated from this enclave.
+     * is setup with the enclave's private encryption key so the recipient can be sure mail originated from this enclave.
      *
      * The enclave will cache post offices so that the same instance is used for the same public key and topic. This
      * ensures mail is sequenced correctly.
@@ -1139,7 +1139,7 @@ Received: $attestationReportBody"""
 
     /**
      * Returns a post office for mail targeted to an enclave with the given topic. The target enclave can be one running
-     * on this host or on another machine. The post office is setup with the enclave's private encryption key so the receipient
+     * on this host or on another machine. The post office is setup with the enclave's private encryption key so the recipient
      * can be sure mail originated from this enclave.
      *
      * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.
@@ -1158,7 +1158,7 @@ Received: $attestationReportBody"""
 
     /**
      * Returns a post office for mail targeted to an enclave with the topic "default". The target enclave can be one running
-     * on this host or on another machine. The post office is setup with the enclave's private encryption key so the receipient
+     * on this host or on another machine. The post office is setup with the enclave's private encryption key so the recipient
      * can be sure mail did indeed originate from this enclave.
      *
      * The enclave will cache post offices so that the same instance is used for the same [EnclaveInstanceInfo] and topic.

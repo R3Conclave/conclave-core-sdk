@@ -246,3 +246,10 @@ sig.initVerify(eii.getDataSigningKey());
     The integrity check ensures that the public key has not been tampered with or altered inside the response. But it does not guarantee 
     the authenticity of the sender, i.e., the integrity check does not guarantee that the message was sent by the KDS. To ensure the authenticity
     of the sender, the `kdsAttestationReport` field in the response must be validated.
+
+!!! tip
+
+    Instead of using the `/public` end point to retrieve KDS public keys to encrypt mails for the enclaves, 
+    it is recommended that Java and Kotlin developers use the builder methods `fromURL` and `fromInputStream`
+    of the `KDSPostOfficeBuilder` class.  
+    These methods will create post offices to automatically validate the signature for you.
