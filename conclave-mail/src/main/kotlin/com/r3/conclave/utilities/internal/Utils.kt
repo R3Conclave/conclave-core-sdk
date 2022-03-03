@@ -181,6 +181,12 @@ fun DataOutputStream.writeIntLengthPrefixBytes(bytes: ByteArray) {
     write(bytes)
 }
 
+fun DataOutputStream.writeShortLengthPrefixBytes(bytes: ByteArray) {
+    require(bytes.size <= Short.MAX_VALUE) { "Too many bytes for prefix of type 'Short'" }
+    writeShort(bytes.size)
+    write(bytes)
+}
+
 fun DataOutputStream.writeIntLengthPrefixString(string: String) {
     writeIntLengthPrefixBytes(string.toByteArray())
 }

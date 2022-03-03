@@ -11,8 +11,8 @@ import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.utilities.internal.writeData
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixString
+import com.r3.conclave.utilities.internal.writeShortLengthPrefixBytes
 import net.i2p.crypto.eddsa.EdDSAEngine
 import java.io.IOException
 import java.io.InputStream
@@ -148,10 +148,11 @@ class KDSPostOfficeBuilder private constructor(
 
         private fun checkSignature(keySpec: KDSKeySpec, kdsPublicResponse: KDSPublicKeyResponse): Boolean {
             val verificationData = writeData {
+                writeByte(1)
                 writeIntLengthPrefixString(keySpec.name)
-                writeIntLengthPrefixString(keySpec.masterKeyType.name.lowercase())
+                writeByte(keySpec.masterKeyType.ordinal)
                 writeIntLengthPrefixString(keySpec.policyConstraint)
-                writeIntLengthPrefixBytes(kdsPublicResponse.publicKey)
+                writeShortLengthPrefixBytes(kdsPublicResponse.publicKey)
             }
             val eii = EnclaveInstanceInfo.deserialize(kdsPublicResponse.kdsAttestationReport)
 
