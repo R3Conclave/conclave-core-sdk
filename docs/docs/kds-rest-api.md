@@ -10,10 +10,10 @@ Currently, the service supports the endpoints [`/public`](#endpoint-public), and
 
 ### Endpoint - `/public`
 Returns a Curve25519 public key corresponding to a private key that was created using key material derived from the given
-key specification. Access to a public key is not subject to constraints. 
+key specification. Access to a public key is not subject to constraints.
 
 This allows a client to firstly attest to the
-validity of the KDS to obtain trust in the KDS, then to request a public key whereby an application enclave can only get 
+validity of the KDS to obtain trust in the KDS, then to request a public key whereby an application enclave can only get
 the private key material for the same key specification if it meets the constraints defined by the client. An application
 enclave that obtains the key material can then generate a Curve25519 private key corresponding to the public key, establishing
 a cryptographic link between the client and the enclave.
@@ -81,7 +81,7 @@ curl --location --request POST 'localhost:8090/public' \
 
 !!! warning
     Ensuring the message integrity and authenticity is paramount. Failing to do so is a security risk and invalidates
-    the protection provided by Conclave. Verify that the message was sent by KDS by validating the 
+    the protection provided by Conclave. Verify that the message was sent by KDS by validating the
     `kdsAttestationReport` and then check the integrity of the message by validating the signature of the message.
 
 ### Endpoint - `/private`
@@ -138,16 +138,18 @@ cannot be accessed by the altered key specification.
 
 #### How to Deserialize the Envelope
 The envelope present in the private key mail is a byte array structured as illustrated below. The master key type field
-can only contain one of the values 0 for a debug private key and 1 for a release private key.
+can only contain one of the values 0 for a debug private key and 1 for a release private key. The API version field will
+contain the API version used for the request (in this case, 1).
 ```
-         Name            Master key type     Policy constraint              
- +------------------+ +------------------+  +------------------+                 
- v                  v v                  v  v                  v          
-+--------+-----------+--------+-----------+--------+-----------+      
-| length |UTF-8 bytes|       byte         | length |UTF-8 bytes|     
-+--------+-----------+--------+-----------+--------+-----------+
-4 bytes    variable         1 byte          4 bytes   variable     
-          sized field                                sized field
+[API version]     [Name] [Master key type] [Policy constraint]
+     |              |            |                  |
+ +-------+ +------------------+ +-------+ +------------------+            
+ v       v v                  v v       v v                  v     
++---------+--------+-----------+---------+--------+-----------+   
+| version | length |UTF-8 bytes|  type   | length |UTF-8 bytes|    
++---------+--------+-----------+---------+--------+-----------+
+  1 byte   4 bytes   variable    1 byte    4 bytes  variable
+            (BE)    sized field             (BE)   sized field
 ```
 
 
@@ -195,7 +197,7 @@ All endpoints might send error responses with the following structure.
 
 | Field | Description |
 | ----- | ----------- |
-| reason | Error message. | 
+| reason | Error message. |
 
 | Error Response | Reason |
 | ------ | ------------------ |
@@ -207,16 +209,18 @@ All endpoints might send error responses with the following structure.
 The integrity of the public key present in the response can be verified as follows:
 
 1. Create a byte array as described in the diagram below. The name, master key type, and policy constraint come from the
-fields in the request sent. Whereas the public key comes from the response after being decoded from Base64.
+fields in the request sent. Whereas the public key comes from the response after being decoded from Base64. The API version
+field will contain the API version used for the request (in this case, 1).
 ```
-         Name            Master key type     Policy constraint   Public key           
- +------------------+ +------------------+  +----------------+   +--------+              
- v                  v v                  v  v                v   v        v       
-+--------+-----------+--------+-----------+--------+-----------+-----------+      
-| length |UTF-8 bytes| length |UTF-8 bytes| length |UTF-8 bytes|   bytes   |     
-+--------+-----------+--------+-----------+--------+-----------+-----------+
-4 bytes    variable    4 bytes  variable   4 bytes   variable     44 bytes
-          sized field          sized field          sized field
+[API version]      [Name]   [Master key type] [Policy constraint]   [Public key]
+     |               |              |               |                    |
+ +-------+ +------------------+ +-------+ +------------------+ +--------------------+              
+ v       v v                  v v       v v                  v v                    v       
++---------+--------+-----------+---------+--------+-----------+----------+-----------+      
+| version | length |UTF-8 bytes|  type   | length |UTF-8 bytes|  length  | key bytes |     
++---------+--------+-----------+---------+--------+-----------+----------+-----------+
+  1 byte   4 bytes   variable    1 byte   4 bytes   variable    2 bytes    variable
+            (BE)    sized field            (BE)    sized field   (BE)     sized field
 ```
 
 2. Deserialize the `kdsAttestationReport` in the response by calling the method `deserialize` in `EnclaveInstanceInfo`:
@@ -243,7 +247,7 @@ sig.initVerify(eii.getDataSigningKey());
 
 !!! warning
 
-    The integrity check ensures that the public key has not been tampered with or altered inside the response. But it does not guarantee 
+    The integrity check ensures that the public key has not been tampered with or altered inside the response. But it does not guarantee
     the authenticity of the sender, i.e., the integrity check does not guarantee that the message was sent by the KDS. To ensure the authenticity
     of the sender, the `kdsAttestationReport` field in the response must be validated.
 
