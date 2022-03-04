@@ -4,7 +4,7 @@ ext {
     // * docs/sdk-extras/cordapp/gradle.properties
     // * containers/aesmd/src/docker/Dockerfile
     // * containers/sgxjvm-build/src/docker/Dockerfile
-    conclave_version = '1.3-RC1'
+    conclave_version = '1.3-RC2-SNAPSHOT'
     kds_version = '0.2-20220301.161234-65'  //The SNAPSHOT version does not work because the integration tests are using classifiers for the kds version.
     kotlin_version = '1.5.30'
     kotlinx_serialization_json_version = '1.3.1'
