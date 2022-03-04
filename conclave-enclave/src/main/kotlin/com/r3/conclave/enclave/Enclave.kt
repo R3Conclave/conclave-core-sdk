@@ -11,7 +11,7 @@ import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.KDSUtils
 import com.r3.conclave.common.internal.kds.KDSUtils.ABANDONED_HEADER_SIZE
-import com.r3.conclave.common.internal.kds.KDSUtils.getJsonMapper
+import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
@@ -683,6 +683,7 @@ Received: $attestationReportBody"""
     }
 
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
+        private val privateKeyForPostOfficeCache = ConcurrentHashMap<KDSKeySpec, Curve25519PrivateKey>()
         private lateinit var sender: Sender
 
         private val currentEnclaveCall = ThreadLocal<Long>()
@@ -774,6 +775,15 @@ Received: $attestationReportBody"""
             inputStream.read()
             val kdsPostOfficeKeySpec = KDSUtils.deserializeKeySpec(inputStream)
 
+            // Be aware that there might be a race condition if multiple threads request the same key at the same time and
+            // the key is not in the map. If that happens multiple threads will send a private key request for the same key,
+            // and all of them will update the cache once the response arrive. However, this won't cause any issues because
+            // all threads will receive the same private key.
+
+            var privateKeyForPostOffice = privateKeyForPostOfficeCache[kdsPostOfficeKeySpec]
+            if (privateKeyForPostOffice != null)
+                return privateKeyForPostOffice
+
             val generatedKdsPostOfficePolicyConstraint = try {
                 EnclaveConstraint.parse(kdsPostOfficeKeySpec.policyConstraint)
             } catch (e: IllegalStateException) {
@@ -789,7 +799,9 @@ Received: $attestationReportBody"""
             /// This means that after this gets executed, the member variable adminHandler.kdsPostOfficeState.postOfficeKdsPrivateKey
             //    will actually be non-null any more (see onKdsPrivateKeyResponseForSpec)
             sendPrivateKeyRequestToHost(keyDerivationFromInputArray)
-            return Curve25519PrivateKey(adminHandler.kdsPostOfficeState.get().postOfficeKdsPrivateKey!!)
+            privateKeyForPostOffice = Curve25519PrivateKey(adminHandler.kdsPostOfficeState.get().postOfficeKdsPrivateKey!!)
+            privateKeyForPostOfficeCache[kdsPostOfficeKeySpec] = privateKeyForPostOffice
+            return privateKeyForPostOffice
         }
 
         private fun onUntrustedHost(stateManager: StateManager<CallState>, hostThreadId: Long, input: ByteBuffer) {

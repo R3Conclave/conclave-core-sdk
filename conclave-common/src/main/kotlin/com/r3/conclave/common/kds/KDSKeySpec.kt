@@ -11,4 +11,22 @@ package com.r3.conclave.common.kds
  * @property policyConstraint This is the constraint policy of the enclave for which the KDS provides the key.
  * The enclave must satisfy this constraint
  */
-class KDSKeySpec(val name: String, val masterKeyType: MasterKeyType, val policyConstraint: String)
+class KDSKeySpec(val name: String, val masterKeyType: MasterKeyType, val policyConstraint: String) {
+    override fun hashCode(): Int {
+        var result = 31 * name.hashCode()
+        result = 31 * result + masterKeyType.hashCode()
+        result = 31 * result + policyConstraint.hashCode()
+        return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return when(other) {
+            is KDSKeySpec -> other.name == name && other.masterKeyType == masterKeyType && other.policyConstraint == policyConstraint
+            else -> false
+        }
+    }
+
+    override fun toString(): String {
+        return "Name: $name MasterKeyType: ${masterKeyType.name.lowercase()} PolicyConstraint: $policyConstraint"
+    }
+}
