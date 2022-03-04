@@ -5,6 +5,8 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.client.internal.kds.KDSPublicKeyRequest
 import com.r3.conclave.client.internal.kds.KDSPublicKeyResponse
+import com.r3.conclave.common.EnclaveConstraint
+import com.r3.conclave.common.InvalidEnclaveException
 import com.r3.conclave.common.internal.kds.KDSUtils.getJsonMapper
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.mail.Curve25519PrivateKey
@@ -74,15 +76,18 @@ class KDSPostOfficeBuilder private constructor(
          * @param keySpec a set of parameters that provides the configuration for a public/private key pair.
          * The enclave will need to obtain the private key associated with this key specification to
          * decrypt mail messages created by the post office.
+         * @param kdsEnclaveConstraint the constraint to be used to validate the KDS Enclave instance
+         * which provided the public key.
          * @return a KDSPostOfficeBuilder.
          * @throws IOException If there is an I/O error when communicating with the KDS
          * @throws SignatureException If the signature validation when requesting the public key fails. This
          * might indicate that a wrong or tampered public key is returned.
+         * @throws InvalidEnclaveException If the validation of the KDS enclave constraint fails.
          */
-        @Throws(SignatureException::class, IOException::class)
+        @Throws(SignatureException::class, IOException::class, InvalidEnclaveException::class)
         @JvmStatic
-        fun fromUrl(kdsUrl: URL, keySpec: KDSKeySpec): KDSPostOfficeBuilder {
-            val destinationPublicKey = retrievePublicKeyFromUrl(kdsUrl, keySpec)
+        fun fromUrl(kdsUrl: URL, keySpec: KDSKeySpec, kdsEnclaveConstraint: EnclaveConstraint): KDSPostOfficeBuilder {
+            val destinationPublicKey = retrievePublicKeyFromUrl(kdsUrl, keySpec, kdsEnclaveConstraint)
             return KDSPostOfficeBuilder(destinationPublicKey, keySpec)
         }
 
@@ -102,15 +107,22 @@ class KDSPostOfficeBuilder private constructor(
          * @param keySpec a set of parameters that provides the configuration for a public/private key pair.
          * The enclave will need to obtain the private key associated with this key specification to
          * decrypt mail messages created by the post office.
+         * @param kdsEnclaveConstraint the constraint to be used to validate the KDS Enclave instance
+         * which provided the public key.
          * @return a KDSPostOfficeBuilder.
          * @throws IOException If there is an I/O error when communicating with the KDS
          * @throws SignatureException If the signature validation when requesting the public key fails. This
          * might indicate that a wrong or tampered public key is returned.
+         * @throws InvalidEnclaveException If the validation of the KDS enclave constraint fails.
          */
-        @Throws(SignatureException::class, IOException::class)
+        @Throws(SignatureException::class, IOException::class, InvalidEnclaveException::class)
         @JvmStatic
-        fun fromInputStream(inputStream: InputStream, keySpec: KDSKeySpec): KDSPostOfficeBuilder {
-            val destinationPublicKey = retrievePublicKeyFromStream(inputStream, keySpec)
+        fun fromInputStream(
+            inputStream: InputStream,
+            keySpec: KDSKeySpec,
+            kdsEnclaveConstraint: EnclaveConstraint
+        ): KDSPostOfficeBuilder {
+            val destinationPublicKey = retrievePublicKeyFromStream(inputStream, keySpec, kdsEnclaveConstraint)
             return KDSPostOfficeBuilder(destinationPublicKey, keySpec)
         }
 
@@ -146,7 +158,11 @@ class KDSPostOfficeBuilder private constructor(
             return con.inputStream
         }
 
-        private fun checkSignature(keySpec: KDSKeySpec, kdsPublicResponse: KDSPublicKeyResponse): Boolean {
+        private fun checkSignature(
+            keySpec: KDSKeySpec,
+            kdsPublicResponse: KDSPublicKeyResponse,
+            kdsEnclaveConstraint: EnclaveConstraint
+        ): Boolean {
             val verificationData = writeData {
                 writeByte(1)
                 writeIntLengthPrefixString(keySpec.name)
@@ -155,24 +171,31 @@ class KDSPostOfficeBuilder private constructor(
                 writeShortLengthPrefixBytes(kdsPublicResponse.publicKey)
             }
             val eii = EnclaveInstanceInfo.deserialize(kdsPublicResponse.kdsAttestationReport)
-
+            kdsEnclaveConstraint.check(eii)
             val sig = EdDSAEngine()
             sig.initVerify(eii.dataSigningKey)
             sig.update(verificationData)
             return sig.verify(kdsPublicResponse.signature)
         }
 
-
-        private fun retrievePublicKeyFromUrl(kdsUrl: URL, keySpec: KDSKeySpec): PublicKey {
+        private fun retrievePublicKeyFromUrl(
+            kdsUrl: URL,
+            keySpec: KDSKeySpec,
+            kdsEnclaveConstraint: EnclaveConstraint
+        ): PublicKey {
             val responseInputStream = requestKdsPublicKeyWithURL(kdsUrl, keySpec)
 
             val publicKey = responseInputStream.use {
-                retrievePublicKeyFromStream(responseInputStream, keySpec)
+                retrievePublicKeyFromStream(responseInputStream, keySpec, kdsEnclaveConstraint)
             }
             return publicKey
         }
 
-        private fun retrievePublicKeyFromStream(inputStream: InputStream, keySpec: KDSKeySpec): PublicKey {
+        private fun retrievePublicKeyFromStream(
+            inputStream: InputStream,
+            keySpec: KDSKeySpec,
+            kdsEnclaveConstraint: EnclaveConstraint
+        ): PublicKey {
             val mapper = getJsonMapper()
             val kdsPublicKeyResponse = try {
                 mapper.readValue(inputStream, KDSPublicKeyResponse::class.java)
@@ -181,7 +204,7 @@ class KDSPostOfficeBuilder private constructor(
             }
             val publicKey = Curve25519PublicKey(kdsPublicKeyResponse.publicKey)
 
-            if (!checkSignature(keySpec, kdsPublicKeyResponse)) {
+            if (!checkSignature(keySpec, kdsPublicKeyResponse, kdsEnclaveConstraint)) {
                 throw SignatureException("Invalid signature")
             }
             return publicKey
