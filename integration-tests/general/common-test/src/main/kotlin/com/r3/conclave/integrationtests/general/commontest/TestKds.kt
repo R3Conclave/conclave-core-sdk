@@ -9,7 +9,9 @@ object TestKds {
     val testKdsPort = startKds()
 
     private fun startKds(): Int {
-        val java = Paths.get(System.getProperty("java.home"), "bin", "java").toString()
+        // Use JDK 17 inside the build container to start the KDS. The SDK build in this release does not use Java
+        // 17 so we cannot use the java.home system property.
+        val java = "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"
         val kdsJar = checkNotNull(System.getProperty("kdsJar"))
         val randomPort = ServerSocket(0).use { it.localPort }
         val kdsCmd = listOf(java, "-jar", kdsJar, "--server.port=$randomPort")

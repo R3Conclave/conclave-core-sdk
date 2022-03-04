@@ -2,7 +2,6 @@ package com.r3.conclave.integrationtests.general.common.tasks
 
 import com.r3.conclave.integrationtests.general.common.EnclaveContext
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ByteArraySerializer
@@ -11,13 +10,13 @@ import kotlinx.serialization.builtins.serializer
 import java.io.*
 import java.net.URL
 import java.nio.channels.ByteChannel
-import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.readBytes
+import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 @Serializable
@@ -357,7 +356,7 @@ class ReadFiles(private val files: Int, private val parentDir: String) : FileSys
 @Serializable
 class ReadAndWriteFilesToDefaultFileSystem(private val files: Int) : FileSystemAction<List<String>>() {
     override fun run(context: EnclaveContext, isMail: Boolean): List<String> {
-        val fileSystem = FileSystems.getDefault();
+        val fileSystem = FileSystems.getDefault()
         val path = fileSystem.getPath("/")
         repeat(files) { i ->
             path.resolve("test_file_$i.txt").writeText("Dummy text from file $i")

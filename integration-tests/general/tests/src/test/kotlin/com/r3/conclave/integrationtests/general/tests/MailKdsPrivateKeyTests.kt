@@ -70,7 +70,7 @@ class MailKdsPrivateKeyTests {
         val postOffice: PostOffice = KDSPostOfficeBuilder.fromUrl(KDS_URL, kdsSpec).build()
 
         assertThatThrownBy { sendMailWithConstraint(postOffice) }
-            .isInstanceOf(EnclaveException::class.java)
+            .isInstanceOf(RuntimeException::class.java)
             .hasCauseExactlyInstanceOf(IOException::class.java)
             .cause.hasMessageContaining("The application enclave does not meet the required key policy")
     }
@@ -96,7 +96,7 @@ class MailKdsPrivateKeyTests {
         val postOffice: PostOffice = KDSPostOfficeBuilder.using(publicKey, kdsSpec).build()
 
         assertThatThrownBy { sendMailWithConstraint(postOffice) }
-            .isInstanceOf(EnclaveException::class.java)
+            .isInstanceOf(RuntimeException::class.java)
             .hasCauseExactlyInstanceOf(IOException::class.java)
             .cause.hasMessageContaining("The application enclave does not meet the required key policy")
     }
@@ -136,7 +136,7 @@ class MailKdsPrivateKeyTests {
         val postOffice: PostOffice = KDSPostOfficeBuilder.fromInputStream(kdsPublicKeyResponseStream, kdsSpec).build()
 
         assertThatThrownBy { sendMailWithConstraint(postOffice) }
-            .isInstanceOf(EnclaveException::class.java)
+            .isInstanceOf(RuntimeException::class.java)
             .hasCauseExactlyInstanceOf(IOException::class.java)
             .cause.hasMessageContaining("The application enclave does not meet the required key policy")
     }
