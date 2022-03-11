@@ -32,7 +32,7 @@ ext {
     // before updating the graal version used by Conclave. If the Graal versions used by the graal module and Conclave are
     // updated at the same time, the PR checks for Conclave might fail because the artifact published by the graal module
     // might not be available on Artifact.
-    graal_version= '21.3.0'
+    graal_version= '21.3.1'
 
     // Directories and files paths
     tempDir     = "$buildDir/tmp"
