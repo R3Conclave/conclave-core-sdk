@@ -38,9 +38,12 @@ task copyGraal(type: Exec) {
     // Task details
     group = 'other'
     description = 'Copies the Graal folder into the build directory.'
+    inputs.dir(inputGraalDir)
+    outputs.dir(graalDir)
+
     //  Here we use cp as Gradle way of copying dir does not keep symbolic links
     doFirst {
-        commandLine 'cp', '-a', inputGraalDir, buildDir
+        commandLine 'cp', '-a', '--remove-destination', "${inputGraalDir}/.", graalDir
     }
 }
 
