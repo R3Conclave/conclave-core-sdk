@@ -534,7 +534,6 @@ Received: $attestationReportBody"""
             val kdsEnclaveInstanceInfo: EnclaveInstanceInfo,
             val privateKey: ByteArray,
             val policyConstraintFromKds: EnclaveConstraint,
-            val masterKeyTypeFromKds: MasterKeyType
         )
 
         private fun onPersistenceKdsPrivateKeyResponse(input: ByteBuffer) {
@@ -542,6 +541,7 @@ Received: $attestationReportBody"""
 
             val privateKeyInfo = retrieveKdsPrivateKeyFromResponse(
                 input,
+                "KDSKeySpecName", // must match the value in EnclaveHost.persistenceKdsPrivateKeyName
                 enclave.env.kdsConfiguration!!.persistenceKeySpec!!.masterKeyType,
                 generatedPersistenceKdsPolicyConstraint
             )
@@ -555,6 +555,7 @@ Received: $attestationReportBody"""
 
         private fun retrieveKdsPrivateKeyFromResponse(
             input: ByteBuffer,
+            name: String,
             masterKeyType: MasterKeyType,
             constraint: EnclaveConstraint
         ) : KDSPrivateKeyResponseContainer {
@@ -572,14 +573,13 @@ Received: $attestationReportBody"""
                 "Mail authenticated sender does not match the KDS EnclaveInstanceInfo encryption key."
             }
 
-            val envelope = verifyKdsPrivateKeyRequestParameters(kdsResponseMail, masterKeyType, constraint)
+            val envelope = verifyKdsPrivateKeyRequestParameters(kdsResponseMail, name, masterKeyType, constraint)
             val kdsPrivateKey = kdsResponseMail.bodyAsBytes
 
             return KDSPrivateKeyResponseContainer(
                 kdsEnclaveInstanceInfo,
                 kdsPrivateKey,
-                envelope.policyConstraint,
-                envelope.masterKeyType
+                envelope.policyConstraint
             )
         }
 
@@ -587,15 +587,10 @@ Received: $attestationReportBody"""
             val threadKdsPostOfficeState = kdsPostOfficeState.get()
             val privateKeyInfo = retrieveKdsPrivateKeyFromResponse(
                 input,
+                threadKdsPostOfficeState.name,
                 threadKdsPostOfficeState.masterKeyType,
                 threadKdsPostOfficeState.generatedKdsPostOfficePolicyConstraint
             )
-            require(privateKeyInfo.policyConstraintFromKds == threadKdsPostOfficeState.generatedKdsPostOfficePolicyConstraint) {
-                "KDS response was generated using a different policy constraint from the one configured in the enclave."
-            }
-            require(privateKeyInfo.masterKeyTypeFromKds == threadKdsPostOfficeState.masterKeyType) {
-                "KDS response was generated using a different master key type from the one configured in the enclave."
-            }
             threadKdsPostOfficeState.postOfficeKdsPrivateKey = privateKeyInfo.privateKey
         }
 
@@ -609,6 +604,7 @@ Received: $attestationReportBody"""
 
         private fun verifyKdsPrivateKeyRequestParameters(
             enclaveMail: EnclaveMail,
+            name: String,
             masterKeyType: MasterKeyType,
             constraint: EnclaveConstraint
         ): PrivateKeyEnvelope {
@@ -617,6 +613,10 @@ Received: $attestationReportBody"""
             }
 
             val privateKeyEnvelope = PrivateKeyEnvelope.deserialize(envelope)
+
+            require(privateKeyEnvelope.name == name) {
+                "KDS response was generated using a different name from the one configured in the enclave."
+            }
 
             require(privateKeyEnvelope.policyConstraint == constraint) {
                 "KDS response was generated using a different policy constraint from the one configured in the enclave."
@@ -792,7 +792,8 @@ Received: $attestationReportBody"""
             adminHandler.kdsPostOfficeState.set(
                 KdsPostOfficeState(
                     generatedKdsPostOfficePolicyConstraint,
-                    kdsPostOfficeKeySpec.masterKeyType
+                    kdsPostOfficeKeySpec.masterKeyType,
+                    kdsPostOfficeKeySpec.name
                 )
             )
             //  Note here: "sendPrivateKeyRequestToHost" is an OCall that triggers a synchronous ECall.

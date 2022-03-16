@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 dependencies {
@@ -12,6 +13,11 @@ dependencies {
     implementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
     implementation "org.assertj:assertj-core:$assertj_version"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
+
+    implementation "io.ktor:ktor-server-netty:$ktor_version"
+    implementation "io.ktor:ktor-serialization:$ktor_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlinx_serialization_protobuf_version"
 
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:2.3.1"
     runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"

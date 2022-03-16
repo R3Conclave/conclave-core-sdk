@@ -65,6 +65,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
 
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
+        private val persistenceKdsPrivateKeyName = "KDSKeySpecName"
 
         /**
          * Diagnostics output outlining CPU capabilities. This is a free text field and should only be used for
@@ -588,7 +589,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
     private fun requestPersistenceKdsPrivateKey(enclaveKdsKeySpec: EnclaveKdsKeySpec) {
         val kdsPrivateKeyRequest = KDSPrivateKeyRequest(
             appAttestationReport = enclaveInstanceInfo.serialize(),
-            name = "KDSKeySpecName",
+            name = persistenceKdsPrivateKeyName,
             masterKeyType = enclaveKdsKeySpec.masterKeyType,
             policyConstraint = enclaveKdsKeySpec.policyConstraint.toString()
         )
