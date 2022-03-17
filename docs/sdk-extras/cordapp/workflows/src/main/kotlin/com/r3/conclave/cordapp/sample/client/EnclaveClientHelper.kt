@@ -58,13 +58,11 @@ object EnclaveClientHelper {
      * @param flow takes a reference to the flow being executed
      * @param counterPartySession the sender party
      * @param serviceType a class that specializes the [EnclaveHostService] type to define the enclave to be loaded
-     * @param anonymous whether the flow responder should expect to relay identity to the hosted enclave or not
      * @return the instance of the responder flow responder helper class
      */
     @Suspendable
     @Throws(FlowException::class)
     @JvmStatic
-    @JvmOverloads
     fun <T : EnclaveHostService> initiateResponderFlow(flow: FlowLogic<*>, counterPartySession: FlowSession,
                                                        serviceType: Class<T>): EnclaveFlowResponder {
         // Start an instance of the enclave hosting service

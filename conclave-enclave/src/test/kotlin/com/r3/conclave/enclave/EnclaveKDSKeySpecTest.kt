@@ -17,26 +17,24 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 
 class EnclaveKDSKeySpecTest {
+    companion object {
+        private const val KDS_ENCLAVE_CONSTRAINT = "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"
+        val enclavePropertiesWithoutPersistence = Properties().apply {
+            setProperty("kds.configurationPresent", "true")
+            setProperty("kds.kdsEnclaveConstraint", KDS_ENCLAVE_CONSTRAINT)
+        }
+        val enclavePropertiesWithPersistence = Properties().apply {
+            putAll(enclavePropertiesWithoutPersistence)
+            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
+            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
+            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
+            setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
+        }
+    }
 
     private lateinit var hostEnclave: EnclaveHost
     private lateinit var kdsServiceMock: KDSServiceMock
     private lateinit var kdsPostOffice: PostOffice
-
-    companion object {
-        val enclavePropertiesWithoutPersistence = Properties().apply {
-            setProperty("kds.configurationPresent", "true")
-            setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-        }
-        val enclavePropertiesWithPersistence = Properties().apply {
-            setProperty("kds.configurationPresent", "true")
-            setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
-            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
-            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
-            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")
-            setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
-        }
-    }
 
     @BeforeEach
     fun init() {
@@ -46,8 +44,12 @@ class EnclaveKDSKeySpecTest {
 
     @AfterEach
     fun close() {
-        kdsServiceMock.close()
-        hostEnclave.close()
+        if (::kdsServiceMock.isInitialized) {
+            kdsServiceMock.close()
+        }
+        if (::hostEnclave.isInitialized) {
+            hostEnclave.close()
+        }
     }
 
     @Test
@@ -63,7 +65,7 @@ class EnclaveKDSKeySpecTest {
         val thrown = assertThrows<EnclaveLoadException> {
             initEnclaveHost(enclavePropertiesWithPersistence)
         }
-        assertThat(thrown.cause?.message).isEqualTo("KDS response was generated using a different name from the one configured in the enclave.")
+        assertThat(thrown.cause?.message).contains("KDS private key response does not match requested key spec.")
     }
 
     @Test
@@ -72,7 +74,7 @@ class EnclaveKDSKeySpecTest {
         val thrown = assertThrows<EnclaveLoadException> {
             initEnclaveHost(enclavePropertiesWithPersistence)
         }
-        assertThat(thrown.cause?.message).isEqualTo("KDS response was generated using a different master key type from the one configured in the enclave.")
+        assertThat(thrown.cause?.message).contains("KDS private key response does not match requested key spec.")
     }
 
     @Test
@@ -81,7 +83,7 @@ class EnclaveKDSKeySpecTest {
         val thrown = assertThrows<EnclaveLoadException> {
             initEnclaveHost(enclavePropertiesWithPersistence)
         }
-        assertThat(thrown.cause?.message).isEqualTo("KDS response was generated using a different policy constraint from the one configured in the enclave.")
+        assertThat(thrown.cause?.message).contains("KDS private key response does not match requested key spec.")
     }
 
     @Test
@@ -99,7 +101,7 @@ class EnclaveKDSKeySpecTest {
         val thrown = assertThrows<IllegalArgumentException> {
             sendMailToEnclave()
         }
-        assertThat(thrown.message).isEqualTo("KDS response was generated using a different name from the one configured in the enclave.")
+        assertThat(thrown.message).contains("KDS private key response does not match requested key spec.")
     }
 
     @Test
@@ -109,7 +111,7 @@ class EnclaveKDSKeySpecTest {
         val thrown = assertThrows<IllegalArgumentException> {
             sendMailToEnclave()
         }
-        assertThat(thrown.message).isEqualTo("KDS response was generated using a different master key type from the one configured in the enclave.")
+        assertThat(thrown.message).contains("KDS private key response does not match requested key spec.")
     }
 
     @Test
@@ -119,7 +121,7 @@ class EnclaveKDSKeySpecTest {
         val thrown = assertThrows<IllegalArgumentException> {
             sendMailToEnclave()
         }
-        assertThat(thrown.message).isEqualTo("KDS response was generated using a different policy constraint from the one configured in the enclave.")
+        assertThat(thrown.message).contains("KDS private key response does not match requested key spec.")
     }
 
     private fun initEnclaveHost(enclaveProperties: Properties) {
@@ -129,17 +131,17 @@ class EnclaveKDSKeySpecTest {
 
     private fun createKDSPostOfficeBuilder(): PostOffice {
         val policyConstraint = "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"
-        val kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+        val kdsEnclaveConstraint = EnclaveConstraint.parse(KDS_ENCLAVE_CONSTRAINT)
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, policyConstraint)
         return KDSPostOfficeBuilder.fromUrl(kdsServiceMock.hostUrl, kdsSpec, kdsEnclaveConstraint).build()
     }
 
     private fun sendMailToEnclave() {
         val encryptedMail: ByteArray = kdsPostOffice.encryptMail(byteArrayOf())
-        hostEnclave.deliverMail(encryptedMail, null) { fromEnclave -> fromEnclave }
+        hostEnclave.deliverMail(encryptedMail, null)
     }
-}
 
-private class NoopEnclave : Enclave() {
-    override fun receiveMail(mail: EnclaveMail, routingHint: String?) = Unit
+    private class NoopEnclave : Enclave() {
+        override fun receiveMail(mail: EnclaveMail, routingHint: String?) = Unit
+    }
 }

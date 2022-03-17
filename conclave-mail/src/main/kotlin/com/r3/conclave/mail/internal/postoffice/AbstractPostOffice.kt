@@ -64,7 +64,7 @@ abstract class AbstractPostOffice {
             recipientPrivateKey: PrivateKey,
             expectedSenderPublicKey: PublicKey
         ): DecryptedEnclaveMail {
-            val mail = MailDecryptingStream(encryptedMailBytes.inputStream()).decryptMail { recipientPrivateKey }
+            val mail = MailDecryptingStream(encryptedMailBytes.inputStream()).decryptMail(recipientPrivateKey)
             require(mail.authenticatedSender == expectedSenderPublicKey) {
                 "Mail does not originate from expected sender. Authenticated sender was ${mail.authenticatedSender} " +
                         "but expected $expectedSenderPublicKey."

@@ -1,6 +1,7 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveConstraint
+import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
@@ -9,10 +10,7 @@ import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
-import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
-import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
-import com.r3.conclave.common.internal.kds.KDSUtils
-import com.r3.conclave.common.internal.kds.KDSUtils.getJsonMapper
+import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
@@ -20,12 +18,13 @@ import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
+import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
+import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
 import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
 import io.github.classgraph.ClassGraph
-import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -65,7 +64,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
 
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
-        private val persistenceKdsPrivateKeyName = "KDSKeySpecName"
+        private val jsonMapper = JsonMapper.builder().enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS).build()
 
         /**
          * Diagnostics output outlining CPU capabilities. This is a free text field and should only be used for
@@ -423,6 +422,15 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
                 throw PlatformSupportException(message)
             }
         }
+
+        private val KDSPrivateKeyResponse.size: Int get() {
+            return encryptedPrivateKey.intLengthPrefixSize + kdsAttestationReport.intLengthPrefixSize
+        }
+
+        private fun ByteBuffer.putKdsPrivateKeyResponse(response: KDSPrivateKeyResponse) {
+            putIntLengthPrefixBytes(response.encryptedPrivateKey)
+            putIntLengthPrefixBytes(response.kdsAttestationReport)
+        }
     }
 
     private var kdsConfiguration: KDSConfiguration? = null
@@ -507,8 +515,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      *
      * @throws IllegalArgumentException If the [enclaveMode] is either release or debug and no attestation parameters
      * are provided.
-     * @throws IllegalStateException If the enclave has been configured to use the persisted file system but no
-     * [enclaveFileSystemFile] value was provided.
+     * @throws EnclaveLoadException If the enclave could not be started.
      * @throws IllegalStateException If the host has been closed.
      */
     @Throws(EnclaveLoadException::class)
@@ -548,14 +555,16 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 
-            // Once the EnclaveInstanceInfo has been updated, we can do a KDS request.
+            // Once the EnclaveInstanceInfo has been updated, we can do a KDS request for the persistence key.
             if (kdsConfiguration != null) {
                 this.kdsConfiguration = kdsConfiguration
+                // TODO We can avoid this ECALL if we get the enclave to send its persistence key spec when it's
+                //  first initialised.
                 val persistenceKeySpec = adminHandler.requestPersistenceKdsKeySpec()
                 //  If the enclave is configured also with KDS spec for persistence, we trigger the private key request.
                 //    Note that the kdsConfiguration is also used in the context of KdsPostOffice
                 if (persistenceKeySpec != null) {
-                    requestPersistenceKdsPrivateKey(persistenceKeySpec)
+                    requestPersistenceKdsPrivateKey(persistenceKeySpec, kdsConfiguration)
                 }
             }
 
@@ -586,22 +595,16 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
     }
 
-    private fun requestPersistenceKdsPrivateKey(enclaveKdsKeySpec: EnclaveKdsKeySpec) {
-        val kdsPrivateKeyRequest = KDSPrivateKeyRequest(
-            appAttestationReport = enclaveInstanceInfo.serialize(),
-            name = persistenceKdsPrivateKeyName,
-            masterKeyType = enclaveKdsKeySpec.masterKeyType,
-            policyConstraint = enclaveKdsKeySpec.policyConstraint.toString()
-        )
-        val kdsResponse = executeKdsPrivateKeyRequest(kdsPrivateKeyRequest, kdsConfiguration!!)
-        adminHandler.forwardKdsPrivateKeyResponseToEnclave(
+    private fun requestPersistenceKdsPrivateKey(keySpec: KDSKeySpec, kdsConfiguration: KDSConfiguration) {
+        val kdsResponse = executeKdsPrivateKeyRequest(keySpec, kdsConfiguration)
+        adminHandler.sendKdsPrivateKeyResponseToEnclave(
             kdsResponse,
             HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE
         )
     }
 
     private fun executeKdsPrivateKeyRequest(
-        kdsPrivateKeyRequest: KDSPrivateKeyRequest,
+        keySpec: KDSKeySpec,
         kdsConfiguration: KDSConfiguration
     ): KDSPrivateKeyResponse {
         val url = URL("${kdsConfiguration.url}/private")
@@ -612,27 +615,33 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         con.setRequestProperty("Content-Type", "application/json; utf-8")
         con.setRequestProperty("API-VERSION", "1")
         con.doOutput = true
-        val mapper = getJsonMapper()
+
+        val kdsPrivateKeyRequest = KDSPrivateKeyRequest(
+            // TODO Cache the serialised bytes
+            appAttestationReport = enclaveInstanceInfo.serialize(),
+            name = keySpec.name,
+            masterKeyType = keySpec.masterKeyType,
+            policyConstraint = keySpec.policyConstraint
+        )
 
         con.outputStream.use {
-            mapper.writeValue(it, kdsPrivateKeyRequest)
+            jsonMapper.writeValue(it, kdsPrivateKeyRequest)
         }
 
         if (con.responseCode != HttpURLConnection.HTTP_OK) {
-            val dataText = con.errorStream.use { inputStream -> inputStream.reader().readText() }
+            val errorText = con.errorStream.use { it.reader().readText() }
             val kdsErrorResponse =  try {
-                 mapper.readValue(dataText, KDSErrorResponse::class.java)
-            } catch (exception: Exception) {
+                jsonMapper.readValue(errorText, KDSErrorResponse::class.java)
+            } catch (e: Exception) {
                 // It is likely that the error response is not a KDSErrorResponse if an exception is raised
                 // The best thing to do in those cases is to return the response code
-
-                throw IOException("HTTP response code: ${con.responseCode}, HTTP response message: $dataText")
+                throw IOException("HTTP response code: ${con.responseCode}, HTTP response message: $errorText")
             }
             throw IOException(kdsErrorResponse.reason)
         }
 
         val kdsPrivateKeyResponse = con.inputStream.use {
-            mapper.readValue(it, KDSPrivateKeyResponse::class.java)
+            jsonMapper.readValue(it, KDSPrivateKeyResponse::class.java)
         }
         return kdsPrivateKeyResponse
     }
@@ -764,10 +773,12 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
+     * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
+     * with the KDS to get it.
      * @throws IllegalStateException If the host has not been started.
      */
     // TODO This should throw EnclaveException
-    @Throws(MailDecryptionException::class)
+    @Throws(MailDecryptionException::class, IOException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
         deliverMailInternal(mail, routingHint, callback)
     }
@@ -799,10 +810,12 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
+     * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
+     * with the KDS to get it.
      * @throws IllegalStateException If the host has not been started.
      */
     // TODO This should throw EnclaveException
-    @Throws(MailDecryptionException::class)
+    @Throws(MailDecryptionException::class, IOException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?) = deliverMailInternal(mail, routingHint, null)
 
     private fun deliverMailInternal(mail: ByteArray, routingHint: String?, callback: EnclaveCallback?) {
@@ -844,7 +857,6 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
     }
 
     private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
-    private class EnclaveKdsKeySpec(val masterKeyType: MasterKeyType, val policyConstraint: EnclaveConstraint)
 
     /** Deserializes keys and other info from the enclave during initialisation. */
     private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
@@ -853,9 +865,10 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
 
-        private var enclaveKdsKeySpec: EnclaveKdsKeySpec? = null
+        private var persistenceKdsKeySpec: KDSKeySpec? = null
 
         private val messageTypes = EnclaveToHost.values()
+        private val masterKeyTypeValues = MasterKeyType.values()
 
         override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
 
@@ -863,8 +876,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             when (messageTypes[input.get().toInt()]) {
                 EnclaveToHost.ENCLAVE_INFO -> onEnclaveInfo(input)
                 EnclaveToHost.ATTESTATION -> onAttestation()
-                EnclaveToHost.KDS_KEY_SPEC_RESPONSE -> onKeySpecResponse(input)
-                EnclaveToHost.MAIL_KDS_PRIVATE_KEY_REQUEST -> onMailKdsPrivateKeyRequest(input)
+                EnclaveToHost.PERSISTENCE_KDS_KEY_SPEC_RESPONSE -> onPersistenceKdsKeySpecResponse(input)
             }
         }
 
@@ -882,6 +894,11 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             }
         }
 
+        private fun onPersistenceKdsKeySpecResponse(input: ByteBuffer) {
+            check(persistenceKdsKeySpec == null)
+            persistenceKdsKeySpec = getKdsKeySpec(input)
+        }
+
         fun sendOpen(sealedState: ByteArray?) {
             val payloadSize = nullableSize(sealedState) { it.size }
             sendToEnclave(HostToEnclave.OPEN, payloadSize) { buffer ->
@@ -893,41 +910,15 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             sendToEnclave(HostToEnclave.CLOSE, 0) { }
         }
 
-        fun forwardKdsPrivateKeyResponseToEnclave(kdsResponse: KDSPrivateKeyResponse, kdsResponseType: HostToEnclave) {
-            val payloadSize = kdsResponse.encryptedPrivateKey.intLengthPrefixSize + kdsResponse.kdsAttestationReport.size
-            sendToEnclave(kdsResponseType, payloadSize) { buffer ->
-                buffer.putIntLengthPrefixBytes(kdsResponse.encryptedPrivateKey)
-                buffer.put(kdsResponse.kdsAttestationReport)
-            }
-        }
-
-        fun requestPersistenceKdsKeySpec(): EnclaveKdsKeySpec? {
+        fun requestPersistenceKdsKeySpec(): KDSKeySpec? {
             sendToEnclave(HostToEnclave.PERSISTENCE_KDS_KEY_SPEC_REQUEST, 0) { }
-            return enclaveKdsKeySpec
+            return persistenceKdsKeySpec
         }
 
-        private fun onKeySpecResponse(byteBuffer: ByteBuffer) {
-            val masterKeyType = MasterKeyType.values()[byteBuffer.get().toInt()]
-            val policyConstraintString = String(byteBuffer.getRemainingBytes())
-            val policyConstraint = EnclaveConstraint.parse(policyConstraintString)
-            enclaveKdsKeySpec = EnclaveKdsKeySpec(masterKeyType, policyConstraint)
-        }
-
-        private fun onMailKdsPrivateKeyRequest(byteBuffer: ByteBuffer) {
-            requireNotNull(host.kdsConfiguration) { "Mail requires a KDS private key to decrypt but no KDS configuration was provided" }
-            val inputStream = DataInputStream(byteBuffer.inputStream())
-            //  This is the type, we do not need to deserialize it
-            inputStream.read()
-            val kdsSpec = KDSUtils.deserializeKeySpec(inputStream)
-            val kdsPrivateKeyRequest = KDSPrivateKeyRequest(
-                appAttestationReport = host.enclaveInstanceInfo.serialize(),
-                name = kdsSpec.name,
-                masterKeyType = kdsSpec.masterKeyType,
-                policyConstraint = kdsSpec.policyConstraint
-            )
-
-            val kdsResponse = host.executeKdsPrivateKeyRequest(kdsPrivateKeyRequest, host.kdsConfiguration!!)
-            forwardKdsPrivateKeyResponseToEnclave(kdsResponse, HostToEnclave.MAIL_KDS_PRIVATE_KEY_RESPONSE)
+        fun sendKdsPrivateKeyResponseToEnclave(response: KDSPrivateKeyResponse, kdsResponseType: HostToEnclave) {
+            sendToEnclave(kdsResponseType, response.size) { buffer ->
+                buffer.putKdsPrivateKeyResponse(response)
+            }
         }
 
         private fun sendToEnclave(type: HostToEnclave, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
@@ -935,6 +926,13 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
                 buffer.put(type.ordinal.toByte())
                 payload(buffer)
             }
+        }
+
+        private fun getKdsKeySpec(input: ByteBuffer): KDSKeySpec {
+            val name = String(input.getIntLengthPrefixBytes())
+            val masterKeyType = masterKeyTypeValues[input.get().toInt()]
+            val policyConstraint = String(input.getRemainingBytes())
+            return KDSKeySpec(name, masterKeyType, policyConstraint)
         }
     }
 
@@ -953,12 +951,16 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
     private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
         private lateinit var sender: Sender
-        override fun connect(upstream: Sender): EnclaveMessageHandler = this.also { sender = upstream }
 
         private val callTypeValues = InternalCallType.values()
-
         @PotentialPackagePrivate("Access for EnclaveHostMockTest")
         private val threadIDToTransaction = ConcurrentHashMap<Long, Transaction>()
+        // Try to reduce the number of HTTP requests to the KDS, which also has the benefit for reducing the number
+        // large ECALLs containing the KDS mail response and the KDE EII bytes (since the enclave also caches the
+        // private key).
+        private val seenKdsKeySpecs = ConcurrentHashMap.newKeySet<KDSKeySpec>()
+
+        override fun connect(upstream: Sender): EnclaveMessageHandler = this.also { sender = upstream }
 
         override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
             val type = callTypeValues[input.get().toInt()]
@@ -1028,13 +1030,48 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
 
         fun deliverMail(mailBytes: ByteArray, callback: EnclaveCallback?, routingHint: String?) {
+            // The host checks if the mail is encrypted with a KDS private key and makes the KDS HTTP request to get
+            // it. This is safe to do as the key derivation field is authenticated and the KDS response is encrypted.
+            // The enclave will check itself anyway that the response matches the key derivation field.
+            // Doing this has two benefits:
+            // 1. Avoids an unnecessary OCALL-ECALL cycle and thus simplifying the enclave code.
+            // 2. Avoids any IOException that might have been thrown by the HTTP request from being swallowed in
+            //    release mode enclaves.
+            val mailKeyDerivation = MailKeyDerivation.deserialiseFromMailBytes(mailBytes)
+            val kdsKeySpec = (mailKeyDerivation as? KdsKeySpecKeyDerivation)?.keySpec
+            val privateKeyResponse = kdsKeySpec?.let { getKdsPrivateKeyResponse(kdsKeySpec) }
+
             callIntoEnclave(callback) { threadID ->
                 val routingHintBytes = routingHint?.toByteArray()
-                val size = nullableSize(routingHintBytes) { it.intLengthPrefixSize } + mailBytes.size
+                val routingHintSize = nullableSize(routingHintBytes) { it.intLengthPrefixSize }
+                val privateKeyResponseSize = nullableSize(privateKeyResponse) { it.size }
+                val size = routingHintSize + privateKeyResponseSize + mailBytes.size
                 sendToEnclave(MAIL, threadID, size) { buffer ->
                     buffer.putNullable(routingHintBytes) { putIntLengthPrefixBytes(it) }
+                    buffer.putNullable(privateKeyResponse) { putKdsPrivateKeyResponse(it) }
                     buffer.put(mailBytes)
                 }
+            }
+
+            if (privateKeyResponse != null) {
+                // It's important that we mark this key spec as having been seen only after the enclave has processed
+                // the mail. In the presence of multiple threads, only here can we guarantee that it has cached the
+                // private key for itself.
+                seenKdsKeySpecs += kdsKeySpec
+            }
+        }
+
+        private fun getKdsPrivateKeyResponse(keySpec: KDSKeySpec): KDSPrivateKeyResponse? {
+            // As an optimisation avoid sending the KDS response mail and KDS EII if the enclave has already cached
+            // the private key. However we can't guarantee that the enclave has cached the private key until after
+            // deliverMail has returned which is why we don't update the cache here.
+            return if (keySpec !in seenKdsKeySpecs) {
+                val kdsConfig = checkNotNull(kdsConfiguration) {
+                    "Mail is encrypted with KDS private key but host has not been provided with KDS configuration."
+                }
+                executeKdsPrivateKeyRequest(keySpec, kdsConfig)
+            } else {
+                null
             }
         }
 

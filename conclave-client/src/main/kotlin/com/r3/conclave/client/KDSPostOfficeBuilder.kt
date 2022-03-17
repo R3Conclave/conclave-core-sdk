@@ -1,13 +1,14 @@
 package com.r3.conclave.client
 
+import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.r3.conclave.client.internal.KDSPostOffice
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.client.internal.kds.KDSPublicKeyRequest
 import com.r3.conclave.client.internal.kds.KDSPublicKeyResponse
 import com.r3.conclave.common.EnclaveConstraint
+import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.InvalidEnclaveException
-import com.r3.conclave.common.internal.kds.KDSUtils.getJsonMapper
+import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.Curve25519PublicKey
@@ -32,6 +33,8 @@ import java.security.SignatureException
  * The users can also optionally define a custom topic for the post office communications with the enclave and
  * a custom sender private key for the authentication of the mails to the enclave.
  */
+// TODO The design of this builder is not quite right. It needs to better reflect the requirement that if a different
+//  key spec is used then a different (senderPrivateKey, topic) pair must be used.
 class KDSPostOfficeBuilder private constructor(
     private val destinationPublicKey: PublicKey,
     private val keySpec: KDSKeySpec
@@ -40,6 +43,7 @@ class KDSPostOfficeBuilder private constructor(
     private var senderPrivateKey: PrivateKey? = null
 
     companion object {
+        private val jsonMapper = JsonMapper.builder().enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS).build()
 
         /**
          * Returns a KDSPostOfficeBuilder instance to build a specific PostOffice that uses a custom public key
@@ -127,7 +131,6 @@ class KDSPostOfficeBuilder private constructor(
         }
 
         private fun requestKdsPublicKeyWithURL(kdsUrl: URL, keySpec: KDSKeySpec): InputStream {
-            val mapper = getJsonMapper()
             val publicKeyRequest = KDSPublicKeyRequest(keySpec.name, keySpec.masterKeyType, keySpec.policyConstraint)
             val uri = kdsUrl.toURI().resolve("/public")
             val publicUrl = uri.toURL()
@@ -138,13 +141,13 @@ class KDSPostOfficeBuilder private constructor(
             con.doOutput = true
 
             con.outputStream.use {
-                mapper.writeValue(it, publicKeyRequest)
+                jsonMapper.writeValue(it, publicKeyRequest)
             }
 
             if (con.responseCode != HttpURLConnection.HTTP_OK) {
                 val errorString = con.errorStream.use { it.reader().readText() }
                 val kdsErrorResponse = try {
-                    mapper.readValue(errorString, KDSErrorResponse::class.java)
+                    jsonMapper.readValue(errorString, KDSErrorResponse::class.java)
                 } catch (exception: Exception) {
                     // It is likely that the error response is not a KDSErrorResponse if an exception is raised
                     // The best thing to do in those cases is to return the response code
@@ -196,9 +199,8 @@ class KDSPostOfficeBuilder private constructor(
             keySpec: KDSKeySpec,
             kdsEnclaveConstraint: EnclaveConstraint
         ): PublicKey {
-            val mapper = getJsonMapper()
             val kdsPublicKeyResponse = try {
-                mapper.readValue(inputStream, KDSPublicKeyResponse::class.java)
+                jsonMapper.readValue(inputStream, KDSPublicKeyResponse::class.java)
             } catch (e: Exception) {
                 throw IOException("Invalid KDS response", e)
             }

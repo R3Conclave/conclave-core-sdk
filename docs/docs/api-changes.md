@@ -14,6 +14,12 @@ required to specify the HTTP header `API-VERSION` with a value of `1`. Details o
 The `keySpec` block in the enclave's build.gradle has changed to `persistenceKeySpec`. The old `keySpec` is still
 supported but deprecated and will be removed in a future version.
 
+### API changes
+
+[`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) now throws an 
+`IOException`. This can occur if the mail to be delivered was encrypted using a KDS key and the host is unable to 
+retrieve it from the KDS.
+
 ## 1.1 to 1.2
 
 ### Improvements to mail and persistence

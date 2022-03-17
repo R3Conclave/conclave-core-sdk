@@ -10,7 +10,6 @@ import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.mail.internal.MailKeyDerivationType
 import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -66,11 +65,7 @@ class EnclaveInstanceInfoImpl(
         }
     }
 
-    val keyDerivation: ByteArray by lazy {
-        writeData {
-            writeByte(MailKeyDerivationType.RANDOM_SESSION_KEY.ordinal)
-        }
-    }
+    val keyDerivation: ByteArray by lazy(RandomSessionKeyDerivation::serialise)
 
     override fun createPostOffice(senderPrivateKey: PrivateKey, topic: String): PostOffice {
         return EIIPostOffice(senderPrivateKey, topic)

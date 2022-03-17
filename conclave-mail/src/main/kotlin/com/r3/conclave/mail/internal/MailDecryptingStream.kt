@@ -351,7 +351,7 @@ class MailDecryptingStream(
      *
      * It is the caller's responsibility to close this stream.
      */
-    fun decryptMail(deriveKey: (ByteArray?) -> PrivateKey): DecryptedEnclaveMail {
+    fun decryptMail(privateKey: PrivateKey): DecryptedEnclaveMail {
         // TODO: Optimise out copies here.
         //
         // We end up copying the mail every time it's read, the copy being defensive and thus useful only to protect
@@ -366,7 +366,6 @@ class MailDecryptingStream(
         // encrypted and authenticated in 64kb Noise packet blocks, so it's safe to hold it in unprotected memory
         // and store just the current decrypted block in EPC, which MailDecryptingStream already does. This would
         // also make it feasible to access huge mails without the 2GB size limit JVM arrays pose.
-        val privateKey = deriveKey(header.keyDerivation)
         setPrivateKey(privateKey)
         val mailBody = readBytes()
         return DecryptedEnclaveMail(
@@ -375,7 +374,8 @@ class MailDecryptingStream(
             Curve25519PublicKey(senderPublicKey),
             header.envelope,
             privateHeader,
-            mailBody
+            mailBody,
+            privateKey
         )
     }
 

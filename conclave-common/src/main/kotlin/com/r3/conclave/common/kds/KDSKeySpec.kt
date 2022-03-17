@@ -1,5 +1,7 @@
 package com.r3.conclave.common.kds
 
+import com.r3.conclave.common.EnclaveConstraint
+
 /**
  * A KDSKeySpec defines a configuration for a specific key we want to obtain from the KDS
  *
@@ -12,6 +14,14 @@ package com.r3.conclave.common.kds
  * The enclave must satisfy this constraint
  */
 class KDSKeySpec(val name: String, val masterKeyType: MasterKeyType, val policyConstraint: String) {
+    init {
+        try {
+            EnclaveConstraint.parse(policyConstraint)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid policy constraint: ${e.message}")
+        }
+    }
+
     override fun hashCode(): Int {
         var result = 31 * name.hashCode()
         result = 31 * result + masterKeyType.hashCode()
@@ -20,13 +30,12 @@ class KDSKeySpec(val name: String, val masterKeyType: MasterKeyType, val policyC
     }
 
     override fun equals(other: Any?): Boolean {
-        return when(other) {
-            is KDSKeySpec -> other.name == name && other.masterKeyType == masterKeyType && other.policyConstraint == policyConstraint
-            else -> false
-        }
+        if (other === this) return true
+        if (other !is KDSKeySpec) return false
+        return other.name == name && other.masterKeyType == masterKeyType && other.policyConstraint == policyConstraint
     }
 
     override fun toString(): String {
-        return "Name: $name MasterKeyType: ${masterKeyType.name.lowercase()} PolicyConstraint: $policyConstraint"
+        return "KDSKeySpec(name=$name, masterKeyType=$masterKeyType, policyConstraint=$policyConstraint)"
     }
 }
