@@ -5,6 +5,7 @@ import com.r3.conclave.mail.EnclaveMailHeader
 import com.r3.conclave.mail.MinSizePolicy
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
+import java.security.PrivateKey
 import java.security.PublicKey
 
 /**
