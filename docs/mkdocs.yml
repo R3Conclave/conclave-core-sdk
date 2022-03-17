@@ -42,6 +42,7 @@ nav:
         - Key Derivation Service REST API: kds-rest-api.md
         - Migration notes: api-changes.md
         - Known issues: known-issues.md
+  - Release notes: release-notes.md      
   - Operations:
     - Server deployment:
       - System requirements: system-requirements.md
