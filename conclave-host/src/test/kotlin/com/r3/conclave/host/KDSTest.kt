@@ -1,7 +1,10 @@
 package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.common.EnclaveConstraint
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
+import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.host.kds.KDSConfiguration
@@ -16,27 +19,27 @@ import java.io.Closeable
 import java.io.IOException
 import java.net.*
 import java.time.Duration
-import java.util.*
 
 class KDSTest {
     companion object {
         private const val PORT = 8091
 
-        // Override enclave properties to enable the KDS
-        private val ENCLAVE_PROPERTIES_OVERRIDE = Properties().apply {
-            setProperty("kds.configurationPresent", "true")
-            setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
-            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
-            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
-            setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")
-            setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
-        }
+        private val enclaveKdsConfig = EnclaveKdsConfig(
+            kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"),
+            persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
+                masterKeyType = MasterKeyType.DEBUG,
+                policyConstraint = EnclaveKdsConfig.PolicyConstraint(
+                    constraint = "SEC:INSECURE",
+                    useOwnCodeHash = true
+                )
+            )
+        )
 
         private fun mockHost(): EnclaveHost {
-            return createMockHost(KDSConfiguredEnclave::class.java, null, ENCLAVE_PROPERTIES_OVERRIDE)
+            return createMockHost(KDSConfiguredEnclave::class.java, null, enclaveKdsConfig)
         }
 
+        // TODO Use Ktor instead of this internal HtttpServer API
         private fun httpServer(httpHandler: HttpHandler): Closeable {
             val httpServer = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), PORT), 1)
             httpServer.createContext("/private", httpHandler)

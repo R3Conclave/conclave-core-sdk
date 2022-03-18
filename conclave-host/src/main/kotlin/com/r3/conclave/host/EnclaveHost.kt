@@ -9,6 +9,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
@@ -218,14 +219,14 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         internal fun internalCreateMock(
             enclaveClass: Class<*>,
             mockConfiguration: MockConfiguration? = null,
-            enclavePropertiesOverride: Properties? = null
+            kdsConfig: EnclaveKdsConfig? = null
         ): EnclaveHost {
             // For mock mode ensure the host can access the enclave constructor. It may have been set as private.
             val constructor = enclaveClass.getDeclaredConstructor().apply { isAccessible = true }
             val enclaveHandle = MockEnclaveHandle(
                 constructor.newInstance(),
                 mockConfiguration,
-                enclavePropertiesOverride,
+                kdsConfig,
                 ErrorHandler()
             )
             return EnclaveHost(enclaveHandle)

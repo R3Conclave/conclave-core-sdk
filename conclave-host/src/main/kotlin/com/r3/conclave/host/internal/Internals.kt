@@ -2,9 +2,9 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.host.EnclaveHost
 import java.net.URL
-import java.util.*
 
 /**
  * [EnclaveHost.internalCreateNative] is internal and so isn't visible to the rest of the codebase. This exists as a
@@ -22,7 +22,7 @@ fun createNativeHost(enclaveMode: EnclaveMode, enclaveFileUrl: URL, enclaveClass
 fun createMockHost(
     enclaveClass: Class<*>,
     mockConfiguration: MockConfiguration? = null,
-    enclavePropertiesOverride: Properties? = null
+    kdsConfig: EnclaveKdsConfig? = null
 ): EnclaveHost {
-    return EnclaveHost.internalCreateMock(enclaveClass, mockConfiguration, enclavePropertiesOverride)
+    return EnclaveHost.internalCreateMock(enclaveClass, mockConfiguration, kdsConfig)
 }

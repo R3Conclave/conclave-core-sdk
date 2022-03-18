@@ -3,20 +3,19 @@ package com.r3.conclave.internaltesting.kds
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.internal.createMockHost
+import com.r3.conclave.internaltesting.kds.api.request.EnclaveRequest
+import com.r3.conclave.internaltesting.kds.api.request.KeySpec
 import com.r3.conclave.internaltesting.kds.api.request.PrivateKeyRequest
 import com.r3.conclave.internaltesting.kds.api.request.PublicKeyRequest
 import com.r3.conclave.internaltesting.kds.api.response.PrivateKeyResponseBody
 import com.r3.conclave.internaltesting.kds.api.response.PublicKeyResponseBody
 import com.r3.conclave.internaltesting.kds.internal.EmbeddedServer
-import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.internal.createMockHost
-import com.r3.conclave.internaltesting.kds.api.request.EnclaveRequest
-import com.r3.conclave.internaltesting.kds.api.request.KeySpec
 import com.r3.conclave.internaltesting.kds.internal.enclave.api.EnclaveResponse
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.utilities.internal.writeData
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixString
 import com.r3.conclave.utilities.internal.writeShortLengthPrefixBytes
 import io.ktor.application.*
@@ -25,27 +24,18 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
 import java.security.KeyPair
 import java.util.*
 
-@OptIn(InternalAPI::class)
-class KDSServiceMock() : AutoCloseable {
-
-    /** This class allows anyone to change the private key request received by the KDS mocked service as needed. Similar to what a malicious actor would do
-     *  It is useful for testing purposes. For instance, to ensure the enclave is doing proper checks
-     */
-    class PrivateKeyRequestModifier(
-        var name: String? = null,
-        val masterKeyType: MasterKeyType? = null,
-        val policyConstraint: String? = null
-    )
-
-    private var privateKeyRequestModifier: PrivateKeyRequestModifier? = null
+class KDSServiceMock : AutoCloseable {
     private val kdsEnclaveMock = createMockHost(KDSEnclaveMock::class.java)
     private val server = EmbeddedServer()
     val hostUrl = server.hostUrl
+
+    var privateKeyRequestModifier: PrivateKeyRequestModifier? = null
+
+    var previousPublicKeyRequest: PublicKeyRequest? = null
+    var previousPrivateKeyRequest: PrivateKeyRequest? = null
 
     init {
         kdsEnclaveMock.start(null, null, null) { }
@@ -57,20 +47,18 @@ class KDSServiceMock() : AutoCloseable {
         kdsEnclaveMock.close()
     }
 
-    fun addRequestModifier(modifier: PrivateKeyRequestModifier) {
-        privateKeyRequestModifier = modifier
-    }
-
     private fun initServer() {
         server.installRoutes {
             post("/public") {
                 val httpRequestBody = extractHttpRequestBody<PublicKeyRequest>()
+                previousPublicKeyRequest = httpRequestBody
                 val httpResponseBody = sendRequestToEnclave(httpRequestBody)
                 sendResponse(httpResponseBody)
             }
 
             post("/private") {
                 val httpRequestBody = extractHttpRequestBody<PrivateKeyRequest>()
+                previousPrivateKeyRequest = httpRequestBody
                 val httpResponseBody = sendRequestToEnclave(httpRequestBody)
                 sendResponse(httpResponseBody)
             }
@@ -82,7 +70,7 @@ class KDSServiceMock() : AutoCloseable {
         call.receive<T>()
 
     private suspend inline fun PipelineContext<Unit, ApplicationCall>.sendResponse(httpResponseBody: Any) {
-        call.response.headers.append("Api-version", "1")
+        call.response.headers.append("API-VERSION", "1")
         call.respond(httpResponseBody)
     }
 
@@ -102,8 +90,7 @@ class KDSServiceMock() : AutoCloseable {
     private fun sendRequestToEnclave(request: EnclaveRequest): EnclaveResponse =
         EnclaveResponse.deserialize(kdsEnclaveMock.callEnclave(request)!!)
 
-    private fun EnclaveHost.callEnclave(request: EnclaveRequest): ByteArray? =
-        kdsEnclaveMock.callEnclave(request.serialize())
+    private fun EnclaveHost.callEnclave(request: EnclaveRequest): ByteArray? = callEnclave(request.serialize())
 
     private fun createEnclaveRequest(request: PublicKeyRequest): EnclaveRequest =
         EnclaveRequest.PublicKey(
@@ -114,27 +101,25 @@ class KDSServiceMock() : AutoCloseable {
             )
         )
 
-    private fun createEnclaveRequest(request: PrivateKeyRequest): EnclaveRequest =
-        EnclaveRequest.PrivateKey(
-            request.appAttestationReport.decodeBase64Bytes(),
+    private fun createEnclaveRequest(request: PrivateKeyRequest): EnclaveRequest {
+        return EnclaveRequest.PrivateKey(
+            Base64.getDecoder().decode(request.appAttestationReport),
             KeySpec(request.name, request.masterKeyType, request.policyConstraint)
         )
+    }
 
     private fun createHttpResponseBody(enclaveResponse: EnclaveResponse.PublicKey): PublicKeyResponseBody =
         PublicKeyResponseBody(
-            enclaveResponse.publicKey.encodeBase64(),
-            enclaveResponse.signature.encodeBase64(),
+            enclaveResponse.publicKey,
+            enclaveResponse.signature,
             enclaveResponse.kdsAttestationReport
         )
 
     private fun createHttpResponseBody(enclaveResponse: EnclaveResponse.PrivateKey): PrivateKeyResponseBody =
-        PrivateKeyResponseBody(enclaveResponse.kdsAttestationReport.encodeBase64(), enclaveResponse.encryptedPrivateKey)
+        PrivateKeyResponseBody(enclaveResponse.kdsAttestationReport, enclaveResponse.encryptedPrivateKey)
 
     private fun applyRequestModifier(request: PrivateKeyRequest): PrivateKeyRequest {
-        if (privateKeyRequestModifier == null)
-            return request
-
-        val privateKeyRequestModifier = privateKeyRequestModifier!!
+        val privateKeyRequestModifier = privateKeyRequestModifier ?: return request
 
         val name = privateKeyRequestModifier.name ?: request.name
         val masterKeyType = privateKeyRequestModifier.masterKeyType ?: request.masterKeyType
@@ -213,3 +198,13 @@ private class KDSEnclaveMock : Enclave() {
         }
     }
 }
+
+/**
+ * This class allows anyone to change the private key request received by the KDS mocked service as needed. Similar to what a malicious actor would do
+ *  It is useful for testing purposes. For instance, to ensure the enclave is doing proper checks
+ */
+class PrivateKeyRequestModifier(
+    val name: String? = null,
+    val masterKeyType: MasterKeyType? = null,
+    val policyConstraint: String? = null
+)

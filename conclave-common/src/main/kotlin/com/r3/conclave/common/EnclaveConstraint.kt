@@ -254,13 +254,13 @@ class EnclaveConstraint {
             keyValues["S"]?.forEach {
                 constraint.acceptableSigners.add(SecureHash.parse(it))
             }
-            constraint.productID = keyValues["PROD"]?.single()?.toInt()
-            constraint.minRevocationLevel = keyValues["REVOKE"]?.single()?.toInt()
-            keyValues["SEC"]?.let {
-                constraint.minSecurityLevel = EnclaveSecurityInfo.Summary.valueOf(it.single())
+            constraint.productID = getSingleOrNone(keyValues, "PROD")?.toInt()
+            constraint.minRevocationLevel = getSingleOrNone(keyValues, "REVOKE")?.toInt()
+            getSingleOrNone(keyValues, "SEC")?.let {
+                constraint.minSecurityLevel = EnclaveSecurityInfo.Summary.valueOf(it)
             }
-            keyValues["EXPIRE"]?.let {
-                constraint.maxAttestationAge = Period.parse(it.single())
+            getSingleOrNone(keyValues, "EXPIRE")?.let {
+                constraint.maxAttestationAge = Period.parse(it)
             }
             if (checkValidity) {
                 constraint.checkCriteriaValid()
@@ -307,6 +307,11 @@ class EnclaveConstraint {
         @JvmStatic
         fun parse(descriptor: String): EnclaveConstraint {
             return parse(descriptor, true);
+        }
+
+        private fun getSingleOrNone(keyValues: Map<String, List<String>>, key: String): String? {
+            val values = keyValues[key] ?: return null
+            return requireNotNull(values.singleOrNull()) { "More than one $key defined" }
         }
     }
 }

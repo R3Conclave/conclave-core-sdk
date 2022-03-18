@@ -1,9 +1,6 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxReport.body
@@ -17,6 +14,7 @@ import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.enclave.internal.kds.KdsPrivateKeyResponse
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.DecryptedEnclaveMail
@@ -243,11 +241,11 @@ abstract class Enclave {
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
     private fun initialiseMock(
-            upstream: Sender,
-            mockConfiguration: MockConfiguration?,
-            enclavePropertiesOverride: Properties?
+        upstream: Sender,
+        mockConfiguration: MockConfiguration?,
+        kdsConfig: EnclaveKdsConfig?
     ): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, mockConfiguration, enclavePropertiesOverride), upstream)
+        return initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig), upstream)
     }
 
     /**
@@ -506,29 +504,44 @@ Received: $attestationReportBody"""
             // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
             // defined. The host will see that we've not sent back a key spec.
             val persistenceKeySpec = enclave.env.kdsConfiguration?.persistenceKeySpec ?: return
-
-            val policyConstraint = persistenceKeySpec.policyConstraint.enclaveConstraint
-
-            val report = env.createReport(null, null)
-            if (persistenceKeySpec.policyConstraint.ownCodeHash) {
-                val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
-                policyConstraint.acceptableCodeHashes.add(mrenclave)
-            }
-            if (persistenceKeySpec.policyConstraint.ownCodeSignerAndProductID) {
-                val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
-                policyConstraint.acceptableSigners.add(mrsigner)
-                policyConstraint.productID = report[body][isvProdId].read()
-            }
-
             persistenceKdsKeySpec = KDSKeySpec(
                 KDS_PERSISTENCE_KEY_NAME,
                 persistenceKeySpec.masterKeyType,
-                // TODO This is problematic the implementation of toString() defines the policy string. If that
-                //  implementation changes (which is can legitmately do) then we inadvertently change the peristence key
-                policyConstraint.toString()
+                buildPersistencePolicyConstraint(persistenceKeySpec)
             )
-
             sendKdsPersistenceKeySpecToHost(persistenceKdsKeySpec)
+        }
+
+        private fun buildPersistencePolicyConstraint(persistenceKeySpec: EnclaveKdsConfig.PersistenceKeySpec): String {
+            val builder = StringBuilder(persistenceKeySpec.policyConstraint.constraint)
+
+            val parsedUserContraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
+
+            val report = env.createReport(null, null)
+            if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
+                val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
+                if (mrenclave !in parsedUserContraint.acceptableCodeHashes) {
+                    builder.append(" C:").append(mrenclave)
+                }
+            }
+
+            if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
+                val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
+                val productId = report[body][isvProdId].read()
+                if (mrsigner !in parsedUserContraint.acceptableSigners) {
+                    builder.append(" S:").append(mrsigner)
+                }
+                if (parsedUserContraint.productID == null) {
+                    builder.append(" PROD:").append(productId)
+                } else {
+                    require(parsedUserContraint.productID == productId) {
+                        "Cannot apply useOwnCodeSignerAndProductID to the KDS persistence policy constraint as " +
+                                "PROD:${parsedUserContraint.productID} is already specified"
+                    }
+                }
+            }
+
+            return builder.toString()
         }
 
         private fun onPersistenceKdsPrivateKeyResponse(input: ByteBuffer) {

@@ -2,6 +2,7 @@ package com.r3.conclave.enclave.internal.kds
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.InvalidEnclaveException
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.mail.EnclaveMail
@@ -16,7 +17,7 @@ class KdsPrivateKeyResponse(private val mail: EnclaveMail, val kdsEnclaveInstanc
         private val masterKeyTypeValues = MasterKeyType.values()
     }
 
-    fun getPrivateKey(kdsConfig: KDSConfiguration, expectedKeySpec: KDSKeySpec): ByteArray {
+    fun getPrivateKey(kdsConfig: EnclaveKdsConfig, expectedKeySpec: KDSKeySpec): ByteArray {
         val keySpec = deserialiseKeySpecFromEnvelope()
 
         // Make sure the private key is actually for the request that was made.

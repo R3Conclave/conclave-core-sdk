@@ -1,14 +1,11 @@
-package com.r3.conclave.enclave.internal
+package com.r3.conclave.common.internal.kds
 
-import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.kds.MasterKeyType
-import com.r3.conclave.enclave.internal.kds.KDSConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.*
 
-class KDSConfigurationTest {
-
+class EnclaveKdsConfigTest {
     companion object {
         private val enclavePropertiesDeprecatedVersion = Properties().apply {
             setProperty("kds.configurationPresent", "true")
@@ -33,22 +30,29 @@ class KDSConfigurationTest {
 
     @Test
     fun `ensure it is possible to load the deprecated version of kds configuration`() {
-        val kdsConfiguration = KDSConfiguration.loadConfiguration(enclavePropertiesDeprecatedVersion)!!
+        val kdsConfiguration = EnclaveKdsConfig.loadConfiguration(enclavePropertiesDeprecatedVersion)!!
         validateConfiguration(kdsConfiguration)
     }
 
     @Test
     fun `ensure it is possible to load the kds configuration`() {
-        val kdsConfiguration = KDSConfiguration.loadConfiguration(enclaveProperties)!!
+        val kdsConfiguration = EnclaveKdsConfig.loadConfiguration(enclaveProperties)!!
         validateConfiguration(kdsConfiguration)
     }
 
-    private fun validateConfiguration(kdsConfiguration: KDSConfiguration) {
-        assertThat(kdsConfiguration.kdsEnclaveConstraint.toString()).isEqualTo("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-        assertThat(kdsConfiguration.persistenceKeySpec!!.masterKeyType).isEqualTo(MasterKeyType.DEBUG)
-        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.enclaveConstraint).isEqualTo(EnclaveConstraint.parse("SEC:INSECURE", false))
-        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.ownCodeHash).isEqualTo(true)
-        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.ownCodeSignerAndProductID).isEqualTo(true)
+    @Test
+    fun `useOwnCodeSignerAndProductID and useOwnCodeHash default to false`() {
+        val properties = Properties().apply {
+            setProperty("kds.configurationPresent", "true")
+            setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+            setProperty("kds.persistenceKeySpec.configurationPresent", "true")
+            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
+            setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
+        }
+
+        val persistenceKeySpec = EnclaveKdsConfig.loadConfiguration(properties)!!.persistenceKeySpec!!
+        assertThat(persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID).isFalse
+        assertThat(persistenceKeySpec.policyConstraint.useOwnCodeHash).isFalse
     }
 
     @Test
@@ -62,8 +66,15 @@ class KDSConfigurationTest {
             setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
         }
 
-        val kdsConfiguration = KDSConfiguration.loadConfiguration(disabledConfiguration)
+        val kdsConfiguration = EnclaveKdsConfig.loadConfiguration(disabledConfiguration)
+        assertThat(kdsConfiguration).isNull()
+    }
 
-        assertThat(kdsConfiguration).isEqualTo(null)
+    private fun validateConfiguration(kdsConfiguration: EnclaveKdsConfig) {
+        assertThat(kdsConfiguration.kdsEnclaveConstraint.toString()).isEqualTo("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+        assertThat(kdsConfiguration.persistenceKeySpec!!.masterKeyType).isEqualTo(MasterKeyType.DEBUG)
+        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.constraint).isEqualTo("SEC:INSECURE")
+        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.useOwnCodeHash).isEqualTo(true)
+        assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.useOwnCodeSignerAndProductID).isEqualTo(true)
     }
 }

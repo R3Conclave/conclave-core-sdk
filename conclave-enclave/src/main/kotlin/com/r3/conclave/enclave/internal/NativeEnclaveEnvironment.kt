@@ -17,9 +17,9 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 @PotentialPackagePrivate
-class NativeEnclaveEnvironment(enclaveProperties: Properties) : EnclaveEnvironment(enclaveProperties) {
-    private var isEnclaveDebug: Boolean? = null
-
+class NativeEnclaveEnvironment(
+    enclaveClass: Class<*>
+) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
         // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
@@ -86,10 +86,12 @@ class NativeEnclaveEnvironment(enclaveProperties: Properties) : EnclaveEnvironme
             val enclave =
                     enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }
                             .newInstance()
-            val env = NativeEnclaveEnvironment(loadEnclaveProperties(enclaveClass, false, null))
+            val env = NativeEnclaveEnvironment(enclaveClass)
             return initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
         }
     }
+
+    private var isEnclaveDebug: Boolean? = null
 
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
