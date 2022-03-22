@@ -208,7 +208,7 @@ All endpoints might send error responses with the following structure.
 
 The integrity of the public key present in the response can be verified as follows:
 
-1. Create a byte array as described in the diagram below. The name, master key type, and policy constraint come from the
+Create a byte array as described in the diagram below. The name, master key type, and policy constraint come from the
 fields in the request sent. Whereas the public key comes from the response after being decoded from Base64. The API version
 field will contain the API version used for the request (in this case, 1).
 ```
@@ -223,27 +223,15 @@ field will contain the API version used for the request (in this case, 1).
             (BE)    sized field            (BE)    sized field   (BE)     sized field
 ```
 
-2. Deserialize the `kdsAttestationReport` in the response by calling the method `deserialize` in `EnclaveInstanceInfo`:
-```Java
-eii = EnclaveInstanceInfo.deserialize(kdsAttestationReport)
-```
+This data, along with the `dataSigningKey` contained in the `kdsAttestationReport` from the response, and the `signature` field are
+used to check the response integrity.
 
-3. Decode the Base64 signature in the response message:
-```Java
-signature = Base64.getDecoder().decode(base64EncodedSignature);
-```
-
-4. Create an instance of `net.i2p.crypto.eddsa.EdDSAEngine` and initialise it with `eii.dataSigningKey`:
-```Java
-EdDSAEngine sig = new EdDSAEngine();
-sig.initVerify(eii.getDataSigningKey());
-```
-
-5. Call the method `sig.update` with the byte array created in step 1.
-6. Check the public key integrity by ensuring the return value from the call `sig.verify(signature)` is true.
-
-!!! note
-    The dependency used by KDS that enables EdDSAEngine has the following Gradle coordinates: net.i2p.crypto:eddsa:0.3.0.
+On the API response, the public key is represented by 44 bytes: the first 12 of them being the algorithm identifier,
+conforming to [RFC-8410](https://datatracker.ietf.org/doc/html/rfc8410#page-3), and the remaining 32 representing the public key data. 
+On some libraries, when importing the key those bytes representing the algorithm identifier are not taken in consideration,
+resulting in failure on the key import. This can be handled in two ways: firstly, slicing the byte array to ignore the first
+12 bytes and just use the 32 bytes corresponding to the key, or implement a more thorough validation, checking the algorithm 
+identifier to ensure it is supported.
 
 !!! warning
 
@@ -257,3 +245,4 @@ sig.initVerify(eii.getDataSigningKey());
     it is recommended that Java and Kotlin developers use the builder methods `fromURL` and `fromInputStream`
     of the `KDSPostOfficeBuilder` class.  
     These methods will create post offices to automatically validate the signature for you.
+    
