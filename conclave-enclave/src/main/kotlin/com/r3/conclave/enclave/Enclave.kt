@@ -684,20 +684,30 @@ Received: $attestationReportBody"""
             // determines this by examining the mail's unencrypted derivation header.
             val kdsPrivateKeyResponse = input.getNullable { adminHandler.getKdsPrivateKeyResponse(this) }
             val mailDecryptingStream = getMailDecryptingStream(input)
-            val mail = decryptMail(mailDecryptingStream, kdsPrivateKeyResponse)
-            executeReceive(hostThreadId, { checkMailOrdering(mail) }, { receiveMail(mail, routingHint) })
+            val (keyDerivation, mail) = decryptMail(mailDecryptingStream, kdsPrivateKeyResponse)
+
+            when (keyDerivation) {
+                RandomSessionKeyDerivation -> executeReceive(hostThreadId, { checkMailOrdering(mail) }, { receiveMail(mail, routingHint) })
+                is KdsKeySpecKeyDerivation ->
+                    // Checking of sequence numbers by the enclave if the mail was encrypted with a KDS key doesn’t
+                    // make sense. This is because such a Mail can be processed by any number of enclave instances, example:
+                    // horizontal scaling of an enclave application. In such a scenario the first mail in the sequence might
+                    // go to enclave 1 and the second mail to enclave 2. Enclave 2 will then complain that the sequence number
+                    // has not started from zero.
+                    executeReceive(hostThreadId, { }, { receiveMail(mail, routingHint) })
+            }
         }
 
         private fun decryptMail(
             mailStream: MailDecryptingStream,
             kdsPrivateKeyResponse: KdsPrivateKeyResponse?
-        ): DecryptedEnclaveMail {
+        ): Pair<MailKeyDerivation, DecryptedEnclaveMail> {
             val keyDerivation = MailKeyDerivation.deserialiseFromMailStream(mailStream)
             val privateKey = when (keyDerivation) {
                 RandomSessionKeyDerivation -> encryptionKeyPair.private
                 is KdsKeySpecKeyDerivation -> getKdsPrivateKey(keyDerivation.keySpec, kdsPrivateKeyResponse)
             }
-            return mailStream.decryptMail(privateKey)
+            return Pair(keyDerivation, mailStream.decryptMail(privateKey))
         }
 
         private fun getKdsPrivateKey(keySpec: KDSKeySpec, kdsPrivateKeyResponse: KdsPrivateKeyResponse?): PrivateKey {

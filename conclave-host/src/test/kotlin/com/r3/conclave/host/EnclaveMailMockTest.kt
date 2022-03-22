@@ -1,10 +1,18 @@
 package com.r3.conclave.host
 
+import com.r3.conclave.client.KDSPostOfficeBuilder
+import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.MockConfiguration
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
+import com.r3.conclave.common.kds.KDSKeySpec
+import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.host.internal.createMockHost
+import com.r3.conclave.host.kds.KDSConfiguration
+import com.r3.conclave.internaltesting.kds.KDSServiceMock
 import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.EnclaveMail
@@ -18,6 +26,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -184,6 +193,44 @@ class EnclaveMailMockTest {
         assertThatIllegalStateException()
             .isThrownBy { noop.deliverMail(encrypted1, "test") }
             .withMessageContaining("First time seeing mail with topic topic-123 so the sequence number must be zero but is instead 1.")
+    }
+
+    @Test
+    fun `ensure enclave ignores the sequence numbers for kds mail`() {
+        val mockKDS = KDSServiceMock()
+        val kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
+        val kdsPostOffice = createKDSPostOfficeBuilder(mockKDS, kdsEnclaveConstraint)
+        val mockConfig = MockConfiguration().apply {
+            codeHash = SHA256Hash.parse("7ED0D171B7BE8D5DB0391D786A96BA8004DEF81B27B99283904062E2DB46ED63")
+            codeSigningKeyHash = SHA256Hash.parse("9DF32DDABAD154C5C2E0E08732ECA0ADFE32D9BC31732522F61E497849C97BAC")
+        }
+        val kdsConfig = EnclaveKdsConfig(kdsEnclaveConstraint = kdsEnclaveConstraint, persistenceKeySpec = null)
+        val enclaveHost = createMockHost(NoopEnclave::class.java, mockConfig, kdsConfig)
+        enclaveHost.start(null, null, null, KDSConfiguration(mockKDS.hostUrl.toString())) {}
+
+        val kdsMailSeqNumber0 = kdsPostOffice.encryptMail(byteArrayOf())
+        val kdsMailSeqNumber1 = kdsPostOffice.encryptMail(byteArrayOf())
+        val kdsMailSeqNumber2 = kdsPostOffice.encryptMail(byteArrayOf())
+        val kdsMailSeqNumber3 = kdsPostOffice.encryptMail(byteArrayOf())
+
+        assertDoesNotThrow {
+            // Ensure the enclaveHost does not throw because it did not receive mail with sequence number 0
+            // This test covers the case when the Enclave requests the key from the kds service
+            enclaveHost.deliverMail(kdsMailSeqNumber1, null)
+        }
+
+        assertDoesNotThrow {
+            // Ensure the enclaveHost does not throw because it did not receive mail with sequence number 2
+            // This test covers the case when Enclave uses its cache to retrieve the key
+            enclaveHost.deliverMail(kdsMailSeqNumber3, null)
+        }
+
+        mockKDS.close()
+    }
+
+    private fun createKDSPostOfficeBuilder(mockKDS: KDSServiceMock, kdsEnclaveConstraint: EnclaveConstraint): PostOffice {
+        val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, kdsEnclaveConstraint.toString())
+        return KDSPostOfficeBuilder.fromUrl(mockKDS.hostUrl, kdsSpec, kdsEnclaveConstraint).build()
     }
 
     @Test
