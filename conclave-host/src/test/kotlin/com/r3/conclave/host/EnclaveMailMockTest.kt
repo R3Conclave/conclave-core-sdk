@@ -4,7 +4,6 @@ import com.r3.conclave.client.KDSPostOfficeBuilder
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
@@ -13,16 +12,13 @@ import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.internaltesting.kds.KDSServiceMock
-import com.r3.conclave.mail.Curve25519PrivateKey
-import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.mail.MailDecryptionException
+import com.r3.conclave.mail.*
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -44,11 +40,11 @@ class EnclaveMailMockTest {
         // where the enclave is multithreaded AND the persistent map is excluded, as this is an invalid state.
         @JvmStatic
         fun validPersistentMapEnablementStates(): List<Arguments> {
-            val configurations = ArrayList<Arguments>()
-            configurations.add(Arguments.arguments(false, false))
-            configurations.add(Arguments.arguments(false, true))
-            configurations.add(Arguments.arguments(true, false))
-            return configurations
+            return listOf(
+                Arguments.arguments(false, false),
+                Arguments.arguments(false, true),
+                Arguments.arguments(true, false)
+            )
         }
     }
 
@@ -57,6 +53,18 @@ class EnclaveMailMockTest {
     private val echo by lazy { createMockHost(MailEchoEnclave::class.java, mockConfiguration) }
     private val noop by lazy { createMockHost(NoopEnclave::class.java, mockConfiguration) }
     private val postOffices = HashMap<Pair<EnclaveInstanceInfo, String>, PostOffice>()
+
+    private val mockKds = KDSServiceMock()
+    private val enclaveKdsConfig = EnclaveKdsConfig(
+        kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"),
+        persistenceKeySpec = null
+    )
+    private val hostKdsConfig = KDSConfiguration(mockKds.hostUrl.toString())
+
+    @AfterEach
+    fun close() {
+        mockKds.close()
+    }
 
     @Test
     fun `deliverMail before start`() {
@@ -196,41 +204,82 @@ class EnclaveMailMockTest {
     }
 
     @Test
-    fun `ensure enclave ignores the sequence numbers for kds mail`() {
-        val mockKDS = KDSServiceMock()
-        val kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-        val kdsPostOffice = createKDSPostOfficeBuilder(mockKDS, kdsEnclaveConstraint)
-        val mockConfig = MockConfiguration().apply {
-            codeHash = SHA256Hash.parse("7ED0D171B7BE8D5DB0391D786A96BA8004DEF81B27B99283904062E2DB46ED63")
-            codeSigningKeyHash = SHA256Hash.parse("9DF32DDABAD154C5C2E0E08732ECA0ADFE32D9BC31732522F61E497849C97BAC")
-        }
-        val kdsConfig = EnclaveKdsConfig(kdsEnclaveConstraint = kdsEnclaveConstraint, persistenceKeySpec = null)
-        val enclaveHost = createMockHost(NoopEnclave::class.java, mockConfig, kdsConfig)
-        enclaveHost.start(null, null, null, KDSConfiguration(mockKDS.hostUrl.toString())) {}
+    fun `sequence numbers are ignored for KDS mail`() {
+        val kdsPostOffice = createKdsPostOffice()
 
-        val kdsMailSeqNumber0 = kdsPostOffice.encryptMail(byteArrayOf())
-        val kdsMailSeqNumber1 = kdsPostOffice.encryptMail(byteArrayOf())
-        val kdsMailSeqNumber2 = kdsPostOffice.encryptMail(byteArrayOf())
-        val kdsMailSeqNumber3 = kdsPostOffice.encryptMail(byteArrayOf())
+        val enclaveHost = createMockHost(NoopEnclave::class.java, null, enclaveKdsConfig)
+        enclaveHost.start(null, null, null, hostKdsConfig) { }
+
+        kdsPostOffice.encryptMail(byteArrayOf())
+        val secondKdsMail = kdsPostOffice.encryptMail(byteArrayOf())
+        kdsPostOffice.encryptMail(byteArrayOf())
+        val fourthKdsMail = kdsPostOffice.encryptMail(byteArrayOf())
+        assertThat(getMailSequenceNumber(secondKdsMail))
+            .isNotZero
+            .isNotEqualTo(getMailSequenceNumber(fourthKdsMail))
 
         assertDoesNotThrow {
             // Ensure the enclaveHost does not throw because it did not receive mail with sequence number 0
             // This test covers the case when the Enclave requests the key from the kds service
-            enclaveHost.deliverMail(kdsMailSeqNumber1, null)
+            enclaveHost.deliverMail(secondKdsMail, null)
         }
 
         assertDoesNotThrow {
             // Ensure the enclaveHost does not throw because it did not receive mail with sequence number 2
             // This test covers the case when Enclave uses its cache to retrieve the key
-            enclaveHost.deliverMail(kdsMailSeqNumber3, null)
+            enclaveHost.deliverMail(fourthKdsMail, null)
         }
-
-        mockKDS.close()
     }
 
-    private fun createKDSPostOfficeBuilder(mockKDS: KDSServiceMock, kdsEnclaveConstraint: EnclaveConstraint): PostOffice {
-        val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, kdsEnclaveConstraint.toString())
-        return KDSPostOfficeBuilder.fromUrl(mockKDS.hostUrl, kdsSpec, kdsEnclaveConstraint).build()
+    @Test
+    fun `different KDS keys can be used for the same topic and sender`() {
+        class EchoEnclave : Enclave() {
+            override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
+                postMail(postOffice(mail).encryptMail(mail.bodyAsBytes), routingHint)
+            }
+        }
+
+        val senderPrivateKey = Curve25519PrivateKey.random()
+        val postOffice1 = createKdsPostOffice(keyName = "name1", senderPrivateKey)
+        val postOffice2 = createKdsPostOffice(keyName = "name2", senderPrivateKey)
+
+        // Make sure we're dealing with different KDS keys
+        assertThat(postOffice1.destinationPublicKey).isNotEqualTo(postOffice2.destinationPublicKey)
+        // But using the same (topic + sender) pair
+        assertThat(postOffice1.topic).isEqualTo(postOffice1.topic)
+        assertThat(postOffice1.senderPublicKey).isEqualTo(postOffice1.senderPublicKey)
+
+        var postedMail: ByteArray? = null
+
+        val enclaveHost = createMockHost(EchoEnclave::class.java, null, enclaveKdsConfig)
+        enclaveHost.start(null, null, null, hostKdsConfig) {
+            postedMail = it.filterIsInstance<MailCommand.PostMail>().single().encryptedBytes
+        }
+
+        enclaveHost.deliverMail(postOffice1.encryptMail("1".toByteArray()), null)
+        assertThat(postOffice1.decryptMail(postedMail!!).bodyAsBytes).isEqualTo("1".toByteArray())
+
+        enclaveHost.deliverMail(postOffice2.encryptMail("2".toByteArray()), null)
+        assertThat(postOffice2.decryptMail(postedMail!!).bodyAsBytes).isEqualTo("2".toByteArray())
+    }
+
+    private fun getMailSequenceNumber(mailBytes: ByteArray): Long {
+        return Mail.getUnauthenticatedHeader(mailBytes).sequenceNumber
+    }
+
+    private fun createKdsPostOffice(
+        keyName: String = "name",
+        senderPrivateKey: PrivateKey = Curve25519PrivateKey.random()
+    ): PostOffice {
+        val keySpec = KDSKeySpec(
+            keyName,
+            MasterKeyType.DEBUG,
+            "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"
+        )
+        return KDSPostOfficeBuilder
+            .fromUrl(mockKds.hostUrl, keySpec, enclaveKdsConfig.kdsEnclaveConstraint)
+            .setSenderPrivateKey(senderPrivateKey)
+            .build()
     }
 
     @Test
@@ -339,17 +388,17 @@ class EnclaveMailMockTest {
 
     @Test
     fun `enclave has different encryption key on restart and can't decrypt mail for previous instance`() {
-        echo.start(null, null, null) { }
-        val previousEncryptionKey = echo.enclaveInstanceInfo.encryptionKey
-        val encryptedMail = buildMail(echo)
-        echo.close()
+        noop.start(null, null, null) { }
+        val previousEncryptionKey = noop.enclaveInstanceInfo.encryptionKey
+        val encryptedMail = buildMail(noop)
+        noop.close()
 
-        val echo2 = createMockHost(MailEchoEnclave::class.java)
-        echo2.start(null, null, null) {  }
+        val noop2 = createMockHost(NoopEnclave::class.java)
+        noop2.start(null, null, null) {  }
 
-        assertThat(previousEncryptionKey).isNotEqualTo(echo2.enclaveInstanceInfo.encryptionKey)
+        assertThat(previousEncryptionKey).isNotEqualTo(noop2.enclaveInstanceInfo.encryptionKey)
         assertThatThrownBy {
-            echo2.deliverMail(encryptedMail, null)
+            noop2.deliverMail(encryptedMail, null)
         }.hasRootCauseInstanceOf(AEADBadTagException::class.java)
     }
 

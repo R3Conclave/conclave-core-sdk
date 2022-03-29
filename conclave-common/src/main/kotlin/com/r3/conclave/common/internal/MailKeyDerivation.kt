@@ -27,7 +27,7 @@ sealed class MailKeyDerivation {
         val ABANDONED_MRSIGNER_SIZE = SgxCpuSvn.size + SgxIsvSvn.size
 
         fun deserialiseFromMailBytes(mailBytes: ByteArray): MailKeyDerivation {
-            return deserialiseFromMailStream(MailDecryptingStream(mailBytes.inputStream()))
+            return deserialiseFromMailStream(MailDecryptingStream(mailBytes))
         }
 
         fun deserialiseFromMailStream(mailStream: MailDecryptingStream): MailKeyDerivation {

@@ -41,6 +41,8 @@ class MailDecryptingStream(
     input: InputStream,
     private var privateKey: PrivateKey? = null
 ) : FilterInputStream(input) {
+    constructor(bytes: ByteArray, privateKey: PrivateKey? = null) : this(bytes.inputStream(), privateKey)
+
     private var cipherState: CipherState? = null
 
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
@@ -153,7 +155,7 @@ class MailDecryptingStream(
     private var currentUserBytesIndex = 0 // How far through the decrypted packet we got.
     private var currentUserBytesLength = 0 // Real length of user bytes in currentDecryptedBuffer.
 
-    /** To get [mark] back, wrap this stream in a [BufferedInputStream]. */
+    /** To get [mark] back, wrap this stream in a [java.io.BufferedInputStream]. */
     override fun markSupported(): Boolean {
         return false
     }
@@ -345,13 +347,11 @@ class MailDecryptingStream(
         return handshake
     }
 
-    /**
-     * Use the given lambda to derive the encryption key for this stream from the header and fully decrypt it into an
-     * authenticated [EnclaveMail] object.
-     *
-     * It is the caller's responsibility to close this stream.
-     */
-    fun decryptMail(privateKey: PrivateKey): DecryptedEnclaveMail {
+    fun decryptKdsMail(kdsPrivateyKey: PrivateKey): DecryptedEnclaveMail = decryptMail(kdsPrivateyKey, isKdsKey = true)
+
+    fun decryptMail(privateKey: PrivateKey): DecryptedEnclaveMail = decryptMail(privateKey, isKdsKey = false)
+
+    private fun decryptMail(privateKey: PrivateKey, isKdsKey: Boolean): DecryptedEnclaveMail {
         // TODO: Optimise out copies here.
         //
         // We end up copying the mail every time it's read, the copy being defensive and thus useful only to protect
@@ -375,7 +375,7 @@ class MailDecryptingStream(
             header.envelope,
             privateHeader,
             mailBody,
-            privateKey
+            privateKey.takeIf { isKdsKey }
         )
     }
 

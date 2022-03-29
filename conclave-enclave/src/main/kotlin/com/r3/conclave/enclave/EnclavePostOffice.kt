@@ -5,7 +5,6 @@ import com.r3.conclave.mail.EnclaveMailHeader
 import com.r3.conclave.mail.MinSizePolicy
 import com.r3.conclave.mail.PostOffice
 import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
-import java.security.PrivateKey
 import java.security.PublicKey
 
 /**
@@ -15,6 +14,10 @@ import java.security.PublicKey
  *
  * [EnclavePostOffice] differs from the general [PostOffice] by not having a decrypt method as the enclave already does
  * that, and not exposing the sender private key as that's a secret of the enclave that should not be leaked.
+ *
+ * [EnclavePostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
+ * multiple threads. However, since most mail are ordered by their sequence numbers, care should be taken to make sure
+ * they are created in their intended order.
  *
  * @see [PostOffice]
  * @see [Enclave.postOffice]
@@ -52,7 +55,7 @@ abstract class EnclavePostOffice(
     /**
      * Returns the sequence number that will be assigned to the next mail.
      */
-    val nextSequenceNumber: Long get() = sequenceNumber
+    abstract val nextSequenceNumber: Long
 
     /**
      * Uses [destinationPublicKey] to encrypt mail with the given body. Only the corresponding private key will be able to
@@ -65,8 +68,6 @@ abstract class EnclavePostOffice(
      * The encoded bytes contains the [body], header and the handshake bytes that set up the shared session key.
      * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
      * subject to change.
-     *
-     * It's safe to call this method from multiple threads.
      *
      * @return the encrypted mail bytes.
      *
@@ -87,15 +88,11 @@ abstract class EnclavePostOffice(
      * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
      * subject to change.
      *
-     * It's safe to call this method from multiple threads.
-     *
      * @return the encrypted mail bytes.
      *
      * @see EnclaveMailHeader
      */
-    fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
-        return encryptMail(body, envelope, getPrivateHeader())
-    }
+    fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray = encryptMail(body, envelope, privateHeader)
 
-    protected abstract fun getPrivateHeader(): ByteArray?
+    protected abstract val privateHeader: ByteArray?
 }

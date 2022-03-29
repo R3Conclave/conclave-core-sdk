@@ -11,7 +11,7 @@ class DecryptedEnclaveMail(
     private val _envelope: ByteArray?,
     val privateHeader: ByteArray?,
     private val _bodyAsBytes: ByteArray,
-    val enclavePrivateKey: PrivateKey
+    val kdsPrivateKey: PrivateKey?
 ) : EnclaveMail {
     override val envelope: ByteArray? get() = _envelope?.clone()
     override val bodyAsBytes: ByteArray get() = _bodyAsBytes.clone()

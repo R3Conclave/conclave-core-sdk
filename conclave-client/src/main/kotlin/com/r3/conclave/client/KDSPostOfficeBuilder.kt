@@ -33,8 +33,6 @@ import java.security.SignatureException
  * The users can also optionally define a custom topic for the post office communications with the enclave and
  * a custom sender private key for the authentication of the mails to the enclave.
  */
-// TODO The design of this builder is not quite right. It needs to better reflect the requirement that if a different
-//  key spec is used then a different (senderPrivateKey, topic) pair must be used.
 class KDSPostOfficeBuilder private constructor(
     private val destinationPublicKey: PublicKey,
     private val keySpec: KDSKeySpec

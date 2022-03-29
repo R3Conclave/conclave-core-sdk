@@ -1,4 +1,4 @@
-package com.r3.conclave.internaltesting.kds.internal
+package com.r3.conclave.internaltesting
 
 import io.ktor.application.*
 import io.ktor.features.*

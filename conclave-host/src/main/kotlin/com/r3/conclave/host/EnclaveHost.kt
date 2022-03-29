@@ -630,7 +630,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
 
         if (con.responseCode != HttpURLConnection.HTTP_OK) {
-            val errorText = con.errorStream.use { it.reader().readText() }
+            val errorText = (con.errorStream ?: con.inputStream).use { it.reader().readText() }
             val kdsErrorResponse =  try {
                 jsonMapper.readValue(errorText, KDSErrorResponse::class.java)
             } catch (e: Exception) {

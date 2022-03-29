@@ -9,12 +9,12 @@ import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.enclave.Enclave.CallState.Receive
 import com.r3.conclave.enclave.Enclave.CallState.Response
 import com.r3.conclave.enclave.Enclave.EnclaveState.*
 import com.r3.conclave.enclave.internal.*
-import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.enclave.internal.kds.KdsPrivateKeyResponse
 import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.DecryptedEnclaveMail
@@ -30,7 +30,6 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
@@ -84,7 +83,7 @@ abstract class Enclave {
     private var persistenceKdsPrivateKey: ByteArray? = null
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
-    private val postOffices = HashMap<PublicKeyAndTopic, EnclavePostOfficeImpl>()
+    private val postOffices = HashMap<PublicKeyAndTopic, SessionEnclavePostOffice>()
     private val lock = ReentrantLock()
     private val enclaveQuiescentCondition = lock.newCondition()
 
@@ -683,31 +682,26 @@ Received: $attestationReportBody"""
             // to provide this if the enclave hasn't previously cached the private key this Mail needs. The host
             // determines this by examining the mail's unencrypted derivation header.
             val kdsPrivateKeyResponse = input.getNullable { adminHandler.getKdsPrivateKeyResponse(this) }
-            val mailDecryptingStream = getMailDecryptingStream(input)
-            val (keyDerivation, mail) = decryptMail(mailDecryptingStream, kdsPrivateKeyResponse)
+            val mailStream = getMailDecryptingStream(input)
 
-            when (keyDerivation) {
-                RandomSessionKeyDerivation -> executeReceive(hostThreadId, { checkMailOrdering(mail) }, { receiveMail(mail, routingHint) })
-                is KdsKeySpecKeyDerivation ->
-                    // Checking of sequence numbers by the enclave if the mail was encrypted with a KDS key doesn’t
-                    // make sense. This is because such a Mail can be processed by any number of enclave instances, example:
-                    // horizontal scaling of an enclave application. In such a scenario the first mail in the sequence might
-                    // go to enclave 1 and the second mail to enclave 2. Enclave 2 will then complain that the sequence number
-                    // has not started from zero.
-                    executeReceive(hostThreadId, { }, { receiveMail(mail, routingHint) })
-            }
-        }
-
-        private fun decryptMail(
-            mailStream: MailDecryptingStream,
-            kdsPrivateKeyResponse: KdsPrivateKeyResponse?
-        ): Pair<MailKeyDerivation, DecryptedEnclaveMail> {
             val keyDerivation = MailKeyDerivation.deserialiseFromMailStream(mailStream)
-            val privateKey = when (keyDerivation) {
-                RandomSessionKeyDerivation -> encryptionKeyPair.private
-                is KdsKeySpecKeyDerivation -> getKdsPrivateKey(keyDerivation.keySpec, kdsPrivateKeyResponse)
+            val mail = when (keyDerivation) {
+                RandomSessionKeyDerivation -> mailStream.decryptMail(encryptionKeyPair.private)
+                is KdsKeySpecKeyDerivation -> {
+                    mailStream.decryptKdsMail(getKdsPrivateKey(keyDerivation.keySpec, kdsPrivateKeyResponse))
+                }
             }
-            return Pair(keyDerivation, mailStream.decryptMail(privateKey))
+
+            val preReceiveAction = if (keyDerivation is KdsKeySpecKeyDerivation) {
+                // We don't check the sequence numbers for KDS encrypted mail because such a mail could be processed by
+                // any number of enclave instances, example: horizontal scaling of an enclave application. In such a
+                // scenario the first mail in the sequence might go to enclave 1 and the second mail to enclave 2.
+                // Enclave 2 would then complain that the sequence number has not started from zero.
+                { }
+            } else {
+                { checkMailOrdering(mail) }
+            }
+            executeReceive(hostThreadId, preReceiveAction) { receiveMail(mail, routingHint) }
         }
 
         private fun getKdsPrivateKey(keySpec: KDSKeySpec, kdsPrivateKeyResponse: KdsPrivateKeyResponse?): PrivateKey {
@@ -1011,7 +1005,6 @@ Received: $attestationReportBody"""
         class Response(val bytes: ByteArray) : CallState()
     }
 
-    //region Mail
     private lateinit var encryptionKeyPair: KeyPair
 
     /**
@@ -1046,7 +1039,7 @@ Received: $attestationReportBody"""
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
      */
     protected fun postOffice(destinationPublicKey: PublicKey, topic: String): EnclavePostOffice {
-        return getPostOffice(destinationPublicKey, topic, null, encryptionKeyPair.private)
+        return getCachedPostOffice(destinationPublicKey, topic, null)
     }
 
     /**
@@ -1069,18 +1062,16 @@ Received: $attestationReportBody"""
      * authenticated sender as the destination public key.
      */
     protected fun postOffice(mail: EnclaveMail): EnclavePostOffice {
-        mail as DecryptedEnclaveMail
-        val postOffice = getPostOffice(mail.authenticatedSender, mail.topic, null, mail.enclavePrivateKey)
-        // Check if this enclave has previously created a reply Post Office for this client + topic pair and that the
-        // same private key is used. If two different private keys are involved then the client will not be able to
-        // decrypt some responses due to the identity check in AbstractPostOffice.Companion.decryptMail.
-        if (postOffice.senderPrivateKey != mail.enclavePrivateKey) {
-            println("WARN: Two different KDS key specs, or a combination of KDS and non-KDS keys, have been used by " +
-                    "the client for the same sender and topic (${mail.authenticatedSender}, ${mail.topic}). The " +
-                    "client is not going to be able to decrypt some of the mail responses."
-            )
+        val kdsPrivateKey = (mail as DecryptedEnclaveMail).kdsPrivateKey
+        return if (kdsPrivateKey == null) {
+            getCachedPostOffice(mail.authenticatedSender, mail.topic, null)
+        } else {
+            // If the mail was encrypted with a custom KDS private key then return a new post office instance with that
+            // key each time. There's no benefit to caching KdsEnclavePostOffice since the KDS response mail do not
+            // have an increasing sequence number (they are all set to 0). Caching would also cause problems if the
+            // client uses another KDS key for the same (authenticatedSender, topic) pair.
+            KdsEnclavePostOffice(mail.authenticatedSender, mail.topic, kdsPrivateKey)
         }
-        return postOffice
     }
 
     /**
@@ -1095,12 +1086,7 @@ Received: $attestationReportBody"""
      */
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo, topic: String): EnclavePostOffice {
         enclaveInstanceInfo as EnclaveInstanceInfoImpl
-        return getPostOffice(
-            enclaveInstanceInfo.encryptionKey,
-            topic,
-            enclaveInstanceInfo.keyDerivation,
-            encryptionKeyPair.private
-        )
+        return getCachedPostOffice(enclaveInstanceInfo.encryptionKey, topic, enclaveInstanceInfo.keyDerivation)
     }
 
     /**
@@ -1117,15 +1103,14 @@ Received: $attestationReportBody"""
         return postOffice(enclaveInstanceInfo, "default")
     }
 
-    private fun getPostOffice(
+    private fun getCachedPostOffice(
         destinationPublicKey: PublicKey,
         topic: String,
-        keyDerivation: ByteArray?,
-        senderPrivateKey: PrivateKey
-    ): EnclavePostOfficeImpl {
+        keyDerivation: ByteArray?
+    ): SessionEnclavePostOffice {
         synchronized(postOffices) {
             return postOffices.computeIfAbsent(PublicKeyAndTopic(destinationPublicKey, topic)) {
-                EnclavePostOfficeImpl(destinationPublicKey, topic, keyDerivation, senderPrivateKey)
+                SessionEnclavePostOffice(destinationPublicKey, topic, keyDerivation)
             }
         }
     }
@@ -1147,17 +1132,27 @@ Received: $attestationReportBody"""
         enclaveMessageHandler.postMail(encryptedMail, routingHint)
     }
 
-    private inner class EnclavePostOfficeImpl(
+    /**
+     * [EnclavePostOffice] for creating response mail using the enclave's random session key.
+     */
+    private inner class SessionEnclavePostOffice(
         destinationPublicKey: PublicKey,
         topic: String,
         override val keyDerivation: ByteArray?,
-        public override val senderPrivateKey: PrivateKey
     ) : EnclavePostOffice(destinationPublicKey, topic) {
+        private var sequenceNumber: Long = 0
+
         init {
             minSizePolicy = defaultMinSizePolicy
         }
 
-        override fun getPrivateHeader(): ByteArray? {
+        override val nextSequenceNumber: Long get() = sequenceNumber
+
+        override fun getAndIncrementSequenceNumber(): Long = sequenceNumber++
+
+        override val senderPrivateKey: PrivateKey get() = encryptionKeyPair.private
+
+        override val privateHeader: ByteArray? get() {
             return enclaveMessageHandler.currentReceiveContext?.let { receiveContext ->
                 receiveContext.pendingPostMails++
                 getMailPrivateHeader(receiveContext, destinationPublicKey)
@@ -1165,12 +1160,33 @@ Received: $attestationReportBody"""
         }
     }
 
+    /**
+     * [EnclavePostOffice] for creating response mail using the KDS private key the recipient had specified. The
+     * sequence number of these response mail are all set to 0. This is because there may be more than one enclave
+     * instance involved when KDS mail is sent from the client and thus an ordering on them cannot be enforced.
+     *
+     * @property senderPrivateKey The KDS private key that was used to decrypt the incoming the KDS mail and which is
+     * now used as the sender key for any response mail.
+     */
+    private inner class KdsEnclavePostOffice(
+        destinationPublicKey: PublicKey,
+        topic: String,
+        override val senderPrivateKey: PrivateKey,
+    ) : EnclavePostOffice(destinationPublicKey, topic) {
+        init {
+            minSizePolicy = defaultMinSizePolicy
+        }
+        override val nextSequenceNumber: Long get() = 0
+        override fun getAndIncrementSequenceNumber(): Long = 0
+        override val keyDerivation: ByteArray? get() = null
+        override val privateHeader: ByteArray? get() = null
+    }
+
     // By default let all post office instances use the same moving average instance to make it harder to analyse mail
     // sizes within any given topic.
     private val defaultMinSizePolicy = MinSizePolicy.movingAverage()
 
     private data class PublicKeyAndTopic(val publicKey: PublicKey, val topic: String)
-    //endregion
 
     private sealed class EnclaveState {
         object New : EnclaveState()

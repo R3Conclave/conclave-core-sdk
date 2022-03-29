@@ -50,21 +50,19 @@ class EnclaveKDSKeySpecTest {
         )
     }
 
+    private val mockKDS = KDSServiceMock()
     private lateinit var enclaveHost: EnclaveHost
-    private lateinit var mockKDS: KDSServiceMock
     private lateinit var kdsPostOffice: PostOffice
 
     @BeforeEach
     fun init() {
-        mockKDS = KDSServiceMock()
+        // Make sure we test that the enclave is checking regardless of the KDS.
+        mockKDS.checkPolicyConstraint = false
         kdsPostOffice = createKDSPostOfficeBuilder()
     }
 
     @AfterEach
     fun close() {
-        if (::mockKDS.isInitialized) {
-            mockKDS.close()
-        }
         if (::enclaveHost.isInitialized) {
             enclaveHost.close()
         }

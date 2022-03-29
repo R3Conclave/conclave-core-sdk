@@ -127,7 +127,7 @@ class MailStreamsTest {
         val totalDataSize = data.size + maxOf(0, privateHeaderSize) + 4
         assertThat(getPacketCount(encrypted)).isEqualTo(ceil(totalDataSize.toDouble() / MAX_PACKET_PAYLOAD_LENGTH).toInt() + 1)
 
-        val mds = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey)
+        val mds = MailDecryptingStream(encrypted, receivingPrivateKey)
         val decrypted = mds.readFully()
         assertArrayEquals(data, decrypted)
 
@@ -184,7 +184,7 @@ class MailStreamsTest {
 
         val encrypted = encryptMessage(message = data, privateHeader = privateHeader)
 
-        val decryptingStream = MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey)
+        val decryptingStream = MailDecryptingStream(encrypted, receivingPrivateKey)
         val out = ByteArrayOutputStream()
         block(decryptingStream, out)
         assertThat(decryptingStream.read()).isEqualTo(-1)
@@ -213,7 +213,7 @@ class MailStreamsTest {
     }
 
     private fun decrypt(src: ByteArray): MailDecryptingStream {
-        val decrypt = MailDecryptingStream(src.inputStream(), receivingPrivateKey)
+        val decrypt = MailDecryptingStream(src, receivingPrivateKey)
         val all = decrypt.readBytes()
         assertArrayEquals(msg, all)
         assertEquals(-1, decrypt.read())
@@ -247,7 +247,7 @@ class MailStreamsTest {
     fun `not able to read stream if private key not provided`() {
         val encrypted = encryptMessage()
 
-        val decryptingStream = MailDecryptingStream(encrypted.inputStream())
+        val decryptingStream = MailDecryptingStream(encrypted)
         assertThatThrownBy { decryptingStream.read() }
             .isInstanceOf(MailDecryptionException::class.java)
             .hasRootCauseMessage("Private key has not been provided to decrypt the stream.")
@@ -256,7 +256,7 @@ class MailStreamsTest {
     @Test
     fun `provide private key after reading header`() {
         val encrypted = encryptMessage()
-        val decryptingStream = MailDecryptingStream(encrypted.inputStream(), privateKey = null)
+        val decryptingStream = MailDecryptingStream(encrypted, privateKey = null)
         assertThat(decryptingStream.header).isEqualTo(header)
 
         decryptingStream.setPrivateKey(receivingPrivateKey)
@@ -272,7 +272,7 @@ class MailStreamsTest {
         val topicIndex = String(encrypted).indexOf("topic")
         encrypted[topicIndex] = 'T'.code.toByte()
 
-        val decryptingStream = MailDecryptingStream(encrypted.inputStream())
+        val decryptingStream = MailDecryptingStream(encrypted)
         // The change goes unnoticed.
         assertThat(decryptingStream.header).isEqualTo(header.copy(topic = "Topic"))
 
@@ -319,7 +319,7 @@ class MailStreamsTest {
         assertThatExceptionOfType(IndexOutOfBoundsException::class.java).isThrownBy {
             val data = ByteArray(16).also(Noise::random)
             val encrypted = encryptMessage(message = data)
-            MailDecryptingStream(encrypted.inputStream(), receivingPrivateKey).use { decrypt ->
+            MailDecryptingStream(encrypted, receivingPrivateKey).use { decrypt ->
                 val out = ByteArray(1)
                 decrypt.read(out, 0x7fffffff, 1)
             }
