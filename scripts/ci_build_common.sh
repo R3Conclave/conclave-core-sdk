@@ -121,6 +121,8 @@ function loadBuildImage() {
     filename=$code_host_dir/containers/sgxjvm-build/build/sgxjvm-build-docker-image.tar.gz
     if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
         if [ ! -f $filename ]; then
+          # The compressed file was split into smaller files.
+          # Recreate the original file and delete the smaller ones.
           cat $filename.part* > $filename && rm $filename.part*
         fi
         docker load < $code_host_dir/containers/sgxjvm-build/build/sgxjvm-build-docker-image.tar.gz
