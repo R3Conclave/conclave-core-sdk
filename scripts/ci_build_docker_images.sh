@@ -11,7 +11,7 @@ function saveDockerImage() {
         local dir="$(dirname $file_name)"
         local image="$2"
         mkdir -p "$dir"
-        docker save "$image" | gzip > "$file_name"
+        docker save "$image" | gzip | split -b 500M - "$file_name.part"
     fi
 }
 
