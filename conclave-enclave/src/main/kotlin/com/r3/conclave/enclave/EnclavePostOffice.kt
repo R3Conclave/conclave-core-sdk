@@ -1,16 +1,15 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMailHeader
-import com.r3.conclave.mail.MinSizePolicy
-import com.r3.conclave.mail.PostOffice
+import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
+import java.security.PrivateKey
 import java.security.PublicKey
 
 /**
  * A special post office which is tailored for use inside the enclave. A cached instance can be retrieved using
  * one of the [Enclave.postOffice] methods. The sender private key is automatically set to the enclave's private
- * encryption key, which is why a private key is not required.
+ * encryption key, which is why a private key is not required, but it is also accessible here as experienced users
+ * might need it for specific purposes, for example they can hash it and derive a unique ID that can’t be forged.
  *
  * [EnclavePostOffice] differs from the general [PostOffice] by not having a decrypt method as the enclave already does
  * that, and not exposing the sender private key as that's a secret of the enclave that should not be leaked.
@@ -41,6 +40,15 @@ abstract class EnclavePostOffice(
         }
         checkTopic(topic)
     }
+
+    /**
+     * The sender private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field.
+     * By default, this is the enclave's random session key, but is a custom KDS key
+     * if the original mail was encrypted with a KDS key.
+     *
+     * @see [EnclaveMail.authenticatedSender]
+     */
+    public abstract override val senderPrivateKey: PrivateKey
 
     /**
      * Returns the [MinSizePolicy] used to apply the minimum size for each encrypted mail. If none is specified then

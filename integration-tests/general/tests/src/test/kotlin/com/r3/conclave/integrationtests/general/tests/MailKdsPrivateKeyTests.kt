@@ -49,7 +49,7 @@ class MailKdsPrivateKeyTests {
             EnclaveConstraint.parse("S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:2 SEC:INSECURE")
 
         private val validPublicKey = Curve25519PublicKey(
-            Base64.getDecoder().decode("bQyMHspHyK1QDUpqPpKrSa0jAd2USmS3tydojhdXOFA=")
+            Base64.getDecoder().decode("d/DKtI1HcZg0QaTmW56+alpvZNANnCtyX3cJtpYLGk4=")
         )
 
         @BeforeAll

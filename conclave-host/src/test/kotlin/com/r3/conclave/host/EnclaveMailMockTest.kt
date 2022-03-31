@@ -19,8 +19,7 @@ import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -113,7 +112,8 @@ class EnclaveMailMockTest {
             null
         }
         assertThat(thrown!!.message).isEqualTo(
-                "deliverMail cannot be called in a callback to another deliverMail when the persistent map is enabled.")
+            "deliverMail cannot be called in a callback to another deliverMail when the persistent map is enabled."
+        )
     }
 
     @Test
@@ -263,6 +263,29 @@ class EnclaveMailMockTest {
         assertThat(postOffice2.decryptMail(postedMail!!).bodyAsBytes).isEqualTo("2".toByteArray())
     }
 
+    @Test
+    fun `check that EnclavePostOffice senderPrivateKey is correct by verifying its related public key`() {
+        class PublicKeyEnclave : Enclave() {
+            override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
+                val privateKey = postOffice(mail).senderPrivateKey as Curve25519PrivateKey
+                val publicKey = privateKey.publicKey
+                callUntrustedHost(publicKey.encoded)
+            }
+        }
+        val enclaveHost = createMockHost(PublicKeyEnclave::class.java, null, enclaveKdsConfig)
+        enclaveHost.start(null, null, null, hostKdsConfig) {}
+
+        val hostKdsPostOffice = createKdsPostOffice(keyName = "name1", Curve25519PrivateKey.random())
+        val mail = hostKdsPostOffice.encryptMail("Dummy message".toByteArray())
+
+        var publicKeyFromEnclave: ByteArray? = null
+        enclaveHost.deliverMail(mail, null) { buffer ->
+            publicKeyFromEnclave = buffer
+            null
+        }
+        assertThat(publicKeyFromEnclave!!).isEqualTo(hostKdsPostOffice.destinationPublicKey.encoded)
+    }
+
     private fun getMailSequenceNumber(mailBytes: ByteArray): Long {
         return Mail.getUnauthenticatedHeader(mailBytes).sequenceNumber
     }
@@ -394,7 +417,7 @@ class EnclaveMailMockTest {
         noop.close()
 
         val noop2 = createMockHost(NoopEnclave::class.java)
-        noop2.start(null, null, null) {  }
+        noop2.start(null, null, null) { }
 
         assertThat(previousEncryptionKey).isNotEqualTo(noop2.enclaveInstanceInfo.encryptionKey)
         assertThatThrownBy {
@@ -440,7 +463,7 @@ class EnclaveMailMockTest {
         }
 
         val host = createMockHost(PostOfficeEnclave::class.java)
-        host.start(null, null, null) {  }
+        host.start(null, null, null) { }
         host.deliverMail(buildMail(host, body = overload.toByteArray()), null)
     }
 
