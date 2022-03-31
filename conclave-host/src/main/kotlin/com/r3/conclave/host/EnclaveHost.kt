@@ -2,6 +2,7 @@ package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.MockConfiguration
@@ -616,7 +617,6 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         con.setRequestProperty("Content-Type", "application/json; utf-8")
         con.setRequestProperty("API-VERSION", "1")
         con.doOutput = true
-        val mapper = getJsonMapper()
 
         val kdsPrivateKeyRequest = KDSPrivateKeyRequest(
             // TODO Cache the serialised bytes

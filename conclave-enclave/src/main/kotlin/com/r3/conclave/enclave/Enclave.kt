@@ -20,11 +20,9 @@ import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.DecryptedEnclaveMail
 import com.r3.conclave.mail.internal.EnclaveStateId
 import com.r3.conclave.mail.internal.MailDecryptingStream
-import com.r3.conclave.mail.internal.MailKeyDerivationType
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
-import java.io.DataInputStream
 import java.io.UTFDataFormatException
 import java.nio.ByteBuffer
 import java.security.KeyPair
@@ -1041,7 +1039,7 @@ Received: $attestationReportBody"""
      * If the destination is an enclave then use the overload which takes in an [EnclaveInstanceInfo] instead.
      */
     protected fun postOffice(destinationPublicKey: PublicKey, topic: String): EnclavePostOffice {
-        return getCachedPostOffice(destinationPublicKey, topic, null, getSenderPrivateKey())
+        return getCachedPostOffice(destinationPublicKey, topic, null)
     }
 
     /**
@@ -1088,7 +1086,7 @@ Received: $attestationReportBody"""
      */
     protected fun postOffice(enclaveInstanceInfo: EnclaveInstanceInfo, topic: String): EnclavePostOffice {
         enclaveInstanceInfo as EnclaveInstanceInfoImpl
-        return getCachedPostOffice(enclaveInstanceInfo.encryptionKey, topic, enclaveInstanceInfo.keyDerivation, getSenderPrivateKey())
+        return getCachedPostOffice(enclaveInstanceInfo.encryptionKey, topic, enclaveInstanceInfo.keyDerivation)
     }
 
     /**
