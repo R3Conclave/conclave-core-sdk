@@ -217,5 +217,5 @@ Once completed, copy the signed file and the public key back onto the build syst
 Invoke Gradle to complete the build.
 
 ```
-./gradlew build -PenclaveMode="Release"
+./gradlew :host:bootJar -PenclaveMode="Release"
 ```

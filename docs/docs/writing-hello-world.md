@@ -62,7 +62,7 @@ conclave {
         // Generate a signature from the signing material.
         //
         // Finally build the signed enclave:
-        //  ./gradlew build -PenclaveMode="Release"
+        //  ./gradlew :host:bootJar -PenclaveMode="Release"
         //
         signingType = externalKey
         signatureDate = new Date(1970, 0, 1)

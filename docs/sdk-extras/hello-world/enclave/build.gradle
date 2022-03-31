@@ -29,7 +29,7 @@ conclave {
         //  openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
         //
         // Finally build the signed enclave:
-        //  ./gradlew build -PenclaveMode="Release"
+        //  ./gradlew :host:bootJar -PenclaveMode="Release"
         //
         signingType = externalKey
         signatureDate = new Date(1970, 0, 1)
