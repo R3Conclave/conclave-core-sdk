@@ -9,14 +9,14 @@ function teardownAESM() {
 }
 
 function loadAESMImage() {
-    filename=$code_host_dir/containers/aesmd/build/aesmd-docker-image.tar.gz
     if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
-      if [ ! -f $filename ]; then
-        # The compressed file was split into smaller files.
-        # Recreate the original file and delete the smaller ones.
-        cat $filename.part* > $filename && rm $filename.part*
-      fi
-      docker load -i $filename
+        filename=$code_host_dir/containers/aesmd/build/aesmd-docker-image.tar.gz
+        if [ ! -f $filename ]; then
+          # The compressed file was split into smaller files.
+          # Recreate the original file and delete the smaller ones.
+          cat $filename.part* > $filename && rm $filename.part*
+        fi
+        docker load -i $filename
     fi
 }
 

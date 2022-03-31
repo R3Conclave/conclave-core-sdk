@@ -2,10 +2,10 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.enclave.internal.kds.KDSConfiguration
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import java.util.*
 
-abstract class EnclaveEnvironment(enclaveProperties: Properties) {
+abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: EnclaveKdsConfig?) {
     companion object {
         // Default enclave properties in the event that the enclave properties resource cannot be loaded.
         // This is required in mock mode because mock enclaves are not always built with the conclave gradle
@@ -25,7 +25,8 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties) {
         }
 
         // Load enclave properties or optionally get defaults, throw an error if this was unsuccessful
-        fun loadEnclaveProperties(enclaveClass: Class<*>, allowDefaults: Boolean, propertyOverrides: Properties?): Properties {
+        @JvmStatic
+        protected fun loadEnclaveProperties(enclaveClass: Class<*>, allowDefaults: Boolean): Properties {
             val propertyStream = enclaveClass.getResourceAsStream("enclave.properties")
             val properties = Properties()
             propertyStream?.use {
@@ -34,9 +35,6 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties) {
                 properties.putAll(defaultProperties)
             } else {
                 throw IllegalStateException("Failed to load internal enclave properties resource.")
-            }
-            propertyOverrides?.let {
-                properties.putAll(it)
             }
             return properties
         }
@@ -53,7 +51,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties) {
     open val persistentFileSystemSize: Long = enclaveProperties.getProperty("persistentFileSystemSize").toLong()
 
     // KDS configuration from build system
-    open val kdsConfiguration: KDSConfiguration? = KDSConfiguration.loadConfiguration(enclaveProperties)
+    open val kdsConfiguration: EnclaveKdsConfig? = kdsConfig ?: EnclaveKdsConfig.loadConfiguration(enclaveProperties)
 
     /**
      * Create an [SgxReport] of the enclave.

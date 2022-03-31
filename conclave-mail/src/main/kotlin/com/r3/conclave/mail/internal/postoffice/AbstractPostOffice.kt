@@ -14,7 +14,6 @@ abstract class AbstractPostOffice {
     protected abstract val senderPrivateKey: PrivateKey
     protected abstract val keyDerivation: ByteArray?
 
-    protected var sequenceNumber: Long = 0
     protected var encryptCalled = false
 
     private var _minSizePolicy: MinSizePolicy? = null
@@ -27,9 +26,11 @@ abstract class AbstractPostOffice {
             _minSizePolicy = value
         }
 
+    protected abstract fun getAndIncrementSequenceNumber(): Long
+
     protected fun encryptMail(body: ByteArray, envelope: ByteArray?, privateHeader: ByteArray?): ByteArray {
         encryptCalled = true
-        val header = EnclaveMailHeaderImpl(sequenceNumber++, topic, envelope, keyDerivation)
+        val header = EnclaveMailHeaderImpl(getAndIncrementSequenceNumber(), topic, envelope, keyDerivation)
         val minSize = minSizePolicy.getMinSize(body.size)
         val output = ByteArrayOutputStream(getExpectedSize(header, minSize, body))
         val stream = MailEncryptingStream(output, destinationPublicKey, header, privateHeader, senderPrivateKey, minSize)
@@ -64,7 +65,7 @@ abstract class AbstractPostOffice {
             recipientPrivateKey: PrivateKey,
             expectedSenderPublicKey: PublicKey
         ): DecryptedEnclaveMail {
-            val mail = MailDecryptingStream(encryptedMailBytes.inputStream()).decryptMail { recipientPrivateKey }
+            val mail = MailDecryptingStream(encryptedMailBytes).decryptMail(recipientPrivateKey)
             require(mail.authenticatedSender == expectedSenderPublicKey) {
                 "Mail does not originate from expected sender. Authenticated sender was ${mail.authenticatedSender} " +
                         "but expected $expectedSenderPublicKey."

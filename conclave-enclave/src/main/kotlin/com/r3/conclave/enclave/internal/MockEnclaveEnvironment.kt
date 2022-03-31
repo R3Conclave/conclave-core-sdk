@@ -12,17 +12,17 @@ import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.enclave.Enclave
+import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-import java.util.*
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
     enclave: Enclave,
     mockConfiguration: MockConfiguration?,
-    enclavePropertiesOverride: Properties?
-) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true, enclavePropertiesOverride)) {
+    kdsConfig: EnclaveKdsConfig?
+) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true), kdsConfig) {
     companion object {
         private val secureRandom = SecureRandom()
 

@@ -2,17 +2,27 @@
 
 ## 1.2 to 1.3
 
-### KDS - beta API
-The beta API for the dev KDS has changed. The request format for both ```/public``` and ```/private``` endpoints has
-been updated. The updates are backwards compatible so no changes are required for enclaves built using an older version of Conclave. But
-developers are encouraged to use the new request formats since the older ones have been marked as deprecated.
+### KDS REST API
 
-The HTTP header ```API-VERSION``` has been added to the beta API for backwards compatibility reasons. The HTTP header ```API-VERSION``` must be set to 1 in 
-order to use the new request formats.
+The Key Derivation Service (KDS) is out of beta and its REST API has been finalised. The request format for both the
+`/public` and `/private` endpoints has changed. The old format is no longer supported and HTTP clients are now
+required to specify the HTTP header `API-VERSION` with a value of `1`. Details on the API can be found
+[here](#kds-rest-api).
 
-### KDS Configuration
-The KDS configuration which is specified in the enclave's Gradle file has been updated. The property `keySpec` has been replaced by `persistenceKeySpec` and
-it is now deprecated.
+### KDS enclave configuration
+
+The `keySpec` block in the enclave's build.gradle has changed to `persistenceKeySpec`. The old `keySpec` is still
+supported but deprecated and will be removed in a future version.
+
+### API changes
+
+[`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) now throws an 
+`IOException`. This can occur if the mail to be delivered was encrypted using a KDS key and the host is unable to 
+retrieve it from the KDS.
+
+Though technically not an API change, the docs for [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office)
+and [`EnclavePostOffice`](api/-conclave/com.r3.conclave.enclave/-enclave-post-office) have been fixed to state that 
+they are _not_ thread-safe.
 
 ## 1.1 to 1.2
 

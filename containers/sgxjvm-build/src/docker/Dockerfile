@@ -73,6 +73,7 @@ RUN apt-get update -y && apt-get install -y \
     ocamlbuild \
     openjdk-8-jdk \
     openjdk-17-jdk \
+    openjdk-17-jdk \
     openssl \
     patch \
     protobuf-compiler \

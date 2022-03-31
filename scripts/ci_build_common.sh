@@ -125,7 +125,7 @@ function loadBuildImage() {
           # Recreate the original file and delete the smaller ones.
           cat $filename.part* > $filename && rm $filename.part*
         fi
-        docker load < $code_host_dir/containers/sgxjvm-build/build/sgxjvm-build-docker-image.tar.gz
+        docker load < $filename
     fi
 }
 

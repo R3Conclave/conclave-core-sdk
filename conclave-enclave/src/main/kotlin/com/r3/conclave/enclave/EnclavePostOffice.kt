@@ -1,19 +1,22 @@
 package com.r3.conclave.enclave
 
-import com.r3.conclave.mail.Curve25519PublicKey
-import com.r3.conclave.mail.EnclaveMailHeader
-import com.r3.conclave.mail.MinSizePolicy
-import com.r3.conclave.mail.PostOffice
+import com.r3.conclave.mail.*
 import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
+import java.security.PrivateKey
 import java.security.PublicKey
 
 /**
  * A special post office which is tailored for use inside the enclave. A cached instance can be retrieved using
  * one of the [Enclave.postOffice] methods. The sender private key is automatically set to the enclave's private
- * encryption key, which is why a private key is not required.
+ * encryption key, which is why a private key is not required, but it is also accessible here as experienced users
+ * might need it for specific purposes, for example they can hash it and derive a unique ID that can’t be forged.
  *
  * [EnclavePostOffice] differs from the general [PostOffice] by not having a decrypt method as the enclave already does
  * that, and not exposing the sender private key as that's a secret of the enclave that should not be leaked.
+ *
+ * [EnclavePostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
+ * multiple threads. However, since most mail are ordered by their sequence numbers, care should be taken to make sure
+ * they are created in their intended order.
  *
  * @see [PostOffice]
  * @see [Enclave.postOffice]
@@ -39,6 +42,15 @@ abstract class EnclavePostOffice(
     }
 
     /**
+     * The sender private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field.
+     * By default, this is the enclave's random session key, but is a custom KDS key
+     * if the original mail was encrypted with a KDS key.
+     *
+     * @see [EnclaveMail.authenticatedSender]
+     */
+    public abstract override val senderPrivateKey: PrivateKey
+
+    /**
      * Returns the [MinSizePolicy] used to apply the minimum size for each encrypted mail. If none is specified then
      * [MinSizePolicy.movingAverage] is used.
      */
@@ -51,7 +63,7 @@ abstract class EnclavePostOffice(
     /**
      * Returns the sequence number that will be assigned to the next mail.
      */
-    val nextSequenceNumber: Long get() = sequenceNumber
+    abstract val nextSequenceNumber: Long
 
     /**
      * Uses [destinationPublicKey] to encrypt mail with the given body. Only the corresponding private key will be able to
@@ -64,8 +76,6 @@ abstract class EnclavePostOffice(
      * The encoded bytes contains the [body], header and the handshake bytes that set up the shared session key.
      * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
      * subject to change.
-     *
-     * It's safe to call this method from multiple threads.
      *
      * @return the encrypted mail bytes.
      *
@@ -86,15 +96,11 @@ abstract class EnclavePostOffice(
      * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
      * subject to change.
      *
-     * It's safe to call this method from multiple threads.
-     *
      * @return the encrypted mail bytes.
      *
      * @see EnclaveMailHeader
      */
-    fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray {
-        return encryptMail(body, envelope, getPrivateHeader())
-    }
+    fun encryptMail(body: ByteArray, envelope: ByteArray?): ByteArray = encryptMail(body, envelope, privateHeader)
 
-    protected abstract fun getPrivateHeader(): ByteArray?
+    protected abstract val privateHeader: ByteArray?
 }

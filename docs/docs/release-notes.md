@@ -2,19 +2,25 @@ Release notes
 =============
 
 ### 1.4
-1. GraalVM has been updated to version 21.3.1
+
+1. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using
+   JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave
+   libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
+2. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
+3. GraalVM has been updated to version 21.3.1.
+4. Gradle 7 is now supported.
 
 ### 1.3
 
-1. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using 
-   JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave 
-   libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
-2. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
-3. GraalVM has been updated to version 21.3.
-4. Gradle 7 is now supported.
-5. The Conclave Key Derivation Service (KDS) now supports release enclave with the new RELEASE master key type.
-6. We have simplified the usage of the KDS by providing Java/Kotlin builders that accept the 
-   URL (or InputStream) of the KDS. We have also given the possibility of using a previously obtained Public Key.
+1. :jigsaw: **New feature!** The Conclave Conclave Key Derivation Service (KDS) is out of beta and now supports
+   production workloads! Use the `RELEASE` master key type instead of `DEBUG`. The REST API docs can be found
+   [here](kds-rest-api.md).
+2. :jigsaw: **New feature!** Suppport for stable enclave encryption keys with Mail by using the KDS. This allows
+   usages where the enclave can restart, or even move to a different physical machine and the client is unaffected.
+   It also allows communication with an enclave before it has even started. See the API docs for the new
+   [KDS post office](api/-conclave/com.r3.conclave.client/-k-d-s-post-office-builder/index.html) for more details.
+3. Support for [Conclave Cloud](https://conclave.cloud/)!
+4. Some small bug fixes.
    
 ### 1.2.1
 

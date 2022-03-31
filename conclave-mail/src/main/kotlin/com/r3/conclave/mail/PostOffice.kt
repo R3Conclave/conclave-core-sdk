@@ -132,6 +132,10 @@ interface EnclaveMail : EnclaveMailHeader {
  * When inside an enclave instances can only be created using one of the `Enclave.postOffice()` methods, and cannot be
  * created using [PostOffice.create] or `EnclaveInstanceInfo.createPostOffice()`. This is to ensure the enclave's
  * private key is correctly applied as the sender.
+ *
+ * [PostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
+ * multiple threads. However, since most mail are ordered by their sequence numbers, care should be taken to make sure
+ * they are created in their intended order.
  */
 abstract class PostOffice(
     /**
@@ -190,6 +194,8 @@ abstract class PostOffice(
         }
     }
 
+    private var sequenceNumber: Long = 0
+
     /**
      * The public key of the recipient to which mail will be encrypted to.
      */
@@ -237,6 +243,8 @@ abstract class PostOffice(
         return this
     }
 
+    override fun getAndIncrementSequenceNumber(): Long = sequenceNumber++
+
     /**
      * Uses [destinationPublicKey] to encrypt mail with the given body. Only the corresponding private key will be able to
      * decrypt the mail. The returned ciphertext will include [topic], incremented sequence number (see [nextSequenceNumber])
@@ -248,8 +256,6 @@ abstract class PostOffice(
      * The encoded bytes contains the [body], header and the handshake bytes that set up the shared session key.
      * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
      * subject to change.
-     *
-     * It's safe to call this method from multiple threads.
      *
      * @return the encrypted mail bytes.
      *
@@ -269,8 +275,6 @@ abstract class PostOffice(
      * The encoded bytes contains the [body], the [envelope], header, the handshake bytes that set up the shared session key.
      * A mail may not be larger than the 2 gigabyte limit of a Java byte array. The format is not defined here and
      * subject to change.
-     *
-     * It's safe to call this method from multiple threads.
      *
      * @return the encrypted mail bytes.
      *
@@ -328,6 +332,6 @@ object Mail {
     @JvmStatic
     @Throws(IOException::class)
     fun getUnauthenticatedHeader(encryptedEnclaveMail: ByteArray): EnclaveMailHeader {
-        return MailDecryptingStream(encryptedEnclaveMail.inputStream()).header
+        return MailDecryptingStream(encryptedEnclaveMail).header
     }
 }

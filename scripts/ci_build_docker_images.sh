@@ -14,7 +14,7 @@ function saveDockerImage() {
         # The docker image is saved to a compressed file to minimize its size as much as possible. Additionally,
         # the compressed file is split into smaller files of up to 500MB. This is done because Teamcity sometimes struggles
         # to copy large files between different agents.
-        docker save "$image" | gzip | split -b 500M - "$file_name.part"
+        docker save $image | gzip | split -b 500M - "$file_name.part"
     fi
 }
 

@@ -41,6 +41,8 @@ class MailDecryptingStream(
     input: InputStream,
     private var privateKey: PrivateKey? = null
 ) : FilterInputStream(input) {
+    constructor(bytes: ByteArray, privateKey: PrivateKey? = null) : this(bytes.inputStream(), privateKey)
+
     private var cipherState: CipherState? = null
 
     // Remember the exception we threw so we can throw it again if the user keeps trying to use the stream.
@@ -153,7 +155,7 @@ class MailDecryptingStream(
     private var currentUserBytesIndex = 0 // How far through the decrypted packet we got.
     private var currentUserBytesLength = 0 // Real length of user bytes in currentDecryptedBuffer.
 
-    /** To get [mark] back, wrap this stream in a [BufferedInputStream]. */
+    /** To get [mark] back, wrap this stream in a [java.io.BufferedInputStream]. */
     override fun markSupported(): Boolean {
         return false
     }
@@ -345,13 +347,11 @@ class MailDecryptingStream(
         return handshake
     }
 
-    /**
-     * Use the given lambda to derive the encryption key for this stream from the header and fully decrypt it into an
-     * authenticated [EnclaveMail] object.
-     *
-     * It is the caller's responsibility to close this stream.
-     */
-    fun decryptMail(deriveKey: (ByteArray?) -> PrivateKey): DecryptedEnclaveMail {
+    fun decryptKdsMail(kdsPrivateyKey: PrivateKey): DecryptedEnclaveMail = decryptMail(kdsPrivateyKey, isKdsKey = true)
+
+    fun decryptMail(privateKey: PrivateKey): DecryptedEnclaveMail = decryptMail(privateKey, isKdsKey = false)
+
+    private fun decryptMail(privateKey: PrivateKey, isKdsKey: Boolean): DecryptedEnclaveMail {
         // TODO: Optimise out copies here.
         //
         // We end up copying the mail every time it's read, the copy being defensive and thus useful only to protect
@@ -366,7 +366,6 @@ class MailDecryptingStream(
         // encrypted and authenticated in 64kb Noise packet blocks, so it's safe to hold it in unprotected memory
         // and store just the current decrypted block in EPC, which MailDecryptingStream already does. This would
         // also make it feasible to access huge mails without the 2GB size limit JVM arrays pose.
-        val privateKey = deriveKey(header.keyDerivation)
         setPrivateKey(privateKey)
         val mailBody = readBytes()
         return DecryptedEnclaveMail(
@@ -375,7 +374,8 @@ class MailDecryptingStream(
             Curve25519PublicKey(senderPublicKey),
             header.envelope,
             privateHeader,
-            mailBody
+            mailBody,
+            privateKey.takeIf { isKdsKey }
         )
     }
 
