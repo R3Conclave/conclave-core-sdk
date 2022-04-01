@@ -2,7 +2,6 @@ package com.r3.conclave.integrationtests.general.common.tasks
 
 import com.r3.conclave.integrationtests.general.common.EnclaveContext
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ByteArraySerializer
@@ -13,6 +12,9 @@ import java.net.URL
 import java.nio.channels.ByteChannel
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Files.createDirectories
+import java.nio.file.Files.walk
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.*
 import java.util.concurrent.ConcurrentHashMap
@@ -42,12 +44,13 @@ class FilesWrite(private val path: String, val bytes: ByteArray) : FileSystemAct
     override fun run(context: EnclaveContext, isMail: Boolean) {
         Files.write(Paths.get(path), bytes)
     }
+
     override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }
 
 @Serializable
 class DeleteFile(private val path: String, private val nioApi: Boolean) : FileSystemAction<Boolean>() {
-    override fun run(context: EnclaveContext, isMail: Boolean) : Boolean {
+    override fun run(context: EnclaveContext, isMail: Boolean): Boolean {
         //  Note that java.io.File "delete" does not throw
         //  when the file is not present, while java.nio.Files "delete" does
         return if (nioApi) {
@@ -58,14 +61,16 @@ class DeleteFile(private val path: String, private val nioApi: Boolean) : FileSy
             file.delete()
         }
     }
+
     override fun resultSerializer(): KSerializer<Boolean> = Boolean.serializer()
 }
 
 @Serializable
 class RenameFile(private val oldPath: String, private val newPath: String) : FileSystemAction<Boolean>() {
-    override fun run(context: EnclaveContext, isMail: Boolean) : Boolean {
+    override fun run(context: EnclaveContext, isMail: Boolean): Boolean {
         return File(oldPath).renameTo(File(newPath))
     }
+
     override fun resultSerializer(): KSerializer<Boolean> = Boolean.serializer()
 }
 
@@ -74,13 +79,28 @@ class MovePath(private val oldPath: String, private val newPath: String) : FileS
     override fun run(context: EnclaveContext, isMail: Boolean) {
         Files.move(Paths.get(oldPath), Paths.get(newPath)).toString()
     }
+
+    override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
+}
+
+@Serializable
+class WalkAndDelete(private val pathString: String) : FileSystemAction<Unit>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) {
+        val path = Path.of(pathString)
+        createDirectories(path)
+        walk(path)
+            .sorted(Comparator.reverseOrder())
+            .map(Path::toFile)
+            .forEach(File::delete)
+    }
+
     override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }
 
 
 @Serializable
 class WalkPath(private val path: String) : FileSystemAction<String>() {
-    override fun run(context: EnclaveContext, isMail: Boolean) : String {
+    override fun run(context: EnclaveContext, isMail: Boolean): String {
         var res = ""
 
         File(path).walk().forEach {
@@ -92,6 +112,7 @@ class WalkPath(private val path: String) : FileSystemAction<String>() {
         }
         return res
     }
+
     override fun resultSerializer(): KSerializer<String> = String.serializer()
 }
 
@@ -100,6 +121,7 @@ class FilesCreateDirectory(private val path: String) : FileSystemAction<Unit>() 
     override fun run(context: EnclaveContext, isMail: Boolean) {
         Files.createDirectory(Paths.get(path))
     }
+
     override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }
 
@@ -108,6 +130,7 @@ class FilesCreateDirectories(private val path: String) : FileSystemAction<Unit>(
     override fun run(context: EnclaveContext, isMail: Boolean) {
         Files.createDirectories(Paths.get(path))
     }
+
     override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }
 
@@ -252,7 +275,7 @@ class OpenUrlFileInputStream(private val path: String, private val uid: Int) : F
 }
 
 @Serializable
-class WriteByteToOuputStream(private val uid: Int, val byte: Int) : FileSystemAction<Unit>() {
+class WriteByteToOutputStream(private val uid: Int, val byte: Int) : FileSystemAction<Unit>() {
     override fun run(context: EnclaveContext, isMail: Boolean) {
         val outputStream = context.stateAs<State>().outputStreams.getValue(uid)
         outputStream.write(byte)
@@ -262,7 +285,7 @@ class WriteByteToOuputStream(private val uid: Int, val byte: Int) : FileSystemAc
 }
 
 @Serializable
-class WriteBytesToOuputStream(private val uid: Int, val bytes: ByteArray) : FileSystemAction<Unit>() {
+class WriteBytesToOutputStream(private val uid: Int, val bytes: ByteArray) : FileSystemAction<Unit>() {
     override fun run(context: EnclaveContext, isMail: Boolean) {
         val outputStream = context.stateAs<State>().outputStreams.getValue(uid)
         outputStream.write(bytes)
@@ -272,7 +295,7 @@ class WriteBytesToOuputStream(private val uid: Int, val bytes: ByteArray) : File
 }
 
 @Serializable
-class WriteOffsetBytesToOuputStream(
+class WriteOffsetBytesToOutputStream(
     private val uid: Int,
     private val bytes: ByteArray,
     private val offset: Int,
@@ -287,7 +310,7 @@ class WriteOffsetBytesToOuputStream(
 }
 
 @Serializable
-class CloseOuputStream(private val uid: Int) : FileSystemAction<Unit>() {
+class CloseOutputStream(private val uid: Int) : FileSystemAction<Unit>() {
     override fun run(context: EnclaveContext, isMail: Boolean) {
         val outputStream = context.stateAs<State>().outputStreams.getValue(uid)
         outputStream.close()
@@ -350,7 +373,6 @@ class WriteFilesConcurrently(private val files: Int, private val parentDir: Stri
                 Paths.get(parentDir, "test_file_$i.txt").writeText("Dummy text from file $i")
             }
         }
-
         return futures.mapIndexed { i, future ->
             future.join()
             String(Paths.get(parentDir, "test_file_$i.txt").readBytes())
@@ -361,7 +383,8 @@ class WriteFilesConcurrently(private val files: Int, private val parentDir: Stri
 }
 
 @Serializable
-class RandomAccessFileConcurrentWrites(private val threads: Int, private val parentDir: String) : FileSystemAction<String>() {
+class RandomAccessFileConcurrentWrites(private val threads: Int, private val parentDir: String) :
+    FileSystemAction<String>() {
     override fun run(context: EnclaveContext, isMail: Boolean): String {
         val testFile = Paths.get(parentDir, "test_file.txt")
         RandomAccessFile(testFile.toFile(), "rws").use { raf ->

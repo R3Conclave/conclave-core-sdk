@@ -30,7 +30,7 @@ class FilesTest : FileSystemEnclaveTest() {
         }
 
         override fun close() {
-            callEnclave(CloseOuputStream(uid))
+            callEnclave(CloseOutputStream(uid))
         }
     }
 
@@ -77,6 +77,17 @@ class FilesTest : FileSystemEnclaveTest() {
         // Ensure deleting or opening the non existing file fails with the expected exception
         filesDeleteNonExistingFile(path, nioApi)
         fileInputStreamNonExistingFile(path, nioApi)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/parent-dir",
+        "/tmp/parent-dir",
+    )
+    fun createDeleteNestedDirectories(parent: String) {
+        val path = "$parent/child-dir/grandchild-dir"
+        callEnclave(WalkAndDelete(path))
+        assertThat(callEnclave(FilesExists(path))).isFalse
     }
 
     @ParameterizedTest

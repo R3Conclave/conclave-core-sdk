@@ -15,20 +15,20 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
 
         fun writeByteByByte(data: ByteArray) {
             for (element in data) {
-                callEnclave(WriteByteToOuputStream(uid, element.toInt()))
+                callEnclave(WriteByteToOutputStream(uid, element.toInt()))
             }
         }
 
         fun writeBytes(data: ByteArray) {
-            callEnclave(WriteBytesToOuputStream(uid, data))
+            callEnclave(WriteBytesToOutputStream(uid, data))
         }
 
         fun writeBytesOffset(data: ByteArray, offset: Int, length: Int) {
-            callEnclave(WriteOffsetBytesToOuputStream(uid, data, offset, length))
+            callEnclave(WriteOffsetBytesToOutputStream(uid, data, offset, length))
         }
 
         override fun close() {
-            callEnclave(CloseOuputStream(uid))
+            callEnclave(CloseOutputStream(uid))
         }
     }
 

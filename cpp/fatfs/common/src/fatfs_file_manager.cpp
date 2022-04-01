@@ -1116,8 +1116,15 @@ namespace conclave {
         FILINFO info;
         FRESULT res = f_readdir(fatfs_dirp, &info);
 
-        if (res != FR_OK || info.fname[0] == 0) {
-            err = ENOENT;
+        if (res != FR_OK) {
+            err = EBADF;
+            return nullptr;
+        }
+        
+        if (info.fname[0] == 0) {
+            //  This indicates that we have reached the end of the directory
+            //    after calling "readdir64" few times (or that the directory is empty).
+            //  We do not return an error but just a null pointer as per "readdir" man page.
             return nullptr;
         }
         dirent64_ptr->d_ino = 0;
@@ -1155,10 +1162,17 @@ namespace conclave {
         FILINFO info;
         FRESULT res = f_readdir(fatfs_dirp, &info);
 
-        if (res != FR_OK || info.fname[0] == 0) {
-            err = ENOENT;
+        if (res != FR_OK) {
+            err = EBADF;
             return nullptr;
         }
+
+        if (info.fname[0] == 0) {
+            //  This indicates that we have reached the end of the directory
+            //    after calling "readdir" few times (or that the directory is empty).
+            //  We do not return an error but just a null pointer as per "readdir" man page.
+            return nullptr;
+        }       
         dirent_ptr->d_ino = 0;
         dirent_ptr->d_off = 0;
         dirent_ptr->d_reclen = strlen(info.fname);
@@ -1202,7 +1216,10 @@ namespace conclave {
         if (f_closedir(fatfs_dirp) != FR_OK) {
             err = EBADF;
             return -1;
-        };
+        }
+        const std::string& path = inverse_dir_paths_.at(fatfs_dirp); 
+        dir_paths_.erase(path);
+        inverse_dir_paths_.erase(fatfs_dirp);
         return 0;
     }
 

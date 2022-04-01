@@ -106,10 +106,10 @@ private val protoBuf = ProtoBuf {
             subclass(IsFileInputStreamFDValid::class, IsFileInputStreamFDValid.serializer())
             subclass(OpenUrlFileInputStream::class, OpenUrlFileInputStream.serializer())
             subclass(NewFileOutputStream::class, NewFileOutputStream.serializer())
-            subclass(WriteByteToOuputStream::class, WriteByteToOuputStream.serializer())
-            subclass(WriteBytesToOuputStream::class, WriteBytesToOuputStream.serializer())
-            subclass(WriteOffsetBytesToOuputStream::class, WriteOffsetBytesToOuputStream.serializer())
-            subclass(CloseOuputStream::class, CloseOuputStream.serializer())
+            subclass(WriteByteToOutputStream::class, WriteByteToOutputStream.serializer())
+            subclass(WriteBytesToOutputStream::class, WriteBytesToOutputStream.serializer())
+            subclass(WriteOffsetBytesToOutputStream::class, WriteOffsetBytesToOutputStream.serializer())
+            subclass(CloseOutputStream::class, CloseOutputStream.serializer())
             subclass(NewDeleteOnCloseByteChannel::class, NewDeleteOnCloseByteChannel.serializer())
             subclass(CloseByteChannel::class, CloseByteChannel.serializer())
             subclass(NewBufferedFileInputStream::class, NewBufferedFileInputStream.serializer())
@@ -123,6 +123,7 @@ private val protoBuf = ProtoBuf {
             subclass(MovePath::class, MovePath.serializer())
             subclass(WalkPath::class, WalkPath.serializer())
             subclass(ReadAndWriteFilesToDefaultFileSystem::class, ReadAndWriteFilesToDefaultFileSystem.serializer())
+            subclass(WalkAndDelete::class, WalkAndDelete.serializer())
         }
     }
 }
