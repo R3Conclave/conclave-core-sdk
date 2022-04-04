@@ -64,7 +64,7 @@ As mock mode is pure Java this will run on any system with a JDK installed.
 ### Debug and release mode
 There are no additional requirements for **building** debug and release mode enclaves on any platform.
 
-We test building and running release-mode enclaves on Ubuntu 18.04 LTS Server x86-64.
+We test building and running release-mode enclaves on Ubuntu 20.04 LTS Server x86-64.
 
 === "macOS / Windows"
     **Running** debug and release mode enclaves is not possible on macOS or Windows.

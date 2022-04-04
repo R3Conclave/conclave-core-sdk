@@ -2,7 +2,7 @@ def cppBuildDir = project(":cpp").buildDir
 
 jar {
     dependsOn(":cpp:compileLinuxSgxSimulation")
-    def ldBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/external/toolset/ubuntu18.04/ld"
+    def ldBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/external/toolset/ubuntu20.04/ld"
     into "com/r3/conclave/binutils", {
         from(ldBuildDir) {
             include "ld"

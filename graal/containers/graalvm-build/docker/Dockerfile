@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20200219
+FROM ubuntu:20.04
 
 # A build container for Graal project.
 
@@ -15,7 +15,7 @@ RUN apt-get update -y && apt-get install -y \
 
 # CMake - instructions from https://apt.kitware.com/.
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
-  && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' \
+  && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
   && apt-get install kitware-archive-keyring -y \
   && rm /etc/apt/trusted.gpg.d/kitware.gpg
 
