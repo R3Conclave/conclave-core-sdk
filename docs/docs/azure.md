@@ -88,6 +88,12 @@ You may need to add your user into `sgx_prv` group to give it access to SGX.
 sudo usermod -aG sgx_prv $USER
 ```
 
+You may need to update the group of `/dev/sgx/provision` to `sgx_prv`.
+
+```sh
+sudo chgrp -h sgx_prv /dev/sgx/provision
+```
+
 ### DCAP Plugin
 In order to perform attestation using DCAP Conclave needs a way to gather information about the platform the enclave is hosted on. This information provides proof from Intel that a system supports SGX and that it is patched and up to date.
 
