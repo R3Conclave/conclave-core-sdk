@@ -1,7 +1,6 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.client.KDSPostOfficeBuilder
-import com.r3.conclave.common.EnclaveConstraint
+import com.r3.conclave.client.PostOfficeBuilder
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
@@ -11,18 +10,19 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.host.internal.createMockHost
 import com.r3.conclave.host.kds.KDSConfiguration
-import com.r3.conclave.internaltesting.kds.KDSServiceMock
+import com.r3.conclave.internaltesting.kds.MockKDS
 import com.r3.conclave.mail.*
 import com.r3.conclave.utilities.internal.deserialise
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -53,17 +53,13 @@ class EnclaveMailMockTest {
     private val noop by lazy { createMockHost(NoopEnclave::class.java, mockConfiguration) }
     private val postOffices = HashMap<Pair<EnclaveInstanceInfo, String>, PostOffice>()
 
-    private val mockKds = KDSServiceMock()
+    @RegisterExtension
+    private val mockKds = MockKDS()
     private val enclaveKdsConfig = EnclaveKdsConfig(
-        kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"),
+        kdsEnclaveConstraint = mockKds.enclaveConstraint,
         persistenceKeySpec = null
     )
-    private val hostKdsConfig = KDSConfiguration(mockKds.hostUrl.toString())
-
-    @AfterEach
-    fun close() {
-        mockKds.close()
-    }
+    private val hostKdsConfig = KDSConfiguration(mockKds.url.toString())
 
     @Test
     fun `deliverMail before start`() {
@@ -299,8 +295,8 @@ class EnclaveMailMockTest {
             MasterKeyType.DEBUG,
             "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"
         )
-        return KDSPostOfficeBuilder
-            .fromUrl(mockKds.hostUrl, keySpec, enclaveKdsConfig.kdsEnclaveConstraint)
+        return PostOfficeBuilder
+            .usingKDS(mockKds.url, keySpec, enclaveKdsConfig.kdsEnclaveConstraint)
             .setSenderPrivateKey(senderPrivateKey)
             .build()
     }

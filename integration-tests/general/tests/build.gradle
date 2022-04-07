@@ -10,6 +10,7 @@ dependencies {
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
     testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.junit-pioneer:junit-pioneer:$junit_pioneer_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"

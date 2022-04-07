@@ -23,7 +23,6 @@ import java.security.Signature
  * An [EnclaveInstanceInfo] should be fetched from the host via some app specific
  * mechanism, such as via an HTTP request, a directory service lookup, shared file
  * etc.
- *
  */
 interface EnclaveInstanceInfo {
     /** Contains information about the enclave code that was loaded. */
@@ -79,7 +78,7 @@ interface EnclaveInstanceInfo {
      *
      * A new sender private key will be used (which can be retrieved with [PostOffice.senderPrivateKey]), and each mail
      * created by this post office will be authenticated with it and act as the client's authenticated identity to the
-     * enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is required per client .
+     * enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is required per client.
      *
      * It's very important that related mail are created from the same post office instance, i.e. having the same topic and
      * sender key. This is so the post office can apply an increasing sequence number to each mail, which the target

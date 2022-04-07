@@ -1,7 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests
 
-import com.r3.conclave.client.KDSPostOfficeBuilder
-import com.r3.conclave.client.internal.kds.KDSPublicKeyRequest
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.r3.conclave.client.PostOfficeBuilder
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.InvalidEnclaveException
 import com.r3.conclave.common.kds.KDSKeySpec
@@ -19,7 +19,6 @@ import com.r3.conclave.integrationtests.general.commontest.TestKds
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.mail.PostOffice
-import com.r3.conclave.shaded.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -30,12 +29,15 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.IOException
 import java.io.InputStream
-import java.net.HttpURLConnection
 import java.net.URL
-import java.time.Duration
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse
+import java.net.http.HttpResponse.BodyHandlers
 import java.util.*
 
-class MailKdsPrivateKeyTests {
+class KdsMailTests {
     companion object {
         private lateinit var kdsUrl: URL
 
@@ -92,18 +94,18 @@ class MailKdsPrivateKeyTests {
     }
 
     @Test
-    fun `sending mail to enclave with URL KDS post office gives back a valid result`() {
+    fun `PostOfficeBuilder-usingKDS happy path`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
-        val postOffice = KDSPostOfficeBuilder.fromUrl(kdsUrl, kdsSpec, VALID_KDS_ENCLAVE_CONSTRAINT).build()
+        val postOffice = PostOfficeBuilder.usingKDS(kdsUrl, kdsSpec, VALID_KDS_ENCLAVE_CONSTRAINT).build()
 
         val result = deliverKdsMail(postOffice, Increment(1))
         assertThat(result).isEqualTo(2)
     }
 
     @Test
-    fun `sending mail to enclave with URL KDS post office with wrong policy constraint throws an exception`() {
+    fun `PostOfficeBuilder-usingKDS with invalid policy constraint`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, INVALID_POLICY_CONSTRAINT)
-        val postOffice = KDSPostOfficeBuilder.fromUrl(kdsUrl, kdsSpec, VALID_KDS_ENCLAVE_CONSTRAINT).build()
+        val postOffice = PostOfficeBuilder.usingKDS(kdsUrl, kdsSpec, VALID_KDS_ENCLAVE_CONSTRAINT).build()
 
         assertThatThrownBy { deliverKdsMail(postOffice, Increment(1)) }
             .isInstanceOf(IOException::class.java)
@@ -111,26 +113,26 @@ class MailKdsPrivateKeyTests {
     }
 
     @Test
-    fun `sending mail to enclave with URL KDS post office with invalid KDS enclave constraint throws an exception`() {
+    fun `PostOfficeBuilder-usingKDS with invalid KDS enclave constraint`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
 
-        assertThatThrownBy { KDSPostOfficeBuilder.fromUrl(kdsUrl, kdsSpec, INVALID_KDS_ENCLAVE_CONSTRAINT).build() }
+        assertThatThrownBy { PostOfficeBuilder.usingKDS(kdsUrl, kdsSpec, INVALID_KDS_ENCLAVE_CONSTRAINT) }
             .isInstanceOf(InvalidEnclaveException::class.java)
             .hasMessageContaining("Enclave has a product ID of 1 which does not match the criteria of 2")
     }
 
     @Test
-    fun `sending mail to enclave with public key manually retrieved from KDS gives back a valid result`() {
+    fun `PostOfficeBuilder-usingKDSPublicKey happy path`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
-        val postOffice: PostOffice = KDSPostOfficeBuilder.using(validPublicKey, kdsSpec).build()
+        val postOffice: PostOffice = PostOfficeBuilder.usingKDSPublicKey(validPublicKey, kdsSpec).build()
         val result = deliverKdsMail(postOffice, Increment(1))
         assertThat(result).isEqualTo(2)
     }
 
     @Test
-    fun `sending mail to enclave with public key KDS post office but wrong policy constraint throws an exception`() {
+    fun `PostOfficeBuilder-usingKDSPublicKey with invalid policy constraint`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, INVALID_POLICY_CONSTRAINT)
-        val postOffice: PostOffice = KDSPostOfficeBuilder.using(validPublicKey, kdsSpec).build()
+        val postOffice: PostOffice = PostOfficeBuilder.usingKDSPublicKey(validPublicKey, kdsSpec).build()
 
         assertThatThrownBy { deliverKdsMail(postOffice, Increment(1)) }
             .isInstanceOf(IOException::class.java)
@@ -138,9 +140,9 @@ class MailKdsPrivateKeyTests {
     }
 
     @Test
-    fun `sending mail to enclave with public key KDS post office but wrong policy constraint name throws an exception`() {
-        val kdsSpec = KDSKeySpec("myNewSpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
-        val postOffice: PostOffice = KDSPostOfficeBuilder.using(validPublicKey, kdsSpec).build()
+    fun `PostOfficeBuilder-usingKDSPublicKey with incorrect key spec`() {
+        val incorrectKeySpec = KDSKeySpec("myNewSpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
+        val postOffice: PostOffice = PostOfficeBuilder.usingKDSPublicKey(validPublicKey, incorrectKeySpec).build()
 
         assertThatThrownBy {
             deliverKdsMail(postOffice, Increment(1))
@@ -148,10 +150,10 @@ class MailKdsPrivateKeyTests {
     }
 
     @Test
-    fun `sending mail to enclave with input stream post office gives back a valid result`() {
+    fun `PostOfficeBuilder-usingKDSResponse happy path`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
-        val kdsPublicKeyResponseStream = requestKdsPublicKey(kdsSpec)
-        val postOffice: PostOffice = KDSPostOfficeBuilder.fromInputStream(
+        val kdsPublicKeyResponseStream = makePublicKeyRequest(kdsSpec)
+        val postOffice: PostOffice = PostOfficeBuilder.usingKDSResponse(
             kdsPublicKeyResponseStream,
             kdsSpec,
             VALID_KDS_ENCLAVE_CONSTRAINT
@@ -161,10 +163,10 @@ class MailKdsPrivateKeyTests {
     }
 
     @Test
-    fun `sending mail to enclave with input stream post office with wrong policy constraint throws an exception`() {
+    fun `PostOfficeBuilder-usingKDSResponse with invalid policy constraint`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, INVALID_POLICY_CONSTRAINT)
-        val kdsPublicKeyResponseStream = requestKdsPublicKey(kdsSpec)
-        val postOffice: PostOffice = KDSPostOfficeBuilder.fromInputStream(
+        val kdsPublicKeyResponseStream = makePublicKeyRequest(kdsSpec)
+        val postOffice: PostOffice = PostOfficeBuilder.usingKDSResponse(
             kdsPublicKeyResponseStream,
             kdsSpec,
             VALID_KDS_ENCLAVE_CONSTRAINT
@@ -176,26 +178,47 @@ class MailKdsPrivateKeyTests {
     }
 
     @Test
-    fun `sending mail to enclave with input stream post office with invalid KDS enclave constraint throws an exception`() {
+    fun `PostOfficeBuilder-usingKDSResponse with invalid KDS enclave constraint`() {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
-        val kdsPublicKeyResponseStream = requestKdsPublicKey(kdsSpec)
+        val kdsPublicKeyResponseStream = makePublicKeyRequest(kdsSpec)
 
         assertThatThrownBy {
-            KDSPostOfficeBuilder.fromInputStream(
+            PostOfficeBuilder.usingKDSResponse(
                 kdsPublicKeyResponseStream,
                 kdsSpec,
                 INVALID_KDS_ENCLAVE_CONSTRAINT
-            ).build()
-        }
-            .isInstanceOf(InvalidEnclaveException::class.java)
+            )
+        }.isInstanceOf(InvalidEnclaveException::class.java)
             .hasMessageContaining("Enclave has a product ID of 1 which does not match the criteria of 2")
+    }
+
+    @Test
+    fun `PostOfficeBuilder-usingKDSResponse with invalid request`() {
+        val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
+
+        val jsonBody = mapOf(
+            "name" to "mySpec",
+            "masterKeyType" to "not a master key",
+            "policyConstraint" to VALID_POLICY_CONSTRAINT
+        )
+
+        val kdsPublicKeyResponseStream = makePublicKeyRequest(jsonBody)
+
+        assertThatThrownBy {
+            PostOfficeBuilder.usingKDSResponse(
+                kdsPublicKeyResponseStream,
+                kdsSpec,
+                VALID_KDS_ENCLAVE_CONSTRAINT
+            )
+        }.isInstanceOf(IOException::class.java)
+            .hasMessageContaining("The requested master key type is not supported")
     }
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `sending two KDS encrypted mail`(sameTopic: Boolean) {
         val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT)
-        val kdsPostOfficeBuilder = KDSPostOfficeBuilder.fromUrl(kdsUrl, kdsSpec, VALID_KDS_ENCLAVE_CONSTRAINT)
+        val kdsPostOfficeBuilder = PostOfficeBuilder.usingKDS(kdsUrl, kdsSpec, VALID_KDS_ENCLAVE_CONSTRAINT)
         val firstPostOffice = kdsPostOfficeBuilder.setTopic("first").build()
         val secondPostOffice = if (sameTopic) firstPostOffice else kdsPostOfficeBuilder.setTopic("second").build()
 
@@ -211,7 +234,7 @@ class MailKdsPrivateKeyTests {
         val futures = (1..10).map { index ->
             // Create 10 concurrent streams, within each having 10 sequential mail
             threadWithFuture {
-                val postOffice = KDSPostOfficeBuilder.fromUrl(
+                val postOffice = PostOfficeBuilder.usingKDS(
                     kdsUrl,
                     KDSKeySpec("key-spec-$index", MasterKeyType.DEBUG, VALID_POLICY_CONSTRAINT),
                     VALID_KDS_ENCLAVE_CONSTRAINT
@@ -224,21 +247,25 @@ class MailKdsPrivateKeyTests {
         futures.map { it.join() }
     }
 
-    private fun requestKdsPublicKey(keySpec: KDSKeySpec): InputStream {
-        val publicKeyRequest = KDSPublicKeyRequest(keySpec.name, keySpec.masterKeyType, keySpec.policyConstraint)
-        // TODO Replace this with java.net.http.HttpClient
-        val con = URL("$kdsUrl/public").openConnection() as HttpURLConnection
-        con.connectTimeout = Duration.ofSeconds(10).toMillis().toInt()
-        con.readTimeout = Duration.ofSeconds(10).toMillis().toInt()
-        con.requestMethod = "POST"
-        con.setRequestProperty("Content-Type", "application/json; utf-8")
-        con.setRequestProperty("API-VERSION", "1")
-        con.doOutput = true
+    private fun makePublicKeyRequest(keySpec: KDSKeySpec): InputStream {
+        val jsonBody = mapOf(
+            "name" to keySpec.name,
+            "masterKeyType" to keySpec.masterKeyType,
+            "policyConstraint" to keySpec.policyConstraint
+        )
+        return makePublicKeyRequest(jsonBody)
+    }
 
-        con.outputStream.use {
-            ObjectMapper().writeValue(it, publicKeyRequest)
-        }
-        return con.inputStream
+    private fun makePublicKeyRequest(jsonBody: Map<String, Any>): InputStream {
+        val request = HttpRequest.newBuilder()
+            .uri(kdsUrl.toURI().resolve("/public"))
+            .header("API-VERSION", "1")
+            .header("Content-Type", "application/json; utf-8")
+            .POST(BodyPublishers.ofString(ObjectMapper().writeValueAsString(jsonBody)))
+            .build()
+        val httpClient = HttpClient.newHttpClient()
+        val response: HttpResponse<InputStream> = httpClient.send(request, BodyHandlers.ofInputStream())
+        return response.body()
     }
 
     private fun <R> deliverKdsMail(kdsPostOffice: PostOffice, action: EnclaveTestAction<R>): R? {
