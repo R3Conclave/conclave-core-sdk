@@ -21,7 +21,7 @@ dependencies {
     testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:filesystem-db-enclave", configuration: enclaveMode)
     testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
-    kds "com.r3.conclave:kds:$kds_version:simulation" // Use the simulation KDS for testing
+    kds "com.r3.conclave:kds-simulation:$kds_version" // Use the simulation KDS for testing
 }
 
 test {
