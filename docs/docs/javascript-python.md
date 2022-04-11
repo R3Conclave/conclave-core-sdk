@@ -152,7 +152,7 @@ as an argument to the client is reversed and returned to the client.
 
     1. Download [graalvm-ce-java17](https://github.com/graalvm/graalvm-ce-builds/releases).
     1. Set the environment variable ```JAVA_HOME``` to point to the GraalVM that was previously downloaded. For instance, 
-    ```export JAVA_HOME=/usr/lib/jvm/graalvm-ce-java17-21.3.0)```.
+    ```export JAVA_HOME=/usr/lib/jvm/graalvm-ce-java17-22.0.0.2)```.
     1. Update the environment variable PATH by running ```export PATH=JAVA_HOME/bin:$PATH```.
     1. For Python only - Install the Python component by running the command ```gu install python```.
 

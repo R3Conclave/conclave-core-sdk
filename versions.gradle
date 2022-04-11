@@ -21,13 +21,9 @@ ext {
     junit_pioneer_version = '1.5.0'
     assertj_version = '3.22.0'
     guava_version = '31.0.1-jre'
-    // TODO: When updating GraalVM, try to remove "-J--add-exports=java.management/sun.management=ALL-UNNAMED"
-    // from defaultOptions() in NativeImage.kt. This was added as a workaround for a bug which should
-    // be [fixed](https://github.com/oracle/graal/pull/3949) in Graal 21.3.1 and 22.0.
-    //
-    // Please ensure the version number matches the one set in GradleEnclavePlugin (Search
+    // Please ensure that the Graal's version number matches the one set in GradleEnclavePlugin (Search
     // for "org.graalvm.sdk:graal-sdk:" in GradleEnclavePlugin)
-    graal_version = '21.3.0'
+    graal_version = '22.0.0.2'
     binutils_version = '2.37'
     mockito_version = '4.0.0'
     spring_boot_version = '2.6.1'

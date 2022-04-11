@@ -130,8 +130,7 @@ open class NativeImage @Inject constructor(
             "-R:StackSize=" + calculateMaxStackSize(),
             "--enable-all-security-services",
             "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
-            "-H:+UseCAPCache",
-            "-J--add-exports=java.management/sun.management=ALL-UNNAMED",
+            "-H:+UseCAPCache"
         )
     }
 

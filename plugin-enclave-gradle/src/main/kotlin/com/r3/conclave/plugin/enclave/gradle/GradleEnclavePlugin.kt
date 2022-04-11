@@ -53,7 +53,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // Please ensure the version number matches the version number set in versions.gradle to avoid
                 // incompatibilities
-                target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:21.3.1")
+                target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:22.0.0.2")
             }
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$sdkVersion")

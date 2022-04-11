@@ -33,24 +33,23 @@ RUN apt-get update -y && apt-get install -y \
     zlib1g-dev
 
 # MX and JVMCI versions should be aligned with Graal's build.
-# For MX you can find the version in the Graal repository, under the tools/mx.tools/suite.py file,
-#   for example https://github.com/oracle/graal/blob/release/graal-vm/21.3/tools/mx.tools/suite.py
-# For JVMCI you can search in the common.json file, for example
-#   https://github.com/oracle/graal/blob/release/graal-vm/21.3/common.json
+# For MX you can take the version of the most recent tag on the day of Graal release
+#   from here https://github.com/graalvm/mx/tags/
+#   You also need the git revision which you can retrieve as follows:
+#   1 - clone the mx repository: git@github.com:graalvm/mx.git
+#   2 - find the commit revision with a "git log", for example: "git log tags/5.317.13"
+# For JVMCI you can search in the common.json file, for example:
+#   https://github.com/oracle/graal/blob/release/graal-vm/22.0/common.json
 # We are currently using labsjdk-ce-17 version.
 # Also, note that in order to apply such changes when building Graal locally,
 #   you need to avoid to download Graal from the Docker repository by setting
 #   "export DOCKER_IMAGE_PULL=0" in your ~/.oblivium_credentials.sh and
 #   rebuild your container from scratch.
-# Finally, you also need to find the revision related to the mx version (see below).
-#    You can clone the mx repository here git@github.com:graalvm/mx.git
-#    and then find the commit revision with a "git log",
-#    for example, "git log tags/5.310.0" 
 ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
-ENV MX_VERSION          5.310.0
-ENV JVMCI_VERSION       21.3-b09
+ENV MX_VERSION          5.317.13
+ENV JVMCI_VERSION       22.0-b05
 ENV LABSJDK_VERSION     17.0.2
 ENV LABSJDK_MAJOR       17
 ENV LABSJDK_BUILD       8
@@ -60,7 +59,7 @@ ENV JVMCI_HOME          $LABSJDK_HOME
 ENV JAVA_HOME           $JVMCI_HOME
 ENV MX_HOME             /opt/mx-$MX_VERSION
 
-# MX version 5.294.1 must use Python 3 otherwise the
+# From MX version 5.294.1 we must use Python 3 otherwise the
 # exception 'ImportError: No module named pathlib' is thrown
 ENV MX_PYTHON_VERSION   3
 
@@ -71,7 +70,7 @@ ENV DOCKER_CONTAINER_IS_RUNNING TRUE
 # Download the right MX version
 RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git /opt/mx-$MX_VERSION
 # Checkout the exact commit to ensure the same code is always used even if the branch is updated
-RUN git -C /opt/mx-$MX_VERSION checkout 522b851
+RUN git -C /opt/mx-$MX_VERSION checkout fac7e8bb
 RUN chmod -R a+wx /opt/mx-$MX_VERSION
 
 # labs-openjdk-17

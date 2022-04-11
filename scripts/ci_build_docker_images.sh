@@ -19,7 +19,7 @@ function saveDockerImage() {
 }
 
 # Graal version without the patch versioning number
-graal_version='21.3'
+graal_version='22.0'
 graal_group_id=com/r3/conclave/graal
 graal_artifact_id=graal-sdk
 graal_artifact_path=$graal_group_id/$graal_artifact_id/$graal_version/$graal_artifact_id-$graal_version.tar.gz

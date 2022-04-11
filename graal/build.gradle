@@ -32,7 +32,7 @@ ext {
     // before updating the graal version used by Conclave. If the Graal versions used by the graal module and Conclave are
     // updated at the same time, the PR checks for Conclave might fail because the artifact published by the graal module
     // might not be available on Artifact.
-    graal_version= '21.3.1'
+    graal_version= '22.0.0.2'
 
     // Directories and files paths
     tempDir     = "$buildDir/tmp"
@@ -262,10 +262,10 @@ def writeDateToFile(String fileName) {
 // The format of the version should be in the form of 'Major.Minor.Patch'. Failing to respect this format will cause
 // issues. Please keep in mind the patch number must be single digit otherwise you will need to update the code below.
 // For instance,
-//  input: '21.3.0'
-//  output: '21.3'
+//  input: '22.0.0.2'
+//  output: '22.0'
 def extractMajorMinorVersionNumbers(String version) {
-    return version.substring(0, version.length() - 2)
+    return version.substring(0, version.length() - 4)
 }
 
 // Ensure that a given task is being run inside the provided container by throwing an exception

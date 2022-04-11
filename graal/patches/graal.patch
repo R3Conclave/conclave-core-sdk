@@ -21,10 +21,6 @@ index 37a4551..b155ed4 100644
      @Option(help = "When set to true, the image generator verifies that the image heap does not contain a home directory as a substring", type = User)//
      public static final HostedOptionKey<Boolean> DetectUserDirectoriesInImageHeap = new HostedOptionKey<>(false);
  
-diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/DefaultFileSystemSupport.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/DefaultFileSystemSupport.java
-new file mode 100644
-index 0000000..d3cd4bc
---- /dev/null
 diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
 index d9b2596..e11730c 100644
 --- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
@@ -104,15 +100,11 @@ diff --git a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibrar
 index 2e01394..7630aed 100644
 --- a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
 +++ b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
-@@ -30,6 +30,7 @@ import com.oracle.svm.core.jdk.NativeLibrarySupport;
- import com.oracle.svm.core.jdk.PlatformNativeLibrarySupport;
+@@ -51,2 +51,3 @@ import com.oracle.svm.core.jdk.NativeLibrarySupport;
  import com.oracle.svm.jni.functions.JNIFunctionTables;
  import com.oracle.svm.jni.nativeapi.JNIJavaVM;
 +import com.oracle.svm.core.SubstrateOptions;
- import org.graalvm.collections.EconomicMap;
- import org.graalvm.collections.Equivalence;
- import org.graalvm.nativeimage.c.function.CFunctionPointer;
-@@ -111,6 +112,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
+@@ -113,6 +113,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
  
      @Override
      public void initialize(PlatformNativeLibrarySupport.NativeLibrary lib) {
