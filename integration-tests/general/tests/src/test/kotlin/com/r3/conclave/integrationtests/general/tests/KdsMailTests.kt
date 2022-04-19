@@ -109,7 +109,7 @@ class KdsMailTests {
 
         assertThatThrownBy { deliverKdsMail(postOffice, Increment(1)) }
             .isInstanceOf(IOException::class.java)
-            .hasMessageContaining("The application enclave does not meet the required key policy")
+            .hasMessageContaining("The application does not meet the required key policy.")
     }
 
     @Test
@@ -136,7 +136,7 @@ class KdsMailTests {
 
         assertThatThrownBy { deliverKdsMail(postOffice, Increment(1)) }
             .isInstanceOf(IOException::class.java)
-            .hasMessageContaining("The application enclave does not meet the required key policy")
+            .hasMessageContaining("The application does not meet the required key policy.")
     }
 
     @Test
@@ -174,7 +174,7 @@ class KdsMailTests {
 
         assertThatThrownBy { deliverKdsMail(postOffice, Increment(1)) }
             .isInstanceOf(IOException::class.java)
-            .hasMessageContaining("The application enclave does not meet the required key policy")
+            .hasMessageContaining("The application does not meet the required key policy.")
     }
 
     @Test

@@ -113,6 +113,26 @@ RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git 
 RUN git -C /opt/mx-$MX_VERSION checkout 5e0efda
 RUN chmod -R a+wx /opt/mx-$MX_VERSION
 
+# Workaround to avoid the error "fatal: unsafe repository (REPO is owned by someone else)" when
+# mx executes. For more details about the error refer to: https://github.com/actions/checkout/issues/760
+# However, the error message we get while using mx is not explicit about the cause as you can see in the stacktrace:
+# File "/opt/mx-5.302.0/mx.py", line 5119, in execute
+#   _built = self.build() \
+# File "/opt/mx-5.302.0/mx_native.py", line 427, in build
+#   self.subject.generate_manifest(sfc.tmpPath)
+# File "/opt/mx-5.302.0/mx_native.py", line 737, in generate_manifest
+#   cflags=[mx_subst.path_substitutions.substitute(cflag) for cflag in self.cflags],
+# File "/opt/mx-5.302.0/mx_native.py", line 682, in cflags
+#   default_cflags += [add_debug_prefix(self.suite.vc_dir)]
+# File "/opt/mx-5.302.0/mx_native.py", line 680, in add_debug_prefix
+#   return '-fdebug-prefix-map={}={}'.format(quote(prefix_dir), quote(mx.basename(prefix_dir)))
+# File "/opt/mx-5.302.0/mx_native.py", line 678, in quote
+#   return '"{}"'.format(path) if ' ' in path else path
+#   TypeError: argument of type 'NoneType' is not iterable
+#   Building com.oracle.jvmtiasmagent_amd64 with Ninja failed
+# The work around for now is to set the directory as safe for all users in the container
+RUN git config --system --add safe.directory /opt/mx-$MX_VERSION
+
 # labs-openjdk-11
 RUN curl -sSL -o /opt/$LABSJDK_CE_11_FILE https://github.com/graalvm/labs-openjdk-11/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_11_FILE
 RUN echo "1dd78393a9bf9084d3508e911476ae4c28932627  /opt/$LABSJDK_CE_11_FILE" | shasum -c -
