@@ -22,7 +22,7 @@ fun createNativeHost(enclaveMode: EnclaveMode, enclaveFileUrl: URL, enclaveClass
 fun createMockHost(
     enclaveClass: Class<*>,
     mockConfiguration: MockConfiguration? = null,
-    kdsConfig: EnclaveKdsConfig? = null
+    enclaveKdsConfig: EnclaveKdsConfig? = null
 ): EnclaveHost {
-    return EnclaveHost.internalCreateMock(enclaveClass, mockConfiguration, kdsConfig)
+    return EnclaveHost.internalCreateMock(enclaveClass, mockConfiguration, enclaveKdsConfig)
 }

@@ -2,6 +2,7 @@ package com.r3.conclave.internaltesting.kds
 
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveSecurityInfo
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
@@ -16,16 +17,20 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
+import org.junit.jupiter.api.extension.AfterEachCallback
+import org.junit.jupiter.api.extension.ExtensionContext
+import java.net.URL
 import java.security.MessageDigest
 import java.util.*
 
 /**
- * A mock KDS for unit testing.
+ * A mock KDS for unit testing. The keys provided by this mock service do not match those of a real KDS, including
+ * the DEBUG key.
  */
-class KDSServiceMock : AutoCloseable {
+class MockKDS : AutoCloseable, AfterEachCallback {
     private val kdsEnclaveMock = createMockHost(MockKdsEnclave::class.java)
     private val server = EmbeddedServer()
-    val hostUrl = server.hostUrl
+    val url: URL = server.hostUrl
 
     var checkPolicyConstraint = true
     var privateKeyRequestModifier: PrivateKeyRequestModifier? = null
@@ -40,6 +45,17 @@ class KDSServiceMock : AutoCloseable {
     override fun close() {
         server.stop()
         kdsEnclaveMock.close()
+    }
+
+    override fun afterEach(context: ExtensionContext) {
+        close()
+    }
+
+    val enclaveConstraint: EnclaveConstraint get() {
+        return EnclaveConstraint().apply {
+            acceptableCodeHashes += kdsEnclaveMock.enclaveInstanceInfo.enclaveInfo.codeHash
+            minSecurityLevel = EnclaveSecurityInfo.Summary.INSECURE
+        }
     }
 
     private fun initServer() {

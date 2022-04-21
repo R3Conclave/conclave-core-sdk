@@ -242,7 +242,6 @@ identifier to ensure it is supported.
 !!! tip
 
     Instead of using the `/public` end point to retrieve KDS public keys to encrypt mails for the enclaves, 
-    it is recommended that Java and Kotlin developers use the builder methods `fromURL` and `fromInputStream`
-    of the `KDSPostOfficeBuilder` class.  
-    These methods will create post offices to automatically validate the signature for you.
-    
+    it is recommended Java and Kotlin developers use the
+    [`post office`](api/-conclave/com.r3.conclave.client/-post-office-builder/using-k-d-s.html). This will perform 
+    all the checks for you.

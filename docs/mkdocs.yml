@@ -56,13 +56,26 @@ nav:
 
 theme:
   name: 'material'
-  palette:
-    primary: 'red'
-    accent: 'red'
   features:
     - navigation.tabs
     - navigation.instant
     - navigation.sections
+  font:
+    text: Poppins
+
+extra_css:
+  - css/r3-branding.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/twitter-square 
+      link: https://twitter.com/Conclavecompute
+    - icon: fontawesome/brands/discord 
+      link: https://discord.gg/8RhkXc5eFp
+    - icon: fontawesome/brands/youtube-square 
+      link: https://www.youtube.com/channel/UCSZbii_Z5QXci6Sr-CvStuw
+    - icon: fontawesome/brands/github 
+      link: https://github.com/R3Conclave
 
 markdown_extensions:
   - admonition
