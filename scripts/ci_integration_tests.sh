@@ -5,7 +5,7 @@ script_dir=$(dirname ${BASH_SOURCE[0]})
 source ${script_dir}/ci_build_common.sh
 source ${script_dir}/ci_hardware_common.sh
 
-loadBuildImage
+loadConclaveBuildImage
 
 enclaveMode=$1
 
@@ -18,7 +18,7 @@ if [ $enclaveMode != "Simulation" ]; then
     startAESMContainer
 fi
 
-runDocker com.r3.sgx/sgxjvm-build "cd integration-tests \
+runDocker com.r3.sgx/conclave-build "cd integration-tests \
     && ./gradlew -s -PenclaveMode=$enclaveMode test -i ${TEST_OPTS:-}"
 
 if [ $enclaveMode != "Simulation" ]; then

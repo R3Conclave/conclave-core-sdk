@@ -71,7 +71,6 @@ RUN apt-get update -y && apt-get install -y \
     nano \
     ocaml \
     ocamlbuild \
-    openjdk-8-jdk \
     openjdk-17-jdk \
     openssl \
     patch \

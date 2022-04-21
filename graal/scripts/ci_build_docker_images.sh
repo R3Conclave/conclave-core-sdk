@@ -19,7 +19,7 @@ root_script_dir="${code_host_dir}/containers/graalvm-build/docker/root/scripts"
 # Ensure the directory exists
 mkdir -p ${root_script_dir}
 # Copy the file
-cp "${code_host_dir}/../containers/sgxjvm-build/src/docker/root/scripts/setup-users.sh" "${root_script_dir}/setup-users.sh"
+cp "${code_host_dir}/../containers/sdk-build/src/docker/root/scripts/setup-users.sh" "${root_script_dir}/setup-users.sh"
 #####################################################################################################
 # Build the docker image based on the Dockerfile and save it to a file so it can be loaded when required
 # This will reduced the time required to run a container in TeamCity because the docker image is built once
