@@ -11,6 +11,7 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.substratevm.EntryPoint
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getRemainingBytes
+import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.util.*
@@ -83,11 +84,13 @@ class NativeEnclaveEnvironment(
             // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
             //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
             val enclaveClass = Class.forName(enclaveClassName)
-            val enclave =
-                    enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }
-                            .newInstance()
-            val env = NativeEnclaveEnvironment(enclaveClass)
-            return initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
+            return try {
+                val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+                val env = NativeEnclaveEnvironment(enclaveClass)
+                initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
+            } catch (e: InvocationTargetException) {
+                throw e.cause ?: e
+            }
         }
     }
 
