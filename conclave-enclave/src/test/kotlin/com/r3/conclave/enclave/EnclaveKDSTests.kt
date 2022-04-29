@@ -265,7 +265,7 @@ class EnclaveKDSTests {
 
     @Test
     fun `ensure the enclave validates the master key type in the key specification for the kds persistence key spec`() {
-        mockKDS.privateKeyRequestModifier = PrivateKeyRequestModifier(masterKeyType = MasterKeyType.RELEASE)
+        mockKDS.privateKeyRequestModifier = PrivateKeyRequestModifier(masterKeyType = MasterKeyType.CLUSTER)
         val thrown = assertThrows<EnclaveLoadException> {
             startEnclave(kdsConfigWithPersistence)
         }
@@ -302,7 +302,7 @@ class EnclaveKDSTests {
     @Test
     fun `ensure the enclave validates the master key type in the key specification for mail`() {
         startEnclave(kdsConfigWithoutPersistence)
-        mockKDS.privateKeyRequestModifier = PrivateKeyRequestModifier(masterKeyType = MasterKeyType.RELEASE)
+        mockKDS.privateKeyRequestModifier = PrivateKeyRequestModifier(masterKeyType = MasterKeyType.CLUSTER)
         val thrown = assertThrows<IllegalArgumentException> {
             sendMailToEnclave()
         }

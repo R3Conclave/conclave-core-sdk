@@ -10,7 +10,7 @@ enum class MasterKeyType {
      */
     DEBUG,
     /**
-     * A release master key suitable for applications running in production environments.
+     * A cluster master key suitable for applications running in production environments.
      */
-    RELEASE
+    CLUSTER
 }
