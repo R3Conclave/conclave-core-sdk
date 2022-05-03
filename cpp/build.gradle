@@ -70,7 +70,7 @@ for (symlink in symlinks) {
             } catch (ignored) {
             }
         }
-        outputs.dir("${buildDirectory(to)}/linux-sgx")
+        outputs.dir(buildDirectory(to))
     }
 }
 

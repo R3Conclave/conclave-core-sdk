@@ -13,8 +13,8 @@ Release notes
 
 ### 1.3
 
-1. :jigsaw: **New feature!** The Conclave Conclave Key Derivation Service (KDS) is out of beta and now supports
-   production workloads! Use the `RELEASE` master key type instead of `DEBUG`. The REST API docs can be found
+1. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports
+   production workloads! Use the `CLUSTER` master key type instead of `DEBUG`. The REST API docs can be found
    [here](kds-rest-api.md).
 2. :jigsaw: **New feature!** Suppport for stable enclave encryption keys with Mail by using the KDS. This allows
    usages where the enclave can restart, or even move to a different physical machine and the client is unaffected.

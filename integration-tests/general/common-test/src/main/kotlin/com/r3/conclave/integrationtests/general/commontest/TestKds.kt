@@ -13,7 +13,7 @@ object TestKds {
     private fun startKds(): Int {
         val randomPort = ServerSocket(0).use { it.localPort }
         val fileSystemTempFile = Files.createTempFile("kds_filesystem", ".disk")
-        val kdsMasterKeyCmd = getMasterKeyCommand(fileSystemTempFile)
+        val kdsMasterKeyCmd = getMasterKeyClusterCommand(fileSystemTempFile)
         val kdsServiceCmd = getServiceCommand(fileSystemTempFile, randomPort)
 
         println("Generating KDS Master Key: $kdsMasterKeyCmd")
@@ -57,7 +57,7 @@ object TestKds {
         return kdsCmd + listOf("--server-port=$randomPort", "--service")
     }
 
-    private fun getMasterKeyCommand(fileSystemTempFile: Path): List<String> {
+    private fun getMasterKeyClusterCommand(fileSystemTempFile: Path): List<String> {
         val kdsCmd = getCommonCommand(fileSystemTempFile)
         return kdsCmd + listOf("--generate-master-key")
     }

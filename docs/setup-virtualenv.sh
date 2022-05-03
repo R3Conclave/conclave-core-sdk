@@ -11,7 +11,7 @@ if [ ! -d "virtualenv" ]; then
     absolutevirtualenv="$PWD/virtualenv"
     python3 -m venv "$absolutevirtualenv"
     source virtualenv/bin/activate
-    pip3 install mkdocs-material==6.2.6
+    pip3 install mkdocs-material==8.2.11
 else
     source virtualenv/bin/activate
 fi

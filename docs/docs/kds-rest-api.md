@@ -138,7 +138,7 @@ cannot be accessed by the altered key specification.
 
 #### How to Deserialize the Envelope
 The envelope present in the private key mail is a byte array structured as illustrated below. The master key type field
-can only contain one of the values 0 for a debug private key and 1 for a release private key. The API version field will
+can only contain one of the values 0 for a debug private key and 1 for a cluster private key. The API version field will
 contain the API version used for the request (in this case, 1).
 ```
 [API version]     [Name] [Master key type] [Policy constraint]
