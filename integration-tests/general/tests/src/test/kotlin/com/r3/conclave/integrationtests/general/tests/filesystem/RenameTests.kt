@@ -72,8 +72,8 @@ class RenameTests : FileSystemEnclaveTest() {
         filesWrite(oldPath, testData1.toByteArray())
         filesWrite(newPath, testData2.toByteArray())
         renameToExistentPath(oldPath, newPath, nioApi)
-        assertThat(listFiles(oldPath)).contains(testData1)
-        assertThat(listFiles(newPath)).contains(testData2)
+        assertThat(walkPath(oldPath)).contains(testData1)
+        assertThat(walkPath(newPath)).contains(testData2)
     }
 
     @ParameterizedTest
@@ -137,8 +137,8 @@ class RenameTests : FileSystemEnclaveTest() {
         filesWrite("$level2Dir/test_file.txt", testData2.toByteArray())
         renamePath(oldPath, newPath, nioApi)
 
-        val oldFiles = listFiles(oldPath)
-        val newFiles = listFiles(newPath)
+        val oldFiles = walkPath(oldPath)
+        val newFiles = walkPath(newPath)
         println("Walk through old files")
         println(oldFiles.length)
         println("Walk through new files")

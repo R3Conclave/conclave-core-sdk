@@ -92,6 +92,27 @@ class FilesTest : FileSystemEnclaveTest() {
 
     @ParameterizedTest
     @CsvSource(
+        "/parent-dir",
+        "/tmp/parent-dir",
+    )
+    fun listFilesMultipleTimes(dir: String) {
+        val smallFileData = byteArrayOf(3, 2, 1)
+        val path1 = "$dir/file1.data"
+        val path2 = "$dir/file2.data"
+        createDirectories(dir)
+
+        filesWrite(path1, smallFileData)
+        filesWrite(path2, smallFileData)
+
+        val fileList1 = callEnclave(ListFilesNTimes(dir, 3))
+        assertThat(fileList1).hasSize(3).containsOnly(listOf("file1.data", "file2.data"))
+
+        val fileList2 = callEnclave(ListFilesNTimes(dir, 3))
+        assertThat(fileList2).hasSize(3).containsOnly(listOf("file1.data", "file2.data"))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
         "/readBytes.data, true",
         "/readBytes.data, false",
         "/tmp/readBytes.data, true",

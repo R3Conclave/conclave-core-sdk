@@ -97,6 +97,22 @@ class WalkAndDelete(private val pathString: String) : FileSystemAction<Unit>() {
     override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }
 
+@Serializable
+class ListFilesNTimes(private val pathString: String, private val numTimes: Int) : FileSystemAction<List<List<String>>>() {
+    override fun run(context: EnclaveContext, isMail: Boolean): List<List<String>> {
+        val path = Path.of(pathString)
+        val result = ArrayList<List<String>>()
+
+        repeat(numTimes) {
+            val files = path.toFile().listFiles()
+            val names = files!!.map { it.name }
+            result.add(names)
+        }
+        return result
+    }
+
+    override fun resultSerializer(): KSerializer<List<List<String>>> = ListSerializer(ListSerializer(String.serializer()))
+}
 
 @Serializable
 class WalkPath(private val path: String) : FileSystemAction<String>() {

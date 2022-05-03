@@ -65,7 +65,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
         assertThat(callEnclave(FilesExists(newPath))).isTrue
     }
 
-    fun listFiles(path: String): String {
+    fun walkPath(path: String): String {
         return callEnclave(WalkPath(path))
     }
 
