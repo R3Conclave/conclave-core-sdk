@@ -59,7 +59,7 @@ object TestKds {
 
     private fun getMasterKeyClusterCommand(fileSystemTempFile: Path): List<String> {
         val kdsCmd = getCommonCommand(fileSystemTempFile)
-        return kdsCmd + listOf("--generate-master-key")
+        return kdsCmd + listOf("--generate-cluster-master-key")
     }
 
     private fun getCommonCommand(fileSystemTempFile: Path): List<String> {
