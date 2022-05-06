@@ -3,7 +3,7 @@ FROM ubuntu:bionic-20200219
 # A build container for the full sgxjvm project.
 # TODO Separate out the enclave build and make it completely reproducible.
 
-LABEL version="1.3-RC4"
+LABEL version="1.3-RC5-SNAPSHOT"
 LABEL description="SGXJVM build container"
 LABEL maintainer="conclave@r3.com"
 
