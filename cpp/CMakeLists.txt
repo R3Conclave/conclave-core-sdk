@@ -19,7 +19,6 @@ add_custom_target(build_tests_and_run ${CMAKE_CTEST_COMMAND} -V ${CMAKE_BINARY_D
 
 add_subdirectory(linux-sgx)
 add_subdirectory(zlib)
-add_subdirectory(dummy)
 
 add_subdirectory(jvm-edl)
 add_subdirectory(jvm-host-enclave-common)
