@@ -330,6 +330,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 // or static variables that need to be initialised which would otherwise be discarded by
                 // the linker.
                 task.librariesWholeArchive.from(
+                    // N.B.: There are two different files called "libjvm_enclave_common.a"
+                    // There is one file called libjvm_enclave_common.a that is used for release
+                    // which does not contain debug symbols and another one that is used for debug which
+                    // contains debug symbols. Which file is used during the build depends on the path set in the variable
+                    // substrateDependenciesPath.
                     "$substrateDependenciesPath/libjvm_enclave_common.a"
                 )
                 task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)

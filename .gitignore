@@ -25,6 +25,7 @@ docs/docs/api
 docs/virtualenv
 
 cpp/jvm-host-shared/include/host_jni_shared.h
+cpp/jvm-enclave-common/include/enclave_jni.h
 
 stale_outputs_checked
 dokka/dokka/

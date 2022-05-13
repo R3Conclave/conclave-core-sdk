@@ -18,21 +18,24 @@ test {
     }
 }
 
-def cppBuildDir = project(":cpp").buildDir
+String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
+String cppBuildDir = "${project(":cpp").buildDir}/$cmakeBuildType"
 
 subprojects { Project project ->
-    def type = project.name.drop("native-host-".size()).capitalize()
+    def enclaveMode = project.name.drop("native-host-".size()).capitalize()
     project.tasks.getByName("jar") { Jar task ->
-        task.dependsOn(":cpp:compileLinuxSgx$type")
-        task.dependsOn(":cpp:compileHost$type")
-        def linuxSgxBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/build/linux"
-        def linuxAzurePluginDir = "$cppBuildDir/../../azure-plugin"
-        def linuxSgxQuoteGenBuildDir = "$cppBuildDir/$type/linux-sgx/src/linux-sgx/external/dcap_source/QuoteGeneration/build/linux"
-        def hostBuildDir = "$cppBuildDir/$type/jvm-host"
-        def hostSharedBuildDir = "$cppBuildDir/$type/jvm-host-shared"
-        def libDir = "/usr/lib/x86_64-linux-gnu"
-        def simSuffix = type == "Simulation" ? "_sim" : ""
-        task.into "com/r3/conclave/host-libraries/$type", {
+        task.dependsOn(":cpp:compileLinuxSgx$cmakeBuildType")
+        task.dependsOn(":cpp:compileHost$cmakeBuildType")
+
+        String linuxSgxBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx/build/linux"
+        String linuxAzurePluginDir = "$cppBuildDir/../../../azure-plugin"
+        String linuxSgxQuoteGenBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx/external/dcap_source/QuoteGeneration/build/linux"
+        String hostBuildDir = "$cppBuildDir/jvm-host"
+        String libDir = "/usr/lib/x86_64-linux-gnu"
+
+        String simSuffix = enclaveMode == "Simulation" ? "_sim" : ""
+
+        task.into "com/r3/conclave/host-libraries/$enclaveMode", {
             from (linuxSgxBuildDir) {
                 include "libsgx_enclave_common.so"
                 rename "libsgx_enclave_common.so", "libsgx_enclave_common.so.1"
@@ -46,7 +49,8 @@ subprojects { Project project ->
                 include "libsgx_pce.signed.so"
             }
             from (hostBuildDir) {
-                include "libjvm_host.so"
+                include "libjvm_host${simSuffix}.so"
+                rename "libjvm_host${simSuffix}.so", "libjvm_host.so"
             }
             from (libDir) {
                 include "libcrypto.so"
@@ -61,7 +65,7 @@ subprojects { Project project ->
                 include "libdcap_quoteprov.so"
                 rename "libdcap_quoteprov.so", "libdcap_quoteprov.so.1"
             }
-            if (type != "Simulation") {
+            if (enclaveMode != "Simulation") {
                 from (libDir) {
                     include "libprotobuf.so"
                 }

@@ -19,18 +19,21 @@ test {
 }
 
 
-def cppBuildDir = project(":cpp").buildDir
+String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
+String cppBuildDir = "${project(":cpp").buildDir}/$cmakeBuildType"
 
 subprojects {
-    def type = name.drop("linux-sgx-".size()).capitalize()
+    def enclaveMode = name.drop("linux-sgx-".size()).capitalize()
     tasks.getByName("jar") { Jar task ->
-        task.dependsOn(":cpp:compileLinuxSgx$type")
-        def sgxSdkDir = "$cppBuildDir/$type/linux-sgx/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk"
-        def sgxLibDir = "$sgxSdkDir/lib64"
-        def sgxIncDir = "$sgxSdkDir/include"
+        task.dependsOn(":cpp:compileLinuxSgx$cmakeBuildType")
 
-        def simSuffix = type == "Simulation" ? "_sim" : ""
-        task.into "com/r3/conclave/sgx/$type", {
+        String sgxSdkDir = "$cppBuildDir/linux-sgx/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk"
+        String sgxLibDir = "$sgxSdkDir/lib64"
+        String sgxIncDir = "$sgxSdkDir/include"
+
+        String simSuffix = enclaveMode == "Simulation" ? "_sim" : ""
+
+        task.into "com/r3/conclave/sgx/$enclaveMode", {
             from (sgxIncDir) {
                 include "tlibc/**/*"
                 include "libcxx/**/*"
@@ -45,12 +48,4 @@ subprojects {
             }
         }
     }
-}
-
-task setupSignToolCMakeBuild(type: Exec) {
-    workingDir buildDir
-    inputs.file("$projectDir/CMakeLists.txt")
-    commandLine "/usr/bin/env", "cmake",
-            "-DCMAKE_BUILD_TYPE=Release", projectDir
-    outputs.file("$buildDir/Makefile")
 }

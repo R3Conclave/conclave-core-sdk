@@ -23,15 +23,17 @@ static __attribute__((used)) void keep_functions() {
 extern "C" {
 
 /*
- * In release enclaves we provide an empty implementation of this function to prevent
- * debug messages from propagating outside the enclave. In debug/simulation enclaves
- * this function is emplemented in jvm_debug.edl and results in an ocall allowing the
- * host to log debug messages.
+ * In release mode enclaves, we want to prevent calls to the debug print edl function, so that
+ * prints do not propagate out of the enclave. As such, the debug_print_edl should not be called
+ * anywhere except here. When something needs to be logged from inside the enclave, this function
+ * should *always* be called instead.
+ * The purpose of allow_debug_print parameter here is to ensure that caller is aware that debug
+ * prints must take the enclave mode into account.
  */
-void debug_print_enclave(const char* msg, int length) {
-#if !defined(NO_ENCLAVE_PRINT)
-    debug_print(msg, length);
-#endif
+void debug_print_enclave(const char* msg, int length, bool allow_debug_print) {
+    if (allow_debug_print) {
+        debug_print_edl(msg, length);
+    }
 }
 
-}
+} // extern "C"

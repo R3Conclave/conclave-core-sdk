@@ -1,8 +1,12 @@
-def cppBuildDir = project(":cpp").buildDir
+// The ld executable in this case is produced by compileLinuxSgx<Debug|Release> depending on whether the flag -PnativeDebug is set or not.
+// We do not always build ld with debug symbols because if the user sets -PnativeDebug, the build will depend on both the
+// release and debug versions of linuxSgx, meaning the sdk will potentially be built twice.
+String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
+String cppBuildDir = "${project(":cpp").buildDir}/$cmakeBuildType"
 
 jar {
-    dependsOn(":cpp:compileLinuxSgxSimulation")
-    def ptraceBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
+    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType")
+    String ptraceBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx/build/linux"
     into "com/r3/conclave/gdb", {
         from(ptraceBuildDir) {
             include "libsgx_ptrace.so"

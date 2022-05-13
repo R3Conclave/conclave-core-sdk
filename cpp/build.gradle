@@ -1,9 +1,4 @@
-import java.nio.file.Paths
-import java.nio.file.Files
-
 apply plugin: "base"
-
-def types = ["Simulation", "Debug", "Release"]
 
 task generateHostJniHeaders(type: Copy) {
     dependsOn ":conclave-host:jar"
@@ -35,51 +30,31 @@ task generateEnclaveJniHeaders(type: Copy) {
     into ("$projectDir/jvm-enclave-common/include")
 }
 
-/*
- * linux-sgx, native-substratevm and most of the stubs, edl libraries etc,
- * only need a debug and release versions, however they are being built
- * as part of the createCmakeBuild task, which builds the 3 flavors.
- */
-String buildDirectory(type) { return "$buildDir/$type" }
-static String createCmakeTaskName(type) { return "createCmakeBuild$type" }
-static String compileTaskNameHost(type) { return "compileHost$type" }
-static String compileTaskNameHostShared(type) { return "compileHostShared$type" }
-static String compileTaskNameLinuxSgx(type) { return "compileLinuxSgx$type" }
-static String compileTaskNameSubstrateVMLib(type) { return "compileSubstrateVMLib$type" }
-static String compileTaskNameFatFsEnclave(type) { return "compileFatFsEnclave$type" }
-static String compileTaskNameFatFsHost(type) { return "compileFatFsHost$type" }
-static String runCppUnitTestsTaskName(type) { return "runCppUnitTests$type" }
-static String symlinkTaskName(from, to) { return "symlink${from}To$to" }
-static String cmakeBuildType(type) { return "-DCMAKE_BUILD_TYPE=$type" }
+// Native components can be built either in "Debug" or "Release" mode.
+// These modes are not to be confused with the Debug/Simulation/Release modes of the enclave.
+// The values correspond directly to the strings passed to -DCMAKE_BUILD_TYPE when building native components
+// Release mode will enable optimisations, and Debug mode will ensure that compiled objects and libraries
+// contain debugging symbols. Either mode will produce all the components required to build enclaves in any
+// enclave mode. To build native components in debug mode, use -PnativeDebug when starting your build.
 
-def symlinks = [[from: "Release", to: "Simulation"], [from: "Release", to: "Debug"], [from: "Debug", to: "Simulation"]]
+for (cmakeBuildType in ["Debug", "Release"]) {
+    String cmakeBuildDir = "$buildDir/$cmakeBuildType"
 
-for (symlink in symlinks) {
-    // These variables below are needed because if we reference "symlink" inside the execution of "doFirst" process yields
-    // the last "symlink" used, and not those used during the task creation.
-    def from = symlink.from
-    def to = symlink.to
+    String createCmakeBuild = "createCmakeBuild$cmakeBuildType"
+    String compileLinuxSgx = "compileLinuxSgx$cmakeBuildType"
+    String compileHostShared = "compileHostShared$cmakeBuildType"
+    String compileJvmEdl = "compileJvmEdl$cmakeBuildType"
+    String compileHost = "compileHost$cmakeBuildType"
+    String compileJvmEnclaveCommon = "compileJvmEnclaveCommon$cmakeBuildType"
+    String compileSubstrateVMLib = "compileSubstrateVMLib$cmakeBuildType"
+    String compileFatFsHost = "compileFatFsHost$cmakeBuildType"
+    String compileFatFsEnclave = "compileFatFsEnclave$cmakeBuildType"
+    String runCppUnitTests = "runCppUnitTests$cmakeBuildType"
 
-    // Create symlinks to reduce linux-sgx sdk build time.
-    tasks.create(symlinkTaskName(from, to)) {
-        dependsOn(compileTaskNameLinuxSgx(from))
-        doFirst {
-            mkdir buildDirectory(to)
-            try {
-                Files.createSymbolicLink(Paths.get("${buildDirectory(to)}/linux-sgx"), Paths.get("${buildDirectory(from)}/linux-sgx"))
-            } catch (ignored) {
-            }
-        }
-        outputs.dir(buildDirectory(to))
-    }
-}
+    tasks.create(createCmakeBuild, Exec) {
+        workingDir(cmakeBuildDir)
 
-for (type in types) {
-    // Use Cmake to create build
-    tasks.create(createCmakeTaskName(type), Exec) {
-        workingDir(buildDirectory(type))
-
-        commandLine("/usr/bin/env", "cmake", cmakeBuildType(type), projectDir)
+        commandLine("/usr/bin/env", "cmake", "-DCMAKE_BUILD_TYPE=$cmakeBuildType", projectDir)
 
         inputs.files(
                 "$projectDir/CMakeLists.txt",
@@ -87,93 +62,105 @@ for (type in types) {
         )
 
         outputs.files(
-                "${buildDirectory(type)}/Makefile"
+                "$cmakeBuildDir/Makefile"
         )
     }
 
-    // Build the host object
-    tasks.create(compileTaskNameHost(type), Exec) {
-        dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateHostJniHeaders, compileTaskNameHostShared(type))
+    tasks.create(compileLinuxSgx, Exec) {
+        dependsOn(createCmakeBuild)
 
-        workingDir(buildDirectory(type))
+        workingDir(cmakeBuildDir)
 
         commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
-                "--target", "jvm_host"
+                "--build", cmakeBuildDir,
+                "--target", "linux-sgx-ext"
         )
     }
 
-    // Build the shared host object
-    tasks.create(compileTaskNameHostShared(type), Exec) {
-        dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateHostSharedJniHeaders)
+    tasks.create(compileJvmEdl, Exec) {
+        dependsOn(createCmakeBuild, compileLinuxSgx)
 
-        workingDir(buildDirectory(type))
+        workingDir(cmakeBuildDir)
 
         commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
+                "--build", cmakeBuildDir,
+                "--target", "jvm_host_edl", "jvm_enclave_edl"
+        )
+    }
+
+    tasks.create(compileHostShared, Exec) {
+        dependsOn(createCmakeBuild, generateHostSharedJniHeaders, compileLinuxSgx)
+
+        workingDir(cmakeBuildDir)
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", cmakeBuildDir,
                 "--target", "jvm_host_shared"
         )
     }
 
-    tasks.create(compileTaskNameLinuxSgx(type), Exec) {
-        def buildSgxDebug = project.hasProperty("linux-sgx-debug")
-        if (buildSgxDebug && type == "Simulation") {
-            dependsOn(symlinkTaskName("Debug", type))
-            commandLine("echo", "Linux SGX $type is a symlink from Debug.")
-        } else if (!buildSgxDebug && (type == "Simulation" || type == "Debug")) {
-            dependsOn(symlinkTaskName("Release", type))
-            commandLine("echo", "Linux SGX $type is a symlink from Release.")
-        } else {
-            dependsOn(createCmakeTaskName(type))
-            workingDir(buildDirectory(type))
-            commandLine("/usr/bin/env", "cmake",
-                    "--build", buildDirectory(type),
-                    "--target", "linux-sgx-ext"
-            )
-        }
-    }
- 
-    tasks.create(compileTaskNameSubstrateVMLib(type), Exec) {
-        dependsOn(createCmakeTaskName(type), generateEnclaveJniHeaders)
+    tasks.create(compileHost, Exec) {
+        dependsOn(createCmakeBuild, generateHostJniHeaders, compileLinuxSgx, compileHostShared)
 
-        workingDir(buildDirectory(type))
+        workingDir(cmakeBuildDir)
 
         commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
+                "--build", cmakeBuildDir,
+                "--target", "jvm_host", "jvm_host_sim"
+        )
+    }
+
+    tasks.create(compileJvmEnclaveCommon, Exec) {
+        dependsOn(createCmakeBuild, compileJvmEdl)
+
+        workingDir(cmakeBuildDir)
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", cmakeBuildDir,
+                "--target", "jvm_enclave_common_simulation", "jvm_enclave_common_debug", "jvm_enclave_common_release"
+        )
+    }
+
+    tasks.create(compileSubstrateVMLib, Exec) {
+        dependsOn(createCmakeBuild, generateEnclaveJniHeaders)
+
+        workingDir(cmakeBuildDir)
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", cmakeBuildDir,
                 "--target", "substratevm"
         )
     }
 
-    tasks.create(compileTaskNameFatFsEnclave(type), Exec) {
-        dependsOn(createCmakeTaskName(type), generateEnclaveJniHeaders)
+    tasks.create(compileFatFsHost, Exec) {
+        dependsOn(createCmakeBuild, generateHostJniHeaders, compileLinuxSgx, compileHostShared)
 
-        workingDir(buildDirectory(type))
-
-        commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
-                "--target", "fatfs_enclave"
-        )
-    }
-
-    tasks.create(compileTaskNameFatFsHost(type), Exec) {
-        dependsOn(compileTaskNameLinuxSgx(type), createCmakeTaskName(type), generateHostJniHeaders, compileTaskNameHostShared(type))
-
-        workingDir(buildDirectory(type))
+        workingDir(cmakeBuildDir)
 
         commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
+                "--build", cmakeBuildDir,
                 "--target", "fatfs_host"
         )
     }
 
-    // Run the cpp unit tests
-    tasks.create(runCppUnitTestsTaskName(type), Exec) {
-        dependsOn(createCmakeTaskName(type))
+    tasks.create(compileFatFsEnclave, Exec) {
+        dependsOn(createCmakeBuild, generateEnclaveJniHeaders)
 
-        workingDir(buildDirectory(type))
+        workingDir(cmakeBuildDir)
 
         commandLine("/usr/bin/env", "cmake",
-                "--build", buildDirectory(type),
+                "--build", cmakeBuildDir,
+                "--target", "fatfs_enclave"
+        )
+    }
+
+    tasks.create(runCppUnitTests, Exec) {
+        dependsOn(createCmakeBuild)
+
+        workingDir(cmakeBuildDir)
+
+        commandLine("/usr/bin/env", "cmake",
+                "--build", cmakeBuildDir,
                 "--target", "build_tests_and_run"
         )
     }

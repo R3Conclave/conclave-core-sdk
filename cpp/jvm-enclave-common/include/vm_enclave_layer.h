@@ -42,7 +42,7 @@ extern "C" {
 											 jbyteArray encryption_key_in);
 
     // Debug print and trace functions for stubs and debug output
-    extern void debug_print_enclave(const char* msg, int length);
+    extern void debug_print_enclave(const char* msg, int length, bool allow_debug_print);
     int enclave_print(const char *s, ...);
     int enclave_trace(const char *s, ...);
 

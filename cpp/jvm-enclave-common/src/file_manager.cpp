@@ -39,7 +39,9 @@ public:
     }
 
     virtual size_t write(const unsigned char* buf, size_t size, size_t offset = 0) override {
-        debug_print_enclave((const char*)buf, size);
+#ifdef ENABLE_DEBUG_PRINT
+        debug_print_enclave((const char*)buf, size, true);
+#endif
         return size;
     }
 };

@@ -60,5 +60,10 @@ enclave {
             unsigned char drive,
             unsigned long persistent_size
         );
+
+        void debug_print_edl(
+            [in, string] const char *string,
+            int n
+        );
     };
 };
