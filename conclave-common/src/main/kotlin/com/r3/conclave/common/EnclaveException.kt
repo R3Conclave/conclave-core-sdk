@@ -7,7 +7,7 @@ package com.r3.conclave.common
  * To prevent accidental leakage of enclave secrets, the original exception is not wrapped if the enclave is running in
  * release mode. Instead, a generic EnclaveException is thrown.
  */
-class EnclaveException(message: String?, cause: Throwable?) : RuntimeException(message, cause) {
+open class EnclaveException(message: String?, cause: Throwable?) : RuntimeException(message, cause) {
     constructor() : this(null, null)
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(null, cause)

@@ -2,30 +2,40 @@ package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.*
 import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 
-object SerializeException {
+object ThrowableSerialisation {
     fun serialise(throwable: Throwable): ByteArray {
+        return writeData {
+            serialise(this, throwable)
+        }
+    }
+
+    private fun serialise(dos: DataOutputStream, root: Throwable) {
         // We need to serialise the throwable with its cause chain in reverse so that during deserialisation the cause
         // is at hand to create each throwable.
-        val throwableChain = generateSequence(throwable, Throwable::cause).toList().asReversed()
-        return writeData {
-            writeList(throwableChain) { t ->
-                writeUTF(t.javaClass.name)
-                nullableWrite(t.message) { writeUTF(it) }
-                writeList(t.stackTrace.asList()) { element ->
-                    writeUTF(element.className)
-                    writeUTF(element.methodName)
-                    nullableWrite(element.fileName) { writeUTF(it) }
-                    writeInt(element.lineNumber)
-                }
+        val throwableChain = generateSequence(root, Throwable::cause).toList().asReversed()
+        dos.writeList(throwableChain) { t ->
+            writeUTF(t.javaClass.name)
+            nullableWrite(t.message) { writeUTF(it) }
+            writeList(t.stackTrace.asList()) { element ->
+                writeUTF(element.className)
+                writeUTF(element.methodName)
+                nullableWrite(element.fileName) { writeUTF(it) }
+                writeInt(element.lineNumber)
+            }
+            writeList(t.suppressed.asList()) { suppressed ->
+                // Recurse and serialise the throwable chain of each suppressed exception.
+                serialise(dos, suppressed)
             }
         }
     }
 
-    fun deserialise(bytes: ByteArray): Throwable {
-        val dis = bytes.dataStream()
+    fun deserialise(bytes: ByteArray): Throwable = deserialise(bytes.dataStream())
+
+    private fun deserialise(dis: DataInputStream): Throwable {
         var count = dis.readInt()
         var cause: Throwable? = null
         while (count-- > 0) {
@@ -55,6 +65,13 @@ object SerializeException {
         val throwable =
             throwableClass?.create(message, cause) ?: RuntimeException("$exceptionClassName: $message", cause)
         throwable.stackTrace = stackTrace
+
+        repeat(dis.readInt()) {
+            // Avoid Kotlin's Throwable as its addSuppressed method uses reflection.
+            @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+            (throwable as java.lang.Throwable).addSuppressed(deserialise(dis))
+        }
+
         return throwable
     }
 

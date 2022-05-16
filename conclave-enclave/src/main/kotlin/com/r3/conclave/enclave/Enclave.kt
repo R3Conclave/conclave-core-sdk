@@ -80,7 +80,7 @@ abstract class Enclave {
     private lateinit var adminHandler: AdminHandler
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
-    private var persistenceKdsPrivateKey: ByteArray? = null
+    private lateinit var persistenceKey: ByteArray
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, SessionEnclavePostOffice>()
@@ -281,43 +281,36 @@ abstract class Enclave {
         }
     }
 
-    private fun getPersistencePrivateKey(): ByteArray {
-        val persistenceKeySpec = env.kdsConfiguration?.persistenceKeySpec
+    private fun initialiseLocalPersistenceKeyIfNecessary() {
+        // Nothing to do if the enclave has already been given a KDS key for persistence.
+        if (this::persistenceKey.isInitialized) return
 
-        if (persistenceKeySpec != null) {
-            val persistenceKdsPrivateKey = persistenceKdsPrivateKey
-            if (persistenceKdsPrivateKey != null) {
-                // The KDS key may be longer than 128 bit, so we only use the first 128 bit
-                return persistenceKdsPrivateKey.copyOf(16)
+        // If the enclave has been configured to use a KDS and the host doesn't provide one, then for dev and testing
+        // the enclave will default to a machine-specific MRSIGNER key. However this most probably isn'twhat the
+        // enclave's clients would want to happen when connecting to a production release enclave.
+        if (env.kdsConfiguration?.persistenceKeySpec != null) {
+            if (env.enclaveMode == EnclaveMode.RELEASE) {
+                throw EnclaveStartException("The enclave has been configured to use a KDS for encrypting " +
+                        "persistent data but the host has not provided one.")
             }
-            // TODO There's no exception message as these are not propageted in release mode. However, from this example
-            //  and others we need a very special and privileged exception that will carry any necessary information
-            //  that's needed even in release.
-
-            // If the enclave has been configured to use a KDS and the host doesn't provide one, then for dev and
-            // testing the enclave will default to a machine-specific MRSIGNER key. However this most probably isn't
-            // what the enclave's clients would want to happen when connecting to a production release enclave.
-            check(env.enclaveMode != EnclaveMode.RELEASE)
-            if (env.enclaveMode == EnclaveMode.DEBUG) {
-                println("WARN: The enclave has been configured to use a KDS for encrypting persistent data but the " +
-                        "host has not provided one. Defaulting to a machine-only MRSIGNER key. However, this enclave " +
-                        "will not start in release mode if there is no KDS.")
-            }
+            println("WARN: The enclave has been configured to use a KDS for encrypting persistent data but the " +
+                    "host has not provided one. Defaulting to a machine-only MRSIGNER key. However, this enclave" +
+                    " will not start in release mode if there is no KDS.")
         }
-        return getLocalSecretKey()
+
+        persistenceKey = getLocalSecretKey()
     }
 
     private fun setupFileSystems() {
-        val privateKey = getPersistencePrivateKey()
         val inMemorySize = env.inMemoryFileSystemSize
         val persistentSize = env.persistentFileSystemSize
 
         if (inMemorySize > 0L && persistentSize == 0L ||
             inMemorySize == 0L && persistentSize > 0L) {
             //  We do not allow other mount point apart from "/" when only one filesystem is present
-            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", privateKey)
+            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", persistenceKey)
         } else if (inMemorySize > 0L && persistentSize > 0L) {
-            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", privateKey)
+            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", persistenceKey)
         }
     }
 
@@ -344,18 +337,14 @@ abstract class Enclave {
 
     private fun applySealedState(sealedStateBlob: ByteArray) {
         if (!env.enablePersistentMap) return
-        val sealedState = try {
-            // Decrypt sealed state using KDS key when the Enclave has been configured to obtain one,
-            // otherwise use the unsealing functions.
-            if (env.kdsConfiguration != null) {
-                decryptSealedState(sealedStateBlob).plaintext
-            } else {
-                env.unsealData(sealedStateBlob).plaintext
-            }
-        } catch (e: Exception) {
-            throw IllegalStateException("Error occurred while unsealing enclave state: ${e.message}", e)
+        // Decrypt sealed state using KDS key when the Enclave has been configured to obtain one, otherwise use the
+        // unsealing functions.
+        val sealedState = if (env.kdsConfiguration != null) {
+            decryptSealedState(sealedStateBlob)
+        } else {
+            env.unsealData(sealedStateBlob)
         }
-        sealedState.deserialise {
+        sealedState.plaintext.deserialise {
             val version = read()
             check(version == 1)
             readEnclaveStateId()  // This is not used currently but it's here in case it's needed later.
@@ -379,7 +368,7 @@ abstract class Enclave {
     }
 
     private fun decryptSealedState(sealedBlob: ByteArray): PlaintextAndEnvelope {
-        return EnclaveUtils.aesDecrypt(getPersistencePrivateKey(), sealedBlob)
+        return EnclaveUtils.aesDecrypt(persistenceKey, sealedBlob)
     }
 
     /**
@@ -453,6 +442,10 @@ Received: $attestationReportBody"""
         }
 
         private fun onOpen(input: ByteBuffer) {
+            if (env.enablePersistentMap && enclave.threadSafe) {
+                throw EnclaveStartException("The persistent map is not available in multi-threaded enclaves.")
+            }
+
             enclave.lock.withLock {
                 /*
                 Functions that are not strictly related to the enclave initialization but that needs to be executed
@@ -461,17 +454,22 @@ Received: $attestationReportBody"""
                 Specifically, setupFileSystems can throw an exception in case the Host does not provide a
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
-                check(!(env.enablePersistentMap && enclave.threadSafe)) {
-                    "The persistent map is not available in multi-threaded enclaves."
-                }
-
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
                 val sealedStateBlob = input.getNullable { getRemainingBytes() }
-                if (sealedStateBlob != null) {
-                    enclave.applySealedState(sealedStateBlob)
+
+                enclave.initialiseLocalPersistenceKeyIfNecessary()
+
+                try {
+                    if (sealedStateBlob != null) {
+                        enclave.applySealedState(sealedStateBlob)
+                    }
+                    enclave.setupFileSystems()
+                    enclave.onStartup()
+                } catch (e: EnclaveStartException) {
+                    throw e
+                } catch (t: Throwable) {
+                    throw EnclaveStartException("Unable to start enclave", t)
                 }
-                enclave.setupFileSystems()
-                enclave.onStartup()
             }
         }
 
@@ -553,10 +551,9 @@ Received: $attestationReportBody"""
             }
             val privateKeyResponse = getKdsPrivateKeyResponse(input)
             enclave.kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
-            enclave.persistenceKdsPrivateKey = privateKeyResponse.getPrivateKey(
-                kdsConfig,
-                expectedKeySpec = persistenceKdsKeySpec
-            )
+            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
+            // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
+            enclave.persistenceKey = kdsPersistenceKey.copyOf(16)
         }
 
         fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
@@ -614,6 +611,10 @@ Received: $attestationReportBody"""
      * Override this method if the enclave requires extra configuration. Please be aware that any initialization code
      * must be placed in this method and not in the class constructor to ensure the enclave is started correctly.
      * This method is invoked as the last step of the enclave initialization.
+     *
+     * Any exceptions thrown by this method propagate out to the host wrapped in a [EnclaveStartException]. This
+     * occurs even in release mode, so care must be taken to avoid leaking any sensitive information in the
+     * exception message or stacktrace.
      */
     open fun onStartup() {
 
@@ -827,7 +828,7 @@ Received: $attestationReportBody"""
         }
 
         private fun encryptSealedState(toBeSealed: PlaintextAndEnvelope): ByteArray {
-            return EnclaveUtils.aesEncrypt(getPersistencePrivateKey(), toBeSealed)
+            return EnclaveUtils.aesEncrypt(persistenceKey, toBeSealed)
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {

@@ -13,31 +13,35 @@ import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.stream.Stream
 
-class SerializeExceptionTest {
+class ThrowableSerialisationTest {
     @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
     @ArgumentsSource(BooleanPermutations::class)
     fun `message and cause c'tor`(withMessage: Boolean, withCause: Boolean) {
-        val original =
-            MessageAndCauseException("message here".takeIf { withMessage }, Exception("da cause").takeIf { withCause })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val original = MessageAndCauseException(
+            "message here".takeIf { withMessage },
+            Exception("da cause").takeIf { withCause }
+        )
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
     @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
     @ArgumentsSource(BooleanPermutations::class)
     fun `cause and message c'tor`(withMessage: Boolean, withCause: Boolean) {
-        val original =
-            CauseAndMessageException(Exception("da cause").takeIf { withCause }, "message here".takeIf { withMessage })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val original = CauseAndMessageException(
+            Exception("da cause").takeIf { withCause },
+            "message here".takeIf { withMessage }
+        )
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
     @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
     @ArgumentsSource(BooleanPermutations::class)
     fun `message only c'tor`(withMessage: Boolean, withCause: Boolean) {
-        val original =
-            MessageOnlyException("message here".takeIf { withMessage }).initCause(Exception("da cause").takeIf { withCause })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val original = MessageOnlyException("message here".takeIf { withMessage })
+            .initCause(Exception("da cause").takeIf { withCause })
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
@@ -45,7 +49,7 @@ class SerializeExceptionTest {
     @ValueSource(booleans = [true, false])
     fun `cause only c'tor`(withCause: Boolean) {
         val original = CauseOnlyException(Exception("da cause").takeIf { withCause })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
@@ -53,7 +57,7 @@ class SerializeExceptionTest {
     @ValueSource(booleans = [true, false])
     fun `cause and constructed message c'tor`(withCause: Boolean) {
         val original = CauseWithConstructedMessageException(Exception("da cause").takeIf { withCause })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
@@ -61,7 +65,7 @@ class SerializeExceptionTest {
     @ValueSource(booleans = [true, false])
     fun `empty c'tor`(withCause: Boolean) {
         val original = EmptyException().initCause(Exception("da cause").takeIf { withCause })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
@@ -69,7 +73,21 @@ class SerializeExceptionTest {
     @ValueSource(booleans = [true, false])
     fun `empty with constructed message c'tor`(withCause: Boolean) {
         val original = EmptyWithConstructedMessageException().initCause(Exception("da cause").takeIf { withCause })
-        val roundtrip = SerializeException.deserialise(SerializeException.serialise(original))
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
+        assertExceptionEqual(roundtrip, original)
+    }
+
+    @ParameterizedTest(name = "{displayName} withMessage='{0}' withCause='{1}'")
+    @ArgumentsSource(BooleanPermutations::class)
+    fun `suppressed exceptions`(withMessage: Boolean, withCause: Boolean) {
+        val original = Exception()
+        repeat(2) {
+            original.addSuppressed(
+                Exception("message here $it".takeIf { withMessage }, Exception("da cause").takeIf { withCause })
+            )
+        }
+
+        val roundtrip = ThrowableSerialisation.deserialise(ThrowableSerialisation.serialise(original))
         assertExceptionEqual(roundtrip, original)
     }
 
@@ -80,9 +98,10 @@ class SerializeExceptionTest {
             writeUTF("com.foo.bar.Exception")
             nullableWrite("BOOM") { writeUTF(it) }
             writeInt(0) // Stacktrace
+            writeInt(0) // Suppressed exceptions
         }
 
-        val deserialised = SerializeException.deserialise(serialised)
+        val deserialised = ThrowableSerialisation.deserialise(serialised)
         assertThat(deserialised).isExactlyInstanceOf(RuntimeException::class.java)
         assertThat(deserialised).hasMessage("com.foo.bar.Exception: BOOM")
         assertThat(deserialised).hasNoCause()

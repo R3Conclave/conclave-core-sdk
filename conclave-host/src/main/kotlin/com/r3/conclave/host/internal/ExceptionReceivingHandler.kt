@@ -1,6 +1,6 @@
 package com.r3.conclave.host.internal
 
-import com.r3.conclave.common.internal.SerializeException
+import com.r3.conclave.common.internal.ThrowableSerialisation
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
@@ -10,30 +10,17 @@ import java.nio.ByteBuffer
 
 /**
  * A [Handler] that handle exceptions received from an `ExceptionSendingHandler`.
- *
- * If an exception is received [onError] is called.
  */
-class ErrorHandler : Handler<ErrorHandler.Connection> {
-    /**
-     * Throws the [Throwable] that was received from the enclave. It is up to the user of this class if they want to
-     * maintain Java semantics on checked exceptions or not.
-     */
-    private fun onError(throwable: Throwable) {
-        throw throwable
-    }
-
+class ExceptionReceivingHandler : Handler<ExceptionReceivingHandler.Connection> {
     override fun onReceive(connection: Connection, input: ByteBuffer) {
         when (input.get()) {
-            SerializeException.Discriminator.ERROR.value -> {
-                val throwable = parseException(input)
-                onError(throwable)
+            ThrowableSerialisation.Discriminator.ERROR.value -> {
+                throw parseException(input)
             }
-
-            SerializeException.Discriminator.NO_ERROR.value -> {
+            ThrowableSerialisation.Discriminator.NO_ERROR.value -> {
                 val downstream = connection.downstream ?: throw IllegalStateException("Downstream not set")
                 downstream.onReceive(input)
             }
-
             else -> throw IllegalArgumentException("Unrecognized error discriminator")
         }
     }
@@ -44,7 +31,7 @@ class ErrorHandler : Handler<ErrorHandler.Connection> {
 
     private fun parseException(input: ByteBuffer): Throwable {
         return try {
-            SerializeException.deserialise(input.getRemainingBytes())
+            ThrowableSerialisation.deserialise(input.getRemainingBytes())
         } catch (throwable: Throwable) {
             input.mark()
             val size = Integer.min(input.remaining(), 64)

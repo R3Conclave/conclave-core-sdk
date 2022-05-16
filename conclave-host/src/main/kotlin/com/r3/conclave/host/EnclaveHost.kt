@@ -55,7 +55,9 @@ import java.util.regex.Pattern
  * Although the enclave must currently run against Java 8, the host can use any
  * version of Java that is supported.
  */
-class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) : AutoCloseable {
+class EnclaveHost private constructor(
+    private val enclaveHandle: EnclaveHandle<ExceptionReceivingHandler.Connection>
+) : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
      * The public items within the object are still published in the documentation.
@@ -209,7 +211,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             enclaveFileUrl: URL,
             enclaveClassName: String,
         ): EnclaveHost {
-            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ErrorHandler())
+            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ExceptionReceivingHandler())
             return EnclaveHost(enclaveHandle)
         }
 
@@ -228,7 +230,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
                 constructor.newInstance(),
                 mockConfiguration,
                 kdsConfig,
-                ErrorHandler()
+                ExceptionReceivingHandler()
             )
             return EnclaveHost(enclaveHandle)
         }

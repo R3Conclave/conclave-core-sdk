@@ -7,9 +7,11 @@ Release notes
    JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave
    libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
 2. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
-3. GraalVM has been updated to version 22.0.
-4. Gradle 7 is now supported.
-5. Ubuntu 20.04 LTS is now the default version whilst 18.04 LTS is still supported and 16.04 LTS is no longer supported.
+3. Exceptions thrown during enclave startup in release mode now propagate to the host. This is to provide better 
+   feedback if the enclave is unable to start.
+4. GraalVM has been updated to version 22.0.
+5. Gradle 7 is now supported.
+6. Ubuntu 20.04 LTS is now the default version whilst 18.04 LTS is still supported and 16.04 LTS is no longer supported.
 
 ### 1.3
 
