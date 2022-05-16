@@ -210,6 +210,7 @@ publishing {
             // Artifact to be publish
             artifact(graalVMTar) {
                 extension 'tar.gz'
+                builtBy(tarGraal)
             }
 
             // Details about the artifact being publish
