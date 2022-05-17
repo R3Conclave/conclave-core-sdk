@@ -2,7 +2,7 @@
 
 !!! important
     Azure does not guarantee access to the same machine on reboot, secrets that are encrypted for a particular enclave may be lost.
-    Consider using the Azure Key Vault to prevent this. At time of writing, access to Azure Key Vault is not a part of the Conclave SDK (v1.1).
+    Consider using the [Key Derivation Service](kds-detail.html) (KDS) to prevent this.
 
 ## Attestation
 
