@@ -23,7 +23,16 @@ class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestat
         // TODO There's no reason why the JNI can't create the QuoteCollateral directly. Doing so allows the properties
         //      to have better types, such as int for the version. The other fields can also just be byte arrays as
         //      converting them to Strings may be unnecessary as they need to be parsed.
-        val collateral = QuoteCollateral(col[0], col[1], col[2], col[3], col[4], col[5], col[6], col[7])
+        val collateral = QuoteCollateral(
+            col[0] as Int,
+            col[1] as String,
+            col[2] as String,
+            col[3] as String,
+            col[4] as String,
+            col[5] as String,
+            col[6] as String,
+            col[7] as String
+        )
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 }

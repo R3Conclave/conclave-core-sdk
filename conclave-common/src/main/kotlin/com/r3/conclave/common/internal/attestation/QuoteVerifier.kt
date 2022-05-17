@@ -23,11 +23,8 @@ import com.r3.conclave.common.internal.attestation.AttestationUtils.parseRawEcds
 import com.r3.conclave.common.internal.attestation.AttestationUtils.sgxExtension
 import com.r3.conclave.common.internal.attestation.QuoteVerifier.EnclaveReportStatus.*
 import com.r3.conclave.common.internal.attestation.QuoteVerifier.ErrorStatus.*
-import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.getUnsignedInt
-import com.r3.conclave.utilities.internal.x509Certs
-import java.security.GeneralSecurityException
-import java.security.Signature
+import com.r3.conclave.utilities.internal.*
+import java.security.*
 import java.security.cert.*
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
@@ -56,7 +53,9 @@ object QuoteVerifier {
         UNSUPPORTED_QUOTE_FORMAT,
         QE_IDENTITY_MISMATCH,
         INVALID_QE_REPORT_SIGNATURE,
-        INVALID_QUOTE_SIGNATURE
+        INVALID_QUOTE_SIGNATURE,
+        SGX_QL_PCK_CERT_CHAIN_ERROR,
+        SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED
     }
 
     private const val QUOTE_VERSION = 3
@@ -68,33 +67,31 @@ object QuoteVerifier {
     private val SGX_PCK_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX PCK Certificate")
     private val SGX_TCB_SIGNING_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX TCB Signing")
 
-    /*
-     * These certificates are hardcoded at Intel's DCAP source code:
-     * linux-sgx/external/dcap_source/QuoteVerification/QvE/Include/sgx_qve_def.h
-     * #define TRUSTED_ROOT_CA_CERT "-----BEGIN CERTIFICATE-----..."
-     * #define TRUSTED_ROOT_CA_CERT_V3 "-----BEGIN CERTIFICATE-----..."
-     *
-     * we have to pick one based on the quote collateral version
-     * linux-sgx/external/dcap_source/QuoteVerification/QvE/Enclave/qve.cpp
-     * if (p_quote_collateral->version == QVE_COLLATERAL_VERSION1)
-     *     quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT;
-     * else if (p_quote_collateral->version == QVE_COLLATERAL_VERSION3)
-     *     quote_trusted_root_ca_cert = TRUSTED_ROOT_CA_CERT_V3;
-     */
-    private val trustedRootCertV1: X509Certificate = javaClass.getResourceAsStream("intel-dcap-root-cert-v1.pem").use {
-        CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
-    }
+    private val hardcodedIntelRootPublicKey: PublicKey
+    private val collateralVersions: List<Int>
 
-    private val trustedRootCertV3: X509Certificate = javaClass.getResourceAsStream("intel-dcap-root-cert-v3.pem").use {
-        CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
-    }
+    init {
+        //  QuoteVerification/QvE/Enclave/qve.cpp->line 76
+        //  This is the Intel Root Public Key in ECDSA format.
+        //    ECDSA uncompressed public keys have a size of  65 bytes, consisting of constant prefix (0x04, representing
+        //    that the key is uncompressed) followed by two 256-bit integers, x and y (2 * 32 bytes).
+        val hardcodedIntelPublicKeyBytes: ByteArray = intArrayOf(
+            //  The first byte is a constant prefix, we are commenting it out as it is really not needed in our code.
+            /*0x04,*/0x0b, 0xa9, 0xc4, 0xc0, 0xc0, 0xc8, 0x61, 0x93, 0xa3, 0xfe, 0x23, 0xd6, 0xb0, 0x2c,
+            0xda, 0x10, 0xa8, 0xbb, 0xd4, 0xe8, 0x8e, 0x48, 0xb4, 0x45, 0x85, 0x61, 0xa3, 0x6e, 0x70,
+            0x55, 0x25, 0xf5, 0x67, 0x91, 0x8e, 0x2e, 0xdc, 0x88, 0xe4, 0x0d, 0x86, 0x0b, 0xd0, 0xcc,
+            0x4e, 0xe2, 0x6a, 0xac, 0xc9, 0x88, 0xe5, 0x05, 0xa9, 0x53, 0x55, 0x8c, 0x45, 0x3f, 0x6b,
+            0x09, 0x04, 0xae, 0x73, 0x94
+        ).map { it.toByte() }.toByteArray()
+        hardcodedIntelRootPublicKey = Cursor.wrap(SgxEcdsa256BitPubkey, hardcodedIntelPublicKeyBytes).toPublicKey()
 
-    private fun trustedRootCert(version: String): X509Certificate {
-        return when (version) {
-            "1" -> trustedRootCertV1
-            "3" -> trustedRootCertV3
-            else -> throw IllegalArgumentException("Invalid collateral version $version")
-        }
+        //  QuoteVerification/QvE/Include/sgx_qve_def.h
+        val qveCollateralVersion1 = 0x1
+        val qveCollateralVersion3 = 0x3
+        val qveCollateralVersion31 = 0x00010003
+        val qveCollateralVersion4 = 0x4
+
+        collateralVersions = listOf(qveCollateralVersion1, qveCollateralVersion3, qveCollateralVersion31, qveCollateralVersion4)
     }
 
     // QuoteVerification/QvE/Enclave/qve.cpp:sgx_qve_verify_quote
@@ -106,6 +103,7 @@ object QuoteVerifier {
         val pckCertPath = authData[qeCertData].toPckCertPath()
 
         val verificationStatus = try {
+            verifyCollateralVersion(collateral.version)
             verifyPckCertificate(pckCertPath, collateral)
             verifyTcbInfo(collateral)
             verifyQeIdentity(collateral)
@@ -127,7 +125,7 @@ object QuoteVerifier {
     }
 
     private fun getLatestIssueTime(pckCertPath: CertPath, collateral: QuoteCollateral): Instant {
-        var latestIssueTime = trustedRootCert(collateral.version).notBefore.toInstant()
+        var latestIssueTime = pckCertPath.rootX509Cert.notBefore.toInstant()
         latestIssueTime = pckCertPath.x509Certs.maxOf(latestIssueTime) { it.notBefore.toInstant() }
         latestIssueTime = maxOf(collateral.rootCaCrl.thisUpdate.toInstant(), latestIssueTime)
         latestIssueTime = maxOf(collateral.pckCrl.thisUpdate.toInstant(), latestIssueTime)
@@ -145,6 +143,7 @@ object QuoteVerifier {
         return maxOf(maxTime, latestIssueTime)
     }
 
+    //  QuoteVerification/QvE/Enclave/qve.cpp:sgxAttestationVerifyQuote
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/QuoteVerifier.cpp:176
     private fun verifyQuote(
         quote: ByteCursor<SgxQuote>,
@@ -208,10 +207,11 @@ object QuoteVerifier {
         }
     }
 
+    //  QuoteVerification/QvE/Enclave/qve.cpp:sgxAttestationVerifyPCKCertificate
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/QuoteVerification.cpp:77 - parsing inputs
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/PckCertVerifier.cpp:51 - verification
     private fun verifyPckCertificate(pckCertPath: CertPath, collateral: QuoteCollateral) {
-        validateCertPath(pckCertPath, collateral.version)
+        validateCertPath(pckCertPath)
 
         // Intel assumes a pck chain of 3 certs
         verify(pckCertPath.certificates.size == 3, UNSUPPORTED_CERT_FORMAT)
@@ -235,11 +235,25 @@ object QuoteVerifier {
         verify(!collateral.pckCrl.isRevoked(pckCert), SGX_PCK_REVOKED)
     }
 
+    //  QuoteVerification/QvE/Enclave/qve.cpp->line 90
+    //    if (hardcode_root_pub_key != root_pub_key_from_cert) {
+    //      ret = SGX_QL_PCK_CERT_CHAIN_ERROR;
+    //      break;
+    //    }
+    private fun validateRootPublicKey(rootCertificate: X509Certificate) {
+        verify(hardcodedIntelRootPublicKey == rootCertificate.publicKey, SGX_QL_PCK_CERT_CHAIN_ERROR)
+    }
+
+    private fun verifyCollateralVersion(collateralVersion: Int) {
+        verify(collateralVersion in collateralVersions, SGX_QL_COLLATERAL_VERSION_NOT_SUPPORTED)
+    }
+
+    //  QuoteVerification/QvE/Enclave/qve.cpp:sgxAttestationVerifyTCBInfo
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/QuoteVerification.cpp:64 - parsing inputs
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBInfoVerifier.cpp:59
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBSigningChain.cpp:51
     private fun verifyTcbInfo(collateral: QuoteCollateral) {
-        verifyTcbChain(collateral.tcbInfoIssuerChain, collateral.rootCaCrl, collateral.version)
+        verifyTcbChain(collateral.tcbInfoIssuerChain, collateral.rootCaCrl)
         verifyJsonSignature(
             collateral.rawSignedTcbInfo,
             """{"tcbInfo":""",
@@ -249,11 +263,12 @@ object QuoteVerifier {
         )
     }
 
+    //  QuoteVerification/QvE/Enclave/qve.cpp:sgxAttestationVerifyEnclaveIdentity
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/QuoteVerification.cpp:232
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/EnclaveIdentityVerifier.cpp:60
     private fun verifyQeIdentity(collateral: QuoteCollateral) {
         // yes, verifyTcbChain is used to verify qeIdentityIssuerChain
-        verifyTcbChain(collateral.qeIdentityIssuerChain, collateral.rootCaCrl, collateral.version)
+        verifyTcbChain(collateral.qeIdentityIssuerChain, collateral.rootCaCrl)
         verifyJsonSignature(
             collateral.rawSignedQeIdentity,
             """{"enclaveIdentity":""",
@@ -286,8 +301,8 @@ object QuoteVerifier {
     }
 
     /// QuoteVerification/QVL/Src/AttestationLibrary/src/Verifiers/TCBSigningChain.cpp:56
-    private fun verifyTcbChain(tcbSignChain: CertPath, rootCaCrl: X509CRL, collateralVersion: String) {
-        validateCertPath(tcbSignChain, collateralVersion)
+    private fun verifyTcbChain(tcbSignChain: CertPath, rootCaCrl: X509CRL) {
+        validateCertPath(tcbSignChain)
 
         // Intel assumes a tcb chain of 2 certs
         verify(tcbSignChain.certificates.size == 2, UNSUPPORTED_CERT_FORMAT)
@@ -300,9 +315,12 @@ object QuoteVerifier {
         verify(!rootCaCrl.isRevoked(tcbSigningCert), SGX_TCB_SIGNING_CERT_REVOKED)
     }
 
-    private fun validateCertPath(chain: CertPath, collateralVersion: String) {
+
+    private fun validateCertPath(chain: CertPath) {
+        validateRootPublicKey(chain.rootX509Cert)
+
         val certTime = chain.x509Certs.minOf { it.notAfter }
-        val pkixParameters = PKIXParameters(setOf(TrustAnchor(trustedRootCert(collateralVersion), null))).apply {
+        val pkixParameters = PKIXParameters(setOf(TrustAnchor(chain.rootX509Cert, null))).apply {
             isRevocationEnabled = false
             date = certTime
         }

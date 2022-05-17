@@ -10,7 +10,6 @@ import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.utilities.internal.readFully
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -32,13 +31,23 @@ class QuoteVerifierTest {
     @Test
     fun `perfect quote does not fail`() {
         // EnclaveInstanceInfo.deserialize calls QuoteValidator.validate internally
-        assertDoesNotThrow { loadSampleDcapAttestation(iceLake = false) }
+        val (signedQuote, collateral) = loadSampleDcapAttestation(iceLake = false)
+        val (verificationStatus) = QuoteVerifier.verify(
+            signedQuote = signedQuote,
+            collateral = collateral
+        )
+        assertThat(verificationStatus).isEqualTo(TcbStatus.UpToDate)
     }
 
     @Test
     fun `perfect quote does not fail for IceLake`() {
         // EnclaveInstanceInfo.deserialize calls QuoteValidator.validate internally
-        assertDoesNotThrow { loadSampleDcapAttestation(iceLake = true) }
+        val (signedQuote, collateral) = loadSampleDcapAttestation(iceLake = true)
+        val (verificationStatus) = QuoteVerifier.verify(
+            signedQuote = signedQuote,
+            collateral = collateral
+        )
+        assertThat(verificationStatus).isEqualTo(TcbStatus.UpToDate)
     }
 
     @Test

@@ -442,7 +442,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         return nullptr;
     }
     else {
-        jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/String"),nullptr);
+        jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/Object"),nullptr);
 
         /**
            enum class PckCaType {
@@ -460,10 +460,11 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
            QeIdentity
            }
         */
-        char version[2] = { '0', 0};
-        version[0] += collateral->version;
+        jclass integerClass = jniEnv->FindClass("java/lang/Integer");
+        jmethodID integerConstructor = jniEnv->GetMethodID(integerClass, "<init>", "(I)V");
+        jobject wrappedVersion = jniEnv->NewObject(integerClass, integerConstructor, static_cast<jint>(collateral->version));
 
-        jniEnv->SetObjectArrayElement(arr,0,jniEnv->NewStringUTF(version));
+        jniEnv->SetObjectArrayElement(arr,0,wrappedVersion);
         jniEnv->SetObjectArrayElement(arr,1,jniEnv->NewStringUTF(collateral->pck_crl_issuer_chain));
         jniEnv->SetObjectArrayElement(arr,2,jniEnv->NewStringUTF(collateral->root_ca_crl));
         jniEnv->SetObjectArrayElement(arr,3,jniEnv->NewStringUTF(collateral->pck_crl));

@@ -230,3 +230,9 @@ val CertPath.x509Certs: List<X509Certificate>
         @Suppress("UNCHECKED_CAST")
         return certificates as List<X509Certificate>
     }
+
+val CertPath.rootX509Cert: X509Certificate
+    get() {
+        return x509Certs.last()
+    }
+

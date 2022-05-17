@@ -291,7 +291,9 @@ data class DcapAttestation(val signedQuote: ByteCursor<SgxSignedQuote>, val coll
     override fun serialise(): ByteArray {
         return writeData {
             write(signedQuote.bytes)
-            writeIntLengthPrefixBytes(collateral.version.toByteArray())
+            //  Note that the collateral version was originally set as a string, hence, for backward compatibility
+            //    we keep this serialization in its String form
+            writeIntLengthPrefixBytes(collateral.version.toString().toByteArray())
             writeIntLengthPrefixBytes(collateral.pckCrlIssuerChain.toByteArray())
             writeIntLengthPrefixBytes(collateral.rawRootCaCrl.toByteArray())
             writeIntLengthPrefixBytes(collateral.rawPckCrl.toByteArray())
@@ -316,7 +318,7 @@ data class DcapAttestation(val signedQuote: ByteCursor<SgxSignedQuote>, val coll
             return DcapAttestation(
                 signedQuote,
                 QuoteCollateral(
-                    version,
+                    version.toInt(),
                     pckCrlIssuerChain,
                     rawRootCaCrl,
                     rawPckCrl,
