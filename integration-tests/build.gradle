@@ -8,19 +8,8 @@ apply from: '../common.gradle'
 subprojects {
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
     ext.attestationMode = findProperty("attestationMode") ?: "epid"
-    repositories {
-        maven {
-            url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
-        }
-        maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
-            }
-        }
-        mavenCentral()
-    }
+
+    apply from: "${rootProject.projectDir}/repositories.gradle"
 
     tasks.withType(Test) {
         useJUnitPlatform {

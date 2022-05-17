@@ -33,11 +33,7 @@ dependencies {
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
 
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jackson_version"
-    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72"
-    testImplementation "org.jetbrains.kotlin:kotlin-test:1.3.72"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
-    testImplementation gradleTestKit()
 }
 
 jar {
@@ -45,20 +41,4 @@ jar {
         // This is used in the plugin to add implicit dependencies of the right version.
         attributes("Conclave-Version": rootProject.version.toString())
     }
-}
-
-test {
-    // These tests take a long time to run. Only run them if configured to do so
-    // via '-PrunPluginEnclaveGradleTests' being passed to Gradle
-    if (!project.hasProperty('runPluginEnclaveGradleTests')) {
-        exclude '*'
-    } else {
-        // The tests require the locally published SDK repo.
-        dependsOn(':sdkRepo')
-    }
-    // Tell the tests where Gradle's current module cache is.
-    // We need the tests to share this module cache to prevent the
-    // Gradle Test-Kit from downloading its own copy of Kotlin etc.
-    systemProperty 'test.gradle.user.home', project.gradle.gradleUserHomeDir
-    systemProperty 'gradle.version', project.gradle.gradleVersion
 }
