@@ -349,17 +349,23 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
         std::string path(std::string(jpath.c_str));
 
         quoting_lib = new r3::conclave::dcap::QuotingAPI();
-        if ( !quoting_lib->init(path, errors) ){
+
+        if (!quoting_lib->init(path, errors)) {
             std::string message("failed to initialize DCAP: ");
             for(auto &err : errors)
                 message += err + ";";
 
+            delete quoting_lib;
+            quoting_lib = nullptr;
             raiseException(jniEnv, message.c_str());
             return -1;
         }
     }
     catch(...){
-        quoting_lib = nullptr;
+        if (quoting_lib != nullptr) {
+            delete quoting_lib;
+            quoting_lib = nullptr;
+        }
 
         raiseException(jniEnv, "failed to initialize DCAP: unknown error");
         return -1;
@@ -435,13 +441,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
-    quote3_error_t eval_result;
-    auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result);
+    quote3_error_t eval_result_get;
+    auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result_get);
+
     if (collateral == nullptr){
-        raiseException(jniEnv, getQuotingErrorMessage(eval_result));
+        raiseException(jniEnv, getQuotingErrorMessage(eval_result_get));
         return nullptr;
-    }
-    else {
+    } else {
         jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/Object"),nullptr);
 
         /**
@@ -472,7 +478,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         jniEnv->SetObjectArrayElement(arr,5,jniEnv->NewStringUTF(collateral->tcb_info));
         jniEnv->SetObjectArrayElement(arr,6,jniEnv->NewStringUTF(collateral->qe_identity_issuer_chain));
         jniEnv->SetObjectArrayElement(arr,7,jniEnv->NewStringUTF(collateral->qe_identity));
-
+        
+        quote3_error_t eval_result_free;
+        
+        if (!quoting_lib->free_quote_verification_collateral(eval_result_free)) {
+            raiseException(jniEnv, getQuotingErrorMessage(eval_result_free));
+            return nullptr;
+        }           
         return arr;
     }
 }

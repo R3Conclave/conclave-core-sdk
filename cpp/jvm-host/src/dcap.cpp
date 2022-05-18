@@ -89,8 +89,10 @@ namespace r3::conclave::dcap {
         }
 
         qp_handle = try_dlopen( qpl, errors);
-        if(qp_handle != nullptr) {
+
+        if (qp_handle != nullptr) {
             SGX_QL_RESOLVE(qp_handle, sgx_ql_get_quote_verification_collateral);
+            SGX_QL_RESOLVE(qp_handle, sgx_ql_free_quote_verification_collateral);
         }
 
         return errors.size() == 0;
@@ -111,6 +113,18 @@ namespace r3::conclave::dcap {
         return eval_result == SGX_QL_SUCCESS;
     }
 
+    bool QuotingAPI::free_quote_verification_collateral(quote3_error_t& eval_result) {
+        if (collateral != nullptr) {
+            eval_result = sgx_ql_free_quote_verification_collateral(collateral);
+            collateral = nullptr;
+            return eval_result == SGX_QL_SUCCESS;
+        } else {
+            //  Already freed or free not required, we return true in such case.
+            return true;
+        }
+    }
+
+    //  The users should not free sgx_ql_qve_collateral_t manually but they are expected to call free_quote_verification_collateral
     sgx_ql_qve_collateral_t* QuotingAPI::get_quote_verification_collateral(const uint8_t* fmspc, int pck_ca_type, quote3_error_t& eval_result){
 
         const char* pck_ca = pck_ca_type == 1 ? "platform" : "processor";
@@ -121,5 +135,13 @@ namespace r3::conclave::dcap {
         eval_result = result;
 
         return SGX_QL_SUCCESS == result ? collateral : nullptr;
+    }
+
+    QuotingAPI::~QuotingAPI() {
+        if (collateral != nullptr) {
+            //  Attempt to free the collateral in case it has not been freed (this should never be the case)
+            //    We do not log potential errors here, we only want to close this gracefully.
+            sgx_ql_free_quote_verification_collateral(collateral);
+        }
     }
 }

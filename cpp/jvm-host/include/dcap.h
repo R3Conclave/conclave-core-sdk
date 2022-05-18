@@ -38,6 +38,7 @@ namespace r3::conclave::dcap {
         SGX_QL_DECL(sgx_qe_get_quote,sgx_report_t *,uint32_t,uint8_t*);
 
         SGX_QL_DECL(sgx_ql_get_quote_verification_collateral, const uint8_t*, uint16_t, const char* pck_ca, sgx_ql_qve_collateral_t**);
+        SGX_QL_DECL(sgx_ql_free_quote_verification_collateral, sgx_ql_qve_collateral_t *p_quote_collateral);
 
     public:
         typedef std::vector<std::string> Errors;
@@ -49,6 +50,9 @@ namespace r3::conclave::dcap {
         bool get_quote(sgx_report_t* report, uint32_t size, uint8_t* data, quote3_error_t& eval_result);
 
         sgx_ql_qve_collateral_t* get_quote_verification_collateral(const uint8_t* fmspc, int pck_ca_type, quote3_error_t& result);
+        bool free_quote_verification_collateral(quote3_error_t& eval_result);
+
+        ~QuotingAPI();
     };
 }
 
