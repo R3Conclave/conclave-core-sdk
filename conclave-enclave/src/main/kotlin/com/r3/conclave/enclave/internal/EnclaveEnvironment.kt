@@ -65,11 +65,6 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
     ): ByteCursor<SgxReport>
 
     /**
-     * Fill [output] with indices in ([offset], [offset] + [length]) with random bytes.
-     */
-    abstract fun randomBytes(output: ByteArray, offset: Int = 0, length: Int = output.size)
-
-    /**
      * Encrypt and authenticate the given [PlaintextAndEnvelope] using AES-GCM. The key used is unique to the enclave.
      * This method can be used to preserve secret data after the enclave is destroyed. The sealed data blob can be
      * unsealed on future instantiations of the enclave using [unsealData], even if the platform firmware has been

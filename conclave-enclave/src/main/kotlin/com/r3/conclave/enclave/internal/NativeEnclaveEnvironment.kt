@@ -129,10 +129,6 @@ class NativeEnclaveEnvironment(
         )
     }
 
-    override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
-        Native.randomBytes(output, offset, length)
-    }
-
     override val enclaveMode: EnclaveMode
         get() {
             return when {
@@ -208,8 +204,8 @@ class NativeEnclaveEnvironment(
         val alwaysInsideEnclave = object : EnclaveContext {
             override fun isInsideEnclave() = true
         }
-        EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
+        EnclaveContext.Companion::class.java.getDeclaredField("instance")
+            .apply { isAccessible = true }
             .set(null, alwaysInsideEnclave)
-        EnclaveSecurityProvider.register()
     }
 }

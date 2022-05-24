@@ -11,11 +11,10 @@ import com.r3.conclave.common.internal.KeyPolicy.NOISVPRODID
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
-import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
+import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
-import java.security.SecureRandom
 import kotlin.LazyThreadSafetyMode.NONE
 
 class MockEnclaveEnvironment(
@@ -24,9 +23,7 @@ class MockEnclaveEnvironment(
     kdsConfig: EnclaveKdsConfig?
 ) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true), kdsConfig) {
     companion object {
-        private val secureRandom = SecureRandom()
-
-        private fun versionToCpuSvn(num: Int): ByteArray { 
+        private fun versionToCpuSvn(num: Int): ByteArray {
             return digest("SHA-256") { 
                 update(ByteBuffer.allocate(2).putShort(num.toShort()).array()) 
             }.copyOf(SgxCpuSvn.size)
@@ -99,16 +96,6 @@ class MockEnclaveEnvironment(
         body[SgxReportBody.isvSvn] = revocationLevel + 1
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
         return report
-    }
-
-    override fun randomBytes(output: ByteArray, offset: Int, length: Int) {
-        if (offset == 0 && length == output.size) {
-            secureRandom.nextBytes(output)
-        } else {
-            val bytes = ByteArray(length)
-            secureRandom.nextBytes(bytes)
-            System.arraycopy(bytes, 0, output, offset, length)
-        }
     }
 
     @Synchronized

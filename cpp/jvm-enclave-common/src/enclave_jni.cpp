@@ -76,9 +76,6 @@ bool validateSealDataArgs
 
 extern "C" {
 
-extern const uint8_t _binary_app_jar_start[];
-extern const uint8_t _binary_app_jar_end[];
-
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
         (JNIEnv *jniEnv, jclass, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
@@ -122,22 +119,6 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
     }
 }
 
-JNIEXPORT jint JNICALL Java_com_r3_conclave_enclave_internal_Native_readAppJarChunk
-        (JNIEnv *jniEnv, jclass, jlong jarOffset, jbyteArray dest, jint destOffset, jint length) {
-    static unsigned long jarSize = _binary_app_jar_end - _binary_app_jar_start;
-    auto remainingBytes = jarSize - jarOffset;
-    if (remainingBytes <= 0) {
-        return 0;
-    }
-    auto destSize = jniEnv->GetArrayLength(dest);
-    auto numberOfBytesToCopy = std::min(std::min((destSize), static_cast<jsize>(length)), static_cast<jsize>(remainingBytes));
-
-    jniEnv->SetByteArrayRegion(dest, destOffset, numberOfBytesToCopy,
-                               reinterpret_cast<const jbyte *>(&_binary_app_jar_start[jarOffset]));
-
-    return numberOfBytesToCopy;
-}
-
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_createReport
         (JNIEnv *jniEnv, jclass, jbyteArray targetInfoIn, jbyteArray reportDataIn, jbyteArray reportOut) {
     jbyte *target_info = nullptr;
@@ -165,27 +146,6 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_createReport
         raiseException(jniEnv, getErrorMessage(returnCode));
     } else {
         jniEnv->ReleaseByteArrayElements(reportOut, report, 0);
-    }
-}
-
-JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_randomBytes
-        (JNIEnv *jniEnv, jclass, jbyteArray output, jint offset, jint length) {
-    if (length < 0) {
-        raiseException(jniEnv, "Please specify a non-negative length");
-        return;
-    }
-
-    if (offset < 0) {
-        raiseException(jniEnv, "Please specify a non-negative offset");
-        return;
-    }
-
-    JniPtr<uint8_t> rng_output(jniEnv, output);
-    auto ret = sgx_read_rand(rng_output.ptr + offset, length);
-    if (ret == SGX_SUCCESS) {
-        rng_output.releaseMode = 0; // to write back to the jvm
-    }  else {
-        raiseException(jniEnv, getErrorMessage(ret));
     }
 }
 
@@ -383,9 +343,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_getKey
 
 DLSYM_STATIC {
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOcall);
-    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_readAppJarChunk);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_createReport);
-    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_randomBytes);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_isEnclaveSimulation);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_sealData);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_unsealData);
