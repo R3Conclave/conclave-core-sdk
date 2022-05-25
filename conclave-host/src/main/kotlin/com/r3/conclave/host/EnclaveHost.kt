@@ -935,9 +935,9 @@ class EnclaveHost private constructor(
         }
 
         private fun getKdsKeySpec(input: ByteBuffer): KDSKeySpec {
-            val name = String(input.getIntLengthPrefixBytes())
+            val name = input.getIntLengthPrefixString()
             val masterKeyType = masterKeyTypeValues[input.get().toInt()]
-            val policyConstraint = String(input.getRemainingBytes())
+            val policyConstraint = input.getRemainingString()
             return KDSKeySpec(name, masterKeyType, policyConstraint)
         }
     }
@@ -984,7 +984,7 @@ class EnclaveHost private constructor(
 
         private fun onMail(transaction: Transaction, input: ByteBuffer) {
             // routingHint can be null/missing.
-            val routingHint = input.getNullable { String(getIntLengthPrefixBytes()) }
+            val routingHint = input.getNullable { getIntLengthPrefixString() }
             // rest of the body to deliver (should be encrypted).
             val encryptedBytes = input.getRemainingBytes()
             val cmd = MailCommand.PostMail(encryptedBytes, routingHint)

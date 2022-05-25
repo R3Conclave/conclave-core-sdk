@@ -24,7 +24,7 @@ class AttestationTests : AbstractEnclaveActionTest() {
         val metadataCursor = Cursor.allocate(SgxEnclaveMetadata.INSTANCE)
         Native.getMetadata(getEnclaveFilename(), metadataCursor.buffer.array())
 
-        val metadata = Cursor.wrap(SgxEnclaveMetadata.INSTANCE, metadataCursor.buffer.array(), 0, metadataCursor.size)
+        val metadata = Cursor.wrap(SgxEnclaveMetadata.INSTANCE, metadataCursor.buffer.array())
         val metaCodeHash = SHA256Hash.get(metadata[enclaveCss][body][enclaveHash].read())
         val metaCodeSigningKeyHash = SHA256Hash.hash(metadata[enclaveCss][key][modulus].bytes)
 

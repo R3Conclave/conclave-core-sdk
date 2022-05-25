@@ -9,6 +9,9 @@ class HandlerConnected<CONNECTION>(val handler: Handler<CONNECTION>, val connect
         }
     }
 
+    /**
+     * @see Handler.onReceive
+     */
     fun onReceive(input: ByteBuffer) {
         handler.onReceive(connection, input)
     }

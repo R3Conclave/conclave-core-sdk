@@ -74,7 +74,7 @@ class EpidAttestationService(override val isRelease: Boolean, private val subscr
     private fun HttpURLConnection.parseResponseCertPath(): CertPath {
         val urlEncodedPemCertPath = getHeaderField("X-IASReport-Signing-Certificate")
         val pemCertPathString = URLDecoder.decode(urlEncodedPemCertPath, "UTF-8")
-        return AttestationUtils.parsePemCertPath(pemCertPathString)
+        return AttestationUtils.parsePemCertPath(pemCertPathString.byteInputStream())
     }
 
     private class ReportRequest(

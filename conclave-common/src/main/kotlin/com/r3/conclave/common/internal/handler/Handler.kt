@@ -56,8 +56,8 @@ interface Handler<CONNECTION> {
 
     /**
      * Receive bytes from upstream.
-     * @param connection the [CONNECTION].
-     * @param input the bytes themselves.
+     * @param input The byte buffer containing the bytes. The buffer may become invalid and cannot be used after this
+     * method returns. If bytes need to be used after this method they must be copied from the buffer.
      */
     fun onReceive(connection: CONNECTION, input: ByteBuffer)
 }

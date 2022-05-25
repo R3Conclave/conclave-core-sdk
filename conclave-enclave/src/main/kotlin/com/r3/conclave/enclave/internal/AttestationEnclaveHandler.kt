@@ -23,7 +23,9 @@ abstract class AttestationEnclaveHandler(private val env: EnclaveEnvironment) : 
     }
 
     override fun onReceive(connection: AttestationEnclaveHandler, input: ByteBuffer) {
-        val quotingEnclaveTargetInfo = Cursor.read(SgxTargetInfo, input)
+        // We use Cursor.slice rather than Cursor.get to avoid copying the bytes. The quotingEnclaveTargetInfo is not
+        // used after this method return so it's safe to do so.
+        val quotingEnclaveTargetInfo = Cursor.slice(SgxTargetInfo, input)
         val report = env.createReport(quotingEnclaveTargetInfo, reportData)
         _report = report
         sender.send(report.encoder.size) { buffer ->

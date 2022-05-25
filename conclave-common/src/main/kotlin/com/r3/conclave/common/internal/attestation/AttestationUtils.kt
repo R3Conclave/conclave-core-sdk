@@ -1,17 +1,17 @@
 package com.r3.conclave.common.internal.attestation
 
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.SGXExtensionASN1Parser
 import com.r3.conclave.common.internal.inputStream
 import com.r3.conclave.utilities.internal.getBytes
-import com.r3.conclave.utilities.internal.getSlice
+import java.io.DataOutputStream
+import java.io.InputStream
 import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.util.regex.Pattern
 
 object AttestationUtils {
     private const val SGX_EXTENSION_OID = "1.2.840.113741.1.13.1"
@@ -20,8 +20,6 @@ object AttestationUtils {
     const val SGX_PCESVN_OID = "$SGX_TCB_OID.17"
     const val SGX_PCEID_OID = "$SGX_EXTENSION_OID.3"
     const val SGX_FMSPC_OID = "$SGX_EXTENSION_OID.4"
-
-    private val PEM_CERT_PATTERN = Pattern.compile("-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----")
 
     val X509Certificate.sgxExtension: SGXExtensionASN1Parser
         get() = SGXExtensionASN1Parser(getExtensionValue(SGX_EXTENSION_OID))
@@ -47,32 +45,23 @@ object AttestationUtils {
         System.arraycopy(chunk, 0, output, offset + 2, chunk.size)
     }
 
-    /**
-     * Parse the given byte buffer representing a cert path encoded as concatented certificates in PEM format.
-     */
-    fun parsePemCertPath(bytes: ByteBuffer): CertPath {
-        return parsePemCertPath(bytes, StandardCharsets.US_ASCII.decode(bytes))
+    fun parsePemCertPath(buffer: ByteBuffer, trailingBytes: Int = 0): CertPath {
+        return parsePemCertPath(buffer.inputStream(), trailingBytes)
     }
 
-    /**
-     * Parse the given string representing a cert path encoded as concatented certificates in PEM format.
-     */
-    fun parsePemCertPath(string: String): CertPath {
-        return parsePemCertPath(ByteBuffer.wrap(string.toByteArray(StandardCharsets.US_ASCII)), string)
-    }
-
-    private fun parsePemCertPath(bytes: ByteBuffer, chars: CharSequence): CertPath {
+    fun parsePemCertPath(stream: InputStream, trailingBytes: Int = 0): CertPath {
         val certificateFactory = CertificateFactory.getInstance("X.509")
-        val certificates = mutableListOf<Certificate>()
-
-        val matcher = PEM_CERT_PATTERN.matcher(chars)
-        while (matcher.find()) {
-            // PEM is encoded in ASCII so there's a one-to-one mapping between the byte and char indices.
-            val size = matcher.end() - matcher.start()
-            val certSlice = bytes.getSlice(size, matcher.start())
-            certificates += certificateFactory.generateCertificate(certSlice.inputStream())
+        // The cert path length in DCAP is 3, so we round that up to 4 for the initial capacity and avoid internal
+        // copying.
+        val certificates = ArrayList<Certificate>(4)
+        while (stream.available() > trailingBytes) {
+            certificates += certificateFactory.generateCertificate(stream)
         }
-
         return certificateFactory.generateCertPath(certificates)
+    }
+
+    fun DataOutputStream.writeIntLengthPrefixBytes(bytes: OpaqueBytes) {
+        writeInt(bytes.size)
+        bytes.writeTo(this)
     }
 }

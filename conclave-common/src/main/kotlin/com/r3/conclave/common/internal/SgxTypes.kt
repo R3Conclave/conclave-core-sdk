@@ -265,7 +265,7 @@ fun ByteCursor<SgxSignedQuote>.toEcdsaP256AuthData(): ByteCursor<SgxEcdsa256BitQ
     check(this[quote][signType].read() == SgxQuoteSignType.ECDSA_P256) {
         "Not a ECDSA-256-with-P-256 auth data."
     }
-    return Cursor.read(SgxEcdsa256BitQuoteAuthData, this[signature].read())
+    return Cursor.slice(SgxEcdsa256BitQuoteAuthData, this[signature].read())
 }
 
 /**
@@ -618,7 +618,8 @@ object SgxQeCertData : VariableStruct() {
 
 fun ByteCursor<SgxQeCertData>.toPckCertPath(): CertPath {
     check(this[type].read() == 5) { "Not a PCK cert path" }
-    return AttestationUtils.parsePemCertPath(this[data].read())
+    // There's a trailing byte which we ignore
+    return AttestationUtils.parsePemCertPath(this[data].read(), trailingBytes = 1)
 }
 
 /**

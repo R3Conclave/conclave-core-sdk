@@ -19,11 +19,8 @@ class QuoteVerifierTest {
     companion object {
         fun loadSampleDcapAttestation(iceLake: Boolean = false): DcapAttestation {
             val input = QuoteVerifierTest::class.java.getResourceAsStream(
-                if (iceLake)
-                    "EnclaveInstanceInfo-DCAP-IceLake.ser"
-                else
-                    "EnclaveInstanceInfo-DCAP.ser"
-            ).readFully()
+                if (iceLake) "EnclaveInstanceInfo-DCAP-IceLake.ser" else "EnclaveInstanceInfo-DCAP.ser"
+            )!!.readFully()
             return (EnclaveInstanceInfo.deserialize(input) as EnclaveInstanceInfoImpl).attestation as DcapAttestation
         }
     }
@@ -83,8 +80,9 @@ class QuoteVerifierTest {
     @Test
     fun `bad pck crl issuer`() {
         val (signedQuote, collateral) = loadSampleDcapAttestation()
-        val badPckCrlCollateral =
-            collateral.copy(rawPckCrl = String(javaClass.getResourceAsStream("sample.root.crl.pem").readFully()))
+        val badPckCrlCollateral = collateral.copy(
+            rawPckCrl = OpaqueBytes(javaClass.getResourceAsStream("sample.root.crl.pem")!!.readFully())
+        )
 
         val (status) = QuoteVerifier.verify(
             signedQuote,
@@ -98,8 +96,9 @@ class QuoteVerifierTest {
     fun `tcbinfo bad signature`() {
         val (signedQuote, collateral) = loadSampleDcapAttestation()
         val badSignedTcbInfo = collateral.signedTcbInfo.copy(signature = OpaqueBytes(Random.nextBytes(128)))
-        val badTcbInfoCollateral =
-            collateral.copy(rawSignedTcbInfo = attestationObjectMapper.writeValueAsString(badSignedTcbInfo))
+        val badTcbInfoCollateral = collateral.copy(
+            rawSignedTcbInfo = OpaqueBytes(attestationObjectMapper.writeValueAsBytes(badSignedTcbInfo))
+        )
 
         val (status) = QuoteVerifier.verify(
             signedQuote,
@@ -114,7 +113,9 @@ class QuoteVerifierTest {
         val (signedQuote, collateral) = loadSampleDcapAttestation()
         val good = collateral.signedTcbInfo
         val bad = good.copy(tcbInfo = good.tcbInfo.copy(pceId = OpaqueBytes.parse("112233445566")))
-        val badTcbInfoCollateral = collateral.copy(rawSignedTcbInfo = attestationObjectMapper.writeValueAsString(bad))
+        val badTcbInfoCollateral = collateral.copy(
+            rawSignedTcbInfo = OpaqueBytes(attestationObjectMapper.writeValueAsBytes(bad))
+        )
 
         val (status) = QuoteVerifier.verify(
             signedQuote,

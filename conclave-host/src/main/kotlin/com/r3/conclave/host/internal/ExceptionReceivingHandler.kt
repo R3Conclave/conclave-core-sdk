@@ -5,7 +5,6 @@ import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.utilities.internal.getBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 
 /**
@@ -31,7 +30,7 @@ class ExceptionReceivingHandler : Handler<ExceptionReceivingHandler.Connection> 
 
     private fun parseException(input: ByteBuffer): Throwable {
         return try {
-            ThrowableSerialisation.deserialise(input.getRemainingBytes())
+            ThrowableSerialisation.deserialise(input)
         } catch (throwable: Throwable) {
             input.mark()
             val size = Integer.min(input.remaining(), 64)

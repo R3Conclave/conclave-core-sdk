@@ -55,6 +55,10 @@ inline fun digest(algorithm: String, block: MessageDigest.() -> Unit): ByteArray
 
 fun ByteBuffer.getBoolean(): Boolean = get().toInt() != 0
 
+/**
+ * Writes the value of 1 if [value] is true, 0 if it's false. This intentionally copies the behaviour of
+ * [DataOutputStream.writeBoolean].
+ */
 fun ByteBuffer.putBoolean(value: Boolean): ByteBuffer = put((if (value) 1 else 0).toByte())
 
 fun ByteBuffer.getUnsignedShort(): Int = java.lang.Short.toUnsignedInt(getShort())
@@ -69,6 +73,14 @@ fun ByteBuffer.putUnsignedShort(value: Int): ByteBuffer {
 fun ByteBuffer.getUnsignedInt(): Long = Integer.toUnsignedLong(getInt())
 
 fun ByteBuffer.getBytes(length: Int): ByteArray = ByteArray(length).also { get(it) }
+
+fun ByteBuffer.getIntLengthPrefixString(): String = getIntLengthPrefixSlice().getRemainingString()
+
+/**
+ * Converts the remaining bytes in this [ByteBuffer] into a String. If the position is 0 and the limit is equal to
+ * the capacity then the entire buffer is converted.
+ */
+fun ByteBuffer.getRemainingString(): String = Charsets.UTF_8.decode(this).toString()
 
 inline fun <T> ByteBuffer.getNullable(block: ByteBuffer.() -> T): T? {
     val isNull = getBoolean()
@@ -174,8 +186,6 @@ fun InputStream.readExactlyNBytes(buffer: ByteArray, n: Int) {
 
 fun DataInputStream.readIntLengthPrefixBytes(): ByteArray = readExactlyNBytes(readInt())
 
-fun DataInputStream.readIntLengthPrefixString(): String = readIntLengthPrefixBytes().decodeToString()
-
 fun DataOutputStream.writeIntLengthPrefixBytes(bytes: ByteArray) {
     writeInt(bytes.size)
     write(bytes)
@@ -235,4 +245,3 @@ val CertPath.rootX509Cert: X509Certificate
     get() {
         return x509Certs.last()
     }
-

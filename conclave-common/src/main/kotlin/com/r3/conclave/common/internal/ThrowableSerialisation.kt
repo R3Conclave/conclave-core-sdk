@@ -5,6 +5,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
+import java.nio.ByteBuffer
 
 object ThrowableSerialisation {
     fun serialise(throwable: Throwable): ByteArray {
@@ -33,7 +34,9 @@ object ThrowableSerialisation {
         }
     }
 
-    fun deserialise(bytes: ByteArray): Throwable = deserialise(bytes.dataStream())
+    fun deserialise(buffer: ByteBuffer): Throwable = deserialise(DataInputStream(buffer.inputStream()))
+
+    fun deserialise(bytes: ByteArray): Throwable = deserialise(ByteBuffer.wrap(bytes))
 
     private fun deserialise(dis: DataInputStream): Throwable {
         var count = dis.readInt()

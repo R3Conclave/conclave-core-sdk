@@ -8,9 +8,9 @@ import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.handler.HandlerConnected
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.enclave.internal.substratevm.EntryPoint
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.getRemainingString
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -32,20 +32,20 @@ class NativeEnclaveEnvironment(
         private var singletonHandler: HandlerConnected<*>? = null
 
         /**
-         * The ECALL entry point. In addition to [EntryPoint.entryPoint], this is also called from JNI code.
+         * The ECALL entry point.
          *
-         * @param input The chunk of data sent from the host.
+         * @param buffer The chunk of data sent from the host.
          */
         @JvmStatic
-        fun enclaveEntry(input: ByteArray) {
+        fun enclaveEntry(buffer: ByteBuffer) {
             val singletonHandler = synchronized(this) {
                 singletonHandler ?: run {
                     // The first ECALL is always the enclave class name, which we only use to instantiate the enclave.
-                    singletonHandler = initialiseEnclave(input)
+                    singletonHandler = initialiseEnclave(buffer)
                     null
                 }
             }
-            singletonHandler?.onReceive(ByteBuffer.wrap(input).asReadOnlyBuffer())
+            singletonHandler?.onReceive(buffer)
         }
 
         private fun seedRandom() {
@@ -77,15 +77,18 @@ class NativeEnclaveEnvironment(
             }
         }
 
-        private fun initialiseEnclave(input: ByteArray): HandlerConnected<*> {
+        private fun initialiseEnclave(buffer: ByteBuffer): HandlerConnected<*> {
             seedRandom()
 
-            val enclaveClassName = String(input)
+            val enclaveClassName = buffer.getRemainingString()
             // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
             //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
             val enclaveClass = Class.forName(enclaveClassName)
             return try {
-                val enclave = enclaveClass.asSubclass(Enclave::class.java).getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+                val enclave = enclaveClass.asSubclass(Enclave::class.java)
+                    .getDeclaredConstructor()
+                    .apply { isAccessible = true }
+                    .newInstance()
                 val env = NativeEnclaveEnvironment(enclaveClass)
                 initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
             } catch (e: InvocationTargetException) {

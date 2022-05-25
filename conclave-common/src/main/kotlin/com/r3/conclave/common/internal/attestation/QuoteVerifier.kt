@@ -23,8 +23,14 @@ import com.r3.conclave.common.internal.attestation.AttestationUtils.parseRawEcds
 import com.r3.conclave.common.internal.attestation.AttestationUtils.sgxExtension
 import com.r3.conclave.common.internal.attestation.QuoteVerifier.EnclaveReportStatus.*
 import com.r3.conclave.common.internal.attestation.QuoteVerifier.ErrorStatus.*
-import com.r3.conclave.utilities.internal.*
-import java.security.*
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.getUnsignedInt
+import com.r3.conclave.utilities.internal.rootX509Cert
+import com.r3.conclave.utilities.internal.x509Certs
+import java.nio.ByteBuffer
+import java.security.GeneralSecurityException
+import java.security.PublicKey
+import java.security.Signature
 import java.security.cert.*
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
@@ -66,6 +72,8 @@ object QuoteVerifier {
     private val SGX_INTERMEDIATE_DN_PROCESSOR = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX PCK Processor CA")
     private val SGX_PCK_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX PCK Certificate")
     private val SGX_TCB_SIGNING_DN = X500Principal(INTEL_SUBJECT_PREFIX + "CN=Intel SGX TCB Signing")
+
+    private val JSON_SIGNATURE_MARKER = """},"signature":"""".toByteArray()
 
     private val hardcodedIntelRootPublicKey: PublicKey
     private val collateralVersions: List<Int>
@@ -279,7 +287,7 @@ object QuoteVerifier {
     }
 
     private fun verifyJsonSignature(
-        rawJson: String,
+        rawJson: OpaqueBytes,
         prefix: String,
         rawSignature: OpaqueBytes,
         cert: X509Certificate,
@@ -289,13 +297,12 @@ object QuoteVerifier {
         // simply removing the whitespace from the body is all that's needed to verify with the signature. However
         // JSON objects are *unordered* key/value pairs, and the encoding for any hex fields for this API accepts both
         // upper and lower case chars. So for these reasons we play it safe and verify over the body as it appears in the
-        // raw JSON string.
-        val body = rawJson
-            .take(rawJson.lastIndexOf("""},"signature":"""") + 1)
-            .drop(prefix.length)
+        // raw JSON.
         val verifier = Signature.getInstance("SHA256withECDSA")
         verifier.initVerify(cert)
-        verifier.update(body.toByteArray())
+        val signedBytesLimit = rawJson.buffer().lastIndexOf(JSON_SIGNATURE_MARKER) + 1
+        val signedBytesView = rawJson.buffer().setView(prefix.length, signedBytesLimit)
+        verifier.update(signedBytesView)
         val signature = parseRawEcdsaToDerEncoding(rawSignature.buffer())
         verify(verifier.verify(signature), errorStatus)
     }
@@ -345,11 +352,6 @@ object QuoteVerifier {
         } catch (e: GeneralSecurityException) {
             throw VerificationException(SGX_CRL_INVALID_SIGNATURE, e)
         }
-    }
-
-    private fun verifyAgainstIssuer(cert: X509Certificate, issuer: X509Certificate) {
-        check(cert.issuerX500Principal == issuer.subjectX500Principal)
-        cert.verify(issuer.publicKey)
     }
 
     private fun verifyAttestationKeyAndQeReportDataHash(authData: ByteCursor<SgxEcdsa256BitQuoteAuthData>) {
@@ -498,6 +500,30 @@ object QuoteVerifier {
 
     private fun verify(check: Boolean, status: ErrorStatus) {
         if (!check) throw VerificationException(status)
+    }
+
+    private fun ByteBuffer.lastIndexOf(search: ByteArray): Int {
+        for (index in limit() - search.size downTo position()) {
+            if (containsBytesFromIndex(index, search)) {
+                return index
+            }
+        }
+        throw IllegalArgumentException()
+    }
+
+    private fun ByteBuffer.containsBytesFromIndex(startIndex: Int, search: ByteArray): Boolean {
+        for (index in search.indices) {
+            if (get(startIndex + index) != search[index]) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun ByteBuffer.setView(start: Int, end: Int): ByteBuffer {
+        position(start)
+        limit(end)
+        return this
     }
 
     private class VerificationException(val status: ErrorStatus, cause: Throwable? = null) : Exception(cause)

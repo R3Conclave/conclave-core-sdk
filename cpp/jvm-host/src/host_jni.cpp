@@ -265,16 +265,18 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
     }
 
     try {
-        // Copy to a JVM buffer
-        JniScopedRef<jbyteArray> javaBufferIn {jniEnv->NewByteArray(bufferInLen), jniEnv};
-        checkJniException(jniEnv);
-        jniEnv->SetByteArrayRegion(javaBufferIn.value(), 0, bufferInLen, static_cast<const jbyte *>(bufferIn));
+        // Wrap the native bytes in a Java direct byte buffer to avoid unnecessary copying. This is safe to do since the
+        // memory is not de-allocated until after this function returns in
+        // Java_com_r3_conclave_enclave_internal_Native_jvmOcall.
+        auto javaBuffer = jniEnv->NewDirectByteBuffer(bufferIn, bufferInLen);
         checkJniException(jniEnv);
         auto hostEnclaveApiClass = jniEnv->FindClass("com/r3/conclave/host/internal/NativeApi");
         checkJniException(jniEnv);
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(J[B)V");
+        // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
+        // copied from it. This means it's safe to de-allocate the pointer after this function returns.
+        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(JLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
-        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), javaBufferIn.value());
+        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), javaBuffer);
         checkJniException(jniEnv);
     } catch (JNIException&) {
         // No-op: delegate handling to the host JVM
@@ -471,6 +473,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         jobject wrappedVersion = jniEnv->NewObject(integerClass, integerConstructor, static_cast<jint>(collateral->version));
 
         jniEnv->SetObjectArrayElement(arr,0,wrappedVersion);
+        // TODO Convert the collateral fields to byte arrays, rather than Strings (which are converted back to bytes
+        //      anyway in the Kotlin code)
         jniEnv->SetObjectArrayElement(arr,1,jniEnv->NewStringUTF(collateral->pck_crl_issuer_chain));
         jniEnv->SetObjectArrayElement(arr,2,jniEnv->NewStringUTF(collateral->root_ca_crl));
         jniEnv->SetObjectArrayElement(arr,3,jniEnv->NewStringUTF(collateral->pck_crl));

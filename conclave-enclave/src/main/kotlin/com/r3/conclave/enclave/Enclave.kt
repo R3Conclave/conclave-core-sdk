@@ -420,7 +420,7 @@ abstract class Enclave {
         }
 
         private fun onAttestation(input: ByteBuffer) {
-            val attestation = Attestation.get(input)
+            val attestation = Attestation.getFromBuffer(input)
             val attestationReportBody = attestation.reportBody
             val enclaveReportBody = enclave.attestationHandler.report[body]
             check(attestationReportBody == enclaveReportBody) {
@@ -455,6 +455,7 @@ Received: $attestationReportBody"""
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
+                // TODO Unseal without having to copy the bytes
                 val sealedStateBlob = input.getNullable { getRemainingBytes() }
 
                 enclave.initialiseLocalPersistenceKeyIfNecessary()
@@ -512,12 +513,12 @@ Received: $attestationReportBody"""
         private fun buildPersistencePolicyConstraint(persistenceKeySpec: EnclaveKdsConfig.PersistenceKeySpec): String {
             val builder = StringBuilder(persistenceKeySpec.policyConstraint.constraint)
 
-            val parsedUserContraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
+            val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
 
             val report = env.createReport(null, null)
             if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
                 val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
-                if (mrenclave !in parsedUserContraint.acceptableCodeHashes) {
+                if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
                     builder.append(" C:").append(mrenclave)
                 }
             }
@@ -525,15 +526,15 @@ Received: $attestationReportBody"""
             if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
                 val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
                 val productId = report[body][isvProdId].read()
-                if (mrsigner !in parsedUserContraint.acceptableSigners) {
+                if (mrsigner !in parsedUserConstraint.acceptableSigners) {
                     builder.append(" S:").append(mrsigner)
                 }
-                if (parsedUserContraint.productID == null) {
+                if (parsedUserConstraint.productID == null) {
                     builder.append(" PROD:").append(productId)
                 } else {
-                    require(parsedUserContraint.productID == productId) {
+                    require(parsedUserConstraint.productID == productId) {
                         "Cannot apply useOwnCodeSignerAndProductID to the KDS persistence policy constraint as " +
-                                "PROD:${parsedUserContraint.productID} is already specified"
+                                "PROD:${parsedUserConstraint.productID} is already specified"
                     }
                 }
             }
@@ -559,9 +560,7 @@ Received: $attestationReportBody"""
         fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
             val mailDecryptingStream = getMailDecryptingStream(input.getIntLengthPrefixSlice())
             val kdsResponseMail = mailDecryptingStream.decryptMail(enclave.encryptionKeyPair.private)
-            // TODO Introduce an internal (or public API) deserialize method which takes in a ByteBuffer so that we
-            //  can avoid the byte copying done here and in other places.
-            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixBytes())
+            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixSlice())
             return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
         }
 
@@ -678,7 +677,7 @@ Received: $attestationReportBody"""
 
         // TODO Mail acks: https://r3-cev.atlassian.net/browse/CON-616
         private fun onMail(hostThreadId: Long, input: ByteBuffer) {
-            val routingHint = input.getNullable { String(getIntLengthPrefixBytes()) }
+            val routingHint = input.getNullable { getIntLengthPrefixString() }
             // This is the KDS private key response the host made on behalf of the enclave. The host is only required
             // to provide this if the enclave hasn't previously cached the private key this Mail needs. The host
             // determines this by examining the mail's unencrypted derivation header.

@@ -27,7 +27,8 @@ class AttestationHostHandler(
     private val stateManager: StateManager<State> = StateManager(State.Unstarted)
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
-        val report = Cursor.read(SgxReport, input)
+        // The report object is used after this method returns and so we must copy the bytes using Cursor.get.
+        val report = Cursor.copy(SgxReport, input)
         stateManager.transitionStateFrom<QuoteInitialized>(to = ReportRetrieved(report))
     }
 
