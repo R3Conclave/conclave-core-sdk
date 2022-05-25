@@ -146,18 +146,21 @@ static conclave::DiskInitialization getInitializationType(JNIEnv* env, const uns
 
 static void handleInitException(JNIEnv* env, const FatFsResult result, const std::string& fsType) {
     switch (result) {
-        //  These are errors for which the user can't do much, so it is not
-        //    useful to provide more info
     case FatFsResult::MKFS_ABORTED:
         {
             //  The minimum number of sectors in FatFs is 128 for the Fat12 type + 63 header of reserved sectors.
-            //  Being the size of the sector equal to 512 bytes, we have (128 + 63) * 512 - 1 = 97791 
+            //  Being the size of the sector equal to 512 bytes, we have (128 + 63) * 512 - 1 = 97791
             const std::string msg("Wrong " + fsType + " filesystem's sizes have been provided, please choose a value bigger than 97791 bytes");
             raiseException(env, msg.c_str());
             return;
         }
     case FatFsResult::WRONG_DRIVE_ID:
     case FatFsResult::MOUNT_FAILED:
+        {
+            const std::string msg("Unable to initialize the enclave's "+ fsType + " filesystem, potentially corrupted or unencryptable filesystem");
+            raiseException(env, msg.c_str(), "java/io/IOException");
+            return;
+        };
     case FatFsResult::DRIVE_REGISTRATION_FAILED:
     case FatFsResult::MKFS_GENERIC_ERROR:
     case FatFsResult::ROOT_DIRECTORY_MOUNT_FAILED:

@@ -12,7 +12,11 @@ import java.util.concurrent.atomic.AtomicInteger
 // TODO The file system tests should test for both persisting and in-memory scenerios.
 abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
     AbstractEnclaveActionTest(defaultEnclaveClassName) {
-    constructor() : this("com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave")
+    constructor() : this(FILESYSTEM_ENCLAVE_CLASS_NAME)
+
+    companion object {
+        const val FILESYSTEM_ENCLAVE_CLASS_NAME = "com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave"
+    }
 
     val uid = AtomicInteger()
 

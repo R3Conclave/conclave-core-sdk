@@ -1,11 +1,20 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
+import com.r3.conclave.common.EnclaveMode.SIMULATION
+import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.Closeable
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.zip.GZIPInputStream
+import kotlin.io.path.inputStream
 
 class FilesTest : FileSystemEnclaveTest() {
     private inner class Handler(private val uid: Int, path: String) : Closeable {
@@ -160,5 +169,29 @@ class FilesTest : FileSystemEnclaveTest() {
     fun outputStreamDeleteOnClose(path: String, nioApi: Boolean) {
         FilesNewOutputStreamHandler(uid.getAndIncrement(), path).close()
         fileInputStreamNonExistingFile(path, nioApi)
+    }
+
+    @Test
+    fun `an enclave with corrupted persistent filesystem fails`() {
+        //  We want this test to run only in SIMULATION mode
+        assumeTrue(SIMULATION.name == System.getProperty("enclaveMode").uppercase())
+
+        copyCorruptedFileSystem()
+
+        assertThatThrownBy {
+            enclaveHost()
+        }
+            .isInstanceOf(EnclaveLoadException::class.java)
+            .hasMessage("Unable to start enclave")
+            .hasStackTraceContaining("java.io.IOException: Unable to initialize the enclave's persistent filesystem, potentially corrupted or unencryptable filesystem")
+    }
+
+    private fun copyCorruptedFileSystem() {
+        val corruptedEnclaveResource =
+            this::class.java.getResource("/com.r3.conclave.integrationtests.general.tests/corrupted_enclave_disk.gz")
+        GZIPInputStream(Path.of(corruptedEnclaveResource!!.toURI()).inputStream()).use { input ->
+            val enclaveFileSystemFile = getFileSystemFilePath(FILESYSTEM_ENCLAVE_CLASS_NAME)
+            Files.copy(input, enclaveFileSystemFile!!)
+        }
     }
 }
