@@ -37,4 +37,4 @@ jobs:
           MERGE_LABELS: "releasemerge,!wip"
           MERGE_METHOD: "merge"
           UPDATE_METHOD: "merge"
-          MERGE_DELETE_BRANCH: "false"
+          MERGE_DELETE_BRANCH: "true"
