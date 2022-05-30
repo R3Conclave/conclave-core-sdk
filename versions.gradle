@@ -13,8 +13,6 @@ ext {
     slf4j_version = '1.7.32'
     picocli_version = '4.6.2'
     bouncycastle_version = '1.69'
-    typesafe_config_version = '1.4.1'
-    jopt_simple_version = '5.0.4'
     i2pcrypto_eddsa_version = '0.3.0'
     classgraph_version = '4.8.132'
     junit_jupiter_version = '5.8.2'
