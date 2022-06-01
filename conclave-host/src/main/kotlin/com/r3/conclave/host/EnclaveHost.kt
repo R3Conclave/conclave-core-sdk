@@ -2,10 +2,7 @@ package com.r3.conclave.host
 
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
-import com.r3.conclave.common.EnclaveException
-import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockConfiguration
+import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
@@ -590,6 +587,22 @@ class EnclaveHost private constructor(
         }
     }
 
+    /**
+     * Create a new attestation quote. The format of the bytes returned are dependent on the attestation protocol
+     * specified by the [AttestationParameters] in [start]. For Intel SGX the bytes represent a sgx_quote_t struct.
+     *
+     * The custom [userData] can be embedded into the quote structure. How this is done is also dependent on the attestation protocol.
+     *
+     * Note this is a beta API which is not finalized. It may change or even be removed in a later release.
+     */
+    @Beta
+    @Synchronized
+    fun createAttestationQuote(userData: ByteArray): ByteArray {
+        require(userData.size == 64) { "User data must be a 64-byte long byte array. User data size: ${userData.size}" }
+        val reportData = Cursor.wrap(SgxReportData, userData)
+        return attestationConnection.getSignedQuote(reportData).bytes
+    }
+
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
         return if (enclaveMode != EnclaveMode.MOCK) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
@@ -657,6 +670,7 @@ class EnclaveHost private constructor(
      * Note that an attestation is already performed on startup. It's recommended to call this method if a long time
      * has passed and clients may want a more fresh version.
      */
+    @Synchronized
     fun updateAttestation() {
         val attestation = getAttestation()
         updateEnclaveInstanceInfo(attestation)
@@ -671,7 +685,7 @@ class EnclaveHost private constructor(
         }
     }
     private fun getAttestation(): Attestation {
-        val signedQuote = attestationConnection.getSignedQuote(ignoreCachedData = true)
+        val signedQuote = attestationConnection.getSignedQuote()
         return attestationService.attestQuote(signedQuote)
     }
 

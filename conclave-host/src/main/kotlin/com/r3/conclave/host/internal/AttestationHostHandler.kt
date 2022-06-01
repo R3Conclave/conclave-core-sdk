@@ -4,10 +4,13 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.host.internal.AttestationHostHandler.State.Ready
 import com.r3.conclave.host.internal.AttestationHostHandler.State.QuoteInitialized
 import com.r3.conclave.host.internal.AttestationHostHandler.State.ReportRetrieved
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
+import com.r3.conclave.utilities.internal.nullableSize
+import com.r3.conclave.utilities.internal.putNullable
 import java.nio.ByteBuffer
 
 class AttestationHostHandler(
@@ -18,16 +21,15 @@ class AttestationHostHandler(
     }
 
     private sealed class State {
-        object Unstarted : State()
+        object Ready : State()
         object QuoteInitialized : State()
         data class ReportRetrieved(val report: ByteCursor<SgxReport>) : State()
-        data class QuoteRetrieved(val signedQuote: ByteCursor<SgxSignedQuote>) : State()
     }
 
-    private val stateManager: StateManager<State> = StateManager(State.Unstarted)
+    private val stateManager: StateManager<State> = StateManager(Ready)
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
-        // The report object is used after this method returns and so we must copy the bytes using Cursor.get.
+        // The report object is used after this method returns, and so we must copy the bytes.
         val report = Cursor.copy(SgxReport, input)
         stateManager.transitionStateFrom<QuoteInitialized>(to = ReportRetrieved(report))
     }
@@ -35,37 +37,34 @@ class AttestationHostHandler(
     override fun connect(upstream: Sender): Connection = Connection(upstream)
 
     inner class Connection(private val upstream: Sender) {
-        fun getSignedQuote(ignoreCachedData: Boolean = false): ByteCursor<SgxSignedQuote> {
-            val initialState = stateManager.state
-            return when (initialState) {
-                State.Unstarted -> createSignedQuote()
-                is State.QuoteRetrieved -> if(ignoreCachedData) createSignedQuote() else getCachedSignedQuote(initialState)
-                else -> throw IllegalStateException(initialState.toString())
-            }
+        fun getSignedQuote(reportData: ByteCursor<SgxReportData>? = null): ByteCursor<SgxSignedQuote> {
+            stateManager.checkStateIs<Ready>()
+            return createSignedQuote(reportData)
         }
 
-        private fun createSignedQuote(): ByteCursor<SgxSignedQuote> {
+        private fun createSignedQuote(reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxSignedQuote> {
             val attestationService = EnclaveQuoteServiceFactory.getService(attestationParameters)
             val quotingEnclaveTargetInfo = initializeQuote(attestationService)
             log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
-            val report = retrieveReport(quotingEnclaveTargetInfo)
+            val report = retrieveReport(quotingEnclaveTargetInfo, reportData)
             val signedQuote = retrieveQuote(attestationService, report)
             log.debug { "Got quote $signedQuote" }
             return signedQuote
         }
 
-        private fun getCachedSignedQuote(state: State.QuoteRetrieved) =
-            state.signedQuote
-
         private fun initializeQuote(enclaveQuoteService: EnclaveQuoteService): ByteCursor<SgxTargetInfo> {
             val targetInfo = enclaveQuoteService.initializeQuote()
-            stateManager.state = QuoteInitialized
+            stateManager.transitionStateFrom<Ready>(to = QuoteInitialized)
             return targetInfo
         }
 
-        private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>): ByteCursor<SgxReport> {
-            upstream.send(quotingEnclaveTargetInfo.encoder.size) { buffer ->
+        private fun retrieveReport(quotingEnclaveTargetInfo: ByteCursor<SgxTargetInfo>, reportData: ByteCursor<SgxReportData>?): ByteCursor<SgxReport> {
+            val size = quotingEnclaveTargetInfo.size + nullableSize(reportData) { reportData -> reportData.size }
+            upstream.send(size) { buffer ->
                 buffer.put(quotingEnclaveTargetInfo.buffer)
+                buffer.putNullable(reportData) { reportData ->
+                    buffer.put(reportData.buffer)
+                }
             }
             val reportRetrieved = stateManager.checkStateIs<ReportRetrieved>()
             return reportRetrieved.report
@@ -73,8 +72,10 @@ class AttestationHostHandler(
 
         private fun retrieveQuote(enclaveQuoteService: EnclaveQuoteService, report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
             val signedQuote = enclaveQuoteService.retrieveQuote(report)
-            stateManager.state = State.QuoteRetrieved(signedQuote)
+            stateManager.transitionStateFrom<ReportRetrieved>(to = Ready)
             return signedQuote
         }
+
+
     }
 }

@@ -3,6 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.Sender
+import com.r3.conclave.utilities.internal.getNullable
 import java.nio.ByteBuffer
 
 /**
@@ -12,10 +13,10 @@ import java.nio.ByteBuffer
 abstract class AttestationEnclaveHandler(private val env: EnclaveEnvironment) : Handler<AttestationEnclaveHandler> {
     private lateinit var sender: Sender
 
-    abstract val reportData: ByteCursor<SgxReportData>
+    abstract val defaultReportData: ByteCursor<SgxReportData>
 
-    private var _report: ByteCursor<SgxReport>? = null
-    val report: ByteCursor<SgxReport> get() = checkNotNull(_report)
+    private var _defaultReport: ByteCursor<SgxReport>? = null
+    val defaultReport: ByteCursor<SgxReport> get() = checkNotNull(_defaultReport)
 
     override fun connect(upstream: Sender): AttestationEnclaveHandler {
         sender = upstream
@@ -23,12 +24,21 @@ abstract class AttestationEnclaveHandler(private val env: EnclaveEnvironment) : 
     }
 
     override fun onReceive(connection: AttestationEnclaveHandler, input: ByteBuffer) {
-        // We use Cursor.slice rather than Cursor.get to avoid copying the bytes. The quotingEnclaveTargetInfo is not
-        // used after this method return so it's safe to do so.
+        // We use Cursor.slice rather than Cursor.copy to avoid copying the bytes. The quotingEnclaveTargetInfo nor the
+        // reportData are not used after this method return, so it's safe to do so.
         val quotingEnclaveTargetInfo = Cursor.slice(SgxTargetInfo, input)
-        val report = env.createReport(quotingEnclaveTargetInfo, reportData)
-        _report = report
-        sender.send(report.encoder.size) { buffer ->
+        val reportData = input.getNullable { Cursor.slice(SgxReportData, input) }
+
+        val report = env.createReport(quotingEnclaveTargetInfo, reportData ?: defaultReportData)
+        if (reportData == null) {
+            // Cache the report only if the default report data was used
+            _defaultReport = report
+        }
+        sendReport(report)
+    }
+
+    private fun sendReport(report: ByteCursor<SgxReport>) {
+        sender.send(report.size) { buffer ->
             buffer.put(report.buffer)
         }
     }

@@ -227,7 +227,7 @@ abstract class Enclave {
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
             attestationHandler = mux.addDownstream(object : AttestationEnclaveHandler(env) {
-                override val reportData = createReportData()
+                override val defaultReportData = createReportData()
             })
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             connected
@@ -420,9 +420,12 @@ abstract class Enclave {
         }
 
         private fun onAttestation(input: ByteBuffer) {
+            // Ensure this method is only called once
+            check(_enclaveInstanceInfo == null)
+
             val attestation = Attestation.getFromBuffer(input)
             val attestationReportBody = attestation.reportBody
-            val enclaveReportBody = enclave.attestationHandler.report[body]
+            val enclaveReportBody = enclave.attestationHandler.defaultReport[body]
             check(attestationReportBody == enclaveReportBody) {
                 """Host has provided attestation for a different enclave.
 Expected: $enclaveReportBody
