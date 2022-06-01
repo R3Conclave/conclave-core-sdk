@@ -212,8 +212,8 @@ tasks['dokkaJavadoc'].outputDirectory.set(file("$projectDir/docs/docs/javadoc"))
 // with Dokka (currently anything greater than 8) to allow the SDK build to continue. It will
 // result in an SDK build with the API documentation missing so should never be used for
 // production builds.
-def excludeDokka = findProperty('excludeDokka')
-if (excludeDokka == null) {
+def excludeDocs = findProperty('excludeDocs')
+if (excludeDocs == null) {
     // Dokka does not always translate kotlin code into pure java documentation. We can use this
     // task to perform some pre-processing between generating the HTML and making the documentation site.
     task preprocessdocs(type: Exec, dependsOn: ['dokkaHtml']) {
@@ -227,20 +227,20 @@ if (excludeDokka == null) {
         from dokkaJavadoc
         archiveClassifier.set('javadoc')
     }
+
+    task mkdocs(type: Exec, dependsOn: ['preprocessdocs']) {
+        description = "Runs the mkdocs tool to produce the static HTML website we expose to end users."
+        commandLine("./make-docsite.sh")
+        workingDir("docs")
+        inputs.files(fileTree("docs/docs"))
+        outputs.dir("docs/build")
+    }
 } else {
-    // Dummy tasks to exclude dokka
-    task preprocessdocs()
+    // Dummy tasks to exclude mkdocs
+    task mkdocs()
     task packageJavadoc(type: Jar) {
         archiveClassifier.set('javadoc')
     }
-}
-
-task mkdocs(type: Exec, dependsOn: ['preprocessdocs']) {
-    description = "Runs the mkdocs tool to produce the static HTML website we expose to end users."
-    commandLine("./make-docsite.sh")
-    workingDir("docs")
-    inputs.files(fileTree("docs/docs"))
-    outputs.dir("docs/build")
 }
 
 task cleanDocs {
