@@ -4,19 +4,20 @@ import com.r3.conclave.integrationtests.general.common.tasks.GetPersistentMap
 import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junitpioneer.jupiter.CartesianEnumSource
-import org.junitpioneer.jupiter.CartesianProductTest
-import org.junitpioneer.jupiter.CartesianValueSource
+import org.junitpioneer.jupiter.cartesian.CartesianTest
+import org.junitpioneer.jupiter.cartesian.CartesianTest.Enum
+import org.junitpioneer.jupiter.cartesian.CartesianTest.Values
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
 class EnclavePersistentMapTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave") {
-    @CartesianProductTest
-    @CartesianEnumSource
-    @CartesianValueSource(booleans = [false, true])
-    fun `persistent map updated by several threads, with enclave restarts`(type: CallType, useKds: Boolean) {
+    @CartesianTest
+    fun `persistent map updated by several threads, with enclave restarts`(
+        @Enum type: CallType,
+        @Values(booleans = [false, true]) useKds: Boolean
+    ) {
         this.useKds = useKds
 
         val threads = 10

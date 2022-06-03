@@ -80,7 +80,7 @@ abstract class Enclave {
     private lateinit var adminHandler: AdminHandler
     private lateinit var attestationHandler: AttestationEnclaveHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
-    private lateinit var persistenceKey: ByteArray
+    private lateinit var aesPersistenceKey: ByteArray
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, SessionEnclavePostOffice>()
@@ -283,7 +283,7 @@ abstract class Enclave {
 
     private fun initialiseLocalPersistenceKeyIfNecessary() {
         // Nothing to do if the enclave has already been given a KDS key for persistence.
-        if (this::persistenceKey.isInitialized) return
+        if (this::aesPersistenceKey.isInitialized) return
 
         // If the enclave has been configured to use a KDS and the host doesn't provide one, then for dev and testing
         // the enclave will default to a machine-specific MRSIGNER key. However this most probably isn'twhat the
@@ -298,7 +298,7 @@ abstract class Enclave {
                     " will not start in release mode if there is no KDS.")
         }
 
-        persistenceKey = getLocalSecretKey()
+        aesPersistenceKey = getLocalSecretKey()
     }
 
     private fun setupFileSystems() {
@@ -308,9 +308,9 @@ abstract class Enclave {
         if (inMemorySize > 0L && persistentSize == 0L ||
             inMemorySize == 0L && persistentSize > 0L) {
             //  We do not allow other mount point apart from "/" when only one filesystem is present
-            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", persistenceKey)
+            env.setupFileSystems(inMemorySize, persistentSize,"/", "/", aesPersistenceKey)
         } else if (inMemorySize > 0L && persistentSize > 0L) {
-            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", persistenceKey)
+            env.setupFileSystems(inMemorySize, persistentSize, "/tmp/", "/", aesPersistenceKey)
         }
     }
 
@@ -335,12 +335,12 @@ abstract class Enclave {
         return Cursor.wrap(SgxReportData, reportData)
     }
 
-    private fun applySealedState(sealedStateBlob: ByteArray) {
+    private fun applySealedState(sealedStateBlob: ByteBuffer) {
         if (!env.enablePersistentMap) return
         // Decrypt sealed state using KDS key when the Enclave has been configured to obtain one, otherwise use the
         // unsealing functions.
         val sealedState = if (env.kdsConfiguration != null) {
-            decryptSealedState(sealedStateBlob)
+            EnclaveUtils.unsealData(aesPersistenceKey, sealedStateBlob)
         } else {
             env.unsealData(sealedStateBlob)
         }
@@ -365,10 +365,6 @@ abstract class Enclave {
                 lastSeenStateIds[clientPublicKey] = lastSeenStateId
             }
         }
-    }
-
-    private fun decryptSealedState(sealedBlob: ByteArray): PlaintextAndEnvelope {
-        return EnclaveUtils.aesDecrypt(persistenceKey, sealedBlob)
     }
 
     /**
@@ -458,8 +454,7 @@ Received: $attestationReportBody"""
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
                 enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
-                // TODO Unseal without having to copy the bytes
-                val sealedStateBlob = input.getNullable { getRemainingBytes() }
+                val sealedStateBlob = input.getNullable { this }
 
                 enclave.initialiseLocalPersistenceKeyIfNecessary()
 
@@ -557,7 +552,7 @@ Received: $attestationReportBody"""
             enclave.kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
             val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
             // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
-            enclave.persistenceKey = kdsPersistenceKey.copyOf(16)
+            enclave.aesPersistenceKey = kdsPersistenceKey.copyOf(16)
         }
 
         fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
@@ -819,7 +814,7 @@ Received: $attestationReportBody"""
             }
 
             val sealedState = if (env.kdsConfiguration != null) {
-                encryptSealedState(PlaintextAndEnvelope(serialised))
+                EnclaveUtils.sealData(aesPersistenceKey, PlaintextAndEnvelope(serialised))
             } else {
                 env.sealData(PlaintextAndEnvelope(serialised))
             }
@@ -827,10 +822,6 @@ Received: $attestationReportBody"""
             sendToHost(SEALED_STATE, hostThreadId, sealedState.size) { buffer ->
                 buffer.put(sealedState)
             }
-        }
-
-        private fun encryptSealedState(toBeSealed: PlaintextAndEnvelope): ByteArray {
-            return EnclaveUtils.aesEncrypt(persistenceKey, toBeSealed)
         }
 
         fun callUntrustedHost(bytes: ByteArray, callback: HostCallback?): ByteArray? {

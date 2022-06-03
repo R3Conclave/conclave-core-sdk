@@ -57,8 +57,9 @@ class MockEnclaveEnvironment(
         configuration.codeSigningKeyHash?.bytes ?: ByteArray(32)
     }
 
-    private val sealingSecret by lazy(NONE) {
-        digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }
+    private val aesSealingKey by lazy(NONE) {
+        // AES-128 is just as secure as AES-256 but faster.
+        digest("SHA-256") { update(enclave.javaClass.name.toByteArray()) }.copyOf(16)
     }
 
     private val tcbLevel: Int
@@ -98,14 +99,12 @@ class MockEnclaveEnvironment(
         return report
     }
 
-    @Synchronized
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
-        return EnclaveUtils.aesEncrypt(sealingSecret, toBeSealed)
+        return EnclaveUtils.sealData(aesSealingKey, toBeSealed)
     }
 
-    @Synchronized
-    override fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope {
-        return EnclaveUtils.aesDecrypt(sealingSecret, sealedBlob)
+    override fun unsealData(sealedBlob: ByteBuffer): PlaintextAndEnvelope {
+        return EnclaveUtils.unsealData(aesSealingKey, sealedBlob)
     }
 
     // Replicates sgx_get_key behaviour in hardware as determined by MockEnclaveEnvironmentHardwareCompatibilityTest.

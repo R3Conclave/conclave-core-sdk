@@ -41,7 +41,7 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
     }
 
     @Test
-    fun `an enclave with persistent disk size bigger than 0 but without host path crashes`() {
+    fun `an enclave with persistent disk size bigger than 0 but without host path`() {
         fileSystemFileTempDir = null
         assertThatThrownBy {
             callEnclave(ReadAndWriteFiles(numThreads, ""))

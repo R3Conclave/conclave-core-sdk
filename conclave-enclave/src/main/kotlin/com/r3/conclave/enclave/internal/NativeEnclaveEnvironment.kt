@@ -161,15 +161,16 @@ class NativeEnclaveEnvironment(
         return sealedData
     }
 
-    override fun unsealData(sealedBlob: ByteArray): PlaintextAndEnvelope {
-        require(sealedBlob.isNotEmpty())
-        val plaintext = ByteArray(Native.plaintextSizeFromSealedData(sealedBlob))
-        val authenticatedData = Native.authenticatedDataSize(sealedBlob).let { if (it > 0) ByteArray(it) else null }
+    override fun unsealData(sealedBlob: ByteBuffer): PlaintextAndEnvelope {
+        require(sealedBlob.hasRemaining())
+        val sealedBytes = sealedBlob.getRemainingBytes()
+        val plaintext = ByteArray(Native.plaintextSizeFromSealedData(sealedBytes))
+        val authenticatedData = Native.authenticatedDataSize(sealedBytes).let { if (it > 0) ByteArray(it) else null }
 
         Native.unsealData(
-            sealedBlob,
+            sealedBytes,
             0,
-            sealedBlob.size,
+            sealedBytes.size,
             plaintext,
             0,
             plaintext.size,
