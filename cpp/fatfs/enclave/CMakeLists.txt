@@ -6,16 +6,6 @@ include(Determinise)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-unused-parameter -fpermissive")
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-  add_definitions(-DNDEBUG)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")  
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb")  
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")  
-else()  
-  set(CMAKE_CXX_FLAGS_DEBUG "-ggdb") 
-  set(CMAKE_C_FLAGS_DEBUG "-ggdb")  
-endif()
-
 GET_DIRECTORY_PROPERTY(EDGER8R_INCLUDE_DIR DIRECTORY ${PROJECT_SOURCE_DIR}/../../linux-sgx DEFINITION EDGER8R_INCLUDE_DIR)
 
 add_library(fatfs_enclave
@@ -45,7 +35,12 @@ target_compile_options(fatfs_enclave PUBLIC -nostdinc -nostdinc++ -fPIC)
 target_link_libraries(fatfs_enclave
         $ENV{JAVA_HOME}/include
         $ENV{JAVA_HOME}/include/linux
-        jvm_enclave_common
+        # Required for headers, which don't vary between sim/debug/release
+        # Doesn't actually matter which we use, but we have to specify one of them.
+        # jvm_enclave_common_(debug|simulation|release) produces a set of archives, and also their associated headers.
+        # The headers don't vary between versions, so we just add release as the dependency.
+        # It's a bit yucky, but it saves us needing three separate builds of fatfs like we have for jvm_enclave_common_*
+        jvm_enclave_common_release
         linux-sgx_headers
         linux-sgx_tstdc_headers)
 

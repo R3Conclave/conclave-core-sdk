@@ -16,13 +16,11 @@ class JarTest {
             val prefix = "com/r3/conclave/host-libraries/$build"
             val libraries = mutableListOf(
                 "$prefix/libjvm_host.so",
-                "$prefix/libjvm_host_shared.so",
                 "$prefix/libsgx_enclave_common.so.1",
                 "$prefix/libsgx_epid${simulationSuffix}.so.1",
                 "$prefix/libsgx_launch${simulationSuffix}.so.1",
                 "$prefix/libsgx_uae_service${simulationSuffix}.so",
                 "$prefix/libsgx_urts${simulationSuffix}.so",
-                "$prefix/libsgx_capable.so",
                 "$prefix/libcrypto.so"
             )
             if (simulationSuffix.isEmpty()) {

@@ -5,10 +5,10 @@ include(ExternalProject)
 set(BUILD_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/src/linux-sgx)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    set(DEBUG_FLAG "")
-else()
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     set(DEBUG_FLAG DEBUG=1)
+else()
+    set(DEBUG_FLAG "")
 endif()
 
 set(SGX_GIT_LABEL "sgx_2.14")

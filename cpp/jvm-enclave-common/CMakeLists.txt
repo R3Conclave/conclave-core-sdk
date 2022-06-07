@@ -7,18 +7,7 @@ include(Determinise)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror -Wno-unused-parameter")
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    add_definitions(-DNDEBUG)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
-else()
-    set(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
-    set(CMAKE_C_FLAGS_DEBUG "-ggdb")
-endif()
-
-# jvm_enclave_common.a this is the library all enclave implementations share
-add_library(jvm_enclave_common
+set(sources
         src/dlsym_symbols.cpp
         src/enclave_thread.cpp
         src/enclave_jni.cpp
@@ -66,26 +55,43 @@ add_library(jvm_enclave_common
         stubs/sys_epoll.cpp
         stubs/sys_vfs.cpp
 )
-add_dependencies(jvm_enclave_common linux-sgx-ext)
 
-target_include_directories(jvm_enclave_common PUBLIC include include/public PRIVATE src)
-target_compile_options(jvm_enclave_common PUBLIC -nostdinc -fPIC)
-target_link_libraries(jvm_enclave_common
+set(link_libraries
         jvm_enclave_edl
         jvm_host_enclave_common_enclave
         linux-sgx_headers
         linux-sgx_tstdc_headers
         linux-sgx_pthread
-	zlib
-	)
+        zlib
+)
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
-    target_compile_definitions(jvm_enclave_common PRIVATE -DSGX_SIM)
-endif()
+# targets for libjvm_enclave_common_<simulation|debug|release>.a
+# Release build target, blocks debug prints from the enclave
+add_library(jvm_enclave_common_release ${sources})
+add_dependencies(jvm_enclave_common_release linux-sgx-ext)
+target_compile_options(jvm_enclave_common_release PUBLIC -nostdinc -fPIC)
+target_include_directories(jvm_enclave_common_release PUBLIC include include/public PRIVATE src)
+target_link_libraries(jvm_enclave_common_release ${link_libraries})
+
+# Debug build target, allows prints (-DENABLE_DEBUG_PRINT)
+add_library(jvm_enclave_common_debug ${sources})
+add_dependencies(jvm_enclave_common_debug linux-sgx-ext)
+target_compile_definitions(jvm_enclave_common_debug PRIVATE -DENABLE_DEBUG_PRINT)
+target_compile_options(jvm_enclave_common_debug PUBLIC -nostdinc -fPIC)
+target_include_directories(jvm_enclave_common_debug PUBLIC include include/public PRIVATE src)
+target_link_libraries(jvm_enclave_common_debug ${link_libraries})
+
+# Simulation build target, allows prints (-DENABLE_DEBUG_PRINT, -DSGX_SIM)
+add_library(jvm_enclave_common_simulation ${sources})
+add_dependencies(jvm_enclave_common_simulation linux-sgx-ext)
+target_compile_definitions(jvm_enclave_common_simulation PRIVATE -DENABLE_DEBUG_PRINT -DSGX_SIM)
+target_compile_options(jvm_enclave_common_simulation PUBLIC -nostdinc -fPIC)
+target_include_directories(jvm_enclave_common_simulation PUBLIC include include/public PRIVATE src)
+target_link_libraries(jvm_enclave_common_simulation ${link_libraries})
 
 # Include google tests found under./test
 target_test(PROJ                  ${PROJECT_NAME}
-            TARGET                jvm_enclave_common
+            TARGET                jvm_enclave_common_debug
             TEST_SRC_PATH         "${CMAKE_CURRENT_SOURCE_DIR}/test"
             TEST_OUT_PATH         "${CMAKE_CURRENT_BINARY_DIR}/test_bin"
             CMAKE_BINARY_DIR      "${CMAKE_BINARY_DIR}"

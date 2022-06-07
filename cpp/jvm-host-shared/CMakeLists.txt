@@ -4,16 +4,6 @@ include(Determinise)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    add_definitions(-DNDEBUG)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Simulation")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
-else()
-    set(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
-    set(CMAKE_C_FLAGS_DEBUG "-ggdb")
-endif()
-
 find_package(JNI REQUIRED)
 
 SET(CMAKE_SKIP_BUILD_RPATH FALSE)

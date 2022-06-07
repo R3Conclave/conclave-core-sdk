@@ -16,13 +16,14 @@ test {
     }
 }
 
-def cppBuildDir = project(":cpp").buildDir
+String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
+String cppBuildDir = "${project(":cpp").buildDir}/$cmakeBuildType"
 
 jar {
-    dependsOn(":cpp:compileLinuxSgxSimulation")
-    dependsOn(":cpp:compileHostSharedSimulation")
-    def linuxSgxBuildDir = "$cppBuildDir/Simulation/linux-sgx/src/linux-sgx/build/linux"
-    def hostSharedBuildDir = "$cppBuildDir/Simulation/jvm-host-shared"
+    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType")
+    dependsOn(":cpp:compileHostShared$cmakeBuildType")
+    String linuxSgxBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx/build/linux"
+    String hostSharedBuildDir = "$cppBuildDir/jvm-host-shared"
     into "com/r3/conclave/host-libraries/shared", {
         from (linuxSgxBuildDir) {
             include "libsgx_capable.so"

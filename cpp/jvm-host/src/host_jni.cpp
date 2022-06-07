@@ -33,7 +33,7 @@ static void raiseEnclaveLoadException(JNIEnv *jniEnv, const char *message) {
     raiseException(jniEnv, message, "com/r3/conclave/host/EnclaveLoadException");
 }
 
-void debug_print(const char *str, int n) {
+void debug_print_edl(const char *str, int n) {
     enclave_console(str, n);
 }
 
