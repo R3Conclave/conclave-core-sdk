@@ -12,7 +12,8 @@ Release notes
    [KDS post office](api/-conclave/com.r3.conclave.client/-k-d-s-post-office-builder/index.html) for more details.
 3. Support for [Conclave Cloud](https://conclave.cloud/)!
 4. Some small bug fixes.
-   
+5. The method `createAttestationQuote`, which allows developers to generate SGX signed quoted with a costume data inside the report data field, has been added to the API. Please be aware that this method is still in beta and might change without notice.
+
 ### 1.2.1
 
 This is a small release with some minor improvements:
