@@ -2,8 +2,8 @@ package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.*
 import java.lang.reflect.Modifier
-import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.*
 
 sealed class Encoder<R> {
@@ -13,8 +13,8 @@ sealed class Encoder<R> {
     abstract val minSize: Int
 
     /**
-     * Return the size of the encoded value that's at the current position of the given [buffer]. The position of the
-     * buffer is not changed by this method.
+     * Return the size of the encoded value that's at the current position of the given [buffer]. The buffer is not
+     * changed by this method.
      */
     abstract fun size(buffer: ByteBuffer): Int
 
@@ -144,14 +144,9 @@ abstract class VariableStruct : AbstractStruct, VariableEncoder<ByteBuffer>() {
     final override val minSize: Int get() = structMinSize
 
     final override fun size(buffer: ByteBuffer): Int {
-        val startPos = buffer.position()
-        val endPos = try {
-            skip(buffer)
-            buffer.position()
-        } finally {
-            (buffer as Buffer).position(startPos)
-        }
-        return endPos - startPos
+        val slice = buffer.slice().order(ByteOrder.LITTLE_ENDIAN)
+        skip(slice)
+        return slice.position()
     }
 
     final override fun skip(buffer: ByteBuffer) {

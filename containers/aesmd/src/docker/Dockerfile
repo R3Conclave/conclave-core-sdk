@@ -1,6 +1,5 @@
-FROM ubuntu:bionic-20200219
+FROM ubuntu:20.04
 
-LABEL version="1.3-RC5-SNAPSHOT"
 LABEL description="Intel aesmd container"
 LABEL maintainer="conclave@r3.com"
 
@@ -14,7 +13,7 @@ RUN apt-get update -y && apt-get install -y \
     libcurl4 \
     wget
 
-RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | tee /etc/apt/sources.list.d/intel-sgx.list
+RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN apt-get update -y && apt-get install -y \
     libsgx-urts \

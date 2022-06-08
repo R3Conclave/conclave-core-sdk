@@ -7,9 +7,6 @@ apply from: '../versions.gradle'
 apply from: '../common.gradle'
 
 def modulesToSubstitute = [
-        'com.r3.conclave:native-enclave-simulation',
-        'com.r3.conclave:native-enclave-debug',
-        'com.r3.conclave:native-enclave-release',
         'com.r3.conclave:native-host-simulation',
         'com.r3.conclave:native-host-debug',
         'com.r3.conclave:native-host-release',

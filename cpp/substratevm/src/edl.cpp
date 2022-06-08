@@ -28,14 +28,6 @@ extern unsigned long __ImageBase;
 extern unsigned long __DeadlockTimeout;
 static uint64_t deadlock_timeout = (uint64_t)((uint64_t)&__DeadlockTimeout - (uint64_t)&__ImageBase);
 
-// Define variables that are used by the JNI function 
-// Java_com_r3_conclave_enclave_internal_Native_readAppJarChunk(). This JNI
-// is not used in SVM enclaves so just set the start and end to 0
-extern "C" {
-extern const uint8_t *_binary_app_jar_start = 0;
-extern const uint8_t *_binary_app_jar_end = 0;
-}
-
 extern "C" {
 int printf(const char *s, ...);
 }

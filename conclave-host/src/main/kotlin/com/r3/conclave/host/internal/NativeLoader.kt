@@ -41,15 +41,26 @@ object NativeLoader {
             }
         }
 
-        val hostLibrariesResourcePath = "com/r3/conclave/host-libraries/${enclaveMode.name.lowercase().replaceFirstChar { it.titlecase() }}"
+        copyHostLibrariesToLibsPath(enclaveMode)
 
-        ClassGraph()
-            .whitelistPaths(hostLibrariesResourcePath)
+        System.load(libsPath.resolve("libjvm_host.so").toString())
+        linkedEnclaveMode = enclaveMode
+    }
+
+    private fun copyHostLibrariesToLibsPath(enclaveMode: EnclaveMode) {
+        val classGraph = ClassGraph()
+        val modeSpecificHostLibrariesResourcePath = "com/r3/conclave/host-libraries/${enclaveMode.name.lowercase().replaceFirstChar { it.titlecase() }}"
+        val sharedHostLibrariesResourcePath = "com/r3/conclave/host-libraries/shared"
+        copyResourceFiles(classGraph, libsPath, modeSpecificHostLibrariesResourcePath, sharedHostLibrariesResourcePath)
+    }
+
+    private fun copyResourceFiles(classGraph: ClassGraph, destinationFolder: Path, vararg acceptPaths: String) {
+        classGraph.acceptPaths(*acceptPaths)
             .scan()
             .use {
-                it.allResources.forEachInputStream { resource, stream ->
+                it.allResources.forEachInputStreamThrowingIOException { resource, stream ->
                     val name = resource.path.substringAfterLast('/')
-                    val destination = libsPath.resolve(name)
+                    val destination = destinationFolder.resolve(name)
                     // REPLACE_EXISTING is a hack to work around an issue observed by IntellectEU that has not
                     // yet been diagnosed. See bug CON-239.
                     Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING)

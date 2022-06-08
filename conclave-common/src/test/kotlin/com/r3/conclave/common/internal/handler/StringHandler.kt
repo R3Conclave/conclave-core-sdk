@@ -1,6 +1,6 @@
 package com.r3.conclave.common.internal.handler
 
-import com.r3.conclave.utilities.internal.getRemainingBytes
+import com.r3.conclave.utilities.internal.getRemainingString
 import java.nio.ByteBuffer
 
 /**
@@ -10,7 +10,7 @@ abstract class StringHandler : Handler<StringSender> {
     abstract fun onReceive(sender: StringSender, string: String)
 
     final override fun onReceive(connection: StringSender, input: ByteBuffer) {
-        onReceive(connection, String(input.getRemainingBytes()))
+        onReceive(connection, input.getRemainingString())
     }
 
     final override fun connect(upstream: Sender): StringSender {

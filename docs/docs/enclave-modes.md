@@ -34,8 +34,8 @@ The table below summarizes which modes can be used in which environments.
 The requirements for building and running enclaves in each mode are described below.
 
 ### Mock mode
-All that is required to build and run Conclave projects in mock mode is a Java 8 or 11 JDK. See
-[JDK Compatibility](system-requirements.md#jdk-compatibility) for more details.
+
+As mock mode is pure Java this will run on any system with a JDK installed.
 
 ### Simulation mode
 === "macOS / Windows"
@@ -64,7 +64,7 @@ All that is required to build and run Conclave projects in mock mode is a Java 8
 ### Debug and release mode
 There are no additional requirements for **building** debug and release mode enclaves on any platform.
 
-We test building and running release-mode enclaves on Ubuntu 18.04 LTS Server x86-64.
+We test building and running release-mode enclaves on Ubuntu 20.04 LTS Server x86-64.
 
 === "macOS / Windows"
     **Running** debug and release mode enclaves is not possible on macOS or Windows.

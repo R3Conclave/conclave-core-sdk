@@ -8,11 +8,11 @@ fi
 source ${script_dir}/ci_build_common.sh
 # You can set this variable to mount the IDEs from the host
 host_ide_dir=${HOST_IDE_DIR:-"${HOME}/.opt"}
-idea_version=${IDEA_VERSION:-"IC-212.4746.92"}
-idea_download_file=ideaIC-2021.2.tar.gz
+idea_version=${IDEA_VERSION:-"IC-213.5744.223"}
+idea_download_file=ideaIC-2021.3.tar.gz
 idea_download_address=https://download-cf.jetbrains.com/idea/$idea_download_file
-clion_version=${clion_version:-"2021.1.3"}
-clion_download_file=CLion-2021.1.3.tar.gz
+clion_version=${clion_version:-"2021.3"}
+clion_download_file=CLion-2021.3.tar.gz
 clion_download_address=https://download-cf.jetbrains.com/cpp/$clion_download_file
 
 source ${script_dir}/devenv_envs.sh
@@ -24,7 +24,7 @@ if [[ -z ${container_id} ]]; then
   # We don't want to / can't log in to the local registry. This step is only useful for remote registries.
   if [ "$OBLIVIUM_CONTAINER_REGISTRY_URL" != "localhost:5000" ] && [ "$docker_image_pull" == "1" ]; then
     docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
-    docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-build
+    docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sdk-build
   else
     DOCKER_IMAGE_AESMD_BUILD="${DOCKER_IMAGE_AESMD_BUILD:-0}" DOCKER_IMAGE_SAVE="${DOCKER_IMAGE_SAVE:-0}" ${script_dir}/ci_build_docker_images.sh
   fi
@@ -46,7 +46,7 @@ if [[ -z ${container_id} ]]; then
       echo "Downloading IntelliJ IDEA from ${idea_download_address}..."
       mkdir -p $host_ide_dir
       curl -SL -o ${host_ide_dir}/$idea_download_file $idea_download_address
-      echo "7c27799861fb1ba0d43a3565a1ec2be789e1871191be709f0e79f1e17d3571fe  ${host_ide_dir}/$idea_download_file" | shasum -a 256 -c -
+      echo "de44097f00f4f9c48cf5abc2fab58c6436a4345f00f83ae7a75734af177e3077  ${host_ide_dir}/$idea_download_file" | shasum -a 256 -c -
       tar -C $host_ide_dir -zxvf ${host_ide_dir}/$idea_download_file
       rm ${host_ide_dir}/$idea_download_file
     fi
@@ -70,8 +70,8 @@ if [[ -z ${container_id} ]]; then
 # Read our internal-docs/containers.md for more information on how to build,
 # customize and use a locally built image.
 # The IDEs can be downloaded at:
-# curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2018.1.2.tar.gz
-# curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2019.3.2.tar.gz
+# curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2021.3.tar.gz
+# curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2021.3.tar.gz
 ide_mount_flags=""
 if [ -r ${host_ide_dir}/idea-$idea_version ]; then
   ide_mount_flags+="-v ${host_ide_dir}/idea-$idea_version/:/opt/idea-$idea_version/"
@@ -90,7 +90,7 @@ fi
        ${env_display} \
        -d \
        -it \
-       $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-build \
+       $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sdk-build \
        bash)
 
   # Set access to docker daemon socket

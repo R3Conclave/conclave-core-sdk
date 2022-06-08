@@ -434,7 +434,7 @@ system.
             not be suitable for you. For more information on these commands and how they can be adapted to suit your own
             project, see the [Running hello world](running-hello-world.md#appendix-summary-of-docker-command-options)tutorial.
         !!! note
-            Alternatively, for a more streamlined development experience, you may also be able to use Ubuntu 18.04 via
+            Alternatively, for a more streamlined development experience, you may also be able to use Ubuntu 20.04 via
             the [Windows subsystem for linux](https://docs.microsoft.com/en-us/windows/wsl/install), though this method
             has not been extensively tested.
 

@@ -10,8 +10,13 @@ import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicInteger
 
 // TODO The file system tests should test for both persisting and in-memory scenerios.
-abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) : AbstractEnclaveActionTest(defaultEnclaveClassName) {
-    constructor() : this("com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave")
+abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
+    AbstractEnclaveActionTest(defaultEnclaveClassName) {
+    constructor() : this(FILESYSTEM_ENCLAVE_CLASS_NAME)
+
+    companion object {
+        const val FILESYSTEM_ENCLAVE_CLASS_NAME = "com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave"
+    }
 
     val uid = AtomicInteger()
 
@@ -29,25 +34,84 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) : Abstract
         assertThat(callEnclave(FilesExists(path))).isFalse
     }
 
-    fun filesDeleteNonExistingFile(path: String, nioApi: Boolean) {
+    private fun callEnclaveRename(oldPath: String, newPath: String, nioApi: Boolean) {
+
         if (nioApi) {
-            assertThatThrownBy { callEnclave(DeleteFile(path, nioApi)) }
+            callEnclave(MovePath(oldPath, newPath))
+        } else {
+            callEnclave(RenameFile(oldPath, newPath))
+        }
+    }
+
+    fun renamePath(oldPath: String, newPath: String, nioApi: Boolean) {
+        callEnclaveRename(oldPath, newPath, nioApi)
+        assertThat(callEnclave(FilesExists(oldPath))).isFalse
+        assertThat(callEnclave(FilesExists(newPath))).isTrue
+    }
+
+    fun renamePathAcrossFileSystems(oldPath: String, newPath: String, nioApi: Boolean) {
+        callEnclaveRename(oldPath, newPath, nioApi)
+
+        if (nioApi) {
+            // When using Files.move, the renaming of files succeeds
+            //   as the JDK does a copy/delete when the "rename" Posix call fails.
+            assertThat(callEnclave(FilesExists(oldPath))).isFalse
+            assertThat(callEnclave(FilesExists(newPath))).isTrue
+        } else {
+            assertThat(callEnclave(FilesExists(oldPath))).isTrue
+            assertThat(callEnclave(FilesExists(newPath))).isFalse
+        }
+    }
+
+    fun renameSamePath(oldPath: String, newPath: String, nioApi: Boolean) {
+        callEnclaveRename(oldPath, newPath, nioApi)
+        assertThat(callEnclave(FilesExists(oldPath))).isTrue
+        assertThat(callEnclave(FilesExists(newPath))).isTrue
+    }
+
+    fun walkPath(path: String): String {
+        return callEnclave(WalkPath(path))
+    }
+
+    fun renameToExistentPath(oldPath: String, newPath: String, nioApi: Boolean) {
+        callEnclaveRename(oldPath, newPath, nioApi)
+        assertThat(callEnclave(FilesExists(oldPath))).isTrue
+        assertThat(callEnclave(FilesExists(newPath))).isTrue
+    }
+
+    fun renameNonExistentPath(oldPath: String, newPath: String, nioApi: Boolean) {
+
+        if (nioApi) {
+            assertThatThrownBy { callEnclaveRename(oldPath, newPath, true) }
                 .isInstanceOf(RuntimeException::class.java)
                 .hasCauseExactlyInstanceOf(NoSuchFileException::class.java)
-                .hasMessageContaining(path)
+                .cause.hasMessageContaining(oldPath)
         } else {
-            assertThat(callEnclave(DeleteFile(path, nioApi))).isFalse
+            callEnclaveRename(oldPath, newPath, false)
+        }
+        assertThat(callEnclave(FilesExists(oldPath))).isFalse
+        assertThat(callEnclave(FilesExists(newPath))).isFalse
+    }
+
+    fun filesDeleteNonExistingFile(path: String, nioApi: Boolean) {
+        if (nioApi) {
+            assertThatThrownBy { callEnclave(DeleteFile(path, true)) }
+                .isInstanceOf(RuntimeException::class.java)
+                .hasCauseExactlyInstanceOf(NoSuchFileException::class.java)
+                .cause.hasMessageContaining(path)
+        } else {
+            assertThat(callEnclave(DeleteFile(path, false))).isFalse
         }
     }
 
     fun filesDeleteNonEmptyDir(path: String, nioApi: Boolean) {
         if (nioApi) {
-            assertThatThrownBy { callEnclave(DeleteFile(path, nioApi)) }
+            assertThatThrownBy { callEnclave(DeleteFile(path, true)) }
                 .isInstanceOf(RuntimeException::class.java)
                 .hasCauseExactlyInstanceOf(DirectoryNotEmptyException::class.java)
-                .hasMessageContaining(path)
+                .cause.hasMessageContaining(path)
         } else {
-            assertThat(callEnclave(DeleteFile(path, nioApi))).isFalse
+            assertThat(callEnclave(DeleteFile(path, false))).isFalse
         }
     }
 
@@ -55,7 +119,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) : Abstract
         assertThatThrownBy { callEnclave(FilesCreateDirectory(path)) }
             .isInstanceOf(RuntimeException::class.java)
             .hasCauseInstanceOf(IOException::class.java)
-            .hasMessageContaining(path)
+            .cause.hasMessageContaining(path)
     }
 
     fun createDirectory(path: String) {
@@ -87,6 +151,6 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) : Abstract
         }
             .isInstanceOf(RuntimeException::class.java)
             .hasCauseExactlyInstanceOf(exception)
-            .hasMessageContaining(path)
+            .cause.hasMessageContaining(path)
     }
 }

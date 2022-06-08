@@ -1,13 +1,13 @@
 package com.r3.conclave.common.internal.handler
 
-import com.r3.conclave.host.internal.ErrorHandler
+import com.r3.conclave.host.internal.ExceptionReceivingHandler
 import java.nio.ByteBuffer
 
 /**
  * A common base [Handler] that handles errors and muxes additional functionality.
  */
 class RootHandler : Handler<RootHandler.Connection> {
-    private val errorHandler = ErrorHandler()
+    private val errorHandler = ExceptionReceivingHandler()
     private val muxingHandler = SimpleMuxingHandler()
 
     override fun onReceive(connection: Connection, input: ByteBuffer) {
@@ -21,7 +21,7 @@ class RootHandler : Handler<RootHandler.Connection> {
     }
 
     class Connection(
-        val errorConnection: ErrorHandler.Connection,
+        val errorConnection: ExceptionReceivingHandler.Connection,
         val muxConnection: SimpleMuxingHandler.Connection
     ) {
         fun <CONNECTION> addDownstream(downstream: Handler<CONNECTION>): CONNECTION {

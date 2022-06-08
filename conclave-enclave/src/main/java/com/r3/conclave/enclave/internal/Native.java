@@ -4,10 +4,6 @@ package com.r3.conclave.enclave.internal;
  * The Enclave JNI. We don't use System.loadLibrary, but instead rely on our custom dlsym to find the relevant symbols.
  */
 public class Native {
-
-    /** Reads a chunk from the statically linked app jar. Poor man's getResources */
-    public static native int readAppJarChunk(long srcOffset, byte[] dest, int destOffset, int length);
-
     /**
      * Makes an OCALL.
      * @param data The chunk of data to be passed to the ocall.
@@ -23,15 +19,9 @@ public class Native {
     public static native void createReport(byte[] targetInfo, byte[] reportData, byte[] reportOut);
 
     /**
-     * A wrapper of sgx_read_rand.
-     */
-    public static native void randomBytes(byte[] output, int offset, int length);
-
-    /**
      * Returns whether the enclave is a simulation one.
      */
     public static native boolean isEnclaveSimulation();
-
 
     /**
      * Seal the data (wrapper of sgx_seal_data).
@@ -81,8 +71,6 @@ public class Native {
             int authenticatedDataOutLength
     );
 
-
-
     /**
      * Returns the necessary sealed blob size (wrapper of `sgx_calc_sealed_data_size`).
      * @param plaintextSize size of data to be decrypted.
@@ -111,7 +99,6 @@ public class Native {
      * @param keyOut Output buffer of at least size [SgxKey128Bit] for receiving the cryptographic key output.
      */
     public static native void getKey(byte[] keyRequestIn, byte[] keyOut);
-
 
     /**
      * JNI function (implemented in api.cpp) to pass the encryption key and

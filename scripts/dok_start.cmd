@@ -13,7 +13,7 @@ if not .%CONTAINER_ID%==. goto running
 if exist "%USERPROFILE%\.oblivium_credentials.cmd" call "%USERPROFILE%\.oblivium_credentials.cmd" 
 
 docker login %OBLIVIUM_CONTAINER_REGISTRY_URL% -u %OBLIVIUM_CONTAINER_REGISTRY_USERNAME% -p "%OBLIVIUM_CONTAINER_REGISTRY_PASSWORD%"
-docker pull %OBLIVIUM_CONTAINER_REGISTRY_URL%/com.r3.sgx/sgxjvm-build
+docker pull %OBLIVIUM_CONTAINER_REGISTRY_URL%/com.r3.sgx/sdk-build
 
 
 rem get current working directory(same as 'pwd' on Linux/Unix)
@@ -23,7 +23,7 @@ set HOST_CODE_DIR=%HOST_CODE_DIR:\=/%
 set HOST_CODE_DIR=//%HOST_CODE_DIR::=%
 
 
-docker run --name sgxjvm --rm -d --ulimit core=256000000 -p 8000:8000 -p 8001:8001 -ti -v "%HOST_CODE_DIR%":/work -w /work sgxjvm-docker-nightly.software.r3.com/com.r3.sgx/sgxjvm-build bash
+docker run --name sgxjvm --rm -d --ulimit core=256000000 -p 8000:8000 -p 8001:8001 -ti -v "%HOST_CODE_DIR%":/work -w /work sgxjvm-docker-nightly.software.r3.com/com.r3.sgx/sdk-build bash
 docker exec -d sgxjvm bash ./scripts/serve-docsites.sh
 
 :running

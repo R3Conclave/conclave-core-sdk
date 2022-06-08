@@ -1,7 +1,3 @@
-plugins {
-    id 'java'
-}
-
 jar {
     into "com/r3/conclave/include", {
         from("$projectDir/include/public") {

@@ -9,7 +9,7 @@ script_dir_no_symlink_resolve=$(dirname $(realpath -s $0))
 # TODO investigate making the latex pdf generation work
 
 # Build build container
-runDocker com.r3.sgx/sgxjvm-build "cd ${script_dir}/.. && ./gradlew containers:sgxjvm-build:buildImagePublish"
+runDocker com.r3.sgx/sdk-build "cd ${script_dir}/.. && ./gradlew containers:sdk-build:buildImagePublish"
 
 # Build docsite
-runDocker com.r3.sgx/sgxjvm-build "cd $script_dir_no_symlink_resolve/../../docs && ./install-docsite-requirements.sh && ./make-docsite.sh"
+runDocker com.r3.sgx/sdk-build "cd $script_dir_no_symlink_resolve/../../docs && ./install-docsite-requirements.sh && ./make-docsite.sh"

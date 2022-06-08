@@ -54,7 +54,10 @@ extern "C" {
     typedef int pid_t;
     typedef int sigset_t;
     typedef int uid_t;
-
+    typedef unsigned int gid_t;
+    typedef unsigned int mode_t;
+    typedef unsigned long long off64_t;
+    
 #undef stdout
 #undef stderr
     extern FILE *stdout;
@@ -234,6 +237,14 @@ extern "C" {
     int getrlimit(int resource, struct rlimit *rlim);
     int setrlimit(int resource, const struct rlimit *rlim);
 
+    // sys/sendfile.h
+    ssize_t sendfile64(int out_fd, int in_fd, off64_t * offset, size_t count);
+
+    // sys/.h
+    int fsetxattr(int fd, const char *name, const void *value, size_t size, int flags);
+
+    ssize_t flistxattr(int fd, char *list, size_t size);
+
     // pwd.h
     struct passwd *getpwuid(uid_t uid);
 
@@ -246,9 +257,6 @@ extern "C" {
 		    struct addrinfo **res);
     void freeaddrinfo(struct addrinfo *res);
     const char *gai_strerror(int errcode);
-
-    // sys/mman.h
-    typedef unsigned long long off64_t;
 
     // dlfcn.h
     typedef struct {
@@ -273,7 +281,7 @@ extern "C" {
     int close_impl(int fildes);
     ssize_t write_impl(int fd, const void *buf, size_t count);
     ssize_t pwrite_impl(int fd, const void *buf, size_t count, off_t offset);
-
+    int rename_impl(const char *oldpath, const char *newpath, int& err);
     //sys/socket.h
     int socketpair_impl(int domain, int type, int protocol, int sv[2]);
 
@@ -285,12 +293,16 @@ extern "C" {
     int access_impl(const char* pathname, int mode, int& err);
     int ftruncate_impl(int fd, off_t offset, int& err);
 
+    int fchown_impl(int fd, uid_t owner, gid_t group, int& err);
+    int fchmod_impl(int fd, mode_t mode, int& err);
+
     // dirent.h
     void* opendir_impl(const char* dirname, int& err);
     struct dirent64* readdir64_impl(void* dirp, int& err);
     struct dirent* readdir_impl(void* dirp, int& err);
     int closedir_impl(void* dirp, int& err);
 
+    int utimes_impl(const char *filename, const struct timeval times[2], int& err);
 
 #ifdef __cplusplus
 }

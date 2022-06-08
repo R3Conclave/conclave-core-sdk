@@ -1,5 +1,6 @@
 package com.r3.conclave.host.internal.attestation
 
+import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
 import com.r3.conclave.common.internal.SgxSignedQuote
@@ -16,14 +17,24 @@ import com.r3.conclave.utilities.internal.x509Certs
 class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
         val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
-        val col = Native.getQuoteCollateral(
+        val fields = Native.getQuoteCollateral(
             pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes(), // fpsmc
             if ("Processor" in pckCert.issuerDN.name) 0 else 1 // pckCert 'type': 0 - Processor, 1 - Platform
         )
-        // TODO There's no reason why the JNI can't create the QuoteCollateral directly. Doing so allows the properties
-        //      to have better types, such as int for the version. The other fields can also just be byte arrays as
-        //      converting them to Strings may be unnecessary as they need to be parsed.
-        val collateral = QuoteCollateral(col[0], col[1], col[2], col[3], col[4], col[5], col[6], col[7])
+        // TODO There's no reason why the JNI can't create the QuoteCollateral directly. It would also fix this hack
+        //  with the collateral fields being passed up as Strings when in fact they should be byte arrays.
+        val collateral = QuoteCollateral(
+            fields[0] as Int,
+            fields[1].asStringToBytes(),
+            fields[2].asStringToBytes(),
+            fields[3].asStringToBytes(),
+            fields[4].asStringToBytes(),
+            fields[5].asStringToBytes(),
+            fields[6].asStringToBytes(),
+            fields[7].asStringToBytes()
+        )
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
+
+    private fun Any.asStringToBytes(): OpaqueBytes = OpaqueBytes((this as String).toByteArray())
 }

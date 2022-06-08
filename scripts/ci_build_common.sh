@@ -117,8 +117,9 @@ docker_opts=(\
     "-w" "$code_docker_dir" \
 )
 
-function loadBuildImage() {
-    filename=$code_host_dir/containers/sgxjvm-build/build/sgxjvm-build-docker-image.tar.gz
+function loadDockerImage() {
+    filename=$1
+    echo $filename
     if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
         if [ ! -f $filename ]; then
           # The compressed file was split into smaller files.
@@ -127,6 +128,14 @@ function loadBuildImage() {
         fi
         docker load < $filename
     fi
+}
+
+function loadSdkBuildImage() {
+    loadDockerImage $code_host_dir/containers/sdk-build/build/sdk-build-docker-image.tar.gz
+}
+
+function loadConclaveBuildImage() {
+    loadDockerImage $code_host_dir/containers/conclave-build/build/conclave-build-docker-image.tar.gz
 }
 
 function runDocker() {

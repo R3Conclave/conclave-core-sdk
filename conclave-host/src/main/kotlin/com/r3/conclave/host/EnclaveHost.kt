@@ -52,7 +52,9 @@ import java.util.regex.Pattern
  * Although the enclave must currently run against Java 8, the host can use any
  * version of Java that is supported.
  */
-class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<ErrorHandler.Connection>) : AutoCloseable {
+class EnclaveHost private constructor(
+    private val enclaveHandle: EnclaveHandle<ExceptionReceivingHandler.Connection>
+) : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
      * The public items within the object are still published in the documentation.
@@ -206,7 +208,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             enclaveFileUrl: URL,
             enclaveClassName: String,
         ): EnclaveHost {
-            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ErrorHandler())
+            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ExceptionReceivingHandler())
             return EnclaveHost(enclaveHandle)
         }
 
@@ -225,7 +227,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
                 constructor.newInstance(),
                 mockConfiguration,
                 kdsConfig,
-                ErrorHandler()
+                ExceptionReceivingHandler()
             )
             return EnclaveHost(enclaveHandle)
         }
@@ -729,6 +731,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
     fun callEnclave(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>): ByteArray? {
         return callEnclaveInternal(bytes, callback)
@@ -755,6 +758,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      *
      * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
     fun callEnclave(bytes: ByteArray): ByteArray? = callEnclaveInternal(bytes, null)
 
@@ -792,8 +796,8 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
      * with the KDS to get it.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
-    // TODO This should throw EnclaveException
     @Throws(MailDecryptionException::class, IOException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?, callback: Function<ByteArray, ByteArray?>) {
         deliverMailInternal(mail, routingHint, callback)
@@ -829,8 +833,8 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
      * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
      * with the KDS to get it.
      * @throws IllegalStateException If the host has not been started.
+     * @throws EnclaveException If an exception is raised from within the enclave.
      */
-    // TODO This should throw EnclaveException
     @Throws(MailDecryptionException::class, IOException::class)
     fun deliverMail(mail: ByteArray, routingHint: String?) = deliverMailInternal(mail, routingHint, null)
 
@@ -945,9 +949,9 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
         }
 
         private fun getKdsKeySpec(input: ByteBuffer): KDSKeySpec {
-            val name = String(input.getIntLengthPrefixBytes())
+            val name = input.getIntLengthPrefixString()
             val masterKeyType = masterKeyTypeValues[input.get().toInt()]
-            val policyConstraint = String(input.getRemainingBytes())
+            val policyConstraint = input.getRemainingString()
             return KDSKeySpec(name, masterKeyType, policyConstraint)
         }
     }
@@ -994,7 +998,7 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
 
         private fun onMail(transaction: Transaction, input: ByteBuffer) {
             // routingHint can be null/missing.
-            val routingHint = input.getNullable { String(getIntLengthPrefixBytes()) }
+            val routingHint = input.getNullable { getIntLengthPrefixString() }
             // rest of the body to deliver (should be encrypted).
             val encryptedBytes = input.getRemainingBytes()
             val cmd = MailCommand.PostMail(encryptedBytes, routingHint)
@@ -1105,7 +1109,6 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
             val previousCallState = callStateManager.transitionStateFrom<CallState>(to = intoEnclaveState)
             // Going into a callEnclave, the call state should only be Ready or IntoEnclave.
             check(previousCallState !is Response)
-
             var response: Response? = null
             try {
                 body(threadID)
@@ -1115,12 +1118,9 @@ class EnclaveHost private constructor(private val enclaveHandle: EnclaveHandle<E
                     is RuntimeException, is Error -> t
                     // MailDecryptionException needs to propagate as is for deliverMail.
                     is MailDecryptionException -> t
-                    // Checked exceptions are wrapped in a RuntimeException to avoid inconsistent throws declaration on
-                    // callEnclave and deliverMail for Java users.
-                    // TODO This should probably be a specific exception class so that the caller can determine more
-                    //  easily if the exception came from the enclave. callEnclave above would also need to be updated
-                    //  as well.
-                    else -> RuntimeException(t)
+                    // No need to wrap an Enclave exception inside another Enclave exception
+                    is EnclaveException -> t
+                    else -> EnclaveException(null, t)
                 }
             } finally {
                 // We revert the state even if an exception was thrown in the callback. This enables the user to have

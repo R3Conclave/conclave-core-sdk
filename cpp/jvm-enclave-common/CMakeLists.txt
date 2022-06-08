@@ -31,6 +31,7 @@ set(sources
         stubs/stdio.cpp
         stubs/stdlib.cpp
         stubs/string.cpp
+        stubs/sys_sendfile.cpp
         stubs/sys_resource.cpp
         stubs/sys_stat.cpp
         stubs/sys_time.cpp
@@ -44,6 +45,7 @@ set(sources
         stubs/arpa_inet.cpp
         stubs/sys_mman.cpp
         stubs/sched.cpp
+        stubs/sched_cpucount.cpp
         stubs/netdb.cpp
         stubs/sys_socket.cpp
         stubs/sys_poll.cpp
@@ -54,6 +56,7 @@ set(sources
         stubs/semaphore.cpp
         stubs/sys_epoll.cpp
         stubs/sys_vfs.cpp
+        stubs/sys_xattr.cpp
 )
 
 set(link_libraries

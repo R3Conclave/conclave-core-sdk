@@ -21,10 +21,6 @@ index 37a4551..b155ed4 100644
      @Option(help = "When set to true, the image generator verifies that the image heap does not contain a home directory as a substring", type = User)//
      public static final HostedOptionKey<Boolean> DetectUserDirectoriesInImageHeap = new HostedOptionKey<>(false);
  
-diff --git a/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/DefaultFileSystemSupport.java b/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/jdk/DefaultFileSystemSupport.java
-new file mode 100644
-index 0000000..d3cd4bc
---- /dev/null
 diff --git a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
 index d9b2596..e11730c 100644
 --- a/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/c/NativeLibraries.java
@@ -104,15 +100,11 @@ diff --git a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibrar
 index 2e01394..7630aed 100644
 --- a/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
 +++ b/substratevm/src/com.oracle.svm.jni/src/com/oracle/svm/jni/JNILibraryInitializer.java
-@@ -30,6 +30,7 @@ import com.oracle.svm.core.jdk.NativeLibrarySupport;
- import com.oracle.svm.core.jdk.PlatformNativeLibrarySupport;
+@@ -51,2 +51,3 @@ import com.oracle.svm.core.jdk.NativeLibrarySupport;
  import com.oracle.svm.jni.functions.JNIFunctionTables;
  import com.oracle.svm.jni.nativeapi.JNIJavaVM;
 +import com.oracle.svm.core.SubstrateOptions;
- import org.graalvm.collections.EconomicMap;
- import org.graalvm.collections.Equivalence;
- import org.graalvm.nativeimage.c.function.CFunctionPointer;
-@@ -111,6 +112,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
+@@ -113,6 +113,10 @@ public class JNILibraryInitializer implements NativeLibrarySupport.LibraryInitia
  
      @Override
      public void initialize(PlatformNativeLibrarySupport.NativeLibrary lib) {
@@ -130,7 +122,7 @@ index 5656dec..1e39f62 100644
 @@ -110,6 +110,15 @@ int get_cpuid (unsigned int leaf, unsigned int *eax, unsigned int *ebx, unsigned
  #define bit_SHA_compat           0x20000000
  #define bit_FMA_compat           0x00001000
- 
+
 +/*
 + * CPUID is not available inside an SGX enclave.
 + * If a clean method that we could use to determine whether or not we were inside
@@ -141,13 +133,12 @@ index 5656dec..1e39f62 100644
 +}
 +
  /*
-  * Extracts the CPU features by using cpuid.h.
-  * Note: This function is implemented in C as cpuid.h
-@@ -117,6 +126,26 @@ int get_cpuid (unsigned int leaf, unsigned int *eax, unsigned int *ebx, unsigned
-  * difficult to keep track of this in Java.
-  */
- void determineCPUFeatures(CPUFeatures* features) {
-+
+ * Extracts the CPU features by using cpuid.h.
+ * Note: This function is implemented in C as cpuid.h
+@@ -528,6 +537,24 @@ static void set_cpufeatures(CPUFeatures *features, CpuidInfo *_cpuid_info)
+ void determineCPUFeatures(CPUFeatures *features)
+ {
+
 +  // Return a minimal hard coded set of features
 +  // TODO: Find a way to safely perform proper feature detection. Alternatively, find a way to
 +  // determine if we are in an enclave and steer feature detection appropriately.
@@ -166,7 +157,7 @@ index 5656dec..1e39f62 100644
 +
 +    return;
 +  }
-+
-   unsigned int eax, ebx, ecx, edx;
-   unsigned int max_level, ext_level;
-   unsigned int vendor;
+
+   CpuidInfo cpuid_info_data = {0};
+   CpuidInfo *_cpuid_info = &cpuid_info_data;
+

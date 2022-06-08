@@ -1,11 +1,12 @@
-plugins {
-    id 'java'
-}
-
 dependencies {
-    // This project must NOT have Kotlin and Jackson as dependencies.
+    // Add all the Conclave libraries as direct dependencies and then make sure Kotlin and Jackson are not pulled in as
+    // transitive dependencies. Obviously this means Kotlin and Jackson cannot be used in this module.
     testImplementation "com.r3.conclave:conclave-client:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-common:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
     testImplementation "com.r3.conclave:conclave-host:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-mail:$conclave_version"
+    testImplementation "com.r3.conclave:conclave-web-client:$conclave_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 }

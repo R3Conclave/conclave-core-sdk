@@ -9,26 +9,26 @@ import java.io.FileOutputStream
 class FileOutputStreamTest : FileSystemEnclaveTest() {
     private inner class Handler(private val uid: Int, path: String, append: Boolean) : AutoCloseable {
         init {
-            val reply = callEnclave(NewFileOuputStream(path, append, uid))
+            val reply = callEnclave(NewFileOutputStream(path, append, uid))
             assertThat(reply).startsWith(FileOutputStream::class.java.name + "@")
         }
 
         fun writeByteByByte(data: ByteArray) {
             for (element in data) {
-                callEnclave(WriteByteToOuputStream(uid, element.toInt()))
+                callEnclave(WriteByteToOutputStream(uid, element.toInt()))
             }
         }
 
         fun writeBytes(data: ByteArray) {
-            callEnclave(WriteBytesToOuputStream(uid, data))
+            callEnclave(WriteBytesToOutputStream(uid, data))
         }
 
         fun writeBytesOffset(data: ByteArray, offset: Int, length: Int) {
-            callEnclave(WriteOffsetBytesToOuputStream(uid, data, offset, length))
+            callEnclave(WriteOffsetBytesToOutputStream(uid, data, offset, length))
         }
 
         override fun close() {
-            callEnclave(CloseOuputStream(uid))
+            callEnclave(CloseOutputStream(uid))
         }
     }
 

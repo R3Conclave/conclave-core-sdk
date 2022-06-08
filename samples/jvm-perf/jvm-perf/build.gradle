@@ -9,10 +9,10 @@ mainClassName = "com.r3.conclave.jvmperf.JvmPerf"
 def mode = sgx_mode.toLowerCase()
 
 dependencies {
-    compile project(":jvm-perf:benchmarks")
+    implementation project(":jvm-perf:benchmarks")
     implementation "com.r3.conclave:conclave-host"
     implementation "com.r3.conclave:conclave-client"
-    compile "org.openjdk.jmh:jmh-core:1.19"
+    implementation "org.openjdk.jmh:jmh-core:1.19"
     annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:1.19"
 
     runtimeOnly project(path: ":jvm-perf:graalvm-enclave-simulation", configuration: "simulation")
