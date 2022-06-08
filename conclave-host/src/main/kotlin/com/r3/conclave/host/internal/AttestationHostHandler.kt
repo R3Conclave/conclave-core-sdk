@@ -9,7 +9,6 @@ import com.r3.conclave.host.internal.AttestationHostHandler.State.QuoteInitializ
 import com.r3.conclave.host.internal.AttestationHostHandler.State.ReportRetrieved
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
-
 import com.r3.conclave.utilities.internal.nullableSize
 import com.r3.conclave.utilities.internal.putNullable
 import java.nio.ByteBuffer
