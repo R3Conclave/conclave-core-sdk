@@ -12,7 +12,6 @@ Release notes
 4. GraalVM has been updated to version 22.0.
 5. Gradle 7 is now supported.
 6. Ubuntu 20.04 LTS is now the default version whilst 18.04 LTS is still supported and 16.04 LTS is no longer supported.
-7. The method `createAttestationQuote`, which allows developers to generate SGX signed quoted with a costume data inside the report data field, has been added to the API. Please be aware that this method is still in beta and might change without notice.
 ### 1.3
 
 1. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports
@@ -24,7 +23,8 @@ Release notes
    [KDS post office](api/-conclave/com.r3.conclave.client/-k-d-s-post-office-builder/index.html) for more details.
 3. Support for [Conclave Cloud](https://conclave.cloud/)!
 4. Some small bug fixes.
-   
+5. The method `createAttestationQuote`, which allows developers to generate SGX signed quoted with a costume data inside the report data field, has been added to the API. Please be aware that this method is still in beta and might change without notice.
+
 ### 1.2.1
 
 This is a small release with some minor improvements:
