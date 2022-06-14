@@ -8,13 +8,9 @@ source ${script_dir}/ci_build_common.sh
 # Kill any lingering Gradle workers
 ps auxwww | grep Gradle | grep -v grep | awk '{ print $2; }' | xargs -r kill || true
 
-docker_image=com.r3.sgx/sdk-build
-
-loadSdkBuildImage
-
 # Build the build-image and the enclave Release artifacts.
-runDocker $docker_image "./gradlew containers:sdk-build:buildImagePublish"
-runDocker $docker_image "cd samples && ./gradlew buildSignedEnclaveRelease -i"
+runDocker $container_image_sdk_build "./gradlew containers:sdk-build:buildImagePublish"
+runDocker $container_image_sdk_build "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
 mkdir FIRST && for so in samples/*/build/conclave/release/*.so; do
     mv $so FIRST
@@ -22,8 +18,8 @@ done
 cd FIRST && sha256sum !(*.signed).so > SHA256SUM && cd -
 
 # Clean the image completely.
-runDocker $docker_image "./gradlew clean && ./gradlew --stop"
-runDocker $docker_image "cd samples && ./gradlew clean && ./gradlew --stop"
+runDocker $container_image_sdk_build "./gradlew clean && ./gradlew --stop"
+runDocker $container_image_sdk_build "cd samples && ./gradlew clean && ./gradlew --stop"
 
 # Change the name of the container's mount-point.
 # Any lingering references to the mount-point inside the enclave
@@ -31,8 +27,8 @@ runDocker $docker_image "cd samples && ./gradlew clean && ./gradlew --stop"
 code_docker_dir="/code"
 
 # Rebuild the build-image and enclave Release artifacts.
-runDocker $docker_image "./gradlew containers:sdk-build:buildImagePublish"
-runDocker $docker_image "cd samples && ./gradlew buildSignedEnclaveRelease -i"
+runDocker $container_image_sdk_build "./gradlew containers:sdk-build:buildImagePublish"
+runDocker $container_image_sdk_build "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
 mkdir SECOND && for so in samples/*/build/conclave/release/*.so; do
     mv $so SECOND

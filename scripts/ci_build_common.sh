@@ -2,8 +2,45 @@
 set -euo pipefail
 # Sets up common build script parameters and functions
 
+getGraalMajorAndMinorVersion() {
+  grep "graal_version" versions.gradle | cut -d '=' -f2 | sed "s/[\' ]//g" | cut -d '.' -f1,2
+}
+
+# Docker login interaction with the repository
+# You might get an error from docker about not being authorized to perform a certain action if you are not logged in
+docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+
 code_host_dir=$PWD
 code_docker_dir=${code_host_dir}
+
+graal_version=$(getGraalMajorAndMinorVersion)
+
+# Generate the docker image tag based on the contents inside the containers module
+# Please be sure that any script that might change the final docker container image
+# is inside the folder containers/scripts. Otherwise, the tag generated won't be
+# correct and you run the risk of overwriting existing docker images that are used
+# by older release branches. Keep in mind that temporary or build directories should be excluded
+# The following code generates the hash based on the contents of a directory and the version of graal used.
+# This hash takes into account the contents of each file inside the directory and subdirectories
+# The cut command removes the dash at the end.
+# All subdirectories with name build and download and hidden files are excluded. Please be sure that any file
+# that is not tracked by git should not be included in this hash.
+# In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
+# must include the graal_version as well.
+# TODO: Remove the gradle module that's in the containers dir as it looks like it doesn't need to be one.
+pushd ${code_host_dir}
+containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
+docker_image_tag=$(echo $containers_dir_hash-$graal_version | sha256sum | cut -d ' ' -f1)
+popd
+
+# Docker container images repository (This repo is usually Artifactory)
+container_image_repo=$OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.conclave
+
+# Docker container images
+container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag
+container_image_conclave_build=$container_image_repo/conclave-build:$docker_image_tag
+container_image_cordapp=$container_image_repo/cordapp:$docker_image_tag
+container_image_sdk_build=$container_image_repo/sdk-build:$docker_image_tag
 
 mkdir -p $HOME/.gradle
 mkdir -p $HOME/.m2
@@ -117,32 +154,11 @@ docker_opts=(\
     "-w" "$code_docker_dir" \
 )
 
-function loadDockerImage() {
-    filename=$1
-    echo $filename
-    if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
-        if [ ! -f $filename ]; then
-          # The compressed file was split into smaller files.
-          # Recreate the original file and delete the smaller ones.
-          cat $filename.part* > $filename && rm $filename.part*
-        fi
-        docker load < $filename
-    fi
-}
-
-function loadSdkBuildImage() {
-    loadDockerImage $code_host_dir/containers/sdk-build/build/sdk-build-docker-image.tar.gz
-}
-
-function loadConclaveBuildImage() {
-    loadDockerImage $code_host_dir/containers/conclave-build/build/conclave-build-docker-image.tar.gz
-}
-
 function runDocker() {
-    image_name=$1
+    container_image=$1
     docker run \
         ${docker_opts[@]+"${docker_opts[@]}"} \
         ${agent_home_dir_flags[@]+"${agent_home_dir_flags[@]}"} \
-        ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${image_name} \
+        ${container_image} \
         bash -c "$2"
 }

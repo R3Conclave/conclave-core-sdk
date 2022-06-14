@@ -1,7 +1,10 @@
 FROM ubuntu:20.04
 
+ARG commit_id
+
 LABEL description="Intel aesmd container"
 LABEL maintainer="conclave@r3.com"
+LABEL commit_id=${commit_id}
 
 # Install dependencies
 RUN apt-get update -y && apt-get install -y \
