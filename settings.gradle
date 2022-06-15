@@ -66,8 +66,6 @@ include 'conclave-init'
 
 include 'internal-testing'
 
-include 'containers:conclave-build'
-
 include 'hsm-tool'
 
 include 'plugin-enclave-gradle'

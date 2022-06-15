@@ -36,6 +36,15 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
 }
 
+processResources {
+    doFirst {
+        copy {
+            from "../containers/conclave-build"
+            into sourceSets.main.output.resourcesDir.toPath().resolve("conclave-build")
+        }
+    }
+}
+
 jar {
     manifest {
         // This is used in the plugin to add implicit dependencies of the right version.
