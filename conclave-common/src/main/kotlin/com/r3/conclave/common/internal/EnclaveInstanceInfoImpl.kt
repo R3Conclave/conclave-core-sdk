@@ -92,9 +92,9 @@ class EnclaveInstanceInfoImpl(
     override fun toString() = """
         Remote attestation for enclave ${enclaveInfo.codeHash}:
           - Mode: ${enclaveInfo.enclaveMode}
-          - Code signing key hash: ${enclaveInfo.codeSigningKeyHash}
-          - Public signing key: ${dataSigningKey.encoded.toHexString()}
-          - Public encryption key: ${encryptionKey.encoded.toHexString()}
+          - Code signer: ${enclaveInfo.codeSigningKeyHash}
+          - Session signing key: ${dataSigningKey.encoded.toHexString()}
+          - Session encryption key: ${encryptionKey.encoded.toHexString()}
           - Product ID: ${enclaveInfo.productID}
           - Revocation level: ${enclaveInfo.revocationLevel}
         
