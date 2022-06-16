@@ -1,25 +1,76 @@
 import java.text.SimpleDateFormat
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Load Gradle plugins
+////////////////////////////////////////////////////////////////////////////////////////////////////
 plugins {
-    id 'java'
+    id 'maven-publish'  // Plugin to publish artifacts to a maven repo
 }
 
-// These files are used as a dummy outputs in place of the graalvm repository directory.
-// This prevents buildGraal from re-triggering cloneAndPatchRepository.
-def graalCloneDummy = "${project.buildDir}/graal_cloned_time"
-def graalBuildDummy = "${project.buildDir}/graal_built_time"
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Global variables
+////////////////////////////////////////////////////////////////////////////////////////////////////
+ext {
 
-def graalMajorMinorVersion = graal_version.substring(0, graal_version.length() - 2)
-task cloneAndPatchRepository(type: Exec) {
-    inputs.files("${project.projectDir}/clone.sh", "${project.projectDir}/patches/graal.patch")
-    outputs.files("${graalCloneDummy}")
-    commandLine "${project.projectDir}/clone.sh", "$graalMajorMinorVersion"
-    doLast {
+    // Environment variables loaded from the system
+    // Add any environment variable to the argument list if it needs to be accessible by Gradle
+    environment = getEnvironmentVariables(
+            'OBLIVIUM_MAVEN_URL',
+            'OBLIVIUM_MAVEN_REPOSITORY',
+            'OBLIVIUM_MAVEN_USERNAME',
+            'OBLIVIUM_MAVEN_PASSWORD',
+            'OBLIVIUM_CONTAINER_REGISTRY_URL',
+            'JVMCI_HOME',
+            'MX_HOME',
+            'DOCKER_CONTAINER_IS_RUNNING'
+    )
+
+    // Graal version - You might also need to update the tools used to build Graal present in the container after Graal version is updated
+    // This property is not loaded from ../versions.gradle because the file is not accessible from the graal-build
+    // docker container. Besides that, the Graal version used by the Graal module and Conclave must remain separated because
+    // when Graal is upgraded, the graal module must be updated and the graal artifact needs to be published
+    // before updating the graal version used by Conclave. If the Graal versions used by the graal module and Conclave are
+    // updated at the same time, the PR checks for Conclave might fail because the artifact published by the graal module
+    // might not be available on Artifact.
+    graal_version= '21.2.0'
+
+    // Directories and files paths
+    tempDir     = "$buildDir/tmp"
+    graalDir    = "$tempDir/graal"
+    graalVMLatestDir    = "$graalDir/vm/latest_graalvm/"
+    graalVMTar          = "$buildDir/distributions/graal-sdk.tar.gz"
+
+    // These files are used as a dummy outputs in place of the graalvm repository directory.
+    // This prevents buildGraal from re-triggering cloneAndPatchRepository.
+    graalCloneDummy = "$tempDir/graal_cloned_time"
+    graalBuildDummy = "$tempDir/graal_built_time"
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Tasks
+////////////////////////////////////////////////////////////////////////////////////////////////////
+task cloneAndPatchGraal(type: Exec) {
+
+    // Task details
+    group = 'Other'
+    description = 'Clones a specific version of Graal and patches the source code with the required changes for Conclave.'
+
+    def patchingScript = "$projectDir/scripts/cloneAndPatch.sh"
+    def graalPatch = "$projectDir/patches/graal.patch"
+    def graalMajorMinorVersion = extractMajorMinorVersionNumbers(graal_version)
+
+    inputs.files("$patchingScript", "$graalPatch")
+    outputs.files("$graalCloneDummy")
+
+    doFirst {
+        mkdir tempDir
+        workingDir tempDir
+        commandLine "$patchingScript", "$graalMajorMinorVersion"
+
         // Write current date to graal clone dummy file. If this task is run again, the content of this file
         // will change and subsequent tasks will run.
-        new File(graalCloneDummy).text = "${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}\n"
+        writeDateToFile(graalCloneDummy)
     }
-    workingDir "${project.buildDir}"
 }
 
 /**
@@ -54,71 +105,54 @@ task cloneAndPatchRepository(type: Exec) {
  * - native-image-configure (native)
  * - js (native)
  */
-
-//  This property can be used to speed up an SDK build when no
-//    dynamic languages are needed
-def excludeDynamicLanguages = findProperty('excludeDynamicLanguages')
-
 task buildGraal(type: Exec) {
-    dependsOn cloneAndPatchRepository
+    dependsOn cloneAndPatchGraal
+
+    // Task details
+    group = 'Build'
+    description = 'Compiles the source code of Graal. For testing purposes consider using the property -PexcludeDynamicLanguages to run the task faster by excluding all dynamic languages such as Javascript and Pythonn.'
+
+
+    //  This property can be used to speed up an SDK build when no dynamic languages are needed
+    def excludeDynamicLanguages = findProperty('excludeDynamicLanguages')
 
     // Register graal repository dummy file as an input and repository directory as output
     inputs.files(graalCloneDummy)
     outputs.files(graalBuildDummy)
 
-    environment['JAVA_HOME'] = System.getenv('JVMCI_HOME')
+    doFirst {
 
-    // MX version 5.294.1 must use Python 3 otherwise the
-    // exception 'ImportError: No module named pathlib' is thrown 
-    environment['MX_PYTHON_VERSION'] = 3
+        assertDockerContainerIsBeingUsed()
 
-    workingDir "${project.buildDir}/graal/vm"
-    // The --force-bash-launchers makes the build faster and use far less RAM by skipping the native-imaging of
-    // some tools we don't use or care about. Without that flag the build can fail due to running out of RAM.
-    if (excludeDynamicLanguages != null) {
-        commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', '/substratevm',
-        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=polybench', 'build'
-    } else {
-        commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graalpython,graal-js,/substratevm',
-        '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=python,js,polybench', 'build'
+        workingDir "$graalDir/vm"
+
+        // The --force-bash-launchers makes the build faster and use far less RAM by skipping the native-imaging of
+        // some tools we don't use or care about. Without that flag the build can fail due to running out of RAM.
+        if (excludeDynamicLanguages != null) {
+        commandLine "${environment.MX_HOME}/mx", '--skip-libraries=polyglot', '--dynamicimports', '/substratevm',
+                '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=polybench', 'build'
+        } else {
+            commandLine "${System.getenv('MX_HOME')}/mx", '--skip-libraries=polyglot', '--dynamicimports', 'graalpython,graal-js,/substratevm',
+                   '--exclude-components=nju,nic,llp,lg,gu,polynative,gvm,poly,nil,svml', '--force-bash-launchers=python,js,polybench', 'build'
+        }
     }
 
     doLast {
         // Write current date to graal build dummy file. If this task is run again, the content of this file
         // will change and subsequent tasks will run.
-        new File(graalBuildDummy).text = "${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}\n"
+        writeDateToFile(graalBuildDummy)
     }
 }
 
-def outputDir = "${project.buildDir}/distributions"
-def outputFile = "graalvm.tar"
-
-def graalVMLatestDir = "${project.buildDir}/graal/vm/latest_graalvm/"
 task getGraalBuildFolder(type: Exec) {
     dependsOn buildGraal
+
     inputs.files(graalBuildDummy)
     standardOutput = new ByteArrayOutputStream()
+
     commandLine 'ls', "$graalVMLatestDir"
     doLast {
         ext.graalVMDir = graalVMLatestDir + standardOutput.toString().replaceAll('\\r', '').replaceAll('\\n', '')
-    }
-}
-
-/**
- * SubstrateVM can add required native libraries during compilation based on parameters to 
- * native-image. For example, the inclusion of --enable-all-security-services results in native-image
- * automatically including libstdc++.a during linking. We link against the SGX trusted runtime to
- * satisfy the linker so to prevent multiply derived symbols we need to provide placeholder, empty
- * implementations of any automatically linked library. This function populates the placeholderlibs/
- * directory with these files and NativeImage.kt adds this directory to the link path
- */
-task generatePlaceholderLibraries(type: Exec) {
-    dependsOn getGraalBuildFolder
-    doFirst {
-        def placeholderDir = getGraalBuildFolder.graalVMDir + "/placeholderlibs/"
-        mkdir placeholderDir
-        // Just create an empty archive
-        commandLine 'ar', "cr", placeholderDir + "libstdc++.a"
     }
 }
 
@@ -128,87 +162,120 @@ task generatePlaceholderLibraries(type: Exec) {
  * rather than preserved. Graal fails to run with the resolved symlinks.
  */
 task tarGraal(type: Exec) {
-    dependsOn getGraalBuildFolder, generatePlaceholderLibraries
+    dependsOn getGraalBuildFolder
 
-    // Set the input to the folder in which the build is generated. We actually want to tar
-    // the only subdirectory from this.
+    // Task details
+    group = 'Other'
+    description = 'Generate graalvm.tar file.'
+
+    // Set the input to the folder in which the build is generated. We actually want to tar the only subdirectory from this.
     inputs.dir(graalVMLatestDir)
+    outputs.file(graalVMTar)
+
     doFirst {
-        if (System.getenv('JVMCI_HOME').contains('openjdk1.8')) {
-            commandLine 'tar', 'chf', "$outputDir/$outputFile", '-C', getGraalBuildFolder.graalVMDir, 
-            "--exclude=./bin",
-            "--exclude=./lib",
-            "--exclude=./man",
-            "--exclude=./sample",
-            "--exclude=*src.zip",
-            '.'
+        if (environment.JVMCI_HOME.contains('openjdk1.8')) {
+            commandLine 'tar', 'czhf', "$graalVMTar", '-C', getGraalBuildFolder.graalVMDir,
+                    "--exclude=./bin",
+                    "--exclude=./lib",
+                    "--exclude=./man",
+                    "--exclude=./sample",
+                    "--exclude=*src.zip",
+                    '.'
         }
         else {
-            commandLine 'tar', 'chf', "$outputDir/$outputFile", '-C', getGraalBuildFolder.graalVMDir, 
-            "--exclude=./lib/tools.jar",
-            "--exclude=./lib/ct.sym",
-            "--exclude=./lib/graalvm",
-            "--exclude=./man",
-            "--exclude=./sample",
-            "--exclude=*src.zip",
-            '.'
+            commandLine 'tar', 'czhf', "$graalVMTar", '-C', getGraalBuildFolder.graalVMDir,
+                    "--exclude=./lib/tools.jar",
+                    "--exclude=./lib/ct.sym",
+                    "--exclude=./lib/graalvm",
+                    "--exclude=./man",
+                    "--exclude=./sample",
+                    "--exclude=*src.zip",
+                    '.'
         }
-    }
-    outputs.file("$outputDir/$outputFile")
-}
-
-/**
- * Generates the CAP cache by running native-image on the cap-cache subproject.
- * The CAP cache is packaged in the graal jar file together with the tarball of the Graal distribution.
- * Relevant native-image options:
- * -H:±ExitAfterCAPCache    Exit image generation after C Annotation Processor Cache creation. Default: - (disabled).
- * -H:±NewCAPCache          Create a C Annotation Processor Cache. Will erase any previous cache at that same location. Default: - (disabled).
- * -H:CAPCacheDir           Directory where information generated by the CAnnotation Processor are cached.
- */
-def capCacheDir = "${project.buildDir}/cap-cache"
-task generateCAPCache(type: Exec) {
-    def shadowJarTask = (Task) project.tasks.getByPath(":graal:cap-cache:shadowJar")
-    def capCacheProjectShadowJar = shadowJarTask.outputs.files.first()
-    def jvmEnclaveCommonJarTask = project.tasks.getByPath(":cpp:jvm-enclave-common:jar")
-    def jvmEnclaveCommonJar = jvmEnclaveCommonJarTask.outputs.files.first()
-    def conclaveEnclaveFatJarTask = project.tasks.getByPath(":conclave-enclave:fatJar")
-    def conclaveEnclaveFatJar = conclaveEnclaveFatJarTask.outputs.files.first()
-    dependsOn buildGraal, shadowJarTask, jvmEnclaveCommonJarTask, conclaveEnclaveFatJarTask, getGraalBuildFolder
-    inputs.files(shadowJarTask.outputs.files.first(), capCacheProjectShadowJar, jvmEnclaveCommonJar, conclaveEnclaveFatJar)
-    outputs.dir(capCacheDir)
-    doFirst {
-        copy {
-            from zipTree(jvmEnclaveCommonJar)
-            into "${project.buildDir}/include"
-        }
-	if (excludeDynamicLanguages != null) {
-            commandLine "${getGraalBuildFolder.graalVMDir}/bin/native-image", '--shared', '-cp', "$capCacheProjectShadowJar:$conclaveEnclaveFatJar",
-            '-H:+ExitAfterCAPCache', '-H:+NewCAPCache', "-H:CAPCacheDir=$capCacheDir",
-            "-H:CCompilerOption=-I${project.buildDir}/include/com/r3/conclave/include",
-            "--no-fallback",
-            "-H:Name=cap-cache"
-	} else {
-            commandLine "${getGraalBuildFolder.graalVMDir}/bin/native-image", '--shared', '-cp', "$capCacheProjectShadowJar:$conclaveEnclaveFatJar",
-            '-H:+ExitAfterCAPCache', '-H:+NewCAPCache', "-H:CAPCacheDir=$capCacheDir",
-            "-H:CCompilerOption=-I${project.buildDir}/include/com/r3/conclave/include",
-            "--no-fallback",
-            "--language:js",
-            "--language:python",
-            "-H:Name=cap-cache"
-	}
     }
 }
 
-jar {
-    dependsOn tarGraal, generateCAPCache
-    into("com/r3/conclave/graalvm") {
-        from(outputDir) {
-            include outputFile
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Maven-publish - Configuration for publishing maven artifacts
+////////////////////////////////////////////////////////////////////////////////////////////////////
+publishing {
+    // List of artifacts to publish
+    publications {
+
+        // Publish the tar file that contains graal
+        maven(MavenPublication) {
+
+            def majorAndMinorVersionNumbers = extractMajorMinorVersionNumbers(graal_version)
+
+            // Artifact to be publish
+            artifact(graalVMTar) {
+                extension 'tar.gz'
+            }
+
+            // Details about the artifact being publish
+            groupId = "com.r3.conclave.graal"
+            artifactId = "graal-sdk"
+            version = "$majorAndMinorVersionNumbers"
+            description = 'Graal distribution including SubstrateVM and tools'
         }
     }
-    into("com/r3/conclave/graalvm/cap-cache") {
-        from(capCacheDir) {
-            include '**/*'
+
+    // List of repositories where the artifact is published
+    repositories {
+
+        // Artifactory repository
+        maven {
+            name = "artifactory"
+            url = "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}"
+            credentials {
+                username = environment.OBLIVIUM_MAVEN_USERNAME
+                password = environment.OBLIVIUM_MAVEN_PASSWORD
+            }
         }
+
+        // Local repository - Useful for testing purposes
+        maven {
+            name = "LocalRepo"
+            url = "$buildDir/repo/graal-vm"
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Helper functions
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The function loads the environments variables from the system
+// Input: List of all environment variables that should be loaded by Gradle
+// Output: A map with the environment variables that were requested
+// Key of the map: environment variable name
+// Value of the map: environment variable value
+static Map<String, String> getEnvironmentVariables(String... envNames) {
+    return envNames.collectEntries {envName -> [(envName): System.getenv(envName)] }
+}
+
+// Writes the current date and time to a file
+def writeDateToFile(String fileName) {
+    new File(fileName).text = "${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}\n"
+}
+
+// The format of the version should be in the form of 'Major.Minor.Patch'. Failing to respect this format will cause
+// issues. Please keep in mind the patch number must be single digit otherwise you will need to update the code below.
+// For instance,
+//  input: '21.3.0'
+//  output: '21.3'
+def extractMajorMinorVersionNumbers(String version) {
+    return version.substring(0, version.length() - 2)
+}
+
+// Ensure that a given task is being run inside the provided container by throwing an exception
+// if that is not the case.
+def assertDockerContainerIsBeingUsed() {
+    if(environment.DOCKER_CONTAINER_IS_RUNNING != "TRUE") {
+        String message = "It was detected that the task is not being run inside the provided docker container.\n" +
+                "This might lead to unexpected errors if your system is not properly configured.\n" +
+                "Please consider running the task inside the provided docker container by running the script ./scripts/devenv_shell.sh first"
+
+        throw new GradleException(message)
     }
 }

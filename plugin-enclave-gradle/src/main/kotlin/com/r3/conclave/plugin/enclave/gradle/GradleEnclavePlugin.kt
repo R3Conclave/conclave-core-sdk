@@ -248,7 +248,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
             task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            task.fromDependencies("com.r3.conclave:graal:$sdkVersion")
+            task.fromDependencies(
+                "com.r3.conclave:graal-cap-cache:$sdkVersion"
+            )
             task.into(baseDirectory)
         }
 

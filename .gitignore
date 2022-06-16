@@ -32,4 +32,6 @@ cpp/jvm-enclave-common/include/enclave_jni.h
 stale_outputs_checked
 dokka/dokka/
 
-graal/cap-cache.build_artifacts.txt
+graal-cap-cache/cap-cache.build_artifacts.txt
+containers/sgxjvm-build/src/docker/root/downloads
+graal/containers/graalvm-build/docker/root

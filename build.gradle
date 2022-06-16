@@ -380,8 +380,8 @@ List<PublishedProject> publishedProjects = [
                 description: 'Conclave Gradle plugin for creating enclaves'
         ),
         new PublishedProject(
-                projectPath: ':graal',
-                description: 'Graal distribution including SubstrateVM and tools'
+                projectPath: ':graal-cap-cache',
+                description: 'Native image CAP cache used during enclave build'
         )
 ]
 

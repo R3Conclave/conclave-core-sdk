@@ -69,6 +69,4 @@ include 'internal-testing'
 include 'hsm-tool'
 
 include 'plugin-enclave-gradle'
-
-include 'graal'
-include 'graal:cap-cache'
+include 'graal-cap-cache'
