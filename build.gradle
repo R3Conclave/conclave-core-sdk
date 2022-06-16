@@ -356,10 +356,6 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':graal-cap-cache',
                 description: 'Native image CAP cache used during enclave build'
-        ),
-        new PublishedProject(
-                projectPath: ':containers:conclave-build',
-                description: 'Conclave docker container for native-image builds'
         )
 ]
 

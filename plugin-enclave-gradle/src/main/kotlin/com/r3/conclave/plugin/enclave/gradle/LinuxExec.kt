@@ -1,23 +1,18 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import org.gradle.api.GradleException
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-    @get:InputFile
-    val dockerFile: RegularFileProperty = objects.fileProperty()
-
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
 
@@ -28,17 +23,22 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     val tagLatest: Property<String> = objects.property(String::class.java)
 
     override fun action() {
+        val conclaveBuildDir = Files.createDirectories(temporaryDir.toPath() / "conclave-build")
+        LinuxExec::class.java.getResourceAsStream("/conclave-build/Dockerfile")!!.use {
+            Files.copy(it, conclaveBuildDir / "Dockerfile", REPLACE_EXISTING)
+        }
+
         // This task should be set as a dependency of any task that requires executing a command in the context
         // of a Linux system or container. The action checks to see if the Host OS is Linux and if not sets
         // up a Linux environment (currently using Docker) in which the commands will be executed.
         if (!OperatingSystem.current().isLinux) {
             try {
                 commandLine(
-                        "docker",
-                        "build",
-                        "--tag", tag.get(),
-                        "--tag", tagLatest.get(),
-                        dockerFile.asFile.get().parentFile.absolutePath
+                    "docker",
+                    "build",
+                    "--tag", tag.get(),
+                    "--tag", tagLatest.get(),
+                    conclaveBuildDir
                 )
             } catch (e: Exception) {
                 throw GradleException(
@@ -66,7 +66,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 // The source file may not exist if this is an output file. Let the actual command being
                 // invoked handle any problems with missing/incorrect files
                 try {
-                    Files.copy(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(file.toPath(), newFile.toPath(), REPLACE_EXISTING)
                 } catch (e: IOException) {
                 }
                 newFile
