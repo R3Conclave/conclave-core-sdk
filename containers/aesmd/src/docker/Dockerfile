@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20200219
+FROM ubuntu:18.04
 
 LABEL description="Intel aesmd container"
 LABEL maintainer="conclave@r3.com"

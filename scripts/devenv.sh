@@ -24,7 +24,7 @@ if [[ -z ${container_id} ]]; then
   # We don't want to / can't log in to the local registry. This step is only useful for remote registries.
   if [ "$OBLIVIUM_CONTAINER_REGISTRY_URL" != "localhost:5000" ] && [ "$docker_image_pull" == "1" ]; then
     docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
-    docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-build
+    docker pull $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sdk-build
   else
     DOCKER_IMAGE_AESMD_BUILD="${DOCKER_IMAGE_AESMD_BUILD:-0}" DOCKER_IMAGE_SAVE="${DOCKER_IMAGE_SAVE:-0}" ${script_dir}/ci_build_docker_images.sh
   fi
@@ -90,7 +90,7 @@ fi
        ${env_display} \
        -d \
        -it \
-       $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sgxjvm-build \
+       $OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.sgx/sdk-build \
        bash)
 
   # Set access to docker daemon socket

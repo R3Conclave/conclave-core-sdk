@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20200219 AS graal
+FROM ubuntu:18.04 AS graal
 # Copy R3 version of Graal into the docker image
 ARG docker_graal_tar_file=/opt/graal.tar.gz
 ENV GRAAL_HOME /opt/graal
@@ -71,7 +71,6 @@ RUN apt-get update -y && apt-get install -y \
     nano \
     ocaml \
     ocamlbuild \
-    openjdk-8-jdk \
     openjdk-11-jdk \
     openjdk-17-jdk \
     openssl \

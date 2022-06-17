@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20200219
+FROM ubuntu:18.04
 
 # A build container for Graal project.
 

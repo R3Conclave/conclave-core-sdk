@@ -12,6 +12,7 @@ object TestKds {
 
     // Use JDK 17 inside the build container to start the KDS. The SDK build in this release does not use Java
     // 17 so we cannot use the java.home system property.
+    // KDS requires Java 17 to run.
     private const val javaPath = "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"
 
     private fun startKds(): Int {

@@ -17,7 +17,7 @@ pushd build/distributions/conclave-sdk-*/hello-world
 # start the web server
 $JAVA_HOME/bin/java -jar $(ls host/build/libs/host-*.jar) & _PID=$!
 # wait for the web server to be ready
-sleep 5
+sleep 20
 # client sends two requests, using the same state file
 for ((i=0;i<2;i++));
 do
@@ -97,15 +97,4 @@ popd
 # clean up
 rm -r mega-project
 rm -r mega-kotlin-project
-popd
-
-
-# Java 8 is required to run Corda
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-echo
-echo Testing the CorDapp sample
-echo
-export PATH=$JAVA_HOME/bin:$PATH
-pushd build/distributions/conclave-sdk-*/cordapp
-./gradlew $gradle_args workflows:test
 popd

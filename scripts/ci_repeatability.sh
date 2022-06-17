@@ -8,12 +8,12 @@ source ${script_dir}/ci_build_common.sh
 # Kill any lingering Gradle workers
 ps auxwww | grep Gradle | grep -v grep | awk '{ print $2; }' | xargs -r kill || true
 
-docker_image=com.r3.sgx/sgxjvm-build
+docker_image=com.r3.sgx/sdk-build
 
-loadBuildImage
+loadSdkBuildImage
 
 # Build the build-image and the enclave Release artifacts.
-runDocker $docker_image "./gradlew containers:sgxjvm-build:buildImagePublish"
+runDocker $docker_image "./gradlew containers:sdk-build:buildImagePublish"
 runDocker $docker_image "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
 mkdir FIRST && for so in samples/*/build/conclave/release/*.so; do
@@ -31,7 +31,7 @@ runDocker $docker_image "cd samples && ./gradlew clean && ./gradlew --stop"
 code_docker_dir="/code"
 
 # Rebuild the build-image and enclave Release artifacts.
-runDocker $docker_image "./gradlew containers:sgxjvm-build:buildImagePublish"
+runDocker $docker_image "./gradlew containers:sdk-build:buildImagePublish"
 runDocker $docker_image "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
 mkdir SECOND && for so in samples/*/build/conclave/release/*.so; do
