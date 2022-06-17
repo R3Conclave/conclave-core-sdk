@@ -67,15 +67,15 @@ The web server loads the enclave and waits for requests from the client. Amongst
 ```bash
 [main] INFO com.r3.conclave.host.web.EnclaveWebController - Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
   - Mode: MOCK
-  - Code signing key hash: 0000000000000000000000000000000000000000000000000000000000000000
-  - Public signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
-  - Public encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
+  - Code signers: 0000000000000000000000000000000000000000000000000000000000000000
+  - Session signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
+  - Session encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
   - Product ID: 1
   - Revocation level: 0
 ```
 This is the [remote attestation](enclaves.md#remote-attestation), an object which proves certain information about the
-enclave that has been loaded. The private key that corresponds to the "Public encryption key" (printed above) is only
-available inside the enclave. Our client will use the "Public encryption key" to encrypt data to send into the enclave.
+enclave that has been loaded. The private key that corresponds to the "Session encryption key" (printed above) is only
+available inside the enclave. Our client will use the "Session encryption key" to encrypt data to send into the enclave.
 
 Once the server is done starting up it will be ready to communicate with the client on http://localhost:8080.
 You can proceed to [Run the client](#run-the-client) when you see the following output:
@@ -284,9 +284,9 @@ When you run the host, you should see the new signing key in the output:
 ```bash hl_lines="3"
 [main] INFO com.r3.conclave.host.web.EnclaveWebController - Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
   - Mode: MOCK
-  - Code signing key hash: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
-  - Public signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
-  - Public encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
+  - Code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+  - Session signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
+  - Session encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
   - Product ID: 1
   - Revocation level: 0
 ```

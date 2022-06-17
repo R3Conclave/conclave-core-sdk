@@ -43,7 +43,7 @@ build process as shown above. This is useful when you neither trust the author n
 audit the source code and then reproduce the build.
 
 Often that's too rigid. We trust the *developer* of the enclave, just not the host. In that case we'll accept any enclave
-signed by the developer's public key. We can express that by listing code signing key hashes, like this:
+signed by the developer's public key. We can express that by listing code signers, like this:
 
 `S:5124CA3A9C8241A3C0A51A1909197786401D2B79FA9FF849F2AA798A942165D3 PROD:1`
 
