@@ -85,7 +85,7 @@ where `MODE` is the [enclave mode](enclave-modes.md).
    ```
    If you are using mock mode (the default), the `SIGNING_KEY_HASH` will be
    `0000000000000000000000000000000000000000000000000000000000000000`. For any mode, you can grab it from the line in
-   the host output which starts with "Code signing key hash". You should see the output
+   the host output which starts with "Code signer". You should see the output
    ```bash
    Enclave returned 321
    ```

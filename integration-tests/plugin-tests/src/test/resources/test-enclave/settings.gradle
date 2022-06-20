@@ -5,7 +5,7 @@ pluginManagement {
 
     repositories {
         maven {
-            url = "../../../../build/distributions/conclave-sdk-$conclave_version/repo"
+            url = " ${rootProject.projectDir}/../../../../build/distributions/conclave-sdk-$conclave_version/repo"
         }
         maven {
             url = "https://software.r3.com/artifactory/sgxjvm"
