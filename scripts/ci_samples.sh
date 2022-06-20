@@ -5,8 +5,6 @@ script_dir=$(dirname ${BASH_SOURCE[0]})
 source ${script_dir}/ci_build_common.sh
 source ${script_dir}/ci_hardware_common.sh
 
-loadConclaveBuildImage
-
 sgx_mode=$1
 
 if [ $sgx_mode != "Simulation" ]; then
@@ -14,15 +12,14 @@ if [ $sgx_mode != "Simulation" ]; then
     # Teardown any aesmd container that might be left running, build and start the aesmd container.
     # The driver is expected to already be installed and loaded on the CI agent.
     teardownAESM
-    loadAESMImage
     startAESMContainer
 fi
 
-runDocker com.r3.sgx/conclave-build "cd samples \
+runDocker $container_image_conclave_build "cd samples \
     && ./gradlew -PenclaveMode=$sgx_mode test -i ${TEST_OPTS:-}"
 
 # Now ensure that we build the Release enclave artifacts.
-runDocker com.r3.sgx/conclave-build "cd samples && ./gradlew buildSignedEnclaveRelease -i"
+runDocker $container_image_conclave_build "cd samples && ./gradlew buildSignedEnclaveRelease -i"
 
 if [ $sgx_mode != "Simulation" ]; then
     # Teardown AESM container

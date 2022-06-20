@@ -12,6 +12,8 @@ FROM graal
 
 LABEL description="SGXJVM build container"
 LABEL maintainer="conclave@r3.com"
+ARG commit_id
+LABEL commit_id=${commit_id}
 
 RUN apt-get update -y && apt-get install -y \
     curl \
