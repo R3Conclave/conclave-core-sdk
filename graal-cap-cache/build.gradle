@@ -25,6 +25,7 @@ ext {
 
     // Directories and files paths
     graalDir = "$buildDir/graal"
+    inputGraalDir = "${environment.GRAAL_HOME}"
     capCacheDir = "${project.buildDir}/cap-cache"
     outputDir = "$buildDir/distributions"
     outputFile = "graalvm.tar"
@@ -33,14 +34,18 @@ ext {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tasks
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-task copyGraal(type: Copy) {
+task copyGraal(type: Exec) {
 
     // Task details
     group = 'other'
     description = 'Copies the Graal folder into the build directory.'
+    inputs.dir(inputGraalDir)
+    outputs.dir(graalDir)
 
-    from environment.GRAAL_HOME
-    into graalDir
+    //  Here we use cp as Gradle way of copying dir does not keep symbolic links
+    doFirst {
+        commandLine 'cp', '-a', '--remove-destination', "${inputGraalDir}/.", graalDir
+    }
 }
 
 /**
@@ -93,7 +98,7 @@ task tarGraal(type: Exec) {
     outputs.file("$outputDir/$outputFile")
 
     doFirst {
-        commandLine 'tar', 'chf', "$outputDir/$outputFile", '-C', graalDir,
+        commandLine 'tar', 'cf', "$outputDir/$outputFile", '-C', graalDir,
                 "--exclude=./lib/tools.jar",
                 "--exclude=./lib/ct.sym",
                 "--exclude=./lib/graalvm",

@@ -174,7 +174,7 @@ task tarGraal(type: Exec) {
 
     doFirst {
         if (environment.JVMCI_HOME.contains('openjdk1.8')) {
-            commandLine 'tar', 'czhf', "$graalVMTar", '-C', getGraalBuildFolder.graalVMDir,
+            commandLine 'tar', 'czf', "$graalVMTar", '-C', getGraalBuildFolder.graalVMDir,
                     "--exclude=./bin",
                     "--exclude=./lib",
                     "--exclude=./man",
@@ -183,7 +183,7 @@ task tarGraal(type: Exec) {
                     '.'
         }
         else {
-            commandLine 'tar', 'czhf', "$graalVMTar", '-C', getGraalBuildFolder.graalVMDir,
+            commandLine 'tar', 'czf', "$graalVMTar", '-C', getGraalBuildFolder.graalVMDir,
                     "--exclude=./lib/tools.jar",
                     "--exclude=./lib/ct.sym",
                     "--exclude=./lib/graalvm",
