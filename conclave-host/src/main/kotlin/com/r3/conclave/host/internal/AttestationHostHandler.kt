@@ -75,7 +75,5 @@ class AttestationHostHandler(
             stateManager.transitionStateFrom<ReportRetrieved>(to = Ready)
             return signedQuote
         }
-
-
     }
 }

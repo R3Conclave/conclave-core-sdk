@@ -1,29 +1,33 @@
 Release notes
 =============
 
-### 1.4
-
-1. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using
-   JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave
-   libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
-2. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
-3. Exceptions thrown during enclave startup in release mode now propagate to the host. This is to provide better 
-   feedback if the enclave is unable to start.
-4. GraalVM has been updated to version 22.0.
-5. Gradle 7 is now supported.
-6. Ubuntu 20.04 LTS is now the default version whilst 18.04 LTS is still supported and 16.04 LTS is no longer supported.
 ### 1.3
 
-1. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports
-   production workloads! Use the `CLUSTER` master key type instead of `DEBUG`. The REST API docs can be found
+1. Support for [Conclave Cloud](https://conclave.cloud/)!
+2. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports production 
+   workloads! Use the `CLUSTER` master key type instead of `DEBUG`. The REST API docs can be found
    [here](kds-rest-api.md).
-2. :jigsaw: **New feature!** Suppport for stable enclave encryption keys with Mail by using the KDS. This allows
+3. :jigsaw: **New feature!** Suppport for stable enclave encryption keys with Mail by using the KDS. This allows
    usages where the enclave can restart, or even move to a different physical machine and the client is unaffected.
-   It also allows communication with an enclave before it has even started. See the API docs for the new
-   [KDS post office](api/-conclave/com.r3.conclave.client/-k-d-s-post-office-builder/index.html) for more details.
-3. Support for [Conclave Cloud](https://conclave.cloud/)!
-4. Some small bug fixes.
-5. The method `createAttestationQuote`, which allows developers to generate SGX signed quoted with a costume data inside the report data field, has been added to the API. Please be aware that this method is still in beta and might change without notice.
+   It enables horizontally-scaled enclave solutions. See the API docs for the new
+   [KDS post office](api/-conclave/com.r3.conclave.client/-post-office-builder/using-k-d-s.html) for more details.
+4. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using
+   JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave
+   libraries are still compiled using Java 8 so you can continue to use Java 8 (or above) if you wish.
+5. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
+6. Gradle 7 is now supported.
+7. Exceptions thrown during enclave startup in release mode now propagate to the host. This provides better feedback if 
+   the enclave is unable to start.
+8. GraalVM has been updated to version 22.0.
+9. 20.04 LTS is now the default version of Ubuntu, whilst 18.04 LTS is still supported. 16.04 LTS is no longer
+   supported.
+10. We've introduced the concept of beta APIs to allow quick iterative feedback on APIs that need more time before 
+    they're finalised. Anything annotated with [`@Beta`](api/-conclave/com.r3.conclave.common/-beta/index.html) is 
+    subject to change and may even be removed in a later release.
+11. :jigsaw: **Beta feature** New method which creates a custom attestation quote for use with services that require a 
+    signed quote object from the enclave. See the API docs for
+    [`EnclaveHost.createAttestationQuote`](api/-conclave/com.r3.conclave.host/-enclave-host/create-attestation-quote.html)
+    for more information.
 
 ### 1.2.1
 

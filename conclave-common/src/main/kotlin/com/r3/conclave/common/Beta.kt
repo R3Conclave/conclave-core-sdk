@@ -12,4 +12,4 @@ import kotlin.annotation.AnnotationTarget.*
 @Target(ANNOTATION_CLASS, CONSTRUCTOR, FIELD, FUNCTION, TYPE, CLASS)
 @Retention(BINARY)
 @MustBeDocumented
-annotation class Beta()
+annotation class Beta
