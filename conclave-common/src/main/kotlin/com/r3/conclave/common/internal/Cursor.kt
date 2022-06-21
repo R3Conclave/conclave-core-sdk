@@ -1,5 +1,6 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.utilities.internal.getBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.getSlice
 import java.nio.Buffer
@@ -27,6 +28,17 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
         fun <T : FixedEncoder<R>, R> allocate(type: T): Cursor<T, R> = Cursor(type, ByteBuffer.allocate(type.size))
 
         /**
+         * Wraps a byte array into a cursor for [T]. The entire byte array must be exactly the size of [type].
+         *
+         * The new [Cursor] will be backed by the given byte array; that is, modifications made via the cursor will cause
+         * the array to be modified and vice versa. Access to the array is possible by calling `buffer.array()`.
+         *
+         * @throws IllegalArgumentException If size of the byte array is not the size of [type].
+         */
+        @JvmStatic
+        fun <T : Encoder<R>, R> wrap(type: T, bytes: ByteArray): Cursor<T, R> = wrap(type, bytes, 0, bytes.size)
+
+        /**
          * Wraps a byte array into a cursor for [T]. [length] must be exactly the size of [type] as encoded by the bytes.
          *
          * The new [Cursor] will be backed by the given byte array; that is, modifications made via the cursor will cause
@@ -35,42 +47,43 @@ class Cursor<out T : Encoder<R>, R> private constructor(val encoder: T, private 
          * @throws IllegalArgumentException If [length] is not the size of [type].
          */
         @JvmStatic
-        fun <T : Encoder<R>, R> wrap(
-            type: T,
-            bytes: ByteArray,
-            offset: Int = 0,
-            length: Int = bytes.size
-        ): Cursor<T, R> {
-            val buffer = ByteBuffer.wrap(bytes, offset, length).order(ByteOrder.LITTLE_ENDIAN)
+        fun <T : Encoder<R>, R> wrap(type: T, bytes: ByteArray, offset: Int, length: Int): Cursor<T, R> {
+            val buffer = ByteBuffer.wrap(bytes, offset, length)
             val size = type.size(buffer)
-            require(length == size) { "Size of ${type.javaClass.simpleName} is $size whereas the length provided is $length." }
+            require(length == size) {
+                "Size of ${type.javaClass.simpleName} is $size whereas the length provided is $length."
+            }
             return Cursor(type, buffer)
         }
 
         /**
-         * Returns a cursor over the remaining bytes of [buffer] to capture [type]. The position of the buffer is
-         * advanced by the size of [type].
+         * Returns a cursor which is a slice over the remaining bytes of [buffer] to capture [type]. The position of
+         * the buffer is advanced by the size of [type].
          *
          * @throws IllegalArgumentException If the remaining bytes of [buffer] is less than the size of [type].
          */
-        fun <T : Encoder<R>, R> read(type: T, buffer: ByteBuffer): Cursor<T, R> {
-            val size = if (type is FixedEncoder<*>) {
-                type.size
-            } else {
-                // We need read the buffer to determine the size of the variable encoder. This needs to be done in little-endian
-                // mode (as Cursor assumes only that). Once we've determined the size we revert the mode back since this
-                // method is only meant to advance the position of the buffer, not change its endianness.
-                val bo = buffer.order()
-                try {
-                    type.size(buffer.order(ByteOrder.LITTLE_ENDIAN))
-                } finally {
-                    buffer.order(bo)
-                }
-            }
+        fun <T : Encoder<R>, R> slice(type: T, buffer: ByteBuffer): Cursor<T, R> {
+            val size = type.size(buffer)
             require(buffer.remaining() >= size) {
-                "Size of ${type.javaClass.simpleName} is $size whereas there are only ${buffer.remaining()} bytes remaining in the buffer."
+                "Size of ${type.javaClass.simpleName} is $size whereas there are only ${buffer.remaining()} bytes " +
+                        "remaining in the buffer."
             }
             return Cursor(type, buffer.getSlice(size))
+        }
+
+        /**
+         * Returns a cursor over the remaining bytes of [buffer] to capture [type]. The cursor uses a copy of the
+         * bytes from the buffer. The position of the buffer is advanced by the size of [type].
+         *
+         * @throws IllegalArgumentException If the remaining bytes of [buffer] is less than the size of [type].
+         */
+        fun <T : Encoder<R>, R> copy(type: T, buffer: ByteBuffer): Cursor<T, R> {
+            val size = type.size(buffer)
+            require(buffer.remaining() >= size) {
+                "Size of ${type.javaClass.simpleName} is $size whereas there are only ${buffer.remaining()} bytes " +
+                        "remaining in the buffer."
+            }
+            return Cursor(type, ByteBuffer.wrap(buffer.getBytes(size)))
         }
     }
 

@@ -265,16 +265,18 @@ void jvm_ocall(void* bufferIn, int bufferInLen) {
     }
 
     try {
-        // Copy to a JVM buffer
-        JniScopedRef<jbyteArray> javaBufferIn {jniEnv->NewByteArray(bufferInLen), jniEnv};
-        checkJniException(jniEnv);
-        jniEnv->SetByteArrayRegion(javaBufferIn.value(), 0, bufferInLen, static_cast<const jbyte *>(bufferIn));
+        // Wrap the native bytes in a Java direct byte buffer to avoid unnecessary copying. This is safe to do since the
+        // memory is not de-allocated until after this function returns in
+        // Java_com_r3_conclave_enclave_internal_Native_jvmOcall.
+        auto javaBuffer = jniEnv->NewDirectByteBuffer(bufferIn, bufferInLen);
         checkJniException(jniEnv);
         auto hostEnclaveApiClass = jniEnv->FindClass("com/r3/conclave/host/internal/NativeApi");
         checkJniException(jniEnv);
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(J[B)V");
+        // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
+        // copied from it. This means it's safe to de-allocate the pointer after this function returns.
+        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(JLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
-        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), javaBufferIn.value());
+        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), javaBuffer);
         checkJniException(jniEnv);
     } catch (JNIException&) {
         // No-op: delegate handling to the host JVM
@@ -319,12 +321,9 @@ void host_encrypted_read_ocall(int* res,
 void host_encrypted_write_ocall(int* res,
                                 const unsigned char drive,
                                 const unsigned char* buf,
-                                const unsigned int buf_size,
-                                const unsigned int num_writes,
                                 const unsigned int sector_size,
-                                const unsigned long* indices,
-                                const unsigned int indices_buf_size) {
-    const int res_f = host_disk_write(drive, buf, num_writes, sector_size, indices);
+                                const unsigned long sector) {
+    const int res_f = host_disk_write(drive, buf, sector_size, sector);
     *res = res_f;
 }
 
@@ -352,17 +351,23 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
         std::string path(std::string(jpath.c_str));
 
         quoting_lib = new r3::conclave::dcap::QuotingAPI();
-        if ( !quoting_lib->init(path, errors) ){
+
+        if (!quoting_lib->init(path, errors)) {
             std::string message("failed to initialize DCAP: ");
             for(auto &err : errors)
                 message += err + ";";
 
+            delete quoting_lib;
+            quoting_lib = nullptr;
             raiseException(jniEnv, message.c_str());
             return -1;
         }
     }
     catch(...){
-        quoting_lib = nullptr;
+        if (quoting_lib != nullptr) {
+            delete quoting_lib;
+            quoting_lib = nullptr;
+        }
 
         raiseException(jniEnv, "failed to initialize DCAP: unknown error");
         return -1;
@@ -438,14 +443,14 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
-    quote3_error_t eval_result;
-    auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result);
+    quote3_error_t eval_result_get;
+    auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result_get);
+
     if (collateral == nullptr){
-        raiseException(jniEnv, getQuotingErrorMessage(eval_result));
+        raiseException(jniEnv, getQuotingErrorMessage(eval_result_get));
         return nullptr;
-    }
-    else {
-        jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/String"),nullptr);
+    } else {
+        jobjectArray arr= (jobjectArray)jniEnv->NewObjectArray(8,jniEnv->FindClass("java/lang/Object"),nullptr);
 
         /**
            enum class PckCaType {
@@ -463,10 +468,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
            QeIdentity
            }
         */
-        char version[2] = { '0', 0};
-        version[0] += collateral->version;
+        jclass integerClass = jniEnv->FindClass("java/lang/Integer");
+        jmethodID integerConstructor = jniEnv->GetMethodID(integerClass, "<init>", "(I)V");
+        jobject wrappedVersion = jniEnv->NewObject(integerClass, integerConstructor, static_cast<jint>(collateral->version));
 
-        jniEnv->SetObjectArrayElement(arr,0,jniEnv->NewStringUTF(version));
+        jniEnv->SetObjectArrayElement(arr,0,wrappedVersion);
+        // TODO Convert the collateral fields to byte arrays, rather than Strings (which are converted back to bytes
+        //      anyway in the Kotlin code)
         jniEnv->SetObjectArrayElement(arr,1,jniEnv->NewStringUTF(collateral->pck_crl_issuer_chain));
         jniEnv->SetObjectArrayElement(arr,2,jniEnv->NewStringUTF(collateral->root_ca_crl));
         jniEnv->SetObjectArrayElement(arr,3,jniEnv->NewStringUTF(collateral->pck_crl));
@@ -474,7 +482,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         jniEnv->SetObjectArrayElement(arr,5,jniEnv->NewStringUTF(collateral->tcb_info));
         jniEnv->SetObjectArrayElement(arr,6,jniEnv->NewStringUTF(collateral->qe_identity_issuer_chain));
         jniEnv->SetObjectArrayElement(arr,7,jniEnv->NewStringUTF(collateral->qe_identity));
-
+        
+        quote3_error_t eval_result_free;
+        
+        if (!quoting_lib->free_quote_verification_collateral(eval_result_free)) {
+            raiseException(jniEnv, getQuotingErrorMessage(eval_result_free));
+            return nullptr;
+        }           
         return arr;
     }
 }

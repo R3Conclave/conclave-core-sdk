@@ -7,9 +7,9 @@ import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 
 open class GenerateEnclaveMetadata @Inject constructor(
-        objects: ObjectFactory,
-        private val buildType: BuildType,
-        private val linuxExec: LinuxExec
+    objects: ObjectFactory,
+    private val buildType: BuildType,
+    private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
@@ -20,23 +20,23 @@ open class GenerateEnclaveMetadata @Inject constructor(
     override fun action() {
         val metadataFile = temporaryDir.toPath().resolve("enclave_metadata.txt")
 
-        if (OperatingSystem.current().isWindows) {
+        if (!OperatingSystem.current().isLinux) {
             try {
                 linuxExec.exec(
-                        listOf<String>(
-                                inputSignTool.asFile.get().absolutePath, "dump",
-                                "-enclave", inputSignedEnclave.asFile.get().absolutePath,
-                                "-dumpfile", metadataFile.toAbsolutePath().toString()
-                        )
+                    listOf<String>(
+                        inputSignTool.asFile.get().absolutePath, "dump",
+                        "-enclave", inputSignedEnclave.asFile.get().absolutePath,
+                        "-dumpfile", metadataFile.toAbsolutePath().toString()
+                    )
                 )
             } finally {
                 linuxExec.cleanPreparedFiles()
             }
         } else {
             commandLine(
-                    inputSignTool.asFile.get(), "dump",
-                    "-enclave", inputSignedEnclave.asFile.get(),
-                    "-dumpfile", metadataFile
+                inputSignTool.asFile.get(), "dump",
+                "-enclave", inputSignedEnclave.asFile.get(),
+                "-dumpfile", metadataFile
             )
         }
 
@@ -44,7 +44,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
         logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
 
-        val buildTypeString = buildType.toString().toUpperCase()
+        val buildTypeString = buildType.toString().uppercase()
         val buildSecurityString = when(buildType) {
             BuildType.Release -> "SECURE"
             else -> "INSECURE"

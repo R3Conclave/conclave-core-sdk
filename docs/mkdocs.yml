@@ -45,7 +45,6 @@ nav:
   - Release notes: release-notes.md      
   - Operations:
     - Server deployment:
-      - System requirements: system-requirements.md
       - Machine setup:
          - Overview: machine-setup.md
          - Cloud Deployment: azure.md

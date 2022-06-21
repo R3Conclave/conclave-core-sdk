@@ -15,7 +15,7 @@ namespace conclave {
     }
 
 
-    DRESULT InMemoryDisk::diskRead(BYTE* output_buf, DWORD start, BYTE num_reads) {
+    DRESULT InMemoryDisk::diskRead(BYTE* output_buf, LBA_t start, BYTE num_reads) {
         FATFS_DEBUG_PRINT("Read - Start %d num_reads %hhu \n", start, num_reads);               
         const unsigned char* ram_first_ptr = ram_buffer_;
         const unsigned char* read_from_ptr = ram_first_ptr + start * SECTOR_SIZE;
@@ -31,11 +31,11 @@ namespace conclave {
     }
 
 
-    DRESULT InMemoryDisk::diskWrite(const BYTE* input_buf, DWORD start, BYTE num) {
+    DRESULT InMemoryDisk::diskWrite(const BYTE* input_buf, LBA_t start, BYTE num) {
         FATFS_DEBUG_PRINT("Write - Start %d num writes %hhu \n", start, num);               
         unsigned char* ram_first_ptr = ram_buffer_;
-        unsigned char* write_to_ptr = ram_first_ptr + start * SECTOR_SIZE;
-        const unsigned long write_size = num * SECTOR_SIZE;    
+        unsigned char* write_to_ptr = ram_first_ptr + (uintptr_t)start * (uintptr_t)SECTOR_SIZE;
+        const unsigned long write_size = num * SECTOR_SIZE;
     
         if ((uintptr_t)write_to_ptr >= (uintptr_t)ram_first_ptr &&
 

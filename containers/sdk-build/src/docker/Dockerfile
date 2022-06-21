@@ -1,4 +1,4 @@
-FROM ubuntu:18.04 AS graal
+FROM ubuntu:20.04 AS graal
 # Copy R3 version of Graal into the docker image
 ARG docker_graal_tar_file=/opt/graal.tar.gz
 ENV GRAAL_HOME /opt/graal
@@ -25,7 +25,7 @@ RUN apt-get update -y && apt-get install -y \
 
 # CMake - instructions from https://apt.kitware.com/.
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
-  && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' \
+  && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
   && apt-get install kitware-archive-keyring -y \
   && rm /etc/apt/trusted.gpg.d/kitware.gpg
 
@@ -40,9 +40,9 @@ RUN add-apt-repository \
 # Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
 # last 5 packages installed below)
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main"
+RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
 RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/18.04/prod bionic main"
+RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main"
 
 RUN apt-get update -y && apt-get install -y \
     autoconf \
@@ -73,7 +73,6 @@ RUN apt-get update -y && apt-get install -y \
     nano \
     ocaml \
     ocamlbuild \
-    openjdk-11-jdk \
     openjdk-17-jdk \
     openssl \
     patch \
@@ -95,13 +94,13 @@ RUN apt-get update -y && apt-get install -y \
 ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
-ENV JAVA_HOME           /usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME           /usr/lib/jvm/java-17-openjdk-amd64
 ENV SGX_SDK_VERSION     2.14
 
 # Linux SGX mitigation binaries
 RUN curl -sSL -o /opt/as.ld.objdump.gold.r3.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.gold.r3.tar.gz
 RUN echo "794963ca90fb0561caf3ed2bee1d9ba394226f355689cdda28161e6e0620a713  /opt/as.ld.objdump.gold.r3.tar.gz" | sha256sum -c -
-RUN tar -zxf /opt/as.ld.objdump.gold.r3.tar.gz -C /usr/local/bin external/toolset/ubuntu18.04 --strip=3
+RUN tar -zxf /opt/as.ld.objdump.gold.r3.tar.gz -C /usr/local/bin external/toolset/ubuntu20.04 --strip=3
 
 # Our custom version of dokka
 RUN curl -sSL -o /opt/dokka.zip https://github.com/R3Conclave/dokka/releases/download/r3-1.5.0-4/dokka.zip \

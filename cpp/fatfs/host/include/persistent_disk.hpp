@@ -26,8 +26,7 @@ int host_disk_read(const unsigned char drive,
 
 int host_disk_write(const unsigned char drive,
                     const unsigned char* buf,
-                    const unsigned int num_writes,
                     const unsigned int sector_size,
-                    const unsigned long* indices);
+                    const unsigned long sector);
 
 #endif

@@ -3,17 +3,12 @@ package com.r3.conclave.integrationtests.general.commontest
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
 object TestKds {
-
     val testKdsPort = startKds()
-
-    // Use JDK 17 inside the build container to start the KDS. The SDK build in this release does not use Java
-    // 17 so we cannot use the java.home system property.
-    // KDS requires Java 17 to run.
-    private const val javaPath = "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"
 
     private fun startKds(): Int {
         val randomPort = ServerSocket(0).use { it.localPort }
@@ -68,10 +63,10 @@ object TestKds {
     }
 
     private fun getCommonCommand(fileSystemTempFile: Path): List<String> {
+        val java = Paths.get(System.getProperty("java.home"), "bin", "java").toString()
         val kdsJar = checkNotNull(System.getProperty("kdsJar"))
-
         return listOf(
-            javaPath,
+            java,
             "-jar",
             kdsJar,
             "--filesystem-file=$fileSystemTempFile"

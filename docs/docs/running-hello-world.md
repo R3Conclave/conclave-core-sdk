@@ -14,7 +14,7 @@ If you get stuck, join our [discord server](https://discord.com/invite/dDaBGqGPr
 
 ## Prerequisites
 
-* You need JDK 11 installed in order to build and run the app.
+* You need JDK 17 installed in order to build and run the app.
 * You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
 * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md)
   and [architecture overview](architecture.md).
@@ -232,8 +232,8 @@ You can generate `host-release.jar` like this:
      inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
     * Press `CTRL+D` to exit the container when finished.
 
-    On Windows systems, it is also possible to install the Windows subsystem for linux (2) and download ubuntu 18.04
-    from the Windows store. From there, it should be possible to launch an Ubuntu 18.04 shell from the start menu or
+    On Windows systems, it is also possible to install the Windows subsystem for linux (2) and download ubuntu 20.04
+    from the Windows store. From there, it should be possible to launch an Ubuntu 20.04 shell from the start menu or
     desktop and proceed to build or run Conclave applications as you would in a native Linux environment.
     Instructions for installing wsl-2 can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
     Please note that this method hasn't been extensively tested.

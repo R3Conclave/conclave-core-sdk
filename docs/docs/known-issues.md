@@ -16,4 +16,3 @@ This release ships with the following known issues that we plan to address in fu
 1. On Windows and macOS, serialization and reflection configuration files configured as described on
    [enclave configuration](enclave-configuration.md) must use non-relative paths. Additionally, on Windows, the paths
    must use forwardslashes rather than Windows standard backslashes.
-1. The enclave filesystem does not currently support renaming of files and directories. This includes the `java.io.File.renameTo` call, which will trigger an enclave crash.

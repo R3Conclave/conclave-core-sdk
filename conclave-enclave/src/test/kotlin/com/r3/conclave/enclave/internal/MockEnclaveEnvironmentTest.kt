@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.ByteBuffer
 import java.security.GeneralSecurityException
 import kotlin.random.Random
 
@@ -49,7 +50,7 @@ class MockEnclaveEnvironmentTest {
         val env = createMockEnclaveEnvironment<EnclaveA>()
         val input = PlaintextAndEnvelope(plaintext, authenticatedData.takeIf { useAuthenticatedData })
         val sealedBlob = env.sealData(input)
-        assertThat(env.unsealData(sealedBlob)).isEqualTo(input)
+        assertThat(env.unsealData(ByteBuffer.wrap(sealedBlob))).isEqualTo(input)
     }
 
     @ParameterizedTest(name = "{displayName} {argumentsWithNames}")
@@ -59,7 +60,7 @@ class MockEnclaveEnvironmentTest {
         val env2 = createMockEnclaveEnvironment<EnclaveA>()
         val input = PlaintextAndEnvelope(plaintext, authenticatedData.takeIf { useAuthenticatedData })
         val sealedBlob = env1.sealData(input)
-        assertThat(env2.unsealData(sealedBlob)).isEqualTo(input)
+        assertThat(env2.unsealData(ByteBuffer.wrap(sealedBlob))).isEqualTo(input)
     }
 
     @ParameterizedTest(name = "{displayName} {argumentsWithNames}")
@@ -70,7 +71,7 @@ class MockEnclaveEnvironmentTest {
         val input = PlaintextAndEnvelope(plaintext, authenticatedData.takeIf { useAuthenticatedData })
         val sealedBlob = envA.sealData(input)
         assertThatExceptionOfType(GeneralSecurityException::class.java).isThrownBy {
-            envB.unsealData(sealedBlob)
+            envB.unsealData(ByteBuffer.wrap(sealedBlob))
         }
     }
 

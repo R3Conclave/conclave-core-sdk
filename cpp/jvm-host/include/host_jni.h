@@ -82,7 +82,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP
 /*
  * Class:     com_r3_conclave_host_internal_Native
  * Method:    getQuoteCollateral
- * Signature: ([BI)[Ljava/lang/String;
+ * Signature: ([BI)[Ljava/lang/Object;
  */
 JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral
   (JNIEnv *, jclass, jbyteArray, jint);

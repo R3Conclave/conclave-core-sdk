@@ -54,7 +54,7 @@ abstract class AbstractTestActionEnclave : Enclave() {
             return env.sealData(PlaintextAndEnvelope(data.plaintext, data.authenticatedData))
         }
         override fun unsealData(sealedBlob: ByteArray): PlaintextAndAD {
-            return env.unsealData(sealedBlob).let { PlaintextAndAD(it.plaintext, it.authenticatedData) }
+            return env.unsealData(ByteBuffer.wrap(sealedBlob)).let { PlaintextAndAD(it.plaintext, it.authenticatedData) }
         }
     }
 

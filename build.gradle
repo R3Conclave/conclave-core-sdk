@@ -1,6 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' apply false
-    id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
+    id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
     id "com.github.ben-manes.versions" version "0.39.0"
     id 'base'
     id 'idea'
@@ -66,9 +66,6 @@ def nativeSubmodulesToSubstitute = [
         ':cpp:native-host:native-host-debug',
         ':cpp:native-host:native-host-release',
         ':cpp:native-host-shared',
-        ':cpp:native-enclave:native-enclave-simulation',
-        ':cpp:native-enclave:native-enclave-debug',
-        ':cpp:native-enclave:native-enclave-release',
         ':cpp:native-sign-tool',
         ':cpp:native-gdb',
         ':cpp:native-binutils'
@@ -101,6 +98,9 @@ allprojects {
 }
 
 subprojects {
+    // All modules pull in the Java plugin
+    apply plugin: 'java'
+
     repositories {
         mavenCentral()
         jcenter()
@@ -113,21 +113,14 @@ subprojects {
         }
     }
 
-    tasks.withType(AbstractCompile) {
-        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
-            kotlinOptions {
-                freeCompilerArgs = ['-Xjvm-default=all', '-java-parameters']
-            }
+    // The default Java version is 8. Specific modules may override this.
+    // This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
         }
     }
 
-    tasks.withType(JavaCompile) {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-        options.encoding = 'UTF-8'
-        options.release = 8
-    }
-    
     // To create deterministic builds we want to ensure all archive tasks
     // use a reproducible file order and use consistent file timestamps
     tasks.withType(AbstractArchiveTask) {
@@ -277,18 +270,6 @@ List<PublishedProject> publishedProjects = [
                 description: 'libc common headers',
         ),
         new PublishedProject(
-                projectPath: ':cpp:native-enclave:native-enclave-simulation',
-                description: 'Partially linked Conclave enclave linked with simulation libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-enclave:native-enclave-debug',
-                description: 'Partially linked Conclave enclave linked with debug libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-enclave:native-enclave-release',
-                description: 'Partially linked Conclave enclave linked with release libraries',
-        ),
-        new PublishedProject(
                 projectPath: ':cpp:native-host:native-host-simulation',
                 description: 'Native Conclave host libraries linked with simulation libraries',
         ),
@@ -327,14 +308,6 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':cpp:linux-sgx:linux-sgx-release',
                 description: 'SGX SDK release libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:macos-binutils',
-                description: 'Binutils for Mac OS',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:macos-sign-tool',
-                description: 'SGX sign tool for Mac OS',
         ),
         new PublishedProject(
                 projectPath: ':cpp:native-substratevm:native-substratevm-simulation',
@@ -409,11 +382,11 @@ if (includeNative) {
             project.shadowJar {
                 if (project.name == "conclave-mail" || project.name == "conclave-common") {
                     // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
-                    // dependencies are in the compileOnly configuration.
-                    configurations = [project.configurations.compileOnly]
+                    // dependencies are compileOnly.
+                    configurations = [project.configurations.compileClasspath]
                     exclude '**/pom.xml'
                     exclude '**/pom.properties'
-                    exclude 'module-info.class'
+                    exclude '**/module-info.class'
                     mergeServiceFiles()
                     if (project.name == "conclave-mail") {
                         exclude 'kotlin/Metadata.class'
@@ -437,7 +410,7 @@ if (includeNative) {
                 exclude '**/*.kotlin_metadata'
                 exclude '**/*.kotlin_builtins'
                 // Everyone needs to have their import lines modified to the new shaded ones.
-                relocate 'com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson'
+                relocate('com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson')
                 // Get rid of the Kotlin related stuff. We don't allow the metadata annotation to leak through because
                 // it causes the IntelliJ plugin to crash, but this does unfortunately mean internal members (which are
                 // public at the bytecode level) will appear. We fix this by making them synthentic which hides them from

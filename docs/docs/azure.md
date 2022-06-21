@@ -39,7 +39,7 @@ comes with the necessary libraries bundled, you don't need to do any further set
 
 ## Machine setup
 
-You need to create an Ubuntu 18.04 LTS Gen2 VM from the [confidential
+You need to create an Ubuntu 20.04 LTS Gen2 VM from the [confidential
 compute](https://azure.microsoft.com/en-gb/solutions/confidential-compute/) line (named like this: DC?s_v2) where the
 question mark is the size. Other distributions should work as long as they are on these VMs, but we haven't tested them.
 
@@ -55,7 +55,7 @@ question mark is the size. Other distributions should work as long as they are o
     ```bash
     az vm create \
     --size Standard_DC4s_v2 \
-    --image Canonical:UbuntuServer:18_04-lts-gen2:latest \
+    --image Canonical:0001-com-ubuntu-server-focal:20_04-lts-gen2:latest \
     --name <VM-NAME> \
     --resource-group <GROUP-NAME>
     ```
@@ -66,7 +66,7 @@ question mark is the size. Other distributions should work as long as they are o
 
     Make sure you do the following when creating your Azure Confidential Computing VM:
 
-    * Use the `Ubuntu Server 18.04 (Gen2)` image
+    * Use the `Ubuntu Server 20.04 (Gen2)` image
     * Pick a size that's got plenty of RAM. For example, you might want to click "Change size" to find `DC4s_v2` type
     * Ensure that the public inbound ports are open for SSH access
 
@@ -79,13 +79,19 @@ Just in case, once you have logged onto the VM:
 * Check that the `enclave` device is present in the `/dev/sgx/` directory
 * Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+
 * If either check fails:
-    * Download the [driver](https://download.01.org/intel-sgx/latest/dcap-latest/linux/distro/ubuntu18.04-server/)
+    * Download the [driver](https://download.01.org/intel-sgx/latest/dcap-latest/linux/distro/ubuntu20.04-server/)
     * Follow the [install instructions](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
 
 You may need to add your user into `sgx_prv` group to give it access to SGX.
 
 ```sh
 sudo usermod -aG sgx_prv $USER
+```
+
+You may need to update the group of `/dev/sgx/provision` to `sgx_prv`.
+
+```sh
+sudo chgrp -h sgx_prv /dev/sgx/provision
 ```
 
 ### DCAP Plugin
@@ -136,9 +142,9 @@ grep AZDCAP /usr/lib/libdcap_quoteprov.so*
 ```
 * If the Azure plugin is not currently installed then:
     * You can build it from [source](github.com/microsoft/Azure-DCAP-Client).
-    * Or extract from a pre-built package provided by Microsoft. E.g. for Ubuntu 18.04 via the command below (only libdcap_quoteprov.so is required).
+    * Or extract from a pre-built package provided by Microsoft. E.g. for Ubuntu 20.04 via the command below (only libdcap_quoteprov.so is required).
 ```sh
-wget https://packages.microsoft.com/ubuntu/18.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.8_amd64.deb && ar x az-dcap-client_1.8_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.8_amd64.deb data.tar.xz
+wget https://packages.microsoft.com/ubuntu/20.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.8_amd64.deb && ar x az-dcap-client_1.8_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.8_amd64.deb data.tar.xz
 ```
 * The preferred name and location of the DCAP client plugin is `/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1`.
 ```sh

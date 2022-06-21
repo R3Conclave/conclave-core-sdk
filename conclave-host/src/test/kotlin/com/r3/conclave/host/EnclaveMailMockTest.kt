@@ -2,6 +2,7 @@ package com.r3.conclave.host
 
 import com.r3.conclave.client.PostOfficeBuilder
 import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
@@ -348,7 +349,7 @@ class EnclaveMailMockTest {
         val e = assertThrows<EnclaveLoadException> {
             host.start(null, null, null) {}
         }
-        assertThat(e.cause!!).isInstanceOf(IllegalStateException::class.java)
+        assertThat(e.cause!!).isInstanceOf(EnclaveStartException::class.java)
         assertThat(e.cause!!).hasMessageStartingWith("The persistent map is not available in multi-threaded enclaves.")
     }
 

@@ -32,8 +32,7 @@ namespace conclave {
     PersistentDisk::PersistentDisk(const BYTE drive,
                                    const unsigned long size,
                                    const unsigned char* encryption_key) :
-        FatFsDisk(drive, size),
-        current_sector_(0) {
+        FatFsDisk(drive, size) {
 
         sgx_sha256_hash_t hash_encryption_key;
         getHashFromKey("R3 persistent filesystem I",
@@ -142,24 +141,13 @@ namespace conclave {
                                
 
     DRESULT PersistentDisk::flush() {
-
-        if (current_sector_ == 0) {
-            return RES_OK;
-        }
         int res = -1;
-        const unsigned int num_writes = current_sector_;
         const unsigned int sector_size = SECTOR_SIZE_AND_MAC;
         host_encrypted_write_ocall(&res,
                                    getDriveId(),
                                    buffer_writes_,
-                                   num_writes * sector_size,
-                                   num_writes,
                                    sector_size,
-                                   buffer_indices_,
-                                   num_writes * sizeof(unsigned long));
-
-        current_sector_ = 0;
-
+                                   buffer_index_);
         if (res < 0) {
             return RES_ERROR;
         }
@@ -168,7 +156,7 @@ namespace conclave {
 
 
     DRESULT PersistentDisk::diskRead(BYTE* output_buf,
-                                     DWORD start,
+                                     LBA_t sector,
                                      BYTE num_reads) {
         DRESULT res_flush = flush();
 
@@ -182,9 +170,9 @@ namespace conclave {
     
         while (i < num_reads) {
 #if SECTOR_SHUFFLING
-            const unsigned long sector_id = mapSectorId(start + i);
+            const unsigned long sector_id = mapSectorId(sector + i);
 #else
-            const unsigned long sector_id = start + i;
+            const unsigned long sector_id = sector + i;
 #endif
 
 #if ENCRYPTION
@@ -228,52 +216,41 @@ namespace conclave {
         }
     }
 
-
 #if _READONLY == 0
     DRESULT PersistentDisk::diskWrite(const BYTE* input_buf,
-                                      DWORD start,
+                                      LBA_t sector,
                                       BYTE num_writes) {
         const BYTE* p_input_buf = input_buf;
         unsigned int i_num = 0;
 
-        unsigned int ceil = ((num_writes - 1) / SIZE_BUFFER_WRITES) + 1;
-        const unsigned int sector_size_to_write = SECTOR_SIZE_AND_MAC;
+        unsigned char* p_output_buf = buffer_writes_;
 
-        for (unsigned int i = 0; i < ceil; ++i) {
-            unsigned char* p_output_buf = buffer_writes_;
-            p_output_buf += (current_sector_ * sector_size_to_write);
-
-            while (current_sector_ < SIZE_BUFFER_WRITES && i_num < num_writes) {
+        while (i_num < num_writes) {
 #if SECTOR_SHUFFLING
-                const unsigned long sector_id = mapSectorId(start + i_num);
+            const unsigned long sector_id = mapSectorId(sector + i_num);
 #else
-                const unsigned long sector_id = start + i_num;
+            const unsigned long sector_id = sector + i_num;
 #endif
-                buffer_indices_[current_sector_] = sector_id;
+            buffer_index_ = sector_id;
             
 #if ENCRYPTION
-                const int res_encrypt = encrypt(sector_id, p_input_buf, p_output_buf);
+            const int res_encrypt = encrypt(sector_id, p_input_buf, p_output_buf);
 
-                if (res_encrypt == -1) {
-                    return RES_ERROR;
-                }
-#else
-                memcpy(p_output_buf, p_input_buf, SECTOR_SIZE);
-#endif
-                current_sector_ ++;
-                i_num ++;
-                p_output_buf += SECTOR_SIZE_AND_MAC;
-                p_input_buf += SECTOR_SIZE;
-            }   
-        
-            if (current_sector_ == SIZE_BUFFER_WRITES) {
-                DRESULT res = flush();
-
-                if (res != RES_OK) {
-                    return RES_ERROR;
-                }
+            if (res_encrypt == -1) {
+                return RES_ERROR;
             }
-        }    
+#else
+            memcpy(p_output_buf, p_input_buf, SECTOR_SIZE);
+#endif
+            p_input_buf += SECTOR_SIZE;
+        
+            DRESULT res = flush();
+    
+            if (res != RES_OK) {
+                return RES_ERROR;
+            }
+            i_num ++;
+        }
         return RES_OK;
     }
 #endif
@@ -315,7 +292,6 @@ namespace conclave {
 
     void PersistentDisk::diskStart() {
         DEBUG_PRINT_FUNCTION;
-        current_sector_ = 0;   
     
 #if SECTOR_SHUFFLING
         prepareSectorTables();

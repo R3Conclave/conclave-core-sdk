@@ -26,8 +26,8 @@ typedef enum {
 
 DSTATUS disk_initialize (BYTE pdrv);
 DSTATUS disk_status (BYTE pdrv);
-DRESULT disk_read(BYTE drive, BYTE * buf, DWORD start, BYTE num);
-DRESULT disk_write(BYTE drive, const BYTE * buf, DWORD start, BYTE num);
+DRESULT disk_read(BYTE drive, BYTE * buf, LBA_t sector, BYTE num);
+DRESULT disk_write(BYTE drive, const BYTE * buf, LBA_t sector, BYTE num);
 DRESULT disk_ioctl(BYTE drive, BYTE cmd, void * buf);
 
 

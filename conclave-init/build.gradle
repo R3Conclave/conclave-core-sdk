@@ -6,6 +6,13 @@ plugins {
 
 apply from: "../versions.gradle"
 
+// This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "info.picocli:picocli:$picocli_version"
@@ -20,6 +27,7 @@ task packageTemplate(type: Zip) {
 
     from "$projectDir/template"
 }
+
 task packageGradleWrapper(type: Zip) {
     archiveFileName = "gradle-wrapper.zip"
     destinationDirectory = file("$buildDir/resources/main")
@@ -32,15 +40,15 @@ task packageGradleWrapper(type: Zip) {
             "gradlew.bat"
     )
 }
-// If packaging more things, make sure to update the test depenency below
+
+// If packaging more things, make sure to update the test dependency below
 tasks.shadowJar.dependsOn(packageTemplate, packageGradleWrapper)
 
 application {
-    mainClass = 'com.r3.conclave.init.cli.MainKt'
+    mainClass.set("com.r3.conclave.init.cli.MainKt")
 }
 
 shadowJar {
-    mainClassName = application.mainClassName
     // Note: The task `sdkCopyConclaveInit` in the root project depends on this archiveFileName
     archiveFileName = "conclave-init-shadow.jar"
     // Workaround to prevent conclave-init looking like another tool which Nexus IQ doesn't like.

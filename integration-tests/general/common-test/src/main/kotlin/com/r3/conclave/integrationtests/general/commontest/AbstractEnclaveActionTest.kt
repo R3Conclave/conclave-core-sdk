@@ -100,11 +100,14 @@ abstract class AbstractEnclaveActionTest(
         fun <R> deliverMail(action: EnclaveTestAction<R>, callback: ((ByteArray) -> ByteArray?)? = null): R
     }
 
+    fun getFileSystemFilePath(enclaveClassName: String): Path? {
+        return fileSystemFileTempDir?.resolve("$enclaveClassName.disk")
+    }
 
     private fun getEnclaveTransport(enclaveClassName: String): TestEnclaveTransport {
         return synchronized(enclaveTransports) {
             enclaveTransports.computeIfAbsent(enclaveClassName) {
-                val enclaveFileSystemFile = fileSystemFileTempDir?.resolve("$enclaveClassName.disk")
+                val enclaveFileSystemFile = getFileSystemFilePath(enclaveClassName)
                 val kdsUrl = if (useKds) "http://localhost:${TestKds.testKdsPort}" else null
                 val transport = object : TestEnclaveTransport(enclaveClassName, enclaveFileSystemFile, kdsUrl) {
                     override val attestationParameters: AttestationParameters? get() = getAttestationParams(enclaveHost)
