@@ -40,6 +40,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_fatfs_FileSystemHandle
 
     if (cls == nullptr) {
         FATFS_DEBUG_PRINT("Class not found %d\n", -1);
+        return;
     }    
 }
 
@@ -85,13 +86,13 @@ long host_disk_get_size(const unsigned char drive, const unsigned long persisten
         return -1;
     }           
     long res = env->CallLongMethod(obj,
-				   mid,
-				   static_cast<int>(drive),
-				   persistent_size);
+                                   mid,
+                                   static_cast<int>(drive),
+                                   persistent_size);
     if (env->ExceptionCheck()) {
-	//  We rely on the DetachCurrentThread below to handle the pending exception and make the
-	//  Host JNI aware of it (we could clear and rethrow it, but the effect would be the same).
-	//  We also tell the Enclave that this has happened by returning a -1, so that it exits accordingly  
+        //  We rely on the DetachCurrentThread below to handle the pending exception and make the
+        //  Host JNI aware of it (we could clear and rethrow it, but the effect would be the same).
+        //  We also tell the Enclave that this has happened by returning a -1, so that it exits accordingly  
         res = -1;
     }
     jvm->DetachCurrentThread();
@@ -154,10 +155,9 @@ int host_disk_read(const unsigned char drive,
 */
 int host_disk_write(const unsigned char drive,
                     const unsigned char* buf,
-                    const unsigned int num_writes,
                     const unsigned int sector_size,
-                    const unsigned long* indices) {
-    FATFS_DEBUG_PRINT_RW("Drive %d, Num writes %d, Sector size %d\n", drive, num_writes, sector_size);
+                    const unsigned long index) {
+    FATFS_DEBUG_PRINT_RW("Drive %d, Index %d, Sector size %d\n", drive, index, sector_size);
 
     JNIEnv* env = NULL;
     jint rs = jvm->AttachCurrentThread((void**)&env, NULL);
@@ -173,37 +173,29 @@ int host_disk_write(const unsigned char drive,
         jvm->DetachCurrentThread();
         return -1;
     }
-    jmethodID mid = env->GetMethodID(cls, "write", "(I[BI[J)I");
+    jmethodID mid = env->GetMethodID(cls, "write", "(I[BIJ)I");
 
     if (mid == nullptr) {
         FATFS_DEBUG_PRINT("Host not writing to drive %d, method not found\n", drive);
         jvm->DetachCurrentThread();
         return -1;
     }
-    const unsigned int buffer_size = num_writes * sector_size;
-    jbyteArray jbuf_array = env->NewByteArray(buffer_size);
+
+    jbyteArray jbuf_array = env->NewByteArray(sector_size);
 
     if (jbuf_array == NULL) {
         FATFS_DEBUG_PRINT("Host not writing to drive %d, byte array not created\n", drive);
         jvm->DetachCurrentThread();
         return -1;
-    }   
-    jlongArray jindices_array = env->NewLongArray(num_writes);
-
-    if (jindices_array == NULL) {
-        FATFS_DEBUG_PRINT("Host not writing to drive %d, int array not created\n", drive);
-        jvm->DetachCurrentThread();
-        return -1;
-    }   
-    env->SetByteArrayRegion(jbuf_array, 0, buffer_size, (const jbyte*)buf);
-    env->SetLongArrayRegion(jindices_array, 0, num_writes, (const jlong*)indices);
+    } 
+    env->SetByteArrayRegion(jbuf_array, 0, sector_size, (const jbyte*)buf);
 
     const int res = env->CallIntMethod(obj,
                                        mid,
                                        static_cast<int>(drive),
                                        jbuf_array,
                                        sector_size,
-                                       jindices_array);
+                                       index);
 
     jvm->DetachCurrentThread();
     return res;

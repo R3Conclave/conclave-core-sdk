@@ -1,15 +1,21 @@
-plugins {
-    id 'com.github.johnrengelman.shadow' version '6.0.0' apply false
-}
-
 apply from: '../versions.gradle'
 apply from: '../common.gradle'
 
 subprojects {
+    apply plugin: 'java'
+
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
     ext.attestationMode = findProperty("attestationMode") ?: "epid"
 
+
     apply from: "${rootProject.projectDir}/repositories.gradle"
+
+    // This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 
     tasks.withType(Test) {
         useJUnitPlatform {

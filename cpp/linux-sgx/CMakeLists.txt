@@ -49,38 +49,6 @@ ExternalProject_Add(linux-sgx-ext
 
         TEST_COMMAND "")
 
-ExternalProject_Add(macos-sign-tool
-# Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
-    DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
-        && git clone -b ${SGX_GIT_LABEL} --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
-        && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
-        && bash -c "cd ${BUILD_SRC_DIR}/external/dcap_source && git apply ${CMAKE_CURRENT_SOURCE_DIR}/dcap_source_macos.diff"
-        && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
-        && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
-        && bash -c "cd ${BUILD_SRC_DIR} && git apply ${CMAKE_CURRENT_SOURCE_DIR}/macos.diff && ./download_prebuilt.sh"
-        && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteGeneration/download_prebuilt.sh"
-
-    SOURCE_DIR ${BUILD_SRC_DIR}
-
-    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff
-             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quoteverify_cpp.patch
-             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/dcap_sgx_urts_wrapper_h.patch
-	     && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch
-	     && patch ${BUILD_SRC_DIR}/psw/ae/aesm_service/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/psw_aesm_make.patch
-             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/QuoteGen_makefile.patch
-             && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/ql/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_ql.patch
-
-    UPDATE_COMMAND ""
-
-    CONFIGURE_COMMAND ""
-
-    BUILD_COMMAND make -j$(NATIVE_BUILD_PARALLEL_LEVEL) ${DEBUG_FLAG} -C ${BUILD_SRC_DIR}/sdk/sign_tool/SignTool
-
-    INSTALL_COMMAND ""
-
-    TEST_COMMAND ""
-)
-
 add_library(linux-sgx_headers INTERFACE)
 target_include_directories(linux-sgx_headers INTERFACE
         ${BUILD_SRC_DIR}/common/inc

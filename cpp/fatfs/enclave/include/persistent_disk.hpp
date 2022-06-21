@@ -11,8 +11,6 @@
 
 #include "disk.hpp"
 
-#define SIZE_BUFFER_WRITES 1
-
 #define ENCRYPTION 1
 #define SECTOR_SHUFFLING 1
 
@@ -45,11 +43,9 @@ namespace conclave {
 
         unsigned char buffer_encryption_[SECTOR_SIZE_AND_MAC] = {0};
 
-        unsigned char buffer_writes_[SECTOR_SIZE_AND_MAC * SIZE_BUFFER_WRITES] = {0};
+        unsigned char buffer_writes_[SECTOR_SIZE_AND_MAC] = {0};
 
-        unsigned long buffer_indices_[SIZE_BUFFER_WRITES] = {0};
-
-        unsigned long current_sector_ = 0;
+        unsigned long buffer_index_ = 0;
 
         int encrypt(const unsigned long sector_id,
                     const BYTE* input_buffer,
@@ -73,11 +69,11 @@ namespace conclave {
         virtual ~PersistentDisk();
 
         DRESULT diskRead(BYTE* output_buf,
-                         DWORD start,
+                         LBA_t sector,
                          BYTE num_reads) override;
 
         DRESULT diskWrite(const BYTE* input_buf,
-                          DWORD start,
+                          LBA_t sector,
                           BYTE num_writes) override;
 
         DRESULT diskIoCtl(BYTE cmd, void* buf) override;

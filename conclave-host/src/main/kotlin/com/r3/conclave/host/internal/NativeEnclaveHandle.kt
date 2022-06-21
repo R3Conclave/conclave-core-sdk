@@ -45,7 +45,7 @@ class NativeEnclaveHandle<CONNECTION>(
 
     override fun sendSerialized(serializedBuffer: ByteBuffer) {
         maybeInit()
-        NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes())
+        NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes(avoidCopying = true))
     }
 
     override fun destroy() {

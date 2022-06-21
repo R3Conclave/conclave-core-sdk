@@ -52,10 +52,7 @@ enclave {
             unsigned char drive,
             [in, size=buf_size] const unsigned char* buf,
             unsigned int buf_size,
-            unsigned int num_writes,
-            unsigned int element_size,
-            [in, size=indices_buf_size] const unsigned long* indices,
-            unsigned int indices_buf_size
+            unsigned long sector
         );
 
         void host_disk_get_size_ocall( 

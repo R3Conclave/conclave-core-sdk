@@ -46,8 +46,6 @@ permissions.
 
 The following Linux distros are formally supported by Intel:
 
-* Ubuntu 16.04 LTS Desktop 64bits
-* Ubuntu 16.04 LTS Server 64bits
 * Ubuntu 18.04 LTS Desktop 64bits
 * Ubuntu 18.04 LTS Server 64bits
 * Ubuntu 20.04 LTS Desktop 64bits
@@ -82,7 +80,6 @@ The quick summary looks like this:
 
 1. Download and run the driver installer binary (all distros)
 2. For Ubuntu users, as root run:
-   * For Ubuntu 16 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu xenial main' > /etc/apt/sources.list.d/intelsgx.list`
    * For Ubuntu 18 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' > /etc/apt/sources.list.d/intelsgx.list`
    * For Ubuntu 20 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intelsgx.list`
    * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`

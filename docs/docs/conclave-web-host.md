@@ -70,7 +70,7 @@ Serialized enclave mail object to be delivered to the enclave.
 
 Reply mail from the enclave as an array of bytes, or empty byte array otherwise.
 
-####Error messages
+#### Error messages
 
 When an error occurs as a result of a request sent to `/deliver-mail`, for example if a mail item is unable to be 
 decrypted, the host will return status code 400 (bad request) and the body of the response will contain information 

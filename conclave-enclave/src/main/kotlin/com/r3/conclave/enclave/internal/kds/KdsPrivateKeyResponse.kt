@@ -6,7 +6,7 @@ import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.mail.EnclaveMail
-import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.getIntLengthPrefixString
 import java.nio.ByteBuffer
 
 /**
@@ -51,9 +51,9 @@ class KdsPrivateKeyResponse(private val mail: EnclaveMail, val kdsEnclaveInstanc
         val serialVersion = buffer.get()
         require(serialVersion.toInt() == 1) { "Unknown format $serialVersion" }
 
-        val name = String(buffer.getIntLengthPrefixBytes())
+        val name = buffer.getIntLengthPrefixString()
         val masterKeyType = masterKeyTypeValues[buffer.get().toInt()]
-        val policyConstraint = String(buffer.getIntLengthPrefixBytes())
+        val policyConstraint = buffer.getIntLengthPrefixString()
 
         return KDSKeySpec(name, masterKeyType, policyConstraint)
     }

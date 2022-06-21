@@ -32,27 +32,6 @@ struct JniPtr {
     }
 };
 
-template<typename T>
-class JniScopedRef {
-public:
-    JniScopedRef(T &&value, JNIEnv *jniEnv)
-            : jniRef_(value), jniEnv_(jniEnv)
-    {}
-
-    T& value() {
-        return jniRef_;
-    }
-
-    ~JniScopedRef() {
-        jniEnv_->DeleteLocalRef(jniRef_);
-    }
-
-private:
-    JniScopedRef(const JniScopedRef&) = delete;
-    T jniRef_;
-    JNIEnv *jniEnv_;
-};
-
 struct JniString {
     JniString() = delete;
     JniString(const JniString&) = delete;

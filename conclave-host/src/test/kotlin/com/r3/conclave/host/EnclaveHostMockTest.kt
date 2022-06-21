@@ -1,8 +1,6 @@
 package com.r3.conclave.host
 
-import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockConfiguration
-import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.StateManager
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.internal.createMockHost
@@ -16,6 +14,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import kotlin.random.Random
@@ -530,6 +529,42 @@ class EnclaveHostMockTest {
         assertFalse(enclave.onShutdownWasCalled, "The host was closed even though it was not initialised. onShutdown should not been called")
     }
 
+    @Test
+    fun `non-EnclaveStartException thrown by onStartup is wrapped in EnclaveStartException`() {
+        class EnclaveOnStartupThrows : Enclave() {
+            override fun onStartup() {
+                throw Exception("Fail!")
+            }
+        }
+
+        val host = createMockHost(EnclaveOnStartupThrows::class.java)
+        val loadException = assertThrows<EnclaveLoadException> { host.start(null, null, null, null) { } }
+
+        assertThat(loadException)
+            .hasCauseInstanceOf(EnclaveStartException::class.java)
+            .cause  // Now start asserting on the EnclaveStartException
+            .hasCauseExactlyInstanceOf(Exception::class.java)
+            .hasRootCauseMessage("Fail!")
+    }
+
+    @Test
+    fun `EnclaveStartException thrown by onStartup`() {
+        class EnclaveOnStartupThrows : Enclave() {
+            override fun onStartup() {
+                throw EnclaveStartException("Fail!")
+            }
+        }
+
+        val host = createMockHost(EnclaveOnStartupThrows::class.java)
+        val loadException = assertThrows<EnclaveLoadException> { host.start(null, null, null, null) { } }
+
+        assertThat(loadException)
+            .hasCauseInstanceOf(EnclaveStartException::class.java)
+            .cause  // Now start asserting on the EnclaveStartException
+            .hasMessage("Fail!")
+            .hasNoCause()
+    }
+
     class PreviousValueEnclave : Enclave() {
         var previousValue: ByteArray? = null
 
@@ -544,9 +579,10 @@ class EnclaveHostMockTest {
     fun `calling callUntrustedHost from a separate thread throws exception`() {
         host = createMockHost(CallUntrustedHostInSeparateThreadEnclave::class.java)
         host.start(null, null, null) { }
-        assertThatExceptionOfType(RuntimeException::class.java).isThrownBy {
+        assertThatThrownBy {
             host.callEnclave(byteArrayOf()) { it }
-        }.withMessageEndingWith("may not attempt to call out to the host outside the context of a call.")
+        }.isExactlyInstanceOf(EnclaveException::class.java)
+         .cause.hasMessageContaining("may not attempt to call out to the host outside the context of a call.")
     }
 
     class CallUntrustedHostInSeparateThreadEnclave : Enclave() {

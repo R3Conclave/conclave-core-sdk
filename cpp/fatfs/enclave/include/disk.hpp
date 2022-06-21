@@ -53,11 +53,11 @@ namespace conclave {
         DSTATUS diskStatus();
     
         virtual DRESULT diskRead(BYTE* input_buffer,
-                                 DWORD start,
+                                 LBA_t sector,
                                  BYTE num_reads) = 0;
 
         virtual DRESULT diskWrite(const BYTE* content_buf,
-                                  DWORD start,
+                                  LBA_t sector,
                                   BYTE num_writes) = 0;
 
         virtual DRESULT diskIoCtl(BYTE cmd, void * buf)  = 0;

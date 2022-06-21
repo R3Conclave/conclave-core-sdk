@@ -1,6 +1,5 @@
 package com.r3.conclave.common.internal.handler
 
-import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.util.function.Consumer
 
@@ -21,10 +20,8 @@ abstract class LeafSender : Sender {
         for (serializer in serializers.asReversed()) {
             serializer.accept(buffer)
         }
-        assert(buffer.position() == needBytes)
-        // Cast to a Buffer as the JDK8 ByteBuffer.flip() function specification
-        // changed in JDK9+
-        (buffer as Buffer).flip()
+        check(buffer.position() == needBytes)
+        buffer.flip()
         sendSerialized(buffer)
     }
 }

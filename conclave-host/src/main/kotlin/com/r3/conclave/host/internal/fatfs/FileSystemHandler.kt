@@ -120,7 +120,7 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>, private val encl
         val position = sectorId * sectorSize
         val readSize = numSectors * sectorSize
         val buffer = ByteArray(readSize)
-        
+
         with(fileSystemFile.file) {
             seek(position + fileSystemFile.headerSize)
             readFully(buffer)
@@ -131,22 +131,14 @@ class FileSystemHandler(enclaveFileSystemFilePaths: List<Path>, private val encl
 
     @Suppress("unused")
     @Synchronized
-    fun write(drive: Int, inputBuffer: ByteArray, sectorSize: Int, indices: LongArray): Int {
+    fun write(drive: Int, inputBuffer: ByteArray, sectorSize: Int, sector: Long): Int {
         val fileSystemFile = filesystemFiles[drive]
 
-        var bufferIt = 0
-        val numWrites = indices.size
-
         with(fileSystemFile.file) {
-            for (i in 0 until numWrites) {
-                val start = indices[i]
-                val position = start * sectorSize
-                seek(position + fileSystemFile.headerSize)
-                write(inputBuffer, bufferIt, sectorSize)
-                bufferIt += sectorSize
-            }
+            val position = sector * sectorSize
+            seek(position + fileSystemFile.headerSize)
+            write(inputBuffer, 0, sectorSize)
         }
-
-        return sectorSize * numWrites
+        return sectorSize
     }
 }

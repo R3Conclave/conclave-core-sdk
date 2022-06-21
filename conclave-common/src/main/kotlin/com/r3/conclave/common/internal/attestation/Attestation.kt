@@ -7,6 +7,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReportBody.attributes
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
+import com.r3.conclave.common.internal.attestation.AttestationUtils.writeIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.*
 import java.io.DataOutputStream
 import java.nio.ByteBuffer
@@ -53,13 +54,13 @@ sealed class Attestation {
     }
 
     companion object {
-        fun get(buffer: ByteBuffer): Attestation {
+        fun getFromBuffer(buffer: ByteBuffer): Attestation {
             val attestationType = buffer.get()
             val attestationSlice = buffer.getIntLengthPrefixSlice()
             return when (attestationType.toInt()) {
-                0 -> EpidAttestation.get(attestationSlice)
-                1 -> DcapAttestation.get(attestationSlice)
-                2 -> MockAttestation.get(attestationSlice)
+                0 -> EpidAttestation.getFromBuffer(attestationSlice)
+                1 -> DcapAttestation.getFromBuffer(attestationSlice)
+                2 -> MockAttestation.getFromBuffer(attestationSlice)
                 else -> throw IllegalArgumentException("Unknown attestation type $attestationType")
             }
         }
@@ -198,11 +199,6 @@ data class EpidAttestation(
         }
     }
 
-    private fun DataOutputStream.writeIntLengthPrefixBytes(bytes: OpaqueBytes) {
-        writeInt(bytes.size)
-        bytes.writeTo(this)
-    }
-
     private val EpidVerificationReport.advistoryIdsSentence: String
         get() {
             return when (advisoryIDs?.size ?: 0) {
@@ -216,7 +212,7 @@ data class EpidAttestation(
             CertificateFactory.getInstance("X.509").generateCertificate(it) as X509Certificate
         }
 
-        fun get(buffer: ByteBuffer): EpidAttestation {
+        fun getFromBuffer(buffer: ByteBuffer): EpidAttestation {
             val reportBytes = OpaqueBytes(buffer.getIntLengthPrefixBytes())
             val signature = OpaqueBytes(buffer.getIntLengthPrefixBytes())
             val certPath =
@@ -226,8 +222,10 @@ data class EpidAttestation(
     }
 }
 
-data class DcapAttestation(val signedQuote: ByteCursor<SgxSignedQuote>, val collateral: QuoteCollateral) :
-    HardwareAttestation() {
+data class DcapAttestation(
+    val signedQuote: ByteCursor<SgxSignedQuote>,
+    val collateral: QuoteCollateral
+) : HardwareAttestation() {
     override val timestamp: Instant
     private val verificationStatus: VerificationStatus
 
@@ -291,41 +289,15 @@ data class DcapAttestation(val signedQuote: ByteCursor<SgxSignedQuote>, val coll
     override fun serialise(): ByteArray {
         return writeData {
             write(signedQuote.bytes)
-            writeIntLengthPrefixBytes(collateral.version.toByteArray())
-            writeIntLengthPrefixBytes(collateral.pckCrlIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(collateral.rawRootCaCrl.toByteArray())
-            writeIntLengthPrefixBytes(collateral.rawPckCrl.toByteArray())
-            writeIntLengthPrefixBytes(collateral.rawTcbInfoIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(collateral.rawSignedTcbInfo.toByteArray())
-            writeIntLengthPrefixBytes(collateral.rawQeIdentityIssuerChain.toByteArray())
-            writeIntLengthPrefixBytes(collateral.rawSignedQeIdentity.toByteArray())
+            collateral.serialiseTo(this)
         }
     }
 
     companion object {
-        fun get(buffer: ByteBuffer): DcapAttestation {
-            val signedQuote = Cursor.read(SgxSignedQuote, buffer).asReadOnly()
-            val version = String(buffer.getIntLengthPrefixBytes())
-            val pckCrlIssuerChain = String(buffer.getIntLengthPrefixBytes())
-            val rawRootCaCrl = String(buffer.getIntLengthPrefixBytes())
-            val rawPckCrl = String(buffer.getIntLengthPrefixBytes())
-            val rawTcbInfoIssuerChain = String(buffer.getIntLengthPrefixBytes())
-            val rawSignedTcbInfo = String(buffer.getIntLengthPrefixBytes())
-            val rawQeIdentityIssuerChain = String(buffer.getIntLengthPrefixBytes())
-            val rawSignedQeIdentity = String(buffer.getIntLengthPrefixBytes())
-            return DcapAttestation(
-                signedQuote,
-                QuoteCollateral(
-                    version,
-                    pckCrlIssuerChain,
-                    rawRootCaCrl,
-                    rawPckCrl,
-                    rawTcbInfoIssuerChain,
-                    rawSignedTcbInfo,
-                    rawQeIdentityIssuerChain,
-                    rawSignedQeIdentity
-                )
-            )
+        fun getFromBuffer(buffer: ByteBuffer): DcapAttestation {
+            val signedQuote = Cursor.copy(SgxSignedQuote, buffer).asReadOnly()
+            val collateral = QuoteCollateral.getFromBuffer(buffer)
+            return DcapAttestation(signedQuote, collateral)
         }
     }
 }
@@ -355,19 +327,21 @@ data class MockAttestation(
     override val securityReason: String get() = "Enclave is running in ${enclaveMode.name.lowercase()} mode."
 
     override fun serialise(): ByteArray {
-        return writeData {
-            writeLong(timestamp.epochSecond)
-            writeInt(timestamp.nano)
-            write(reportBody.bytes)
-            writeBoolean(isSimulation)
-        }
+        // We use a ByteBuffer (which forces us to pre-allocate the size) to avoid some extra copying when writing the
+        // reportBody.
+        val buffer = ByteBuffer.allocate(Long.SIZE_BYTES + Int.SIZE_BYTES + reportBody.size + 1)
+        buffer.putLong(timestamp.epochSecond)
+        buffer.putInt(timestamp.nano)
+        buffer.put(reportBody.read())
+        buffer.putBoolean(isSimulation)
+        return buffer.array()
     }
 
     companion object {
-        fun get(buffer: ByteBuffer): MockAttestation {
+        fun getFromBuffer(buffer: ByteBuffer): MockAttestation {
             val epochSecond = buffer.getLong()
             val nano = buffer.getInt()
-            val reportBody = Cursor.read(SgxReportBody, buffer).asReadOnly()
+            val reportBody = Cursor.copy(SgxReportBody, buffer).asReadOnly()
             val isSimulation = buffer.getBoolean()
             return MockAttestation(Instant.ofEpochSecond(epochSecond, nano.toLong()), reportBody, isSimulation)
         }

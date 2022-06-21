@@ -1,7 +1,6 @@
 plugins {
     id 'application'
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.github.johnrengelman.shadow'
 }
 
 mainClassName = "com.r3.conclave.integrationtests.tribuo.host.Host"

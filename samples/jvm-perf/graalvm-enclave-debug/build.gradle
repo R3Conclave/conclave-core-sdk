@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    compile project(':jvm-perf:benchmarks')
+    implementation project(':jvm-perf:benchmarks')
 
     // As Kotlin and Jackson are shaded in as part of the Conclave SDK they're not transitive dependencies and so must
     // be added in here to enable the test to work when the samples are run as a composite build.

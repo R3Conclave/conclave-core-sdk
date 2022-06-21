@@ -146,18 +146,21 @@ static conclave::DiskInitialization getInitializationType(JNIEnv* env, const uns
 
 static void handleInitException(JNIEnv* env, const FatFsResult result, const std::string& fsType) {
     switch (result) {
-        //  These are errors for which the user can't do much, so it is not
-        //    useful to provide more info
     case FatFsResult::MKFS_ABORTED:
         {
             //  The minimum number of sectors in FatFs is 128 for the Fat12 type + 63 header of reserved sectors.
-            //  Being the size of the sector equal to 512 bytes, we have (128 + 63) * 512 - 1 = 97791 
+            //  Being the size of the sector equal to 512 bytes, we have (128 + 63) * 512 - 1 = 97791
             const std::string msg("Wrong " + fsType + " filesystem's sizes have been provided, please choose a value bigger than 97791 bytes");
             raiseException(env, msg.c_str());
             return;
         }
     case FatFsResult::WRONG_DRIVE_ID:
     case FatFsResult::MOUNT_FAILED:
+        {
+            const std::string msg("Unable to initialize the enclave's "+ fsType + " filesystem, potentially corrupted or unencryptable filesystem");
+            raiseException(env, msg.c_str(), "java/io/IOException");
+            return;
+        };
     case FatFsResult::DRIVE_REGISTRATION_FAILED:
     case FatFsResult::MKFS_GENERIC_ERROR:
     case FatFsResult::ROOT_DIRECTORY_MOUNT_FAILED:
@@ -419,6 +422,27 @@ ssize_t pread_impl(int fd, void* buf, size_t count, off_t offset) {
 };
 
 
+int rename_impl(const char* oldpath, const char* newpath, int& err) {
+    DEBUG_PRINT_FUNCTION;
+
+    auto old_file_manager = getFatFsInstanceFromPath(oldpath);
+    auto new_file_manager = getFatFsInstanceFromPath(newpath);
+
+    if (old_file_manager == nullptr || new_file_manager == nullptr) {
+        err = ENOENT;
+        return -1;
+    }    
+    
+    if (old_file_manager != new_file_manager) {
+        FATFS_DEBUG_PRINT("Usage of different filesystems types for the paths %s %s is not possible\n", oldpath, newpath);
+        err = EXDEV;
+        return -1;
+    } else {
+        return old_file_manager->rename(oldpath, newpath, err);
+    }
+};
+
+
 int close_impl(int fd) {
     DEBUG_PRINT_FUNCTION;
 
@@ -621,6 +645,7 @@ struct dirent64* readdir64_impl(void* dirp, int& err) {
     auto file_manager = getFatFsInstanceFromDir(dirp);
 
     if (file_manager == nullptr) {
+        err = EBADF;
         return nullptr;
     }
     return file_manager->readdir64(dirp, err);
@@ -631,6 +656,7 @@ struct dirent* readdir_impl(void* dirp, int& err) {
     auto file_manager = getFatFsInstanceFromDir(dirp);
 
     if (file_manager == nullptr) {
+        err = EBADF;
         return nullptr;
     }
     return file_manager->readdir(dirp, err);
@@ -642,6 +668,7 @@ int closedir_impl(void* dirp, int& err) {
     auto file_manager = getFatFsInstanceFromDir(dirp);
 
     if (file_manager == nullptr) {
+        err = EBADF;
         return -1;
     }
     return file_manager->closedir(dirp, err);
@@ -652,7 +679,41 @@ int ftruncate_impl(int fd, off_t offset, int& err) {
     auto file_manager = getFatFsInstanceFromHandle(fd);
 
     if (file_manager == nullptr) {
+        err = EBADF;
         return -1;
     }
     return file_manager->ftruncate(fd, offset, err);
+}
+
+
+int fchown_impl(int fd, uid_t owner, gid_t group, int& err) {
+    auto file_manager = getFatFsInstanceFromHandle(fd);
+
+    if (file_manager == nullptr) {
+        err = EBADF;
+        return -1;
+    }
+    return file_manager->fchown(fd, owner, group, err);
+}
+
+
+int fchmod_impl(int fd, mode_t mode, int& err) {
+    auto file_manager = getFatFsInstanceFromHandle(fd);
+
+    if (file_manager == nullptr) {
+        err = EBADF;
+        return -1;
+    }
+    return file_manager->fchmod(fd, mode, err);
+}
+
+
+int utimes_impl(const char *filename, const struct timeval times[2], int& err) {
+    auto file_manager = getFatFsInstanceFromPath(filename);
+    
+    if (file_manager == nullptr) {
+        err = ENOENT;
+        return -1;
+    }
+    return file_manager->utimes(filename, times, err);
 }

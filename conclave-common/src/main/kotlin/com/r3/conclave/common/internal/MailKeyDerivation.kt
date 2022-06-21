@@ -4,12 +4,11 @@ import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.mail.internal.MailDecryptingStream
-import com.r3.conclave.utilities.internal.dataStream
-import com.r3.conclave.utilities.internal.readIntLengthPrefixString
+import com.r3.conclave.utilities.internal.getIntLengthPrefixString
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixString
-import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.nio.ByteBuffer
 
 sealed class MailKeyDerivation {
     companion object {
@@ -38,14 +37,14 @@ sealed class MailKeyDerivation {
                 // sending in Mail with these abandoned key derivation values.
                 return RandomSessionKeyDerivation
             }
-            val keyDerivationStream = keyDerivation.dataStream()
+            val buffer = ByteBuffer.wrap(keyDerivation)
             val keyDerivationType: Int
             try {
-                keyDerivationType = keyDerivationStream.readByte().toInt()
+                keyDerivationType = buffer.get().toInt()
                 if (keyDerivationType == RANDOM_SESSION_TYPE) {
                     return RandomSessionKeyDerivation
                 } else if (keyDerivationType == KDS_KEY_SPEC_TYPE) {
-                    return KdsKeySpecKeyDerivation.deserialise(keyDerivationStream)
+                    return KdsKeySpecKeyDerivation.getFromBuffer(buffer)
                 }
             } catch (e: Exception) {
                 throw MailDecryptionException("Cannot deserialize the key derivation header", e)
@@ -77,10 +76,10 @@ class KdsKeySpecKeyDerivation(val keySpec: KDSKeySpec) : MailKeyDerivation() {
     companion object {
         private val masterKeyTypeValues = MasterKeyType.values()
 
-        fun deserialise(dis: DataInputStream): KdsKeySpecKeyDerivation {
-            val name = dis.readIntLengthPrefixString()
-            val masterKeyType = masterKeyTypeValues[dis.readByte().toInt()]
-            val policyConstraint = dis.readIntLengthPrefixString()
+        fun getFromBuffer(buffer: ByteBuffer): KdsKeySpecKeyDerivation {
+            val name = buffer.getIntLengthPrefixString()
+            val masterKeyType = masterKeyTypeValues[buffer.get().toInt()]
+            val policyConstraint = buffer.getIntLengthPrefixString()
             return KdsKeySpecKeyDerivation(KDSKeySpec(name, masterKeyType, policyConstraint))
         }
     }

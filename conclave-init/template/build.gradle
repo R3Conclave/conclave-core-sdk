@@ -1,18 +1,12 @@
 plugins {
-    id 'java'
-    id 'idea'
-    id 'org.jetbrains.kotlin.jvm' version '1.5.31' apply false
-}
-
-idea {
-    module {
-        downloadJavadoc = true
-    }
+    id 'org.jetbrains.kotlin.jvm' version '1.6.10' apply false
 }
 
 subprojects {
     apply plugin: 'idea'
+    apply plugin: 'java'
     apply plugin: "org.jetbrains.kotlin.jvm"
+
     idea {
         module {
             downloadJavadoc = true
@@ -26,13 +20,11 @@ subprojects {
         mavenCentral()
     }
 
-    tasks.withType(AbstractCompile) {
-        if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
-            kotlinOptions {
-                jvmTarget = "11"
-                apiVersion = '1.5'
-                languageVersion = '1.5'
-            }
+    // Configure the entire project to use Java 17. This will also apply to Kotlin. Change this value if you want to use
+    // another version.
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
         }
     }
 

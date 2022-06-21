@@ -10,7 +10,7 @@ import kotlinx.serialization.builtins.ByteArraySerializer
 @Serializable
 class GetSecretKey(private val keyRequest: ByteArray) : EnclaveTestAction<ByteArray>() {
     override fun run(context: EnclaveContext, isMail: Boolean): ByteArray {
-        return context.getSecretKey(Cursor.wrap(SgxKeyRequest.INSTANCE, keyRequest, 0, keyRequest.size))
+        return context.getSecretKey(Cursor.wrap(SgxKeyRequest.INSTANCE, keyRequest))
     }
 
     override fun resultSerializer(): KSerializer<ByteArray> = ByteArraySerializer()

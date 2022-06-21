@@ -24,9 +24,9 @@ namespace conclave {
 
         virtual ~InMemoryDisk();
 
-        DRESULT diskRead(BYTE* output_buffer, DWORD start, BYTE num_reads) override;
+        DRESULT diskRead(BYTE* output_buffer, LBA_t sector, BYTE num_reads) override;
 
-        DRESULT diskWrite(const BYTE* content_buf, DWORD start, BYTE num_writes) override;
+        DRESULT diskWrite(const BYTE* content_buf, LBA_t sector, BYTE num_writes) override;
 
         DRESULT diskIoCtl(BYTE cmd, void * buf) override;
 

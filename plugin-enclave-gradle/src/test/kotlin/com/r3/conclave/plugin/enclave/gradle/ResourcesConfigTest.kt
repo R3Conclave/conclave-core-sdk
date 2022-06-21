@@ -3,15 +3,18 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import kotlin.io.path.readText
 
-internal class ResourcesConfigTest {
+class ResourcesConfigTest {
     private val mapper = jacksonObjectMapper()
 
     @Test
-    fun generateResourcesConfig() {
-        val outputFile = createTempFile()
-        ResourcesConfig.create(includes = listOf(".*/intel-.*pem")).writeToFile(outputFile)
-        val generatedJSON = mapper.readTree(outputFile)
+    fun generateResourcesConfig(@TempDir dir: Path) {
+        val outputFile = dir / "output"
+        ResourcesConfig.create(includes = listOf(".*/intel-.*pem")).writeToFile(outputFile.toFile())
+        val generatedJSON = mapper.readTree(outputFile.readText())
 
         val expectedJSON = """
         {

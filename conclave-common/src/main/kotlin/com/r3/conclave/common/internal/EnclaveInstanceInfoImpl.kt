@@ -107,7 +107,7 @@ class EnclaveInstanceInfoImpl(
         override val destinationPublicKey: PublicKey get() = this@EnclaveInstanceInfoImpl.encryptionKey
         override val keyDerivation: ByteArray get() = this@EnclaveInstanceInfoImpl.keyDerivation
     }
-    
+
     companion object {
         private val magic = "EII".toByteArray()
     }

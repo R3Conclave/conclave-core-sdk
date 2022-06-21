@@ -56,7 +56,7 @@ do some manual work to set up a docker container (instructions below).
     ./gradlew workflows:test
     ```
 
-Alternatively, ubuntu 18.04 via WSL 2 ([Windows Subsystem for Linux 2](https://docs.microsoft.com/en-us/windows/wsl/install)
+Alternatively, ubuntu 20.04 via WSL 2 ([Windows Subsystem for Linux 2](https://docs.microsoft.com/en-us/windows/wsl/install)
 may also prove to work for you, though this has not been extensively tested.
 
 For an explanation of the Docker command used above, see

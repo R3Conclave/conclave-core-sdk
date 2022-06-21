@@ -99,20 +99,27 @@ interface EnclaveInstanceInfo {
         private val signatureScheme = SignatureSchemeEdDSA()
 
         /**
-         * Deserializes this object from its custom format.
+         * Deserializes an [EnclaveInstanceInfo] from the given bytes.
          *
          * @throws IllegalArgumentException If the bytes are invalid.
          */
         @JvmStatic
-        fun deserialize(from: ByteArray): EnclaveInstanceInfo {
-            val buffer = ByteBuffer.wrap(from)
+        fun deserialize(bytes: ByteArray): EnclaveInstanceInfo = deserialize(ByteBuffer.wrap(bytes))
+
+        /**
+         * Deserializes an [EnclaveInstanceInfo] from the given byte buffer.
+         *
+         * @throws IllegalArgumentException If the bytes are invalid.
+         */
+        @JvmStatic
+        fun deserialize(buffer: ByteBuffer): EnclaveInstanceInfo {
             require(buffer.remaining() > magic.capacity() && buffer.getSlice(magic.capacity()) == magic) {
                 "Not EnclaveInstanceInfo bytes"
             }
             try {
                 val dataSigningKey = buffer.getIntLengthPrefixBytes().let(signatureScheme::decodePublicKey)
                 val encryptionKey = Curve25519PublicKey(buffer.getIntLengthPrefixBytes())
-                val attestation = Attestation.get(buffer)
+                val attestation = Attestation.getFromBuffer(buffer)
                 // New fields need to be behind an availability check before being read. Use dis.available() to check if there
                 // are more bytes available and only parse them if there are. If not then provide defaults.
                 return EnclaveInstanceInfoImpl(dataSigningKey, encryptionKey, attestation)

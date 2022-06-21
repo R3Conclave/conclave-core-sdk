@@ -85,7 +85,7 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
         if (persistenceKeySpec.masterKeyType.isPresent) {
             val masterKeyTypeString = persistenceKeySpec.masterKeyType.get()
             val masterKeyType = try {
-                MasterKeyType.valueOf(masterKeyTypeString.toUpperCase())
+                MasterKeyType.valueOf(masterKeyTypeString.uppercase())
             } catch (e: IllegalArgumentException) {
                 throw GradleException(
                     "Invalid KDS master key type '$masterKeyTypeString'. Valid values are: " +

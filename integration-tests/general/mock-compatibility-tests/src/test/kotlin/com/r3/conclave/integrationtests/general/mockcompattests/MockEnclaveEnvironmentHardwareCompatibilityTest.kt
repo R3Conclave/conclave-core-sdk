@@ -1,14 +1,15 @@
 package com.r3.conclave.integrationtests.general.mockcompattests
 
 import com.google.common.collect.Sets
-import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.EnclaveMode.DEBUG
+import com.r3.conclave.common.EnclaveMode.RELEASE
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.internal.InternalsKt.createNativeHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
+import com.r3.conclave.host.internal.InternalsKt.createNativeHost
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner
@@ -19,9 +20,6 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.nio.file.Files
-import java.nio.file.Files.copy
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import kotlin.random.Random
 
 /**
@@ -71,7 +69,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     @BeforeEach
     fun setup() {
         //  We want this test to run only in DEBUG mode
-        assumeTrue(EnclaveMode.DEBUG.name.lowercase() == System.getProperty("enclaveMode"))
+        assumeTrue(DEBUG.name == System.getProperty("enclaveMode").uppercase())
     }
 
     @AfterEach
@@ -99,13 +97,13 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
 
         println("Key requests producing errors:")
         println("==============================")
-        nativeUniqueness.errorKeyRequests.forEach { keyRequestSpec, message ->
+        nativeUniqueness.errorKeyRequests.forEach { (keyRequestSpec, message) ->
             println("$keyRequestSpec: $message")
         }
         println()
 
         // If native throws then mock must throw with the same message.
-        nativeUniqueness.errorKeyRequests.forEach { keyRequestSpec, nativeError ->
+        nativeUniqueness.errorKeyRequests.forEach { (keyRequestSpec, nativeError) ->
             val mockError = mockUniqueness.errorKeyRequests[keyRequestSpec]
             assertNotNull(mockError) { "$keyRequestSpec returned a key but should have returned error '$nativeError'" }
             assertEquals(nativeError, mockError, keyRequestSpec::toString)
@@ -125,7 +123,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec): EnclaveHost {
         val enclaveClassName = enclaveSpec.enclaveClass.canonicalName
         // Look for an SGX enclave image.
-        val enclaveMode = EnclaveMode.DEBUG
+        val enclaveMode = DEBUG
         val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
         val enclaveFileUrl = EnclaveHost::class.java.getResource(resourceName)!!
         return createNativeHost(enclaveMode, enclaveFileUrl, enclaveClassName)
@@ -135,7 +133,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val host = loadNativeHostFromFile(enclaveSpec)
             val attestationParameters = when (host.enclaveMode) {
-                EnclaveMode.RELEASE, EnclaveMode.DEBUG -> AbstractEnclaveActionTest.getHardwareAttestationParams()
+                RELEASE, DEBUG -> AbstractEnclaveActionTest.getHardwareAttestationParams()
                 else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
             }
             host.start(attestationParameters, null, null) { }

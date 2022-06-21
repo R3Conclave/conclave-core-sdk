@@ -2,6 +2,7 @@ package com.r3.conclave.host
 
 import com.r3.conclave.client.EnclaveClient
 import com.r3.conclave.client.EnclaveRollbackException
+import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.EnclavePostOffice
@@ -160,7 +161,7 @@ class EnclavePersistentMapMockTest {
     fun `multi-threaded enclaves not supported`() {
         threadSafeEnclave = true
         val e = assertThrows<EnclaveLoadException> { client }
-        assertThat(e.cause!!).isInstanceOf(IllegalStateException::class.java)
+        assertThat(e.cause!!).isInstanceOf(EnclaveStartException::class.java)
         assertThat(e.cause!!).hasMessageStartingWith("The persistent map is not available in multi-threaded enclaves.")
     }
 

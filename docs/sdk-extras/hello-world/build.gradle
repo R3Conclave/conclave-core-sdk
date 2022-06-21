@@ -1,22 +1,5 @@
-plugins {
-    id 'java'
-    id 'idea'
-    id 'eclipse'
-}
-
-eclipse {
-    classpath {
-        downloadJavadoc = true
-    }
-}
-
-idea {
-    module {
-        downloadJavadoc = true
-    }
-}
-
 subprojects {
+    apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'eclipse'
 
@@ -25,6 +8,7 @@ subprojects {
             downloadJavadoc = true
         }
     }
+
     eclipse {
         classpath {
             downloadJavadoc = true
@@ -36,6 +20,12 @@ subprojects {
             url = rootProject.file(conclaveRepo)
         }
         mavenCentral()
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
     }
 
     tasks.withType(Test) {

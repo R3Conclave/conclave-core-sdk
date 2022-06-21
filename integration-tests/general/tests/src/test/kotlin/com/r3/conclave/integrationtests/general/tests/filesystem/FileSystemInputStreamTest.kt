@@ -6,6 +6,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.IOException
+import com.r3.conclave.common.EnclaveException
 
 class FileSystemInputStreamTest : FileSystemEnclaveTest() {
 
@@ -34,9 +35,9 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
 
         fun reset() {
             assertThatThrownBy { callEnclave(ResetInputStream(uid)) }
-                .isInstanceOf(java.lang.RuntimeException::class.java)
+                .isInstanceOf(EnclaveException::class.java)
                 .hasCauseExactlyInstanceOf(IOException::class.java)
-                .hasMessageContaining("java.io.IOException: Resetting to invalid mark")
+                .cause.hasMessage("Resetting to invalid mark")
         }
     }
 
