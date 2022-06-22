@@ -11,7 +11,7 @@ class EnclaveKdsConfigTest {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
             setProperty("kds.persistenceKeySpec.configurationPresent", "true")
-            setProperty("kds.keySpec.masterKeyType", "debug")
+            setProperty("kds.keySpec.masterKeyType", "development")
             setProperty("kds.keySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
             setProperty("kds.keySpec.policyConstraint.useOwnCodeHash", "true")
             setProperty("kds.keySpec.policyConstraint.constraint", "SEC:INSECURE")
@@ -21,7 +21,7 @@ class EnclaveKdsConfigTest {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
             setProperty("kds.persistenceKeySpec.configurationPresent", "true")
-            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
+            setProperty("kds.persistenceKeySpec.masterKeyType", "development")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")
             setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
@@ -46,7 +46,7 @@ class EnclaveKdsConfigTest {
             setProperty("kds.configurationPresent", "true")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
             setProperty("kds.persistenceKeySpec.configurationPresent", "true")
-            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
+            setProperty("kds.persistenceKeySpec.masterKeyType", "development")
             setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
         }
 
@@ -60,7 +60,7 @@ class EnclaveKdsConfigTest {
         val disabledConfiguration = Properties().apply {
             setProperty("kds.configurationPresent", "false")
             setProperty("kds.kdsEnclaveConstraint", "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-            setProperty("kds.persistenceKeySpec.masterKeyType", "debug")
+            setProperty("kds.persistenceKeySpec.masterKeyType", "development")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID", "true")
             setProperty("kds.persistenceKeySpec.policyConstraint.useOwnCodeHash", "true")
             setProperty("kds.persistenceKeySpec.policyConstraint.constraint", "SEC:INSECURE")
@@ -72,7 +72,7 @@ class EnclaveKdsConfigTest {
 
     private fun validateConfiguration(kdsConfiguration: EnclaveKdsConfig) {
         assertThat(kdsConfiguration.kdsEnclaveConstraint.toString()).isEqualTo("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE")
-        assertThat(kdsConfiguration.persistenceKeySpec!!.masterKeyType).isEqualTo(MasterKeyType.DEBUG)
+        assertThat(kdsConfiguration.persistenceKeySpec!!.masterKeyType).isEqualTo(MasterKeyType.DEVELOPMENT)
         assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.constraint).isEqualTo("SEC:INSECURE")
         assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.useOwnCodeHash).isEqualTo(true)
         assertThat(kdsConfiguration.persistenceKeySpec!!.policyConstraint.useOwnCodeSignerAndProductID).isEqualTo(true)

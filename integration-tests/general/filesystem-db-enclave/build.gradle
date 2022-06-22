@@ -26,7 +26,7 @@ conclave {
     kds {
         kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"
         persistenceKeySpec {
-            masterKeyType = "debug"
+            masterKeyType = "development"
             policyConstraint {
                 constraint = "SEC:INSECURE"
                 useOwnCodeSignerAndProductID = true

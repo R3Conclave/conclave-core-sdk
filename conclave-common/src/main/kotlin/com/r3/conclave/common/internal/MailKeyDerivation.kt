@@ -73,12 +73,9 @@ object RandomSessionKeyDerivation : MailKeyDerivation() {
 }
 
 class KdsKeySpecKeyDerivation(val keySpec: KDSKeySpec) : MailKeyDerivation() {
-    companion object {
-        private val masterKeyTypeValues = MasterKeyType.values()
-
-        fun getFromBuffer(buffer: ByteBuffer): KdsKeySpecKeyDerivation {
+    companion object {fun getFromBuffer(buffer: ByteBuffer): KdsKeySpecKeyDerivation {
             val name = buffer.getIntLengthPrefixString()
-            val masterKeyType = masterKeyTypeValues[buffer.get().toInt()]
+            val masterKeyType = MasterKeyType.fromID(buffer.get().toInt())
             val policyConstraint = buffer.getIntLengthPrefixString()
             return KdsKeySpecKeyDerivation(KDSKeySpec(name, masterKeyType, policyConstraint))
         }
@@ -88,7 +85,7 @@ class KdsKeySpecKeyDerivation(val keySpec: KDSKeySpec) : MailKeyDerivation() {
 
     override fun serialise(dos: DataOutputStream) {
         dos.writeIntLengthPrefixString(keySpec.name)
-        dos.writeByte(keySpec.masterKeyType.ordinal)
+        dos.writeByte(keySpec.masterKeyType.id)
         dos.writeIntLengthPrefixString(keySpec.policyConstraint)
         // Make sure the serialised size isn't the same as the old MRSIGNER header, or otherwise the enclave will
         // treat it as one.

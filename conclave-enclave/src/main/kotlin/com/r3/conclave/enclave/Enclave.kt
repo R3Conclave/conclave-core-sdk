@@ -591,7 +591,7 @@ Received: $attestationReportBody"""
             val payloadSize = nameBytes.intLengthPrefixSize + 1 + policyConstraintBytes.size
             sendToHost(EnclaveToHost.PERSISTENCE_KDS_KEY_SPEC_RESPONSE, payloadSize) { buffer ->
                 buffer.putIntLengthPrefixBytes(nameBytes)
-                buffer.put(keySpec.masterKeyType.ordinal.toByte())
+                buffer.put(keySpec.masterKeyType.id.toByte())
                 buffer.put(policyConstraintBytes)
             }
         }

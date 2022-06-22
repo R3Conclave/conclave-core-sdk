@@ -232,7 +232,7 @@ class PostOfficeBuilder private constructor(
             val verificationData = writeData {
                 writeByte(1)
                 writeIntLengthPrefixString(keySpec.name)
-                writeByte(keySpec.masterKeyType.ordinal)
+                writeByte(keySpec.masterKeyType.id)
                 writeIntLengthPrefixString(keySpec.policyConstraint)
                 writeShortLengthPrefixBytes(kdsPublicResponse.publicKey)
             }

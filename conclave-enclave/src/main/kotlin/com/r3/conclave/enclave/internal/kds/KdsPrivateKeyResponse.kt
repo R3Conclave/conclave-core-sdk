@@ -13,9 +13,6 @@ import java.nio.ByteBuffer
  * Represents the parsed and unencrypted KDS private key response.
  */
 class KdsPrivateKeyResponse(private val mail: EnclaveMail, val kdsEnclaveInstanceInfo: EnclaveInstanceInfo) {
-    companion object {
-        private val masterKeyTypeValues = MasterKeyType.values()
-    }
 
     fun getPrivateKey(kdsConfig: EnclaveKdsConfig, expectedKeySpec: KDSKeySpec): ByteArray {
         val keySpec = deserialiseKeySpecFromEnvelope()
@@ -52,7 +49,7 @@ class KdsPrivateKeyResponse(private val mail: EnclaveMail, val kdsEnclaveInstanc
         require(serialVersion.toInt() == 1) { "Unknown format $serialVersion" }
 
         val name = buffer.getIntLengthPrefixString()
-        val masterKeyType = masterKeyTypeValues[buffer.get().toInt()]
+        val masterKeyType = MasterKeyType.fromID(buffer.get().toInt())
         val policyConstraint = buffer.getIntLengthPrefixString()
 
         return KDSKeySpec(name, masterKeyType, policyConstraint)
