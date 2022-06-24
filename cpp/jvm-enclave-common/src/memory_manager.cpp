@@ -3,8 +3,6 @@
 //
 #include "memory_manager.h"
 
-#include "conclave_tools.h"
-
 #ifndef UNIT_TEST
 #include "vm_enclave_layer.h"
 #else

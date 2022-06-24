@@ -2,7 +2,7 @@ project(substratevm)
 
 include(Determinise)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 # Use "-ggdb" for more gdb friendly debug info
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")

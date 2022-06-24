@@ -372,7 +372,7 @@ index df3feeb..f2d2fdb 100644
      if(trust_thread)
      {
          trust_thread->reset_ref();
-@@ -410,20 +435,31 @@ CTrustThread * CTrustThreadPool::acquire_thread(int ecall_cmd)
+@@ -410,20 +435,31 @@
      }
      else
      {
@@ -416,7 +416,7 @@ index df3feeb..f2d2fdb 100644
          }
      }
  
-@@ -567,6 +603,15 @@ sgx_status_t CTrustThreadPool::fill_tcs_mini_pool()
+@@ -567,6 +598,15 @@ sgx_status_t CTrustThreadPool::fill_tcs_mini_pool()
      return ret;
  }
  
@@ -531,8 +531,8 @@ index 38b47be..e5f1ef7 100644
  int pthread_cond_init(pthread_cond_t *condp, const pthread_condattr_t *attr)
  {
      UNUSED(attr);
-@@ -64,6 +72,28 @@ int pthread_cond_wait(pthread_cond_t *condp, pthread_mutex_t *mutexp)
-     return sgx_thread_cond_wait(cond, *mutexp);
+@@ -42,6 +42,20 @@ int pthread_cond_wait(pthread_cond_t *condp, pthread_mutex_t *mutexp)
+     return sgx_thread_cond_wait(condp, mutexp);
  }
  
 +int _pthread_cond_timedwait(pthread_cond_t *condp, pthread_mutex_t *mutexp, const struct timespec* reltime)
@@ -546,20 +546,12 @@ index 38b47be..e5f1ef7 100644
 +    // a time source then you can implement the standard pthread_cond_timedwait by calculating the relative
 +    // time then calling this function.
 +    uint64_t timeout = (reltime->tv_sec * 1000000000 + reltime->tv_nsec);
-+
-+    pthread_cond_t cond;
-+    int error;
-+    if (*condp == NULL) {
-+        if ((error = pthread_cond_init(condp, NULL)))
-+            return (error);
-+    }
-+    cond = *condp;
-+    return (sgx_thread_cond_timedwait(cond, *mutexp, timeout) == (int)SGX_WAIT_TIMEOUT) ? ETIMEDOUT : 0;
++    return (sgx_thread_cond_timedwait(condp, mutexp, timeout) == (int)SGX_WAIT_TIMEOUT) ? ETIMEDOUT : 0;
 +}
 +
  int pthread_cond_signal(pthread_cond_t *condp)
  {
-     pthread_cond_t cond;
+     return sgx_thread_cond_signal(condp);
 diff --git a/sdk/pthread/pthread_imp.h b/sdk/pthread/pthread_imp.h
 index 161a04e..a291da9 100644
 --- a/sdk/pthread/pthread_imp.h

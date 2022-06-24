@@ -19,9 +19,9 @@ RUN apt-get update -y && apt-get install -y \
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN apt-get update -y && apt-get install -y \
-    libsgx-urts \
-    libsgx-epid
-
+    libsgx-epid \
+    libsgx-quote-ex \
+    libsgx-dcap-ql
 # Need to set LD_LIBRARY_PATH to directory of aesm_service executable
 
 WORKDIR /opt/intel/sgx-aesm-service/aesm

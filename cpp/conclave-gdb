@@ -17,7 +17,7 @@
 shopt -s expand_aliases
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LINUX_SGX_BUILD_PATH="$ROOT/build/Simulation/linux-sgx/src/linux-sgx/build/linux"
+LINUX_SGX_BUILD_PATH="$ROOT/build/Debug/linux-sgx/src/linux-sgx/build/linux"
 SGXJVM_ROOT_PATH=$(dirname $ROOT)
 
 # If the GDB config is not present then create it
@@ -31,9 +31,10 @@ if [ ! -d "$HOME/.gdbsgxjvm" ]; then
     # Conclave directories
     echo "directory $SGXJVM_ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
     echo "directory $SGXJVM_ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/conclave-common/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
     echo "directory $SGXJVM_ROOT_PATH/conclave-enclave/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
     echo "directory $SGXJVM_ROOT_PATH/conclave-enclave/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/conclave-mail/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $SGXJVM_ROOT_PATH/conclave-mail/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
     # Graal compiler
     echo "directory $SGXJVM_ROOT_PATH/graal/build/graal/compiler/src/org.graalvm.compiler.replacements/src" >> $HOME/.gdbsgxjvm/src_dirs
     # Add the configuration directory because GDB will search there for python scripts

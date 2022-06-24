@@ -1,6 +1,6 @@
 project(jvm-edl)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -frandom-seed=1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -frandom-seed=1")
 
 # jvm-edl
 # This target generates the .c and .h files for the host and the enclave using the edger8r tool.

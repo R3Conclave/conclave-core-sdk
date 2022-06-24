@@ -1,7 +1,6 @@
 #pragma once
 
 #include "shared_data.h"
-#include "conclave_tools.h"
 #include "sgx_scoped_lock.h"
 
 struct timespec;

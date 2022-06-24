@@ -54,8 +54,9 @@ extern "C" {
 	int mkdir(const char* path, mode_t mode) {
 		enclave_trace("mkdir\n");
 		int err = 0;
-		return mkdir_impl(path, mode, err);
+		int res = mkdir_impl(path, mode, err);
 		errno = err;
+		return res;
 	}
 
 	int __xstat(int, const char*, struct stat*) {
