@@ -2,8 +2,8 @@ diff --git a/sdk/tlibc/string/memset.c b/sdk/tlibc/string/memset.c
 index fcdca89..39d3566 100644
 --- a/sdk/tlibc/string/memset.c
 +++ b/sdk/tlibc/string/memset.c
-@@ -40,6 +40,7 @@ extern void *__memset(void *dst, int c, size_t n);
- #endif
+@@ -78,6 +78,7 @@ extern void *__memset(void *dst, int c, size_t n);
+ }
  
  void *
 +__attribute__((optimize("O0")))

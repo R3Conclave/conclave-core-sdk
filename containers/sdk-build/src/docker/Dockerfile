@@ -59,8 +59,11 @@ RUN apt-get update -y && apt-get install -y \
     gdb \
     gdbserver \
     git \
+    libboost-dev \
+    libboost-system-dev \
     libcurl4-openssl-dev \
     libgbm-dev \
+    libprotobuf-c-dev \
     libprotobuf-dev \
     libsgx-dcap-ql \
     libsgx-dcap-ql-dev \
@@ -75,7 +78,9 @@ RUN apt-get update -y && apt-get install -y \
     openjdk-17-jdk \
     openssl \
     patch \
+    pkgconf \
     protobuf-compiler \
+    protobuf-c-compiler \
     python \
     python3-dev \
     python3-pip \
@@ -94,7 +99,7 @@ ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV JAVA_HOME           /usr/lib/jvm/java-17-openjdk-amd64
-ENV SGX_SDK_VERSION     2.16
+ENV SGX_SDK_VERSION     2.17
 
 # Linux SGX mitigation binaries
 RUN curl -sSL -o /opt/as.ld.objdump.r4.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.r4.tar.gz
