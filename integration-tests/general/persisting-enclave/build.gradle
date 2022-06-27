@@ -15,6 +15,7 @@ conclave {
     revocationLevel = 0
     enablePersistentMap = true
     persistentFileSystemSize = "32m"
+    inMemoryFileSystemSize = "32m"
 
     kds {
         kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"

@@ -16,7 +16,6 @@ STUB(pathconf);
 STUB(readlink);
 STUB(_exit);
 STUB(lchown);
-STUB(chown);
 STUB(symlink);
 STUB(__xmknod);
 STUB(link);
@@ -316,11 +315,16 @@ extern "C" {
         return res;
     }        
 
+    int chown(const char *pathname, uid_t owner, gid_t group) {
+        enclave_trace("chown\n");
+        return 0;
+    }
+
     int fchmod(int fd, mode_t mode) {
         enclave_trace("fchmod(%d)\n", fd);
         int err = 0;
         const int res = fchmod_impl(fd, mode, err);
         errno = err;
         return res;
-    }        
+    }
 }

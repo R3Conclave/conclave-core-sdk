@@ -8,7 +8,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Stub functions to satisfy the linker
-STUB(chmod);
 STUB(fstat64);
 STUB(fstat);
 STUB(stat);
@@ -93,5 +92,10 @@ extern "C" {
 		const int res = lstat64_impl(pathname, stat_buf, err);
 		errno = err;
 		return res;
+	}
+
+	int chmod(const char *pathname, mode_t mode) {
+		enclave_trace("chmod\n");
+		return 0;
 	}
 }

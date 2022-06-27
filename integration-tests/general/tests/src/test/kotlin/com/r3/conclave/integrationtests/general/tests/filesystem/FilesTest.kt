@@ -7,10 +7,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.Closeable
+import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
@@ -184,6 +186,38 @@ class FilesTest : FileSystemEnclaveTest() {
             .isInstanceOf(EnclaveLoadException::class.java)
             .hasMessage("Unable to start enclave")
             .hasStackTraceContaining("java.io.IOException: Unable to initialize the enclave's persistent filesystem, potentially corrupted or unencryptable filesystem")
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/tmp/in-memory-fs-dir,/persistent-fs-dir/",
+        "/persistent-fs-dir/,/tmp/in-memory-fs-dir"
+    )
+    fun `ensure moving directories between filesystems does not throw an error - empty directory`(src: String, dst: String) {
+        createDirectory(src)
+
+        assertDoesNotThrow {
+            movePath(src, dst)
+        }
+
+        assertThat(callEnclave(FilesExists(src))).isFalse
+        assertThat(callEnclave(FilesExists(dst))).isTrue
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/tmp/in-memory-fs-dir,/persistent-fs-dir/",
+        "/persistent-fs-dir/,/tmp/in-memory-fs-dir"
+    )
+    fun `ensure moving directories between filesystems throws an error - not an empty directory`(src: String, dst: String) {
+        createDirectory(src)
+        createDirectory("$src/a")
+
+        assertThatThrownBy {
+            // Java does not allow moving directories that are not empty between filesystems.
+            // Refer to: https://bugs.openjdk.org/browse/JDK-8201407
+            movePath(src, dst)
+        }.hasCauseExactlyInstanceOf(DirectoryNotEmptyException::class.java)
     }
 
     private fun copyCorruptedFileSystem() {
