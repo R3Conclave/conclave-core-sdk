@@ -14,6 +14,7 @@ import java.nio.ByteBuffer
 import java.security.Signature
 import java.security.cert.*
 import java.time.Instant
+import java.util.*
 
 /**
  * Represents an attestation that was performed by an attestation service on the enclave host. Once created it can be
@@ -177,17 +178,17 @@ data class EpidAttestation(
                         "most recent version of SigRL from the IAS. Until then the content of the QUOTE is not trustworthy."
                 EpidQuoteStatus.GROUP_OUT_OF_DATE -> "The EPID signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
-                        "as compromised and thus it is not revoked.${report.advistoryIdsSentence}"
+                        "as compromised and thus it is not revoked.${report.advisoryIdsSentence}"
                 EpidQuoteStatus.CONFIGURATION_NEEDED -> "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
-                        "identified as compromised and thus it is not revoked.${report.advistoryIdsSentence}"
+                        "identified as compromised and thus it is not revoked.${report.advisoryIdsSentence}"
                 EpidQuoteStatus.SW_HARDENING_NEEDED -> "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly but due to certain issues affecting the platform, additional software hardening in the " +
-                        "attesting SGX enclaves may be needed.${report.advistoryIdsSentence}"
+                        "attesting SGX enclaves may be needed.${report.advisoryIdsSentence}"
                 EpidQuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED -> "The signature of the ISV enclave QUOTE " +
                         "has been verified correctly but additional configuration for the platform and software hardening in " +
                         "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
-                        "thus it is not revoked.${report.advistoryIdsSentence}"
+                        "thus it is not revoked.${report.advisoryIdsSentence}"
             }
         }
 
@@ -199,7 +200,7 @@ data class EpidAttestation(
         }
     }
 
-    private val EpidVerificationReport.advistoryIdsSentence: String
+    private val EpidVerificationReport.advisoryIdsSentence: String
         get() {
             return when (advisoryIDs?.size ?: 0) {
                 0 -> ""
@@ -263,28 +264,39 @@ data class DcapAttestation(
                 return "Enclave QUOTE has not been verified correctly and thus is untrustworthy ($verificationStatus)"
             }
 
+            val advisoryIdsSentence = getAdvisoryIdsSentence()
             return when (verificationStatus) {
                 TcbStatus.UpToDate -> "A signature of the ISV enclave QUOTE was verified correctly and the TCB level " +
                         "of the SGX platform is up-to-date."
                 TcbStatus.SWHardeningNeeded -> "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly but due to certain issues affecting the platform, additional software hardening in the " +
-                        "attesting SGX enclaves may be needed."
+                        "attesting SGX enclaves may be needed.$advisoryIdsSentence"
                 TcbStatus.ConfigurationNeeded -> "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but additional configuration of SGX platform may be needed. The platform has not been " +
                         "identified as compromised and thus it is not revoked."
                 TcbStatus.ConfigurationAndSWHardeningNeeded -> "The signature of the ISV enclave QUOTE " +
                         "has been verified correctly but additional configuration for the platform and software hardening in " +
                         "the attesting SGX enclaves may be needed. The platform has not been identified as compromised and " +
-                        "thus it is not revoked."
+                        "thus it is not revoked.$advisoryIdsSentence"
                 TcbStatus.OutOfDate -> "The signature of the ISV enclave QUOTE has been verified " +
                         "correctly, but the TCB level of SGX platform is outdated. The platform has not been identified " +
-                        "as compromised and thus it is not revoked."
+                        "as compromised and thus it is not revoked.$advisoryIdsSentence"
                 TcbStatus.OutOfDateConfigurationNeeded -> "The signature of the ISV enclave QUOTE has been " +
                         "verified correctly, but the TCB level of SGX platform is outdated and additional configuration of " +
-                        "it may be needed. The platform has not been identified as compromised and thus it is not revoked."
+                        "it may be needed. The platform has not been identified as compromised and thus it is not revoked.$advisoryIdsSentence"
                 TcbStatus.Revoked -> "The TCB level of SGX platform is revoked. The platform is not trustworthy."
             }
         }
+
+    private fun getAdvisoryIdsSentence(): String {
+        val advisoryIDs =
+            collateral.signedTcbInfo.tcbInfo.tcbLevels.flatMapTo(TreeSet()) { it.advisoryIDs ?: emptySet() }
+
+        return when (advisoryIDs.size) {
+            0 -> ""
+            else -> " For further details see Advisory IDs ${advisoryIDs.joinToString(", ")}."
+        }
+    }
 
     override fun serialise(): ByteArray {
         return writeData {
