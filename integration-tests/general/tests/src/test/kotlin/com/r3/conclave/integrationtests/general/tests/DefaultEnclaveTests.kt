@@ -1,20 +1,16 @@
 package com.r3.conclave.integrationtests.general.tests
 
-import com.r3.conclave.host.AttestationParameters
-import com.r3.conclave.integrationtests.general.common.tasks.*
+import com.r3.conclave.integrationtests.general.common.tasks.CheckNotMultiThreadedAction
+import com.r3.conclave.integrationtests.general.common.tasks.Echo
+import com.r3.conclave.integrationtests.general.common.tasks.EchoWithCallback
+import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 import kotlin.random.Random
 
 class DefaultEnclaveTests : AbstractEnclaveActionTest() {
@@ -62,51 +58,6 @@ class DefaultEnclaveTests : AbstractEnclaveActionTest() {
         for (n in 1..1000) {
             callEnclave(echo)
         }
-    }
-
-    @Test
-    fun `destroy while OCALL in progress`() {
-        // TODO For some reason this test hangs when using EPID since introducing Gradle 7
-        assumeTrue(getAttestationParams(enclaveHost()) !is AttestationParameters.EPID)
-
-        val semaphore = CompletableFuture<Unit>()
-        val ocalls = AtomicInteger(0)
-        val ecall = threadWithFuture {
-            callEnclave(EchoWithCallback(ByteArray(16))) { bytes ->
-                if (ocalls.getAndIncrement() == 0) {
-                    semaphore.get()
-                    bytes
-                } else {
-                    null
-                }
-            }
-        }
-        while (ocalls.get() == 0) {
-            Thread.sleep(100)
-        }
-        val destructor = threadWithFuture {
-            enclaveHost().close()
-        }
-        semaphore.complete(Unit)
-        destructor.join()
-        ecall.join()
-        assertThat(ocalls.get()).isEqualTo(2)
-    }
-
-    @Disabled("This test demonstrates the waiting behaviour of enclave destruction: CON-361")
-    @Test
-    fun `destroy while ECALL in progress`() {
-        val latch = CountDownLatch(1)
-
-        thread(isDaemon = true) {
-            callEnclave(SpinAction()) {
-                latch.countDown()
-                null
-            }
-        }
-
-        latch.await()  // Wait until the enclave signals the ECALL is in progress
-        enclaveHost().close() // hang
     }
 
     @Test
