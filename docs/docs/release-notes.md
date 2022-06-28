@@ -28,7 +28,9 @@ Release notes
     signed quote object from the enclave. See the API docs for
     [`EnclaveHost.createAttestationQuote`](api/-conclave/com.r3.conclave.host/-enclave-host/create-attestation-quote.html)
     for more information.
-
+12. Conclave now uses version 2.17 of the Intel SGX SDK. This provides bug fixes and other improvements. See the
+   [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.17-release)
+   for more details.
 ### 1.2.1
 
 This is a small release with some minor improvements:
