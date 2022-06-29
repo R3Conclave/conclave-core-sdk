@@ -14,7 +14,12 @@ enum class MasterKeyType(val id: Int) {
     /**
      * A cluster master key suitable for applications running in production environments.
      */
-    CLUSTER(1);
+    CLUSTER(1),
+
+    /**
+     * An azure managed HSM backed key suitable for applications running in production environments.
+     */
+    AZURE_HSM(2);
 
     companion object {
         /**
@@ -29,6 +34,7 @@ enum class MasterKeyType(val id: Int) {
             return when (id) {
                 DEVELOPMENT.id -> DEVELOPMENT
                 CLUSTER.id -> CLUSTER
+                AZURE_HSM.id -> AZURE_HSM
                 else -> throw IllegalArgumentException("Invalid master key type ID.")
             }
         }
