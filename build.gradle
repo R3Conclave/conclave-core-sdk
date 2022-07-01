@@ -470,10 +470,6 @@ idea {
 // plugin, based on the repositories block inside the if(includeNative) block above.
 task cleanSDK(type: Delete) {
     delete "$buildDir/sdk/repo"
-    delete "$buildDir/sdk/hello-world/client/build"
-    delete "$buildDir/sdk/hello-world/enclave/build"
-    delete "$buildDir/sdk/hello-world/host/build"
-    delete "$buildDir/sdk/hello-world/.gradle"
 }
 
 task sdkRepo {
@@ -511,16 +507,14 @@ task sdkCopyExtras(type: Copy) {
     into "$buildDir/sdk"
     doLast {
         // Patch the gradle.properties file in the sample app so it uses the SDK copy of the repository.
-        for (p in ["hello-world", "cordapp"]) {
-            def props = new Properties()
-            file("$buildDir/sdk/$p/gradle.properties").newInputStream().withCloseable {
-                props.load(it)
-                props["conclaveRepo"] = "../repo"
-                props["conclaveVersion"] = "${rootProject.version}".toString()
-            }
-            file("$buildDir/sdk/$p/gradle.properties").newOutputStream().withCloseable {
-                props.store(it, "")
-            }
+        def props = new Properties()
+        file("$buildDir/sdk/cordapp/gradle.properties").newInputStream().withCloseable {
+            props.load(it)
+            props["conclaveRepo"] = "../repo"
+            props["conclaveVersion"] = "${rootProject.version}".toString()
+        }
+        file("$buildDir/sdk/cordapp/gradle.properties").newOutputStream().withCloseable {
+            props.store(it, "")
         }
     }
 }

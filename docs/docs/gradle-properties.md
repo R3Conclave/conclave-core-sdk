@@ -6,8 +6,8 @@ The Conclave samples use
 [Gradle properties](https://docs.gradle.org/current/userguide/build_environment.html#sec:gradle_configuration_properties)
 to import the SDK libraries into Conclave projects. The properties in question are `conclaveRepo` and `conclaveVersion`.
 
-This is configured in `settings.gradle`. For example, consider the file
-`/path/to/conclave/sdk/hello-world/settings.gradle`, where these properties are used to import the Conclave maven
+This is configured in `settings.gradle`. For example, consider the
+[hello world sample](https://github.com/R3Conclave/conclave-samples/blob/master/hello-world/settings.gradle), where these properties are used to import the Conclave maven
 repository and apply the Conclave plugin:
 ```groovy
 pluginManagement {

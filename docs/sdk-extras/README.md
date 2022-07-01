@@ -10,10 +10,6 @@ In the `repo/` directory there is a Maven repository that provides all the
 libraries you'll need in your project. The documentation will show you how to
 configure your project to use the files within.
 
-The `hello-world/` directory contains a sample project demonstrating how to use
-Conclave by building an enclave, a host and a client. This sample is the same
-as what you will build if you follow the tutorial in the Conclave docs.
-
 The `cordapp/` directory is a sample that shows how to integrate Conclave with
 a Corda CorDapp.
 

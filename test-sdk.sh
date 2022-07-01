@@ -7,30 +7,6 @@ enclave_mode=$1
 gradle_args="-PenclaveMode=$enclave_mode"
 
 echo
-echo Now trying to build and test the hello-world sample
-echo
-pushd build/distributions/conclave-sdk-*/hello-world
-# just run unit test
-./gradlew --stacktrace $gradle_args test
-# build the host web server and client
-./gradlew -q $gradle_args host:bootJar client:shadowJar
-# start the web server
-$JAVA_HOME/bin/java -jar $(ls host/build/libs/host-*.jar) & _PID=$!
-# wait for the web server to be ready
-sleep 20
-# client sends two requests, using the same state file
-for ((i=0;i<2;i++));
-do
-    $JAVA_HOME/bin/java -jar client/build/libs/client.jar \
-        "S:0000000000000000000000000000000000000000000000000000000000000000 S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" \
-        "reverse me!"
-done
-# kill the web server process
-kill -9 $_PID
-popd
-sleep 10
-
-echo
 echo Now testing Conclave Init
 echo
 

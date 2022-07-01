@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This tutorial describes how to compile and run the **sample app**, which you can find in the `hello-world` directory of
-the Conclave SDK. This app contains the `ReverseEnclave`, which reverses a string provided by the client and
-passes it back.
+This tutorial describes how to compile and run the sample hello world app, which you can find in the 
+[conclave samples repository](https://github.com/R3Conclave/conclave-samples). This app contains the `ReverseEnclave`, 
+which reverses a string provided by the client and passes it back.
 
 We are first going to run the app in [mock mode](enclave-modes.md),
 which is the simplest (and least realistic) of the enclave modes.
@@ -21,9 +21,10 @@ If you get stuck, join our [discord server](https://discord.com/invite/dDaBGqGPr
 
 ## Compile the sample application
 
-Navigate to the hello world sample.
+Clone and navigate to the hello world sample.
 ```bash
-cd /path/to/conclave/sdk/hello-world
+git clone git@github.com:R3Conclave/conclave-samples.git
+cd conclave-samples/hello-world
 ```
 
 The sample app, like all Conclave apps, consists of an
