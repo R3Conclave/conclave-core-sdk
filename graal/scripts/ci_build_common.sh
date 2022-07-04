@@ -22,7 +22,6 @@ fi
 docker_group_add=()
 # OS specific settings
 if [ "$(uname)" == "Darwin" ]; then
-    cardreader_gid=""
     num_cpus=$( sysctl -n hw.ncpu )
     docker_ip="192.168.65.2"
     network_cmd=("-p" "8000:8000" "-p" "8001:8001")
@@ -37,7 +36,6 @@ else
         exit 1
     fi
     docker_group_add=("--group-add" "${docker_gid}")
-    cardreader_gid=$(cut -d: -f3 < <(getent group cardreader) || echo "")
     num_cpus=$( nproc )
     network_cmd=("--network=host")
     host_core_dump_dir="/var/crash/"
@@ -50,16 +48,6 @@ else
         docker_ip="172.17.0.2"
         fi
     fi
-fi
-
-volume_usb=()
-if [[ -d /dev/bus/usb ]]; then
-    volume_usb=("-v" "/dev/bus/usb:/dev/bus/usb")
-fi
-
-group_cardreader=()
-if [[ ! -z ${cardreader_gid} ]]; then
-    group_cardreader=("--group-add" "${cardreader_gid}")
 fi
 
 # Part of Graal build process involves cloning and running git commands.
@@ -76,13 +64,11 @@ fi
 # For more information: https://gist.github.com/dimo414/2fb052d230654cc0c25e9e41a9651ebe
 docker_opts=(\
     "--rm" \
-    "--privileged" \
     "-u" "$(id -u):$(id -g)" \
     "--ulimit" "core=512000000" \
     "--label" "graalvm" \
     ${docker_group_add[@]+"${docker_group_add[@]}"} \
     ${network_cmd[@]+"${network_cmd[@]}"} \
-    ${group_cardreader[@]+"${group_cardreader[@]}"} \
     "-v" "$HOME/.gradle:/gradle" \
     "-v" "$HOME/.m2:/home/.m2" \
     "-v" "$HOME/.mx:/home/.mx" \
@@ -91,7 +77,6 @@ docker_opts=(\
     "-v" "/var/run/docker.sock:/var/run/docker.sock" \
     "-v" "$host_core_dump_dir:/var/crash/" \
     "-v" "${code_host_dir}:${code_docker_dir}" \
-    ${volume_usb[@]+"${volume_usb[@]}"} \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
     ${use_maven_repo_flags[@]+"${use_maven_repo_flags[@]}"} \

@@ -110,9 +110,6 @@ fi
 
   # Let us read/write to the home directory.
   docker exec -u root $container_id chown $(id -u):$(id -g) /home
-  if [[ ! -z ${cardreader_gid} ]]; then
-    docker exec -it $@ -u root $container_id bash -c "groupadd -g ${cardreader_gid} cardreader_ext || true"
-  fi
 
   # Start the docsite servers. They have hot-reload so editing the files in docs (for docs.conclave.net) or
   # internal-docs (not published on the web) will automatically cause any open browsers to refresh.

@@ -45,7 +45,4 @@ if [[ -z ${container_id} ]]; then
 
   # Let us read/write to the home directory.
   docker exec -u root $container_id chown $(id -u):$(id -g) /home
-  if [[ ! -z ${cardreader_gid} ]]; then
-    docker exec -it $@ -u root $container_id bash -c "groupadd -g ${cardreader_gid} cardreader_ext || true"
-  fi
 fi

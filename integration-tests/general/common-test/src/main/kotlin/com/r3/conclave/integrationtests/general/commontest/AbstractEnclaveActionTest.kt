@@ -1,6 +1,5 @@
 package com.r3.conclave.integrationtests.general.commontest
 
-import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.integrationtests.general.common.tasks.EnclaveTestAction
@@ -10,8 +9,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.io.path.exists
 
 abstract class AbstractEnclaveActionTest(
     private val defaultEnclaveClassName: String = "com.r3.conclave.integrationtests.general.defaultenclave.DefaultEnclave"
@@ -26,28 +23,6 @@ abstract class AbstractEnclaveActionTest(
     var useKds = false
 
     companion object {
-
-        fun getAttestationParams(enclaveHost: EnclaveHost): AttestationParameters? {
-            return if (enclaveHost.enclaveMode.isHardware) getHardwareAttestationParams() else null
-        }
-
-        fun getHardwareAttestationParams(): AttestationParameters {
-            return when {
-                // EPID vs DCAP can be detected because the drivers are different and have different names.
-                Paths.get("/dev/isgx").exists() -> {
-                    val spid = OpaqueBytes.parse(System.getProperty("conclave.spid"))
-                    val attestationKey = checkNotNull(System.getProperty("conclave.attestation-key"))
-                    AttestationParameters.EPID(spid, attestationKey)
-                }
-                Paths.get("/dev/sgx/enclave").exists() -> {
-                    AttestationParameters.DCAP()
-                }
-                else -> throw UnsupportedOperationException(
-                    "SGX does not appear to be available on this machine. Check kernel drivers."
-                )
-            }
-        }
-
         fun <R> callEnclave(
             enclaveHost: EnclaveHost,
             action: EnclaveTestAction<R>,
@@ -110,7 +85,7 @@ abstract class AbstractEnclaveActionTest(
                 val enclaveFileSystemFile = getFileSystemFilePath(enclaveClassName)
                 val kdsUrl = if (useKds) "http://localhost:${TestKds.testKdsPort}" else null
                 val transport = object : TestEnclaveTransport(enclaveClassName, enclaveFileSystemFile, kdsUrl) {
-                    override val attestationParameters: AttestationParameters? get() = getAttestationParams(enclaveHost)
+                    override val attestationParameters: AttestationParameters? get() = TestUtils.getAttestationParams(enclaveHost)
                 }
                 transport.startEnclave()
                 transport

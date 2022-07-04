@@ -14,8 +14,8 @@ import com.r3.conclave.integrationtests.general.common.tasks.Increment
 import com.r3.conclave.integrationtests.general.common.tasks.decode
 import com.r3.conclave.integrationtests.general.common.tasks.encode
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
-import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import com.r3.conclave.integrationtests.general.commontest.TestKds
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.mail.PostOffice
@@ -69,11 +69,7 @@ class KdsMailTests {
     @BeforeEach
     fun startEnclave() {
         enclaveHost = EnclaveHost.load("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave")
-        val attestationParameters = if (enclaveHost.enclaveMode.isHardware) {
-            AbstractEnclaveActionTest.getHardwareAttestationParams()
-        } else {
-            null
-        }
+        val attestationParameters = TestUtils.getAttestationParams(enclaveHost)
         enclaveHost.start(attestationParameters, null, null, KDSConfiguration(kdsUrl.toString())) { commands ->
             for (command in commands) {
                 if (command is MailCommand.PostMail) {

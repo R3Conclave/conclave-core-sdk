@@ -5,8 +5,6 @@ subprojects {
     apply plugin: 'java'
 
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
-    ext.attestationMode = findProperty("attestationMode") ?: "epid"
-
 
     apply from: "${rootProject.projectDir}/repositories.gradle"
 
@@ -18,12 +16,6 @@ subprojects {
     }
 
     tasks.withType(Test) {
-        useJUnitPlatform {
-            if (findProperty("slowTests") == null) {
-                excludeTags("slow")
-            } else {
-                includeTags("slow")
-            }
-        }
+        useJUnitPlatform()
     }
 }

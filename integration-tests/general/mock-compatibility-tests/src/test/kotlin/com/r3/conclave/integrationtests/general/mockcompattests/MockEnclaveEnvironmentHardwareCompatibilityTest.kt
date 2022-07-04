@@ -2,7 +2,6 @@ package com.r3.conclave.integrationtests.general.mockcompattests
 
 import com.google.common.collect.Sets
 import com.r3.conclave.common.EnclaveMode.DEBUG
-import com.r3.conclave.common.EnclaveMode.RELEASE
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
@@ -10,7 +9,7 @@ import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
 import com.r3.conclave.host.internal.InternalsKt.createNativeHost
-import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner
 import org.assertj.core.api.Assertions.assertThat
@@ -132,9 +131,8 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
     private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
         return nativeEnclaves.computeIfAbsent(enclaveSpec) {
             val host = loadNativeHostFromFile(enclaveSpec)
-            val attestationParameters = when (host.enclaveMode) {
-                RELEASE, DEBUG -> AbstractEnclaveActionTest.getHardwareAttestationParams()
-                else -> throw IllegalStateException("The enclave needs to be built in Release or Debug mode")
+            val attestationParameters = checkNotNull(TestUtils.getAttestationParams(host)) {
+                "Release or debug enclave required"
             }
             host.start(attestationParameters, null, null) { }
             host
