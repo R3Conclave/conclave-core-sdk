@@ -496,29 +496,6 @@ task zipGPL2Sources(type: Zip) {
     }
 }
 
-// Copy things like the README file, the sample apps, the license text.
-task sdkCopyExtras(type: Copy) {
-    group = "SDK Build"
-    description = "Copy the docs/sdk-extras directory into the $buildDir/sdk directory"
-    from("docs/sdk-extras") {
-        exclude("**/.gradle/**")
-        exclude("**/build/**")
-    }
-    into "$buildDir/sdk"
-    doLast {
-        // Patch the gradle.properties file in the sample app so it uses the SDK copy of the repository.
-        def props = new Properties()
-        file("$buildDir/sdk/cordapp/gradle.properties").newInputStream().withCloseable {
-            props.load(it)
-            props["conclaveRepo"] = "../repo"
-            props["conclaveVersion"] = "${rootProject.version}".toString()
-        }
-        file("$buildDir/sdk/cordapp/gradle.properties").newOutputStream().withCloseable {
-            props.store(it, "")
-        }
-    }
-}
-
 task sdkCopyConclaveInit(type: Copy, dependsOn: "conclave-init:shadowJar") {
     from file("conclave-init/build/libs/conclave-init-shadow.jar")
     into "$buildDir/sdk"
@@ -528,7 +505,7 @@ task sdkCopyConclaveInit(type: Copy, dependsOn: "conclave-init:shadowJar") {
 // This task doesn't actually copy all the files, despite being called `sdkFiles`. It copies `docs/build` into the
 // `build/sdk` directory and depends on the other tasks which copy the other bits. We should probably rename this task
 // to "sdkCopyDocs", and move all the dependencies to the `sdk` task.
-task sdkFiles(type: Copy, dependsOn: ["sdkRepo", "buildDocs", "zipGPL2Sources", "sdkCopyExtras", "sdkCopyConclaveInit"]) {
+task sdkFiles(type: Copy, dependsOn: ["sdkRepo", "buildDocs", "zipGPL2Sources", "sdkCopyConclaveInit"]) {
     group = "SDK Build"
     description = "Build the SDK directory tree that we ship to end users."
     from("docs/build")

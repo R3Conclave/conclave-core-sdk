@@ -16,7 +16,6 @@ sgx_mode=$1
  fi
 
 runDocker $container_image_conclave_build "./test-sdk.sh $sgx_mode"
-runDocker $container_image_cordapp "./test-sdk-cordapp.sh $sgx_mode"
 
 if [ $sgx_mode != "Simulation" ]; then
     # Teardown AESM container

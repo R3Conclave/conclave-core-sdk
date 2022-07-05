@@ -94,13 +94,6 @@ buildContainerAESMD() {
   popd
 }
 
-# Builds Cordaap docker image
-buildContainerCordapp() {
-  pushd "${code_host_dir}/containers/cordapp/src/docker"
-  docker build -t $container_image_cordapp --build-arg commit_id=$commit_id .
-  popd
-}
-
 # Prints a message and builds the container image based on the function passed as a second argument
 buildContainer() {
     echo "Building docker image container $1..."
@@ -140,8 +133,5 @@ if [ -z "${DOCKER_IMAGE_AESMD_BUILD:-}" ] || [ "${DOCKER_IMAGE_AESMD_BUILD}" == 
 fi
 if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD}" == "1" ]; then
   buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build buildContainerConclaveBuild
-fi
-if [ -z "${DOCKER_IMAGE_CORDAPP_BUILD:-}" ] || [ "${DOCKER_IMAGE_CORDAPP_BUILD}" == "1" ]; then
-  buildAndPublishContainerIfItDoesNotExist $container_image_cordapp buildContainerCordapp
 fi
 buildAndPublishContainerIfItDoesNotExist $container_image_sdk_build buildContainerSDKBuild

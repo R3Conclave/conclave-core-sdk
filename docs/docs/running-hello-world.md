@@ -23,7 +23,7 @@ If you get stuck, join our [discord server](https://discord.com/invite/dDaBGqGPr
 
 Clone and navigate to the hello world sample.
 ```bash
-git clone git@github.com:R3Conclave/conclave-samples.git
+git clone https://github.com/R3Conclave/conclave-samples.git
 cd conclave-samples/hello-world
 ```
 
