@@ -27,8 +27,19 @@ git clone https://github.com/R3Conclave/conclave-samples.git
 cd conclave-samples/hello-world
 ```
 
+Update the file `gradle.properties` so that `conclaveVersion` is set to the version of the Conclave SDK that was downloaded
+from [conclave.net](https://www.conclave.net). You must also update the property `conclaveRepo` to point to the `repo` directory
+present in the Conclave SDK. For instance, you will get the file `conclave-sdk-1.2.1.zip` if the Conclave SDK version 1.2.1 is downloaded.
+After unzipping the file, you get the folder `conclave-sdk-1.2.1`. In this case, `conclaveVersion` must be set to `1.2.1` and
+`conclaveRepo` must be set to `path/to/conclave-sdk-1.2.1/repo`. The result would look like:
+
+```bash
+conclaveVersion=1.2.1
+conclaveRepo=path/to/conclave-sdk-1.2.1/repo
+```
+
 The sample app, like all Conclave apps, consists of an
-[an enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
+[enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
 which is provided by the Conclave SDK. We can generate a fat JAR for the host and client using the `:bootJar` and
 `:shadowJar` tasks, respectively.
 === "Windows"
