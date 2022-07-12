@@ -19,8 +19,6 @@
 **/docs/docs/javadoc
 ?/
 
-internal-docs/site
-
 docs/docs/api
 docs/virtualenv
 

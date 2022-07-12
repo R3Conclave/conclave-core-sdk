@@ -15,5 +15,3 @@ source setup-virtualenv.sh
 # just localhost (which in the container is different to the host).
 mkdocs serve -a 0.0.0.0:8000 &
 trap "kill $(jobs -p)" SIGINT SIGTERM
-cd ../internal-docs
-mkdocs serve -a 0.0.0.0:8001

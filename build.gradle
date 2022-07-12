@@ -157,9 +157,7 @@ subprojects {
 
 // region Docsite building
 //
-// This part of the build handles the creation of the EXTERNAL docsite. The internal docsite is not built automatically
-// at this time: run `mkdocs serve` in the internal-docs directory yourself to view it.
-
+// This part of the build handles the creation of the EXTERNAL docsite.
 // Dokka is the tool that reads KDoc comments from Kotlin and produces an API website.
 
 import org.jetbrains.dokka.gradle.DokkaTask
