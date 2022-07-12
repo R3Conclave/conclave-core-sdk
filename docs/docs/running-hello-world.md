@@ -15,7 +15,6 @@ If you get stuck, join our [discord server](https://discord.com/invite/dDaBGqGPr
 ## Prerequisites
 
 * You need JDK 17 installed in order to build and run the app.
-* You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
 * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md)
   and [architecture overview](architecture.md).
 
@@ -25,17 +24,6 @@ Clone and navigate to the hello world sample.
 ```bash
 git clone https://github.com/R3Conclave/conclave-samples.git
 cd conclave-samples/hello-world
-```
-
-Update the file `gradle.properties` so that `conclaveVersion` is set to the version of the Conclave SDK that was downloaded
-from [conclave.net](https://www.conclave.net). You must also update the property `conclaveRepo` to point to the `repo` directory
-present in the Conclave SDK. For instance, you will get the file `conclave-sdk-1.2.1.zip` if the Conclave SDK version 1.2.1 is downloaded.
-After unzipping the file, you get the folder `conclave-sdk-1.2.1`. In this case, `conclaveVersion` must be set to `1.2.1` and
-`conclaveRepo` must be set to `path/to/conclave-sdk-1.2.1/repo`. The result would look like:
-
-```bash
-conclaveVersion=1.2.1
-conclaveRepo=path/to/conclave-sdk-1.2.1/repo
 ```
 
 The sample app, like all Conclave apps, consists of an

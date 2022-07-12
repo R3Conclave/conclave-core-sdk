@@ -18,19 +18,20 @@ dependencies {
     implementation "info.picocli:picocli:$picocli_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 // Zip up the template directory and gradle wrapper and add it as a java resource
 task packageTemplate(type: Zip) {
     archiveFileName = "template.zip"
-    destinationDirectory = file("$buildDir/resources/main")
+    destinationDirectory = sourceSets.main.output.resourcesDir
 
     from "$projectDir/template"
 }
 
 task packageGradleWrapper(type: Zip) {
     archiveFileName = "gradle-wrapper.zip"
-    destinationDirectory = file("$buildDir/resources/main")
+    destinationDirectory = sourceSets.main.output.resourcesDir
 
     from "$rootDir"
     include(
@@ -41,23 +42,16 @@ task packageGradleWrapper(type: Zip) {
     )
 }
 
-// If packaging more things, make sure to update the test dependency below
-tasks.shadowJar.dependsOn(packageTemplate, packageGradleWrapper)
+processResources {
+    dependsOn(packageTemplate, packageGradleWrapper)
+}
 
 application {
     mainClass.set("com.r3.conclave.init.cli.MainKt")
 }
 
 shadowJar {
-    // Note: The task `sdkCopyConclaveInit` in the root project depends on this archiveFileName
-    archiveFileName = "conclave-init-shadow.jar"
+    archiveClassifier.set("")
     // Workaround to prevent conclave-init looking like another tool which Nexus IQ doesn't like.
     relocate 'kotlin', 'com.r3.conclave.shaded.kotlin'
-}
-
-tasks.withType(Test) {
-    dependsOn(packageTemplate, packageGradleWrapper)
-    testLogging {
-        events "passed", "skipped", "failed"
-    }
 }

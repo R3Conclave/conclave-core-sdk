@@ -1,21 +1,20 @@
 # Conclave Init
 
 Conclave Init is a tool for bootstrapping Conclave projects, reducing the amount of boilerplate you need to write.
-
-You can use the tool once you have [set up your machine](enclave-modes.md#system-requirements)
-and installed [Conclave](https://conclave.net/get-conclave/). (You can use the community edition for the purposes of
-this tutorial!)
-
-Conclave Init will automatically generate your Conclave project so that you can focus on writing enclave code!
+It will automatically generate your Conclave project so that you can focus on writing enclave code!
 
 ## Generate a new project
 
-You will find `conclave-init.jar` in the `tools` directory of the Conclave SDK. To create a new Conclave project,
-run the following
-command:
+First download the Conclave Init tool:
 
 ```shell
-java -jar /path/to/conclave-sdk/tools/conclave-init.jar \
+wget https://repo1.maven.org/maven2/com/r3/conclave/conclave-init/1.3/conclave-init-1.3.jar -O conclave-init.jar
+```
+
+To create a new Conclave project, run the following command:
+
+```shell
+java -jar conclave-init.jar \
   --package com.megacorp \
   --enclave-class-name AmazingEnclave \
   --target ./amazing-conclave-app
@@ -133,8 +132,7 @@ where the Java version of the entire project is set.
 
 #### `gradle.properties`
 
-Defines the versions of dependencies. Note, we assume that the required `conclaveRepo` and `conclaveVersion` 
-properties are set in the [user-wide `gradle.properties` file](gradle-properties.md#user-settings).
+Defines the version of Conclave being used with the `conclaveVersion` property.
 
 ### Enclave, host, and client modules
 The enclave, host, and client are the three components in a Conclave application. See

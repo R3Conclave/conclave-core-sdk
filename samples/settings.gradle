@@ -18,7 +18,7 @@ pluginManagement {
                 break
             case "sdk":
                 maven {
-                    url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
+                    url = "${rootProject.projectDir}/../build/repo"
                 }
                 break
         }

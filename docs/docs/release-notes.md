@@ -33,6 +33,8 @@ Release notes
    for more details.
 13. We have added Intel advisory IDs, which provide information on specific SGX vulnerabilities, for DCAP attestation as well;
     previously, they present only for EPID attestation.
+14. The Conclave Init tool now sets the Conclave version at the individual project level, rather at the user level.
+
 ### 1.2.1
 
 This is a small release with some minor improvements:

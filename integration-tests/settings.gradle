@@ -4,7 +4,7 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         maven {
-            url = "${rootProject.projectDir}/../build/distributions/conclave-sdk-$conclave_version/repo"
+            url = "${rootProject.projectDir}/../build/repo"
         }
         maven {
             url = "https://software.r3.com/artifactory/sgxjvm"

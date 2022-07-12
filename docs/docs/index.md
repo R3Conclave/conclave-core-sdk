@@ -31,13 +31,7 @@ Conclave is a software development kit for the rapid development of privacy-firs
 
 ## Getting started
 
-If you are interested in trying Conclave, download it [here](https://www.conclave.net/get-conclave/) and check out the [tutorial](https://docs.conclave.net/running-hello-world.html) on how to run your first enclave.
-
-* **[Get Conclave](https://conclave.net/get-conclave/)**
-    * Conclave 1.0 SHA2: `c3430d7172b2b0ab15a19930558f8c18c64974bb113dfd2c0722d067cdf3fee5`
-    * Conclave 1.1 SHA2: `3d47ae8a9fb944d75fb4ee127cd9874c04343643c830e1fe68898c3c93891ca2`
-    * Conclave 1.2 SHA2: `072642ce92e277567794739c4a080414a3313f186208d0cb118945cbcc859682`
-    * Conclave 1.2.1 SHA2: `06cb37bb9b8b36275322b7eeda2fec3ab2cd5d0f23192841c6efd5320e9c2026`
+Take a look at the [hello world sample](running-hello-world.md) to get started with Conclave.
 
 ## Get help with Conclave
 

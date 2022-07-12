@@ -7,9 +7,9 @@ import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 import kotlin.io.path.*
 
-
 object ConclaveInit {
     fun createProject(
+        conclaveVersion: String,
         language: Language,
         basePackage: JavaPackage,
         enclaveClass: JavaClass,
@@ -33,9 +33,20 @@ object ConclaveInit {
             destination.writeText(contents)
         }
 
+        generateGradleProperties(outputRoot, conclaveVersion)
         copyGradleWrapper(outputRoot)
 
         templateRoot.deleteRecursively()
+    }
+
+    private fun generateGradleProperties(outputRoot: Path, conclaveVersion: String) {
+        val gradlePropertiesFile = outputRoot / "gradle.properties"
+        gradlePropertiesFile.writeLines(listOf(
+            "# Dependency versions",
+            "conclaveVersion=$conclaveVersion",
+            "jupiterVersion=5.8.2",
+            "slf4jVersion=1.7.32",
+        ))
     }
 
     private fun copyGradleWrapper(outputRoot: Path) {

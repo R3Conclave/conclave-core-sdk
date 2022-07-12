@@ -155,6 +155,125 @@ subprojects {
     }
 }
 
+class PublishedProject {
+    String projectPath
+    String description
+    boolean apiLibrary = false
+    boolean shade = false
+}
+
+List<PublishedProject> publishedProjects = [
+        new PublishedProject(
+                projectPath: ':cpp:jvm-enclave-common',
+                description: 'libc common headers',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host:native-host-simulation',
+                description: 'Native Conclave host libraries linked with simulation libraries',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host:native-host-debug',
+                description: 'Native Conclave host libraries linked with debug libraries',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host:native-host-release',
+                description: 'Native Conclave host libraries linked with release libraries',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-host-shared',
+                description: 'Native Conclave host libraries shared between simulation, debug and release',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-gdb',
+                description: 'The Intel Linux SDK gdb plugin and wrapper',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-sign-tool',
+                description: 'The Intel Linux SDK signing tool',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-binutils',
+                description: 'Pinned version of essential binutils tools',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:linux-sgx:linux-sgx-simulation',
+                description: 'SGX SDK simulation libraries and headers',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:linux-sgx:linux-sgx-debug',
+                description: 'SGX SDK debug libraries and headers',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:linux-sgx:linux-sgx-release',
+                description: 'SGX SDK release libraries and headers',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-substratevm:native-substratevm-simulation',
+                description: 'SubstrateVM stubs, JNI and EDL simulation libraries',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-substratevm:native-substratevm-debug',
+                description: 'SubstrateVM stubs, JNI and EDL debug libraries',
+        ),
+        new PublishedProject(
+                projectPath: ':cpp:native-substratevm:native-substratevm-release',
+                description: 'SubstrateVM stubs, JNI and EDL release libraries',
+        ),
+        new PublishedProject(
+                projectPath: ':graal-cap-cache',
+                description: 'Native image CAP cache used during enclave build',
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-common',
+                description: 'Conclave API common to enclave, host and client',
+                apiLibrary: true,
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-enclave',
+                description: 'Conclave enclave API',
+                apiLibrary: true,
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-host',
+                description: 'Conclave host API',
+                apiLibrary: true,
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-web-host',
+                description: 'Conclave host web server',
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-client',
+                description: 'Conclave client API',
+                apiLibrary: true,
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-web-client',
+                description: 'Conclave web client API',
+                apiLibrary: true,
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-mail',
+                description: 'Conclave mail API',
+                apiLibrary: true,
+                shade: true
+        ),
+        new PublishedProject(
+                projectPath: ':plugin-enclave-gradle',
+                description: 'Conclave Gradle plugin for creating enclaves',
+        ),
+        new PublishedProject(
+                projectPath: ':conclave-init',
+                description: 'Conclave tool for bootstrapping projects',
+        )
+]
+
 // region Docsite building
 //
 // This part of the build handles the creation of the EXTERNAL docsite.
@@ -174,18 +293,11 @@ tasks.withType(DokkaTask).configureEach {
                         "{\"customAssets\":[\"${file("$projectDir/docs/assets/docs_logo.svg")}\", \"${file("$projectDir/docs/assets/arrow_down.svg")}\"], "
                       + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
 
-            // Don't want users seeing deprecated stuff, they can call it up in their IDE if they need it.
-            def subProjects = [
-                    "conclave-client",
-                    "conclave-common",
-                    "conclave-enclave",
-                    "conclave-host",
-                    "conclave-mail",
-                    "conclave-web-client"
-            ]
-
-            subProjects.forEach() {
-                sourceRoots.from(file("$projectDir/$it/src/main/kotlin"))
+            for (publishedProject in publishedProjects) {
+                if (publishedProject.apiLibrary) {
+                    def project = project(publishedProject.projectPath)
+                    sourceRoots.from(file("${project.projectDir}/src/main/kotlin"))
+                }
             }
 
             // Filter out our internal and kotlin-specific classes
@@ -256,126 +368,25 @@ task buildDocs(dependsOn: ['mkdocs'])
 dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
-//region Publishing
-class PublishedProject {
-    String projectPath
-    String description
-}
-
-List<PublishedProject> publishedProjects = [
-        new PublishedProject(
-                projectPath: ':cpp:jvm-enclave-common',
-                description: 'libc common headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host:native-host-simulation',
-                description: 'Native Conclave host libraries linked with simulation libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host:native-host-debug',
-                description: 'Native Conclave host libraries linked with debug libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host:native-host-release',
-                description: 'Native Conclave host libraries linked with release libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host-shared',
-                description: 'Native Conclave host libraries shared between simulation, debug and release',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-gdb',
-                description: 'The Intel Linux SDK gdb plugin and wrapper',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-sign-tool',
-                description: 'The Intel Linux SDK signing tool',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-binutils',
-                description: 'Pinned version of essential binutils tools',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:linux-sgx:linux-sgx-simulation',
-                description: 'SGX SDK simulation libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:linux-sgx:linux-sgx-debug',
-                description: 'SGX SDK debug libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:linux-sgx:linux-sgx-release',
-                description: 'SGX SDK release libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-substratevm:native-substratevm-simulation',
-                description: 'SubstrateVM stubs, JNI and EDL simulation libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-substratevm:native-substratevm-debug',
-                description: 'SubstrateVM stubs, JNI and EDL debug libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-substratevm:native-substratevm-release',
-                description: 'SubstrateVM stubs, JNI and EDL release libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-common',
-                description: 'Conclave API common to enclave, host and client',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-enclave',
-                description: 'Conclave enclave API',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-host',
-                description: 'Conclave host API',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-web-host',
-                description: 'Conclave host web server',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-client',
-                description: 'Conclave client API',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-web-client',
-                description: 'Conclave web client API',
-        ),
-        new PublishedProject(
-                projectPath: ':conclave-mail',
-                description: 'Conclave mail API',
-        ),
-        new PublishedProject(
-                projectPath: ':plugin-enclave-gradle',
-                description: 'Conclave Gradle plugin for creating enclaves'
-        ),
-        new PublishedProject(
-                projectPath: ':graal-cap-cache',
-                description: 'Native image CAP cache used during enclave build'
-        )
-]
-
 // We only enable publish if native parts of the build are included.
 // We create a safeguard task to check this.
 task publish {
     doFirst {
         if (!includeNative) {
-            throw new Exception('Native artifacts aren\'t built, not publishing')
+            throw new GradleException("Native artifacts aren't built, not publishing")
         }
     }
 }
 
 if (includeNative) {
-    for (published in publishedProjects) {
-        def project = project(published.projectPath)
-        def description = published.description
+    for (publishedProject in publishedProjects) {
+        def project = project(publishedProject.projectPath)
+        def description = publishedProject.description
         project.pluginManager.apply('java')
         project.pluginManager.apply('maven-publish')
         // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
         // which might use different versions of these libraries.
-        if (published.projectPath.startsWith(":conclave-")) {
+        if (publishedProject.shade) {
             project.pluginManager.apply('com.github.johnrengelman.shadow')
             project.shadowJar {
                 if (project.name == "conclave-mail" || project.name == "conclave-common") {
@@ -418,14 +429,21 @@ if (includeNative) {
                 archiveClassifier = ''
             }
         }
+        if (publishedProject.apiLibrary) {
+            project.java {
+                withSourcesJar()
+            }
+        }
         project.publishing {
             publications {
                 maven(MavenPublication) {
                     from project.components.java
                     pom.description = description
-                    // Only publish docs for the Conclave modules, as the others aren't meant to be used.
-                    if (published.projectPath.startsWith(":conclave-"))
+                    if (publishedProject.apiLibrary) {
+                        // TODO This actually duplicates the same doc jar file for all the published modules!
+                        //  https://r3-cev.atlassian.net/browse/CON-1065
                         artifact packageJavadoc
+                    }
                 }
             }
             repositories {
@@ -437,9 +455,9 @@ if (includeNative) {
                         password = environment.OBLIVIUM_MAVEN_PASSWORD
                     }
                 }
-                maven {    // This section implicitly creates the publishAllPublicationsToSdkRepoRepository target.
-                    name = "sdkRepo"
-                    url = "$buildDir/sdk/repo"
+                maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
+                    name = "build"
+                    url = "$buildDir/repo"
                 }
             }
         }
@@ -455,74 +473,6 @@ idea {
         ]
     }
 }
-//endregion
-
-
-//region SDK artifact creation
-//
-// This set of rules creates the tarball of the SDK that we ship to our users. It consists of a local Maven repository
-// which contains all the JARs and native artifacts needed for the plugins, the docsite, and extra files like
-// a readme and the patches we are obliged to release under the GPL.
-//
-// The publishAllPublicationsToSdkRepoRepository target is synthesised automatically by the maven-publish Gradle
-// plugin, based on the repositories block inside the if(includeNative) block above.
-task cleanSDK(type: Delete) {
-    delete "$buildDir/sdk/repo"
-}
-
-task sdkRepo {
-    dependsOn = ["cleanSDK", publishedProjects.collect { "${it.projectPath}:publishAllPublicationsToSdkRepoRepository" }]
-}
-
-task zipGPL2Sources(type: Zip) {
-    group = "SDK Build"
-    description = "Zip up codebases we statically link with OpenJDK, to comply with our GPL2 obligations"
-    archiveFileName = "sources.zip"
-    destinationDirectory = file("$buildDir/sdk")
-    reproducibleFileOrder = true
-    from("cpp/jvm-enclave-common") {
-        into "jvm-enclave-common"
-    }
-    from("cpp/jvm-host-enclave-common") {
-        into "jvm-host-enclave-common"
-    }
-    from("cpp/jvm-edl") {
-        into "jvm-edl"
-    }
-    from("graal/patches") {
-        into "graal"
-    }
-}
-
-task sdkCopyConclaveInit(type: Copy, dependsOn: "conclave-init:shadowJar") {
-    from file("conclave-init/build/libs/conclave-init-shadow.jar")
-    into "$buildDir/sdk"
-    rename { "tools/conclave-init.jar" }
-}
-
-// This task doesn't actually copy all the files, despite being called `sdkFiles`. It copies `docs/build` into the
-// `build/sdk` directory and depends on the other tasks which copy the other bits. We should probably rename this task
-// to "sdkCopyDocs", and move all the dependencies to the `sdk` task.
-task sdkFiles(type: Copy, dependsOn: ["sdkRepo", "buildDocs", "zipGPL2Sources", "sdkCopyConclaveInit"]) {
-    group = "SDK Build"
-    description = "Build the SDK directory tree that we ship to end users."
-    from("docs/build")
-    into "$buildDir/sdk/docs"
-}
-
-task sdk(type: Zip, dependsOn: ["sdkFiles"]) {
-    group = "SDK Build"
-    archiveFileName = "conclave-sdk-${rootProject.version}.zip"
-    description = "Build the SDK downloadable file that we ship to end users."
-    def outName = "conclave-sdk-${rootProject.version}"
-    from("$buildDir/sdk") {
-        into(outName)
-    }
-    doLast {
-        println("SDK zip has been placed in $buildDir/distributions/$outName")
-    }
-}
-//endregion
 
 // Run gradlew dependencyLicenseReport and open build/reports/dependency-license/index.html
 import com.github.jk1.license.render.*
