@@ -4,8 +4,13 @@ FROM ubuntu:20.04
 
 LABEL description="R3 GraalVM build container"
 LABEL maintainer="conclave@r3.com"
+ARG commit_id
+LABEL commit_id=${commit_id}
+
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y && apt-get install -y \
+    git \
     curl \
     apt-transport-https \
     ca-certificates \
@@ -13,24 +18,14 @@ RUN apt-get update -y && apt-get install -y \
     gnupg \
     wget
 
-# CMake - instructions from https://apt.kitware.com/.
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
-  && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
-  && apt-get install kitware-archive-keyring -y \
-  && rm /etc/apt/trusted.gpg.d/kitware.gpg
-
 RUN apt-get update -y && apt-get install -y \
     cmake \
     g++ \
-    git \
-    libtool \
-    libunwind8 \
     patch \
     python \
     python3 \
     python3-dev \
-    vim \
-    zlib1g-dev
+    vim
 
 # MX and JVMCI versions should be aligned with Graal's build.
 # For MX you can take the version of the most recent tag on the day of Graal release
@@ -67,27 +62,22 @@ ENV MX_PYTHON_VERSION   3
 ENV DOCKER_CONTAINER_IS_RUNNING TRUE
 
 # MX
-# Download the right MX version
-RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git /opt/mx-$MX_VERSION
-# Checkout the exact commit to ensure the same code is always used even if the branch is updated
-RUN git -C /opt/mx-$MX_VERSION checkout fac7e8bb
-RUN chmod -R a+wx /opt/mx-$MX_VERSION
+# Download the right MX version and checkout the exact commit to ensure the same code is always used even if the branch is updated
+RUN git clone --depth 1 --branch $MX_VERSION  https://github.com/graalvm/mx.git /opt/mx-$MX_VERSION \
+  && git -C /opt/mx-$MX_VERSION checkout fac7e8bb \
+  && chmod -R a+wx /opt/mx-$MX_VERSION
 
 # labs-openjdk-17
 RUN curl -sSL -o /opt/$LABSJDK_CE_FILE https://github.com/graalvm/labs-openjdk-$LABSJDK_MAJOR/releases/download/jvmci-$JVMCI_VERSION/$LABSJDK_CE_FILE \
     && tar -xaf /opt/$LABSJDK_CE_FILE -C /opt \
     && rm -v /opt/$LABSJDK_CE_FILE
 
-
 # Set up a fake user. Without this System.getProperty("user.home") returns '?' which confuses Corda.
 COPY root/scripts/setup-users.sh /scripts/setup-users.sh
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && /scripts/setup-users.sh
 
 # Configure a nicer/more useful prompt that doesn't show the (bogus/artificial) username, but does show git branch.
-RUN echo "export PS1=\"conclave \[\e[32m\]\[\e[0m\] \w> \"" >>/etc/bash.bashrc
-
-# Make emacs not to use window system
-RUN echo "alias emacs='emacs -nw'" >>/etc/bash.bashrc
+RUN echo "export PS1=\"conclave \[\e[32m\]\$(git branch | awk '/^\* / { print \$2 }')\[\e[0m\] \w> \"" >>/etc/bash.bashrc
 
 # Make ls use colors.
 RUN echo "alias ls='ls --color'" >>/etc/bash.bashrc
