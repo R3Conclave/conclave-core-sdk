@@ -2,9 +2,10 @@
 set -xeuo pipefail
 
 basedir=$(dirname "$(realpath "$0")")
-graal_version=$1
+upstream_graal_version=$1
+major_minor_upstream_graal_version=$(cut -d '.' -f 1,2 <<< $upstream_graal_version)
 graal_repo="https://github.com/oracle/graal.git"
-graal_branch="release/graal-vm/$graal_version"
+graal_branch="release/graal-vm/$major_minor_upstream_graal_version"
 graal_patch="$basedir/../patches/graal.patch"
 graal_dir="graal"
 
