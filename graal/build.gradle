@@ -68,7 +68,6 @@ task cloneAndPatchGraal(type: Exec) {
 
     def patchingScript = "$projectDir/scripts/cloneAndPatch.sh"
     def graalPatch = "$projectDir/patches/graal.patch"
-    def graalMajorMinorVersion = extractMajorMinorVersionNumbers(graal_version)
 
     inputs.files("$patchingScript", "$graalPatch")
     outputs.files("$graalCloneDummy")
@@ -76,7 +75,7 @@ task cloneAndPatchGraal(type: Exec) {
     doFirst {
         mkdir tempDir
         workingDir tempDir
-        commandLine "$patchingScript", "$graalMajorMinorVersion"
+        commandLine "$patchingScript", "$graal_version"
 
         // Write current date to graal clone dummy file. If this task is run again, the content of this file
         // will change and subsequent tasks will run.
@@ -267,15 +266,6 @@ static Map<String, String> getEnvironmentVariables(String... envNames) {
 // Writes the current date and time to a file
 def writeDateToFile(String fileName) {
     new File(fileName).text = "${new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())}\n"
-}
-
-// The format of the version should be in the form of 'Major.Minor.Patch'. Failing to respect this format will cause
-// issues. Please keep in mind the patch number must be single digit otherwise you will need to update the code below.
-// For instance,
-//  input: '22.0.0.2'
-//  output: '22.0'
-def extractMajorMinorVersionNumbers(String version) {
-    return version.substring(0, version.length() - 4)
 }
 
 // Ensure that a given task is being run inside the provided container by throwing an exception
