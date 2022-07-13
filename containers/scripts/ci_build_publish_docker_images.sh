@@ -35,7 +35,7 @@ graal_artifact_id=graal-sdk
 # Returning zero as true is strange but that is the convention with bash shell.
 # N.B. The image might exist locally and not on the remote server
 doesContainerImageExist() {
-  docker image inspect $1 &> /dev/null
+  docker manifest inspect $1 &> /dev/null
 }
 
 # Downloads or copys Graal from a local directory. This is required for building the sdk build.
@@ -94,13 +94,6 @@ buildContainerAESMD() {
   popd
 }
 
-# Builds Cordaap docker image
-buildContainerCordapp() {
-  pushd "${code_host_dir}/containers/cordapp/src/docker"
-  docker build -t $container_image_cordapp --build-arg commit_id=$commit_id .
-  popd
-}
-
 # Prints a message and builds the container image based on the function passed as a second argument
 buildContainer() {
     echo "Building docker image container $1..."
@@ -123,16 +116,12 @@ buildAndPublishContainerIfItDoesNotExist() {
   else
     echo "Container $1 not found."
     buildContainer $1 $2
-  fi
-
-  # Only publish the image if requested. Not all users are authorized to publish to the repository.
-  if [ "$publish_images" == "publish" ]; then
-    # The container image is pushed even if the container image exists because it is possible to check that
-    # the image exists (locally or remotely) but it is not possible to guarantee that the container image exists remotely.
-    # Publish the docker image to the repository (Usually the repository is Artifactory)
-    publishContainer $1
-  else
-    echo "Container image will not be published. To publish the container image type ./ci_build_publish_docker_images.sh publish. You must be authorized user to publish to the repository"
+    # Only publish the image if requested. Not all users are authorized to publish to the repository.
+    if [ "$publish_images" == "publish" ]; then
+      publishContainer $1
+    else
+      echo "Container image will not be published. To publish the container image type ./ci_build_publish_docker_images.sh publish. You must be authorized user to publish to the repository"
+    fi
   fi
 }
 
@@ -144,8 +133,5 @@ if [ -z "${DOCKER_IMAGE_AESMD_BUILD:-}" ] || [ "${DOCKER_IMAGE_AESMD_BUILD}" == 
 fi
 if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD}" == "1" ]; then
   buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build buildContainerConclaveBuild
-fi
-if [ -z "${DOCKER_IMAGE_CORDAPP_BUILD:-}" ] || [ "${DOCKER_IMAGE_CORDAPP_BUILD}" == "1" ]; then
-  buildAndPublishContainerIfItDoesNotExist $container_image_cordapp buildContainerCordapp
 fi
 buildAndPublishContainerIfItDoesNotExist $container_image_sdk_build buildContainerSDKBuild

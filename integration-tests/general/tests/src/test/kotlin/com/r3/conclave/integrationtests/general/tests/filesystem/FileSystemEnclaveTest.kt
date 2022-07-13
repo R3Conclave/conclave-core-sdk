@@ -130,6 +130,10 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
         callEnclave(FilesCreateDirectories(path))
     }
 
+    fun movePath(src: String, dst: String) {
+        callEnclave(MovePath(src, dst))
+    }
+
     fun filesSize(path: String, expectedSize: Long) {
         assertThat(callEnclave(FilesSize(path))).isEqualTo(expectedSize)
     }

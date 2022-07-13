@@ -10,7 +10,7 @@ endif()
 # This project contains two libraries both sharing the same code,
 # but the enclave one is linked against tstdc and the host one against system libc
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Werror")
 
 find_package(JNI REQUIRED)
 

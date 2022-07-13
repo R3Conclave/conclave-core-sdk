@@ -242,8 +242,9 @@ The master key type can be selected from the table below:
 
 | Master key type | Description |
 | ----- | ---------------|
-| `MasterKeyType.DEBUG` | A master key that can be used for developing enclaves in mock, simulation or debug mode. This master key must not be used to derive enclave keys in production enclaves. |
+| `MasterKeyType.DEVELOPMENT` | A master key that can be used for developing enclaves in mock, simulation or debug mode. This master key must not be used to derive enclave keys in production enclaves. |
 | `MasterKeyType.CLUSTER` | A master key that can be used for enclaves running in release mode. This master key can be used to derive enclave keys in production enclaves. The master key exists across a cluster of KDS nodes to increase availability and reduce the chance of it being lost. |
+| `MasterKeyType.AZURE_HSM` | A master key backed by a FIPS compliant azure HSM. This master key can be used to derive enclave keys in production enclaves, and is suitable for applications where strong availability requirements or regulatory compliance requirements are necessary. |
 
 !!!Important
     Initially the KDS will be provided as a public preview to Conclave customers

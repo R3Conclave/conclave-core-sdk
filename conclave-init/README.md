@@ -9,11 +9,10 @@ The CLI is exposed through [Main.kt](src/main/kotlin/com/r3/conclave/init/cli/Ma
 The entry point for the main logic is [ConclaveInit.kt](src/main/kotlin/com/r3/conclave/init/ConclaveInit.kt). In future, this could be called from another interface, e.g. REST or a GUI.
 
 ### Template
-The [template](template/) is a simple Conclave project with Java and Kotlin enclave implementations. Note that the tool will filter the source files based on which language is selected.
+The [template](template) is a simple Conclave project with Java and Kotlin enclave implementations. Note that the 
+tool will filter the source files based on which language is selected.
 
 There is a bit of Gradle trickery involved in packaging the template. The `Zip` commands in [build.gradle](build.gradle) package up the template and also the Gradle wrapper from `sgxjvm`  into the resources directory, so that they are included in the fat JAR produced by the shadow plugin.
-
-The fat JAR is packaged up into the root of the Conclave SDK by the `sdkCopyConclaveInit` task, defined in [../build.gradle](../build.gradle).
 
 The app can be executed via 
 ```
@@ -23,5 +22,5 @@ java -jar /path/to/conclave-init.jar ARGS
 See [the user docs](../docs/docs/conclave-init.md) for more details.
 
 ## Tests
-In addition to the unit tests in the conclave-init submodule, there is a section in [`test-sdk.sh`](../test-sdk.sh) which runs the tool directly from the output of the gradle `sdk` task.
-
+In addition to the unit tests in this module, there are some basic integration tests in the
+[`test-conclave-init.sh`](../test-conclave-init.sh) script.

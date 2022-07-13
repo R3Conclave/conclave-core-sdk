@@ -65,7 +65,7 @@ curl --location --request POST 'localhost:8090/public' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "name": "MasterKeyForTesting",
-    "masterKeyType": "debug",
+    "masterKeyType": "development",
     "policyConstraint":"S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE"
 }'
 ```
@@ -138,8 +138,8 @@ cannot be accessed by the altered key specification.
 
 #### How to Deserialize the Envelope
 The envelope present in the private key mail is a byte array structured as illustrated below. The master key type field
-can only contain one of the values 0 for a debug private key and 1 for a cluster private key. The API version field will
-contain the API version used for the request (in this case, 1).
+contains the type ID of the master key used for derivation (0, 1, 2 for development, cluster and azure key vault master
+keys respectively). The API version field will contain the API version used for the request (in this case, 1).
 ```
 [API version]     [Name] [Master key type] [Policy constraint]
      |              |            |                  |
@@ -162,7 +162,7 @@ curl --location --request POST 'localhost:8090/private' \
 --data-raw '{
     "appAttestationReport": "RUlJAAAALDAqMAUGAytlcAMhAINkJMp+IBZSnSWEY1ux0z/HRfpzllu1I2oT0R6zl82MAAAAIARTUJux1z0gV889af4tL3iOAM300VuZbWppAZLZ/QwzAgAAAY0AAAAAYfK2fykTkGBIIPM3auay8gNNO3pLSKd4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAcAAAAAAAAAWN4G6qxjHqRGYJjDJViSVwClv6xlhw5HtR26hr1swdoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEkkyjqcgkGjwKoaJKQHqoZAHSt5+p/4STLaeYqUIWbUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIczKEHJt2DTFS6SfYsgVDWPAMMgy6wnPBhVHs8tfNiZevzUaW2+1dYfm62aUeGmAOI24vKtY++UV6nkTWYWRXcB",
     "name": "MasterKeyForTesting",
-    "masterKeyType": "debug",
+    "masterKeyType": "development",
     "policyConstraint": "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE"
 }'
 ```

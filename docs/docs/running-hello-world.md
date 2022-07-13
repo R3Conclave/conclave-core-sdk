@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This tutorial describes how to compile and run the **sample app**, which you can find in the `hello-world` directory of
-the Conclave SDK. This app contains the `ReverseEnclave`, which reverses a string provided by the client and
-passes it back.
+This tutorial describes how to compile and run the sample hello world app, which you can find in the 
+[conclave samples repository](https://github.com/R3Conclave/conclave-samples). This app contains the `ReverseEnclave`, 
+which reverses a string provided by the client and passes it back.
 
 We are first going to run the app in [mock mode](enclave-modes.md),
 which is the simplest (and least realistic) of the enclave modes.
@@ -15,19 +15,19 @@ If you get stuck, join our [discord server](https://discord.com/invite/dDaBGqGPr
 ## Prerequisites
 
 * You need JDK 17 installed in order to build and run the app.
-* You need the Conclave SDK. If you don't have it, grab a copy from [conclave.net](https://www.conclave.net).
 * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md)
   and [architecture overview](architecture.md).
 
 ## Compile the sample application
 
-Navigate to the hello world sample.
+Clone and navigate to the hello world sample.
 ```bash
-cd /path/to/conclave/sdk/hello-world
+git clone https://github.com/R3Conclave/conclave-samples.git
+cd conclave-samples/hello-world
 ```
 
 The sample app, like all Conclave apps, consists of an
-[an enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
+[enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
 which is provided by the Conclave SDK. We can generate a fat JAR for the host and client using the `:bootJar` and
 `:shadowJar` tasks, respectively.
 === "Windows"

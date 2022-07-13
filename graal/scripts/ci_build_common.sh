@@ -2,14 +2,68 @@
 set -euo pipefail
 # Sets up common build script parameters and functions
 
+###################################################################
+## Configuration
+###################################################################
+
+# Docker login interaction with the repository
+# You might get an error from docker about not being authorized to perform a certain action if you are not logged in
+docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+
 code_host_dir=$PWD
-code_docker_dir=${code_host_dir}
+sdk_code_host_dir=$(realpath $code_host_dir/..)
+echo $sdk_code_host_dir
+sdk_code_docker_dir=${sdk_code_host_dir}
 
 mkdir -p $HOME/.gradle
 mkdir -p $HOME/.m2
 mkdir -p $HOME/.ccache
 mkdir -p $HOME/.mx
 mkdir -p $HOME/.container
+
+###################################################################
+
+# Get graal version
+graal_version=$(grep "graal_version=" ./build.gradle | cut -d '=' -f 2 | sed "s/[ ']//g")
+if [ -z "$graal_version" ]; then
+  echo "Unable to get graal version"
+  exit 1
+fi
+
+echo "Graal version found: $graal_version"
+
+# Validate Graal version number
+if [[ ! ($graal_version =~ ^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$) ]]; then
+  echo "Graal version does not follow convention."
+  exit 1
+fi
+
+###################################################################
+
+# Generate the docker image tag based on the contents inside the containers module
+# Please be sure that any script that might change the final docker container image
+# is inside the folder containers/scripts. Otherwise, the tag generated won't be
+# correct and you run the risk of overwriting existing docker images that are used
+# by older release branches. Keep in mind that temporary or build directories should be excluded
+# The following code generates the hash based on the contents of a directory and the version of graal used.
+# This hash takes into account the contents of each file inside the directory and subdirectories
+# The cut command removes the dash at the end.
+# All subdirectories with name build and hidden files are excluded. Please be sure that any file
+# that is not tracked by git should not be included in this hash.
+# In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
+# must include the graal_version as well.
+pushd ${code_host_dir}
+containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/root/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
+docker_image_tag=$(echo $containers_dir_hash-$graal_version | sha256sum | cut -d ' ' -f1)
+popd
+
+# Docker container images repository (This repo is usually Artifactory)
+container_image_repo=$OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.conclave
+
+# Docker container images
+container_image_graalvm_build=$container_image_repo/graalvm-build:$docker_image_tag
+
+###################################################################
 
 # USE_MAVEN_REPO can be set to "artifactory" or "sdk" and will affect
 # which artifacts the samples will use.
@@ -22,7 +76,6 @@ fi
 docker_group_add=()
 # OS specific settings
 if [ "$(uname)" == "Darwin" ]; then
-    cardreader_gid=""
     num_cpus=$( sysctl -n hw.ncpu )
     docker_ip="192.168.65.2"
     network_cmd=("-p" "8000:8000" "-p" "8001:8001")
@@ -37,7 +90,6 @@ else
         exit 1
     fi
     docker_group_add=("--group-add" "${docker_gid}")
-    cardreader_gid=$(cut -d: -f3 < <(getent group cardreader) || echo "")
     num_cpus=$( nproc )
     network_cmd=("--network=host")
     host_core_dump_dir="/var/crash/"
@@ -50,16 +102,6 @@ else
         docker_ip="172.17.0.2"
         fi
     fi
-fi
-
-volume_usb=()
-if [[ -d /dev/bus/usb ]]; then
-    volume_usb=("-v" "/dev/bus/usb:/dev/bus/usb")
-fi
-
-group_cardreader=()
-if [[ ! -z ${cardreader_gid} ]]; then
-    group_cardreader=("--group-add" "${cardreader_gid}")
 fi
 
 # Part of Graal build process involves cloning and running git commands.
@@ -76,13 +118,11 @@ fi
 # For more information: https://gist.github.com/dimo414/2fb052d230654cc0c25e9e41a9651ebe
 docker_opts=(\
     "--rm" \
-    "--privileged" \
     "-u" "$(id -u):$(id -g)" \
     "--ulimit" "core=512000000" \
     "--label" "graalvm" \
     ${docker_group_add[@]+"${docker_group_add[@]}"} \
     ${network_cmd[@]+"${network_cmd[@]}"} \
-    ${group_cardreader[@]+"${group_cardreader[@]}"} \
     "-v" "$HOME/.gradle:/gradle" \
     "-v" "$HOME/.m2:/home/.m2" \
     "-v" "$HOME/.mx:/home/.mx" \
@@ -90,26 +130,19 @@ docker_opts=(\
     "-v" "$HOME/.container:/home" \
     "-v" "/var/run/docker.sock:/var/run/docker.sock" \
     "-v" "$host_core_dump_dir:/var/crash/" \
-    "-v" "${code_host_dir}:${code_docker_dir}" \
-    ${volume_usb[@]+"${volume_usb[@]}"} \
+    "-v" "${sdk_code_host_dir}:${sdk_code_docker_dir}" \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
     ${use_maven_repo_flags[@]+"${use_maven_repo_flags[@]}"} \
     $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
-    "-w" "$code_docker_dir" \
+    "-w" "$code_host_dir" \
 )
-
-function loadBuildImage() {
-    if [ -z "${DOCKER_IMAGE_LOAD:-}" ] || [ "${DOCKER_IMAGE_LOAD}" == "1" ]; then
-        docker load < $code_host_dir/build/containers/graalvm-build-docker-image.tar.gz
-    fi
-}
 
 function runDocker() {
     image_name=$1
     docker run \
         ${docker_opts[@]+"${docker_opts[@]}"} \
         ${agent_home_dir_flags[@]+"${agent_home_dir_flags[@]}"} \
-        ${OBLIVIUM_CONTAINER_REGISTRY_URL}/${image_name} \
+        ${image_name} \
         bash -c "$2"
 }

@@ -119,7 +119,7 @@ class MockKDS : AutoCloseable, AfterEachCallback {
         // isn't needed.
         val sha256 = MessageDigest.getInstance("SHA-256")
         sha256.update(keySpec.name.encodeToByteArray())
-        sha256.update(keySpec.masterKeyType.ordinal.toByte())
+        sha256.update(keySpec.masterKeyType.id.toByte())
         sha256.update(keySpec.policyConstraint.encodeToByteArray())
         return sha256.digest()
     }
@@ -137,7 +137,7 @@ class MockKDS : AutoCloseable, AfterEachCallback {
         val signingBytes = writeData {
             writeByte(1)
             writeIntLengthPrefixString(keySpec.name)
-            writeByte(keySpec.masterKeyType.ordinal)
+            writeByte(keySpec.masterKeyType.id)
             writeIntLengthPrefixString(keySpec.policyConstraint)
             writeShortLengthPrefixBytes(encodedPublicKey)
         }
@@ -148,7 +148,7 @@ class MockKDS : AutoCloseable, AfterEachCallback {
         return writeData {
             writeByte(1)
             writeIntLengthPrefixString(keySpec.name)
-            writeByte(keySpec.masterKeyType.ordinal)
+            writeByte(keySpec.masterKeyType.id)
             writeIntLengthPrefixString(keySpec.policyConstraint)
         }
     }

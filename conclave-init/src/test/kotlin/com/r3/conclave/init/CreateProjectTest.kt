@@ -4,6 +4,7 @@ import com.r3.conclave.init.common.deleteRecursively
 import com.r3.conclave.init.common.walkTopDown
 import com.r3.conclave.init.template.JavaClass
 import com.r3.conclave.init.template.JavaPackage
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -66,7 +67,7 @@ internal class TestCreateProject {
         val basePackage = JavaPackage("com.megacorp")
         val enclaveClass = JavaClass("MegaEnclave")
 
-        ConclaveInit.createProject(language, basePackage, enclaveClass, outputDir)
+        ConclaveInit.createProject("testVersion", language, basePackage, enclaveClass, outputDir)
 
         val expectedChildren = listOf(
             "README.md",
@@ -83,6 +84,9 @@ internal class TestCreateProject {
 
         val actualChildren = outputDir.listDirectoryEntries().map { it.relativeTo(outputDir) }.toSet()
         assertEquals(expectedChildren, actualChildren)
+
+        val gradlePropertiesContents = (outputDir / "gradle.properties").readLines()
+        assertThat(gradlePropertiesContents).contains("conclaveVersion=testVersion")
 
         val enclaveTestFile = outputDir.resolve(enclaveTestFilePath)
         assertTrue(enclaveTestFile.exists())

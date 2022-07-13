@@ -1,0 +1,38 @@
+diff --git a/sdk/simulation/assembly/linux/gnu_tls.h b/sdk/simulation/assembly/linux/gnu_tls.h
+index 974ddf45..6837c9f7 100644
+--- a/sdk/simulation/assembly/linux/gnu_tls.h
++++ b/sdk/simulation/assembly/linux/gnu_tls.h
+@@ -64,7 +64,7 @@ typedef struct
+   ({ dtv_t* __dtv;                              \
+      __asm__ ("mov %%fs:%c1, %0" : "=r"(__dtv)      \
+           : "i" (offsetof (tcbhead_t, dtv)));   \
+-     __dtv; })
++     &__dtv[1]; })
+ 
+ #define GET_FS_GS_0()                                    \
+   ({  uintptr_t __orig;                                  \
+diff --git a/sdk/trts/linux/trts_pic.h b/sdk/trts/linux/trts_pic.h
+index 1f769bed..b884f13f 100644
+--- a/sdk/trts/linux/trts_pic.h
++++ b/sdk/trts/linux/trts_pic.h
+@@ -81,6 +81,7 @@
+ 
+ #define dtv    SE_WORDSIZE
+ #define tls    0 
++#define tls64  16
+ .macro READ_TD_DATA offset
+ #ifdef SE_SIM
+ /* TLS support in simulation mode
+@@ -92,10 +93,11 @@
+ 
+ #if defined(LINUX32)
+     mov     %gs:dtv, %xax
++    mov     tls(%xax), %xax
+ #elif defined(LINUX64)
+     mov     %fs:dtv, %xax
++    mov     tls64(%xax), %xax
+ #endif
+-    mov     tls(%xax), %xax
+     mov     \offset(%xax), %xax
+ 
+ #else /* SE_SIM */

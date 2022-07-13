@@ -46,6 +46,7 @@ subprojects { Project project ->
                 include "libsgx_urts${simSuffix}.so"
                 include "libsgx_uae_service${simSuffix}.so"
                 include "libsgx_qe3.signed.so"
+                include "libsgx_id_enclave.signed.so"
                 include "libsgx_pce.signed.so"
             }
             from (hostBuildDir) {
@@ -57,6 +58,7 @@ subprojects { Project project ->
             }
             from (linuxSgxQuoteGenBuildDir) {
                 include "libsgx_qe3_logic.so"
+                include "libsgx_id_enclave.signed.so"
                 include "libsgx_pce_logic.so"
                 include "libsgx_dcap_ql.so"
                 rename "libsgx_dcap_ql.so", "libsgx_dcap_ql.so.1"

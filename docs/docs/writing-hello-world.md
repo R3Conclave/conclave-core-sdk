@@ -79,7 +79,7 @@ each of the different build types.
 * Debug builds use a private key stored in a file.
 * Release builds use a private key managed by some external signing process.
 
-The ```hello-world``` sample in the SDK contains some example keys that can be used with the ```privateKey```
+The ```hello-world``` sample in the [conclave-samples](https://github.com/R3Conclave/conclave-samples/hello-world) repository contains some example keys that can be used with the ```privateKey```
 and ```externalKey``` signing types. These can be found in ```hello-world/signing/```.
 
 | Key Files | Description |

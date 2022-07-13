@@ -45,7 +45,7 @@ class EnclaveKDSTests {
     private val kdsConfigWithPersistence = EnclaveKdsConfig(
         kdsEnclaveConstraint = mockKDS.enclaveConstraint,
         persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-            masterKeyType = MasterKeyType.DEBUG,
+            masterKeyType = MasterKeyType.DEVELOPMENT,
             policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                 constraint = "SEC:INSECURE",
                 useOwnCodeSignerAndProductID = true
@@ -78,7 +78,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     constraint = "  C:$APP_ENCLAVE_CODE_HASH SEC:INSECURE  ",
                 )
@@ -94,7 +94,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(constraint = "SEC:INSECURE")
             )
         )
@@ -110,7 +110,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeHash = true,
                     constraint = " C:0000000000000000000000000000000000000000000000000000000000000000 SEC:INSECURE"  // Note leading space
@@ -131,7 +131,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeHash = true,
                     constraint = "C:$appEnclaveCodeHash SEC:INSECURE"
@@ -148,7 +148,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeSignerAndProductID = true,
                     constraint = " SEC:INSECURE" // Note leading space
@@ -168,7 +168,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeSignerAndProductID = true,
                     constraint = " S:$appEnclaveCodeSigner SEC:INSECURE PROD:12" // Note leading space
@@ -185,7 +185,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeSignerAndProductID = true,
                     constraint = "PROD:12 SEC:INSECURE"
@@ -202,7 +202,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeSignerAndProductID = true,
                     constraint = "PROD:13 SEC:INSECURE"
@@ -223,7 +223,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeSignerAndProductID = true,
                     constraint = "S:$APP_ENCLAVE_CODE_SIGNER SEC:INSECURE"
@@ -240,7 +240,7 @@ class EnclaveKDSTests {
         val kdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = mockKDS.enclaveConstraint,
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     useOwnCodeHash = true,
                     useOwnCodeSignerAndProductID = true,
@@ -326,7 +326,7 @@ class EnclaveKDSTests {
 
     private fun createKdsPostOffice(): PostOffice {
         val policyConstraint = "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"
-        val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEBUG, policyConstraint)
+        val kdsSpec = KDSKeySpec("mySpec", MasterKeyType.DEVELOPMENT, policyConstraint)
         return PostOfficeBuilder.usingKDS(mockKDS.url, kdsSpec, mockKDS.enclaveConstraint).build()
     }
 

@@ -13,7 +13,6 @@ echo
 echo "You are now in a shell inside a Docker container. "
 echo -e "Run \x1B[4m./gradlew build test\x1B[0m to compile and run unit tests."
 echo -e "Browse to \x1B[4mhttp://localhost:8000\x1B[0m to view the external docsite."
-echo -e "Browse to \x1B[4mhttp://localhost:8001\x1B[0m to view the internal docsite."
 echo
 
 

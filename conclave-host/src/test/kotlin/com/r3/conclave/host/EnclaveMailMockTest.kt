@@ -293,7 +293,7 @@ class EnclaveMailMockTest {
     ): PostOffice {
         val keySpec = KDSKeySpec(
             keyName,
-            MasterKeyType.DEBUG,
+            MasterKeyType.DEVELOPMENT,
             "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"
         )
         return PostOfficeBuilder

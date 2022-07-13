@@ -8,7 +8,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.relativeTo
 
-internal class ZipResourceTest() {
+class ZipResourceTest {
     @Test
     // Not sure about this test as it will break whenever the template is modified
     fun `extract template`() {
@@ -27,7 +27,6 @@ internal class ZipResourceTest() {
             "enclave/src/test/kotlin/com/r3/conclave/template/enclave/TemplateEnclaveTest.kt",
             "enclave/src/main/kotlin/com/r3/conclave/template/enclave/TemplateEnclave.kt",
             "build.gradle",
-            "gradle.properties",
             "settings.gradle",
             "host/build.gradle"
         ).map(::Path).toSet()
@@ -38,5 +37,3 @@ internal class ZipResourceTest() {
         assertEquals(expected, outputFiles)
     }
 }
-
-

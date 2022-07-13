@@ -11,7 +11,7 @@ else()
     set(DEBUG_FLAG "")
 endif()
 
-set(SGX_GIT_LABEL "sgx_2.14")
+set(SGX_GIT_LABEL "sgx_2.17")
 
 ExternalProject_Add(linux-sgx-ext
 # Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
@@ -27,6 +27,10 @@ ExternalProject_Add(linux-sgx-ext
         SOURCE_DIR ${BUILD_SRC_DIR}
 
         PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff ${CMAKE_CURRENT_SOURCE_DIR}/memset.patch
+             #  The dtv.patch solves an issue we have spotted in the Intel SGX SDK, starting from version 2.15.1.
+             #    See https://github.com/intel/linux-sgx/issues/855
+             #    As this is an issue in simulation mode only, we will apply this patch until the issue is solved or closed.
+             && git apply ${CMAKE_CURRENT_SOURCE_DIR}/dtv.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quoteverify_cpp.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/dcap_sgx_urts_wrapper_h.patch
 	     && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch

@@ -27,7 +27,7 @@ class KDSTest {
         private val enclaveKdsConfig = EnclaveKdsConfig(
             kdsEnclaveConstraint = EnclaveConstraint.parse("S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE"),
             persistenceKeySpec = EnclaveKdsConfig.PersistenceKeySpec(
-                masterKeyType = MasterKeyType.DEBUG,
+                masterKeyType = MasterKeyType.DEVELOPMENT,
                 policyConstraint = EnclaveKdsConfig.PolicyConstraint(
                     constraint = "SEC:INSECURE",
                     useOwnCodeHash = true

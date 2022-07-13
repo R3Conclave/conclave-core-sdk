@@ -223,6 +223,9 @@ data class TcbInfo @JsonCreator constructor(
  * that were originally published on or prior to this date.
  *
  * @property tcbStatus TCB level status.
+ *
+ * @property advisoryIDs Array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to.
+
  */
 data class TcbLevel @JsonCreator constructor(
     @JsonProperty("tcb")
@@ -233,7 +236,10 @@ data class TcbLevel @JsonCreator constructor(
     val tcbDate: Instant,
 
     @JsonProperty("tcbStatus")
-    val tcbStatus: TcbStatus
+    val tcbStatus: TcbStatus,
+
+    @JsonProperty("advisoryIDs")
+    val advisoryIDs: List<String>? = null
 )
 
 enum class TcbStatus : VerificationStatus {

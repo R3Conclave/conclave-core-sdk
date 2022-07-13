@@ -1,13 +1,24 @@
 --- a/external/dcap_source/QuoteGeneration/Makefile	2021-01-11 17:11:54.590165381 +0000
 +++ b/external/dcap_source/QuoteGeneration/Makefile	2021-01-12 09:41:11.225302161 +0000
-@@ -31,22 +31,17 @@
+@@ -31,33 +31,28 @@
  
  CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
  
--.PHONY: all dcap opt_check_failed clean rebuild pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
-+.PHONY: all dcap prebuilt clean rebuild pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
+-.PHONY: all dcap opt_check_failed clean rebuild pce_logic tdx_logic tdx_qgs tdx_attest qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
++.PHONY: all dcap prebuilt clean rebuild pce_logic tdx_logic tdx_qgs tdx_attest qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
  
  all: dcap
+ 
+ #--------------------------------------------------------------------------------------
+ # Function: get_distr_info
+ # Arguments: 1: the grep keyword to be searched from /etc/os-release
+ # Returns: Return the value for the Linux distribution info corresponding to the keyword
+ #---------------------------------------------------------------------------------------
+ get_distr_info = $(patsubst "%",%,$(shell grep $(1) /etc/os-release 2> /dev/null | awk -F'=' '{print $$2}'))
+ 
+ DISTR_ID := $(call get_distr_info, '^ID=')
+ DISTR_VER := $(call get_distr_info, '^VERSION_ID=')
+ 
  
  # DCAP requires prebuilt enclaves.
 -CHECK_OPT :=
@@ -17,13 +28,13 @@
 +	./download_prebuilt.sh
  endif
  
--dcap: $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
+-dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper tdx_qe id_enclave
 -
 -opt_check_failed:
 -	@echo "Please run download_prebuilt.sh before compiling"
 -	@echo "Exiting......"
 -	@exit -2
-+dcap: prebuilt pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
++dcap: prebuilt tdx_logic tdx_qgs tdx_attest pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper tdx_qe id_enclave
  
  pce_logic:
  	$(MAKE) -C pce_wrapper/linux

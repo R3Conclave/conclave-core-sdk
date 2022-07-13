@@ -6,6 +6,7 @@ import com.r3.conclave.integrationtests.general.common.PlaintextAndAD
 import com.r3.conclave.integrationtests.general.common.tasks.SealData
 import com.r3.conclave.integrationtests.general.common.tasks.UnsealData
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,7 +26,7 @@ class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.
     @ValueSource(booleans = [ false, true ])
     fun `unseal with different instance of same enclave`(withAD: Boolean) {
         val differentInstanceOfSameEnclave = EnclaveHost.load(enclaveHost().enclaveClassName)
-        differentInstanceOfSameEnclave.let { it.start(getAttestationParams(it), null, null) { } }
+        differentInstanceOfSameEnclave.let { it.start(TestUtils.getAttestationParams(it), null, null) { } }
 
         val data = PlaintextAndAD("Sealing Hello World!".toByteArray(), if (withAD) "with AD!".toByteArray() else null)
         val sealedBlob = callEnclave(enclaveHost(), SealData(data))

@@ -335,7 +335,7 @@ class EnclaveHost private constructor(
                     throw IllegalArgumentException(
                         """$beginning on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
                             |    runtimeOnly project(path: ":enclave project", configuration: mode)
-                            |    
+                            |
                             |    where:
                             |      mode is either "release", "debug", "simulation" or "mock"
                             """.trimMargin()
@@ -888,7 +888,6 @@ class EnclaveHost private constructor(
         private var persistenceKdsKeySpec: KDSKeySpec? = null
 
         private val messageTypes = EnclaveToHost.values()
-        private val masterKeyTypeValues = MasterKeyType.values()
 
         override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
 
@@ -950,7 +949,7 @@ class EnclaveHost private constructor(
 
         private fun getKdsKeySpec(input: ByteBuffer): KDSKeySpec {
             val name = input.getIntLengthPrefixString()
-            val masterKeyType = masterKeyTypeValues[input.get().toInt()]
+            val masterKeyType = MasterKeyType.fromID(input.get().toInt())
             val policyConstraint = input.getRemainingString()
             return KDSKeySpec(name, masterKeyType, policyConstraint)
         }

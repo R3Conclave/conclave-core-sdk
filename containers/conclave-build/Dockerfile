@@ -25,8 +25,11 @@ RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/2
 
 # Disable interactive dialogue
 # Otherwise, a message that requires user input will appear while installing Java 17
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-17-jre-headless \
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        openjdk-17-jre-headless \
         az-dcap-client \
-        libsgx-urts
+        libsgx-epid \
+        libsgx-quote-ex \
+        libsgx-dcap-ql
 
 CMD java -version

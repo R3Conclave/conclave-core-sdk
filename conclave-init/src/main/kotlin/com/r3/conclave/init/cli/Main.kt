@@ -3,16 +3,16 @@ package com.r3.conclave.init.cli
 import com.r3.conclave.init.ConclaveInit
 import com.r3.conclave.init.Language
 import com.r3.conclave.init.common.printBlock
-import com.r3.conclave.init.common.walkTopDown
-import com.r3.conclave.init.gradle.configureGradleProperties
 import com.r3.conclave.init.template.JavaClass
 import com.r3.conclave.init.template.JavaPackage
 import picocli.CommandLine
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import java.util.concurrent.Callable
-import java.util.jar.JarInputStream
-import kotlin.io.path.*
+import java.util.jar.Manifest
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.exists
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -66,19 +66,10 @@ class ConclaveInitCli : Callable<Int> {
     )
     val language: Language = Language.JAVA
 
-    @CommandLine.Option(
-        names = ["-g", "--configure-gradle"],
-        description = ["Attempt to configure the user-wide gradle properties. " +
-                "See https://docs.conclave.net/gradle-properties.html for more information.\n" +
-                "Default: \${DEFAULT-VALUE}"]
-    )
-    var configureGradle: Boolean = true
-
     override fun call(): Int {
         checkTargetDoesNotExist()
-        if (configureGradle) configureGradle()
         projectSummary().printBlock()
-        ConclaveInit.createProject(language, basePackage, enclaveClass, target)
+        ConclaveInit.createProject(getConclaveVersion(), language, basePackage, enclaveClass, target)
         return 0
     }
 
@@ -93,64 +84,6 @@ class ConclaveInitCli : Callable<Int> {
         }
     }
 
-    private fun configureGradle() {
-        val conclaveRepo = getPathToSdkRepo()
-        if (sdkRepoIsValid(conclaveRepo)) {
-            val conclaveVersion = getConclaveVersion(conclaveRepo)
-            configureGradleProperties(conclaveRepo, conclaveVersion)
-        }
-    }
-
-    private fun getPathToSdkRepo(): Path {
-        val conclaveInitURI = this::class.java.protectionDomain.codeSource.location.toURI()
-        val toolsDir = Paths.get(conclaveInitURI).parent
-        val sdkDir = toolsDir.parent
-        return sdkDir.resolve("repo").normalize()
-    }
-
-    private fun sdkRepoIsValid(sdkRepo: Path): Boolean {
-        val helpPrefix = """
-        WARNING: Could not detect Conclave SDK Repo. Was `conclave-init.jar` moved out
-        of the tools directory? Expected directory $sdkRepo
-        """.trimIndent()
-
-        try {
-            check(sdkRepo.exists()) { "$helpPrefix does not exist." }
-            check(sdkRepo.isDirectory()) { "$helpPrefix is not a directory." }
-            check(sdkRepo.resolve("com").isDirectory()) { "$helpPrefix is not a Maven repository." }
-        } catch (e: IllegalStateException) {
-            println(e.message)
-            """
-            Gradle must be configured manually or the generated project may not compile.
-
-            See https://docs.conclave.net/gradle-properties.html for more information.
-            """.printBlock()
-            return false
-        }
-        return true
-    }
-
-    private fun getConclaveVersion(sdkRepo: Path): String? {
-        val jarsFromRepo = sdkRepo.walkTopDown().filter { it.extension == "jar" }
-        val conclaveVersion = jarsFromRepo.firstNotNullOfOrNull { jar ->
-            val manifest = jar.inputStream().use { JarInputStream(it).manifest }
-            manifest.mainAttributes.getValue("Conclave-Release-Version")
-        }
-
-        if (conclaveVersion == null) {
-            """
-            WARNING: could not detect Conclave version of repo $sdkRepo. Please edit the value
-            manually in gradle.properties.
-            
-            See https://docs.conclave.net/gradle-properties.html for more information.
-            """.printBlock()
-
-            return null
-        }
-
-        return conclaveVersion
-    }
-
     private fun projectSummary(): String = """
         Creating new Conclave project.
             Language: $language
@@ -158,6 +91,14 @@ class ConclaveInitCli : Callable<Int> {
             Enclave class: ${enclaveClass.name}
             Output directory: ${target.absolutePathString()}
         """.trimIndent()
+
+    private fun getConclaveVersion(): String {
+        return ConclaveInitCli::class.java.classLoader.resources("META-INF/MANIFEST.MF")
+            .map { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Release-Version") }
+            .filter(Objects::nonNull)
+            .findFirst()
+            .get()
+    }
 }
 
 internal class JavaPackageConverter : CommandLine.ITypeConverter<JavaPackage> {

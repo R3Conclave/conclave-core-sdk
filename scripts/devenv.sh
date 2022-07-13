@@ -67,8 +67,6 @@ if [[ -z ${container_id} ]]; then
 # as well as the the host's native IDEs, but the IDE launch scripts will fail.
 # Since exiting the container doesn't stop it, you may need to stop it manually
 # in order to remount the IDEs.
-# Read our internal-docs/containers.md for more information on how to build,
-# customize and use a locally built image.
 # The IDEs can be downloaded at:
 # curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2021.3.tar.gz
 # curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2021.3.tar.gz
@@ -110,11 +108,8 @@ fi
 
   # Let us read/write to the home directory.
   docker exec -u root $container_id chown $(id -u):$(id -g) /home
-  if [[ ! -z ${cardreader_gid} ]]; then
-    docker exec -it $@ -u root $container_id bash -c "groupadd -g ${cardreader_gid} cardreader_ext || true"
-  fi
 
-  # Start the docsite servers. They have hot-reload so editing the files in docs (for docs.conclave.net) or
-  # internal-docs (not published on the web) will automatically cause any open browsers to refresh.
+  # Start the docsite servers. They have hot-reload so editing the files in docs (for docs.conclave.net)
+  # will automatically cause any open browsers to refresh.
   docker exec -d $container_id bash ./scripts/serve-docsites.sh
 fi

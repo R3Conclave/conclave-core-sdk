@@ -19,19 +19,11 @@ mkdir -p "${script_dir}/../build/nexus-iq"
 # Note: Add [-w] to the command line to fail on any warning.
 java --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -jar $NEXUS_IQ_HOME/nexus-iq-cli.jar \
     -s https://nexusiq.dev.r3.com \
-    -i conclave_sdk_${version%-*} \
+    -i conclave_sdk \
     -a $1:$2 \
     -t $3 \
     -r "${script_dir}/../build/nexus-iq/nexus-iq_report.json" \
-    "${script_dir}/../build/distributions/conclave-sdk-${version}.zip"
-
-java --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -jar $NEXUS_IQ_HOME/nexus-iq-cli.jar \
-    -s https://nexusiq.dev.r3.com \
-    -i conclave_sdk_conclave_init \
-    -a $1:$2 \
-    -t $3 \
-    -r "${script_dir}/../conclave-init/build/nexus-iq/nexus-iq_report.json" \
-    "${script_dir}/../conclave-init/build/libs/conclave-init-shadow.jar"
+    "${script_dir}/../build/repo"
 
 res=$?
 
