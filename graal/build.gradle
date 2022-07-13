@@ -10,6 +10,8 @@ plugins {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Global variables
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+apply from: "../versions.gradle"
+
 ext {
 
     // Environment variables loaded from the system
@@ -32,7 +34,7 @@ ext {
     // before updating the graal version used by Conclave. If the Graal versions used by the graal module and Conclave are
     // updated at the same time, the PR checks for Conclave might fail because the artifact published by the graal module
     // might not be available on Artifact.
-    graal_version= '22.0.0.2'
+    graal_version='22.0.0.2'
 
     // Directories and files paths
     tempDir     = "$buildDir/tmp"
@@ -214,8 +216,6 @@ publishing {
         // Publish the tar file that contains graal
         maven(MavenPublication) {
 
-            def majorAndMinorVersionNumbers = extractMajorMinorVersionNumbers(graal_version)
-
             // Artifact to be publish
             artifact(graalVMTar) {
                 extension 'tar.gz'
@@ -225,7 +225,7 @@ publishing {
             // Details about the artifact being publish
             groupId = "com.r3.conclave.graal"
             artifactId = "graal-sdk"
-            version = "$majorAndMinorVersionNumbers"
+            version = "$graal_version-$conclave_version"
             description = 'Graal distribution including SubstrateVM and tools'
         }
     }
