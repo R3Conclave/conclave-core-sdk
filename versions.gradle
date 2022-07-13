@@ -2,7 +2,7 @@ ext {
     // GA release checklist (i.e. does not apply to SNAPSHOT or RCs):
     //  * Update version in https://github.com/R3Conclave/conclave-samples/blob/master/hello-world/gradle.properties
     //  * Update download link in docs/docs/conclave-init.md
-    conclave_version = '1.3-RC6-SNAPSHOT'
+    conclave_version = '1.4-SNAPSHOT'
     kds_version = '0.3-SNAPSHOT'
     kotlin_version = '1.6.10'
     kotlinx_serialization_json_version = '1.3.1'

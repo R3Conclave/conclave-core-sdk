@@ -8,7 +8,7 @@ It will automatically generate your Conclave project so that you can focus on wr
 First download the Conclave Init tool:
 
 ```shell
-wget https://repo1.maven.org/maven2/com/r3/conclave/conclave-init/1.3/conclave-init-1.3.jar -O conclave-init.jar
+wget https://repo1.maven.org/maven2/com/r3/conclave/conclave-init/1.4/conclave-init-1.4.jar -O conclave-init.jar
 ```
 
 To create a new Conclave project, run the following command:
