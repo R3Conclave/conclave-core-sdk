@@ -181,8 +181,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val generateAppResourcesConfigTask =
             target.createTask<GenerateAppResourcesConfig>("generateAppResourcesConfig") { task ->
-                task.dependsOn(generateEnclavePropertiesTask)
-                task.resourcesDirectory.set(getMainSourceSet(target).output.resourcesDir)
+                task.dependsOn(shadowJarTask)
+                task.jarFile.set(shadowJarTask.archiveFile)
                 task.appResourcesConfigFile.set((baseDirectory / "app-resources-config.json").toFile())
             }
 
