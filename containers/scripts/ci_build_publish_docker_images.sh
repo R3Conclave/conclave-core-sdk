@@ -23,11 +23,6 @@ source ${containers_script_dir}/common.sh
 # Git commit id
 commit_id=$(getGitCommitId)
 
-# Graal Configuration
-# Graal version without the patch versioning number
-graal_group_id=com/r3/conclave/graal
-graal_artifact_id=graal-sdk
-
 ###################################################################
 # Functions
 ###################################################################
@@ -41,29 +36,29 @@ doesContainerImageExist() {
 # Downloads or copys Graal from a local directory. This is required for building the sdk build.
 downloadOrCopyGraal() {
   sgxjvm_downloads_dir="root/downloads"
-  graal_tar_file="${sgxjvm_downloads_dir}/graal-sdk.tar.gz"
-  graal_artifact_path=$graal_group_id/$graal_artifact_id/$graal_version/$graal_artifact_id-$graal_version.tar.gz
+  conclave_graal_tar_file="${sgxjvm_downloads_dir}/graalvm.tar.gz"
+  conclave_graal_artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz
 
   # Delete all files from the directory to avoid issues
   rm -rf $sgxjvm_downloads_dir/*
 
   # If you are upgrading Graal version consider setting the environment variable GRAAL_DIR to the local directory where Graal was built.
-  # For instance, GRAAL_DIR=../../../../graal/build/distributions/graal-sdk.tar.gz. Keep in mind the working directory when setting the environment variable.
+  # For instance, GRAAL_DIR=../../../../graalvm.tar.gz. Keep in mind the working directory when setting the environment variable.
   if [[ -z "${GRAAL_DIR:-}" ]]; then
     credentials=$OBLIVIUM_MAVEN_USERNAME:$OBLIVIUM_MAVEN_PASSWORD
-    url=$OBLIVIUM_MAVEN_URL/$OBLIVIUM_MAVEN_REPOSITORY/${graal_artifact_path}
+    url=$OBLIVIUM_MAVEN_URL/$OBLIVIUM_MAVEN_REPOSITORY/${conclave_graal_artifact_path}
 
     echo "Pulling Graal from $url..."
     echo "For testing purposes point the env. var. GRAAL_DIR to the local directory where Graal was built. For instance, GRAAL_DIR=../../../../graal/build/distributions/graal-sdk.tar.gz. Keep in mind the working directory when setting the environment variable."
     echo "Working directory:" $(pwd)
-    curl -SLf -o ${graal_tar_file} --create-dirs -u $credentials  $url
+    curl -SLf -o ${conclave_graal_tar_file} --create-dirs -u $credentials  $url
   else
     # Ensure the directory exists
     mkdir -p $sgxjvm_downloads_dir
 
     # This copy is required to allow docker to access the file
     echo "Working directory:" $(pwd)
-    cp $GRAAL_DIR $graal_tar_file
+    cp $GRAAL_DIR $conclave_graal_tar_file
   fi
 }
 # Builds sdk-build docker image

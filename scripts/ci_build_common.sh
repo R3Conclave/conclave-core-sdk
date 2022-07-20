@@ -2,10 +2,6 @@
 set -euo pipefail
 # Sets up common build script parameters and functions
 
-getGraalMajorAndMinorVersion() {
-  grep "graal_version" versions.gradle | cut -d '=' -f2 | sed "s/[\' ]//g" | cut -d '.' -f1,2
-}
-
 # Docker login interaction with the repository
 # You might get an error from docker about not being authorized to perform a certain action if you are not logged in
 docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
@@ -13,7 +9,16 @@ docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_US
 code_host_dir=$PWD
 code_docker_dir=${code_host_dir}
 
-graal_version=$(getGraalMajorAndMinorVersion)
+source ${code_host_dir}/containers/scripts/common.sh
+source ${script_dir}/devenv_envs.sh
+
+conclave_graal_version=$(getConclaveGraalVersion)
+
+credentials=$OBLIVIUM_MAVEN_USERNAME:$OBLIVIUM_MAVEN_PASSWORD
+artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz.sha512
+url=$OBLIVIUM_MAVEN_URL/$OBLIVIUM_MAVEN_REPOSITORY/${artifact_path}
+
+conclave_graal_sha512sum=$(curl -SLf -u$credentials $url)
 
 # Generate the docker image tag based on the contents inside the containers module
 # Please be sure that any script that might change the final docker container image
@@ -26,10 +31,10 @@ graal_version=$(getGraalMajorAndMinorVersion)
 # All subdirectories with name build and download and hidden files are excluded. Please be sure that any file
 # that is not tracked by git should not be included in this hash.
 # In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
-# must include the graal_version as well.
+# must include the conclave_graal sha512sum as well.
 pushd ${code_host_dir}
 containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
-docker_image_tag=$(echo $containers_dir_hash-$graal_version | sha256sum | cut -d ' ' -f1)
+docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum| sha256sum | cut -d ' ' -f1)
 popd
 
 # Docker container images repository (This repo is usually Artifactory)
