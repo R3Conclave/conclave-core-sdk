@@ -44,7 +44,7 @@ the enclave by fetching an attestation. The client will then use the Conclave SD
 information and make a decision whether to proceed (see [enclave-constraints](constraints.md)). If the enclave is 
 deemed to be trusted by the client, then an encryption key is derived from the attestation data, and the client can 
 continue to interact with the enclave via the host by delivering and receiving encrypted messages using the the 
-`/deliver-mail` and `/poll-mail` endpoints. For code examples, see the [hello world sample](https://github.com/R3Conclave/conclave-samples/hello-world).
+`/deliver-mail` and `/poll-mail` endpoints. For code examples, see the [hello world sample](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
 
 ### `/attestation (GET)`
 This endpoint accepts GET requests and returns the serialized attestation data-structure as a block of bytes.

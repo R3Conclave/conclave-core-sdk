@@ -1,6 +1,6 @@
 ext {
     // GA release checklist (i.e. does not apply to SNAPSHOT or RCs):
-    //  * Update version in https://github.com/R3Conclave/conclave-samples/blob/master/hello-world/gradle.properties
+    //  * Create release branch in https://github.com/R3Conclave/conclave-tutorials and update all versions.
     //  * Update download link in docs/docs/conclave-init.md
     conclave_version = '1.3-RC6-SNAPSHOT'
     // Please ensure that the Graal's version number matches the one set in GradleEnclavePlugin (Search

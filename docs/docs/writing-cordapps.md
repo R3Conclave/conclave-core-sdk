@@ -5,9 +5,9 @@ to peer database in which user-written apps can be installed. Enclaves can be us
 provide multi-party computation over the peer to peer network. Or look at it the other way around: Corda can provide
 communication and identity services to your enclave.
 
-The sample [CorDapp](https://github.com/R3Conclave/conclave-samples/cordapp) builds on the [hello-world](writing-hello-world.md) sample allowing nodes to perform the 
-reverse string task between two nodes, one of which loads the enclave. Smart contracts aren't used in this 
-sample, only flows are needed.
+The sample [CorDapp](https://github.com/R3Conclave/conclave-samples/cordapp) builds on the [hello world](writing-hello-world.md)
+tutorial allowing nodes to perform the reverse string task between two nodes, one of which loads the enclave. Smart
+contracts aren't used in this sample, only flows are needed.
 
 The sample divides the code into several pieces. The packages that _don't_ have `samples` in the name are
 intended to be copy/pasted into your own code. They'll be turned into a full API in future. The code
