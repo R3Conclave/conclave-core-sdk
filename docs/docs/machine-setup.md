@@ -1,37 +1,29 @@
 # Machine setup
 
-So. There's an easy way to do this, and a hard way.
+There's an easy way to do this, and a hard way.
 
 ## The easy way
 
-1. [Requisition a Microsoft Azure Gen 2 VM](azure.md).
-1. Upload your Java app to it and run it, as if it were any other Java app.
-1. There is no step 3!
-
-When using Azure, everything is fully automatic.
+1. [Create a Microsoft Azure Gen 3 VM](azure.md).
+2. Upload your Java app to the VM and run it, as if it were any other Java app.
 
 ## The harder way
 
 To deploy an enclave using real SGX hardware you need to configure the host system, and if your hardware
-does not support DCAP attestation also get access to the [Intel Attestation Service (IAS)](ias.md). At this time
-the host must be [Linux](machine-setup.md#distribution-support) and requires the following steps:
+does not support DCAP attestation also get access to the [Intel Attestation Service (IAS)](ias.md). At this time,
+the host must be [Linux](machine-setup.md#distribution-support), and requires the following steps:
 
-1. Installing the SGX kernel driver, which isn't yet included in upstream kernels.
-2. Installing the Intel platform services software.
+1. Install the SGX kernel driver (not required for Linux kernel versions later than 5.11).
+2. Install the Intel platform services software.
 3. Follow the instructions at the [IAS website](https://api.portal.trustedservices.intel.com/EPID-attestation) to get
    access to the IAS servers using a whitelisted SSL key.
 
 !!! note
-    To just *develop* enclaves it's sufficient to have any Linux or Windows host, as the simulation mode requires no 
-    special machine setup. However, Intel requires that the CPU must at least support [SSE4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1).
+    You can *develop* enclaves on Linux, Windows, or macOS hosts. To use simulation mode in Windows and macOS, you need to install and run Docker. Intel requires that the CPU must at least support [SSE4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1).
 
 ## Hardware support
 
-The machine needs support from both the CPU and firmware. At this time multi-socket boards don't support SGX. Your 
-hardware manufacturer can tell you if your machine supports SGX, but most new computers do (one exception is anything 
-made by Apple).
-
-There is a community maintained list of [tested/compatible hardware available on GitHub](https://github.com/ayeks/SGX-hardware).
+The machine needs support from both the CPU and firmware. Please check with your hardware manufacture to confirm that your machine supports SGX.
 
 For some machines SGX must be explicitly enabled in the BIOS/UEFI firmware screens. For others, it can be activated
 by any root user: the Conclave host API will try to activate it for you, if possible and if run with sufficient
@@ -86,7 +78,7 @@ The quick summary looks like this:
    * Then run: `apt-get update`
    * Finally: `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`
 3. For other users, use the SDK installer (which installs the platform services software as well)
-4. These steps will start the `aesm_service`. 
+4. These steps will start the `aesm_service`.
 
 
 ## Limited network connectivity
@@ -98,22 +90,22 @@ connectivity you must use an outbound HTTP[S] proxy server.
 The `aesmd` service has a configuration file in `/etc/aesmd.conf`. You may need to put your proxy settings there.
 
 The program that uses Conclave will also need to make web requests to https://api.trustedservices.intel.com so you
-may need to [provide Java with HTTP proxy settings](https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html) 
-as well. 
-   
+may need to [provide Java with HTTP proxy settings](https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html)
+as well.
+
 ## Using containers
 
-To configure Docker for use with SGX, you must pass at least these flags when creating the container: 
+To configure Docker for use with SGX, you must pass at least these flags when creating the container:
 
 `--device=/dev/isgx -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket`
 
-Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an enclave. 
+Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an enclave.
 
 <!--- TODO: We should offer a machine setup test tool here or use the one from Fortanix -->
 
 ## Renewing machine security  
 
-After following the above instructions, you may discover your [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) objects report the enclave as 
+After following the above instructions, you may discover your [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) objects report the enclave as
 `STALE`. This means the machine requires software updates. Applying all available updates and
 rebooting should make the security evaluation of `STALE` go away. See ["Renewability"](renewability.md) to learn more
 about this topic and what exactly is involved.
