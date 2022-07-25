@@ -63,23 +63,6 @@ elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
     sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/var/run/aesmd:/var/run/aesmd")
 fi
 
-# Part of Graal build process involves cloning and running git commands.
-# TeamCity is configured to use mirrors (https://www.jetbrains.com/help/teamcity/git.html#Git-AgentSettings),
-# and for the git commands to work properly, the container needs access
-# the agent home directory.
-agent_home_dir_flags=()
-if [ -d "${AGENT_HOME_DIR:-}" ]; then
-    agent_home_dir_flags=("-v" "${AGENT_HOME_DIR}:/${AGENT_HOME_DIR}")
-fi
-
-# USE_MAVEN_REPO can be set to "artifactory" or "sdk" and will affect
-# which artifacts the samples will use.
-# When unset, samples will use the composite build.
-use_maven_repo_flags=()
-if [ -n "${USE_MAVEN_REPO-}" ]; then
-    use_maven_repo_flags=("-e" "USE_MAVEN_REPO=${USE_MAVEN_REPO}")
-fi
-
 docker_group_add=()
 
 # OS specific settings
@@ -137,7 +120,6 @@ docker_opts=(\
     ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
-    ${use_maven_repo_flags[@]+"${use_maven_repo_flags[@]}"} \
     $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
     "-w" "$code_docker_dir" \
 )
@@ -146,7 +128,6 @@ function runDocker() {
     container_image=$1
     docker run \
         ${docker_opts[@]+"${docker_opts[@]}"} \
-        ${agent_home_dir_flags[@]+"${agent_home_dir_flags[@]}"} \
         ${container_image} \
         bash -c "$2"
 }
