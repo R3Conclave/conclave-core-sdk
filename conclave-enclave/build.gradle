@@ -15,8 +15,6 @@ dependencies {
     testImplementation project(":internal-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
-    // ASM: byte code manipulation library
-    testImplementation "org.ow2.asm:asm:$asm_version"
     testImplementation "org.mockito:mockito-inline:$mockito_version"
 }
 

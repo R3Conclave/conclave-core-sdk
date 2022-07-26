@@ -64,12 +64,10 @@ object EnclaveInstanceInfoSerializer : KSerializer<EnclaveInstanceInfo> {
 private val protoBuf = ProtoBuf {
     serializersModule = SerializersModule {
         polymorphic(EnclaveTestAction::class) {
-            subclass(AvianTestRunner::class, AvianTestRunner.serializer())
             subclass(ConcurrentCallsIntoEnclaveAction::class, ConcurrentCallsIntoEnclaveAction.serializer())
             subclass(Echo::class, Echo.serializer())
             subclass(EchoWithCallback::class, EchoWithCallback.serializer())
             subclass(Increment::class, Increment.serializer())
-            subclass(Outliers::class, Outliers.serializer())
             subclass(RepeatedOcallsAction::class, RepeatedOcallsAction.serializer())
             subclass(EcallOcallRecursionAction::class, EcallOcallRecursionAction.serializer())
             subclass(SetMaxCallCount::class, SetMaxCallCount.serializer())

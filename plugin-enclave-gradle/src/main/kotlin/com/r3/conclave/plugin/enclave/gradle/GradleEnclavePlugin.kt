@@ -40,15 +40,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // This is called before the build tasks are executed but after the build.gradle file
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
-            val message = "As Avian has been demised, only GraalVM (graalvm_native_image) is supported and the " +
-                    "parameter \"runtime\" is now deprecated and can be removed."
-            if (conclaveExtension.runtime.isPresent) {
-                if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
-                    target.logger.warn(message)
-                } else {
-                    throw GradleException(message)
-                }
-            }
             // If language support is enabled then automatically add the required dependency.
             if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // Please ensure the version number matches the version number set in versions.gradle to avoid
