@@ -45,13 +45,12 @@ downloadOrCopyGraal() {
   # If you are upgrading Graal version consider setting the environment variable GRAAL_DIR to the local directory where Graal was built.
   # For instance, GRAAL_DIR=../../../../graalvm.tar.gz. Keep in mind the working directory when setting the environment variable.
   if [[ -z "${GRAAL_DIR:-}" ]]; then
-    credentials=$OBLIVIUM_MAVEN_USERNAME:$OBLIVIUM_MAVEN_PASSWORD
-    url=$OBLIVIUM_MAVEN_URL/$OBLIVIUM_MAVEN_REPOSITORY/${conclave_graal_artifact_path}
+    url="https://software.r3.com/artifactory/conclave-maven/${conclave_graal_artifact_path}"
 
     echo "Pulling Graal from $url..."
     echo "For testing purposes point the env. var. GRAAL_DIR to the local directory where Graal was built. For instance, GRAAL_DIR=../../../../graal/build/distributions/graal-sdk.tar.gz. Keep in mind the working directory when setting the environment variable."
     echo "Working directory:" $(pwd)
-    curl -SLf -o ${conclave_graal_tar_file} --create-dirs -u $credentials  $url
+    curl -SLf -o ${conclave_graal_tar_file} --create-dirs $url
   else
     # Ensure the directory exists
     mkdir -p $sgxjvm_downloads_dir

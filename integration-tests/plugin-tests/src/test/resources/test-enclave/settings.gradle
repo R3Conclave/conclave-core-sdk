@@ -5,14 +5,10 @@ pluginManagement {
 
     repositories {
         maven {
-            url = " ${rootProject.projectDir}/../../../../build/repo"
+            url = "${rootProject.projectDir}/../../../../build/repo"
         }
         maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
-            }
+            url = "https://software.r3.com/artifactory/conclave-maven"
         }
         mavenCentral()
         gradlePluginPortal()

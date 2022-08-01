@@ -6,7 +6,18 @@ subprojects {
 
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 
-    apply from: "${rootProject.projectDir}/repositories.gradle"
+    repositories {
+
+        maven {
+            url = "${rootProject.projectDir}/../build/repo"
+        }
+
+        maven {
+            url = "https://software.r3.com/artifactory/conclave-maven"
+        }
+
+        mavenCentral()
+    }
 
     // This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
     java {

@@ -45,8 +45,6 @@ String getConclaveRevision() {
 
 ext {
     environment = createEnvironment(
-            'OBLIVIUM_MAVEN_URL',
-            'OBLIVIUM_MAVEN_REPOSITORY',
             'OBLIVIUM_MAVEN_USERNAME',
             'OBLIVIUM_MAVEN_PASSWORD',
             'OBLIVIUM_CONTAINER_REGISTRY_URL'
@@ -105,11 +103,7 @@ subprojects {
         mavenCentral()
         jcenter()
         maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = environment.OBLIVIUM_MAVEN_USERNAME
-                password = environment.OBLIVIUM_MAVEN_PASSWORD
-            }
+            url = "https://software.r3.com/artifactory/conclave-maven"
         }
     }
 
@@ -447,9 +441,15 @@ if (includeNative) {
                 }
             }
             repositories {
+
                 maven {
+                    def mavenDevRepositoryPath = 'conclave-maven-dev'
+                    def mavenReleaseRepositoryPath = 'conclave-maven-release'
+                    def useDevRepository = "$conclave_version".endsWith("-SNAPSHOT") || "$conclave_version".matches(/.+\-RC[0-9]+$/)
+                    def repositoryPath = useDevRepository ? mavenDevRepositoryPath : mavenReleaseRepositoryPath
+
                     name = "artifactory"
-                    url = "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}"
+                    url = "https://software.r3.com/artifactory/$repositoryPath"
                     credentials {
                         username = environment.OBLIVIUM_MAVEN_USERNAME
                         password = environment.OBLIVIUM_MAVEN_PASSWORD

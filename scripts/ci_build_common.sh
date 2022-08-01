@@ -12,13 +12,11 @@ code_docker_dir=${code_host_dir}
 source ${code_host_dir}/containers/scripts/common.sh
 source ${script_dir}/devenv_envs.sh
 
-conclave_graal_version=$(getConclaveGraalVersion)
-
-credentials=$OBLIVIUM_MAVEN_USERNAME:$OBLIVIUM_MAVEN_PASSWORD
+conclave_graal_version=$(grep -w "conclave_graal_version =" ./versions.gradle | cut -d '=' -f 2 | sed "s/[ ']//g")
 artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz.sha512
-url=$OBLIVIUM_MAVEN_URL/$OBLIVIUM_MAVEN_REPOSITORY/${artifact_path}
+url="https://software.r3.com/artifactory/conclave-maven/${artifact_path}"
 
-conclave_graal_sha512sum=$(curl -SLf -u$credentials $url)
+conclave_graal_sha512sum=$(curl -SLf $url)
 
 # Generate the docker image tag based on the contents inside the containers module
 # Please be sure that any script that might change the final docker container image
