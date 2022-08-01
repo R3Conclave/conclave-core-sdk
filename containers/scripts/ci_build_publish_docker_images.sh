@@ -35,12 +35,12 @@ doesContainerImageExist() {
 
 # Downloads or copys Graal from a local directory. This is required for building the sdk build.
 downloadOrCopyGraal() {
-  sgxjvm_downloads_dir="root/downloads"
-  conclave_graal_tar_file="${sgxjvm_downloads_dir}/graalvm.tar.gz"
+  downloads_dir="root/downloads"
+  conclave_graal_tar_file="${downloads_dir}/graalvm.tar.gz"
   conclave_graal_artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz
 
   # Delete all files from the directory to avoid issues
-  rm -rf $sgxjvm_downloads_dir/*
+  rm -rf $downloads_dir/*
 
   # If you are upgrading Graal version consider setting the environment variable GRAAL_DIR to the local directory where Graal was built.
   # For instance, GRAAL_DIR=../../../../graalvm.tar.gz. Keep in mind the working directory when setting the environment variable.
@@ -53,7 +53,7 @@ downloadOrCopyGraal() {
     curl -SLf -o ${conclave_graal_tar_file} --create-dirs $url
   else
     # Ensure the directory exists
-    mkdir -p $sgxjvm_downloads_dir
+    mkdir -p $downloads_dir
 
     # This copy is required to allow docker to access the file
     echo "Working directory:" $(pwd)

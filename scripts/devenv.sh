@@ -62,23 +62,25 @@ if [[ -z ${container_id} ]]; then
   else
     echo "Set the environment variable 'CONCLAVE_DOCKER_IDE=1' to automatically download IntelliJ IDEA and CLion."
   fi
-# Mount the IDEs from the host. The IDEs should be compatible with the container's OS.
-# If the IDEs are not present, the devenv shell can still be used,
-# as well as the the host's native IDEs, but the IDE launch scripts will fail.
-# Since exiting the container doesn't stop it, you may need to stop it manually
-# in order to remount the IDEs.
-# The IDEs can be downloaded at:
-# curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2021.3.tar.gz
-# curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2021.3.tar.gz
-ide_mount_flags=""
-if [ -r ${host_ide_dir}/idea-$idea_version ]; then
-  ide_mount_flags+="-v ${host_ide_dir}/idea-$idea_version/:/opt/idea-$idea_version/"
-fi
-if [ -r ${host_ide_dir}/clion-$clion_version ]; then
-  ide_mount_flags+=" -v ${host_ide_dir}/clion-$clion_version/:/opt/clion-$clion_version/"
-fi
+
+  # Mount the IDEs from the host. The IDEs should be compatible with the container's OS.
+  # If the IDEs are not present, the devenv shell can still be used,
+  # as well as the the host's native IDEs, but the IDE launch scripts will fail.
+  # Since exiting the container doesn't stop it, you may need to stop it manually
+  # in order to remount the IDEs.
+  # The IDEs can be downloaded at:
+  # curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2021.3.tar.gz
+  # curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2021.3.tar.gz
+  ide_mount_flags=""
+  if [ -r ${host_ide_dir}/idea-$idea_version ]; then
+    ide_mount_flags+="-v ${host_ide_dir}/idea-$idea_version/:/opt/idea-$idea_version/"
+  fi
+  if [ -r ${host_ide_dir}/clion-$clion_version ]; then
+    ide_mount_flags+=" -v ${host_ide_dir}/clion-$clion_version/:/opt/clion-$clion_version/"
+  fi
 
   container_id=$(docker run \
+       --label sdk-build \
        --name=$container_name \
        ${docker_opts[@]+"${docker_opts[@]}"} \
        --privileged \

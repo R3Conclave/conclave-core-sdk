@@ -7,10 +7,9 @@ RUN mkdir $GRAAL_HOME && tar -C $GRAAL_HOME -xzf $docker_graal_tar_file && rm -r
 
 FROM graal
 
-# A build container for the full sgxjvm project.
 # TODO Separate out the enclave build and make it completely reproducible.
 
-LABEL description="SGXJVM build container"
+LABEL description="Build container for the Conclave SDK"
 LABEL maintainer="conclave@r3.com"
 ARG commit_id
 LABEL commit_id=${commit_id}
