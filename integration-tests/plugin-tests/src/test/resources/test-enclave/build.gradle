@@ -5,18 +5,14 @@ plugins {
 
 // This test project is copied into a junit temp directory in the build directory before it's built, which is why
 // these relevant paths seem to not line up.
-apply from: '../../../../versions.gradle'
+apply from: "${rootProject.projectDir}/../../../../versions.gradle"
 
 repositories {
     maven {
+        //  Only Conclave artifacts should be present here
         url = "${rootProject.projectDir}/../../../../build/repo"
+        apply from: "${rootProject.projectDir}/../../../repositories.gradle"
     }
-
-    maven {
-        url = "https://software.r3.com/artifactory/conclave-maven"
-    }
-
-    mavenCentral()
 }
 
 compileKotlin {

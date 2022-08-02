@@ -1,5 +1,5 @@
-apply from: '../versions.gradle'
-apply from: '../common.gradle'
+apply from: "${rootProject.projectDir}/../versions.gradle"
+apply from: "${rootProject.projectDir}/../common.gradle"
 
 subprojects {
     apply plugin: 'java'
@@ -7,16 +7,11 @@ subprojects {
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 
     repositories {
-
         maven {
+            //  Only Conclave artifacts should be present here
             url = "${rootProject.projectDir}/../build/repo"
         }
-
-        maven {
-            url = "https://software.r3.com/artifactory/conclave-maven"
-        }
-
-        mavenCentral()
+        apply from: "${rootProject.projectDir}/repositories.gradle"
     }
 
     // This will also configure Kotlin: https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support
