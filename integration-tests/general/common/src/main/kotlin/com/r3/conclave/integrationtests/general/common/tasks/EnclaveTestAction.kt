@@ -123,6 +123,7 @@ private val protoBuf = ProtoBuf {
             subclass(ReadAndWriteFilesToDefaultFileSystem::class, ReadAndWriteFilesToDefaultFileSystem.serializer())
             subclass(WalkAndDelete::class, WalkAndDelete.serializer())
             subclass(ListFilesNTimes::class, ListFilesNTimes.serializer())
+            subclass(CreateAttestationQuoteAction::class, CreateAttestationQuoteAction.serializer())
         }
     }
 }

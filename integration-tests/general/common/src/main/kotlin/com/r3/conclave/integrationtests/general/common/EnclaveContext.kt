@@ -26,4 +26,5 @@ abstract class EnclaveContext {
     abstract fun getSecretKey(keyRequest: Cursor<SgxKeyRequest, ByteBuffer>): ByteArray
     abstract fun sealData(data: PlaintextAndAD): ByteArray
     abstract fun unsealData(sealedBlob: ByteArray): PlaintextAndAD
+    abstract fun createAttestationQuote(reportData: ByteArray): ByteArray
 }

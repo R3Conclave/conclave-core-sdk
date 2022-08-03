@@ -24,8 +24,9 @@ Release notes
 10. We've introduced the concept of beta APIs to allow quick iterative feedback on APIs that need more time before
     they're finalized. Anything annotated with [`@Beta`](api/-conclave/com.r3.conclave.common/-beta/index.html) is
     subject to change and may even be removed in a later release.
-11. :jigsaw: **Beta feature** New method which creates a custom attestation quote for use with services that require a
-    signed quote object from the enclave. See the API docs [`EnclaveHost.createAttestationQuote`](api/-conclave/com.r3.conclave.host/-enclave-host/create-attestation-quote.html)
+11. :jigsaw: **Beta feature** New API method which creates an attestation quote with custom report data, for use with
+    external SGX-enabled applications which require a signed quote with specific content. See
+    [`Enclave.createAttestationQuote`](api/-conclave/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
 12. Conclave now uses version 2.17 of the Intel SGX SDK. This provides bug fixes and other improvements. See the
    [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.17-release)

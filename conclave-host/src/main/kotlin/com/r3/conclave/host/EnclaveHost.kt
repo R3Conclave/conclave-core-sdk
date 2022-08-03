@@ -16,6 +16,8 @@ import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
@@ -444,6 +446,10 @@ class EnclaveHost private constructor(
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
+    private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
+    private lateinit var signedQuoteHandler: SignedQuoteHandler
+    private lateinit var enclaveInstanceInfoQuoteHandler: EnclaveInstanceInfoQuoteHandler
+
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
 
     /**
@@ -466,8 +472,8 @@ class EnclaveHost private constructor(
      */
     val mockEnclave: Any get() = enclaveHandle.mockEnclave
 
-    private lateinit var attestationConnection: AttestationHostHandler.Connection
     private lateinit var attestationService: AttestationService
+    private lateinit var quotingService: EnclaveQuoteService
 
     @Throws(EnclaveLoadException::class)
     @Synchronized
@@ -535,6 +541,7 @@ class EnclaveHost private constructor(
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
+        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
 
         try {
             this.commandsCallback = commandsCallback
@@ -543,12 +550,11 @@ class EnclaveHost private constructor(
             val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
             // The admin handler deserializes keys and other info from the enclave during initialisation.
             adminHandler = mux.addDownstream(AdminHandler(this))
-            // The attestation handler manages the process of generating remote attestations that are then
-            // placed into the EnclaveInstanceInfo.
-            attestationConnection = mux.addDownstream(AttestationHostHandler(
-                // Ignore the attestation parameters if the enclave mode is non-hardware and switch to mock attestation.
-                attestationParameters?.takeIf { enclaveMode.isHardware }
-            ))
+
+            // Connect handlers associated with attestation
+            quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
+            signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
+            enclaveInstanceInfoQuoteHandler = mux.addDownstream(EnclaveInstanceInfoQuoteHandler())
 
             // The enclave is initialised when it receives its first bytes. We use the request for
             // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
@@ -585,22 +591,6 @@ class EnclaveHost private constructor(
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
         }
-    }
-
-    /**
-     * Create a new attestation quote. The format of the bytes returned are dependent on the attestation protocol
-     * specified by the [AttestationParameters] in [start]. For Intel SGX the bytes represent a sgx_quote_t struct.
-     *
-     * The custom [userData] can be embedded into the quote structure. How this is done is also dependent on the attestation protocol.
-     *
-     * Note this is a beta API which is not finalized. It may change or even be removed in a later release.
-     */
-    @Beta
-    @Synchronized
-    fun createAttestationQuote(userData: ByteArray): ByteArray {
-        require(userData.size == 64) { "User data must be a 64-byte long byte array. User data size: ${userData.size}" }
-        val reportData = Cursor.wrap(SgxReportData, userData)
-        return attestationConnection.getSignedQuote(reportData).bytes
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
@@ -684,8 +674,12 @@ class EnclaveHost private constructor(
             log.warn("Enclave will not be able to start-up in debug or release mode while $ENV_VAR_SGX_AESM_ADDR is set.")
         }
     }
+
     private fun getAttestation(): Attestation {
-        val signedQuote = attestationConnection.getSignedQuote()
+        val quotingEnclaveTargetInfo = quotingService.initializeQuote()
+        log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
+        val signedQuote = enclaveInstanceInfoQuoteHandler.getQuote(quotingEnclaveTargetInfo)
+        log.debug { "Got quote $signedQuote" }
         return attestationService.attestQuote(signedQuote)
     }
 
@@ -964,6 +958,71 @@ class EnclaveHost private constructor(
             val commandsCopy = ArrayList(mailCommands)
             mailCommands.clear()
             commandsCallback.accept(commandsCopy)
+        }
+    }
+
+    /**
+     * Handler for servicing requests from the enclave for signed quotes.
+     */
+    private inner class SignedQuoteHandler : Handler<SignedQuoteHandler> {
+        private lateinit var sender: Sender
+
+        override fun connect(upstream: Sender): SignedQuoteHandler {
+            sender = upstream
+            return this
+        }
+
+        override fun onReceive(connection: SignedQuoteHandler, input: ByteBuffer) {
+            val report = Cursor.slice(SgxReport, input)
+            val signedQuote = quotingService.retrieveQuote(report)
+            sender.send(signedQuote.size) { buffer -> buffer.put(signedQuote.buffer) }
+        }
+    }
+
+    /**
+     * Handler for servicing requests from the enclave for quoting info.
+     */
+    private inner class QuotingEnclaveInfoHandler : Handler<QuotingEnclaveInfoHandler> {
+        private lateinit var sender: Sender
+
+        override fun connect(upstream: Sender): QuotingEnclaveInfoHandler {
+            sender = upstream
+            return this
+        }
+
+        override fun onReceive(connection: QuotingEnclaveInfoHandler, input: ByteBuffer) {
+            val quotingEnclaveInfo = quotingService.initializeQuote()
+            sender.send(quotingEnclaveInfo.size) { buffer -> buffer.put(quotingEnclaveInfo.buffer) }
+        }
+    }
+
+    /**
+     * Handler for retrieving a report from the enclave for enclave instance info.
+     */
+    private inner class EnclaveInstanceInfoQuoteHandler : Handler<EnclaveInstanceInfoQuoteHandler> {
+        private lateinit var sender: Sender
+
+        private val quote = ThreadLocal<ByteCursor<SgxSignedQuote>>()
+
+        override fun connect(upstream: Sender): EnclaveInstanceInfoQuoteHandler {
+            sender = upstream
+            return this
+        }
+
+        override fun onReceive(connection: EnclaveInstanceInfoQuoteHandler, input: ByteBuffer) {
+            check(quote.get() == null)
+            quote.set(Cursor.copy(SgxSignedQuote, input))
+        }
+
+        fun getQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
+            try {
+                sender.send(target.size) { buffer ->
+                    buffer.put(target.buffer)
+                }
+                return checkNotNull(quote.get())
+            } finally {
+                quote.remove()
+            }
         }
     }
 
