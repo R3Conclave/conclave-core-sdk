@@ -441,15 +441,9 @@ if (includeNative) {
                 }
             }
             repositories {
-
                 maven {
-                    def mavenDevRepositoryPath = 'conclave-maven-dev'
-                    def mavenReleaseRepositoryPath = 'conclave-maven-release'
-                    def useDevRepository = "$conclave_version".endsWith("-SNAPSHOT") || "$conclave_version".matches(/.+\-RC[0-9]+$/)
-                    def repositoryPath = useDevRepository ? mavenDevRepositoryPath : mavenReleaseRepositoryPath
-
                     name = "artifactory"
-                    url = "https://software.r3.com/artifactory/$repositoryPath"
+                    url = getArtifactoryForPublication()
                     credentials {
                         username = environment.OBLIVIUM_MAVEN_USERNAME
                         password = environment.OBLIVIUM_MAVEN_PASSWORD
@@ -462,6 +456,18 @@ if (includeNative) {
             }
         }
     }
+}
+
+String getArtifactoryForPublication() {
+    String mavenRepo
+    if (version.endsWith("-SNAPSHOT")) {
+        mavenRepo = "conclave-maven-dev"
+    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+        mavenRepo = "conclave-maven-unstable"
+    } else {
+        mavenRepo = "conclave-maven-stable"
+    }
+    return "https://software.r3.com/artifactory/" + mavenRepo
 }
 
 // To speed up IntelliJ indexing

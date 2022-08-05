@@ -44,7 +44,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // It might be possible that the conclave part of the version not match the current version, e.g. if
                 // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
-                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:22.0.0.2-1.3-RC6-SNAPSHOT")
+                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:22.0.0.2-1.3-RC6")
             }
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$sdkVersion")
