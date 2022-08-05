@@ -60,6 +60,7 @@ downloadOrCopyGraal() {
     cp $GRAAL_DIR $conclave_graal_tar_file
   fi
 }
+
 # Builds sdk-build docker image
 buildContainerSDKBuild() {
   pushd "${code_host_dir}/containers/sdk-build/src/docker"
@@ -95,11 +96,6 @@ buildContainer() {
     $2
 }
 
-
-publishContainer() {
-    docker push $1
-}
-
 # Check if the a docker container image exists. If the image does not exist then it is created and published
 # The function takes as first argument the docker container image name and the function that generates the docker image
 # if required
@@ -111,8 +107,9 @@ buildAndPublishContainerIfItDoesNotExist() {
     echo "Container $1 not found."
     buildContainer $1 $2
     # Only publish the image if requested. Not all users are authorized to publish to the repository.
-    if [ "$publish_images" == "publish" ]; then
-      publishContainer $1
+    if [ "$publish_images" == "publish" ] && [ -n "$OBLIVIUM_CONTAINER_REGISTRY_USERNAME" ] && [ -n "$OBLIVIUM_CONTAINER_REGISTRY_PASSWORD" ]; then
+      docker login conclave-docker-dev.software.r3.com -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+      docker push $1
     else
       echo "Container image will not be published. To publish the container image type ./ci_build_publish_docker_images.sh publish. You must be authorized user to publish to the repository"
     fi

@@ -19,11 +19,13 @@ source ${script_dir}/devenv_envs.sh
 
 container_name=$(echo "code${code_host_dir}" | sed -e 's/[^a-zA-Z0-9_.-]/_/g')
 container_id=$(docker ps -aqf name=^/$container_name\$ || echo "")
-docker_image_pull="${DOCKER_IMAGE_PULL:-0}"
+
+# To avoid pulling the docker image from the registry, the user needs to set
+#   the environment variable DOCKER_IMAGE_PULL to 0 (in ~/.bashrc for example).
+docker_image_pull="${DOCKER_IMAGE_PULL:-1}"
 if [[ -z ${container_id} ]]; then
   # We don't want to / can't log in to the local registry. This step is only useful for remote registries.
-  if [ "$OBLIVIUM_CONTAINER_REGISTRY_URL" != "localhost:5000" ] && [ "$docker_image_pull" == "1" ]; then
-    docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+  if [ "$docker_image_pull" == "1" ]; then
     docker pull $container_image_sdk_build
   else
     DOCKER_IMAGE_AESMD_BUILD="${DOCKER_IMAGE_AESMD_BUILD:-0}" DOCKER_IMAGE_SAVE="${DOCKER_IMAGE_SAVE:-0}" ${code_host_dir}/containers/scripts/ci_build_publish_docker_images.sh

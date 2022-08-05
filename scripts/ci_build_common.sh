@@ -2,10 +2,6 @@
 set -euo pipefail
 # Sets up common build script parameters and functions
 
-# Docker login interaction with the repository
-# You might get an error from docker about not being authorized to perform a certain action if you are not logged in
-docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
-
 code_host_dir=$PWD
 code_docker_dir=${code_host_dir}
 
@@ -35,8 +31,8 @@ containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/do
 docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum| sha256sum | cut -d ' ' -f1)
 popd
 
-# Docker container images repository (This repo is usually Artifactory)
-container_image_repo=$OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.conclave
+# Docker container images repository
+container_image_repo=conclave-docker-dev.software.r3.com/com.r3.conclave
 
 # Docker container images
 container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag

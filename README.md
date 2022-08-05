@@ -68,24 +68,7 @@ environment scripts (which you will need later).
 For more information follow [this link](https://docs.docker.com/install/linux/linux-postinstall/)
 to learn more about the docker post-installation steps for linux.
 
-Development is done inside a "devenv" container, which has access to your host disk and network. This is layered on top
-of the build container. You will also need a local [registry container](https://docs.docker.com/registry/) running.
-If your docker installation is fresh, you will need to [prepare the registry](#preparing-the-docker-registry) as described below.
-
-### Preparing the Docker Registry
-[comment]: <https://r3-cev.atlassian.net/browse/CON-1058> (Link to improve this point once we open source.)
-The build container's and other dependencies are stored in Maven central. 
-
-Create a file (`~/.oblivium_credentials.sh`) containing the access credentials:
-
-```console
-export DOCKER_IMAGE_PULL=1
-export OBLIVIUM_CONTAINER_REGISTRY_USERNAME=<R3 email address>
-export OBLIVIUM_CONTAINER_REGISTRY_PASSWORD=<API key>
-export OBLIVIUM_MAVEN_USERNAME=<R3 email address>
-export OBLIVIUM_MAVEN_PASSWORD=<API key>
-export OBLIVIUM_CONTAINER_REGISTRY_URL=sgxjvm-docker-nightly.software.r3.com
-```
+Development is done inside a "devenv" container, which has access to your host disk and network.
 
 ## Entering the container
 

@@ -46,8 +46,7 @@ String getConclaveRevision() {
 ext {
     environment = createEnvironment(
             'OBLIVIUM_MAVEN_USERNAME',
-            'OBLIVIUM_MAVEN_PASSWORD',
-            'OBLIVIUM_CONTAINER_REGISTRY_URL'
+            'OBLIVIUM_MAVEN_PASSWORD'
     )
 
     conclave_revision = getConclaveRevision()
