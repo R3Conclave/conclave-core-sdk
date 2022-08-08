@@ -15,4 +15,5 @@ This release ships with the following known issues that we plan to address in fu
    on disk repositories.
 1. On Windows and macOS, serialization and reflection configuration files configured as described on
    [enclave configuration](enclave-configuration.md) must use non-relative paths. Additionally, on Windows, the paths
-   must use forwardslashes rather than Windows standard backslashes.
+   must use forward slashes rather than Windows standard backslashes.
+1. Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64 binaries.

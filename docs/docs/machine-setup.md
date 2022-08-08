@@ -18,8 +18,9 @@ the host must be [Linux](machine-setup.md#distribution-support), and requires th
 3. Follow the instructions at the [IAS website](https://api.portal.trustedservices.intel.com/EPID-attestation) to get
    access to the IAS servers using a whitelisted SSL key.
 
-!!! note
-    You can *develop* enclaves on Linux, Windows, or macOS hosts. To use simulation mode in Windows and macOS, you need to install and run Docker. Intel requires that the CPU must at least support [SSE4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1).
+!!! important
+    You can *develop* enclaves on Linux, Windows, or macOS hosts. To use simulation mode in Windows and macOS, you need to install and run Docker. Intel requires that the CPU must at least support [SSE4.1](https://en.wikipedia.org/wiki/SSE4#SSE4.1). Conclave works only in mock mode on new Mac computers with Apple silicon due to a [known issue](known-issues.md)
+
 
 ## Hardware support
 
