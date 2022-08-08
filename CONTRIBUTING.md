@@ -1,6 +1,6 @@
 # Contributing to Conclave
 
-We would love for you to contribute to Conclave and help make it even better than it is today!
+We encourage you to contribute to Conclave and help make it even better than it is today!
 As a contributor, here are the guidelines we would like you to follow:
 
  - [Got a Question or Problem?](#question)
