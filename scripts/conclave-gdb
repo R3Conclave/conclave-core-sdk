@@ -16,27 +16,27 @@
 
 shopt -s expand_aliases
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LINUX_SGX_BUILD_PATH="$ROOT/build/Debug/linux-sgx/src/linux-sgx/build/linux"
-ROOT_PATH=$(dirname $ROOT)
+CPP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../cpp" && pwd)"
+LINUX_SGX_BUILD_PATH="$CPP_ROOT/build/Debug/linux-sgx/src/linux-sgx/build/linux"
+CPP_ROOT_PATH=$(dirname $CPP_ROOT)
 
 # If the GDB config is not present then create it
 if [ ! -d "$HOME/.gdbconclave" ]; then
     mkdir -p $HOME/.gdbconclave
-    cp $ROOT_PATH/graal/gdb/svmhelpers.py $HOME/.gdbconclave
+    cp $CPP_ROOT_PATH/graal/gdb/svmhelpers.py $HOME/.gdbconclave
     # Create a file that contains java source directories in the SDK
     # Substrate VM sources
-    find $ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbconclave/src_dirs
+    find $CPP_ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbconclave/src_dirs
     # Java 8 sources (these were not used to build Graal so may not exactly match)
     # Conclave directories
-    echo "directory $ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
-    echo "directory $ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
-    echo "directory $ROOT_PATH/conclave-enclave/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
-    echo "directory $ROOT_PATH/conclave-enclave/src/main/java" >> $HOME/.gdbconclave/src_dirs
-    echo "directory $ROOT_PATH/conclave-mail/src/main/java" >> $HOME/.gdbconclave/src_dirs
-    echo "directory $ROOT_PATH/conclave-mail/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/conclave-enclave/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/conclave-enclave/src/main/java" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/conclave-mail/src/main/java" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/conclave-mail/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
     # Graal compiler
-    echo "directory $ROOT_PATH/graal/build/graal/compiler/src/org.graalvm.compiler.replacements/src" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $CPP_ROOT_PATH/graal/build/graal/compiler/src/org.graalvm.compiler.replacements/src" >> $HOME/.gdbconclave/src_dirs
     # Add the configuration directory because GDB will search there for python scripts
     echo "directory $HOME/.gdbconclave" >> $HOME/.gdbconclave/src_dirs
 fi

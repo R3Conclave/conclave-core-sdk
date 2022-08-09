@@ -124,6 +124,9 @@ By default, this code is built in `Release` mode. If you need to debug C/C++ cod
 ./gradlew build -PnativeDebug
 ```
 
+If you want to debug C/C++ code inside the enclave, you can use the scripts `conclave-gdb` and `conclave-gdb-attach`
+ (in the directory `scripts/`) to debug your code. These are just wrappers of `gdb` for Conclave.
+
 ### IntelliJ and CLion inside the container (Linux only)
 It is possible to install IntelliJ and CLion into the containers, but only on Linux.
 

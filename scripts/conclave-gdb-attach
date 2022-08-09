@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 shopt -s expand_aliases
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_PATH=$(dirname $ROOT)
+CPP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../cpp" && pwd)"
+CPP_ROOT_PATH=$(dirname $CPP_ROOT)
 
 if [ "$*" == "" ]; then
     echo "Usage: conclave-gdb-attach Classname
@@ -18,4 +18,4 @@ if [ -z "$PID" ]; then
 fi
 echo "Attaching to process: $PID"
 
-$ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')"
+$CPP_ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')"

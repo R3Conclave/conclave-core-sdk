@@ -36,7 +36,6 @@ if (includeNative) {
     include 'cpp:linux-sgx:linux-sgx-release'
     include 'cpp:linux-sgx:linux-sgx-simulation'
     include 'cpp:native-binutils'
-    include 'cpp:native-gdb'
     include 'cpp:native-host'
     include 'cpp:native-host:native-host-debug'
     include 'cpp:native-host:native-host-release'
