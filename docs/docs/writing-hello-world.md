@@ -79,12 +79,12 @@ each of the different build types.
 * Debug builds use a private key stored in a file.
 * Release builds use a private key managed by some external signing process.
 
-The ```hello-world``` sample in the [conclave-samples](https://github.com/R3Conclave/conclave-samples/hello-world) repository contains some example keys that can be used with the ```privateKey```
-and ```externalKey``` signing types. These can be found in ```hello-world/signing/```.
+The `hello world` [sample](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world) repository contains some example
+keys that can be used with the `privateKey` and `externalKey` signing types. These can be found in `signing` directory.
 
-| Key Files | Description |
-| :----     | :----       |
-| sample_private_key.pem | A 3072 bit RSA private key that can be used to test the ```privateKey``` signing type |
+| Key Files              | Description                                                                                                                                                                  |
+|:-----------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| sample_private_key.pem | A 3072 bit RSA private key that can be used to test the ```privateKey``` signing type                                                                                        |
 | external_signing_*.pem | An AES encrypted 3072 bit RSA public/private key pair that can be used to test the ```externalKey``` signing type. The private key can be accessed with the password '12345' |
 
 Copy the `signing` directory from the SDK into your project and/or update the paths in the enclave `build.gradle`.

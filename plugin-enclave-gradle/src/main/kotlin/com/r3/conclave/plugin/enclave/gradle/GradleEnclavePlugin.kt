@@ -40,20 +40,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // This is called before the build tasks are executed but after the build.gradle file
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
-            val message = "As Avian has been demised, only GraalVM (graalvm_native_image) is supported and the " +
-                    "parameter \"runtime\" is now deprecated and can be removed."
-            if (conclaveExtension.runtime.isPresent) {
-                if (conclaveExtension.runtime.get() == RuntimeType.GraalVMNativeImage) {
-                    target.logger.warn(message)
-                } else {
-                    throw GradleException(message)
-                }
-            }
             // If language support is enabled then automatically add the required dependency.
             if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
-                // Please ensure the version number matches the version number set in versions.gradle to avoid
-                // incompatibilities
-                target.dependencies.add("implementation", "org.graalvm.sdk:graal-sdk:22.0.0.2")
+                // It might be possible that the conclave part of the version not match the current version, e.g. if
+                // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
+                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:22.0.0.2-1.3-RC6")
             }
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$sdkVersion")
@@ -181,8 +172,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val generateAppResourcesConfigTask =
             target.createTask<GenerateAppResourcesConfig>("generateAppResourcesConfig") { task ->
-                task.dependsOn(generateEnclavePropertiesTask)
-                task.resourcesDirectory.set(getMainSourceSet(target).output.resourcesDir)
+                task.dependsOn(shadowJarTask)
+                task.jarFile.set(shadowJarTask.archiveFile)
                 task.appResourcesConfigFile.set((baseDirectory / "app-resources-config.json").toFile())
             }
 

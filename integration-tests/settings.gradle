@@ -1,20 +1,13 @@
 pluginManagement {
-    apply from: '../versions.gradle'
+    apply from: "${rootProject.projectDir}/../versions.gradle"
 
     repositories {
-        gradlePluginPortal()
         maven {
             url = "${rootProject.projectDir}/../build/repo"
         }
-        maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
-            }
-        }
-        mavenCentral()
+        apply from: "${rootProject.projectDir}/repositories_plugin.gradle"
     }
+
 
     plugins {
         id 'org.jetbrains.kotlin.jvm' version kotlin_version apply false

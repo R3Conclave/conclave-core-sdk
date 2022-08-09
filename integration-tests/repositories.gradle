@@ -1,13 +1,26 @@
 repositories {
-    maven {
-        url = "${rootProject.projectDir}/../build/repo"
-    }
-    maven {
-        url = "https://software.r3.com/artifactory/sgxjvm"
-        credentials {
-            username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-            password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = "https://software.r3.com/artifactory/conclave-maven"
+            }
+        }
+
+        filter {
+            includeModuleByRegex("com\\.r3\\.conclave", "kds-.*")
+            includeModuleByRegex("com\\.r3\\.conclave", "graal-sdk.*")
         }
     }
-    mavenCentral()
+
+    mavenCentral {
+        content {
+            excludeGroupByRegex "com\\.r3\\.conclave.*"
+        }
+    }
+
+    gradlePluginPortal {
+        content {
+            excludeGroupByRegex "com\\.r3\\.conclave.*"
+        }
+    }
 }

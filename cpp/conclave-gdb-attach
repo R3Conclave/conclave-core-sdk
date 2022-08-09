@@ -2,7 +2,7 @@
 shopt -s expand_aliases
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SGXJVM_ROOT_PATH=$(dirname $ROOT)
+ROOT_PATH=$(dirname $ROOT)
 
 if [ "$*" == "" ]; then
     echo "Usage: conclave-gdb-attach Classname
@@ -18,4 +18,4 @@ if [ -z "$PID" ]; then
 fi
 echo "Attaching to process: $PID"
 
-$SGXJVM_ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')"
+$ROOT_PATH/cpp/conclave-gdb attach "$(jps -l | grep $1 | sed -e 's/\s.*$//')"

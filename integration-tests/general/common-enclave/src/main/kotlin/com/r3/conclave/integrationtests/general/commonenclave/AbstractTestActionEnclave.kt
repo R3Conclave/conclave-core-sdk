@@ -56,6 +56,9 @@ abstract class AbstractTestActionEnclave : Enclave() {
         override fun unsealData(sealedBlob: ByteArray): PlaintextAndAD {
             return env.unsealData(ByteBuffer.wrap(sealedBlob)).let { PlaintextAndAD(it.plaintext, it.authenticatedData) }
         }
+        override fun createAttestationQuote(reportData: ByteArray): ByteArray {
+            return this@AbstractTestActionEnclave.createAttestationQuote(reportData)
+        }
     }
 
     final override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray = processEncodedAction(bytes, false)

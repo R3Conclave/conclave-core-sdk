@@ -1,0 +1,28 @@
+settings.pluginManagement {
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = "https://software.r3.com/artifactory/conclave-maven"
+                }
+            }
+
+            filter {
+                includeModuleByRegex("com\\.r3\\.conclave", "kds-.*")
+                includeModuleByRegex("com\\.r3\\.conclave", "graal-sdk.*")
+            }
+        }
+
+        mavenCentral {
+            content {
+                excludeGroupByRegex "com\\.r3\\.conclave.*"
+            }
+        }
+
+        gradlePluginPortal {
+            content {
+                excludeGroupByRegex "com\\.r3\\.conclave.*"
+            }
+        }
+    }
+}

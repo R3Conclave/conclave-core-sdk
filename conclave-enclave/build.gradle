@@ -11,12 +11,10 @@ dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
-    implementation "org.graalvm.sdk:graal-sdk:$graal_version"
+    implementation "com.r3.conclave:graal-sdk:$conclave_graal_version"
     testImplementation project(":internal-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
-    // ASM: byte code manipulation library
-    testImplementation "org.ow2.asm:asm:$asm_version"
     testImplementation "org.mockito:mockito-inline:$mockito_version"
 }
 

@@ -28,6 +28,10 @@ echo Run Java project unit tests
 # Maven Central. However, for testing against a particular build of the SDK, we need to tell the generated project to
 # use our local repo containing the SDK under test.
 
+# Gradle takes into consideration the order in which the repositories are listed. Because we are applying changes to gradle files using the sed,
+# the repos will appear in reverse order in the file.
+# Please ensure that the url conclave-maven always appears after the repo to ensure that Gradle first looks at the local repo before searching in Artifactory.
+sed -i "s/repositories {/repositories {\nmaven { url = 'https:\/\/software.r3.com\/artifactory\/conclave-maven' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/..\/repo' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.gradle
 ./gradlew test
@@ -58,6 +62,10 @@ pushd mega-kotlin-project
 
 echo Run Kotlin project unit tests
 
+# Gradle takes into consideration the order in which the repositories are listed. Because we are applying changes to gradle files using the sed,
+# the repos will appear in reverse order in the file.
+# Please ensure that the url conclave-maven always appears after the repo to ensure that Gradle first looks at the local repo before searching in Artifactory.
+sed -i "s/repositories {/repositories {\nmaven { url = 'https:\/\/software.r3.com\/artifactory\/conclave-maven' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/..\/repo' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.gradle
 ./gradlew test

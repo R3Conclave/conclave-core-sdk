@@ -1,21 +1,13 @@
 // This test project is copied into a junit temp directory in the build directory before it's built, which is why
 // these relevant paths seem to not line up.
 pluginManagement {
-    apply from: '../../../../versions.gradle'
+    apply from: "${rootProject.projectDir}/../../../../versions.gradle"
 
     repositories {
         maven {
-            url = " ${rootProject.projectDir}/../../../../build/repo"
+            url = "${rootProject.projectDir}/../../../../build/repo"
         }
-        maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = System.getenv('OBLIVIUM_MAVEN_USERNAME')
-                password = System.getenv('OBLIVIUM_MAVEN_PASSWORD')
-            }
-        }
-        mavenCentral()
-        gradlePluginPortal()
+        apply from: "${rootProject.projectDir}/../../../repositories_plugin.gradle"
     }
 
     plugins {

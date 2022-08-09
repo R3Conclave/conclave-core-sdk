@@ -2,18 +2,16 @@
 set -euo pipefail
 # Sets up common build script parameters and functions
 
-getGraalMajorAndMinorVersion() {
-  grep "graal_version" versions.gradle | cut -d '=' -f2 | sed "s/[\' ]//g" | cut -d '.' -f1,2
-}
-
-# Docker login interaction with the repository
-# You might get an error from docker about not being authorized to perform a certain action if you are not logged in
-docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
-
 code_host_dir=$PWD
 code_docker_dir=${code_host_dir}
 
-graal_version=$(getGraalMajorAndMinorVersion)
+source ${code_host_dir}/containers/scripts/common.sh
+
+conclave_graal_version=$(grep -w "conclave_graal_version =" ./versions.gradle | cut -d '=' -f 2 | sed "s/[ ']//g")
+artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz.sha512
+url="https://software.r3.com/artifactory/conclave-maven/${artifact_path}"
+
+conclave_graal_sha512sum=$(curl -SLf $url)
 
 # Generate the docker image tag based on the contents inside the containers module
 # Please be sure that any script that might change the final docker container image
@@ -26,14 +24,14 @@ graal_version=$(getGraalMajorAndMinorVersion)
 # All subdirectories with name build and download and hidden files are excluded. Please be sure that any file
 # that is not tracked by git should not be included in this hash.
 # In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
-# must include the graal_version as well.
+# must include the conclave_graal sha512sum as well.
 pushd ${code_host_dir}
 containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
-docker_image_tag=$(echo $containers_dir_hash-$graal_version | sha256sum | cut -d ' ' -f1)
+docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum| sha256sum | cut -d ' ' -f1)
 popd
 
-# Docker container images repository (This repo is usually Artifactory)
-container_image_repo=$OBLIVIUM_CONTAINER_REGISTRY_URL/com.r3.conclave
+# Docker container images repository
+container_image_repo=conclave-docker-dev.software.r3.com/com.r3.conclave
 
 # Docker container images
 container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag
@@ -56,23 +54,6 @@ elif [ -e /dev/sgx_enclave ]; then  # DCAP
     sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/var/run/aesmd:/var/run/aesmd")
 elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
     sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/var/run/aesmd:/var/run/aesmd")
-fi
-
-# Part of Graal build process involves cloning and running git commands.
-# TeamCity is configured to use mirrors (https://www.jetbrains.com/help/teamcity/git.html#Git-AgentSettings),
-# and for the git commands to work properly, the container needs access
-# the agent home directory.
-agent_home_dir_flags=()
-if [ -d "${AGENT_HOME_DIR:-}" ]; then
-    agent_home_dir_flags=("-v" "${AGENT_HOME_DIR}:/${AGENT_HOME_DIR}")
-fi
-
-# USE_MAVEN_REPO can be set to "artifactory" or "sdk" and will affect
-# which artifacts the samples will use.
-# When unset, samples will use the composite build.
-use_maven_repo_flags=()
-if [ -n "${USE_MAVEN_REPO-}" ]; then
-    use_maven_repo_flags=("-e" "USE_MAVEN_REPO=${USE_MAVEN_REPO}")
 fi
 
 docker_group_add=()
@@ -132,8 +113,7 @@ docker_opts=(\
     ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
-    ${use_maven_repo_flags[@]+"${use_maven_repo_flags[@]}"} \
-    $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
+    $(env | cut -f1 -d= | grep CONCLAVE_ | sed 's/^CONCLAVE_/-e CONCLAVE_/') \
     "-w" "$code_docker_dir" \
 )
 
@@ -141,7 +121,6 @@ function runDocker() {
     container_image=$1
     docker run \
         ${docker_opts[@]+"${docker_opts[@]}"} \
-        ${agent_home_dir_flags[@]+"${agent_home_dir_flags[@]}"} \
         ${container_image} \
         bash -c "$2"
 }

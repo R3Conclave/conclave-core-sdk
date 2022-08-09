@@ -25,10 +25,6 @@ dependencies {
     dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.0-SNAPSHOT")
 }
 
-static Map<String, String> createEnvironment(String... names) {
-    return names.collectEntries { [(it): System.getenv(it)] }
-}
-
 String getConclaveRevision() {
     String conclave_revision
 
@@ -44,14 +40,6 @@ String getConclaveRevision() {
 }
 
 ext {
-    environment = createEnvironment(
-            'OBLIVIUM_MAVEN_URL',
-            'OBLIVIUM_MAVEN_REPOSITORY',
-            'OBLIVIUM_MAVEN_USERNAME',
-            'OBLIVIUM_MAVEN_PASSWORD',
-            'OBLIVIUM_CONTAINER_REGISTRY_URL'
-    )
-
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
 }
@@ -105,11 +93,7 @@ subprojects {
         mavenCentral()
         jcenter()
         maven {
-            url = "https://software.r3.com/artifactory/sgxjvm"
-            credentials {
-                username = environment.OBLIVIUM_MAVEN_USERNAME
-                password = environment.OBLIVIUM_MAVEN_PASSWORD
-            }
+            url = "https://software.r3.com/artifactory/conclave-maven"
         }
     }
 
@@ -449,10 +433,10 @@ if (includeNative) {
             repositories {
                 maven {
                     name = "artifactory"
-                    url = "${environment.OBLIVIUM_MAVEN_URL}/${environment.OBLIVIUM_MAVEN_REPOSITORY}"
+                    url = getArtifactoryForPublication()
                     credentials {
-                        username = environment.OBLIVIUM_MAVEN_USERNAME
-                        password = environment.OBLIVIUM_MAVEN_PASSWORD
+                        username = System.getenv("CONCLAVE_ARTIFACTORY_USERNAME")
+                        password = System.getenv("CONCLAVE_ARTIFACTORY_PASSWORD")
                     }
                 }
                 maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
@@ -462,6 +446,18 @@ if (includeNative) {
             }
         }
     }
+}
+
+String getArtifactoryForPublication() {
+    String mavenRepo
+    if (version.endsWith("-SNAPSHOT")) {
+        mavenRepo = "conclave-maven-dev"
+    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+        mavenRepo = "conclave-maven-unstable"
+    } else {
+        mavenRepo = "conclave-maven-stable"
+    }
+    return "https://software.r3.com/artifactory/" + mavenRepo
 }
 
 // To speed up IntelliJ indexing
