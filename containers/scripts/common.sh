@@ -1,11 +1,31 @@
+#!/usr/bin/env bash
+set -xeuo pipefail
+
 ###################################################################
 # Helper functions
 ###################################################################
-getConclaveVersion() {
-  grep "conclave_version" versions.gradle | grep "conclave_version" | cut -d '=' -f2 | sed "s/[\' ]//g"
+function getVersionValueFromVersionsFile() {
+  versionName=$1
+  grep "$versionName" versions.gradle | cut -d '=' -f2 | sed "s/[\' ]//g"
+}
+
+function getConclaveVersion() {
+  getVersionValueFromVersionsFile conclave_version
+}
+
+function getConclaveGraalVersion() {
+  getVersionValueFromVersionsFile conclave_graal_version
 }
 
 # Returns the most recent Git commit id
-getGitCommitId() {
+function getGitCommitId() {
   git rev-parse HEAD
 }
+
+###################################################################
+# Configuration
+###################################################################
+# Graal Configuration
+conclave_graal_group_id="com/r3/conclave"
+conclave_graal_version=$(getConclaveGraalVersion)
+conclave_graal_artifact_id="graalvm"

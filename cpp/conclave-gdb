@@ -18,27 +18,27 @@ shopt -s expand_aliases
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LINUX_SGX_BUILD_PATH="$ROOT/build/Debug/linux-sgx/src/linux-sgx/build/linux"
-SGXJVM_ROOT_PATH=$(dirname $ROOT)
+ROOT_PATH=$(dirname $ROOT)
 
 # If the GDB config is not present then create it
-if [ ! -d "$HOME/.gdbsgxjvm" ]; then
-    mkdir -p $HOME/.gdbsgxjvm
-    cp $SGXJVM_ROOT_PATH/graal/gdb/svmhelpers.py $HOME/.gdbsgxjvm
+if [ ! -d "$HOME/.gdbconclave" ]; then
+    mkdir -p $HOME/.gdbconclave
+    cp $ROOT_PATH/graal/gdb/svmhelpers.py $HOME/.gdbconclave
     # Create a file that contains java source directories in the SDK
     # Substrate VM sources
-    find $SGXJVM_ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbsgxjvm/src_dirs
+    find $ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbconclave/src_dirs
     # Java 8 sources (these were not used to build Graal so may not exactly match)
     # Conclave directories
-    echo "directory $SGXJVM_ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/conclave-enclave/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/conclave-enclave/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/conclave-mail/src/main/java" >> $HOME/.gdbsgxjvm/src_dirs
-    echo "directory $SGXJVM_ROOT_PATH/conclave-mail/src/main/kotlin" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $ROOT_PATH/conclave-client/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $ROOT_PATH/conclave-common/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $ROOT_PATH/conclave-enclave/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $ROOT_PATH/conclave-enclave/src/main/java" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $ROOT_PATH/conclave-mail/src/main/java" >> $HOME/.gdbconclave/src_dirs
+    echo "directory $ROOT_PATH/conclave-mail/src/main/kotlin" >> $HOME/.gdbconclave/src_dirs
     # Graal compiler
-    echo "directory $SGXJVM_ROOT_PATH/graal/build/graal/compiler/src/org.graalvm.compiler.replacements/src" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $ROOT_PATH/graal/build/graal/compiler/src/org.graalvm.compiler.replacements/src" >> $HOME/.gdbconclave/src_dirs
     # Add the configuration directory because GDB will search there for python scripts
-    echo "directory $HOME/.gdbsgxjvm" >> $HOME/.gdbsgxjvm/src_dirs
+    echo "directory $HOME/.gdbconclave" >> $HOME/.gdbconclave/src_dirs
 fi
 
 GDB_SGX_PLUGIN_PATH=$LINUX_SGX_BUILD_PATH/gdb-sgx-plugin
@@ -50,4 +50,4 @@ export PYTHONPATH=$GDB_SGX_PLUGIN_PATH
 # In order to skip these the command line below includes '-iex "handle SIGSEGV nostop noprint pass"'. Once you
 # have hit your entry point/breakpoint you may wish to re-enable this exception if you are trying to track
 # down a crashing bug.
-LD_PRELOAD=$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/env gdb -iex "directory $GDB_SGX_PLUGIN_PATH" -iex "source $GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" -iex "add-auto-load-safe-path $HOME/.gdbsgxjvm" -iex "source $HOME/.gdbsgxjvm/src_dirs"  -iex "handle SIGSEGV nostop noprint pass" "$@"
+LD_PRELOAD=$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/env gdb -iex "directory $GDB_SGX_PLUGIN_PATH" -iex "source $GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" -iex "add-auto-load-safe-path $HOME/.gdbconclave" -iex "source $HOME/.gdbconclave/src_dirs"  -iex "handle SIGSEGV nostop noprint pass" "$@"

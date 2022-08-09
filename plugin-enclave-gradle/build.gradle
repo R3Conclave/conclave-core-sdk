@@ -31,7 +31,7 @@ dependencies {
 processResources {
     doFirst {
         copy {
-            from "../containers/conclave-build"
+            from "../containers/conclave-build/"
             into sourceSets.main.output.resourcesDir.toPath().resolve("conclave-build")
         }
     }

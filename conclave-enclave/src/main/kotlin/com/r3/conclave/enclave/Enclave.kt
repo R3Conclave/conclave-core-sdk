@@ -3,10 +3,12 @@ package com.r3.conclave.enclave
 import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
+import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
@@ -78,7 +80,9 @@ abstract class Enclave {
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
     private lateinit var adminHandler: AdminHandler
-    private lateinit var attestationHandler: AttestationEnclaveHandler
+    private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
+    private lateinit var signedQuoteHandler: SignedQuoteHandler
+    private lateinit var enclaveInstanceInfoQuoteHandler: EnclaveInstanceInfoQuoteHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private lateinit var aesPersistenceKey: ByteArray
 
@@ -226,12 +230,48 @@ abstract class Enclave {
             val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
-            attestationHandler = mux.addDownstream(object : AttestationEnclaveHandler(env) {
-                override val defaultReportData = createReportData()
-            })
+            quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
+            signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
+            enclaveInstanceInfoQuoteHandler = mux.addDownstream(EnclaveInstanceInfoQuoteHandler())
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             connected
         }
+    }
+
+    /**
+     * Create a new attestation quote containing optional user specified report data.
+     *
+     * @param reportData An optional 64 byte array to be included in the quote. This can be used to create a quote
+     * which confirms to attesting parties that specific runtime state is present within the enclave. Care needs to be
+     * taken when forming the report data bytes to ensure that their values cannot be influenced by untrusted code, for
+     * example, by bytes received via [receiveFromUntrustedHost]. How this data is embedded in the quote is dependent on
+     * the attestation protocol.
+     *
+     * @return Quote bytes. The format of the quote bytes depends on the attestation protocol being used.
+     *
+     * @Throws IllegalArgumentException If the provided report data byte array is present, but is not 64 bytes long.
+     */
+    @Beta
+    fun createAttestationQuote(reportData: ByteArray?): ByteArray {
+        val reportDataCursor = reportData?.let {
+            require(reportData.size == 64) {
+                "User report data must be 64 bytes long, but was ${reportData.size} bytes instead."
+            }
+            ByteCursor.wrap(SgxReportData, reportData)
+        }
+        val quotingEnclaveInfo = quotingEnclaveInfoHandler.getQuotingEnclaveInfo()
+        return createAttestationQuote(quotingEnclaveInfo, reportDataCursor).bytes
+    }
+
+    /**
+     * Internal implementation of createAttestationQuote, using byte cursors rather than raw byte arrays.
+     */
+    private fun createAttestationQuote(
+            quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+            reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote> {
+        val report = env.createReport(quotingEnclaveInfo, reportData)
+        return signedQuoteHandler.getSignedQuote(report)
     }
 
     /**
@@ -327,7 +367,7 @@ abstract class Enclave {
         encryptionKeyPair = KeyPair(private.publicKey, private)
     }
 
-    private fun createReportData(): ByteCursor<SgxReportData> {
+    private fun createEnclaveInstanceInfoReportData(): ByteCursor<SgxReportData> {
         val reportData = digest("SHA-512") {
             update(signatureKey.encoded)
             update(encryptionKeyPair.public.encoded)
@@ -421,7 +461,7 @@ abstract class Enclave {
 
             val attestation = Attestation.getFromBuffer(input)
             val attestationReportBody = attestation.reportBody
-            val enclaveReportBody = enclave.attestationHandler.defaultReport[body]
+            val enclaveReportBody = enclave.enclaveInstanceInfoQuoteHandler.mostRecentQuote[quote][reportBody]
             check(attestationReportBody == enclaveReportBody) {
                 """Host has provided attestation for a different enclave.
 Expected: $enclaveReportBody
@@ -949,6 +989,30 @@ Received: $attestationReportBody"""
                 buffer.put(encryptedBytes)
             }
             currentReceiveContext?.run { pendingPostMails-- }
+        }
+    }
+
+    /**
+     * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
+     */
+    private inner class EnclaveInstanceInfoQuoteHandler : Handler<EnclaveInstanceInfoQuoteHandler> {
+        private lateinit var sender: Sender
+
+        private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
+        val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
+
+        override fun connect(upstream: Sender): EnclaveInstanceInfoQuoteHandler {
+            sender = upstream
+            return this
+        }
+
+        override fun onReceive(connection: EnclaveInstanceInfoQuoteHandler, input: ByteBuffer) {
+            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, input)
+            val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
+            _mostRecentQuote = quote
+            sender.send(quote.size) { buffer ->
+                buffer.put(quote.buffer)
+            }
         }
     }
 

@@ -20,7 +20,7 @@ docker exec -it -e PS1="conclave \e[32m\$(git branch | awk '/^\* / { print \$2 }
 
 echo
 echo "The devenv container can be shut down with one of these commands: "
-echo "  - All devenv containers, use: docker stop \$(docker ps -f label=sgxjvm -q)"
+echo "  - All devenv containers, use: docker stop \$(docker ps -f label=sdk-build -q)"
 echo "  - Just this one, use: docker stop $container_id"
 echo
 echo "Ciao!"

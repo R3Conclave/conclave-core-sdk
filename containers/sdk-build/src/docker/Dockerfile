@@ -2,15 +2,14 @@ FROM ubuntu:20.04 AS graal
 # Copy R3 version of Graal into the docker image
 ARG docker_graal_tar_file=/opt/graal.tar.gz
 ENV GRAAL_HOME /opt/graal
-COPY /root/downloads/graal-sdk.tar.gz $docker_graal_tar_file
+COPY /root/downloads/graalvm.tar.gz $docker_graal_tar_file
 RUN mkdir $GRAAL_HOME && tar -C $GRAAL_HOME -xzf $docker_graal_tar_file && rm -r $docker_graal_tar_file
 
 FROM graal
 
-# A build container for the full sgxjvm project.
 # TODO Separate out the enclave build and make it completely reproducible.
 
-LABEL description="SGXJVM build container"
+LABEL description="Build container for the Conclave SDK"
 LABEL maintainer="conclave@r3.com"
 ARG commit_id
 LABEL commit_id=${commit_id}

@@ -409,19 +409,14 @@ open class NativeImage @Inject constructor(
     }
 
     private fun includeResourcesOption(internalResourcesConfig: File): List<String> {
-        val configs = listOf(internalResourcesConfig, appResourcesConfig.get().asFile)
-        val files = configs.joinToString(separator = ",") { it.absolutePath }
         return listOf(
-            "-H:ResourceConfigurationFiles=$files",
+            "-H:ResourceConfigurationFiles=$internalResourcesConfig",
             "-H:Log=registerResource:verbose"
         )
     }
 
     override fun action() {
         GenerateLinkerScript.writeToFile(linkerScript)
-
-        val internalResourcesConfig = linkerScript.parent.resolve("internal-resources-config.json").toFile()
-        ResourcesConfig.create(includes = listOf(".*/intel-.*pem")).writeToFile(internalResourcesConfig)
 
         var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
         if (!nativeImageFile.exists()) {
@@ -450,7 +445,7 @@ open class NativeImage @Inject constructor(
             + sgxLibrariesOptions()
             + linkerScriptOption()
             + reflectConfigurationOption()
-            + includeResourcesOption(internalResourcesConfig)
+            + includeResourcesOption(appResourcesConfig.get().asFile)
             + serializationConfigurationOption()
             + getLanguages()
         )

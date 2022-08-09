@@ -36,8 +36,8 @@ Each fix is a separate commit in the 'conclave-changes' branch of https://github
 
 
 ## Using the R3 dokka version
-Our SGXJVM root gradle project refers to the dokka plugin, therefore the plugin itself cannot be built as part of our build 
-script. Instead, dokka must be built and published and be made available in a maven repository before Conclave can be built. 
+The Conclave SDK root gradle project refers to the dokka plugin, therefore the plugin itself cannot be built as part
+of the build script. Instead, dokka must be built and published and be made available in a maven repository before Conclave can be built. 
 To achieve this, we publish a pre-built zip file containing the required repository to our github fork of dokka. This is 
 then downloaded and unzipped in our sdk-build container. The repo is put into /opt/dokka. The conclave build.gradle 
 then has a mavenLocal repository configuration pointing to this directory.

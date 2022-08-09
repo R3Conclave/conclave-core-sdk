@@ -4,9 +4,6 @@ allprojects {
 }
 
 subprojects {
-    ext.conclave_spid = '***REMOVED***'
-    ext.attestation_key = '***REMOVED***'
-
     tasks.withType(AbstractCompile) {
         if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
             kotlinOptions {
@@ -20,8 +17,8 @@ subprojects {
         useJUnitPlatform()
 
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
-        systemProperty 'conclave.spid', conclave_spid
-        systemProperty 'conclave.attestation-key', attestation_key
+        systemProperty 'conclave.spid', findProperty("epid.spid")
+        systemProperty 'conclave.attestation-key', findProperty("epid.attestation-key")
 
         failFast = true
         testLogging {

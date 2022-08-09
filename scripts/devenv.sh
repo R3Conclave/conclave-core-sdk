@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 script_dir=$(dirname ${BASH_SOURCE[0]})
-if [ -f ~/.oblivium_credentials.sh ]
-then
-  source ~/.oblivium_credentials.sh
-fi
 source ${script_dir}/ci_build_common.sh
 # You can set this variable to mount the IDEs from the host
 host_ide_dir=${HOST_IDE_DIR:-"${HOME}/.opt"}
@@ -15,15 +11,15 @@ clion_version=${clion_version:-"2021.3"}
 clion_download_file=CLion-2021.3.tar.gz
 clion_download_address=https://download-cf.jetbrains.com/cpp/$clion_download_file
 
-source ${script_dir}/devenv_envs.sh
-
 container_name=$(echo "code${code_host_dir}" | sed -e 's/[^a-zA-Z0-9_.-]/_/g')
 container_id=$(docker ps -aqf name=^/$container_name\$ || echo "")
-docker_image_pull="${DOCKER_IMAGE_PULL:-0}"
+
+# To avoid pulling the docker image from the registry, the user needs to set
+#   the environment variable DOCKER_IMAGE_PULL to 0 (in ~/.bashrc for example).
+docker_image_pull="${DOCKER_IMAGE_PULL:-1}"
 if [[ -z ${container_id} ]]; then
   # We don't want to / can't log in to the local registry. This step is only useful for remote registries.
-  if [ "$OBLIVIUM_CONTAINER_REGISTRY_URL" != "localhost:5000" ] && [ "$docker_image_pull" == "1" ]; then
-    docker login $OBLIVIUM_CONTAINER_REGISTRY_URL -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+  if [ "$docker_image_pull" == "1" ]; then
     docker pull $container_image_sdk_build
   else
     DOCKER_IMAGE_AESMD_BUILD="${DOCKER_IMAGE_AESMD_BUILD:-0}" DOCKER_IMAGE_SAVE="${DOCKER_IMAGE_SAVE:-0}" ${code_host_dir}/containers/scripts/ci_build_publish_docker_images.sh
@@ -62,23 +58,25 @@ if [[ -z ${container_id} ]]; then
   else
     echo "Set the environment variable 'CONCLAVE_DOCKER_IDE=1' to automatically download IntelliJ IDEA and CLion."
   fi
-# Mount the IDEs from the host. The IDEs should be compatible with the container's OS.
-# If the IDEs are not present, the devenv shell can still be used,
-# as well as the the host's native IDEs, but the IDE launch scripts will fail.
-# Since exiting the container doesn't stop it, you may need to stop it manually
-# in order to remount the IDEs.
-# The IDEs can be downloaded at:
-# curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2021.3.tar.gz
-# curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2021.3.tar.gz
-ide_mount_flags=""
-if [ -r ${host_ide_dir}/idea-$idea_version ]; then
-  ide_mount_flags+="-v ${host_ide_dir}/idea-$idea_version/:/opt/idea-$idea_version/"
-fi
-if [ -r ${host_ide_dir}/clion-$clion_version ]; then
-  ide_mount_flags+=" -v ${host_ide_dir}/clion-$clion_version/:/opt/clion-$clion_version/"
-fi
+
+  # Mount the IDEs from the host. The IDEs should be compatible with the container's OS.
+  # If the IDEs are not present, the devenv shell can still be used,
+  # as well as the the host's native IDEs, but the IDE launch scripts will fail.
+  # Since exiting the container doesn't stop it, you may need to stop it manually
+  # in order to remount the IDEs.
+  # The IDEs can be downloaded at:
+  # curl -sSL -o /opt/clion.tar.gz https://download-cf.jetbrains.com/cpp/CLion-2021.3.tar.gz
+  # curl -sSL -o /opt/idea.tar.gz https://download-cf.jetbrains.com/idea/ideaIC-2021.3.tar.gz
+  ide_mount_flags=""
+  if [ -r ${host_ide_dir}/idea-$idea_version ]; then
+    ide_mount_flags+="-v ${host_ide_dir}/idea-$idea_version/:/opt/idea-$idea_version/"
+  fi
+  if [ -r ${host_ide_dir}/clion-$clion_version ]; then
+    ide_mount_flags+=" -v ${host_ide_dir}/clion-$clion_version/:/opt/clion-$clion_version/"
+  fi
 
   container_id=$(docker run \
+       --label sdk-build \
        --name=$container_name \
        ${docker_opts[@]+"${docker_opts[@]}"} \
        --privileged \
