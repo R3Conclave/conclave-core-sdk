@@ -5,29 +5,36 @@ hide:
 
 # Introduction to Conclave
 
-Welcome to the Conclave documentation. The documentation is best place to start with Conclave. We cover what problems Conclave can solve, talk about concepts and its architecture, and how you can get started using it.
+Welcome to the Conclave documentation. These pages cover what problems Conclave can solve, concepts and architecture, and how you can get started using Conclave.
 
 ## Why Conclave?
 
-[Conclave](https://www.conclave.net/) solves challenges that organisations of all sizes encounter when they process sensitive data. This ranges from secure data sharing across multiple parties, to solutions that provide transparency into how data is processed. In today’s connected, cloud-first world, data owners don’t have control over their information when shared with third parties. How can they regain control again? We developed Conclave which enables users to build, deploy, and integrate privacy-first services at scale.
+Data owners lose absolute control over their information when they share it with third parties.
+[Conclave](https://www.conclave.net/) helps data owners to regain control by enabling users to build, deploy, and integrate privacy-first applications at scale.
+
+With Conclave, you can build:
+
+- Applications that safeguard data while in use.
+- Applications that provide digital evidence that no one has tampered with the data.
+- Solutions for secure multi-party data sharing.
 
 ## What is Conclave?
 
-Conclave is a software development kit for the rapid development of privacy-first applications using hardware-based trusted execution environments (TEEs), also known as [enclaves](enclaves.md). Conclave makes confidential computing accessible to a broad range of developers because it doesn’t require deep knowledge of the underlying hardware.
+Conclave is a software development kit for the rapid development of privacy-first applications using hardware-based Trusted Execution Environments (TEEs) known as [enclaves](enclaves.md).
+Conclave makes [Confidential Computing](enclaves.md) using Intel® Security Guard Extension (SGX) more accessible for developers.
 
-**Key features of Conclave:**
+### Advantages of Conclave
 
--	**Developer-friendly:** You don’t have to be a cryptography expert. A high-level, intuitive API brings the world of trusted execution to regular business developers who can write secure applications on any operating system.
--	**Code in the language of your choice:** Write your host app in any language that can run on a Java Virtual Machine like Java, Kotlin or even JavaScript or Python.
--	**Focus on business logic:** Conclave’s innovative ‘Mail’ feature takes care of the messaging and persistence, allowing you to focus on the business logic. All the complexities of interacting with secure enclaves are abstracted behind an intuitive API.
--	**Everything in one platform:** Conclave Core is one of the few SDKs that tightly integrates with a complementary cloud offering, providing a seamless path from development to deployment, and including features that enable workloads to migrate between cloud servers transparently.
--	**Cloud based Key Derivation Service (KDS):** Get the benefit of stable, persistent keys regardless of which physical machine the enclave is running on, and thus also making it possible to migrate enclave state/data by maintaining SGX security guarantees without affecting the performance.
--	**Enhanced security, performance, and capabilities:** Conclave uses the GraalVM native image technology for incredibly tight memory usage, support for any GraalVM language and instant startup time. 
--	**Easily deploy to Microsoft Azure:** Just upload your Java host app and run it as normal. No setup needed!
--	**Compatible with Corda Enterprise:** Conclave is available as stand-alone but also compatible with R3’s flagship DLT platform Corda Enterprise
--	**Audit your enclaves remotely:** Verify the source code of the remotely running enclave.
--	**Convenient Gradle plugin:** Automat compiling, signing, and calculating the code hash of your enclave using a simple Gradle plugin.
--	**Powerful unit testing framework:** Verify the operation of your enclave and remote attestation functionality, using just JUnit.
+- **Developer-friendly:** You don't have to be a cryptography expert to use Conclave. A high-level, intuitive API helps you write secure applications on any operating system.
+- **Code in many languages:** Write your code in Java, Kotlin, or any other JVM (Java Virtual Machine) language. You can also use Javascript and basic Python to write your application.
+- **Focus on business logic:** Interact with secure enclaves easily using an intuitive API. **Conclave Mail** takes care of the end-to-end encrypted messaging.
+- **Everything in one platform:** Conclave SDK tightly integrates with a [complementary cloud offering](https://www.conclave.net/conclave-cloud/).
+- **Cloud-based Key Derivation Service (KDS):** Create stable applications that maintain Intel SGX security guarantees even when the enclave runs on multiple physical machines.
+- **Enhanced security, performance, and capabilities:** Conclave uses the GraalVM native image technology for incredibly tight memory usage, support for GraalVM languages, and instant startup time.
+- **Quickly deploy to Microsoft Azure:** Run Conclave apps on Microsoft Azure VMs with minimal setup.
+- **Audit your enclaves remotely:** Verify the source code of the remotely running enclave.
+- **Convenient Gradle plugin:** Automate compiling, signing, and calculating the code hash of enclaves using a simple Gradle plugin.
+- **Powerful unit testing framework:** Verify remote attestation and the operation of enclaves using JUnit.
 
 ## Getting started
 
@@ -35,9 +42,12 @@ Take a look at the [hello world sample](running-hello-world.md) to get started w
 
 ## Get help with Conclave
 
-There's a public [mailing list](https://groups.io/g/conclave-discuss) for discussion of using Conclave and we also welcome general SGX talk. You can also 
-find the development team during UK office hours (GMT 0900-1700) on [Discord](https://discord.gg/8RhkXc5eFp).
+If you need help:
+
+- Ask questions on [Discord](https://discord.gg/zpHKkMZ8Sw). Conclave's development team answers questions during UK business hours (GMT 0900-1700).
+- Discuss everything about Conclave on [this public mailing list](https://groups.io/g/conclave-discuss). You can also use the mailing list to discuss SGX and other TEE technologies.
+
 
 [:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button }
 [:fontawesome-solid-paper-plane: Email us directly](mailto:conclave@r3.com){: .md-button }
-[:fontawesome-brands-discord: Join us on Discord](https://discord.gg/8RhkXc5eFp){: .md-button }
+[:fontawesome-brands-discord: Join us on Discord](https://discord.gg/zpHKkMZ8Sw){: .md-button }
