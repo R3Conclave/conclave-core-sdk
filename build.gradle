@@ -25,10 +25,6 @@ dependencies {
     dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.0-SNAPSHOT")
 }
 
-static Map<String, String> createEnvironment(String... names) {
-    return names.collectEntries { [(it): System.getenv(it)] }
-}
-
 String getConclaveRevision() {
     String conclave_revision
 
@@ -44,11 +40,6 @@ String getConclaveRevision() {
 }
 
 ext {
-    environment = createEnvironment(
-            'OBLIVIUM_MAVEN_USERNAME',
-            'OBLIVIUM_MAVEN_PASSWORD'
-    )
-
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
 }
@@ -444,8 +435,8 @@ if (includeNative) {
                     name = "artifactory"
                     url = getArtifactoryForPublication()
                     credentials {
-                        username = environment.OBLIVIUM_MAVEN_USERNAME
-                        password = environment.OBLIVIUM_MAVEN_PASSWORD
+                        username = System.getenv("CONCLAVE_ARTIFACTORY_USERNAME")
+                        password = System.getenv("CONCLAVE_ARTIFACTORY_PASSWORD")
                     }
                 }
                 maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.

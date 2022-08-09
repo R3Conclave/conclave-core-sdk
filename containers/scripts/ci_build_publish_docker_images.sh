@@ -17,7 +17,6 @@ containers_script_dir=$(dirname ${BASH_SOURCE[0]})
 script_dir=$containers_script_dir/../../scripts
 
 source ${script_dir}/ci_build_common.sh
-source ${script_dir}/devenv_envs.sh
 source ${containers_script_dir}/common.sh
 
 # Git commit id
@@ -107,8 +106,8 @@ buildAndPublishContainerIfItDoesNotExist() {
     echo "Container $1 not found."
     buildContainer $1 $2
     # Only publish the image if requested. Not all users are authorized to publish to the repository.
-    if [ "$publish_images" == "publish" ] && [ -n "$OBLIVIUM_CONTAINER_REGISTRY_USERNAME" ] && [ -n "$OBLIVIUM_CONTAINER_REGISTRY_PASSWORD" ]; then
-      docker login conclave-docker-dev.software.r3.com -u $OBLIVIUM_CONTAINER_REGISTRY_USERNAME -p $OBLIVIUM_CONTAINER_REGISTRY_PASSWORD
+    if [ "$publish_images" == "publish" ]; then
+      docker login conclave-docker-dev.software.r3.com -u $CONCLAVE_ARTIFACTORY_USERNAME -p $CONCLAVE_ARTIFACTORY_PASSWORD
       docker push $1
     else
       echo "Container image will not be published. To publish the container image type ./ci_build_publish_docker_images.sh publish. You must be authorized user to publish to the repository"

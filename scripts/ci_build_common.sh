@@ -6,7 +6,6 @@ code_host_dir=$PWD
 code_docker_dir=${code_host_dir}
 
 source ${code_host_dir}/containers/scripts/common.sh
-source ${script_dir}/devenv_envs.sh
 
 conclave_graal_version=$(grep -w "conclave_graal_version =" ./versions.gradle | cut -d '=' -f 2 | sed "s/[ ']//g")
 artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz.sha512
@@ -114,7 +113,7 @@ docker_opts=(\
     ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
-    $(env | cut -f1 -d= | grep OBLIVIUM_ | sed 's/^OBLIVIUM_/-e OBLIVIUM_/') \
+    $(env | cut -f1 -d= | grep CONCLAVE_ | sed 's/^CONCLAVE_/-e CONCLAVE_/') \
     "-w" "$code_docker_dir" \
 )
 

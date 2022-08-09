@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 script_dir=$(dirname ${BASH_SOURCE[0]})
-if [ -f ~/.oblivium_credentials.sh ]
-then
-  source ~/.oblivium_credentials.sh
-fi
 source ${script_dir}/ci_build_common.sh
 # You can set this variable to mount the IDEs from the host
 host_ide_dir=${HOST_IDE_DIR:-"${HOME}/.opt"}
@@ -14,8 +10,6 @@ idea_download_address=https://download-cf.jetbrains.com/idea/$idea_download_file
 clion_version=${clion_version:-"2021.3"}
 clion_download_file=CLion-2021.3.tar.gz
 clion_download_address=https://download-cf.jetbrains.com/cpp/$clion_download_file
-
-source ${script_dir}/devenv_envs.sh
 
 container_name=$(echo "code${code_host_dir}" | sed -e 's/[^a-zA-Z0-9_.-]/_/g')
 container_id=$(docker ps -aqf name=^/$container_name\$ || echo "")

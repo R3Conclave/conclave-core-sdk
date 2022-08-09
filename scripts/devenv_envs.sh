@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-export OBLIVIUM_MAVEN_USERNAME=${OBLIVIUM_MAVEN_USERNAME:-}
-export OBLIVIUM_MAVEN_PASSWORD=${OBLIVIUM_MAVEN_PASSWORD:-}
