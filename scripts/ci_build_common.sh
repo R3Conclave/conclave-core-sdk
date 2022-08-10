@@ -113,7 +113,7 @@ docker_opts=(\
     ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
-    $(env | cut -f1 -d= | grep ^CONCLAVE_ | sed 's/^CONCLAVE_/-e CONCLAVE_/') \
+    $(env | cut -f1 -d= | awk 'gsub(/^CONCLAVE/, "-e CONCLAVE_")') \
     "-w" "$code_docker_dir" \
 )
 
