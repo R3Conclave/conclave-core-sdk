@@ -11,13 +11,23 @@ else()
     set(DEBUG_FLAG "")
 endif()
 
-set(SGX_GIT_LABEL "sgx_2.17")
+# Note: Intel hasn't created the tag sgx_2.17.1 yet, so we clone the
+#   whole repository and we checkout the commit id. This requires us
+#   to save the current directory ("pwd"), change directory into the
+#   Intel SGX repository (just cloned), checkout the commit id and change
+#   back to the previous "current directory".
+#   All of this will be removed when the tag is available, only the
+#   "git clone" command will be required.
+# TODO: Use the tag when available and remove the related git commands.
+set(SGX_GIT_LABEL "70e1535caa96c315189760a3ad4663eded9e8a2c")
+set(SGX_GIT_TAG "sgx_2.17.1")
 
 ExternalProject_Add(linux-sgx-ext
 # Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
 
         DOWNLOAD_COMMAND rm -fr ${BUILD_SRC_DIR}
-            && git clone -b ${SGX_GIT_LABEL} --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+            && git clone https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
+            && TEMP_DIR=$(pwd) && cd ${BUILD_SRC_DIR} && git checkout -b ${SGX_GIT_TAG} ${SGX_GIT_LABEL} && cd ${TEMP_DIR}
             && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
             && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"

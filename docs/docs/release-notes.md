@@ -28,8 +28,8 @@ Release notes
     external SGX-enabled applications which require a signed quote with specific content. See
     [`Enclave.createAttestationQuote`](api/-conclave/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
-12. Conclave now uses version 2.17 of the Intel SGX SDK. This provides bug fixes and other improvements. See the
-   [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.17-release)
+12. Conclave now uses version 2.17.1 of the Intel SGX SDK. This provides bug fixes and other improvements. See the
+   [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.17.1-release)
    for more details.
 13. We have added Intel advisory IDs, which provide information on specific SGX vulnerabilities, for DCAP attestation as well;
     previously, they present only for EPID attestation.
