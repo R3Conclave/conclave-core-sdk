@@ -42,7 +42,7 @@ a development Docker container that we have prepared.
 If you are comfortable on Linux, you might want to use Dell laptops: they support SGX, and it is 
 convenient to use SGX locally.
 
-In the instructions below we assume Ubuntu as Linux distribution; in case you use a different one,
+In the instructions below we assume Ubuntu as the Linux distribution; in case you use a different one,
 you need to translate the instructions to your chosen distribution.
 
 ### Getting the source code
@@ -99,15 +99,27 @@ conclave master ~/conclave-sdk>
 ```
 
 ### Building the SDK and runnning tests
-We use **Gradle** to build the SDK, you can now build and run tests with the following commands:
+We use [Gradle](https://docs.gradle.org/) to build the SDK, which you can do with the following command:
 ```shell
 ./gradlew build
-./gradlew test
+```
+
+This is will also run the unit tests. To skip them run:
+```shell
+./gradlew build -x test
 ```
 
 Due to the large number of native components, the build takes around 10 minutes the first time,
 then some elements of the build are cached and hence it should be sensibly quicker
 after that.
+
+The integration tests reside as a separate Gradle project in [integration-tests/](integration-tests). To run them
+you will first need to create a local Maven repository with the SDK artifacts:
+```shell
+./gradlew publishAllPublicationsToBuildRepository
+cd integration-tests
+./gradlew test
+```
 
 >Note: if in your development you need to use `sudo` inside the container, then enter it using
 >```shell
