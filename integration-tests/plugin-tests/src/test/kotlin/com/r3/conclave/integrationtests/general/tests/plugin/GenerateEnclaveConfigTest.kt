@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
 
 class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig", modeDependent = true) {
     private class EnclaveConfiguration {
@@ -27,6 +28,8 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val miscMask: String? = null
     }
 
+    private val enclaveDir: Path get() = Path.of("$projectDir/enclave")
+
     @Test
     fun `increment product id`() {
         assertTaskRunIsIncremental()
@@ -37,7 +40,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedProductId = initialProductID + 1
 
         replaceAndRewriteBuildFile(
-            projectDir!!,
+            enclaveDir,
             "productID = $initialProductID",
             "productID = $expectedProductId"
         )
@@ -57,7 +60,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedRevocationLevel = initialRevocationLevel + 1
 
         replaceAndRewriteBuildFile(
-            projectDir!!,
+            enclaveDir,
             "revocationLevel = $initialRevocationLevel",
             "revocationLevel = $expectedRevocationLevel"
         )
@@ -77,7 +80,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedMaxHeapSize = initialMaxHeapSize + 1
 
         replaceAndRewriteBuildFile(
-            projectDir!!,
+            enclaveDir,
             """maxHeapSize = "$initialMaxHeapSize"""",
             """maxHeapSize = "$expectedMaxHeapSize""""
         )
@@ -96,7 +99,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedMaxStackSize = initialMaxStackSize + 1
 
         replaceAndRewriteBuildFile(
-            projectDir!!,
+            enclaveDir,
             """maxStackSize = "$initialMaxStackSize"""",
             """maxStackSize = "$expectedMaxStackSize""""
         )
@@ -107,7 +110,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
     }
 
     private fun loadEnclaveConfigurationFromFile(): EnclaveConfiguration {
-        val enclaveConfigurationFile = projectDir!!.resolve("build/conclave/${enclaveMode.toLowerCase()}/enclave.xml")
+        val enclaveConfigurationFile = enclaveDir.resolve("build/conclave/${enclaveMode.toLowerCase()}/enclave.xml")
         return XmlMapper().readValue(enclaveConfigurationFile.toFile(), EnclaveConfiguration::class.java)
     }
 }

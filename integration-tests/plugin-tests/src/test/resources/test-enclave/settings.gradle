@@ -15,3 +15,7 @@ pluginManagement {
         id 'com.r3.conclave.enclave' version conclave_version apply false
     }
 }
+
+// Due to how Gradle works, this enclave module must exist otherwise
+// the graalvm.tar.gz dependency cannot be resolved properly and an error is thrown by Gradle.
+include 'enclave'

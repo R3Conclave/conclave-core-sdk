@@ -1,4 +1,4 @@
-package com.r3.conclave.plugin.enclave.gradle.test
+package com.test.enclave
 
 import com.r3.conclave.enclave.Enclave
 

@@ -7,12 +7,12 @@ import java.nio.file.Path
 import kotlin.io.path.deleteExisting
 
 class GenerateReflectionConfigTest : AbstractPluginTaskTest("generateReflectionConfig", modeDependent = false) {
-    private val reflectConfigPath get() = "$projectDir/build/conclave/reflectconfig"
+    private val reflectConfigPath get() = "$projectDir/enclave/build/conclave/reflectconfig"
 
     @Test
     fun `incremental build`() {
         assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(Path.of(reflectConfigPath)).content().contains("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")
+        assertThat(Path.of(reflectConfigPath)).content().contains("com.test.enclave.TestEnclave")
         assertThat(runTask().outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
     }
 

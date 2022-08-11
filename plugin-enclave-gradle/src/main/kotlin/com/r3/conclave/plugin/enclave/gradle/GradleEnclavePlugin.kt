@@ -35,6 +35,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.pluginManager.apply(ShadowPlugin::class.java)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
+        val conclaveGraalVersion = "22.0.0.2-1.3-RC6"
 
         target.afterEvaluate {
             // This is called before the build tasks are executed but after the build.gradle file
@@ -44,7 +45,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             if (conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // It might be possible that the conclave part of the version not match the current version, e.g. if
                 // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
-                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:22.0.0.2-1.3-RC6")
+                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:$conclaveGraalVersion")
             }
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$sdkVersion")
@@ -99,6 +100,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 it.isCanBeResolved = false
             }
         }
+
+        // Create a tar configuration. This is required to download graalvm-*.tar.gz
+        target.configurations.create("graalVMTar")
+        target.dependencies.add("graalVMTar", "com.r3.conclave:graalvm:$conclaveGraalVersion@tar.gz")
 
         // Create the tasks that are required to build the Mock build type artifact.
         createMockArtifact(target, shadowJarTask)
@@ -177,11 +182,24 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.appResourcesConfigFile.set((baseDirectory / "app-resources-config.json").toFile())
             }
 
+        val graalVMPath = "$baseDirectory/com/r3/conclave/graalvm"
+        val graalVMDistributionPath = "$graalVMPath/distribution"
+        val copyGraalVM = target.createTask<Exec>("copyGraalVM") { task ->
+            val graalvmFile = target.configurations.findByName("graalVMTar")!!.files.single {
+                it.name.endsWith("tar.gz")
+            }
 
-        val copyGraalVM = target.createTask<Copy>("copyGraalVM") { task ->
-            task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            task.fromDependencies(
-                "com.r3.conclave:graal-cap-cache:$sdkVersion")
+            //The command tar is used because the Gradle untar task doesn't work with symbolic links
+            Files.createDirectories(Paths.get(graalVMDistributionPath))
+            task.inputs.file(graalvmFile)
+            task.outputs.dir(graalVMDistributionPath)
+            task.workingDir(graalVMDistributionPath)
+            task.commandLine("tar", "xf", graalvmFile)
+        }
+
+        val capCachePath = "$graalVMPath/cap-cache"
+        val copyCapCache = target.createTask<Copy>("copyCapCache") { task ->
+            task.fromDependencies("com.r3.conclave:graal-cap-cache:$sdkVersion")
             task.into(baseDirectory)
         }
 
@@ -192,7 +210,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // which disables execution optimizations.
             // Graal gets confused because linuxExec targets Dockerfile as an input file which lives
             // under the folder "conclave" and the following dependencies target the "conclave" folder as an output
-            // directory. The file Dockerfile is created by copyGraalVM task which untarGraalVM linuxExec depends on.
+            // directory.
             task.dependsOn(copyEnclaveCommonHeaders)
             task.dependsOn(copySgxToolsTask)
             /////////////////////////////////////////////////////////
@@ -203,30 +221,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // Create a 'latest' tag too so users can follow our tutorial documentation using the
             // tag 'conclave-build:latest' rather than looking up the conclave version.
             task.tagLatest.set("conclave-build:latest")
-        }
-
-        val graalVMPath = "$baseDirectory/com/r3/conclave/graalvm"
-        val graalVMDistributionPath = "$graalVMPath/distribution"
-        val capCachePath = "$graalVMPath/cap-cache"
-        val untarGraalVM = target.createTask<Exec>("untarGraalVM") { task ->
-            /////////////////////////////////////////////////////////
-            // untarGraalVM does not have a dependency on the following tasks.
-            // These dependencies were defined to remove a false positive warning message from Graal
-            // which disables execution optimizations.
-            // Graal gets confused because untarGraalVM targets graalvm.tar as an input file which lives
-            // under the folder "conclave" and the following dependencies target the "conclave" folder as an output
-            // directory. The file graalvm.tar is created by copyGraalVM task which untarGraalVM correctly depends on.
-            task.dependsOn(copyEnclaveCommonHeaders)
-            task.dependsOn(copySgxToolsTask)
-            /////////////////////////////////////////////////////////
-
-            task.dependsOn(copyGraalVM)
-            Files.createDirectories(Paths.get(graalVMDistributionPath))
-            val graalVMTarPath = "$graalVMPath/graalvm.tar"
-            task.inputs.file(graalVMTarPath)
-            task.outputs.dir(graalVMDistributionPath)
-            task.workingDir(graalVMDistributionPath)
-            task.commandLine("tar", "xf", graalVMTarPath)
         }
 
         for (type in BuildType.values().filter { it != BuildType.Mock }) {
@@ -264,7 +258,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 // under the folder "conclave" and copySubstrateDependenciesTask targets the "conclave" folder as an output
                 // directory. The files required by untarGraalVM and linuxExec are not generated by copySubstrateDependenciesTask.
                 task.dependsOn(linuxExec)
-                task.dependsOn(untarGraalVM)
+                task.dependsOn(copyGraalVM)
                 /////////////////////////////////////////////////////////
                 task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 task.fromDependencies(
@@ -283,7 +277,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 linuxExec
             ) { task ->
                 task.dependsOn(
-                    untarGraalVM,
+                    copyGraalVM,
+                    copyCapCache,
                     copySgxToolsTask,
                     copySubstrateDependenciesTask,
                     generateReflectionConfigTask,
