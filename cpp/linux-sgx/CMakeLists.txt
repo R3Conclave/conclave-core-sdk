@@ -22,6 +22,7 @@ ExternalProject_Add(linux-sgx-ext
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
             && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
             && bash -c "cd ${BUILD_SRC_DIR} && ./download_prebuilt.sh"
+            && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteGeneration/download_prebuilt.sh"
 
         SOURCE_DIR ${BUILD_SRC_DIR}
 
