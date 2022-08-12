@@ -44,18 +44,6 @@ ext {
     project.logger.info("Conclave revision: $conclave_revision")
 }
 
-
-// This code allows the user to run gradle like this: ./gradlew -PexcludeNative
-// and the native components will be downloaded instead of built locally. This
-// can speed things up a lot if you aren't intending to change them!
-def includeNative = findProperty('excludeNative') == null
-def nativeSubmodulesToSubstitute = [
-        ':cpp:native-host:native-host-simulation',
-        ':cpp:native-host:native-host-debug',
-        ':cpp:native-host:native-host-release',
-        ':cpp:native-host-shared'
-]
-
 // Allow the user to move the default build location. This is helpful for improving the
 // atrocious performance of Mac Docker, which otherwise will try to build everything on
 // the super-slow osxfuse filesystem. This way it can be relocated to a (faster) Linux
@@ -120,18 +108,6 @@ subprojects {
             // Shaded dependencies should not be added to the runtime classpath so they are declared as compileOnly.
             // However compileOnly does not extend to the test configuration so we add that.
             testImplementation.extendsFrom(compileOnly)
-        }
-
-        // Allow -PexcludeNative to do builds with downloaded artifacts instead of locally built artifacts.
-        if (includeNative) {
-            all {
-                for (submodule in nativeSubmodulesToSubstitute) {
-                    def submoduleProject = project(submodule)
-                    resolutionStrategy.dependencySubstitution {
-                        substitute module("${submoduleProject.getGroup()}:${submoduleProject.getName()}") with project(submodule)
-                    }
-                }
-            }
         }
     }
 }
@@ -329,97 +305,85 @@ task buildDocs(dependsOn: ['mkdocs'])
 dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
-// We only enable publish if native parts of the build are included.
-// We create a safeguard task to check this.
-task publish {
-    doFirst {
-        if (!includeNative) {
-            throw new GradleException("Native artifacts aren't built, not publishing")
-        }
-    }
-}
-
-if (includeNative) {
-    for (publishedProject in publishedProjects) {
-        def project = project(publishedProject.projectPath)
-        def description = publishedProject.description
-        project.pluginManager.apply('java')
-        project.pluginManager.apply('maven-publish')
-        // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
-        // which might use different versions of these libraries.
-        if (publishedProject.shade) {
-            project.pluginManager.apply('com.github.johnrengelman.shadow')
-            project.shadowJar {
-                if (project.name == "conclave-mail" || project.name == "conclave-common") {
-                    // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
-                    // dependencies are compileOnly.
-                    configurations = [project.configurations.compileClasspath]
-                    exclude '**/pom.xml'
-                    exclude '**/pom.properties'
-                    exclude '**/module-info.class'
-                    mergeServiceFiles()
-                    if (project.name == "conclave-mail") {
-                        exclude 'kotlin/Metadata.class'
-                        // Only conclave-mail, as the root in the dependency tree, will contain the shaded kotlin. Everything
-                        // else depends on conclave-mail (transitively) and so will inherit the shaded version.
-                        dependencies {
-                            it.include(dependency("org.jetbrains.kotlin:"))
-                        }
-                    } else {
-                        // Only conclave-common needs to contain the shaded Jackson library. Anything else that needs Jackson,
-                        // e.g. conclave-host, can inherit this shaded version.
-                        dependencies {
-                            it.include(dependency("com.fasterxml.jackson.*:"))
-                        }
+for (publishedProject in publishedProjects) {
+    def project = project(publishedProject.projectPath)
+    def description = publishedProject.description
+    project.pluginManager.apply('java')
+    project.pluginManager.apply('maven-publish')
+    // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
+    // which might use different versions of these libraries.
+    if (publishedProject.shade) {
+        project.pluginManager.apply('com.github.johnrengelman.shadow')
+        project.shadowJar {
+            if (project.name == "conclave-mail" || project.name == "conclave-common") {
+                // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
+                // dependencies are compileOnly.
+                configurations = [project.configurations.compileClasspath]
+                exclude '**/pom.xml'
+                exclude '**/pom.properties'
+                exclude '**/module-info.class'
+                mergeServiceFiles()
+                if (project.name == "conclave-mail") {
+                    exclude 'kotlin/Metadata.class'
+                    // Only conclave-mail, as the root in the dependency tree, will contain the shaded kotlin. Everything
+                    // else depends on conclave-mail (transitively) and so will inherit the shaded version.
+                    dependencies {
+                        it.include(dependency("org.jetbrains.kotlin:"))
                     }
                 } else {
-                    // The remaining modules are not shading anything so we turn it off.
-                    configurations = []
-                }
-                exclude 'META-INF/*.kotlin_module'
-                exclude '**/*.kotlin_metadata'
-                exclude '**/*.kotlin_builtins'
-                // Everyone needs to have their import lines modified to the new shaded ones.
-                relocate('com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson')
-                // Get rid of the Kotlin related stuff. We don't allow the metadata annotation to leak through because
-                // it causes the IntelliJ plugin to crash, but this does unfortunately mean internal members (which are
-                // public at the bytecode level) will appear. We fix this by making them synthentic which hides them from
-                // the compiler.
-                relocate('kotlin', 'com.r3.conclave.shaded.kotlin')
-                // Replace the output of the "jar" task with this one.
-                archiveClassifier = ''
-            }
-        }
-        if (publishedProject.apiLibrary) {
-            project.java {
-                withSourcesJar()
-            }
-        }
-        project.publishing {
-            publications {
-                maven(MavenPublication) {
-                    from project.components.java
-                    pom.description = description
-                    if (publishedProject.apiLibrary) {
-                        // TODO This actually duplicates the same doc jar file for all the published modules!
-                        //  https://r3-cev.atlassian.net/browse/CON-1065
-                        artifact packageJavadoc
+                    // Only conclave-common needs to contain the shaded Jackson library. Anything else that needs Jackson,
+                    // e.g. conclave-host, can inherit this shaded version.
+                    dependencies {
+                        it.include(dependency("com.fasterxml.jackson.*:"))
                     }
                 }
+            } else {
+                // The remaining modules are not shading anything so we turn it off.
+                configurations = []
             }
-            repositories {
-                maven {
-                    name = "artifactory"
-                    url = getArtifactoryForPublication()
-                    credentials {
-                        username = System.getenv("CONCLAVE_ARTIFACTORY_USERNAME")
-                        password = System.getenv("CONCLAVE_ARTIFACTORY_PASSWORD")
-                    }
+            exclude 'META-INF/*.kotlin_module'
+            exclude '**/*.kotlin_metadata'
+            exclude '**/*.kotlin_builtins'
+            // Everyone needs to have their import lines modified to the new shaded ones.
+            relocate('com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson')
+            // Get rid of the Kotlin related stuff. We don't allow the metadata annotation to leak through because
+            // it causes the IntelliJ plugin to crash, but this does unfortunately mean internal members (which are
+            // public at the bytecode level) will appear. We fix this by making them synthentic which hides them from
+            // the compiler.
+            relocate('kotlin', 'com.r3.conclave.shaded.kotlin')
+            // Replace the output of the "jar" task with this one.
+            archiveClassifier = ''
+        }
+    }
+    if (publishedProject.apiLibrary) {
+        project.java {
+            withSourcesJar()
+        }
+    }
+    project.publishing {
+        publications {
+            maven(MavenPublication) {
+                from project.components.java
+                pom.description = description
+                if (publishedProject.apiLibrary) {
+                    // TODO This actually duplicates the same doc jar file for all the published modules!
+                    //  https://r3-cev.atlassian.net/browse/CON-1065
+                    artifact packageJavadoc
                 }
-                maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
-                    name = "build"
-                    url = "$buildDir/repo"
+            }
+        }
+        repositories {
+            maven {
+                name = "artifactory"
+                url = getArtifactoryForPublication()
+                credentials {
+                    username = System.getenv("CONCLAVE_ARTIFACTORY_USERNAME")
+                    password = System.getenv("CONCLAVE_ARTIFACTORY_PASSWORD")
                 }
+            }
+            maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
+                name = "build"
+                url = "$buildDir/repo"
             }
         }
     }
