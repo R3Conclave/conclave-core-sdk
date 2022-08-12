@@ -121,22 +121,6 @@ class PublishedProject {
 
 List<PublishedProject> publishedProjects = [
         new PublishedProject(
-                projectPath: ':cpp:native-host:native-host-simulation',
-                description: 'Native Conclave host libraries linked with simulation libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host:native-host-debug',
-                description: 'Native Conclave host libraries linked with debug libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host:native-host-release',
-                description: 'Native Conclave host libraries linked with release libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-host-shared',
-                description: 'Native Conclave host libraries shared between simulation, debug and release',
-        ),
-        new PublishedProject(
                 projectPath: ':cpp:linux-sgx:linux-sgx-simulation',
                 description: 'SGX SDK simulation libraries and headers',
         ),

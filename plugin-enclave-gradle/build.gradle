@@ -28,62 +28,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
 }
 
-// Bundle the various tools and components needed by the plugin to build enclaves
-processResources {
-    // The ld executable in this case is produced by compileLinuxSgx<Debug|Release> depending on whether the flag
-    // -PnativeDebug is set or not. We do not always build ld with debug symbols because if the user sets
-    // -PnativeDebug, the build will depend on both the release and debug versions of linuxSgx, meaning the SDK will
-    // potentially be built twice.
-    String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
-
-    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType", "generateCAPCache")
-
-    def resourcesDir = sourceSets.main.output.resourcesDir
-    def cppProject = project(":cpp")
-
-    doFirst {
-        copy {
-            from "${rootProject.projectDir}/containers/conclave-build"
-            into "$resourcesDir/conclave-build"
-        }
-    }
-
-    doFirst {
-        copy {
-            from "${cppProject.projectDir}/jvm-enclave-common/include/public"
-            include "*.h"
-            into "$resourcesDir/include"
-        }
-    }
-
-    doFirst {
-        String cppBuildDir = "${cppProject.buildDir}/$cmakeBuildType"
-        copy {
-            into "$resourcesDir/sgx-tools"
-            from ("$cppBuildDir/linux-sgx/src/linux-sgx/build/linux") {
-                include "sgx_sign"
-            }
-            from ("$cppBuildDir/linux-sgx/src/linux-sgx/external/toolset/ubuntu20.04/ld") {
-                include "ld"
-            }
-        }
-    }
-
-    doFirst {
-        copy {
-            from generateCAPCache
-            into "$resourcesDir/graalvm-cap-cache"
-        }
-    }
-}
-
-jar {
-    manifest {
-        // This is used in the plugin to add implicit dependencies of the right version.
-        attributes("Conclave-Version": rootProject.version.toString())
-    }
-}
-
 /**
  * Generates the CAP cache by running native-image on the cap-cache subproject.
  * The CAP cache is packaged in the graal jar file together with the tarball of the Graal distribution.
@@ -103,5 +47,49 @@ task generateCAPCache(type: Exec) {
                 "--language:js",
                 "--language:python",
                 "-H:Name=cap-cache"
+    }
+}
+
+// Bundle the various tools and components needed by the plugin to build enclaves
+processResources {
+    // The ld executable in this case is produced by compileLinuxSgx<Debug|Release> depending on whether the flag
+    // -PnativeDebug is set or not. We do not always build ld with debug symbols because if the user sets
+    // -PnativeDebug, the build will depend on both the release and debug versions of linuxSgx, meaning the SDK will
+    // potentially be built twice.
+    String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
+
+    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType", "generateCAPCache")
+
+    def cppProject = project(":cpp")
+    String linuxSgxBuildDir = "${cppProject.buildDir}/$cmakeBuildType/linux-sgx/src/linux-sgx"
+
+    into("conclave-build") {
+        from("${rootProject.projectDir}/containers/conclave-build")
+    }
+
+    into("include") {
+        from("${cppProject.projectDir}/jvm-enclave-common/include/public") {
+            include "*.h"
+        }
+    }
+
+    into("sgx-tools") {
+        from("$linuxSgxBuildDir/build/linux") {
+            include "sgx_sign"
+        }
+        from("$linuxSgxBuildDir/external/toolset/ubuntu20.04/ld") {
+            include "ld"
+        }
+    }
+
+    into("graalvm-cap-cache") {
+        from(generateCAPCache)
+    }
+}
+
+jar {
+    manifest {
+        // This is used in the plugin to add implicit dependencies of the right version.
+        attributes("Conclave-Version": rootProject.version.toString())
     }
 }
