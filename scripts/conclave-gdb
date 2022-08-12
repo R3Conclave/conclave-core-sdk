@@ -23,7 +23,7 @@ CPP_ROOT_PATH=$(dirname $CPP_ROOT)
 # If the GDB config is not present then create it
 if [ ! -d "$HOME/.gdbconclave" ]; then
     mkdir -p $HOME/.gdbconclave
-    cp $CPP_ROOT_PATH/graal/gdb/svmhelpers.py $HOME/.gdbconclave
+    cp svmhelpers.py $HOME/.gdbconclave
     # Create a file that contains java source directories in the SDK
     # Substrate VM sources
     find $CPP_ROOT_PATH/graal/build/graal/substratevm/src -iname src -type d -exec echo directory {} \; > $HOME/.gdbconclave/src_dirs

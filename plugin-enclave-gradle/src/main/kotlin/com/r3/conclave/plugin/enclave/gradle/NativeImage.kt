@@ -1,14 +1,18 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import io.github.classgraph.ClassGraph
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
-import org.gradle.api.GradleException
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
+import kotlin.io.path.createDirectories
 import kotlin.math.roundToInt
 
 /**
@@ -51,6 +55,7 @@ reflection. Default: None
 
 open class NativeImage @Inject constructor(
         objects: ObjectFactory,
+        private val plugin: GradleEnclavePlugin,
         private val buildType: BuildType,
         private val linkerScript: Path,
         private val linuxExec: LinuxExec) : ConclaveTask() {
@@ -68,9 +73,6 @@ open class NativeImage @Inject constructor(
 
     @get:InputFile
     val jarFile: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFiles
-    val includePaths: ConfigurableFileCollection = objects.fileCollection()
 
     @get:InputDirectory
     val libraryPath: RegularFileProperty = objects.fileProperty()
@@ -108,12 +110,6 @@ open class NativeImage @Inject constructor(
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
-    @get:InputFile
-    val ldPath: RegularFileProperty = objects.fileProperty()
-
-    @get:InputDirectory
-    val capCache: RegularFileProperty = objects.fileProperty()
-
     private fun defaultOptions(): List<String> {
         val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
         return listOf(
@@ -129,13 +125,13 @@ open class NativeImage @Inject constructor(
             "-R:MaxHeapSize=" + calculateMaxHeapSize(maxHeapSizeBytes),
             "-R:StackSize=" + calculateMaxStackSize(),
             "--enable-all-security-services",
-            "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
+            "-H:CAPCacheDir=${copyResourceDirectory("graalvm-cap-cache")}",
             "-H:+UseCAPCache"
         )
     }
 
     private val compilerOptions get() = listOf(
-            "-H:CCompilerOption=-B${ldPath.get().asFile.parentFile.absolutePath}",
+            "-H:CCompilerOption=-B${plugin.ldPath().parent.toAbsolutePath()}",
             "-H:CCompilerOption=-fvisibility=hidden",
             "-H:CCompilerOption=-fpie",
             "-H:CCompilerOption=-ffunction-sections",
@@ -171,13 +167,16 @@ open class NativeImage @Inject constructor(
         val stackSize = GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
         if (stackSize <= zoneSize) {
             // Invalid stack size
-            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack size in the Conclave configuration for your enclave.");
+            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack " +
+                    "size in the Conclave configuration for your enclave.")
         }
         return stackSize - zoneSize
     }
 
     private fun includePathsOptions(): List<String> {
-        return includePaths.files.map { "-H:CCompilerOption=-I$it" }.toList()
+        // Pick up all the header files in /include resource directory
+        val includeDir = copyResourceDirectory("include")
+        return listOf("-H:CCompilerOption=-I$includeDir")
     }
 
     private fun libraryPathOption(): String {
@@ -466,5 +465,17 @@ open class NativeImage @Inject constructor(
         else if (errorOut != null) {
             throw GradleException("The native-image enclave build failed. See the error message above for details.")
         }
+    }
+
+    private fun copyResourceDirectory(dirName: String): Path {
+        val dir = temporaryDir.toPath() / dirName
+        dir.createDirectories()
+        ClassGraph().acceptPaths(dirName).scan().use { result ->
+            result.allResources.forEachInputStreamThrowingIOException { resource, stream ->
+                val fileName = resource.path.substringAfterLast('/')
+                Files.copy(stream, dir / fileName, REPLACE_EXISTING)
+            }
+        }
+        return dir
     }
 }
