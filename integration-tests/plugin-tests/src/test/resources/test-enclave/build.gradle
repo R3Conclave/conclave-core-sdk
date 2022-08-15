@@ -1,25 +1,33 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
+    id 'com.r3.conclave.enclave'
 }
 
-subprojects {
-    apply plugin: "org.jetbrains.kotlin.jvm"
+// This test project is copied into a junit temp directory in the build directory before it's built, which is why
+// these relevant paths seem to not line up.
+apply from: "${rootProject.projectDir}/../../../../versions.gradle"
 
-    // This test project is copied into a junit temp directory in the build directory before it's built, which is why
-    // these relevant paths seem to not line up.
-    apply from: "${rootProject.projectDir}/../../../../versions.gradle"
-
-    repositories {
-        maven {
-            //  Only Conclave artifacts should be present here
-            url = "${rootProject.projectDir}/../../../../build/repo"
-            apply from: "${rootProject.projectDir}/../../../repositories.gradle"
-        }
+repositories {
+    maven {
+        //  Only Conclave artifacts should be present here
+        url = "${rootProject.projectDir}/../../../../build/repo"
+        apply from: "${rootProject.projectDir}/../../../repositories.gradle"
     }
+}
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(8)
-        }
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
     }
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+    // These numbers need to stay in this format as they are used
+    //   to test that a minimal change to them causes a rebuild of the enclave
+    maxHeapSize = "268435456"
+    maxStackSize = "2097152"
+    reflectionConfigurationFiles.from("reflectionconfig.json")
+    serializationConfigurationFiles.from("serializationconfig.json")
 }

@@ -41,7 +41,7 @@ abstract class AbstractPluginTaskTest(private val taskName: String, private val 
         val name = if (modeDependent) "$taskName$enclaveMode" else taskName
         val runner = gradleRunner(name, projectDir!!)
         val buildResult = runner.build()
-        return buildResult.task(":enclave:$name")!!
+        return buildResult.task(":$name")!!
     }
 
     fun assertTaskRunIsIncremental() {

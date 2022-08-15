@@ -7,7 +7,7 @@ import java.nio.file.Path
 import kotlin.io.path.deleteExisting
 
 class GenerateReflectionConfigTest : AbstractPluginTaskTest("generateReflectionConfig", modeDependent = false) {
-    private val reflectConfigPath get() = "$projectDir/enclave/build/conclave/reflectconfig"
+    private val reflectConfigPath get() = "$projectDir/build/conclave/reflectconfig"
 
     @Test
     fun `incremental build`() {

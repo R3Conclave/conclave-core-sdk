@@ -111,10 +111,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
         }
 
-        // Create a tar configuration. This is required to download graalvm-*.tar.gz
-        target.configurations.create("graalVMTar")
-        target.dependencies.add("graalVMTar", "com.r3.conclave:graalvm:$CONCLAVE_GRAALVM_VERSION@tar.gz")
-
         // Create the tasks that are required to build the Mock build type artifact.
         createMockArtifact(target, shadowJarTask)
 
@@ -192,16 +188,29 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val graalVMDistributionPath = "$baseDirectory/com/r3/conclave/graalvm/distribution"
 
         val copyGraalVM = target.createTask<Exec>("copyGraalVM") { task ->
-            val graalvmFile = target.configurations.findByName("graalVMTar")!!.files.single {
-                it.name.endsWith("tar.gz")
+
+            task.outputs.dir(graalVMDistributionPath)
+
+            // Create a configuration for downloading graalvm-*.tar.gz using Gradle
+            val graalVMConfigName = "${task.name}Config"
+            val configuration = target.configurations.create(graalVMConfigName)
+            target.dependencies.add(graalVMConfigName, "com.r3.conclave:graalvm:$CONCLAVE_GRAALVM_VERSION@tar.gz")
+            task.dependsOn(configuration)
+
+            // This is a hack to delay the execution of the code inside toString.
+            // Gradle has three stages, initialization, configuration, and execution.
+            // The code inside the toString function must run during the execution stage. For that to happen,
+            // the following wrapper was created
+            class LazyGraalVmFile(target: Project) {
+                override fun toString(): String {
+                    return target.configurations.findByName(graalVMConfigName)!!.files.single() { it.name.endsWith("tar.gz") }.absolutePath
+                }
             }
 
-            //The command tar is used because the Gradle untar task doesn't work with symbolic links
+            // Uncompress the graalvm-*.tar.gz
             Files.createDirectories(Paths.get(graalVMDistributionPath))
-            task.inputs.file(graalvmFile)
-            task.outputs.dir(graalVMDistributionPath)
             task.workingDir(graalVMDistributionPath)
-            task.commandLine("tar", "xf", graalvmFile)
+            task.commandLine("tar", "xf", LazyGraalVmFile(target))
         }
 
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->

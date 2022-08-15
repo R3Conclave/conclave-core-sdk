@@ -6,15 +6,13 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraalEnclave", modeDependent = true) {
-    private val enclaveDir: Path get() = Path.of("$projectDir/enclave")
-
     @Test
     fun `incremental builds`() {
         // First fresh run and then make sure the second run is up-to-date.
         assertTaskRunIsIncremental()
 
         replaceAndRewriteBuildFile(
-            enclaveDir,
+            projectDir!!,
             """maxHeapSize = "268435456"""",
             """maxHeapSize = "268435457""""
         )
@@ -24,7 +22,7 @@ class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraal
         // Finally, update the native image config files and make sure they trigger a new build before reaching
         // up-to-date status.
         for (fileName in listOf("reflectionconfig.json", "serializationconfig.json")) {
-            val file = Path.of("$enclaveDir/$fileName")
+            val file = Path.of("$projectDir/$fileName")
             file.writeText(file.readText().replace("Class0", "AnotherClass0"))
             assertTaskRunIsIncremental()
         }

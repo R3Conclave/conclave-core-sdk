@@ -28,8 +28,6 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val miscMask: String? = null
     }
 
-    private val enclaveDir: Path get() = Path.of("$projectDir/enclave")
-
     @Test
     fun `increment product id`() {
         assertTaskRunIsIncremental()
@@ -40,7 +38,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedProductId = initialProductID + 1
 
         replaceAndRewriteBuildFile(
-            enclaveDir,
+            projectDir!!,
             "productID = $initialProductID",
             "productID = $expectedProductId"
         )
@@ -60,7 +58,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedRevocationLevel = initialRevocationLevel + 1
 
         replaceAndRewriteBuildFile(
-            enclaveDir,
+            projectDir!!,
             "revocationLevel = $initialRevocationLevel",
             "revocationLevel = $expectedRevocationLevel"
         )
@@ -80,7 +78,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedMaxHeapSize = initialMaxHeapSize + 1
 
         replaceAndRewriteBuildFile(
-            enclaveDir,
+            projectDir!!,
             """maxHeapSize = "$initialMaxHeapSize"""",
             """maxHeapSize = "$expectedMaxHeapSize""""
         )
@@ -99,7 +97,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
         val expectedMaxStackSize = initialMaxStackSize + 1
 
         replaceAndRewriteBuildFile(
-            enclaveDir,
+            projectDir!!,
             """maxStackSize = "$initialMaxStackSize"""",
             """maxStackSize = "$expectedMaxStackSize""""
         )
@@ -110,7 +108,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig"
     }
 
     private fun loadEnclaveConfigurationFromFile(): EnclaveConfiguration {
-        val enclaveConfigurationFile = enclaveDir.resolve("build/conclave/${enclaveMode.toLowerCase()}/enclave.xml")
+        val enclaveConfigurationFile = projectDir!!.resolve("build/conclave/${enclaveMode.toLowerCase()}/enclave.xml")
         return XmlMapper().readValue(enclaveConfigurationFile.toFile(), EnclaveConfiguration::class.java)
     }
 }
