@@ -202,8 +202,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // The code inside the toString function must run during the execution stage. For that to happen,
             // the following wrapper was created
             class LazyGraalVmFile(target: Project) {
+                val graalVMAbsolutePath by lazy { target.configurations.findByName(graalVMConfigName)!!.files.single() { it.name.endsWith("tar.gz") }.absolutePath }
                 override fun toString(): String {
-                    return target.configurations.findByName(graalVMConfigName)!!.files.single() { it.name.endsWith("tar.gz") }.absolutePath
+                    return graalVMAbsolutePath
                 }
             }
 
