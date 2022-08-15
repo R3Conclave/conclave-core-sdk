@@ -121,30 +121,6 @@ class PublishedProject {
 
 List<PublishedProject> publishedProjects = [
         new PublishedProject(
-                projectPath: ':cpp:linux-sgx:linux-sgx-simulation',
-                description: 'SGX SDK simulation libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:linux-sgx:linux-sgx-debug',
-                description: 'SGX SDK debug libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:linux-sgx:linux-sgx-release',
-                description: 'SGX SDK release libraries and headers',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-substratevm:native-substratevm-simulation',
-                description: 'SubstrateVM stubs, JNI and EDL simulation libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-substratevm:native-substratevm-debug',
-                description: 'SubstrateVM stubs, JNI and EDL debug libraries',
-        ),
-        new PublishedProject(
-                projectPath: ':cpp:native-substratevm:native-substratevm-release',
-                description: 'SubstrateVM stubs, JNI and EDL release libraries',
-        ),
-        new PublishedProject(
                 projectPath: ':conclave-common',
                 description: 'Conclave API common to enclave, host and client',
                 apiLibrary: true,

@@ -58,21 +58,31 @@ processResources {
     // potentially be built twice.
     String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
 
-    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType", "generateCAPCache")
+    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType")
+    dependsOn(":cpp:compileFatFsEnclave$cmakeBuildType")
+    dependsOn(":cpp:compileSubstrateVMLib$cmakeBuildType")
+    dependsOn(":cpp:compileJvmEnclaveCommon$cmakeBuildType")
+    dependsOn(":cpp:compileJvmEdl$cmakeBuildType")
+    dependsOn("generateCAPCache")
 
     def cppProject = project(":cpp")
-    String linuxSgxBuildDir = "${cppProject.buildDir}/$cmakeBuildType/linux-sgx/src/linux-sgx"
+    String cppBuildDir = "${cppProject.buildDir}/$cmakeBuildType"
+    String linuxSgxBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx"
+    String sgxSdkBuildDir = "$cppBuildDir/linux-sgx/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk"
 
+    // conclave-build Dockerfile
     into("conclave-build") {
         from("${rootProject.projectDir}/containers/conclave-build")
     }
 
+    // C common headers
     into("include") {
         from("${cppProject.projectDir}/jvm-enclave-common/include/public") {
             include "*.h"
         }
     }
 
+    // SGX tools
     into("sgx-tools") {
         from("$linuxSgxBuildDir/build/linux") {
             include "sgx_sign"
@@ -82,6 +92,60 @@ processResources {
         }
     }
 
+    // linux-sgx libs
+    into("linux-sgx-libs/common") {  // All enclave modes use these libs
+        from("$sgxSdkBuildDir/include") {
+            include "tlibc/**/*"
+            include "libcxx/**/*"
+        }
+        from("$sgxSdkBuildDir/lib64") {
+            include "libsgx_pthread.a"
+            include "libsgx_tcrypto.a"
+            include "libsgx_tcxx.a"
+            include "libsgx_tstdc.a"
+        }
+    }
+    into("linux-sgx-libs/hardware") {  // Only release and debug modes use these libs
+        from("$sgxSdkBuildDir/lib64") {
+            include "libsgx_trts.a"
+            include "libsgx_tservice.a"
+        }
+    }
+    into("linux-sgx-libs/simulation") {  // Only simulation mode uses these libs
+        from("$sgxSdkBuildDir/lib64") {
+            include "libsgx_trts_sim.a"
+            include "libsgx_tservice_sim.a"
+        }
+    }
+
+    // substratevm libs
+    into("substratevm-libs/common") {  // All enclave modes use these libs
+        from("$cppBuildDir/substratevm") {
+            include "libsubstratevm.a"
+        }
+        from("$cppBuildDir/fatfs/enclave") {
+            include "libfatfs_enclave.a"
+        }
+        from("$cppBuildDir/jvm-edl") {
+            include "libjvm_enclave_edl.a"
+        }
+        from("$cppBuildDir/jvm-host-enclave-common") {
+            include "libjvm_host_enclave_common_enclave.a"
+        }
+        from ("$cppBuildDir/zlib/zlib-ext-prefix/src/zlib-ext-build") {
+            include "libz.a"
+        }
+    }
+    for (enclaveMode in ["release", "debug", "simulation"]) {
+        into("substratevm-libs/$enclaveMode") {
+            from("$cppBuildDir/jvm-enclave-common") {
+                include "libjvm_enclave_common_${enclaveMode}.a"
+                rename "libjvm_enclave_common_${enclaveMode}.a", "libjvm_enclave_common.a"
+            }
+        }
+    }
+
+    // GraalVM CAP cache
     into("graalvm-cap-cache") {
         from(generateCAPCache)
     }

@@ -21,14 +21,6 @@ pluginManagement {
 rootProject.name = "conclave-sdk"
 
 include 'cpp'
-include 'cpp:linux-sgx'
-include 'cpp:linux-sgx:linux-sgx-debug'
-include 'cpp:linux-sgx:linux-sgx-release'
-include 'cpp:linux-sgx:linux-sgx-simulation'
-include 'cpp:native-substratevm'
-include 'cpp:native-substratevm:native-substratevm-debug'
-include 'cpp:native-substratevm:native-substratevm-release'
-include 'cpp:native-substratevm:native-substratevm-simulation'
 include 'conclave-mail'
 include 'conclave-common'
 include 'conclave-enclave'
