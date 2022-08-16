@@ -3,22 +3,22 @@ A template project to use as a starting point for Conclave applications.
 
 ## How to build and run
 Build the host:
-```bash
+```shell
 ./gradlew host:bootJar
 ```
 
 Build the client:
-```bash
+```shell
 ./gradlew client:shadowJar
 ```
 
 Run the host:
-```bash
+```shell
 java -jar host/build/libs/host-mock.jar
 ```
 
 Run the client:
-```bash
+```shell
 java -jar client/build/libs/client-all.jar \
     "S:0000000000000000000000000000000000000000000000000000000000000000 \
     PROD:1 SEC:INSECURE"
