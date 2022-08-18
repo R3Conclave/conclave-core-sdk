@@ -212,6 +212,11 @@ meaningful directories in this repo.
 | [plugin&#x2011;enclave&#x2011;gradle/](plugin-enclave-gradle)                                                                                                                                                                                                                                                | This is a Gradle plugin which automates all the process for taking a partial enclave file and producing a signed one which contains the end-user enclave code, and which can be used seamlessly by the host code.                                                                                              |
 | [scripts/](scripts)                                                                                                                                                                                                                                                                                          | This contains shell scripts and utilities used for managing deployment, developer environments, releases etc.                                                                                                                                                                                                  |
 
+## License
+Conclave SDK is open source and distributed under the [Apache License v2.0](LICENSE).
+
+It incorporates components from third-party open source libraries. See the [NOTICE](NOTICE.md) file for more information.
+
 [r3_website]: https://www.r3.com
 [conclave_website]: https://www.conclave.net
 [docs]: https://docs.conclave.net

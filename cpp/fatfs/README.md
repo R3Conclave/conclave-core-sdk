@@ -1,5 +1,6 @@
 # cpp/fatfs
-This code creates the representation of the enclave filesystem using FatFs.
+This code creates the representation of the enclave filesystem using
+[FatFs - Generic FAT Filesystem module](http://elm-chan.org/fsw/ff/00index_e.html).
 
 There are two separate artifacts generated: `libfatfs_enclave.a` is a C++ static archive library to be linked together
 with other static libraries to form the shared object that represents the **SGX enclave**, `libfatfs_host.a` is a C++

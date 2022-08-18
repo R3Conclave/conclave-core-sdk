@@ -234,6 +234,12 @@ if (excludeDocs == null) {
     task packageJavadoc(type: Jar, dependsOn: ['dokkaJavadoc']) {
         from dokkaJavadoc
         archiveClassifier.set('javadoc')
+        metaInf {
+            from(project.rootDir) {
+                include 'LICENSE'
+                include 'NOTICE.md'
+            }
+        }
     }
 
     task mkdocs(type: Exec, dependsOn: ['preprocessdocs']) {
@@ -267,7 +273,7 @@ dokkaHtml.shouldRunAfter mkdocs
 
 for (publishedProject in publishedProjects) {
     def project = project(publishedProject.projectPath)
-    def description = publishedProject.description
+    def projectDescription = publishedProject.description
     project.pluginManager.apply('java')
     project.pluginManager.apply('maven-publish')
     // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
@@ -324,7 +330,20 @@ for (publishedProject in publishedProjects) {
         publications {
             maven(MavenPublication) {
                 from project.components.java
-                pom.description = description
+                pom {
+                    description = projectDescription
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            distribution = 'repo'
+                        }
+                    }
+                    organization {
+                        name = 'R3 LLC'
+                        url = "https://www.r3.com"
+                    }
+                }
                 if (publishedProject.apiLibrary) {
                     // TODO This actually duplicates the same doc jar file for all the published modules!
                     //  https://r3-cev.atlassian.net/browse/CON-1065
