@@ -242,10 +242,11 @@ abstract class Enclave {
      * Create a new attestation quote containing optional user specified report data.
      *
      * @param reportData An optional 64 byte array to be included in the quote. This can be used to create a quote
-     * which confirms to attesting parties that specific runtime state is present within the enclave. Care needs to be
-     * taken when forming the report data bytes to ensure that their values cannot be influenced by untrusted code, for
-     * example, by bytes received via [receiveFromUntrustedHost]. How this data is embedded in the quote is dependent on
-     * the attestation protocol.
+     * which confirms to attesting parties that specific runtime state is present within the enclave. How this data
+     * is embedded in the quote is dependent on the attestation protocol.
+     *
+     * When creating the report data bytes, ensure that their values cannot be influenced by untrusted code. For
+     * example, they should not be influenced by the bytes received through [receiveFromUntrustedHost].
      *
      * @return Quote bytes. The format of the quote bytes depends on the attestation protocol being used.
      *

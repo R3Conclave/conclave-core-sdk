@@ -2,10 +2,25 @@
 
 ## 1.2 to 1.3
 
+### Maven Central
+
+With the open sourcing of the SDK, artifacts are no longer distributed in a zip file and are instead available on 
+[Maven Central](https://search.maven.org/). For existing projects, the local maven repo directory is no longer needed. 
+This can be deleted along with the `conclaveRepo` property in your gradle.properties file. Make sure `mavenCentral()` 
+is added as a repository in your build.gradle:
+
+```groovy
+subprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+```
+
 ### KDS REST API
 
 The Key Derivation Service (KDS) is out of beta and its REST API has been finalised. The request format for both the
-`/public` and `/private` endpoints has changed. The old format is no longer supported and HTTP clients are now
+`/public` and `/private` endpoints have changed. The old format is no longer supported and HTTP clients are now
 required to specify the HTTP header `API-VERSION` with a value of `1`. Details on the API can be found
 [here](#kds-rest-api).
 
@@ -23,6 +38,13 @@ retrieve it from the KDS.
 Though technically not an API change, the docs for [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office)
 and [`EnclavePostOffice`](api/-conclave/com.r3.conclave.enclave/-enclave-post-office) have been fixed to state that 
 they are _not_ thread-safe.
+
+### Conclave Init
+
+Conclave Init now requires Java 17 to run, and generated projects will target Java 17 by default.
+
+Conclave SDK version is now set at the individual project level, rather at the OS user
+level. This means the `--configure-gradle` option is no longer needed and has been removed.
 
 ## 1.1 to 1.2
 

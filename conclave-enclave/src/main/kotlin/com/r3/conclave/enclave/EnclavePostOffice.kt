@@ -7,12 +7,11 @@ import java.security.PublicKey
 
 /**
  * A special post office which is tailored for use inside the enclave. A cached instance can be retrieved using
- * one of the [Enclave.postOffice] methods. The sender private key is automatically set to the enclave's private
- * encryption key, which is why a private key is not required, but it is also accessible here as experienced users
- * might need it for specific purposes, for example they can hash it and derive a unique ID that can’t be forged.
+ * one of the [Enclave.postOffice] methods. The sender's private key is automatically set to the enclave's private
+ * encryption key.
  *
- * [EnclavePostOffice] differs from the general [PostOffice] by not having a decrypt method as the enclave already does
- * that, and not exposing the sender private key as that's a secret of the enclave that should not be leaked.
+ * Unlike general [PostOffice], [EnclavePostOffice] does not have a decrypt method as Mail is automatically
+ * decrypted and passed to the enclave in [Enclave.receiveMail].
  *
  * [EnclavePostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
  * multiple threads. However, since most mail are ordered by their sequence numbers, care should be taken to make sure
@@ -42,9 +41,13 @@ abstract class EnclavePostOffice(
     }
 
     /**
-     * The sender private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field.
-     * By default, this is the enclave's random session key, but is a custom KDS key
-     * if the original mail was encrypted with a KDS key.
+     * Returns the sender's private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field
+     * for the recipient. By default, this is the enclave's random session key. However, the sender's private key is a
+     * KDS key if the original Mail is encrypted using KDS.
+     *
+     * Experienced users can use the private key for advanced purposes. For example, you can hash the private key to
+     * derive a unique ID that can’t be forged. To retain the security guarantees of the enclave, it is critical the
+     * private key is not leaked out.
      *
      * @see [EnclaveMail.authenticatedSender]
      */
