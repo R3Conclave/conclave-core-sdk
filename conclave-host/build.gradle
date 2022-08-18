@@ -14,17 +14,70 @@ dependencies {
     // Logging using the SLF4J API
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
-    // Native libraries for creating and communicating with an enclave.
-    // TODO There's really no need to include all three dependencies. The host can only use the one that matches with
-    //      the mode the enclave was built against. So by bundling all three modes we're unnecessarily bloating the
-    //      host. Consider a gradle plugin for the host that automatically adds the relevant dependency based on the enclave.
-    runtimeOnly "com.r3.conclave:native-host-release:${rootProject.version}"
-    runtimeOnly "com.r3.conclave:native-host-debug:${rootProject.version}"
-    runtimeOnly "com.r3.conclave:native-host-simulation:${rootProject.version}"
-    runtimeOnly "com.r3.conclave:native-host-shared:${rootProject.version}"
-
     testImplementation project(":internal-testing")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "com.google.guava:guava:$guava_version"
+}
+
+// Copy required native libraries into resources
+processResources {
+    String cmakeBuildType = project.hasProperty("nativeDebug") ? "Debug" : "Release"
+
+    dependsOn(":cpp:compileLinuxSgx$cmakeBuildType")
+    dependsOn(":cpp:compileHost$cmakeBuildType")
+    dependsOn(":cpp:compileHostShared$cmakeBuildType")
+
+    String cppBuildDir = "${project(":cpp").buildDir}/$cmakeBuildType"
+    String linuxSgxBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx"
+
+    into("com/r3/conclave/host-libraries/shared") {
+        from("$linuxSgxBuildDir/build/linux") {
+            include "libsgx_capable.so"
+        }
+        from("$cppBuildDir/jvm-host-shared") {
+            include "libjvm_host_shared.so"
+        }
+    }
+
+    for (enclaveMode in ["Simulation", "Debug", "Release"]) {
+        String simSuffix = enclaveMode == "Simulation" ? "_sim" : ""
+
+        into("com/r3/conclave/host-libraries/$enclaveMode") {
+            from("$linuxSgxBuildDir/build/linux") {
+                include "libsgx_enclave_common.so"
+                rename "libsgx_enclave_common.so", "libsgx_enclave_common.so.1"
+                include "libsgx_epid${simSuffix}.so"
+                rename "libsgx_epid${simSuffix}.so", "libsgx_epid${simSuffix}.so.1"
+                include "libsgx_launch${simSuffix}.so"
+                rename "libsgx_launch${simSuffix}.so", "libsgx_launch${simSuffix}.so.1"
+                include "libsgx_urts${simSuffix}.so"
+                include "libsgx_uae_service${simSuffix}.so"
+                include "libsgx_qe3.signed.so"
+                include "libsgx_id_enclave.signed.so"
+                include "libsgx_pce.signed.so"
+            }
+            from("$cppBuildDir/jvm-host") {
+                include "libjvm_host${simSuffix}.so"
+                rename "libjvm_host${simSuffix}.so", "libjvm_host.so"
+            }
+            from("/usr/lib/x86_64-linux-gnu") {
+                include "libcrypto.so"
+                if (enclaveMode != "Simulation") {
+                    include "libprotobuf.so"
+                }
+            }
+            from("$linuxSgxBuildDir/external/dcap_source/QuoteGeneration/build/linux") {
+                include "libsgx_qe3_logic.so"
+                include "libsgx_id_enclave.signed.so"
+                include "libsgx_pce_logic.so"
+                include "libsgx_dcap_ql.so"
+                rename "libsgx_dcap_ql.so", "libsgx_dcap_ql.so.1"
+            }
+            from("${rootProject.projectDir}/azure-plugin") {
+                include "libdcap_quoteprov.so"
+                rename "libdcap_quoteprov.so", "libdcap_quoteprov.so.1"
+            }
+        }
+    }
 }

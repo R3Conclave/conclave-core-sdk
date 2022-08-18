@@ -20,35 +20,7 @@ pluginManagement {
 
 rootProject.name = "conclave-sdk"
 
-def includeNative = true
-try {
-    if (excludeNative) {
-        includeNative = false
-    }
-} catch (MissingPropertyException ignored) {
-}
-
-if (includeNative) {
-    include 'cpp'
-    include 'cpp:jvm-enclave-common'
-    include 'cpp:linux-sgx'
-    include 'cpp:linux-sgx:linux-sgx-debug'
-    include 'cpp:linux-sgx:linux-sgx-release'
-    include 'cpp:linux-sgx:linux-sgx-simulation'
-    include 'cpp:native-binutils'
-    include 'cpp:native-gdb'
-    include 'cpp:native-host'
-    include 'cpp:native-host:native-host-debug'
-    include 'cpp:native-host:native-host-release'
-    include 'cpp:native-host:native-host-simulation'
-    include 'cpp:native-host-shared'
-    include 'cpp:native-sign-tool'
-    include 'cpp:native-substratevm'
-    include 'cpp:native-substratevm:native-substratevm-debug'
-    include 'cpp:native-substratevm:native-substratevm-release'
-    include 'cpp:native-substratevm:native-substratevm-simulation'
-}
-
+include 'cpp'
 include 'conclave-mail'
 include 'conclave-common'
 include 'conclave-enclave'
@@ -59,5 +31,3 @@ include 'conclave-web-client'
 include 'conclave-init'
 include 'internal-testing'
 include 'plugin-enclave-gradle'
-include 'graal-cap-cache'
-include 'graal-cap-cache:cap-enclave'

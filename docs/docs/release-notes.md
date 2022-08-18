@@ -3,37 +3,37 @@ Release notes
 
 ### 1.3
 
-1. Support for [Conclave Cloud](https://conclave.cloud/)!
-2. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports production
-   workloads! Use the `CLUSTER` master key type instead of `DEVELOPMENT`. The REST API docs can be found
-   [here](kds-rest-api.md).
-3. :jigsaw: **New feature!** Support for stable enclave encryption keys with Mail by using the KDS. This allows
-   usages where the enclave can restart, or even move to a different physical machine and the client is unaffected.
-   It enables horizontally-scaled enclave solutions. See the API docs for the new
+1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our blog post on why we made it open source and 
+   what this means for you. You can find the source code at https://github.com/R3Conclave/conclave-sdk.
+2. The SDK artifacts are now available on Maven Central. There's no longer any need to have a local repo 
+   directory in your Conclave project. See the [API changes page](api-changes.md#maven-central) for more details.  
+3. The Core SDK powers our new Conclave Cloud platform. Head over to https://conclave.cloud to learn more. 
+4. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports production
+   workloads. The REST API docs can be found [here](kds-rest-api.md).
+5. :jigsaw: **New feature!** Support for stable enclave encryption keys with Mail by using the KDS. This enables use 
+   cases where the enclave can restart or move to a different physical machine without affecting the client. It also 
+   enables horizontally-scaled enclave solutions. See the API docs for the new
    [KDS post office](api/-conclave/com.r3.conclave.client/-post-office-builder/using-k-d-s.html) for more details.
-4. :jigsaw: **Java 17** is now supported the enclave. There's no need to configure anything. Just make you're using
-   JDK 17 when building your application benefit from the new features since Java 11. As with 1.2 the Conclave
-   libraries are still compiled using Java 8. So you can continue to use Java 8 (or above) if you wish.
-5. Conclave Init now requires Java 17 to run and the template project targets Java 17 as well by default.
-6. Gradle 7 is now supported.
+6. :jigsaw: **Java 17** is now supported inside the enclave. There's no need to configure anything. Just ensure 
+   you're using JDK 17 when building your enclave to benefit from the new language features.
 7. Exceptions thrown during enclave startup in release mode now propagate to the host. This provides better feedback if
    the enclave is unable to start.
-8. GraalVM has been updated to version 22.0.
-9. 20.04 LTS is now the default version of Ubuntu, whilst 18.04 LTS is still supported. 16.04 LTS is no longer
-   supported.
-10. We've introduced the concept of beta APIs to allow quick iterative feedback on APIs that need more time before
-    they're finalized. Anything annotated with [`@Beta`](api/-conclave/com.r3.conclave.common/-beta/index.html) is
-    subject to change and may even be removed in a later release.
-11. :jigsaw: **Beta feature** New API method which creates an attestation quote with custom report data, for use with
+8. Gradle 7 is now supported.
+9. GraalVM has been updated to version 22.0.
+10. Intel SGX SDK has been updated to 2.17.1. This provides bug fixes, security updates, and other improvements. See the
+    [SGX SDK release notes](https://github.com/intel/linux-sgx/releases) for more details.
+11. Conclave now supports Ubuntu 20.04 LTS and 18.04 LTS. 16.04 LTS is no longer supported.
+12. We've introduced the concept of beta APIs to facilitate quick iterative feedback on APIs before they're finalized. 
+    Anything annotated with [`@Beta`](api/-conclave/com.r3.conclave.common/-beta/index.html) is subject to change 
+    and may even be removed in a later release.
+13. :jigsaw: **Beta feature** New API method which creates an attestation quote with custom report data, for use with
     external SGX-enabled applications which require a signed quote with specific content. See
     [`Enclave.createAttestationQuote`](api/-conclave/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
-12. Conclave now uses version 2.17 of the Intel SGX SDK. This provides bug fixes and other improvements. See the
-   [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.17-release)
-   for more details.
-13. We have added Intel advisory IDs, which provide information on specific SGX vulnerabilities, for DCAP attestation as well;
-    previously, they present only for EPID attestation.
-14. The Conclave Init tool now sets the Conclave version at the individual project level, rather at the user level.
+14. We have added Intel advisory IDs to DCAP-based attestation reports. These provide more information on any 
+    platform vilnerabilites that may be present on the system.
+
+Please read the list of [known issues](known-issues.md).
 
 ### 1.2.1
 
@@ -138,88 +138,3 @@ This is a small release with some minor improvements:
 1. The container gradle script has been removed due to stability issues and will no longer be supported. If you are
    using container-gradle to develop on Mac, we strongly suggest you stop doing so and follow
    [these instructions](running-hello-world.md) for running your conclave projects instead.
-
-### 1.1
-
-!!! important
-    There have been some breaking changes in this version of Conclave. Be sure to check out the [API changes](api-changes.md)
-    you might need to make to get your current project building with Conclave 1.1.
-
-!!! Deprecation
-    The Avian runtime is deprecated as of Conclave 1.1. Previously Conclave gave you the choice of whether to use Avian
-    or GraalVM native image as the runtime environment inside your enclave. Enclaves built with GraalVM native image
-    have many benefits over Avian enclaves, including enhanced security, performance and capabilities. Therefore
-    new projects should not use the Avian runtime. References to using Avian have been removed from the documentation
-    for Conclave 1.1, and the next release of SDK will not include the capability to build enclaves that use the Avian runtime.
-    Conclave 1.1 does still allow you to build Avian enclaves on Linux and macOS but you cannot build Avian enclaves
-    on Windows systems.
-
-1. **Conclave 1.1 has been tested on the latest 3rd Gen Intel Xeon Scalable processors, also known as Ice Lake Xeon CPUs.**
-   These CPUs bring a number of enhancements for Conclave applications, especially in the amount of memory available
-   for use inside enclaves where the limit has been increased from typically around 95MB up to 512GB per CPU depending
-   on the platform. You do not need to make any changes to your application to support these new CPUs except
-   to ensure you are using DCAP attestation as Xeon Scalable processors do not support EPID.
-1. :jigsaw: **New feature!** Mock mode has been extended so you can now specify 'mock' as an enclave mode and use
-   your regular host rather than having to modify your code to use a special build of your host. A new `mockEnclave`
-   property has been added to `EnclaveHost` that can be used in mock mode to allow access to the enclave instance
-   for probing internal state during development and testing.
-   [Learn more about enclave configurations](architecture.md#testing-and-debugging).
-   [See more information about how the API has changed](api-changes.md#1.0-to-1.1)
-1. :jigsaw: **New feature!** When using mock mode you can now specify the configuration of the mock environment,
-   allowing parameters such as the `codeHash`, `codeSigningKeyHash` and `tcbLevel` to be modified programatically
-   in your unit tests. See [Mock mode configuration](mockmode.md#mock-mode-configuration) for more details.
-1. :jigsaw: **New feature!** We've updated the [CorDapp sample](https://github.com/R3Conclave/conclave-samples/blob/master/cordapp/README.md)
-    to show how to integrate
-   Corda network identities with Conclave. The node can now log in to the enclave and identify itself by presenting its
-   verified X.509 certificate. The enclave can use this to map the mail sender key to a meaningful X.500 name.
-1. :jigsaw: **New feature!** To better showcase Conclave we've created a [separate repository](https://github.com/R3Conclave/conclave-samples)
-   of enclave samples for you to look and try out. We plan to update this on a more regular basis. In particular we have
-   a [sample](https://github.com/R3Conclave/conclave-samples/tree/master/tribuo-tutorials) running the [Tribuo](https://tribuo.org/)
-   machine learning library inside an enclave.
-1. The Conclave documentation has been improved, fixing a number of errors and updating the format of the Javadocs
-   section of the documentation site. The Conclave SDK documentation is packaged along with the SDK so it is automatically
-   displayed in IDEs that support this, including Eclipse and Visual Studio Code. See
-   [Writing hello world](writing-hello-world.md#ide-documentation-in-the-root-buildgradle-file) for details of
-   how to configure your Gradle project to display documentation in the IDE.
-1. We've updated to version 21.0.0 of GraalVM which along with some performance improvements to the garbage collector,
-   also adds Java serialisation support. We've updated Conclave to take advantage of this. Find out more about how
-   to configure [serialization within the enclave](enclave-configuration.md#serializationconfigurationfiles).
-1. The SGX SDK that Conclave is built upon has been updated to version 2.13.3. This provides bug fixes and an update
-   to the Intel IPP cryptographic library. See the [SGX SDK release notes](https://01.org/intel-softwareguard-extensions/downloads/intel-sgx-linux-2.13.3-release)
-   for more details.
-1. We've improved the error messages in a number of places, including when there are problems signing the enclave
-   and when there are issues in sending and receiving Mail messages.
-1. The container-gradle script has been updated to correctly handle configuration files that live outside the source tree.
-1. The output of the enclave gradle build has been tidied up, hiding the information that would only normally be
-   present on verbose builds. If you want to see the verbose output in your build, just add `--info` to your
-   gradle build command line.
-1. Security improvements and bug fixes: improved DCAP certificate validation, added additional bounds checks on some
-   internal methods, fixes to allow validation of enclave-to-enclave attestations inside an enclave.
-
-### 1.0
-
-1. :jigsaw: **New feature!** A new `PostOffice` API makes using mail easier and also automatically applies a reasonable
-   minimum size to each mail to help defend against the host guessing message contents by looking at how big it is (a size
-   side channel attack). The default size policy is a moving average. See `MinSizePolicy` for more information. Mail
-   topic semantics have been improved by making them scoped to the sender public key rather than being global. This
-   allows the enclave to enforce correct mail ordering with respect to the sequence numbers on a per-sender basis. This means
-   `EnclaveMail.authenticatedSender` is no longer nullable and will always return an authenticated sender, i.e. if
-   a sender private key is not specified then one is automatically created.
-1. :jigsaw: **New feature!** An embedded, in-memory file system is provided that emulates POSIX semantics. This is
-   intended to provide compatibility with libraries and programs that expect to load data or config files from disk.
-   [Learn more about the in-memory filesystem](filesystem.md).
-1. :jigsaw: **New feature!** A new script is provided to make it easier to run your application inside a Docker container
-   on macOS. This helps you execute a simulation mode enclave without direct access to a Linux machine.
-1. :jigsaw: **New feature!** The enclave signing key hash is now printed during the build, ready for you to copy into a constraint.
-1. :jigsaw: **New feature!** A tutorial for how to write [CorDapps](https://www.corda.net) has been added. Corda can
-   provide your enclave with a business oriented peer-to-peer network that has integrated identity. [Learn more about
-   writing CorDapps with Conclave](https://github.com/R3Conclave/conclave-samples/blob/master/cordapp/README.md).
-1. Multi-threaded enclaves are now opt-in. By default, the enclave object will be locked before data from the host is
-   delivered. This ensures that a malicious host cannot multi-thread an enclave that's not expecting it.
-1. The Gradle tasks list has been cleaned up to hide internal tasks that aren't useful to invoke from the command line.
-1. GraalVM has been updated to version 20.3. An upgrade to 21.0 will come soon.
-1. Usability improvements: better error messages, more FAQs.
-1. Bug fixes: improve CPU compatibility checks, enclaves with non-public constructors are now loadable.
-1. Security improvements and fixes.
-
-Please read the list of [known issues](known-issues.md).

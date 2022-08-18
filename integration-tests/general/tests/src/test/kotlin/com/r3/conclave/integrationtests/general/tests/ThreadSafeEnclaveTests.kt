@@ -19,7 +19,7 @@ import kotlin.streams.toList
 class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave") {
     @Test
     fun `concurrent calls into the enclave`() {
-        val n = 10000
+        val n = 1000
         callEnclave(SetMaxCallCount(n))
 
         val sum = IntStream.rangeClosed(1, n)

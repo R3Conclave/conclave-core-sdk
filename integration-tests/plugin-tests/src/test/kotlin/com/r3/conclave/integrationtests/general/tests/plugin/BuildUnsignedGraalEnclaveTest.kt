@@ -19,7 +19,7 @@ class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraal
         // Then check that the build runs again with the new build.gradle changes and then is up-to-date again.
         assertTaskRunIsIncremental()
 
-        // Finally update the native image config files and make sure they trigger a new build before reaching
+        // Finally, update the native image config files and make sure they trigger a new build before reaching
         // up-to-date status.
         for (fileName in listOf("reflectionconfig.json", "serializationconfig.json")) {
             val file = Path.of("$projectDir/$fileName")

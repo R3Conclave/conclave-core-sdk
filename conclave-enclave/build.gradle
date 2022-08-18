@@ -3,8 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
 }
 
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 dependencies {
     api project(":conclave-common")
 
@@ -16,15 +14,4 @@ dependencies {
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.mockito:mockito-inline:$mockito_version"
-}
-
-// This task is needed by :internal-testing for quickly generating dynamic test enclaves. Normally the shadowJar task
-// does exactly what we want here but it's been configured to shade Kotlin and Jackson instead.
-task fatJar(type: ShadowJar) {
-    archiveClassifier = 'fatjar'
-    from sourceSets.main.output
-    configurations = [
-            project.configurations.runtimeClasspath,
-            project(":conclave-common").configurations.compileClasspath
-    ]
 }

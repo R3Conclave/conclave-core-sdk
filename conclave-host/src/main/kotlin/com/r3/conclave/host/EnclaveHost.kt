@@ -161,7 +161,7 @@ class EnclaveHost private constructor(
         /**
          * Determine whether hardware enclaves are supported on the current platform. Irrespective of the
          * current project mode. To support hardware enclaves, the platform needs to be Linux and the system
-         * needs a CPU which supports the intel SGX instruction set extensions.
+         * needs a CPU which supports Intel SGX.
          *
          * @return Boolean true if hardware enclaves are supported, false otherwise.
          */

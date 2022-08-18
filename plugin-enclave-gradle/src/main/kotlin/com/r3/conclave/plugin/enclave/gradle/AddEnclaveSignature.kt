@@ -6,9 +6,11 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
+import kotlin.io.path.absolutePathString
 
 open class AddEnclaveSignature @Inject constructor(
     objects: ObjectFactory,
+    private val plugin: GradleEnclavePlugin,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile
@@ -16,9 +18,6 @@ open class AddEnclaveSignature @Inject constructor(
 
     @get:InputFile
     val inputSigningMaterial: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFile
-    val signTool: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
     val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
@@ -42,7 +41,7 @@ open class AddEnclaveSignature @Inject constructor(
 
                 linuxExec.exec(
                     listOf<String>(
-                        signTool.asFile.get().absolutePath, "catsig",
+                        plugin.signToolPath().absolutePathString(), "catsig",
                         "-key", mrSignerPublicKey.absolutePath,
                         "-enclave", inputEnclave.asFile.get().absolutePath,
                         "-out", outputSignedEnclave.asFile.get().absolutePath,
@@ -55,7 +54,7 @@ open class AddEnclaveSignature @Inject constructor(
                 linuxExec.cleanPreparedFiles()
             }
         } else {
-            commandLine(signTool.asFile.get(), "catsig",
+            commandLine(plugin.signToolPath().absolutePathString(), "catsig",
                 "-key", inputMrsignerPublicKey.asFile.get(),
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSignedEnclave.asFile.get(),

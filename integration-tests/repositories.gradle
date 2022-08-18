@@ -9,6 +9,7 @@ repositories {
         filter {
             includeModuleByRegex("com\\.r3\\.conclave", "kds-.*")
             includeModuleByRegex("com\\.r3\\.conclave", "graal-sdk.*")
+            includeModuleByRegex("com\\.r3\\.conclave", "graalvm.*")
         }
     }
 

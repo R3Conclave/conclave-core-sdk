@@ -1,3 +1,3 @@
-## conclave-common
-
-This module contains code common to both conclave-host and conclave-client, and is part of the Conclave API.
+# conclave-common
+This module contains code common to both [conclave-host](../conclave-host) and [conclave-client](../conclave-client), 
+and it is part of the Conclave API.

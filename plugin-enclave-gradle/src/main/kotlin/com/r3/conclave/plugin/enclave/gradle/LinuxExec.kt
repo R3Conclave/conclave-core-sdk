@@ -23,15 +23,15 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     val tagLatest: Property<String> = objects.property(String::class.java)
 
     override fun action() {
-        val conclaveBuildDir = Files.createDirectories(temporaryDir.toPath() / "conclave-build")
-        LinuxExec::class.java.getResourceAsStream("/conclave-build/Dockerfile")!!.use {
-            Files.copy(it, conclaveBuildDir / "Dockerfile", REPLACE_EXISTING)
-        }
-
         // This task should be set as a dependency of any task that requires executing a command in the context
         // of a Linux system or container. The action checks to see if the Host OS is Linux and if not sets
         // up a Linux environment (currently using Docker) in which the commands will be executed.
         if (!OperatingSystem.current().isLinux) {
+            val conclaveBuildDir = Files.createDirectories(temporaryDir.toPath() / "conclave-build")
+            LinuxExec::class.java.getResourceAsStream("/conclave-build/Dockerfile")!!.use {
+                Files.copy(it, conclaveBuildDir / "Dockerfile", REPLACE_EXISTING)
+            }
+
             try {
                 commandLine(
                     "docker",
