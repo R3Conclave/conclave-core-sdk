@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
 
 class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig", modeDependent = true) {
     private class EnclaveConfiguration {

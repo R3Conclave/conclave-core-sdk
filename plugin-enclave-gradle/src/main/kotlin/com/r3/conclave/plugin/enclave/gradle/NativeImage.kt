@@ -1,14 +1,19 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import io.github.classgraph.ClassGraph
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
-import org.gradle.api.GradleException
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
+import kotlin.io.path.createDirectories
+import kotlin.io.path.listDirectoryEntries
 import kotlin.math.roundToInt
 
 /**
@@ -51,6 +56,7 @@ reflection. Default: None
 
 open class NativeImage @Inject constructor(
         objects: ObjectFactory,
+        private val plugin: GradleEnclavePlugin,
         private val buildType: BuildType,
         private val linkerScript: Path,
         private val linuxExec: LinuxExec) : ConclaveTask() {
@@ -68,18 +74,6 @@ open class NativeImage @Inject constructor(
 
     @get:InputFile
     val jarFile: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFiles
-    val includePaths: ConfigurableFileCollection = objects.fileCollection()
-
-    @get:InputDirectory
-    val libraryPath: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFiles
-    val libraries: ConfigurableFileCollection = objects.fileCollection()
-
-    @get:InputFiles
-    val librariesWholeArchive: ConfigurableFileCollection = objects.fileCollection()
 
     @get:InputFile
     val appResourcesConfig: RegularFileProperty = objects.fileProperty()
@@ -108,12 +102,6 @@ open class NativeImage @Inject constructor(
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
-    @get:InputFile
-    val ldPath: RegularFileProperty = objects.fileProperty()
-
-    @get:InputDirectory
-    val capCache: RegularFileProperty = objects.fileProperty()
-
     private fun defaultOptions(): List<String> {
         val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
         return listOf(
@@ -129,13 +117,13 @@ open class NativeImage @Inject constructor(
             "-R:MaxHeapSize=" + calculateMaxHeapSize(maxHeapSizeBytes),
             "-R:StackSize=" + calculateMaxStackSize(),
             "--enable-all-security-services",
-            "-H:CAPCacheDir=${capCache.get().asFile.absolutePath}",
+            "-H:CAPCacheDir=${copyResourceDirectory("graalvm-cap-cache")}",
             "-H:+UseCAPCache"
         )
     }
 
     private val compilerOptions get() = listOf(
-            "-H:CCompilerOption=-B${ldPath.get().asFile.parentFile.absolutePath}",
+            "-H:CCompilerOption=-B${plugin.ldPath().parent.toAbsolutePath()}",
             "-H:CCompilerOption=-fvisibility=hidden",
             "-H:CCompilerOption=-fpie",
             "-H:CCompilerOption=-ffunction-sections",
@@ -171,25 +159,42 @@ open class NativeImage @Inject constructor(
         val stackSize = GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
         if (stackSize <= zoneSize) {
             // Invalid stack size
-            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack size in the Conclave configuration for your enclave.");
+            throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack " +
+                    "size in the Conclave configuration for your enclave.")
         }
         return stackSize - zoneSize
     }
 
     private fun includePathsOptions(): List<String> {
-        return includePaths.files.map { "-H:CCompilerOption=-I$it" }.toList()
+        // Pick up all the header files in /include resource directory
+        val includeDir = copyResourceDirectory("include")
+        return listOf("-H:CCompilerOption=-I$includeDir")
     }
 
-    private fun libraryPathOption(): String {
-        return "-H:NativeLinkerOption=-L" + libraryPath.get().asFile.absolutePath
+    private fun libraryPathOptions(): List<String> {
+        val paths = mutableListOf("linux-sgx-libs/common")
+        paths += if (buildType == BuildType.Simulation) "linux-sgx-libs/simulation" else "linux-sgx-libs/hardware"
+        return paths.map { "-H:NativeLinkerOption=-L${copyResourceDirectory(it)}" }
     }
 
     private fun librariesOptions(): List<String> {
-        return libraries.files.map { "-H:NativeLinkerOption=$it" }.toList()
+        // This code is assuming all the libraries in substratevm-libs/common do not need to be linked with
+        // --whole-archive (see librariesWholeArchiveOptions below). If that no longer becomes the case then manually
+        // specify the libraries.
+        return copyResourceDirectory("substratevm-libs/common")
+            .listDirectoryEntries()
+            .map { "-H:NativeLinkerOption=$it" }
     }
 
     private fun librariesWholeArchiveOptions(): List<String> {
-        return librariesWholeArchive.files.map { "-H:NativeLinkerOption=$it" }.toList()
+        // Libraries in this section are linked with the --whole-archive option which means that
+        // nothing is discarded by the linker. This is required if a static library has any constructors
+        // or static variables that need to be initialised which would otherwise be discarded by
+        // the linker.
+        val substratevmEnclaveModeLibsDir = copyResourceDirectory("substratevm-libs/${buildType.name.lowercase()}")
+        return listOf("libjvm_enclave_common.a").map {
+            "-H:NativeLinkerOption=${ substratevmEnclaveModeLibsDir / it }"
+        }
     }
 
     private fun placeholderLibPathOption(): String {
@@ -197,7 +202,7 @@ open class NativeImage @Inject constructor(
         // decides to link against from clashing with the trusted SGX runtime. We just need to ensure the linker
         // adds the path to the directory containing the placeholders to prevent it from pulling in the OS native
         // versions of the libraries.
-        return "-H:NativeLinkerOption=-L" + nativeImagePath.get().asFile.absolutePath + "/placeholderlibs"
+        return "-H:NativeLinkerOption=-L${nativeImagePath.get().asFile.absolutePath}/placeholderlibs"
     }
 
     /**
@@ -437,7 +442,7 @@ open class NativeImage @Inject constructor(
             + compilerOptions
             + placeholderLibPathOption()
             + includePathsOptions()
-            + libraryPathOption()
+            + libraryPathOptions()
             + "-H:NativeLinkerOption=-Wl,--whole-archive"
             + librariesWholeArchiveOptions()
             + "-H:NativeLinkerOption=-Wl,--no-whole-archive"
@@ -466,5 +471,17 @@ open class NativeImage @Inject constructor(
         else if (errorOut != null) {
             throw GradleException("The native-image enclave build failed. See the error message above for details.")
         }
+    }
+
+    private fun copyResourceDirectory(path: String): Path {
+        val tempDir = temporaryDir.toPath()
+        ClassGraph().acceptPaths(path).scan().use { result ->
+            result.allResources.forEachInputStreamThrowingIOException { resource, stream ->
+                val file = tempDir.resolve(resource.path)
+                file.parent.createDirectories()
+                Files.copy(stream, file, REPLACE_EXISTING)
+            }
+        }
+        return tempDir.resolve(path)
     }
 }

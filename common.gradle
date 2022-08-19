@@ -33,6 +33,15 @@ subprojects {
             logger.lifecycle("Ending> {}.{} ({})", descriptor.classDisplayName, descriptor.displayName, descriptor.id)
         }
     }
+    tasks.withType(Jar) {
+
+        metaInf {
+            from(project.rootDir) {
+                include 'LICENSE'
+                include 'NOTICE.md'
+            }
+        }
+    }
 }
 
 wrapper {

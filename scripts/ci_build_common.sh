@@ -27,7 +27,7 @@ conclave_graal_sha512sum=$(curl -SLf $url)
 # must include the conclave_graal sha512sum as well.
 pushd ${code_host_dir}
 containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
-docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum| sha256sum | cut -d ' ' -f1)
+docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum | sha256sum | cut -d ' ' -f1)
 popd
 
 # Docker container images repository
@@ -113,7 +113,7 @@ docker_opts=(\
     ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} \
     "-e" "GRADLE_USER_HOME=/gradle" \
     "-e" "GRADLE_OPTS=-Dorg.gradle.workers.max=$num_cpus" \
-    $(env | cut -f1 -d= | grep CONCLAVE_ | sed 's/^CONCLAVE_/-e CONCLAVE_/') \
+    $(env | cut -f1 -d= | awk 'gsub(/^CONCLAVE_/, "-e CONCLAVE_")') \
     "-w" "$code_docker_dir" \
 )
 

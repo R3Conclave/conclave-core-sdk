@@ -1,6 +1,6 @@
 [
   {
-    "name" : "com.r3.conclave.plugin.enclave.gradle.test.Class0",
+    "name" : "com.test.enclave.Class0",
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,
     "allDeclaredMethods" : true,

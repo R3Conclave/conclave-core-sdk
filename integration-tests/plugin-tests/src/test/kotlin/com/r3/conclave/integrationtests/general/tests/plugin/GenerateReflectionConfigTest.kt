@@ -12,7 +12,7 @@ class GenerateReflectionConfigTest : AbstractPluginTaskTest("generateReflectionC
     @Test
     fun `incremental build`() {
         assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(Path.of(reflectConfigPath)).content().contains("com.r3.conclave.plugin.enclave.gradle.test.TestEnclave")
+        assertThat(Path.of(reflectConfigPath)).content().contains("com.test.enclave.TestEnclave")
         assertThat(runTask().outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
     }
 

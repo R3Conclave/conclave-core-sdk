@@ -14,9 +14,11 @@ import java.nio.ByteOrder
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
+import kotlin.io.path.absolutePathString
 
 open class GenerateEnclaveSigningMaterial @Inject constructor(
     objects: ObjectFactory,
+    private val plugin: GradleEnclavePlugin,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     private companion object {
@@ -25,9 +27,6 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
 
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFile
-    val signTool: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
     val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
@@ -47,7 +46,7 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
 
             linuxExec.exec(
                 listOf<String> (
-                    signTool.asFile.get().absolutePath, "gendata",
+                    plugin.signToolPath().absolutePathString(), "gendata",
                     "-enclave", inputEnclave.asFile.get().absolutePath,
                     "-out", dockerOutputSigningFile.absolutePath,
                     "-config", inputEnclaveConfig.asFile.get().absolutePath
@@ -56,7 +55,7 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
         } else {
             dockerOutputSigningFile = null
             commandLine(
-                signTool.asFile.get(), "gendata",
+                plugin.signToolPath().absolutePathString(), "gendata",
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSigningMaterial.asFile.get(),
                 "-config", inputEnclaveConfig.asFile.get()

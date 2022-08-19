@@ -5,17 +5,16 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
 import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
+import kotlin.io.path.absolutePathString
 
 open class GenerateEnclaveMetadata @Inject constructor(
     objects: ObjectFactory,
+    private val plugin: GradleEnclavePlugin,
     private val buildType: BuildType,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFile
-    val inputSignTool: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
         val metadataFile = temporaryDir.toPath().resolve("enclave_metadata.txt")
@@ -24,7 +23,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
             try {
                 linuxExec.exec(
                     listOf<String>(
-                        inputSignTool.asFile.get().absolutePath, "dump",
+                        plugin.signToolPath().absolutePathString(), "dump",
                         "-enclave", inputSignedEnclave.asFile.get().absolutePath,
                         "-dumpfile", metadataFile.toAbsolutePath().toString()
                     )
@@ -34,7 +33,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
             }
         } else {
             commandLine(
-                inputSignTool.asFile.get(), "dump",
+                plugin.signToolPath().absolutePathString(), "dump",
                 "-enclave", inputSignedEnclave.asFile.get(),
                 "-dumpfile", metadataFile
             )

@@ -3,8 +3,7 @@ ext {
     //  * Create release branch in https://github.com/R3Conclave/conclave-tutorials and update all versions.
     //  * Update download link in docs/docs/conclave-init.md
     conclave_version = '1.4-SNAPSHOT'
-    // Please ensure that the Graal's version number matches the one set in GradleEnclavePlugin (Search
-    // for "com.r3.conclave:graal-sdk" in GradleEnclavePlugin)
+    // Also update GradleEnclavePlugin.CONCLAVE_GRAALVM_VERSION
     conclave_graal_version = '22.0.0.2-1.3-RC6'
     kds_version = '0.3-SNAPSHOT'
     kotlin_version = '1.6.10'

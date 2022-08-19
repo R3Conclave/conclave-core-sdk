@@ -1,9 +1,9 @@
 apply plugin: "base"
 
 task generateHostJniHeaders(type: Copy) {
-    dependsOn ":conclave-host:jar"
-    def source = project(":conclave-host").buildDir
-    from ("$source/generated/sources/headers/java/main"){
+    dependsOn ":conclave-host:compileJava"
+    def buildDir = project(":conclave-host").buildDir
+    from ("$buildDir/generated/sources/headers/java/main") {
         include "com_r3_conclave_host_internal_Native.h"
         rename "com_r3_conclave_host_internal_Native.h","host_jni.h"
     }
@@ -11,9 +11,9 @@ task generateHostJniHeaders(type: Copy) {
 }
 
 task generateHostSharedJniHeaders(type: Copy) {
-    dependsOn ":conclave-host:jar"
-    def source = project(":conclave-host").buildDir
-    from ("$source/generated/sources/headers/java/main") {
+    dependsOn ":conclave-host:compileJava"
+    def buildDir = project(":conclave-host").buildDir
+    from ("$buildDir/generated/sources/headers/java/main") {
         include "com_r3_conclave_host_internal_NativeSharedInternal.h"
         rename "com_r3_conclave_host_internal_NativeSharedInternal.h", "host_jni_shared.h"
     }
@@ -21,9 +21,9 @@ task generateHostSharedJniHeaders(type: Copy) {
 }
 
 task generateEnclaveJniHeaders(type: Copy) {
-    dependsOn ":conclave-enclave:jar"
-    def source = project(":conclave-enclave").buildDir
-    from ("$source/generated/sources/headers/java/main") {
+    dependsOn ":conclave-enclave:compileJava"
+    def buildDir = project(":conclave-enclave").buildDir
+    from ("$buildDir/generated/sources/headers/java/main") {
         include "com_r3_conclave_enclave_internal_Native.h"
         rename "com_r3_conclave_enclave_internal_Native.h","enclave_jni.h"
     }

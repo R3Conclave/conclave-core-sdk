@@ -7,9 +7,11 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
+import kotlin.io.path.absolutePathString
 
 open class SignEnclave @Inject constructor(
     objects: ObjectFactory,
+    private val plugin: GradleEnclavePlugin,
     private val enclaveExtension: EnclaveExtension,
     private val buildType: BuildType,
     private val linuxExec: LinuxExec
@@ -19,9 +21,6 @@ open class SignEnclave @Inject constructor(
 
     @get:InputFile
     val inputKey: RegularFileProperty = objects.fileProperty()
-
-    @get:InputFile
-    val signTool: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
     val inputEnclaveConfig: RegularFileProperty = objects.fileProperty()
@@ -48,7 +47,7 @@ open class SignEnclave @Inject constructor(
 
                 linuxExec.exec(
                     listOf<String>(
-                        signTool.asFile.get().absolutePath, "sign",
+                        plugin.signToolPath().absolutePathString(), "sign",
                         "-key", keyFile.absolutePath,
                         "-enclave", inputEnclave.asFile.get().absolutePath,
                         "-out", outputSignedEnclave.asFile.get().absolutePath,
@@ -60,7 +59,7 @@ open class SignEnclave @Inject constructor(
             }
         } else {
             commandLine(
-                signTool.get(), "sign",
+                plugin.signToolPath().absolutePathString(), "sign",
                 "-key", inputKey.asFile.get(),
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSignedEnclave.asFile.get(),
