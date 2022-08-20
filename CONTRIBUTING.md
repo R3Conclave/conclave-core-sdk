@@ -37,10 +37,11 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 1. Search [GitHub][github] for an open or closed PR that relates to your submission. You don't want to 
 duplicate existing efforts.
 2. Be sure that an issue describes the problem you're fixing or documents the design for the feature you'd like to add.
+<!--- TODO: Update when the CLA process is finialised. --->
 3. Please sign our [Contributor License Agreement (CLA)](#cla) before sending PRs.
    We cannot accept code without a signed CLA. Make sure you author all contributed Git commits with email address associated with your CLA signature.
 4. Fork the project, set up the development environment, make your changes in a separate git branch and add descriptive messages to your commits.
-5. Push your branch to GitHub and send PR to `R3Conclave/conclave-sdk:master `.
+5. Push your branch to GitHub and send PR to `R3Conclave/conclave-core-sdk:master`.
 
 
 #### Addressing review feedback
@@ -61,5 +62,5 @@ If you have more than one GitHub account, or multiple email addresses associated
 
 [discord]: https://discord.gg/zpHKkMZ8Sw
 [mailing list]: https://groups.io/g/conclave-discuss
-[github]: https://github.com/R3Conclave/conclave-sdk
+[github]: https://github.com/R3Conclave/conclave-core-sdk
 [cla]: https://cla-assistant.io/

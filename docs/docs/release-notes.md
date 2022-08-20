@@ -4,7 +4,7 @@ Release notes
 ### 1.3
 
 1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our blog post on why we made it open source and 
-   what this means for you. You can find the source code at https://github.com/R3Conclave/conclave-sdk.
+   what this means for you. You can find the source code at https://github.com/R3Conclave/conclave-core-sdk.
 2. The SDK artifacts are now available on Maven Central. There's no longer any need to have a local repo 
    directory in your Conclave project. See the [API changes page](api-changes.md#maven-central) for more details.  
 3. The Core SDK powers our new Conclave Cloud platform. Head over to https://conclave.cloud to learn more. 

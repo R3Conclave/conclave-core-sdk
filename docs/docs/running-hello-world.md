@@ -27,8 +27,8 @@ cd conclave-tutorials/hello-world
 ```
 
 The sample app, like all Conclave apps, consists of an
-[enclave and a client](architecture.md#primary-entities). The enclave runs inside a host app,
-which is provided by the Conclave SDK. We can generate a fat JAR for the host and client using the `:bootJar` and
+[enclave and a client](architecture.md#primary-entities). The enclave runs inside a host application,
+which is provided by the Conclave Core SDK. We can generate a fat JAR for the host and client using the `:bootJar` and
 `:shadowJar` tasks, respectively.
 === "Windows"
     ```bash
