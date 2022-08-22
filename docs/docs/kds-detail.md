@@ -162,7 +162,7 @@ parameters to the function.
 ![](images/kds_key_derivation.png)
 
 In the diagram above, an enclave built using Conclave wants to use a key from
-the KDS for persistence so the Conclave SDK makes a request to the KDS based on
+the KDS for persistence so a request is made to the KDS based on
 the configuration provided inside the enclave code. The request to the KDS
 includes the key specification, consisting of the "Master Key" to use and the
 key policy constraint that must be met in order for the KDS to release a key to
@@ -227,13 +227,12 @@ the application enclave.
 
 ![](images/kds_key_exchange.png)
 
-All of this happens behind the scenes to developers using the Conclave SDK: the
-Conclave SDK automatically performs all required mechanisms required to ensure a
-secure key exchange.
+All of this happens behind the scenes to developers using the Conclave Core SDK: it automatically performs all 
+required mechanisms required to ensure a secure key exchange.
 
 # What is the 'Master Key'?
-In order for the KDS to provide stable keys to enclaves developed with the
-Conclave SDK, the KDS itself needs access to a stable master key. Rather than
+In order for the KDS to provide stable keys to enclaves developed with Conclave, the KDS itself needs access to a 
+stable master key. Rather than
 providing one fixed master key, the KDS can be given access to different sources
 of master key, the actual master key to use being provided as part of the key
 specification.

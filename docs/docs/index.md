@@ -28,7 +28,8 @@ Conclave makes [Confidential Computing](enclaves.md) using Intel® Security Guar
 - **Developer-friendly:** You don't have to be a cryptography expert to use Conclave. A high-level, intuitive API helps you write secure applications on any operating system.
 - **Code in many languages:** Write your code in Java, Kotlin, or any other JVM (Java Virtual Machine) language. You can also use Javascript and basic Python to write your application.
 - **Focus on business logic:** Interact with secure enclaves easily using an intuitive API. **Conclave Mail** takes care of the end-to-end encrypted messaging.
-- **Everything in one platform:** Conclave SDK tightly integrates with a [complementary cloud offering](https://www.conclave.net/conclave-cloud/).
+- **Everything in one platform:** The Core SDK tightly integrates with a
+  [complementary cloud offering](https://www.conclave.net/conclave-cloud/).
 - **Cloud-based Key Derivation Service (KDS):** Create stable applications that maintain Intel SGX security guarantees even when the enclave runs on multiple physical machines.
 - **Enhanced security, performance, and capabilities:** Conclave uses the GraalVM native image technology for incredibly tight memory usage, support for GraalVM languages, and instant startup time.
 - **Quickly deploy to Microsoft Azure:** Run Conclave apps on Microsoft Azure VMs with minimal setup.

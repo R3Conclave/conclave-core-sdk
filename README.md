@@ -1,46 +1,33 @@
-[![Conclave SDK](.github/assets/logo.png)][conclave_website]
+[![Conclave Core SDK](.github/assets/logo.png)][conclave_website]
 
-## Overview
-[Conclave SDK][docs] is an open source platform that makes working with SGX enclaves easy.
+The [Conclave Core SDK][docs] is an open source platform that lets you create SGX enclaves easily. You can 
+write your enclave code in high-level languages such as Java, Kotlin, and JavaScript.
 
-It is a toolkit for building **enclaves**, small pieces of software that are protected from attack 
-by the owner of the computer on which they run. 
-It is ideally suited to solving multi-party collaboration and privacy problems, 
+**Enclaves** are small pieces of software that are protected from attack by the owner of the computer on which they 
+run. They are ideally suited to solving multi-party collaboration and privacy problems, 
 but can also be used to secure your infrastructure against attack.
 
-Conclave SDK has been originally developed by [R3][r3_website], and it is has been made available 
-to the community, see the [license below](#license).
+The Conclave Core SDK is developed by [R3][r3_website], and has been made available to the [open source community](#license).
 
-### Documentation and tutorials
-Please refer to the [Conclave website for documentation and tutorials][docs].
-Sources of the documentation are under the directory [docs/](docs/docs).
+## How to use Conclave
+If you want to learn how to use Conclave and build enclaves, take a look at the
+[hello world example and tutorial][hello_world]. You can also refer to the [Conclave documentation][docs] and
+[API docs](https://docs.conclave.net/api/index.html).
 
-### Contributing
-We encourage you to contribute to Conclave. As a contributor please [follow these guidelines](#contributing.md).
+## Contributing
+We encourage you to contribute to Conclave. Please read our contribution [guidelines](CONTRIBUTING.md).
 
 ### Community
-You can interact with the Conclave SDK community on these channels:
+You can also interact with the Conclave community on these channels:
 
-[Discord channel](https://discord.gg/zpHKkMZ8Sw)
+[Discord](https://discord.gg/zpHKkMZ8Sw)
 
 [Mailing list](https://groups.io/g/conclave-discuss)
 
-## Usage
-If you want to start using Conclave SDK and building enclaves, please see
-the [Hello World example and tutorials][hello_world].
-
-<!--- TODO: <https://r3-cev.atlassian.net/browse/CON-1020> (This is the Jira ticket to publish artifacts to Maven Central.) --->
-Pre-built artifacts of Conclave SDK are present in [Maven Central](https://MAVEN_CENTRAL_REPOSITORY_TO_BE_ADDED),
-so you just need to use that repository and add the related dependencies to your project.
-
-Conclave SDK currently only fully supports Ubuntu Linux. There is a limited support for macOS and Windows:
-you **can build** the enclaves, but you **can't run** enclaves on them.
-
 ## Building the SDK
-If you want to modify the source code of Conclave SDK, you can develop on macOS (Intel) and Linux platforms by using 
-a development Docker container that we have prepared.
-If you are comfortable on Linux, you might want to use Dell laptops: they support SGX, and it is 
-convenient to use SGX locally.
+If you want to build the SDK, you can do so both on Linux and macOS (Intel only) using a development Docker container.
+
+> :warning: **Building the SDK is currently not supported on Apple Silicon hardware.
 
 In the instructions below we assume Ubuntu as the Linux distribution; in case you use a different one,
 you need to translate the instructions to your chosen distribution.
@@ -48,15 +35,14 @@ you need to translate the instructions to your chosen distribution.
 ### Getting the source code
 To retrieve the source code you need to clone this repository:
 ```shell
-git clone https://github.com/R3Conclave/conclave-sdk.git
+git clone https://github.com/R3Conclave/conclave-core-sdk.git
 ```
 
-### Preparing your development container
+### Preparing the development container
 We have created Docker containers to have an encapsulated and easy-to-use build environment, follow the instructions
 for your operating system.
 
 #### macOS (Intel)
-> :warning: **Conclave SDK is currently not supported on Apple Silicon CPUs.
 
 You can install Docker Desktop [following Docker's instructions](https://docs.docker.com/desktop/mac/install/)
 
@@ -95,7 +81,7 @@ You are now in a shell inside a Docker container.
 Run ./gradlew build test to compile and run unit tests.
 Browse to http://localhost:8000 to view the external docsite.
 
-conclave master ~/conclave-sdk> 
+conclave master ~/conclave-core-sdk> 
 ```
 
 ### Building the SDK and runnning tests
@@ -128,7 +114,7 @@ cd integration-tests
 > In this way you will be using the container as a `root` user.
 > 
 ### Debug mode
-As part of the build, Conclave SDK uses a modified version of [Intel SGX SDK](https://github.com/intel/linux-sgx),
+As part of the build, Conclave uses a modified version of the [Intel SGX SDK](https://github.com/intel/linux-sgx),
 together with other C/C++ code.
 By default, this code is built in `Release` mode. If you need to debug C/C++ code you need to set the `Debug` mode by adding
 `-PnativeDebug` to the parameters. e.g. 
@@ -162,7 +148,7 @@ By default, the IDEs will be downloaded under the host's `~/.opt/` folder.
 You can now use these commands to launch your IDE of choice:
 
 ```shell
-cd <conclave-sdk's local repository>
+cd <conclave-core-sdk's local repository>
 ./scripts/idea.sh      # starts IDEA in a container
 ./scripts/clion.sh     # starts CLion in a container
 ```
@@ -180,40 +166,39 @@ docker stop $(docker ps -f label=sdk-build -q)
 
 If you stop the container, you can restart it and log back in by re-running the `devenv_shell.sh` script.
 
-**Gradle** maintains various caches and such in the container in the `/gradle` directory (this won't appear on your host
+Gradle maintains various caches and such in the container in the `/gradle` directory (this won't appear on your host
 system). If your container gets messed up you can blow it away by stopping it and then using `docker images` to list the
 image, and `docker rmi` to delete the image. Then rerun `devenv_shell.sh` to re-download things fresh.
 
 
 ## Exploring the codebase
 
-Conclave SDK consists of several technologies bundled together. Here is a description of the most
+The Conclave Core SDK consists of several technologies working together. Here is a description of the most
 meaningful directories in this repo.
 
-| Directory                                                                                                                                                                                                                                                                                                    | Description                                                                                                                                                                                                                                                                                                    |
-|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [azure&#x2011;plugin/](azure-plugin)                                                                                                                                                                                                                                                                         | This contains script and tools to use the SDK in an Azure Virtual Machine.                                                                                                                                                                                                                                     |
-| [conclave&#x2011;client/](conclave-client)<br/>[conclave&#x2011;common/](conclave-common)<br/>[conclave&#x2011;host/](conclave-host)<br/>[conclave&#x2011;mail/](conclave-mail)<br/>[conclave&#x2011;web&#x2011;client/](conclave-web-client)<br/>[conclave&#x2011;web&#x2011;host/](conclave-web-host)<br/> | These directories contain the public modules of the Conclave API.                                                                                                                                                                                                                                              |
-| [conclave&#x2011;init/](conclave-init)                                                                                                                                                                                                                                                                       | This is a tool to quickly and automatically generate a Conclave project.                                                                                                                                                                                                                                       |
-| [containers/conclave&#x2011;build/](containers/conclave-build)                                                                                                                                                                                                                                               | This contains the definition of a Linux container used to build an enclave in Windows and macOS.                                                                                                                                                                                                               |
-| [containers/sdk&#x2011;build/](containers/sdk-build)                                                                                                                                                                                                                                                         | This contains the definition and the scripts to create and use a container to build Conclave SDK.                                                                                                                                                                                                              |
-| [cpp/](cpp)                                                                                                                                                                                                                                                                                                  | This is where all C++ code resides. This is mostly a CMake project, with a wrapper `build.gradle` extracting the artifacts.                                                                                                                                                                                    |
-| [cpp/fatfs/](cpp/fatfs)                                                                                                                                                                                                                                                                                      | This code creates the representation of the enclave filesystem using FatFs.                                                                                                                                                                                                                                    |
-| [cpp/jvm&#x2011;edl/](cpp/jvm-edl)                                                                                                                                                                                                                                                                           | This is where we generate the ECALL/OCALL boundary using Intel's EDL language. Note that the boundary is minimal, the  JVM boundary is implemented on top of this.                                                                                                                                             |
-| [cpp/jvm&#x2011;enclave&#x2011;common/](cpp/jvm-enclave-common)                                                                                                                                                                                                                                              | This is C/C++ enclave code that implements or stubs Linux system POSIX calls.                                                                                                                                                                                                                                  |
-| [cpp/jvm&#x2011;host/](cpp/jvm-host)                                                                                                                                                                                                                                                                         | This is C/C++ host code to interact with Java/Kotlin host code through JNI.                                                                                                                                                                                                                                    |
-| [cpp/jvm&#x2011;host&#x2011;enclave&#x2011;common/](cpp/jvm-host-enclave-common)                                                                                                                                                                                                                             | This is C/C++ code used both by the host and the enclave. It mainly consists of utility functions/classes.                                                                                                                                                                                                     |
-| [cpp/jvm&#x2011;host&#x2011;shared/](cpp/jvm-host-shared)                                                                                                                                                                                                                                                    | This is C/C++ host code, mainly to retrieve hardware information using Intel SGX SDK.                                                                                                                                                                                                                          |
-| [cpp/linux&#x2011;sgx/](cpp/linux-sgx)                                                                                                                                                                                                                                                                       | This directory contains modifications to the Intel SGX SDK. CMake checks out the [Intel SGX SDK](https://github.com/intel/linux-sgx) and applies some patches on top of it. The build compiles the SDK, installs it locally on a build directory so the PSW compilation (`cpp/psw`) can find its dependencies. |
-| [cpp/substratevm/](cpp/substratevm)                                                                                                                                                                                                                                                                          | This is C/C++ enclave code, with the implementation of the entry points (host to enclave) of some EDL code.                                                                                                                                                                                                    |
-| [docs/](docs)                                                                                                                                                                                                                                                                                                | This contains the source code for the [Conclave documentation](https://docs.conclave.net).                                                                                                                                                                                                                     |
-| [dokka/](dokka)                                                                                                                                                                                                                                                                                              | This contains a script to build a fork of [Dokka](https://github.com/Kotlin/dokka), a documentation engine for Kotlin.                                                                                                                                                                                         |
-| [integration&#x2011;tests/](integration-tests)                                                                                                                                                                                                                                                               | This is a separate independent Gradle project which is used to test the SDK artifacts at an integration-level.                                                                                                                                                                                                 |
-| [plugin&#x2011;enclave&#x2011;gradle/](plugin-enclave-gradle)                                                                                                                                                                                                                                                | This is a Gradle plugin which automates all the process for taking a partial enclave file and producing a signed one which contains the end-user enclave code, and which can be used seamlessly by the host code.                                                                                              |
-| [scripts/](scripts)                                                                                                                                                                                                                                                                                          | This contains shell scripts and utilities used for managing deployment, developer environments, releases etc.                                                                                                                                                                                                  |
+| Directory                                                                                                                                                                                                                                          | Description                                                                                                                 |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| [conclave&#x2011;client/](conclave-client)<br/>[conclave&#x2011;common/](conclave-common)<br/>[conclave&#x2011;host/](conclave-host)<br/>[conclave&#x2011;mail/](conclave-mail)<br/>[conclave&#x2011;web&#x2011;client/](conclave-web-client)<br/> | Kotlin/Java code of the Core API.                                                                                           |
+| [conclave&#x2011;web&#x2011;host/](conclave-web-host)                                                                                                                                                                                              | Simple web-based Conclave [host server](https://docs.conclave.net/conclave-web-host.html).                                  |
+| [conclave&#x2011;init/](conclave-init)                                                                                                                                                                                                             | This is a tool to quickly and automatically generate a Conclave project.                                                    |
+| [containers/conclave&#x2011;build/](containers/conclave-build)                                                                                                                                                                                     | Docker container for building Conclave enclaves in Windows and macOS.                                                       |
+| [containers/sdk&#x2011;build/](containers/sdk-build)                                                                                                                                                                                               | Docker container for building the Conclave Core SDK.                                                                        |
+| [cpp/](cpp)                                                                                                                                                                                                                                        | This is where all C++ code resides. This is mostly a CMake project, with a wrapper `build.gradle` extracting the artifacts. |
+| [cpp/fatfs/](cpp/fatfs)                                                                                                                                                                                                                            | This code creates the representation of the enclave filesystem using FatFs.                                                 |
+| [cpp/jvm&#x2011;edl/](cpp/jvm-edl)                                                                                                                                                                                                                 | The minimal ECALL/OCALL boundary using Intel's EDL language.                                                                |
+| [cpp/jvm&#x2011;enclave&#x2011;common/](cpp/jvm-enclave-common)                                                                                                                                                                                    | Implementations and stubs of Linux system POSIX calls inside the enclave.                                                   |
+| [cpp/jvm&#x2011;host/](cpp/jvm-host)                                                                                                                                                                                                               | Native code which interacts with the Java/Kotlin layer through JNI.                                                         |
+| [cpp/jvm&#x2011;host&#x2011;enclave&#x2011;common/](cpp/jvm-host-enclave-common)                                                                                                                                                                   | Native code used both by the host and the enclave. It mainly consists of utility functions/classes.                         |
+| [cpp/linux&#x2011;sgx/](cpp/linux-sgx)                                                                                                                                                                                                             | Conclave modifications to the [Intel SGX SDK](https://github.com/intel/linux-sgx).                                          |
+| [cpp/substratevm/](cpp/substratevm)                                                                                                                                                                                                                | This is C/C++ enclave code, with the implementation of the entry points (host to enclave) of some EDL code.                 |
+| [docs/](docs)                                                                                                                                                                                                                                      | This contains the source code for the [Conclave documentation](https://docs.conclave.net).                                  |
+| [dokka/](dokka)                                                                                                                                                                                                                                    | This contains a script to build a fork of [Dokka](https://github.com/Kotlin/dokka), a documentation engine for Kotlin.      |
+| [integration&#x2011;tests/](integration-tests)                                                                                                                                                                                                     | This is a separate independent Gradle project which is used to test the SDK artifacts at an integration-level.              |
+| [plugin&#x2011;enclave&#x2011;gradle/](plugin-enclave-gradle)                                                                                                                                                                                      | The Conclave Grade enclave plugin which automates the process of building a native SGX binary.                              |
+| [scripts/](scripts)                                                                                                                                                                                                                                | Various scripts for building and testing the SDK.                                                                           |
 
 ## License
-Conclave SDK is open source and distributed under the [Apache License v2.0](LICENSE).
+The Conclave Core SDK is open source and distributed under the [Apache License v2.0](LICENSE).
 
 It incorporates components from third-party open source libraries. See the [NOTICE](NOTICE.md) file for more information.
 

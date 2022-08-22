@@ -7,9 +7,7 @@ RUN mkdir $GRAAL_HOME && tar -C $GRAAL_HOME -xzf $docker_graal_tar_file && rm -r
 
 FROM graal
 
-# TODO Separate out the enclave build and make it completely reproducible.
-
-LABEL description="Build container for the Conclave SDK"
+LABEL description="Build container for the Conclave Core SDK"
 LABEL maintainer="conclave@r3.com"
 ARG commit_id
 LABEL commit_id=${commit_id}
