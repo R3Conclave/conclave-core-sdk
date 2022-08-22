@@ -13,16 +13,16 @@ The Conclave Key Derivation Service (KDS) is an enclave based service which solv
 R3 provides a publicly accessible instance of the KDS as part of the Conclave Platform which may be used by any Conclave based enclave.
 
 !!!Note
-The URL for the R3 public KDS is `https://kds.dev.conclave.cloud`.
-This is URL may be changed in a later deployment of the KDS.
+    The URL for the R3 public KDS is `https://kds.dev.conclave.cloud`.
+    This is URL may be changed in a later deployment of the KDS.
 
 ## Configuring the KDS URL
 For an enclave to obtain keys from a KDS, the URL of a KDS instance must be provided when the enclave is started.
 
 !!!Note
-If the KDS URL is not provided and the enclave is a simulation or debug mode enclave, a warning will be printed and the enclave will default to signer derived keys.
-This behaviour allows for enclave development without a connection to a KDS.
-If a release mode enclave is started without the KDS URL, an error will be generated and the enclave will not start.
+    If the KDS URL is not provided and the enclave is a simulation or debug mode enclave, a warning will be printed and the enclave will default to signer derived keys.
+    This behaviour allows for enclave development without a connection to a KDS.
+    If a release mode enclave is started without the KDS URL, an error will be generated and the enclave will not start.
 
 ### Web host configuration
 If you are using the [Conclave web host](conclave-web-host.md), the KDS url and timeout duration in seconds can be provided on the command line when starting your application:
@@ -89,7 +89,7 @@ The `kds {}` section contains all KDS related configuration:
 The KDS enclave constraint controls how your enclave will attest to the KDS enclave at the URL provided on startup (see [enclave constraints](constraints.md)).
 
 !!!note
-For the R3 KDS, the following constraint should be used: `S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE`.
+    For the R3 KDS, the following constraint should be used: `S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE`.
 
 ### Choosing a value for the `masterKeyType`
 The KDS contains several internal master keys which may be used when deriving keys for user enclaves.
@@ -102,8 +102,8 @@ There are several supported key types, each with different trust models:
 
 ### Defining the `policyConstraint` section
 !!!warning
-Selection of the KDS policy constraint can have significant security and operational implications.
-For this reason, users are strongly encouraged to read the following sections in their entirety.
+    Selection of the KDS policy constraint can have significant security and operational implications.
+    For this reason, users are strongly encouraged to read the following sections in their entirety.
 
 The `policyConstraint` section defines which enclaves can access a derived key.
 It is important to choose a constraint which is strict enough to prevent unauthorised access the key, but also lenient enough to allow for upgrades of enclave code and data migration if required.
@@ -175,48 +175,53 @@ This policy makes it easy to migrate encrypted data to a new version of the encl
 This constraint has fewer operational implications, but security is weakened as the enclave signer must be trusted not to sign an unsafe or malicious enclave.
 
 !!!note
-In this example, security may be enhanced by having an external auditor build and sign the enclave on the behalf of the developer.
+    In this example, security may be enhanced by having an external auditor build and sign the enclave on the behalf of the developer.
 
 ## KDS keys for mail
-To use KDS derived keys for mail, the client must construct a [`PostOffice`](api/-conclave/com.r3.conclave.client/) object configured for use with KDS keys.
-This can be accomplished using the [`PostOfficeBuilder.usingKDS`](api/-conclave/com.r3.conclave.client/-post-office-builder/-companion/using-k-d-s.html) method.
+The KDS is also capable of providing keys for use with [Conclave mail](mail.md).
+When using KDS keys with mail, the client application requests a public key from the KDS for use in a Conclave [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office/index.html) and specifies which enclaves should be permitted access to the corresponding private key.
+Upon receiving mail, the enclave requests the private key and uses it to decrypt the mail object from the client.
+In this manner, users can create mail objects which can be decrypted by any enclave that matches a given set of constraints, without needing to attest to the enclave first.
 
-### KDS key spec
-The [`KDSKeySpec`](api/-conclave/com.r3.conclave.common.kds/-k-d-s-key-spec/-k-d-s-key-spec.html) class describes the specification of a key to be used for mail encryption.
-A key spec needs to be created before a key can be retrieved and a PostOffice created.
+### Defining a KDS key spec
+To make use of KDS keys with mail, the client must construct a [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office/index.html) object configured for use with KDS keys.
+The first step is to create a [`KDSKeySpec`](api/-conclave/com.r3.conclave.common.kds/-k-d-s-key-spec/-k-d-s-key-spec.html) object which specifies how the public key should be derived and which enclaves should be allowed access to the corresponding private key.
 
 ```java
-var KDSKeySpec = new KDSKeySpec(
+import com.r3.conclave.common.kds.KDSKeySpec;
+
+...
+var kdsKeySpec = new KDSKeySpec(
         keyName,
         masterKeyType,
         policyConstraint);
+...
 ```
 
-- `keyName` - The name of the key. This name is used during key derivation and if changed, will result in a different key being generated.
+- `keyName` - The name of the key. This name is used during key derivation and if changed, will result in a different key being generated. This can be used to separate keys by purpose.
 - `masterKeyType` - The type of master key to use for the derivation (see [`MasterKeyType`](api/-conclave/com.r3.conclave.common.kds/-master-key-type/index.html)).
-- `policyConstraint` - An [`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object which describes the
+- `policyConstraint` - An [`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object which describes the constraints that the enclave must meet in order to derive the corresponding private key and decrypt messages.
 
 ### KDS post office builder
-To create mail objects using KDS keys, a post office must be created using a KDS key.
+Once an appropriate key spec has been created, a post office can be instantiated using the [`PostOfficeBuilder`](api/-conclave/com.r3.conclave.client/-post-office-builder/index.html) class.
 
 ```java
 import com.r3.conclave.client.PostOfficeBuilder;
 
-class Main {
-    var kdsURL = new URL("<kds-url>");
-    var kdsEnclaveConstraint = new EnclaveConstraints("<kds-enclave-constraints>");
-    var kdsKeySpec = null; // TODO
+...
+var kdsURL = new URL("<kds-url>");
+var kdsEnclaveConstraint = new EnclaveConstraints("<kds-enclave-constraints>");
 
-    PostOffice postOffice = PostOfficeBuilder().usingKDS(
-        kdsURL,
-        kdsKeySpec,                
-        kdsEnclaveConstraint    
-    ).build();
-    
-    
-}
+PostOffice postOffice = PostOfficeBuilder().usingKDS(
+    kdsURL,
+    kdsKeySpec,                
+    kdsEnclaveConstraint    
+).build();
+...
 ```
 
-- `<kds-url>` - The URL of the KDS which the enclave has been configured for.
+- `<kds-url>` - The URL of the KDS instance to use. This should match the KDS instance that the enclave is configured for.
 - `<kds-enclave-constraints>` - The constraints that will be used when attesting to the KDS enclave.
   These should match the expected details of the KDS.
+
+The [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office/index.html) may then be used to encrypt and decrypt messages.
