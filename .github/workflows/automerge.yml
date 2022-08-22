@@ -21,8 +21,9 @@ jobs:
   automerge:
     runs-on: ubuntu-latest
     steps:
-      - name: basicautomerge
-        uses: "pascalgn/automerge-action@v0.12.0"
+      - id: basicautomerge
+        name: basicautomerge
+        uses: "pascalgn/automerge-action@v0.15.3"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MERGE_LABELS: "!releasemerge,!wip"
@@ -30,8 +31,9 @@ jobs:
           UPDATE_METHOD: "merge"
           MERGE_DELETE_BRANCH: "true"
           MERGE_COMMIT_MESSAGE: "pull-request-title-and-description"
-      - name: releaseautomerge
-        uses: "pascalgn/automerge-action@v0.12.0"
+      - id: releaseautomerge
+        name: releaseautomerge
+        uses: "pascalgn/automerge-action@v0.15.3"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MERGE_LABELS: "releasemerge,!wip"
