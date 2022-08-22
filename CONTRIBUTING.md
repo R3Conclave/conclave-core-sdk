@@ -37,7 +37,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 1. Search [GitHub][github] for an open or closed PR that relates to your submission. You don't want to 
 duplicate existing efforts.
 2. Be sure that an issue describes the problem you're fixing or documents the design for the feature you'd like to add.
-<!--- TODO: Update when the CLA process is finialised. --->
+<!--- TODO: Update when the CLA process is finalized. --->
 3. Please sign our [Contributor License Agreement (CLA)](#cla) before sending PRs.
    We cannot accept code without a signed CLA. Make sure you author all contributed Git commits with email address associated with your CLA signature.
 4. Fork the project, set up the development environment, make your changes in a separate git branch and add descriptive messages to your commits.

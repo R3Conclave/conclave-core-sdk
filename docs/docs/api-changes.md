@@ -43,7 +43,7 @@ they are _not_ thread-safe.
 
 Conclave Init now requires Java 17 to run, and generated projects will target Java 17 by default.
 
-The SDK version is now set at the individual project level, rather at the OS user
+The SDK version is now set at the individual project level rather than at the OS user
 level. This means the `--configure-gradle` option is no longer needed and has been removed.
 
 ## 1.1 to 1.2

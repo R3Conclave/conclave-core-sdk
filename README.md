@@ -1,7 +1,7 @@
 [![Conclave Core SDK](.github/assets/logo.png)][conclave_website]
 
-The [Conclave Core SDK][docs] is an open source platform that lets you create SGX enclaves very easily. You can 
-write your enclave code in high-level languages such as Java, Kotlin and JavaScript.
+The [Conclave Core SDK][docs] is an open source platform that lets you create SGX enclaves easily. You can 
+write your enclave code in high-level languages such as Java, Kotlin, and JavaScript.
 
 **Enclaves** are small pieces of software that are protected from attack by the owner of the computer on which they 
 run. They are ideally suited to solving multi-party collaboration and privacy problems, 
@@ -15,7 +15,7 @@ If you want to learn how to use Conclave and build enclaves, take a look at the
 [API docs](https://docs.conclave.net/api/index.html).
 
 ## Contributing
-We encourage you to contribute to Conclave. Have a read of our contribution [guidelines](CONTRIBUTING.md).
+We encourage you to contribute to Conclave. Please read our contribution [guidelines](CONTRIBUTING.md).
 
 ### Community
 You can also interact with the Conclave community on these channels:

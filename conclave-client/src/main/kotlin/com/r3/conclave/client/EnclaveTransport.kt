@@ -13,7 +13,7 @@ import java.io.IOException
  *
  * Details such as how to start and shutdown the transport are implementation specific.
  *
- * [com.r3.conclave.client.web.WebEnclaveTransport] is a HTTP RESTful implementation for connecting the client to a
+ * [com.r3.conclave.client.web.WebEnclaveTransport] is an HTTP RESTful implementation for connecting the client to a
  * host which is using the `conclave-web-host` module.
  *
  * @see EnclaveClient
