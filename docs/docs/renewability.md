@@ -30,8 +30,8 @@ bugs in the ME have no effect on your enclave.
 When bugs or security weaknesses are found the replaceable parts of the TCB are upgraded via normal software updates.
 The version of the TCB a computer is using is a part of the remote attestation, so enclave clients can check if the
 operator of an enclave has upgraded their TCB correctly and refuse to upload data if not. In this state the
-[`EnclaveInstanceInfo.securityInfo.summary`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/get-security-info.html) 
-property will be set to [`STALE`](api/-conclave/com.r3.conclave.common/-enclave-security-info/-summary/index.html), indicating that the 
+[`EnclaveInstanceInfo.securityInfo.summary`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/get-security-info.html) 
+property will be set to [`STALE`](api/-conclave%20-core/com.r3.conclave.common/-enclave-security-info/-summary/index.html), indicating that the 
 system is running in a secure mode but there are known reasons to upgrade.
 
 To perform TCB recovery one or more of the following actions may be required by the owner of the hardware (i.e. either 
@@ -47,8 +47,8 @@ performing TCB recoveries.
 
 If a new version of Conclave is required that will be communicated to licensees when it becomes available. New versions
 may also provide more detailed advice on what to do in the
-[`EnclaveSecurityInfo`](api/-conclave/com.r3.conclave.common/-enclave-security-info/index.html) object. 
-Converting an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object to a 
+[`EnclaveSecurityInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-security-info/index.html) object. 
+Converting an [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object to a 
 string will usually include a textual summary explaining why a machine is judged to
 be insecure or stale and what can be done to resolve the problem.
 
@@ -69,7 +69,7 @@ enclave the ability to read data sealed using previous TCB states. However, the 
 cannot request a key based on a future value of the CPUSVN.
 
 Conclave Mail handles TCB recovery automatically. Mails sent to the enclave prior to a TCB recovery are still decryptable
-after the recovery. Once clients have downloaded a fresh [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) any new mails sent to the enclave using it
+after the recovery. Once clients have downloaded a fresh [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) any new mails sent to the enclave using it
 will not be decryptable by the old system, or one that's been downgraded.
 
 ### Mock Mode and the SGX CPUSVN
@@ -79,14 +79,14 @@ the enclave from being able to access data with a later CPUSVN.
 
 In order to test this Conclave gives you the ability to set the SGX CPUSVN [when using mock mode](mockmode.md#mock-mode-configuration).
 Rather than providing an array of bytes, Conclave simplifies the setting of mock CPUSVN values by providing an
-integer [`tcbLevel`](api/-conclave/com.r3.conclave.common/-mock-configuration/set-tcb-level.html) setting. This 
+integer [`tcbLevel`](api/-conclave%20-core/com.r3.conclave.common/-mock-configuration/set-tcb-level.html) setting. This 
 allows you to specify an integer between 1 and 65535 which is hashed 
 internally in the mock enclave using SHA256 and the resulting byte array is used as the mock CPUSVN. The use of an
 integer for `tcbLevel` means it is easy to test with ordered version numbers, allowing you to test how your enclave reacts
 to incrementing and decrementing TCB level values, simulating TCB recovery and downgrades.
 
 You can set the TCB level to use for testing by providing a
-[`MockConfiguration`](api/-conclave/com.r3.conclave.common/-mock-configuration/index.html) when loading your enclave in mock mode. 
+[`MockConfiguration`](api/-conclave%20-core/com.r3.conclave.common/-mock-configuration/index.html) when loading your enclave in mock mode. 
 For example, the following configuration sets the SGX CPUSVN while specifying the default values for everything else:
 
 ```java hl_lines="2"
@@ -104,7 +104,7 @@ The enclave itself makes up a part of the overall system's TCB, because it's tru
 security bug in the enclave business logic itself (or in Conclave) you will need to do an enclave-specific TCB recovery.
 This is easy: just increment the revocationLevel in your [enclave configuration](enclave-configuration.md). Enclaves
 with a higher revocation level can read mail sent to enclaves with a lower level, but not vice-versa. When clients 
-download a fresh [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) then they will
+download a fresh [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) then they will
 start sending mail that can't be decrypted by the revoked enclave.
 The final step is for clients to adjust their enclave constraint to require the new revocation level, thus forcing the
 server to run the upgraded version.
@@ -112,7 +112,7 @@ server to run the upgraded version.
 ## Timeframes for TCB recovery
 
 When a global TCB recovery begins Intel announce it via their website. Deadlines are provided at which time remote attestations
-from non-upgraded systems will become labelled as [`STALE`](api/-conclave/com.r3.conclave.common/-enclave-security-info/-summary/index.html).
+from non-upgraded systems will become labelled as [`STALE`](api/-conclave%20-core/com.r3.conclave.common/-enclave-security-info/-summary/index.html).
 This doesn't happen immediately: time is provided with which
 to implement any required changes and upgrade. This is to avoid apps that require fully upgraded systems from 
 unexpectedly breaking on the day of the security announcements.

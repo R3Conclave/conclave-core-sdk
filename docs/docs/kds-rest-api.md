@@ -243,5 +243,5 @@ identifier to ensure it is supported.
 
     Instead of using the `/public` end point to retrieve KDS public keys to encrypt mails for the enclaves, 
     it is recommended Java and Kotlin developers use the
-    [`post office`](api/-conclave/com.r3.conclave.client/-post-office-builder/using-k-d-s.html). This will perform 
+    [`post office`](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/using-k-d-s.html). This will perform 
     all the checks for you.
