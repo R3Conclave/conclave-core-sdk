@@ -21,8 +21,8 @@ when submitting multiple bids on the same lot.
 
 ## Add state to your client
 
-[`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) provides a helpful
-[`save`](api/-conclave/com.r3.conclave.client/-enclave-client/save.html) method which will serialize the necessary 
+[`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) provides a helpful
+[`save`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/save.html) method which will serialize the necessary 
 state to bytes and which can then
 be used at a later point to restore the client using the `EnclaveClient` constructor that takes in a byte array.
 
@@ -51,4 +51,4 @@ Files.write(stateFile, enclaveClient.save())
 
 Notice how an [enclave constraint](constraints.md) is not required when loading the state from the file.
 In general, we assume that the constraint will not change for a long-lived client. The constraint can always be
-updated using [`EnclaveClient.setEnclaveConstraint`](api/-conclave/com.r3.conclave.client/-enclave-client/set-enclave-constraint.html).
+updated using [`EnclaveClient.setEnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/set-enclave-constraint.html).

@@ -84,7 +84,7 @@ between the enclave and the client.
 
 However, Conclave doesn't define any particular network protocol for the host to route messages to and from the network.
 Conclave Mail and serialized
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) objects are
+[`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) objects are
 byte arrays. You can send these byte arrays using REST, gRPC,
 [Corda](https://github.com/R3Conclave/conclave-samples/tree/master/cordapp) flows, raw sockets, or files.
 You can also embed the byte arrays inside any other protocol.
@@ -148,7 +148,7 @@ Intel will whitelist your signing key and the release mode then becomes availabl
 !!! Note 
 
     Conclave's design ensures that enclave clients don't need to interact with Intel. The host interacts with Intel and
-    publishes a serialized [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html)
+    publishes a serialized [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html)
     object to the clients. The Conclave client libraries embed the necessary certificates to verify Intel's signature over
     this data, and the integrity of the object is checked automatically when it's deserialized.
 
@@ -217,7 +217,7 @@ Intel provides official guidance on the
 
 The developer is responsible for writing code that restarts the enclave from time to time. Restarting the enclave will
 force a re-attestation which refreshes the
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html). Enclave restarts
+[`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). Enclave restarts
 should be synchronized between the host and the client-side tool. To avoid synchronization errors, remember to make the
 host server refresh more frequently than the client requires.
 
