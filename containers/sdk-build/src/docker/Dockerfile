@@ -105,13 +105,6 @@ RUN curl -sSL -o /opt/as.ld.objdump.r4.tar.gz https://download.01.org/intel-sgx/
 RUN echo "9e4eb03442d26d38d59f47f796389ad919f33d5598dc3825dcd750b8dc55e9d2  /opt/as.ld.objdump.r4.tar.gz" | sha256sum -c -
 RUN tar -zxf /opt/as.ld.objdump.r4.tar.gz -C /usr/local/bin external/toolset/ubuntu20.04 --strip=3
 
-# Our custom version of dokka
-RUN curl -sSL -o /opt/dokka.zip https://github.com/R3Conclave/dokka/releases/download/r3-1.5.0-4/dokka.zip \
-    && echo "3b6e4c1bd6c4967feb40596ce7b29f31c048ebf539cd3b157f2978325ccd55eb  /opt/dokka.zip" | sha256sum -c - \
-    && mkdir -p /opt/dokka/repository/org/jetbrains/dokka/ \
-    && unzip /opt/dokka.zip -d /opt/dokka/repository/org/jetbrains/dokka/ \
-    && rm -v /opt/dokka.zip
-
 # Nexus IQ
 ENV NEXUS_IQ_HOME /opt/nexus-iq/
 RUN mkdir -p $NEXUS_IQ_HOME

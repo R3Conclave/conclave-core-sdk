@@ -2,9 +2,6 @@ pluginManagement {
     apply from: 'versions.gradle'
 
     repositories {
-        maven {
-            url "file://opt/dokka/repository"
-        }
         gradlePluginPortal()
     }
 
