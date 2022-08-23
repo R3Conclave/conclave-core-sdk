@@ -273,9 +273,11 @@ dokkaHtml.shouldRunAfter mkdocs
 
 for (publishedProject in publishedProjects) {
     def project = project(publishedProject.projectPath)
-    def projectDescription = publishedProject.description
+
     project.pluginManager.apply('java')
     project.pluginManager.apply('maven-publish')
+    project.pluginManager.apply('signing')
+
     // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
     // which might use different versions of these libraries.
     if (publishedProject.shade) {
@@ -321,21 +323,31 @@ for (publishedProject in publishedProjects) {
             archiveClassifier = ''
         }
     }
+
     if (publishedProject.apiLibrary) {
         project.java {
             withSourcesJar()
         }
     }
+
+    project.signing {
+        required = false  // Skip signing if the key is not available, which is what we want for local builds
+        def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
+        def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
+        useInMemoryPgpKeys(key, password)
+        sign(project.publishing.publications)
+    }
+
     project.publishing {
         publications {
             maven(MavenPublication) {
                 from project.components.java
                 pom {
-                    description = projectDescription
+                    description = publishedProject.description
                     licenses {
                         license {
                             name = 'The Apache License, Version 2.0'
-                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                             distribution = 'repo'
                         }
                     }
