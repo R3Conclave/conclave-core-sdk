@@ -20,7 +20,6 @@ ext {
     junit_pioneer_version = '1.5.0'
     assertj_version = '3.22.0'
     guava_version = '31.0.1-jre'
-    binutils_version = '2.37'
     mockito_version = '4.0.0'
     spring_boot_version = '2.6.1'
     spring_dependency_management_version = '1.0.11.RELEASE'
