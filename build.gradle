@@ -178,10 +178,10 @@ List<PublishedProject> publishedProjects = [
 
 import org.jetbrains.dokka.gradle.DokkaTask
 tasks.withType(DokkaTask).configureEach {
-    moduleName.set("Conclave Core")
+    moduleName.set("Conclave")
     dokkaSourceSets {
         register("conclave") {
-            displayName.set("Conclave Core")
+            displayName.set("Conclave")
             jdkVersion.set(8)
             reportUndocumented.set(false)
             skipDeprecated.set(true)
