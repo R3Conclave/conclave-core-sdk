@@ -50,7 +50,7 @@ data that's unencrypted, but it's often useful for the client, host and enclave 
 to storage and routing of data. Even when the host is untrusted it may still be useful for the client to send data
 that is readable by the host and enclave simultaneously, but which the host cannot tamper with. Inside the enclave
 you can be assured that the header fields contain the values set by the client, because they're checked before
-[`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) is invoked.
+[`receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html) is invoked.
 
 In addition to the headers there is also the _authenticated sender public key_. This is the public key of the client
 that sent the mail. Like the body it's encrypted so that the host cannot learn the client identities. It's called
@@ -139,7 +139,7 @@ key and can be encoded in another 256 bits (32 bytes). We write this public key 
 key is an *ephemeral* key - we picked it just for the purposes of creating this mail. 
 
 We know the target's public key either because the enclave puts it public key into the remote attestation, represented 
-by an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object, or because the enclave is replying and obtained the key to reply to from an earlier
+by an [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object, or because the enclave is replying and obtained the key to reply to from an earlier
 mail. Two public keys is all that's needed for both parties to compute the same AES key, without any man-in-the-middle
 being able to calculate the same value.
 
@@ -218,7 +218,7 @@ so fake pseudo-certificates can end up harder to deploy and work with than a pur
 Noise is more modular - you can provide any arbitrary byte array as part of the handshake, which can thus 
 include a certificate (of any format) if you want that, but it isn't necessary.
 
-In Conclave the "certificate" is the remote attestation data represented as an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object. 
+In Conclave the "certificate" is the remote attestation data represented as an [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object. 
 It will usually make sense to expose this to the client via some app-specific mechanism, for example, returning it
 in some other API, publishing it on a web server, a network drive, a message queue, even putting it into a 
 distributed hash table. Noise and by extension Conclave doesn't care how you get this data, only that you have it.
