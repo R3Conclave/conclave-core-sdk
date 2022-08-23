@@ -58,7 +58,7 @@ conclave {
     kds {
         kdsEnclaveConstraint = "<KDS enclave policy constraints>"
         persistencekeySpec {
-            masterKeyType = ("development"|"cluster"|"akv_hsm")
+            masterKeyType = ("development"|"cluster"|"azure_hsm")
             policyConstraint {
                 constraint = "<key policy constraints>"
                 useOwnCodeHash = (true|false)                 // Optional
@@ -95,12 +95,12 @@ The KDS enclave constraint controls how your enclave will attest to the KDS encl
     For the R3 development KDS, the following constraint should be used: `S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE`.
 
 ### Choosing a value for the `masterKeyType`
-The KDS contains several internal master keys which may be used when deriving keys for user enclaves.
-The master key is an internal secret of the KDS instance that is used during key derivation to prevent other KDS instances from deriving the same keys.
+The masters keys are internal secrets of a KDS instance and are private to that instance.
+They are used during key derivation to ensure that other KDS instances are unable to derive the same keys.
 There are several supported key types, each with different trust models:
 
 - [`development`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-d-e-v-e-l-o-p-m-e-n-t/index.html) - A stable master key which is not suitable for production workloads, but can be used to test KDS integration. Release mode enclaves cannot use this key type.
-- [`azure_hsm`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-a-z-u-r-e_-h-s-m/index.html) - A production-ready master key which is backed by an Azure Key Vault. The key is end-to-end encrypted. However, users of this key are assuming trust in Microsoft and R3.
+- [`azure_hsm`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-a-z-u-r-e_-h-s-m/index.html) - A production-ready master key which is backed by an [Azure Key Vault](https://docs.microsoft.com/en-us/azure/key-vault/general/overview). The key is end-to-end encrypted. However, users of this key are assuming trust in Microsoft and R3.
 - [`cluster`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-c-l-u-s-t-e-r/index.html) - A production-ready master key which resides entirely within SGX enclaves. Neither R3 nor the KDS hosting provider have access to this key.
 
 ### Defining the `policyConstraint` section
@@ -125,8 +125,8 @@ Just like Conclave attestation, it follows the [enclave constraints DSL](constra
 The `useOwnCodeHash` and `useOwnCodeSignerAndProductID` properties of the `policyConstraint` section allow you to add the code hash or code signer and product ID of the current enclave in the `constraint` property.
 These parameters cannot be added to the `constraint` field directly as their values are not known at build time.
 
-- The `useOwnCodeHash` property, when set to `true`, will restrict access to the key so that it is only released to enclaves with a code hash that matches the code hash of the current enclave.
-- The `useOwnCodeSignerAndProductID` property, when set to `true`, will restrict access to the key so that it is only released to enclaves with the same code signer and product ID as the current enclave.
+- The `useOwnCodeHash` property, when set to `true`, will append the current enclaves code hash to the constraint.
+- The `useOwnCodeSignerAndProductID` property, when set to `true`, will append the current enclaves code signer and product ID to the constraint.
 
 ### Example `PolicyConstraint` configurations
 #### Exact version of an enclave running on a secure platform
