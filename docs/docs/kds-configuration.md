@@ -87,7 +87,6 @@ The `kds {}` section contains all KDS related configuration:
 
 !!!note
     For more information on the key derivation process, see [KDS detail](kds-detail.md#deriving-keys-from-the-key-specification).
-    For more information on how master
 
 ### Choosing a value for the `kdsEnclaveConstraint`
 The KDS enclave constraint controls how your enclave will attest to the KDS enclave at the URL provided on startup (see [enclave constraints](constraints.md)).
