@@ -433,10 +433,6 @@ for (publishedProject in publishedProjects) {
                 url = "$buildDir/repo"
             }
 
-            // Only allow publication to "Maven Central" if
-            //  - this is a GA release,
-            //  - it is published when running the publishing task from the release branch,
-            //  - the related env variables are set (i.e. only from TeamCity)
             if (releaseType == VersionType.GA_RELEASE) {
                 maven {
                     name = "OSSRH"
