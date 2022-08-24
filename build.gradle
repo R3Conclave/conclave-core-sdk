@@ -39,9 +39,23 @@ String getConclaveRevision() {
     return conclave_revision
 }
 
+enum VersionType {
+    GA_RELEASE,
+    RELEASE_CANDIDATE,
+    SNAPSHOT
+}
+
 ext {
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
+
+    if (version.endsWith("-SNAPSHOT")) {
+        releaseType = VersionType.SNAPSHOT
+    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+        releaseType = VersionType.RELEASE_CANDIDATE
+    } else {
+        releaseType = VersionType.GA_RELEASE
+    }
 }
 
 // Allow the user to move the default build location. This is helpful for improving the
@@ -405,9 +419,9 @@ for (publishedProject in publishedProjects) {
 
 String getArtifactoryForPublication() {
     String mavenRepo
-    if (version.endsWith("-SNAPSHOT")) {
+    if (versionType == VersionType.SNAPSHOT) {
         mavenRepo = "conclave-maven-dev"
-    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+    } else if (versionType == VersionType.RELEASE_CANDIDATE) {
         mavenRepo = "conclave-maven-unstable"
     } else {
         mavenRepo = "conclave-maven-stable"
