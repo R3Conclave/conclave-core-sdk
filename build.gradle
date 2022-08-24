@@ -347,7 +347,9 @@ for (publishedProject in publishedProjects) {
     }
 
     project.signing {
-        required = false  // Skip signing if the key is not available, which is what we want for local builds
+        // Skip signing if the key is not available, which is what we want for local builds.
+        //   Signing is required for releases, i.e. when we want to publish to Maven Central
+        required = (versionType == VersionType.GA_RELEASE)
         def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
         def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
         useInMemoryPgpKeys(key, password)
@@ -366,7 +368,7 @@ for (publishedProject in publishedProjects) {
 
                     name = project.name
                     description = publishedProject.description
-                    url = $projectURL
+                    url = projectURL
 
                     licenses {
                         license {
