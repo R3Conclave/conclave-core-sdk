@@ -191,7 +191,7 @@ However, security is weakened with this constraint, as the enclave signer must b
 The KDS is also capable of providing keys for use with [Conclave Mail](mail.md) through use of a specially constructed [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html).
 
 When using a KDS post office, the post office requests a public key from the KDS for use in a Conclave [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html) and specifies which enclaves should be permitted access to the corresponding private key.
-Upon receiving Mail, the enclave requests the private key from the same KDS and uses it to decrypt the Mail object from the client.
+Upon receiving Mail, the enclave requests the private key from the same KDS and uses it to decrypt the Mail message from the client.
 In this manner, users can create Mail messages which can be decrypted by any enclave that matches a given set of constraints, without first having to receive and attest to the [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) of a specific enclave.
 
 ### Configuring the Enclave
