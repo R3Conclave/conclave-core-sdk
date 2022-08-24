@@ -271,6 +271,8 @@ task buildDocs(dependsOn: ['mkdocs'])
 dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
+def projectURL = "https://github.com/R3Conclave/conclave-core-sdk"
+
 for (publishedProject in publishedProjects) {
     def project = project(publishedProject.projectPath)
 
@@ -343,7 +345,19 @@ for (publishedProject in publishedProjects) {
             maven(MavenPublication) {
                 from project.components.java
                 pom {
+                    //  Remove the ":" from the path. Here the assumption, currently correct, is that
+                    //    the path matches the name of the subdirectory in the code.
+                    def subDir = project.path.substring(1)
+
+                    groupId = project.group
+                    artifactId = project.name
+                    version = project.version
+                    packaging = "jar"
+
+                    name = project.name
                     description = publishedProject.description
+                    url = $projectURL
+
                     licenses {
                         license {
                             name = 'The Apache License, Version 2.0'
@@ -351,9 +365,18 @@ for (publishedProject in publishedProjects) {
                             distribution = 'repo'
                         }
                     }
-                    organization {
-                        name = 'R3 LLC'
-                        url = "https://www.r3.com"
+                    developers {
+                        developer {
+                            name = 'Conclave Team'
+                            email = 'conclave@r3.com'
+                            organization = 'R3 LLC'
+                            organizationUrl = 'https://www.3.com'
+                        }
+                    }
+                    scm {
+                        connection = "scm:git:git://github.com/R3Conclave/conclave-core-sdk.git"
+                        developerConnection = "scm:git:ssh://github.com:R3Conclave/conclave-core-sdk.git"
+                        url = "https://github.com/R3Conclave/conclave-core-sdk/tree/master"
                     }
                 }
                 if (publishedProject.apiLibrary) {
