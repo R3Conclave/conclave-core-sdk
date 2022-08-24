@@ -359,10 +359,6 @@ for (publishedProject in publishedProjects) {
             maven(MavenPublication) {
                 from project.components.java
                 pom {
-                    //  Remove the ":" from the path. Here the assumption, currently correct, is that
-                    //    the path matches the name of the subdirectory in the code.
-                    def subDir = project.path.substring(1)
-
                     groupId = project.group
                     artifactId = project.name
                     version = project.version
@@ -382,9 +378,9 @@ for (publishedProject in publishedProjects) {
                     developers {
                         developer {
                             name = 'Conclave Team'
-                            email = 'conclave@r3.com'
+                            email = "conclave@r3.com"
                             organization = 'R3 LLC'
-                            organizationUrl = 'https://www.3.com'
+                            organizationUrl = "https://www.r3.com"
                         }
                     }
                     scm {
