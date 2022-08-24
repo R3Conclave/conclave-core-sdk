@@ -285,6 +285,16 @@ task buildDocs(dependsOn: ['mkdocs'])
 dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
+def getGitBranch() {
+    def branch = ""
+    def proc = "git rev-parse --abbrev-ref HEAD".execute()
+    proc.in.eachLine { line -> branch = line }
+    proc.err.eachLine { line -> println line }
+    proc.waitFor()
+    branch
+}
+
+def gitBranch = getGitBranch()
 def projectURL = "https://github.com/R3Conclave/conclave-core-sdk"
 
 for (publishedProject in publishedProjects) {
@@ -349,7 +359,7 @@ for (publishedProject in publishedProjects) {
     project.signing {
         // Skip signing if the key is not available, which is what we want for local builds.
         //   Signing is required for releases, i.e. when we want to publish to Maven Central
-        required = (versionType == VersionType.GA_RELEASE)
+        required = (releaseType == VersionType.GA_RELEASE)
         def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
         def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
         useInMemoryPgpKeys(key, password)
@@ -411,14 +421,20 @@ for (publishedProject in publishedProjects) {
                 name = "build"
                 url = "$buildDir/repo"
             }
-            // Only allow publication to "Maven Central" if this is a GA release.
-            if (versionType == VersionType.GA_RELEASE) {
+
+            def ossRHUsername = System.getenv("CONCLAVE_OSSRH_USERNAME")
+            def ossRHPassword = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+            // Only allow publication to "Maven Central" if
+            //  - this is a GA release,
+            //  - it is published when running the publishing task from the release branch,
+            //  - the related env variables are set (i.e. only from TeamCity)
+            if (releaseType == VersionType.GA_RELEASE && gitBranch == "release/$conclave_version" && ossRHUsername != null) {
                 maven {
                     name = "OSSRH"
                     url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
                     credentials {
-                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
-                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+                        username = ossRHUsername
+                        password = ossRHPassword
                     }
                 }
             }
@@ -428,9 +444,9 @@ for (publishedProject in publishedProjects) {
 
 String getArtifactoryForPublication() {
     String mavenRepo
-    if (versionType == VersionType.SNAPSHOT) {
+    if (releaseType == VersionType.SNAPSHOT) {
         mavenRepo = "conclave-maven-dev"
-    } else if (versionType == VersionType.RELEASE_CANDIDATE) {
+    } else if (releaseType == VersionType.RELEASE_CANDIDATE) {
         mavenRepo = "conclave-maven-unstable"
     } else {
         mavenRepo = "conclave-maven-stable"
