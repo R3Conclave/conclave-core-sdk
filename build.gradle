@@ -45,6 +45,10 @@ enum VersionType {
     SNAPSHOT
 }
 
+def gitBranch = getGitBranch()
+def ossRHUsername = System.getenv("CONCLAVE_OSSRH_USERNAME")
+def ossRHPassword = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+
 ext {
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
@@ -53,8 +57,16 @@ ext {
         releaseType = VersionType.SNAPSHOT
     } else if (version.matches(/.+\-RC[0-9]+$/)) {
         releaseType = VersionType.RELEASE_CANDIDATE
-    } else {
+    } else if ((gitBranch == "release/$conclave_version") && ossRHUsername != null) {
+        // We consider this a GA release only if
+        //  - it is not a RELEASE_CANDIDATE or SNAPSHOT
+        //  - the current branch is a release branch,
+        //  - the related env variables are set (i.e. only from TeamCity)
         releaseType = VersionType.GA_RELEASE
+    } else {
+        //  This is to avoid that we publish by mistake to Maven Central
+
+        releaseType = VersionType.RELEASE_CANDIDATE
     }
 }
 
@@ -294,7 +306,6 @@ def getGitBranch() {
     branch
 }
 
-def gitBranch = getGitBranch()
 def projectURL = "https://github.com/R3Conclave/conclave-core-sdk"
 
 for (publishedProject in publishedProjects) {
@@ -422,13 +433,11 @@ for (publishedProject in publishedProjects) {
                 url = "$buildDir/repo"
             }
 
-            def ossRHUsername = System.getenv("CONCLAVE_OSSRH_USERNAME")
-            def ossRHPassword = System.getenv("CONCLAVE_OSSRH_PASSWORD")
             // Only allow publication to "Maven Central" if
             //  - this is a GA release,
             //  - it is published when running the publishing task from the release branch,
             //  - the related env variables are set (i.e. only from TeamCity)
-            if (releaseType == VersionType.GA_RELEASE && gitBranch == "release/$conclave_version" && ossRHUsername != null) {
+            if (releaseType == VersionType.GA_RELEASE) {
                 maven {
                     name = "OSSRH"
                     url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
