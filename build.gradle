@@ -413,6 +413,17 @@ for (publishedProject in publishedProjects) {
                 name = "build"
                 url = "$buildDir/repo"
             }
+            // Only allow publication to "Maven Central" if this is a GA release.
+            if (versionType == VersionType.GA_RELEASE) {
+                maven {
+                    name = "OSSRH"
+                    url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                    credentials {
+                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
+                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+                    }
+                }
+            }
         }
     }
 }
