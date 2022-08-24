@@ -14,7 +14,7 @@ R3 provides a publicly accessible instance of the KDS as part of the Conclave Cl
 
 !!!Note
     R3 runs a development KDS at the following URL: `https://kds.dev.conclave.cloud`.
-    A production ready deployment is pending.
+    A production ready deployment will be available soon.
 
 ## Configuring the KDS URL
 For an enclave to obtain keys from a KDS for either storage or communication, the URL of a KDS instance must be provided when the enclave is started.
