@@ -407,7 +407,7 @@ for (publishedProject in publishedProjects) {
                 name = "build"
                 url = "$buildDir/repo"
             }
-            //  This repository is to be used only by TeamCity when publishing to Maven Central
+            //  This repository is used for publishing to Maven Central from TeamCity.
             if (versionType == VersionType.GA_RELEASE) {
                 maven {
                     name = "OSSRH"
