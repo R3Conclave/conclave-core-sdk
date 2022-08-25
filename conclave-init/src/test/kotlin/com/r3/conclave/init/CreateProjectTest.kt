@@ -96,11 +96,11 @@ internal class TestCreateProject {
 
         val clientBuildGradle = outputDir.resolve("client/build.gradle")
         val clientMainClass = "com.megacorp.client.MegaEnclaveClient"
-        assertTrue(clientBuildGradle.readText().contains("mainClassName = \"$clientMainClass\""))
+        assertThat(clientBuildGradle.readText()).contains("""mainClass.set("$clientMainClass")""")
 
         val hostBuildGradle = outputDir.resolve("host/build.gradle")
         val hostMainClass = "com.r3.conclave.host.web.EnclaveWebHost"
-        assertTrue(hostBuildGradle.readText().contains("mainClassName = \"$hostMainClass\""))
+        assertThat(hostBuildGradle.readText()).contains("""mainClass.set("$hostMainClass")""")
 
         val sourceFiles = outputDir
             .walkTopDown()

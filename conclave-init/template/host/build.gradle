@@ -5,7 +5,7 @@ plugins {
 
 // Use the provided main method for the web host.
 application {
-    mainClassName = "com.r3.conclave.host.web.EnclaveWebHost"
+    mainClass.set("com.r3.conclave.host.web.EnclaveWebHost")
 }
 
 // Define a Gradle flag "enclaveMode" which controls which enclave mode to use when building the host. The default is
