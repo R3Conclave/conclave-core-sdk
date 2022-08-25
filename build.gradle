@@ -39,7 +39,7 @@ String getConclaveRevision() {
     return conclave_revision
 }
 
-enum ArtifactType {
+enum VersionType {
     GA_RELEASE,
     RELEASE_CANDIDATE,
     SNAPSHOT
@@ -54,18 +54,18 @@ ext {
     project.logger.info("Conclave revision: $conclave_revision")
 
     if (version.endsWith("-SNAPSHOT")) {
-        artifactType = ArtifactType.SNAPSHOT
+        versionType = VersionType.SNAPSHOT
     } else if (version.matches(/.+\-RC[0-9]+$/)) {
-        artifactType = ArtifactType.RELEASE_CANDIDATE
+        versionType = VersionType.RELEASE_CANDIDATE
     } else if ((gitBranch == "release/$conclave_version") && ossRHUsername != null) {
         // We consider this a GA release only if
         //  - it is not a RELEASE_CANDIDATE or SNAPSHOT
         //  - the current branch is a release branch,
         //  - the related env variables are set (i.e. only from TeamCity)
-        artifactType = ArtifactType.GA_RELEASE
+        versionType = VersionType.GA_RELEASE
     } else {
         //  This is to avoid that we publish by mistake to Maven Central
-        artifactType = ArtifactType.RELEASE_CANDIDATE
+        versionType = VersionType.RELEASE_CANDIDATE
     }
 }
 
@@ -369,7 +369,7 @@ for (publishedProject in publishedProjects) {
     project.signing {
         // Skip signing if the key is not available, which is what we want for local builds.
         //   Signing is required for releases, i.e. when we want to publish to Maven Central
-        required = (artifactType == ArtifactType.GA_RELEASE)
+        required = (versionType == VersionType.GA_RELEASE)
         def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
         def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
         useInMemoryPgpKeys(key, password)
@@ -381,11 +381,6 @@ for (publishedProject in publishedProjects) {
             maven(MavenPublication) {
                 from project.components.java
                 pom {
-                    groupId = project.group
-                    artifactId = project.name
-                    version = project.version
-                    packaging = "jar"
-
                     name = project.name
                     description = publishedProject.description
                     url = projectURL
@@ -432,7 +427,7 @@ for (publishedProject in publishedProjects) {
                 url = "$buildDir/repo"
             }
             //  This repository is to be used only by TeamCity when publishing to Maven Central
-            if (artifactType == ArtifactType.GA_RELEASE) {
+            if (versionType == VersionType.GA_RELEASE) {
                 maven {
                     name = "OSSRH"
                     url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
@@ -448,9 +443,9 @@ for (publishedProject in publishedProjects) {
 
 String getArtifactoryForPublication() {
     String mavenRepo
-    if (artifactType == ArtifactType.SNAPSHOT) {
+    if (versionType == VersionType.SNAPSHOT) {
         mavenRepo = "conclave-maven-dev"
-    } else if (artifactType == ArtifactType.RELEASE_CANDIDATE) {
+    } else if (versionType == VersionType.RELEASE_CANDIDATE) {
         mavenRepo = "conclave-maven-unstable"
     } else {
         mavenRepo = "conclave-maven-stable"
