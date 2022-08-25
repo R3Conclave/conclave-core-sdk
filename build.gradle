@@ -393,6 +393,17 @@ for (publishedProject in publishedProjects) {
             }
         }
         repositories {
+            //  This repository is used for publishing to Maven Central from TeamCity.
+            if (versionType == VersionType.GA_RELEASE) {
+                maven {
+                    name = "OSSRH"
+                    url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                    credentials {
+                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
+                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+                    }
+                }
+            }
             maven {
                 name = "artifactory"
                 url = getArtifactoryForPublication()
@@ -404,17 +415,6 @@ for (publishedProject in publishedProjects) {
             maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
                 name = "build"
                 url = "$buildDir/repo"
-            }
-            //  This repository is used for publishing to Maven Central from TeamCity.
-            if (versionType == VersionType.GA_RELEASE) {
-                maven {
-                    name = "OSSRH"
-                    url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                    credentials {
-                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
-                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
-                    }
-                }
             }
         }
     }
