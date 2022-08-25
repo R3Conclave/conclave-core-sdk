@@ -285,8 +285,6 @@ task buildDocs(dependsOn: ['mkdocs'])
 dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
-def projectURL = "https://github.com/R3Conclave/conclave-core-sdk"
-
 for (publishedProject in publishedProjects) {
     def project = project(publishedProject.projectPath)
 
@@ -364,7 +362,7 @@ for (publishedProject in publishedProjects) {
                 from project.components.java
                 pom {
                     description = publishedProject.description
-                    url = projectURL
+                    url = "https://github.com/R3Conclave/conclave-core-sdk"
 
                     licenses {
                         license {
