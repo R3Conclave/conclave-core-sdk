@@ -39,9 +39,23 @@ String getConclaveRevision() {
     return conclave_revision
 }
 
+enum VersionType {
+    GA_RELEASE,
+    RELEASE_CANDIDATE,
+    SNAPSHOT
+}
+
 ext {
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
+
+    if (version.endsWith("-SNAPSHOT")) {
+        versionType = VersionType.SNAPSHOT
+    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+        versionType = VersionType.RELEASE_CANDIDATE
+    } else {
+        versionType = VersionType.GA_RELEASE
+    }
 }
 
 // Allow the user to move the default build location. This is helpful for improving the
@@ -331,7 +345,11 @@ for (publishedProject in publishedProjects) {
     }
 
     project.signing {
-        required = false  // Skip signing if the key is not available, which is what we want for local builds
+        // Signing is required for the publication of releases to Maven Central.
+        // As per Gradle Signing Plugin rules, "required = false" means that the artifacts 
+        //   will only be signed if signatory credentials are configured (i.e. only in TeamCity).
+        //   The build will skip signing if the key is not available, which is what we want for local builds
+        required = false
         def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
         def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
         useInMemoryPgpKeys(key, password)
@@ -344,6 +362,8 @@ for (publishedProject in publishedProjects) {
                 from project.components.java
                 pom {
                     description = publishedProject.description
+                    url = "https://github.com/R3Conclave/conclave-core-sdk"
+
                     licenses {
                         license {
                             name = 'The Apache License, Version 2.0'
@@ -351,9 +371,18 @@ for (publishedProject in publishedProjects) {
                             distribution = 'repo'
                         }
                     }
-                    organization {
-                        name = 'R3 LLC'
-                        url = "https://www.r3.com"
+                    developers {
+                        developer {
+                            name = 'Conclave Team'
+                            email = "conclave@r3.com"
+                            organization = 'R3 LLC'
+                            organizationUrl = "https://www.r3.com"
+                        }
+                    }
+                    scm {
+                        connection = "scm:git:git://github.com/R3Conclave/conclave-core-sdk.git"
+                        developerConnection = "scm:git:ssh://github.com:R3Conclave/conclave-core-sdk.git"
+                        url = "https://github.com/R3Conclave/conclave-core-sdk/tree/master"
                     }
                 }
                 if (publishedProject.apiLibrary) {
@@ -376,15 +405,26 @@ for (publishedProject in publishedProjects) {
                 name = "build"
                 url = "$buildDir/repo"
             }
+            //  This repository is used for publishing to Maven Central from TeamCity.
+            if (versionType == VersionType.GA_RELEASE) {
+                maven {
+                    name = "OSSRH"
+                    url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                    credentials {
+                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
+                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+                    }
+                }
+            }
         }
     }
 }
 
 String getArtifactoryForPublication() {
     String mavenRepo
-    if (version.endsWith("-SNAPSHOT")) {
+    if (versionType == VersionType.SNAPSHOT) {
         mavenRepo = "conclave-maven-dev"
-    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+    } else if (versionType == VersionType.RELEASE_CANDIDATE) {
         mavenRepo = "conclave-maven-unstable"
     } else {
         mavenRepo = "conclave-maven-stable"
