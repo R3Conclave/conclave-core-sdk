@@ -35,7 +35,7 @@ Update the host build.gradle to reference it:
 
 ```groovy hl_lines="2"
 application {
-    mainClassName = "com.example.tutorial.host.MyEnclaveHost"
+    mainClass.set("com.example.tutorial.host.MyEnclaveHost")
 }
 ```
 
