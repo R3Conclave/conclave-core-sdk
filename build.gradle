@@ -45,10 +45,6 @@ enum VersionType {
     SNAPSHOT
 }
 
-def gitBranch = getGitBranch()
-def ossRHUsername = System.getenv("CONCLAVE_OSSRH_USERNAME")
-def ossRHPassword = System.getenv("CONCLAVE_OSSRH_PASSWORD")
-
 ext {
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
@@ -57,15 +53,8 @@ ext {
         versionType = VersionType.SNAPSHOT
     } else if (version.matches(/.+\-RC[0-9]+$/)) {
         versionType = VersionType.RELEASE_CANDIDATE
-    } else if ((gitBranch == "release/$conclave_version") && ossRHUsername != null) {
-        // We consider this a GA release only if
-        //  - it is not a RELEASE_CANDIDATE or SNAPSHOT
-        //  - the current branch is a release branch,
-        //  - the related env variables are set (i.e. only from TeamCity)
-        versionType = VersionType.GA_RELEASE
     } else {
-        //  This is to avoid that we publish by mistake to Maven Central
-        versionType = VersionType.RELEASE_CANDIDATE
+        versionType = VersionType.GA_RELEASE
     }
 }
 
@@ -296,15 +285,6 @@ task buildDocs(dependsOn: ['mkdocs'])
 dokkaHtml.shouldRunAfter mkdocs
 // endregion
 
-def getGitBranch() {
-    def branch = ""
-    def proc = "git rev-parse --abbrev-ref HEAD".execute()
-    proc.in.eachLine { line -> branch = line }
-    proc.err.eachLine { line -> println line }
-    proc.waitFor()
-    branch
-}
-
 def projectURL = "https://github.com/R3Conclave/conclave-core-sdk"
 
 for (publishedProject in publishedProjects) {
@@ -369,7 +349,9 @@ for (publishedProject in publishedProjects) {
     project.signing {
         // Skip signing if the key is not available, which is what we want for local builds.
         //   Signing is required for releases, i.e. when we want to publish to Maven Central
-        required = (versionType == VersionType.GA_RELEASE)
+        // required = false means that this task will be executed only when username and passwords are available
+        //   i.e. this task does not run when building locally.
+        required = false
         def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
         def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
         useInMemoryPgpKeys(key, password)
@@ -381,7 +363,6 @@ for (publishedProject in publishedProjects) {
             maven(MavenPublication) {
                 from project.components.java
                 pom {
-                    name = project.name
                     description = publishedProject.description
                     url = projectURL
 
@@ -432,8 +413,8 @@ for (publishedProject in publishedProjects) {
                     name = "OSSRH"
                     url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
                     credentials {
-                        username = ossRHUsername
-                        password = ossRHPassword
+                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
+                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
                     }
                 }
             }
