@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
     // We use a custom build of Dokka so we have to use the snapshot version.
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.7.10")
+    dokkaHtmlPlugin("com.r3.conclave:kotlin-as-java-plugin:1.5.31-1.3")
 }
 
 String getConclaveRevision() {
