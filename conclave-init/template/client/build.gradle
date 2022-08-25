@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClassName = "com.r3.conclave.template.client.TemplateEnclaveClient"
+    mainClass.set("com.r3.conclave.template.client.TemplateEnclaveClient")
 }
 
 dependencies {
