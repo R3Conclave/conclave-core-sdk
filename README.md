@@ -198,7 +198,9 @@ meaningful directories in this repo.
 | [scripts/](scripts)                                                                                                                                                                                                                                | Various scripts for building and testing the SDK.                                                                           |
 
 ## License
-The Conclave Core SDK is open source and distributed under the [Apache License v2.0](LICENSE).
+Copyright © 2022, R3 LLC, all rights reserved.
+
+The Conclave Core SDK is distributed under the [Apache License v2.0](LICENSE).
 
 It incorporates components from third-party open source libraries. See the [NOTICE](NOTICE.md) file for more information.
 
