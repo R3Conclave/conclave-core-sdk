@@ -349,8 +349,8 @@ for (publishedProject in publishedProjects) {
     project.signing {
         // Skip signing if the key is not available, which is what we want for local builds.
         //   Signing is required for releases, i.e. when we want to publish to Maven Central
-        // required = false means that this task will be executed only when username and passwords are available
-        //   i.e. this task does not run when building locally.
+        // "required = false" means that this task will only be executed when username and passwords are available
+        //   as environment variables, i.e. this task should not run when building localy.
         required = false
         def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
         def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
