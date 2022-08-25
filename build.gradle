@@ -182,13 +182,7 @@ tasks.withType(DokkaTask).configureEach {
             jdkVersion.set(8)
             reportUndocumented.set(false)
             skipDeprecated.set(true)
-            documentedVisibilities.set(
-                    [
-                            org.jetbrains.dokka.DokkaConfiguration.Visibility.PUBLIC,
-                            org.jetbrains.dokka.DokkaConfiguration.Visibility.PROTECTED,
-                    ]
-            )
-
+            includeNonPublic.set(false)
             pluginsMapConfiguration.put("org.jetbrains.dokka.base.DokkaBase",
                         "{\"customAssets\":[\"${file("$projectDir/docs/assets/docs_logo.svg")}\", \"${file("$projectDir/docs/assets/arrow_down.svg")}\"], "
                       + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
