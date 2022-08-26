@@ -347,35 +347,20 @@ for (publishedProject in publishedProjects) {
 
     project.publishing {
         publications {
-            maven(MavenPublication) {
-                from project.components.java
-                pom {
-                    name = project.name
-                    description = publishedProject.description
-                    url = "https://github.com/R3Conclave/conclave-core-sdk"
-
-                    licenses {
-                        license {
-                            name = 'The Apache License, Version 2.0'
-                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                            distribution = 'repo'
-                        }
-                    }
-                    developers {
-                        developer {
-                            name = 'Conclave Team'
-                            email = "conclave@r3.com"
-                            organization = 'R3 LLC'
-                            organizationUrl = "https://www.r3.com"
-                        }
-                    }
-                    scm {
-                        connection = "scm:git:git://github.com/R3Conclave/conclave-core-sdk.git"
-                        developerConnection = "scm:git:ssh://github.com:R3Conclave/conclave-core-sdk.git"
-                        url = "https://github.com/R3Conclave/conclave-core-sdk/tree/master"
-                    }
+            if (project.name == "plugin-enclave-gradle") {
+                // Plugin Enclave Gradle has already a default publication named "pluginMaven".
+                // As we do not want duplicate publications, we update the default one, hence
+                //   the distinction in this code
+                pluginMaven(MavenPublication) {
+                    addPomDetails(pom, project.name, publishedProject.description)
+                    artifact packageJavadoc
                 }
-                artifact packageJavadoc
+            } else {
+                maven(MavenPublication) {
+                    from project.components.java
+                    addPomDetails(pom, project.name, publishedProject.description)
+                    artifact packageJavadoc
+                }
             }
         }
         repositories {
@@ -416,6 +401,33 @@ String getArtifactoryForPublication() {
         mavenRepo = "conclave-maven-stable"
     }
     return "https://software.r3.com/artifactory/" + mavenRepo
+}
+
+def addPomDetails(MavenPom pom, String name, String description) {
+    pom.name = name
+    pom.description = description
+    pom.url = "https://github.com/R3Conclave/conclave-core-sdk"
+
+    pom.licenses {
+        license {
+            name = 'The Apache License, Version 2.0'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
+        }
+    }
+    pom.developers {
+        developer {
+            name = 'Conclave Team'
+            email = "conclave@r3.com"
+            organization = 'R3 LLC'
+            organizationUrl = "https://www.r3.com"
+        }
+    }
+    pom.scm {
+        connection = "scm:git:git://github.com/R3Conclave/conclave-core-sdk.git"
+        developerConnection = "scm:git:ssh://github.com:R3Conclave/conclave-core-sdk.git"
+        url = "https://github.com/R3Conclave/conclave-core-sdk/tree/master"
+    }
 }
 
 // To speed up IntelliJ indexing
