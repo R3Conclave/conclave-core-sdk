@@ -358,16 +358,9 @@ for (publishedProject in publishedProjects) {
                 //  Together with "maven-publish" plugin, "java-gradle-plugin" will prepare
                 //    "pluginMaven" and "enclavePluginPluginMarkerMaven" that we override to generate
                 //    a customized POM.
+                //  Note that the plugin "java-gradle-plugin" is also applied
+                //    in the build.gradle of "plugin-enclave-gradle".
                 project.pluginManager.apply('java-gradle-plugin')
-
-                project.gradlePlugin {
-                    plugins {
-                        enclavePlugin {
-                            id = 'com.r3.conclave.enclave'
-                            implementationClass = 'com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin'
-                        }
-                    }
-                }
 
                 pluginMaven(MavenPublication) {
                     addPomDetails(pom, project.name, publishedProject.description)

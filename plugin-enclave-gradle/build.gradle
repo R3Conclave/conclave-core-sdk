@@ -1,10 +1,16 @@
-//  Note: the settings specifying the mapping of this plugin
-//    to its implementation class are in the root build.gradle
-
 plugins {
+    id 'java-gradle-plugin'
     id 'org.jetbrains.kotlin.jvm'
 }
 
+gradlePlugin {
+    plugins {
+        enclavePlugin {
+            id = 'com.r3.conclave.enclave'
+            implementationClass = 'com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin'
+        }
+    }
+}
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
