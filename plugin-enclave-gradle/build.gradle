@@ -4,6 +4,8 @@ plugins {
 }
 
 gradlePlugin {
+    automatedPublishing = false
+
     plugins {
         enclavePlugin {
             id = 'com.r3.conclave.enclave'
