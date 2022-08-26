@@ -357,7 +357,7 @@ for (publishedProject in publishedProjects) {
             } else {
                 //  Together with "maven-publish" plugin, "java-gradle-plugin" will prepare
                 //    "pluginMaven" and "enclavePluginPluginMarkerMaven" that we override to generate
-                //    a customized pom.
+                //    a customized POM.
                 project.pluginManager.apply('java-gradle-plugin')
 
                 project.gradlePlugin {
@@ -373,7 +373,7 @@ for (publishedProject in publishedProjects) {
                     addPomDetails(pom, project.name, publishedProject.description)
                     artifact packageJavadoc
                 }
-                //  This is needed to override the pom.xml of the marker, which is evaluated in the
+                //  This is needed to override the POM of the marker, which is evaluated in the
                 //    afterEvaluate of MavenPluginPublishPlugin.
                 project.afterEvaluate {
                     project.publishing.publications {
