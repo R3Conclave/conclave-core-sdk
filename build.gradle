@@ -387,6 +387,7 @@ for (publishedProject in publishedProjects) {
         }
 
         repositories {
+            //  This repository is used for publishing to Maven Central from TeamCity.
             if (versionType == VersionType.GA_RELEASE) {
                 maven {
                     name = "OSSRH"
@@ -397,7 +398,6 @@ for (publishedProject in publishedProjects) {
                     }
                 }
             }
-
             maven {
                 name = "artifactory"
                 url = getArtifactoryForPublication()
@@ -406,7 +406,7 @@ for (publishedProject in publishedProjects) {
                     password = System.getenv("CONCLAVE_ARTIFACTORY_PASSWORD")
                 }
             }
-            maven {
+            maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
                 name = "build"
                 url = "$buildDir/repo"
             }
