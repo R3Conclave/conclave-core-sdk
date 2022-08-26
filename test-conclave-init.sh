@@ -11,7 +11,7 @@ echo
 
 pushd build
 
-conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ find -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar')
+conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar')
 
 echo Create Java project
 
