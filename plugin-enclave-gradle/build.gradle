@@ -150,11 +150,10 @@ processResources {
         from(generateCAPCache)
     }
 }
-/*
+
 jar {
     manifest {
         // This is used in the plugin to add implicit dependencies of the right version.
         attributes("Conclave-Version": rootProject.version.toString())
     }
 }
-*/
