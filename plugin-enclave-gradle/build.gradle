@@ -1,5 +1,5 @@
 //  Note: the settings specifying the mapping of this plugin
-//    with its implementation class are in the root build.gradle
+//    to its implementation class are in the root build.gradle
 
 plugins {
     id 'org.jetbrains.kotlin.jvm'
