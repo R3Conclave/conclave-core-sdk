@@ -129,7 +129,6 @@ subprojects {
 class PublishedProject {
     String projectPath
     String description
-    boolean apiLibrary = false
     boolean shade = false
 }
 
@@ -137,19 +136,16 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-common',
                 description: 'Conclave API common to enclave, host and client',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-enclave',
                 description: 'Conclave enclave API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
@@ -160,19 +156,16 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-client',
                 description: 'Conclave client API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-web-client',
                 description: 'Conclave web client API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-mail',
                 description: 'Conclave mail API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
@@ -205,10 +198,8 @@ tasks.withType(DokkaTask).configureEach {
                       + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
 
             for (publishedProject in publishedProjects) {
-                if (publishedProject.apiLibrary) {
-                    def project = project(publishedProject.projectPath)
-                    sourceRoots.from(file("${project.projectDir}/src/main/kotlin"))
-                }
+                def project = project(publishedProject.projectPath)
+                sourceRoots.from(file("${project.projectDir}/src/main/kotlin"))
             }
 
             // Filter out our internal and kotlin-specific classes
@@ -338,10 +329,8 @@ for (publishedProject in publishedProjects) {
         }
     }
 
-    if (publishedProject.apiLibrary) {
-        project.java {
-            withSourcesJar()
-        }
+    project.java {
+        withSourcesJar()
     }
 
     project.signing {
@@ -361,6 +350,7 @@ for (publishedProject in publishedProjects) {
             maven(MavenPublication) {
                 from project.components.java
                 pom {
+                    name = project.name
                     description = publishedProject.description
                     url = "https://github.com/R3Conclave/conclave-core-sdk"
 
@@ -385,11 +375,7 @@ for (publishedProject in publishedProjects) {
                         url = "https://github.com/R3Conclave/conclave-core-sdk/tree/master"
                     }
                 }
-                if (publishedProject.apiLibrary) {
-                    // TODO This actually duplicates the same doc jar file for all the published modules!
-                    //  https://r3-cev.atlassian.net/browse/CON-1065
-                    artifact packageJavadoc
-                }
+                artifact packageJavadoc
             }
         }
         repositories {
