@@ -66,15 +66,12 @@ public class Native {
         }
     */
     public static native int initQuoteDCAP(String bundlePath, byte[] initQuoteResponseOut); // 0 --> OK
-    public static native int calcQuoteSizeDCAP();  // > 0 --> OK
-    public static native int getQuoteDCAP(byte[] quoteRequestIn, byte[] quoteOut); // 0 --> OK
-    public static native Object[] getQuoteCollateral(byte[] fmspc, int pck);
 
-    // SgxMetadata
-    public static native void getMetadata(
-        String enclavePath,
-        byte[] metadataOut
-    );
+    public static native int calcQuoteSizeDCAP();  // > 0 --> OK
+
+    public static native int getQuoteDCAP(byte[] quoteRequestIn, byte[] quoteOut); // 0 --> OK
+
+    public static native Object[] getQuoteCollateral(byte[] fmspc, int pck);
 
     public static native String getCpuCapabilitiesSummary();
 }

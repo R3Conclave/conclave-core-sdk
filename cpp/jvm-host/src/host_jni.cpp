@@ -1,6 +1,5 @@
 #include <host_jni.h>
 #include <sgx_urts.h>
-#include <enclave_metadata.h>
 #include <jvm_u.h>
 #include <iostream>
 #include <string>
@@ -12,7 +11,6 @@
 #include <sys/mman.h>
 #include <parser/elfparser.h>
 #include <internal/enclave_creator.h>
-#include <fclose_guard.h>
 #include <munmap_guard.h>
 #include <enclave_platform.h>
 #include <dcap.h>
@@ -240,22 +238,6 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote(JNIEnv
     } else {
         raiseException(jniEnv, getErrorMessage(returnCode));
     }
-}
-
-JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata(JNIEnv *jniEnv,
-                                                                             jclass,
-                                                                             jstring enclaveFilePath,
-                                                                             jbyteArray metadataOut) {
-
-    JniString path(jniEnv, enclaveFilePath);
-    JniPtr<metadata_t> metadata(jniEnv, metadataOut);
-
-    auto status = retrieve_enclave_metadata(path.c_str, metadata.ptr);
-    if (status != SGX_SUCCESS) {
-        raiseException(jniEnv, getErrorMessage(status));
-        return;
-    }
-    metadata.releaseMode = 0;
 }
 
 void jvm_ocall(void* bufferIn, int bufferInLen) {
