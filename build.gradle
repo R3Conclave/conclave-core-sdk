@@ -347,24 +347,46 @@ for (publishedProject in publishedProjects) {
 
     project.publishing {
         publications {
-            if (project.name == "plugin-enclave-gradle") {
-                // Plugin Enclave Gradle has already a default publication named "pluginMaven".
-                // As we do not want duplicate publications, we update the default one, hence
-                //   the distinction in this code
-                pluginMaven(MavenPublication) {
-                    addPomDetails(pom, project.name, publishedProject.description)
-                    artifact packageJavadoc
-                }
-            } else {
+
+            if (project.name != "plugin-enclave-gradle") {
                 maven(MavenPublication) {
                     from project.components.java
                     addPomDetails(pom, project.name, publishedProject.description)
                     artifact packageJavadoc
                 }
+            } else {
+                //  Together with "maven-publish" plugin, "java-gradle-plugin" will prepare
+                //    "pluginMaven" and "enclavePluginPluginMarkerMaven" that we override to generate
+                //    a customized pom.
+                project.pluginManager.apply('java-gradle-plugin')
+
+                project.gradlePlugin {
+                    plugins {
+                        enclavePlugin {
+                            id = 'com.r3.conclave.enclave'
+                            implementationClass = 'com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin'
+                        }
+                    }
+                }
+
+                pluginMaven(MavenPublication) {
+                    addPomDetails(pom, project.name, publishedProject.description)
+                    artifact packageJavadoc
+                }
+                //  This is needed to override the pom.xml of the marker, which is evaluated in the
+                //    afterEvaluate of MavenPluginPublishPlugin.
+                project.afterEvaluate {
+                    project.publishing.publications {
+
+                        enclavePluginPluginMarkerMaven(MavenPublication) {
+                            addPomDetails(pom, "com.r3.conclave.enclave.gradle.plugin", "Gradle Enclave Plugin marker")
+                        }
+                    }
+                }
             }
         }
+
         repositories {
-            //  This repository is used for publishing to Maven Central from TeamCity.
             if (versionType == VersionType.GA_RELEASE) {
                 maven {
                     name = "OSSRH"
@@ -375,6 +397,7 @@ for (publishedProject in publishedProjects) {
                     }
                 }
             }
+
             maven {
                 name = "artifactory"
                 url = getArtifactoryForPublication()
@@ -383,7 +406,7 @@ for (publishedProject in publishedProjects) {
                     password = System.getenv("CONCLAVE_ARTIFACTORY_PASSWORD")
                 }
             }
-            maven {    // This section implicitly creates the publishAllPublicationsToBuildRepository target.
+            maven {
                 name = "build"
                 url = "$buildDir/repo"
             }

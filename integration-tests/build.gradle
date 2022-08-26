@@ -4,6 +4,7 @@ apply from: "${rootProject.projectDir}/../common.gradle"
 subprojects {
     apply plugin: 'java'
 
+    
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
 
     repositories {
