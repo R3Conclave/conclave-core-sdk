@@ -1,47 +1,39 @@
-# Configuring Conclave to use a key from a Key Derivation Service
-Conclave enclaves are able to use a key from a Key Derivation Service (KDS) for
-encrypting data that will be persisted outside the enclave. Using a key from a
-KDS allows the encrypted data that is persisted by an enclave to be accessed by
-the enclave even if it is moved to another physical machine. Without the KDS,
-moving an enclave to a different physical machine renders any encrypted
-persisted data unreadable, effectively cryptographically erasing the data.
+# Configuring Conclave for use with the KDS
+This page covers how to configure your enclave project to use KDS keys.
+More detailed information about the architecture of the KDS can be found [here](kds-detail.md).
 
-R3 provides an instance of a Conclave Key Derivation Service (KDS) as part of
-the Conclave Platform that can be used by any Conclave enclave to obtain stable
-keys for persisting data regardless of what physical system the enclave is
-running on.
+## What is the KDS?
+By default, Conclave persists encrypted data outside the enclave using keys which are specific to the CPU which the enclave is running on.
+This causes problems for cloud applications where virtual machines may be re-provisioned and moved to different hardware.
 
-This page describes how to configure your enclave project to use a KDS key. For
-a [more detailed description of how this works and the reasons behind using
-a KDS, please take a look here](kds-detail.md).
+In addition to CPU based keys for storage, Conclave makes use of random session keys for communication.
+This presents additional problems for cloud applications which involve horizontal scaling, because the session key will be different for each enclave in the cluster.
 
-
-## Configuring the KDS URL
-For an enclave to obtain a key from the KDS, the URL of the KDS and the
-specification of the key to obtain must both be configured by the developer.
-
-The KDS connection is configured in the host application. The configuration
-consists of parameters that specify the URL to use to connect to the KDS, and a
-duration after which an unresponsive connection to the KDS will timeout.
+The Conclave Key Derivation Service (KDS) is an enclave based service which solves these problems by providing Conclave enclaves a means to securely derive stable keys for both storage and communication.
+R3 provides a publicly accessible instance of the KDS as part of the Conclave Cloud Platform which may be used by any Conclave based enclave.
 
 !!!Note
-    If you configure your enclave to use a KDS key but do not provide a KDS
-    configuration for the host then enclaves built in release mode will not
-    start. Enclaves built in non-release modes will start but will use
-    a key derived from the signer of the enclave, bound to the CPU of the
-    system. This allows for development without a connection to the KDS.
+    R3 runs a development KDS at the following URL: `https://kds.dev.conclave.cloud`.
+    A production ready deployment will be available soon.
 
-If you are using the web host then you can specify the KDS connection parameters
-on the command line when starting your service:
+## Configuring the KDS URL
+For an enclave to obtain keys from a KDS for either storage or communication, the URL of a KDS instance must be provided when the enclave is started.
+
+!!!Note
+    If the KDS URL is not provided and the enclave is a simulation or debug mode enclave, a warning will be printed and the enclave will default to internally derived keys based on the enclave code signer.
+    This behavior allows for enclave development without a connection to a KDS.
+    If a release mode enclave is started without the KDS URL, an error will be generated and the enclave will not start.
+
+### Web host configuration
+If you are using the [Conclave web host](conclave-web-host.md), provide the KDS URL and timeout duration in seconds on the command line when you start your application:
 
 ```
---kds.url=https://kds.dev.conclave.cloud
---kds.connection.timeout.seconds=60
+--kds.url=<URL of kds instance>
+--kds.connection.timeout.seconds=<Count in seconds>
 ```
 
-Otherwise if you are developing your own host application you use
-[`KDSConfiguration`](api/-conclave/com.r3.conclave.host.kds/-k-d-s-configuration/index.html) to specify these 
-parameters then pass the configuration to [`EnclaveHost.start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html):
+### Custom host configuration
+If you are writing a custom host for your enclave, or you're instantiating the enclave as part of an existing project, you can configure the KDS URL by providing a [`KDSConfiguration`](api/-conclave%20-core/com.r3.conclave.host.kds/-k-d-s-configuration/index.html) object when starting the enclave (see [`EnclaveHost.start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html)):
 
 ```java
 import com.r3.conclave.host.kds.KDSConfiguration;
@@ -54,147 +46,112 @@ enclaveHost.start(null, null, null, kdsConfiguration) {}
 
 ```
 
-!!!Note
-    The URL for the public preview of the R3 hosted KDS is
-    `https://kds.dev.conclave.cloud`. This is URL might be changed in a later
-    deployment of the KDS.
+## KDS keys for persistent storage
+To use KDS derived keys for persistent storage, you need to specify how the KDS should derive the storage key.
+Key specifications are configured on a per-enclave basis and are included in the enclave `build.gradle`.
 
-## Configuring the key specification
-The key specification to use within an enclave is configured in the build
-configuration for that enclave. The state of the configuration is included in
-the enclave binary and, as such, its measurement is included in the
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) remote attestation report for the enclave. This ensures
-the key specification is not tampered with.
-
-The key specification is defined in the build configuration as follows:
+The format of the KDS configuration is as follows:
 
 ```groovy
 conclave {
-  ...
-  kds {
-    kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE"
-    persistencekeySpec {
-      masterKeyType = "development"
-      policyConstraint {
-        constraint = "<your policy constraints>"
-        useOwnCodeHash = (true|false)                 // Optional
-        useOwnCodeSignerAndProductID = (true|false)   // Optional
-      }
+    ...
+    kds {
+        kdsEnclaveConstraint = "<KDS enclave policy constraints>"
+        persistencekeySpec {
+            masterKeyType = ("development"|"cluster"|"azure_hsm")
+            policyConstraint {
+                constraint = "<key policy constraints>"
+                useOwnCodeHash = (true|false)                 // Optional
+                useOwnCodeSignerAndProductID = (true|false)   // Optional
+            }
+        }
     }
-  }
-  ...
+    ...
 }
 ```
 
-Taking a look at the configuration above, we first have a `kds {}` section which
-contains all KDS related configuration. This section contains the
-`kdsEnclaveConstraint` property, which defines the
-[enclave constraints](constraints.md) to use during
-attestation when getting a key from the KDS enclave.
+#### KDS block
+The `kds {}` section contains all KDS related configuration:
 
-Next we have the `persistenceKeySpec {}` section. This section contains parameters which
-define how the KDS generates keys.
+- `kdsEnclaveConstraint` - The constraints that the KDS enclave must match. The enclave will use these constraints to attest to the KDS at the URL provided on startup.
+- `persististenceKeySpec` - Subsection containing specifications for how encrypted storage keys should be derived.
 
-The KDS has several private internal keys which it may use for derivation of user keys. The `masterKeyType` property
-allows the developer to configure which of these keys will be used by the KDS when deriving keys for their enclave.
-Available values are `development`, `cluster` and `azure_hsm`.
+#### Persistence key specification section (`persistenceKeySpec`)
+- `masterKeyType` - Which KDS master key should we use when deriving a key, supported values are [`development`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-d-e-v-e-l-o-p-m-e-n-t/index.html), [`cluster`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-c-l-u-s-t-e-r/index.html) and [`azure_hsm`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-a-z-u-r-e_-h-s-m/index.html). See [KDS detail](kds-detail.md#what-is-the-master-key) for more information about KDS master keys.
+- `policyConstraint` - Subsection which contains configuration for the constraints that an enclave must meet to access a key generated by the KDS.
 
-Finally, we have the `policyConstraint {}` section, which defines the
-constraints which the enclave must meet in order to access the key generated by
-the KDS. This section contains the `constraint`, `useOwnCodeHash`, and
-`useOwnCodeSignerAndProductID` properties. Read on for more information
-regarding usage of these properties.
+#### Policy constraint section (`policyConstraint`)
+- `constraint` - The enclave should meet this policy constraint to be allowed to derive the key. This has the same format as the [enclave constraints](constraints.md) DSL, which Conclave uses for attestation.
+- `useOwnCodeHash` - Use the code hash of this enclave. This will add the code hash of the enclave to the `constraint` property at runtime.
+- `useOwnCodeSignerAndProductID` - Use the code signer and product ID of this enclave. This will add the code signer and product ID of the enclave to the `constraint` property at runtime.
 
-## Defining the `PolicyConstraint`
-The key policy constraint can be thought of as similar to the
-[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) object which is used during
-attestation to define the minimum security attributes of an enclave's
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object before
-initiating communication. It can be configured in much the same way by setting the `constraint` property using the
-[enclave constraint DSL](constraints.md). In this case however, the KDS imposes the key policy constraint on the
-`EnclaveInstanceInfo` of the requesting enclave before releasing a key to it.
+!!!note
+    For more information on the key derivation process, see [KDS detail](kds-detail.md#deriving-keys-from-the-key-specification).
 
-As noted before, the measurement of the key policy constraint is included in the
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) for the enclave. This poses a problem as the enclave code
-measurement and signer of the enclave are not known at build time. To get around
-this, the `policyConstraint` section allows the constraint to be defined
-programmatically using the `useOwnCodeHash` and `useOwnCodeSignerAndProductID`
-properties.
+### Choosing a value for the `kdsEnclaveConstraint`
+The KDS enclave constraint controls how your enclave will attest to the KDS enclave at the URL provided on startup (see [enclave constraints](constraints.md)).
 
-The effect of these properties is to constrain access to the key in different
-ways. If you want to include the enclave measurement in the constraint,
-effectively tying the key to an exact version of the enclave code, then this can
-be done by setting the `useOwnCodeHash` property to true. Alternatively, if you
-want subsequent versions of an enclave to be able to access data persisted by
-previous versions of that enclave, then you can set
-`useOwnCodeSignerAndProductID` to true instead. This will effectively tie the
-key to a specific product and signer, but not to a specific version of the
-enclave code. These parameters may be used together to generate keys which are
-unique to both the enclave signer & product ID, and the specific version of
-the enclave.
+!!!Note
+    For the R3 development KDS, the following constraint should be used: `S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE`.
 
-!!! note
+### Choosing a value for the `masterKeyType`
+The master keys are internal secrets of a KDS instance used in the key derivation process.
+They are used during key derivation to ensure that other KDS instances are unable to derive the same keys.
+There are several supported key types, each with different trust models:
 
-    The policy constraint string is not sanitised, it's only parsed to make sure it's valid. Otherwise it is sent as 
-    is  to the KDS. This includes any redundant whitespace for example. If `useOwnCodeHash` or 
-    `useOwnCodeSignerAndProductID` are specified the relevant fields are appended to the end of the constraint 
-    string. The only exception to this is if the matching code hash or code signer are already specified in the 
-    policy constraint in which case those values are not appended.
+- [`development`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-d-e-v-e-l-o-p-m-e-n-t/index.html) - A stable master key which is not suitable for production workloads, but can be used to test KDS integration. Release mode enclaves cannot use this key type.
+- [`azure_hsm`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-a-z-u-r-e_-h-s-m/index.html) - A production-ready master key which is backed by an [Azure Key Vault](https://docs.microsoft.com/en-us/azure/key-vault/general/overview). The key is end-to-end encrypted. However, users of this key are assuming trust in Microsoft and R3.
+- [`cluster`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/-c-l-u-s-t-e-r/index.html) - A production-ready master key which resides entirely within SGX enclaves. Neither R3 nor the KDS hosting provider have access to this key.
 
-## What `PolicyConstraint` should I specify?
-The `policyConstraint` section defines exactly which enclaves can access the key
-defined by the specification. It is important to choose a constraint which is
-strict enough to prevent unauthorised enclaves from accessing the key, but also
-one that is lenient enough to allow for upgrades of enclave code and data
-migration if required. This will vary depending on the needs of the project.
+!!!Note
+    For more information on the available master key types, see [KDS Detail](kds-detail.md#what-is-the-master-key).
 
-The constraint is specified by adding constraint parameters by calling the
-functions described below, or by adding rules in the `EnclaveConstraint` defined
-inside the `PolicyConstraint`. When calling functions on `PolicyConstraint`,
-each function returns the current `PolicyConstraint` so can be chained together
-to define a combination of constraints.
+### Defining the `policyConstraint` section
+The `policyConstraint` section defines which enclaves can access a derived key.
+It is important to choose a constraint which is:
 
-| <div style="width:290px">Parameter</div>  | Implications |
-| ------- | ------------------------ |
-| `policyConstraint { useOwnCodeHash = true }` | Only enclaves with exactly the same code hash as the currently loaded enclave will have access to the key. If the enclave code is modified in any way then a different key will be derived by the KDS causing any data persisted with the original key to be inaccessible in the new enclave. |
-| `policyConstraint { constraint = "C:<code hash>" }` | Only enclaves with the specified code hash will have access to the key. Due to the fact that it is impossible for an enclave to know its own code hash until it is built, this configuration cannot be used for authorising the current enclave. Instead use `useOwnCodeHash()` without arguments. This option can be used for allowing two or more different enclaves access to the same key. As many code hashes as necessary can be added by chaining calls to `useOwnCodeHash(hash)` |
-| `policyConstraint { useOwnCodeSignerAndProductID = true }` | Any enclave that is signed with the same key as the one used to sign this enclave and has the same product ID as this enclave can access the key. When used in isolation, this allows for easy upgrade of enclaves as any enclave signed with the same key and having the same product number will result in the same key being derived by the KDS, allowing persisted data to be shared between all versions of the enclave. |
-| `policyConstraint { constraint = "S:<code signer> PROD:<product id>" }` | Any enclave that is signed with the specified signing key hash and has the specified product ID can access the key. Please note that although multiple signers can be added, Conclave constraints currently only support a single product ID.|
-| `policyConstraint { constraint = "REVOKE:<min revocation level>" }` | Specifying a value for the minimum revocation level ensures that an enclave will only be given access to a key if the [revocationLevel](enclave-configuration.md#revocationlevel) field defined when the enclave was built is greater than or equal to the value specified in this constraint. Whenever you release a new version of your enclave that fixes any bugs or security issues, you should increment the `revocationLevel` for the new enclave and update this constraint to match the new version. |
-| `policyConstraint { constraint = "SEC:<security level>" }` | Any enclave is running on a platform that meets at a minimum the specified security level will be allowed access to the key. For a production enclave built in release mode you should set the minimum security level to `STALE` or `SECURE` |
+- Strict enough to prevent unauthorised access the key.
+- Lenient enough to allow for upgrades of enclave code and data migration if required.
 
-## Example `PolicyConstraint` configurations
-### Exact version of an enclave running on a secure platform
-This example shows how to ensure that a key is only accessible to an exact
-version of an enclave. If any code is changed within the enclave and it is
-rebuilt then the modified enclave will not have access to the original key.
+Example configurations are included later in the section.
 
-In addition, the enclave must be running on a fully patched, up-to-date Intel
-SGX capable system. If any new security updates are available for the platform,
-even if the platform is not considered insecure, then the key will not be
-provided to the enclave.
+!!!Warning
+    Selection of the KDS policy constraint can have significant security and operational implications.
+    For this reason, users are strongly encouraged to read the following sections in their entirety.
 
-When using this configuration it is not possible to migrate data to a new
-version of the enclave, unless the developer included functionality in the
-original enclave to explicitly export data encrypted using a different key.
+### Setting the `constraint` property
+The `constraint` property of `policyConstraint` functions in a similar manner to the [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) object which is used when attesting to a Conclave enclave.
+When a request for a key is received by the KDS, the KDS attests that the key policy constraint matches the details of the requesting enclave before releasing a derived key.
+Just like Conclave attestation, it follows the [enclave constraints DSL](constraints.md).
+
+### Setting the `useOwnCodeHash` and `useOwnCodeSignerAndProductID` properties
+The `useOwnCodeHash` and `useOwnCodeSignerAndProductID` properties of the `policyConstraint` section allow you to add the code hash or code signer and product ID of the current enclave in the `constraint` property.
+These parameters cannot be added to the `constraint` field directly as their values are not known at build time.
+
+- The `useOwnCodeHash` property, when set to `true`, will append the current enclaves code hash to the constraint.
+- The `useOwnCodeSignerAndProductID` property, when set to `true`, will append the current enclaves code signer and product ID to the constraint.
+
+### Example `PolicyConstraint` configurations
+#### Exact version of an enclave running on a secure platform
+In this restrictive policy constraint example, access to the derived key is restricted to release mode enclaves with a specific code hash running on a fully patched and up-to-date SGX-capable host.
 
 ```groovy
 kds {
-  persistenceKeySpec {
-    policyConstraint {
-      constraint = "SEC:SECURE"
-      useOwnCodeHash = true
+    persistenceKeySpec {
+        policyConstraint {
+            constraint = "SEC:SECURE"
+            useOwnCodeHash = true
+        }
     }
-  }
 }
 ```
 
-### Exact version of an enclave running on a platform that may need updating
-This example is similar to above, but allows the key to be provided to an
-enclave running on a platform where a security update is available, as long as
-the platform has not been flagged as insecure. This will allow the service that
-uses the enclave to continue running whilst giving the system administrator time
-to deploy the patch to the system, bringing it back to the `SECURE` state.
+This is a restrictive policy constraint with significant operational implications.
+Because of the code hash requirement, persisted data will be inaccessible to subsequent versions of the enclave.
+Also, if the host system is not fully patched, the derived key will not be accessible and the enclave may be denied access to storage keys until patches are installed.
+
+#### Exact version of an enclave running on a platform that may need updating
+In this slightly less restrictive policy example, access to the derived key is permitted in cases where non-critical security patches are available for the host system.
 
 ```groovy
 kds {
@@ -207,32 +164,94 @@ kds {
 }
 ```
 
-### Any enclave for a particular product signed using the same key
-This example allows any enclave running any code to access the key as long as it
-is signed with the same signing key, is part of the same product and is running
-on a secure platform.
+This constraint doesn't affect the operational implications of enclave updates because access to the derived key still requires that the enclave has a specific code hash.
+However, it avoids the denial of service that happens in the more restrictive case above by giving the enclave host time to patch their systems to bring them back to the `SECURE` state.
 
-The combination of a signing key and a product ID allows for unique keys to be
-generated per product, but shared with all versions of enclaves within a single
-product.
-
-This makes it easy to release new versions of enclaves, or allows multiple
-different services to share access to persisted data. However, the owner of the
-code signing key must be trusted enclave clients because they have the ability
-to author a new enclave that is able to perform any action on data protected
-using the signing key.
-
-This example is probably most suitable where the service author is trusted, or
-when using an external auditor to validate enclave code and sign the enclave on
-the developer's behalf.
+#### Any enclave for a particular product signed using the same key
+In this permissive policy constraint example, access to the derived key is permitted for enclaves with a matching [product ID](enclave-configuration.md#productid) and signing key.
 
 ```groovy
 kds {
     persistenceKeySpec {
         policyConstraint {
-            constraint = "SEC:SECURE"
+            constraint = "SEC:STALE"
             useOwnCodeSignerAndProductID = true
         }
     }
 }
 ```
+
+This constraint has fewer operational implications, as the enclave code can be updated without losing access to persisted data.
+However, security is weakened with this constraint, as the enclave signer must be trusted not to sign an unsafe or malicious enclave.
+
+!!!Note
+    In this example, security may be enhanced by having an external auditor build and sign the enclave on the behalf of the developer.
+
+## KDS keys for Conclave Mail
+The KDS is also capable of providing keys for use with [Conclave Mail](mail.md) through use of a specially constructed [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html).
+
+When using a KDS post office, the post office requests a public key from the KDS for use in a Conclave [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html) and specifies which enclaves should be permitted access to the corresponding private key.
+Upon receiving Mail, the enclave requests the private key from the same KDS and uses it to decrypt the Mail message from the client.
+In this manner, users can create Mail messages which can be decrypted by any enclave that matches a given set of constraints, without first having to receive and attest to the [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) of a specific enclave.
+
+### Configuring the Enclave
+To make use of KDS keys for Mail, the `kdsEnclaveConstraints` field in the enclaves `build.gradle` must be configured.
+This configuration alone is sufficient to use KDS keys with Mail.
+
+```groovy
+...
+conclave {
+    kds {
+        kdsEnclaveConstraints = "<KDS enclave policy constraints>"
+    }
+}
+...
+```
+
+!!!Note
+    For the R3 development KDS, the following constraint should be used: `S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:STALE`.
+
+### Defining a KDS key spec
+The client must construct an appropriately configured [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html) object with which to encrypt Mail.
+The first step is to create a [`KDSKeySpec`](api/-conclave%20-core/com.r3.conclave.common.kds/-k-d-s-key-spec/-k-d-s-key-spec.html) object which specifies how the public key should be derived and which enclaves should be allowed access to the corresponding private key:
+
+```java
+import com.r3.conclave.common.kds.KDSKeySpec;
+
+...
+var kdsKeySpec = new KDSKeySpec(
+        keyName,
+        masterKeyType,
+        policyConstraint);
+...
+```
+
+- `keyName` - The name of the key. This name is used during key derivation and if changed, will result in a different key being generated. This can be used to separate keys by purpose.
+- `masterKeyType` - The type of master key to use for the derivation (see [`MasterKeyType`](api/-conclave%20-core/com.r3.conclave.common.kds/-master-key-type/index.html)).
+- `policyConstraint` - A string which specifies the constraints that the enclave must meet in order to derive the corresponding private key and decrypt messages. The string should be in the [enclave constraints DSL](constraints.md) format.
+
+### Using the KDS post office builder
+After creating an appropriate key spec, you can instantiate a post office using the [`usingKDS`](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/using-k-d-s.html) method of the [`PostOfficeBuilder`](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/index.html) class.
+
+```java
+import com.r3.conclave.client.PostOfficeBuilder;
+
+...
+var kdsURL = new URL("<kds-url>");
+var kdsEnclaveConstraint = new EnclaveConstraints.parse("<kds-enclave-constraints>");
+
+PostOffice postOffice = PostOfficeBuilder().usingKDS(
+        kdsURL,
+        kdsKeySpec,                
+        kdsEnclaveConstraint    
+).build();
+...
+```
+
+Where:
+
+- `<kds-url>` is the URL of the KDS instance to use. This should match the KDS instance that the enclave is configured for.
+- `<kds-enclave-constraints>` are the constraints that will be used when attesting to the KDS enclave.
+  These should match the expected details of the KDS.
+
+You can then use the [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html) to encrypt and decrypt messages as usual.

@@ -29,7 +29,7 @@ import kotlin.io.path.setPosixFilePermissions
 
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {
-        const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.3-RC6"
+        const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.3"
     }
 
     override fun apply(target: Project) {

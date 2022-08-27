@@ -35,7 +35,7 @@ Update the host build.gradle to reference it:
 
 ```groovy hl_lines="2"
 application {
-    mainClassName = "com.example.tutorial.host.MyEnclaveHost"
+    mainClass.set("com.example.tutorial.host.MyEnclaveHost")
 }
 ```
 
@@ -80,13 +80,13 @@ Check that the host and client run without any issues:
 Now that the project modules have been set up, we can start implementing functionality. Perhaps counterintuitively, 
 the first step is to actually write our client, as that will direct how we implement the host.
 
-We recommend clients use the [`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) 
+We recommend clients use the [`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) 
 class for managing communication with the enclave. It deals with the encryption of mail messages and amongst other 
 things, makes dealing with enclave restarts transparent. The details of the transport layer to the host are dealt 
-with by the [`EnclaveTransport`](api/-conclave/com.r3.conclave.client/-enclave-transport/index.html) interface. An 
-implementation of this is required by [`EnclaveClient.start`](api/-conclave/com.r3.conclave.client/-enclave-client/start.html).
+with by the [`EnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/index.html) interface. An 
+implementation of this is required by [`EnclaveClient.start`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/start.html).
 For example, if the enclave is running behind the [Conclave web host](conclave-web-host.md) then the client needs to 
-use the [`WebEnclaveTransport`](api/-conclave/com.r3.conclave.client.web/-web-enclave-transport/index.html) class.
+use the [`WebEnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client.web/-web-enclave-transport/index.html) class.
 
 We will write a very simple socket based `EnclaveTransport`. Host and port parameters will be required, and it 
 should implement `Closeable` to allow the caller to close any underlying connections.
@@ -122,11 +122,11 @@ public class MyEnclaveTransport implements EnclaveTransport, Closeable {
 The `input` and `output` streams are our communication channels with the host server for receiving and sending raw 
 bytes, respectively.
 
-### [`enclaveInstanceInfo()`](api/-conclave/com.r3.conclave.client/-enclave-transport/enclave-instance-info.html)
+### [`enclaveInstanceInfo()`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/enclave-instance-info.html)
 
 The first `EnclaveTransport` method we'll implement is
-[`enclaveInstanceInfo`](api/-conclave/com.r3.conclave.client/-enclave-transport/enclave-instance-info.html), which 
-downloads the latest [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html)
+[`enclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/enclave-instance-info.html), which 
+downloads the latest [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html)
 object from the host:
 
 ```java
@@ -144,16 +144,16 @@ public EnclaveInstanceInfo enclaveInstanceInfo() throws IOException {
 
 We'll represent the attestation request by a single byte value of 1. The byte is sent and the method blocks immediately 
 waiting for the server to respond back with the attestation bytes. Once received we
-[deserialize](api/-conclave/com.r3.conclave.common/-enclave-instance-info/deserialize.html) them into an 
+[deserialize](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/deserialize.html) them into an 
 `EnclaveInstanceInfo` object.
 
-### [`connect()`](api/-conclave/com.r3.conclave.client/-enclave-transport/connect.html)
+### [`connect()`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/connect.html)
 
 Next we need to implement the methods for sending and receiving mail, but these are not defined in
-[`EnclaveTransport`](api/-conclave/com.r3.conclave.client/-enclave-transport/index.html) but are 
+[`EnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/index.html) but are 
 represented by an interface called
-[`ClientConnection`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/index.html).
-An instance of this is created by [`EnclaveTransport.connect`](api/-conclave/com.r3.conclave.client/-enclave-transport/connect.html)
+[`ClientConnection`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/index.html).
+An instance of this is created by [`EnclaveTransport.connect`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/connect.html)
 and represents a logical `EnclaveClient` connection. This allows multiple `EnclaveClient` instances to use a single 
 `EnclaveTransport`. Our `ClientConnection` implementation will be a private inner class and `connect` will simply 
 return a new instance of one.
@@ -172,14 +172,14 @@ private class MyClientConnection implements ClientConnection {
 }
 ```
 
-The [`disconnect`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/disconnect.html) 
+The [`disconnect`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/disconnect.html) 
 method is empty as this is a simple implementation and there's nothing to do when the `EnclaveClient`
-[closes](api/-conclave/com.r3.conclave.client/-enclave-client/close.html).
+[closes](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/close.html).
 
-### [`sendMail()`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
+### [`sendMail()`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
 
 For sending [encrypted mail](mail.md) to the host we need to implement
-[`sendMail`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html):
+[`sendMail`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html):
 
 ```java
 @Nullable
@@ -203,7 +203,7 @@ public byte[] sendMail(@NotNull byte[] encryptedMailBytes) throws IOException, M
 
 This request is represented by the byte value 2, followed by the size prefix mail bytes. Once that's sent we
 immediately block waiting for a response from the host. The
-[`sendMail`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
+[`sendMail`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
 specification states the method must block and wait for the mail to be processed by the enclave. If the enclave is 
 able to process the mail successfully then any response from it must be received and returned. This is represented 
 by the response type 1:
@@ -222,12 +222,12 @@ private byte[] readMail() throws IOException {
 ```
 
 If the enclave couldn't decrypt the sent mail then that must also be 
-indicated and a [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html) 
+indicated and a [`MailDecryptionException`](api/-conclave%20-core/com.r3.conclave.mail/-mail-decryption-exception/index.html) 
 must be thrown instead (which is response type 2).
 
-### [`pollMail()`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/poll-mail.html)
+### [`pollMail()`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/poll-mail.html)
 
-The final method that needs to be implemented is [`pollMail`](api/-conclave/com.r3.conclave.client/-enclave-transport/-client-connection/poll-mail.html)
+The final method that needs to be implemented is [`pollMail`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/poll-mail.html)
 which is for polling for any extra response mail the enclave might have created for the client:
 
 ```java
@@ -246,7 +246,7 @@ there are no other parameters that's all that needs to be sent. The response fol
 it receives a mail response and so we can reuse the `readMail()` method from above.
 
 And that's it for the client side! We can use our socket `EnclaveTransport` implementation with an
-[`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) instance to connect to the host:
+[`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) instance to connect to the host:
 
 ```java
 public static void main(String[] args) throws InvalidEnclaveException, IOException {
@@ -264,7 +264,7 @@ Now we need to implement the corresponding logic on the host to receive and proc
 
 ### Loading the enclave
 
-One of the first things the host does is [load the enclave](api/-conclave/com.r3.conclave.host/-enclave-host/load.html), 
+One of the first things the host does is [load the enclave](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/load.html), 
 which by default it does by scanning the classpath.
 
 ```java
@@ -288,8 +288,8 @@ public class MyEnclaveHost {
 ### Starting the enclave
 
 The next thing is to start the enclave, which is done by calling
-[`EnclaveHost.start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html). It takes a series of parameters 
-which are explained in more detail in the [API docs](api/-conclave/com.r3.conclave.host/-enclave-host/start.html).
+[`EnclaveHost.start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html). It takes a series of parameters 
+which are explained in more detail in the [API docs](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
 For this tutorial most of these parameters will be passed in from the command line:
 
 ```java
@@ -341,14 +341,14 @@ System.out.println(enclaveHost.getEnclaveInstanceInfo());
 ```
 
 The last `start` parameter is a callback lambda for processing
-[mail commands](api/-conclave/com.r3.conclave.host/-mail-command/index.html) from the enclave. The commands come 
+[mail commands](api/-conclave%20-core/com.r3.conclave.host/-mail-command/index.html) from the enclave. The commands come 
 from the enclave grouped together in a list after every
-[`callEnclave`](api/-conclave/com.r3.conclave.host/-enclave-host/call-enclave.html) or
-[`deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) call. We will 
+[`callEnclave`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/call-enclave.html) or
+[`deliverMail`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/deliver-mail.html) call. We will 
 provide a basic implementation of these commands, which we will do shortly.
 
 Once the enclave has started, the host logs the
-[enclave's attestation report](api/-conclave/com.r3.conclave.host/-enclave-host/get-enclave-instance-info.html) 
+[enclave's attestation report](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/get-enclave-instance-info.html) 
 to the console. This is useful for debugging but also for determining the enclave constraint to use when running the 
 client. 
 
@@ -408,7 +408,7 @@ the client has disconnected. We'll implement the methods that process these requ
 #### Attestation request
 
 The attestation request is straightforward to implement as it's just sending the
-[serialised `EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/serialize.html):
+[serialised `EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/serialize.html):
 
 ```java
 private static void sendAttestation(DataOutputStream output) throws IOException {
@@ -437,13 +437,13 @@ private static void processInboundMail(DataInputStream input, DataOutputStream o
 }
 ```
 
-Once the mail bytes have been received they are [delivered](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html)
+Once the mail bytes have been received they are [delivered](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/deliver-mail.html)
 to the enclave to be decrypted and processed. A second parameter called the "routing hint" is required alongside it. 
 This is used by the enclave to correctly route responses back to clients. In this simple implementation there is 
 only one client at a time and so the routing hint isn't used. If there were multiple clients then they would each be 
 given a unique routing hint.
 
-`deliverMail` will throw a [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html)
+`deliverMail` will throw a [`MailDecryptionException`](api/-conclave%20-core/com.r3.conclave.mail/-mail-decryption-exception/index.html)
 if the enclave could not decrypt the mail bytes. It's important the client be notified of this, so we catch it and 
 send back a response value of 2, which is what our [earlier implementation of `sendMail`](#sendmail) expects.
 
@@ -470,13 +470,13 @@ private static void processMailCommands(List<MailCommand> commands) throws IOExc
 }
 ```
 
-Mail responses from the enclave are emitted through the [`PostMail`](api/-conclave/com.r3.conclave.host/-mail-command/-post-mail/index.html)
+Mail responses from the enclave are emitted through the [`PostMail`](api/-conclave%20-core/com.r3.conclave.host/-mail-command/-post-mail/index.html)
 command. We store them in a queue for retrieval later. We ignore the
-[routing hint](api/-conclave/com.r3.conclave.host/-mail-command/-post-mail/get-routing-hint.html) here for the same 
+[routing hint](api/-conclave%20-core/com.r3.conclave.host/-mail-command/-post-mail/get-routing-hint.html) here for the same 
 reason we didn't use it earlier. To support multiple clients the the routing hint would be used to assign the posted 
 mail to the correct client connection.
 
-We also implement the other command, [`StoreSealedState`](api/-conclave/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html).
+We also implement the other command, [`StoreSealedState`](api/-conclave%20-core/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html).
 The new sealed state is written to disk, overwriting the previous one. 
 
 !!! note

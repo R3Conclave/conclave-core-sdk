@@ -106,7 +106,7 @@ Failure to do this may result in an SGX_ERROR_NO_DEVICE error when creating an e
 
 ## Renewing machine security  
 
-After following the above instructions, you may discover your [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) objects report the enclave as
+After following the above instructions, you may discover your [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) objects report the enclave as
 `STALE`. This means the machine requires software updates. Applying all available updates and
 rebooting should make the security evaluation of `STALE` go away. See ["Renewability"](renewability.md) to learn more
 about this topic and what exactly is involved.

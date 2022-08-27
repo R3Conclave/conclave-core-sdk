@@ -12,7 +12,7 @@ package com.r3.conclave.host
 sealed class MailCommand {
     /**
      * A [MailCommand] which is emitted when the enclave wants to send an encrypted message over the network
-     * to a client (via `Enclave.postMail`). The host should examine the [routingHint] parameter to decide where the
+     * to a client (via [com.r3.conclave.enclave.Enclave.postMail]). The host should examine the [routingHint] parameter to decide where the
      * enclave wants it to be sent.
      *
      * You don't have to perform the actual send synchronously if that's inappropriate

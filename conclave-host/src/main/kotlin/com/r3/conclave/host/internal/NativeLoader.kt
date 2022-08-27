@@ -61,8 +61,6 @@ object NativeLoader {
                 it.allResources.forEachInputStreamThrowingIOException { resource, stream ->
                     val name = resource.path.substringAfterLast('/')
                     val destination = destinationFolder.resolve(name)
-                    // REPLACE_EXISTING is a hack to work around an issue observed by IntellectEU that has not
-                    // yet been diagnosed. See bug CON-239.
                     Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING)
                 }
             }

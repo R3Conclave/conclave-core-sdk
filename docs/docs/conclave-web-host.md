@@ -40,7 +40,7 @@ Timeout to use when attempting to contact the key derivation service enclave.
 
 ## REST API:
 The REST API consists of several endpoints, detailed below. When using this API, clients begin an interaction with 
-the enclave by fetching an attestation. The client will then use the Conclave SDK to examine the attestation 
+the enclave by fetching an attestation. The client will then use Conclave to examine the attestation 
 information and make a decision whether to proceed (see [enclave-constraints](constraints.md)). If the enclave is 
 deemed to be trusted by the client, then an encryption key is derived from the attestation data, and the client can 
 continue to interact with the enclave via the host by delivering and receiving encrypted messages using the the 
