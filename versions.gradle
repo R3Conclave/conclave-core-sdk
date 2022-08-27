@@ -1,8 +1,5 @@
 ext {
-    // GA release checklist (i.e. does not apply to SNAPSHOT or RCs):
-    //  * Create release branch in https://github.com/R3Conclave/conclave-tutorials and update all versions.
-    //  * Update download link in docs/docs/conclave-init.md
-    conclave_version = '1.3'
+    conclave_version = '1.3.1-SNAPSHOT'
     // Also update GradleEnclavePlugin.CONCLAVE_GRAALVM_VERSION
     conclave_graal_version = '22.0.0.2-1.3'
     kds_version = '0.3-SNAPSHOT'
