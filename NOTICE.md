@@ -38,6 +38,7 @@ Apache 2: https://github.com/FasterXML/jackson-module-kotlin/blob/master/LICENSE
 
 **[HttpComponents Client](https://github.com/apache/httpcomponents-client/)**
 
+Copyright 1999-2022 The Apache Software Foundation
 Apache 2: https://github.com/apache/httpcomponents-client/blob/master/LICENSE.txt
 
 **[Spring Boot](https://github.com/spring-projects/spring-boot/)**
@@ -130,6 +131,7 @@ Licensing terms for SLF4: http://www.slf4j.org/license.html
 
 **[Dokka](https://github.com/Kotlin/dokka)**
 
+Copyright 2014-2019 JetBrains s.r.o. and Dokka project contributors.
 Apache 2: https://github.com/Kotlin/dokka/blob/master/LICENSE
 
 **[Google / Guava](https://github.com/google/guava)**

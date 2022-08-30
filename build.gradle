@@ -39,9 +39,23 @@ String getConclaveRevision() {
     return conclave_revision
 }
 
+enum VersionType {
+    GA_RELEASE,
+    RELEASE_CANDIDATE,
+    SNAPSHOT
+}
+
 ext {
     conclave_revision = getConclaveRevision()
     project.logger.info("Conclave revision: $conclave_revision")
+
+    if (version.endsWith("-SNAPSHOT")) {
+        versionType = VersionType.SNAPSHOT
+    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+        versionType = VersionType.RELEASE_CANDIDATE
+    } else {
+        versionType = VersionType.GA_RELEASE
+    }
 }
 
 // Allow the user to move the default build location. This is helpful for improving the
@@ -115,7 +129,6 @@ subprojects {
 class PublishedProject {
     String projectPath
     String description
-    boolean apiLibrary = false
     boolean shade = false
 }
 
@@ -123,19 +136,16 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-common',
                 description: 'Conclave API common to enclave, host and client',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-enclave',
                 description: 'Conclave enclave API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
@@ -146,19 +156,16 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-client',
                 description: 'Conclave client API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-web-client',
                 description: 'Conclave web client API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-mail',
                 description: 'Conclave mail API',
-                apiLibrary: true,
                 shade: true
         ),
         new PublishedProject(
@@ -178,10 +185,10 @@ List<PublishedProject> publishedProjects = [
 
 import org.jetbrains.dokka.gradle.DokkaTask
 tasks.withType(DokkaTask).configureEach {
-    moduleName.set("Conclave")
+    moduleName.set("Conclave Core")
     dokkaSourceSets {
         register("conclave") {
-            displayName.set("Conclave")
+            displayName.set("Conclave Core")
             jdkVersion.set(8)
             reportUndocumented.set(false)
             skipDeprecated.set(true)
@@ -191,10 +198,8 @@ tasks.withType(DokkaTask).configureEach {
                       + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
 
             for (publishedProject in publishedProjects) {
-                if (publishedProject.apiLibrary) {
-                    def project = project(publishedProject.projectPath)
-                    sourceRoots.from(file("${project.projectDir}/src/main/kotlin"))
-                }
+                def project = project(publishedProject.projectPath)
+                sourceRoots.from(file("${project.projectDir}/src/main/kotlin"))
             }
 
             // Filter out our internal and kotlin-specific classes
@@ -273,9 +278,11 @@ dokkaHtml.shouldRunAfter mkdocs
 
 for (publishedProject in publishedProjects) {
     def project = project(publishedProject.projectPath)
-    def projectDescription = publishedProject.description
+
     project.pluginManager.apply('java')
     project.pluginManager.apply('maven-publish')
+    project.pluginManager.apply('signing')
+
     // We shade certain libraries into the Conclave API jars to avoid any potential versioning issues in Conclave apps
     // which might use different versions of these libraries.
     if (publishedProject.shade) {
@@ -321,37 +328,71 @@ for (publishedProject in publishedProjects) {
             archiveClassifier = ''
         }
     }
-    if (publishedProject.apiLibrary) {
-        project.java {
-            withSourcesJar()
-        }
+
+    project.java {
+        withSourcesJar()
     }
+
+    project.signing {
+        // Signing is required for the publication of releases to Maven Central.
+        // As per Gradle Signing Plugin rules, "required = false" means that the artifacts 
+        //   will only be signed if signatory credentials are configured (i.e. only in TeamCity).
+        //   The build will skip signing if the key is not available, which is what we want for local builds
+        required = false
+        def key = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY")
+        def password = System.getenv("CONCLAVE_PUBLICATION_SIGNING_PRIVATE_KEY_PASSWORD")
+        useInMemoryPgpKeys(key, password)
+        sign(project.publishing.publications)
+    }
+
     project.publishing {
         publications {
-            maven(MavenPublication) {
-                from project.components.java
-                pom {
-                    description = projectDescription
-                    licenses {
-                        license {
-                            name = 'The Apache License, Version 2.0'
-                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                            distribution = 'repo'
-                        }
-                    }
-                    organization {
-                        name = 'R3 LLC'
-                        url = "https://www.r3.com"
-                    }
+
+            if (project.name != "plugin-enclave-gradle") {
+                maven(MavenPublication) {
+                    from project.components.java
+                    addPomDetails(pom, project.name, publishedProject.description)
+                    artifact packageJavadoc
                 }
-                if (publishedProject.apiLibrary) {
+            } else {
+                //  Together with "maven-publish" plugin, "java-gradle-plugin" will prepare
+                //    "pluginMaven" and "enclavePluginPluginMarkerMaven" that we override to generate
+                //    a customized POM.
+                //  Note that the plugin "java-gradle-plugin" is also applied
+                //    in the build.gradle of "plugin-enclave-gradle".
+                project.pluginManager.apply('java-gradle-plugin')
+
+                pluginMaven(MavenPublication) {
+                    addPomDetails(pom, project.name, publishedProject.description)
                     // TODO This actually duplicates the same doc jar file for all the published modules!
                     //  https://r3-cev.atlassian.net/browse/CON-1065
                     artifact packageJavadoc
                 }
+                //  This is needed to override the POM of the marker, which is evaluated in the
+                //    afterEvaluate of MavenPluginPublishPlugin.
+                project.afterEvaluate {
+                    project.publishing.publications {
+
+                        enclavePluginPluginMarkerMaven(MavenPublication) {
+                            addPomDetails(pom, "com.r3.conclave.enclave.gradle.plugin", "Gradle Enclave Plugin marker")
+                        }
+                    }
+                }
             }
         }
+
         repositories {
+            //  This repository is used for publishing to Maven Central from TeamCity.
+            if (versionType == VersionType.GA_RELEASE) {
+                maven {
+                    name = "OSSRH"
+                    url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
+                    credentials {
+                        username = System.getenv("CONCLAVE_OSSRH_USERNAME")
+                        password = System.getenv("CONCLAVE_OSSRH_PASSWORD")
+                    }
+                }
+            }
             maven {
                 name = "artifactory"
                 url = getArtifactoryForPublication()
@@ -370,14 +411,41 @@ for (publishedProject in publishedProjects) {
 
 String getArtifactoryForPublication() {
     String mavenRepo
-    if (version.endsWith("-SNAPSHOT")) {
+    if (versionType == VersionType.SNAPSHOT) {
         mavenRepo = "conclave-maven-dev"
-    } else if (version.matches(/.+\-RC[0-9]+$/)) {
+    } else if (versionType == VersionType.RELEASE_CANDIDATE) {
         mavenRepo = "conclave-maven-unstable"
     } else {
         mavenRepo = "conclave-maven-stable"
     }
     return "https://software.r3.com/artifactory/" + mavenRepo
+}
+
+def addPomDetails(MavenPom pom, String name, String description) {
+    pom.name = name
+    pom.description = description
+    pom.url = "https://github.com/R3Conclave/conclave-core-sdk"
+
+    pom.licenses {
+        license {
+            name = 'The Apache License, Version 2.0'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
+        }
+    }
+    pom.developers {
+        developer {
+            name = 'Conclave Team'
+            email = "conclave@r3.com"
+            organization = 'R3 LLC'
+            organizationUrl = "https://www.r3.com"
+        }
+    }
+    pom.scm {
+        connection = "scm:git:git://github.com/R3Conclave/conclave-core-sdk.git"
+        developerConnection = "scm:git:ssh://github.com:R3Conclave/conclave-core-sdk.git"
+        url = "https://github.com/R3Conclave/conclave-core-sdk/tree/master"
+    }
 }
 
 // To speed up IntelliJ indexing

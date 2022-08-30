@@ -487,7 +487,7 @@ class EnclaveHost private constructor(
     }
 
     /**
-     * Causes the enclave to be loaded and the `Enclave` object constructed inside.
+     * Causes the enclave to be loaded and the [com.r3.conclave.enclave.Enclave] object constructed inside.
      * This method must be called before sending is possible. Remember to call
      * [close] to free the associated enclave resources when you're done with it.
      *
@@ -499,7 +499,7 @@ class EnclaveHost private constructor(
      *
      * @param sealedState The last sealed state that was emitted by the enclave via [MailCommand.StoreSealedState]. The
      * sealed state is an encrypted blob of the enclave's internal state and it's updated by the enclave as it processes
-     * mail (the contents of `Enclave.getPersistentMap()` is also part of this state). Each new sealed state that is
+     * mail (the contents of [com.r3.conclave.enclave.Enclave.persistentMap] is also part of this state). Each new sealed state that is
      * emitted via [MailCommand.StoreSealedState] supercedes the previous one and must be securely persisted. Failure
      * to do this will result in the enclave's clients detecting a "rollback" attack if the enclave is restarted.
      * Typically the sealed state should be stored in a database, inside the same database transaction that
@@ -707,23 +707,24 @@ class EnclaveHost private constructor(
      * mechanism, alternatively, [DataOutputStream] is a convenient way to lay out
      * pieces of data in a fixed order.
      *
-     * For this method to work the enclave class must override and implement `receiveFromUntrustedHost` The return
+     * For this method to work the enclave class must override and implement [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] The return
      * value from that method (which can be null) is returned here. It will not be received via the provided callback.
      *
      * With the provided callback the enclave also has the option of using
-     * `Enclave.callUntrustedHost` and sending/receiving byte arrays in the opposite
+     * [com.r3.conclave.enclave.Enclave.callUntrustedHost] and sending/receiving byte arrays in the opposite
      * direction. By chaining callbacks together, a kind of virtual stack can be constructed
      * allowing complex back-and-forth conversations between enclave and untrusted host.
      *
-     * Any uncaught exceptions thrown by `receiveFromUntrustedHost` will propagate across the enclave-host boundary and
+     * Any uncaught exceptions thrown by [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] will propagate across the enclave-host boundary and
      * will be rethrown here.
      *
      * @param bytes Bytes to send to the enclave.
-     * @param callback Bytes received from the enclave via `Enclave.callUntrustedHost`.
+     * @param callback Bytes received from the enclave via [com.r3.conclave.enclave.Enclave.callUntrustedHost].
      *
-     * @return The return value of the enclave's `receiveFromUntrustedHost`.
+     * @return The return value of the enclave's [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of
+     * [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      * @throws IllegalStateException If the host has not been started.
      * @throws EnclaveException If an exception is raised from within the enclave.
      */
@@ -737,20 +738,20 @@ class EnclaveHost private constructor(
      * mechanism, alternatively, [DataOutputStream] is a convenient way to lay out
      * pieces of data in a fixed order.
      *
-     * For this method to work the enclave class must override and implement `receiveFromUntrustedHost` The return
+     * For this method to work the enclave class must override and implement [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] The return
      * value from that method (which can be null) is returned here. It will not be received via the provided callback.
      *
-     * The enclave does not have the option of using `Enclave.callUntrustedHost` for
+     * The enclave does not have the option of using [com.r3.conclave.enclave.Enclave.callUntrustedHost] for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
-     * Any uncaught exceptions thrown by `receiveFromUntrustedHost` will propagate across the enclave-host boundary and
-     * will be rethrown here.
+     * Any uncaught exceptions thrown by [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] will propagate
+     * across the enclave-host boundary and will be rethrown here.
      *
      * @param bytes Bytes to send to the enclave.
      *
-     * @return The return value of the enclave's `receiveFromUntrustedHost`.
+     * @return The return value of the enclave's [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      * @throws IllegalStateException If the host has not been started.
      * @throws EnclaveException If an exception is raised from within the enclave.
      */
@@ -761,7 +762,8 @@ class EnclaveHost private constructor(
     }
 
     /**
-     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement `receiveMail`
+     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement
+     * [com.r3.conclave.enclave.Enclave.receiveMail]
      * to receive it. If the enclave throws an exception it will be rethrown.
      * It's up to the caller to decide what to do with mails that don't seem to be
      * handled properly: discarding it and logging an error is a simple option, or
@@ -780,11 +782,12 @@ class EnclaveHost private constructor(
      * @param mail The encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
      * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
-     * @param callback If the enclave calls `Enclave.callUntrustedHost` then the
+     * @param callback If the enclave calls [com.r3.conclave.enclave.Enclave.callUntrustedHost] then the
      * bytes will be passed to this object for consumption and generation of the
      * response.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation for
+     * [com.r3.conclave.enclave.Enclave.receiveMail].
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
      * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
@@ -798,7 +801,8 @@ class EnclaveHost private constructor(
     }
 
     /**
-     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement `receiveMail`
+     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement
+     * [com.r3.conclave.enclave.Enclave.receiveMail]
      * to receive it. If the enclave throws an exception it will be rethrown.
      * It's up to the caller to decide what to do with mails that don't seem to be
      * handled properly: discarding it and logging an error is a simple option, or
@@ -814,14 +818,14 @@ class EnclaveHost private constructor(
      * restarted and the client had used the enclave's old encryption key. In such a scenerio the client must be
      * informed so that it re-send the mail using the enclave's new encryption key.
      *
-     * Note: The enclave does not have the option of using `Enclave.callUntrustedHost` for
+     * Note: The enclave does not have the option of using [com.r3.conclave.enclave.Enclave.callUntrustedHost] for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
      * @param mail the encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
      * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation for [com.r3.conclave.enclave.Enclave.receiveMail].
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
      * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate

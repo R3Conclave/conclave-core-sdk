@@ -75,7 +75,7 @@ _Default: None. You must provide a value_
 
 The revocation level should be incremented whenever a weakness or vulnerability in the enclave code is discovered
 and fixed. Doing this will enable clients to avoid connecting to old, compromised enclaves. The client can set an
-[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum 
+[`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum 
 revocation level when loading an enclave.
 
 The revocation level in an enclave affects the keys that are generated for 'sealing' data in an enclave. 
@@ -226,7 +226,7 @@ your enclave will load/save/read/write all files and directories into that file.
 
 The enclave host must provide a file where the encrypted file system will be persisted. If using the
 [web host](conclave-web-host.md) then the `--filesystem.file` flag must be specified. If using a custom host then it 
-must be passed into [`EnclaveHost.start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html).
+must be passed into [`EnclaveHost.start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
 
 !!! note
     Once created with a specific enclave mode, the filesystem cannot be used by the same enclave built with a different enclave mode.
