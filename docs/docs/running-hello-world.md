@@ -2,12 +2,13 @@
 
 ## Introduction
 
-This tutorial describes how to compile and run the sample hello world app, which you can find in the
-[Conclave tutorials repository](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
-This app contains the `ReverseEnclave` function, which reverses a string provided by the client and passes it back.
+This tutorial describes how to compile and run the sample
+[hello world app](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
+This app contains an enclave `ReverseEnclave`, which reverses a string provided by the client and passes it 
+back.
 
 Follow the instructions to run the app in [mock mode](enclave-modes.md). After running it in mock mode, you
-can proceed to [run the app in other modes](#beyond-mock-mode).
+can proceed to [run the app in the other modes](#beyond-mock-mode).
 
 If you get stuck at any step, please [talk to us on Discord](https://discord.gg/zpHKkMZ8Sw).
 
@@ -15,7 +16,8 @@ If you get stuck at any step, please [talk to us on Discord](https://discord.gg/
 
 * This tutorial assumes you've read and understood the [conceptual overview](enclaves.md)
   and [architecture overview](architecture.md).
-* You need JDK 17 or higher installed. You can download it [here](https://www.oracle.com/java/technologies/downloads/).
+* You need to install JDK. Conclave is compatible from version 8 to 17.
+You can download JDK 17 [here](https://www.oracle.com/java/technologies/downloads/).
 
 ## Compile the sample application
 
@@ -33,13 +35,15 @@ cd conclave-tutorials/hello-world
 3. Generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks.
 
 === "Windows"
-```bash
+    ```bash
     gradlew.bat :host:bootJar :client:shadowJar
-```
+    ```
+
 === "macOS / Linux"
-```bash
+    ```bash
     ./gradlew :host:bootJar :client:shadowJar
-```
+    ```
+
 When the compilation is complete, you will get a success message: 'BUILD SUCCESSFUL'.
 
 ## Run the host
@@ -76,8 +80,8 @@ this:
   - Revocation level: 0
 ```
 This output is the [remote attestation](enclaves.md#remote-attestation), an object which proves certain information
-about the enclave. The private key corresponding to the "Session encryption key" (printed above) is only available
-inside the enclave. The client will use the "Session encryption key" to encrypt data to send to the enclave.
+about the enclave. The private key corresponding to the ```Session encryption key``` is only available
+inside the enclave. The client will use the ```Session encryption key``` to encrypt data to send to the enclave.
 
 After the server starts up, it will be ready to communicate with the client on http://localhost:8080.
 
@@ -146,7 +150,7 @@ java -jar client/build/libs/client.jar "S:22222222222222222222222222222222222222
 SEC:INSECURE" reverse-me
 ```
 
-You will get the following error, as the client's signing key(code signer) does not match the enclave's signing key:
+You will get the following error, as the client's code signer does not match the enclave's signing key:
 > com.r3.conclave.common.InvalidEnclaveException: Enclave code signer does not match any of the acceptable code signers.
 (key hash 0000000000000000000000000000000000000000000000000000000000000000 vs acceptable
 2222222222222222222222222222222222222222222222222222222222222222)
@@ -176,12 +180,6 @@ using the `enclaveMode` Gradle parameter. For example, you can compile the host 
 
 This generates the host JAR at `host/build/libs/host-simulation.jar`.
 
-!!!Note
-
-    If you use IntelliJ, find the bootJar task of your host project from the Gradle menu on the right-hand 
-    side. Modify the run configuration of this task by adding the -PenclaveMode=<MODE> flag to the arguments section.
-    Now you can run the task.
-
 For *release mode*, the sample app is configured (in the `build.gradle` of the `enclave` subproject) to use
 external signing. Note that *external signing is optional*.
 See [enclave signing](signing.md) for more information on external signing.
@@ -189,32 +187,32 @@ See [enclave signing](signing.md) for more information on external signing.
 To generate `host-release.jar`:
 
 === "Windows"
-
-1. Install [OpenSSL](https://www.openssl.org/source/) on your system if it's not already installed.
-2. Build the signing material:
+    
+    1. Install [OpenSSL](https://www.openssl.org/source/) on your system if it's not already installed.
+    2. Build the signing material:
     ```bash
     gradlew.bat prepareForSigning -PenclaveMode=release
     ```
-3. Generate a signature from the signing material. The password for the sample external key is '12345'.
+    3. Generate a signature from the signing material. The password for the sample external key is '12345'.
     ```bash
     openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
     ```
-4. Build the signed enclave:
+    4. Build the signed enclave:
     ```bash
     gradlew.bat :host:bootJar -PenclaveMode="release"
     ```
 === "macOS / Linux"
 
-1. Install [OpenSSL](https://www.openssl.org/source/) on your system if it's not already installed.
-2. Build the signing material:
+    1. Install [OpenSSL](https://www.openssl.org/source/) on your system if it's not already installed.
+    2. Build the signing material:
     ```bash
     ./gradlew prepareForSigning -PenclaveMode=release
     ```
-3. Generate a signature from the signing material. The password for the sample external key is '12345'.
+    3. Generate a signature from the signing material. The password for the sample external key is '12345'.
     ```bash
     openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
     ```    
-4. Build the signed enclave:
+    4. Build the signed enclave:
     ```bash
     ./gradlew :host:bootJar -PenclaveMode="release"
     ```
