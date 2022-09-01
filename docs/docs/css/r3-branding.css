@@ -13,10 +13,12 @@ See:
   --md-primary-fg-color--light:        #53585F;
   --md-primary-fg-color--dark:         #00161E;
   --md-accent-fg-color:                #EC1D24;
-  --md-typeset-color:                  #ADD8E6;
-  --md-typeset-a-color:                #ADD8E6;
 }
 
 :root > * {
   --md-footer-bg-color:                #003245;
+}
+
+.md-content {
+  --md-typeset-a-color: #ADD8E6;
 }
