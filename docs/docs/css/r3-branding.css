@@ -13,7 +13,8 @@ See:
   --md-primary-fg-color--light:        #53585F;
   --md-primary-fg-color--dark:         #00161E;
   --md-accent-fg-color:                #EC1D24;
-  --md-typeset-a-color:                #338BA8;
+  --md-typeset-color:                  #ADD8E6;
+  --md-typeset-a-color:                #ADD8E6;
 }
 
 :root > * {
