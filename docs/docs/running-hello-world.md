@@ -2,27 +2,19 @@
 
 ## Introduction
 
-This tutorial describes how to compile and run the sample
-[hello world app](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
+This tutorial describes how to compile and run the
+[sample hello world app](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
 This app contains an enclave `ReverseEnclave`, which reverses a string provided by the client and passes it 
 back.
-
-Follow the instructions to run the app in [mock mode](enclave-modes.md). After running it in mock mode, you
-can proceed to [run the app in the other modes](#beyond-mock-mode).
 
 If you get stuck at any step, please [talk to us on Discord](https://discord.gg/zpHKkMZ8Sw).
 
 ## Prerequisites
 
-* This tutorial assumes you've read and understood the [conceptual overview](enclaves.md)
-  and [architecture overview](architecture.md).
-* You need to install JDK. Conclave is compatible from version 8 to 17.
-You can download JDK 17 [here](https://www.oracle.com/java/technologies/downloads/).
+* You need to install JDK 17. You can download JDK 17 [here](https://www.oracle.com/java/technologies/downloads/).
 
 ## Compile the sample application
 
-Like all Conclave apps, this sample app has an [enclave and a client](architecture.md#primary-entities). The enclave
-runs inside a host, which is also a part of the sample app.
 
 To get the sample app and compile it:
 
@@ -48,27 +40,33 @@ When the compilation is complete, you will get a success message: 'BUILD SUCCESS
 
 ## Run the host
 
-1. Run the host with the command:
+Like all Conclave apps, this sample app has an [enclave and a client](architecture.md#primary-entities). The enclave
+runs inside a host, which is also a part of the sample app.
+
+To run the host:
+
+1. Run the command:
 ```bash
 java -jar host/build/libs/host-mock.jar
 ```
 
-The sample uses the Conclave web host. This is a Spring Boot application. So, you will see the Spring logo when the web
-server starts up.
+This will start *Conclave web host*, a Spring Boot service, to handle the client's requests. You will see the Spring 
+logo when the web server starts up.
 
 ```text
+
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
 ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
-  '  |____| .__|_| |_|_| |_\__, | / /k/ /
+  '  |____| .__|_| |_|_| |_\__, | / / / /
  =========|_|==============|___/=/_/_/_/
- :: Spring Boot ::                (v2.4.2)
+ :: Spring Boot ::                (v2.6.1)
+
 ```
 
 
-The web server loads the enclave and waits for requests from the client. In the output, you will see an output like
-this:
+The web server loads the enclave and waits for requests from the client. You will see an output like this:
 
 ```bash
 [main] INFO com.r3.conclave.host.web.EnclaveWebController - Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
@@ -81,15 +79,19 @@ this:
 ```
 This output is the [remote attestation](enclaves.md#remote-attestation), an object which proves certain information
 about the enclave. The private key corresponding to the ```Session encryption key``` is only available
-inside the enclave. The client will use the ```Session encryption key``` to encrypt data to send to the enclave.
+inside the enclave. The client will use the public key corresponding to the ```Session encryption key``` to encrypt 
+data and send it to the enclave.
 
-After the server starts up, it will be ready to communicate with the client on http://localhost:8080.
-
-2. Proceed to [Run the client](#run-the-client) when you see the following output:
+2. You can confirm that the server started up when you see the following output:
 
 ```text
 [main] c.r.c.host.web.EnclaveWebHost$Companion  : Started EnclaveWebHost.Companion in <SECONDS> seconds 
 ```
+
+The host is ready to communicate with the client on http://localhost:8080.
+
+Now you can [run the client](#run-the-client).
+
 
 !!!Warning
 
@@ -101,19 +103,16 @@ After the server starts up, it will be ready to communicate with the client on h
 
 ## Run the client
 
-After running the host:
+To run the client:
 
 1. Open another command line interface.
-2. Navigate to the hello-world sample.
+2. Go to the hello-world directory and run the client.
 ```bash
 cd conclave-tutorials/hello-world
+java -jar client/build/libs/client.jar "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" reverse-me
 ```
-3. Run the client with the command:
-```bash
-java -jar client/build/libs/client.jar "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1
-SEC:INSECURE" reverse-me
-```
-In the above command, the parameters in quotes are the constraints, and 'reverse-me' is the string to be reversed.
+In the above command, the parameters in quotes are the [constraints](constraints.md)), and 'reverse-me' is the 
+string to be reversed.
 
 You will see the output:
 ```bash
@@ -122,11 +121,14 @@ Reversing `reverse-me` gives `em-esrever`
 
 You have run your first enclave successfully.
 
-The following sequence of events produces the above output:
+
+## Sequence of events
+
+The sample app reversed the string by these steps:
 
 1. The host loads the enclave, which generates a remote attestation report.
-2. The client connects to the host and downloads the attestation report.
-3. The client uses the attestation report to verify that it is connected to the enclave it expected, and that the
+2. The client connects to the host and retrieves the attestation report.
+3. The client uses the attestation report to verify that it is connected to the expected enclave, and that the
    enclave is running in the expected mode.
 4. The client encrypts the "reverse-me" string using the public key provided in the attestation.
 5. In the message to the enclave, the client also includes a public key for the enclave to use when responding.
@@ -134,28 +136,7 @@ The following sequence of events produces the above output:
 7. The host passes the encrypted message to the enclave.
 8. The enclave decrypts the client's message, reverses the string, and encrypts the response using the client's
    public key.
-9. The enclave passes the encrypted message to the host, and is sent back to the client as an HTTP response to the same
-   request.
-
-### Enclave Constraint
-The `--constraint` parameter of the client defines the properties of an acceptable enclave.
-This includes the signing key, which is also present in the host output in the previous section:
-```
-S:0000000000000000000000000000000000000000000000000000000000000000
-```
-
-Try rerunning the command with a different signing key:
-```
-java -jar client/build/libs/client.jar "S:2222222222222222222222222222222222222222222222222222222222222222 PROD:1
-SEC:INSECURE" reverse-me
-```
-
-You will get the following error, as the client's code signer does not match the enclave's signing key:
-> com.r3.conclave.common.InvalidEnclaveException: Enclave code signer does not match any of the acceptable code signers.
-(key hash 0000000000000000000000000000000000000000000000000000000000000000 vs acceptable
-2222222222222222222222222222222222222222222222222222222222222222)
-
-For more information on choosing a constraint, see [Enclave constraints](constraints.md).
+9. The enclave passes the encrypted response to the host, which forwards it to the client in an HTTP response.
 
 ## Beyond mock mode
 This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
@@ -166,22 +147,27 @@ your desired mode.*
 
 ### Build the enclave in other modes
 
-The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mode) such that you can define the mode
-using the `enclaveMode` Gradle parameter. For example, you can compile the host for simulation mode with the command
+In the previous section, you run the sample app in [mock mode](enclave-modes.md). Now you can run it in the other 
+modes. The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mode) such that you can define 
+the mode using the `enclaveMode` Gradle parameter. For example, you can compile the host for simulation mode with 
+the command:
 
 === "Windows"
 ```bash
     gradlew.bat :host:bootJar -PenclaveMode=simulation
 ```
+Replace `simulation` with `debug` for debug mode.
+
 === "macOS / Linux"
 ```bash
     ./gradlew :host:bootJar -PenclaveMode=simulation
 ```
+Replace `simulation` with `debug` for debug mode.
 
 This generates the host JAR at `host/build/libs/host-simulation.jar`.
 
 For *release mode*, the sample app is configured (in the `build.gradle` of the `enclave` subproject) to use
-external signing. Note that *external signing is optional*.
+external code signing. Note that *external code signing is optional*.
 See [enclave signing](signing.md) for more information on external signing.
 
 To generate `host-release.jar`:
@@ -260,6 +246,10 @@ environment using Conclave's Docker integration.
     !!!Note
         * You need Docker to run the *host* on macOS. You can run the client on macOS without Docker.
         * It is not possible to run enclaves in debug or release mode on macOS.
+        * Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on
+          [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64 
+          binaries.
+        
 
 1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
     ```bash
@@ -302,7 +292,7 @@ when you are not using mock mode, which will be reflected in the enclave constra
 ```bash hl_lines="3"
 [main] INFO com.r3.conclave.host.web.EnclaveWebController -
 Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
-  - Mode: MOCK
+  - Mode: SIMULATION
   - Code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
   - Session signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
   - Session encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
@@ -325,8 +315,7 @@ Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75
 
 3. Run the client using the signing key from the host's attestation report
 ```bash
-java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 
-SEC:INSECURE" reverse-me
+java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" reverse-me
 ```
 
 ## Next steps
