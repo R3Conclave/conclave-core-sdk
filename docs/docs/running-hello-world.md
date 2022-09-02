@@ -85,7 +85,7 @@ about the enclave. The private key corresponding to the ```Session encryption ke
 inside the enclave. The client will use the public key corresponding to the ```Session encryption key``` to encrypt 
 data and send it to the enclave.
 
-2. You can confirm that the server started up when you see the following output:
+You can confirm that the server started up when you see the following output:
 
 ```text
 [main] c.r.c.host.web.EnclaveWebHost$Companion  : Started EnclaveWebHost.Companion in <SECONDS> seconds 
@@ -296,38 +296,54 @@ Don't worry, you will still be able to use simulation mode even if you see this 
 
 ### Run the client in other modes
 The client build is independent of the mode. The only difference is that the enclave will have a different signing key
-when you are not using mock mode, which will be reflected in the enclave constraint p****rovided to the client.
+when you are not using mock mode, which will be reflected in the enclave constraint provided to the client.
 
-1. When you run the host, you should see the new signing key in the output:
-```bash hl_lines="3"
-[main] INFO com.r3.conclave.host.web.EnclaveWebController -
-Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
-  - Mode: SIMULATION
-  - Code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
-  - Session signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
-  - Session encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
-  - Product ID: 1
-  - Revocation level: 0
-```
 
-2. If you haven't built the client already, build it the same way as in mock mode
+
+
 
 === "Linux/macOS"
-
+    
+    1. When you run the host, you should see the new signing key in the output:
+    ```bash hl_lines="3"
+    [main] INFO com.r3.conclave.host.web.EnclaveWebController -
+    Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
+    - Mode: SIMULATION
+    - Code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+    - Session signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
+    - Session encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
+    - Product ID: 1
+    - Revocation level: 0
+    ``` 
+    2. If you haven't built the client already, build it the same way as in mock mode:
     ```bash
     ./gradlew :client:shadowJar
     ```
-
+    3. Run the client using the signing key from the host's attestation report
+    ```bash
+    java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" reverse-me
+    ```
 === "Windows"
-
+    
+    1. When you run the host, you should see the new signing key in the output:
+    ```bash hl_lines="3"
+    [main] INFO com.r3.conclave.host.web.EnclaveWebController -
+    Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
+    - Mode: SIMULATION
+    - Code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
+    - Session signing key: 302A300506032B6570032100D23DD5C05A37CB5B6ED50EA1501E55ABF0EF85B50A97A69D0C3F4F84372AF928
+    - Session encryption key: 42CF5E2457B19A9E4FA3716F40CDF6B07A3EEC95D1AFE29C6F1DE99FD0DC647C
+    - Product ID: 1
+    - Revocation level: 0
+    ``` 
+    2. If you haven't built the client already, build it the same way as in mock mode:
     ```bash
     gradlew.bat :client:shadowJar
     ```
-
-3. Run the client using the signing key from the host's attestation report
-```bash
-java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" reverse-me
-```
+    3. Run the client using the signing key from the host's attestation report
+    ```bash
+    java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" reverse-me
+    ```
 
 ## Next steps
 Now you know how to build and run the hello world sample, see how it is implemented in
