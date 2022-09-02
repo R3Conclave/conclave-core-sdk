@@ -22,7 +22,7 @@ To set up a project:
 
 1. Download the Conclave Init tool.
 ```bash
-   wget https://repo1.maven.org/maven2/com/r3/conclave/conclave-init/1.4/conclave-init-1.4.jar -O conclave-init.jar
+   wget https://repo1.maven.org/maven2/com/r3/conclave/conclave-init/1.3/conclave-init-1.3.jar -O conclave-init.jar
 ```
 2. Create a new Conclave project using Conclave Init. Note that you don't have to create a project directory beforehand.
 ```bash
@@ -81,24 +81,13 @@ each of the different build types.
 * Debug builds use a private key stored in a file.
 * Release builds use a private key managed by an external signing process.
 
-2. Copy the `signing` directory in the `hello world`
-[sample](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world) repository into your project and
-update the paths in the enclave `build.gradle`. 
+2. Create an RSA private key.
 
-The `signing` directory has the `privateKey` and `externalKey` signing types. See a description below:
+```
+openssl genrsa -out my_private_key.pem -3 3072
+```
 
-| Key Files              | Description                                                                                                                                                                   |
-|:-----------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| sample_private_key.pem | A 3072 bit RSA private key that can be used to test the ```privateKey``` signing type                                                                                         |
-| external_signing_*.pem | An AES encrypted 3072 bit RSA public/private key pair that can be used to test the ```externalKey``` signing type. The private key can be accessed with the password '12345'. |
-
-
-Alternatively, you can also [generate your own](signing.md#generating-keys-for-signing-an-enclave) keys.
-
-!!!Important
-
-    Use these sample keys only for the tutorial. Do not use these keys to sign your own enclaves as Intel hasn't
-    whitelisted these sample keys.
+You can learn more ways to generate signing keys [here](signing.md#generating-keys-for-signing-an-enclave).
 
 
 ## Create a new subclass of [`Enclave`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/index.html)
@@ -154,7 +143,7 @@ The second method in the enclave implementation overrides the
 [`receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html) method. Messages enter the 
 enclave through this method.
 
-The host calls this method to send messages to the enclave and uses the [Conclave mail](architecture.md#mail)
+The host calls this method to send messages to the enclave and uses the [Conclave Mail](architecture.md#mail)
 API for encryption and authentication of messages. The enclave in this tutorial uses the
 [`postMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/post-mail.html) method to reply to the host. 
 The host then sends the encrypted reply to the appropriate client. This tutorial handles transport using the built-in
@@ -281,8 +270,9 @@ public class ReverseEnclaveClient {
 
 To encrypt the response from the enclave to the client, the client needs a public key and a private key.
 
-Conclave abstracts the complexity of dealing with private keys inside `EnclaveClient`. The
-`new EnclaveClient(constraint)` line in the above code also creates a new random Curve25519 private key.
+Conclave abstracts the complexity of dealing with private keys inside
+[`EnclaveClient`](https://docs.conclave.net/api/-conclave/com.r3.conclave.client/-enclave-client/-enclave-client.html).
+The `new EnclaveClient(constraint)` line in the above code also creates a new random Curve25519 private key.
 
 To use an existing private key or to manually create a new random key, use the following code:
 
@@ -418,7 +408,7 @@ public class NativeTest {
 
 The test class is annotated with `@EnabledOnOs(OS.LINUX)`. This is from
 [JUnit 5](https://junit.org/junit5/docs/current/user-guide/#writing-tests-conditional-execution-os) to ensure that the
-native test is run on a Linux environment.
+native test is run only on a Linux environment.
 
 To execute the test using a simulation enclave, run:
 

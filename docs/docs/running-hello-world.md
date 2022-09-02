@@ -11,7 +11,7 @@ If you get stuck at any step, please [talk to us on Discord](https://discord.gg/
 
 ## Prerequisites
 
-* You need JDK 17. You can download JDK 17 [here](https://www.oracle.com/java/technologies/downloads/).
+* You need JDK 17, which you can download [here](https://www.oracle.com/java/technologies/downloads/).
 
 ## Compile the sample application
 
@@ -39,7 +39,12 @@ cd conclave-tutorials/hello-world
     ```
 
 
-When the compilation is complete, you will get a success message: 'BUILD SUCCESSFUL'.
+When the compilation is complete, you will get a success message:
+
+```text
+BUILD SUCCESSFUL in <SECONDS>s
+9 actionable tasks: 2 executed, 7 up-to-date
+```
 
 ## Run the host
 
@@ -118,7 +123,7 @@ You have run your first enclave successfully.
 
 ## Sequence of events
 
-The sample application reversed the string by these steps:
+The sample application reversed the string securely and confidentially by these steps:
 
 1. The host loads the enclave, which generates a remote attestation report.
 2. The client connects to the host and retrieves the attestation report.
