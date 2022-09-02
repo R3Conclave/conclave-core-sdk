@@ -27,11 +27,13 @@ cd conclave-tutorials/hello-world
 3. Generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks.
 
 === "Windows"
+    
     ```bash
     gradlew.bat :host:bootJar :client:shadowJar
     ```
 
 === "macOS / Linux"
+    
     ```bash
     ./gradlew :host:bootJar :client:shadowJar
     ```
