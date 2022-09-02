@@ -26,12 +26,11 @@ cd conclave-tutorials/hello-world
 ```
 3. Generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks.
 
-=== "macOS / Linux"
+=== "Linux/macOS"
 
     ```bash
     ./gradlew :host:bootJar :client:shadowJar
     ```
-
 
 === "Windows"
     
@@ -156,6 +155,13 @@ The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mo
 the mode using the `enclaveMode` Gradle parameter. For example, you can compile the host for simulation mode with 
 the command:
 
+=== "Linux/macOS"
+
+    ```bash
+    ./gradlew :host:bootJar -PenclaveMode=simulation
+    ```
+    Replace `simulation` with `debug` for debug mode.
+
 === "Windows"
     
     ```bash
@@ -163,12 +169,6 @@ the command:
     ```
     Replace `simulation` with `debug` for debug mode.
 
-=== "macOS / Linux"
-   
-    ```bash
-    ./gradlew :host:bootJar -PenclaveMode=simulation
-    ```
-    Replace `simulation` with `debug` for debug mode.
 
 This generates the host JAR at `host/build/libs/host-simulation.jar`.
 
@@ -179,6 +179,22 @@ external code signing. Note that *external code signing is optional*.
 See [enclave signing](signing.md) for more information on external signing.
 
 To generate `host-release.jar`:
+
+=== "Linux/macOS"
+
+    1. Install [OpenSSL](https://www.openssl.org/source/) on your system if it's not already installed.
+    2. Build the signing material:
+    ```bash
+    ./gradlew prepareForSigning -PenclaveMode=release
+    ```
+    3. Generate a signature from the signing material. The password for the sample external key is '12345'.
+    ```bash
+    openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
+    ```    
+    4. Build the signed enclave:
+    ```bash
+    ./gradlew :host:bootJar -PenclaveMode="release"
+    ```
 
 === "Windows"
     
@@ -195,23 +211,44 @@ To generate `host-release.jar`:
     ```bash
     gradlew.bat :host:bootJar -PenclaveMode="release"
     ```
-=== "macOS / Linux"
-
-    1. Install [OpenSSL](https://www.openssl.org/source/) on your system if it's not already installed.
-    2. Build the signing material:
-    ```bash
-    ./gradlew prepareForSigning -PenclaveMode=release
-    ```
-    3. Generate a signature from the signing material. The password for the sample external key is '12345'.
-    ```bash
-    openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
-    ```    
-    4. Build the signed enclave:
-    ```bash
-    ./gradlew :host:bootJar -PenclaveMode="release"
-    ```
 
 ### Run the enclave in other modes
+
+=== "Linux"
+
+    On a Linux machine that meets the [system requirements](enclave-modes.md#system-requirements), you can run your 
+    app in all the modes the same way as in mock mode.
+
+=== "macOS"
+
+    You need a Linux environment to run the host in simulation mode. This section describes how to create such an
+    environment using Conclave's Docker integration.
+
+    !!!Note
+        * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
+        * It is not possible to run enclaves in debug or release mode on macOS.
+        * Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on
+          [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64 
+          binaries.
+        
+
+    1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
+       ```bash
+       ./gradlew enclave:setupLinuxExecEnvironment
+       ```
+    2. Instantiate a container using the `conclave-build` image.
+       ```bash
+       docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
+       ```
+       This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this 
+       command according to the specific needs of your project. Please take a look at the explanation of the options 
+       used in this command [at the end of this tutorial](#appendix-summary-of-docker-command-options). Check the 
+       [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) or run
+       `docker <command> --help` on the Docker command line interface for more information.
+
+    3. You can now run the host and client as we did for mock mode. The only differences are that the host must be 
+       run from inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+    4. Press `CTRL+D` to exit the container when finished.
 
 === "Windows"
 
@@ -246,43 +283,8 @@ To generate `host-release.jar`:
     Instructions for installing WSL-2 can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
     Please note that this method hasn't been extensively tested.
 
-=== "macOS"
 
-    You need a Linux environment to run the host in simulation mode. This section describes how to create such an
-    environment using Conclave's Docker integration.
-
-    !!!Note
-        * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
-        * It is not possible to run enclaves in debug or release mode on macOS.
-        * Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on
-          [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64 
-          binaries.
-        
-
-    1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
-       ```bash
-       ./gradlew enclave:setupLinuxExecEnvironment
-       ```
-    2. Instantiate a container using the `conclave-build` image.
-       ```bash
-       docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
-       ```
-       This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this 
-       command according to the specific needs of your project. Please take a look at the explanation of the options 
-       used in this command [at the end of this tutorial](#appendix-summary-of-docker-command-options). Check the 
-       [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) or run
-       `docker <command> --help` on the Docker command line interface for more information.
-
-    3. You can now run the host and client as we did for mock mode. The only differences are that the host must be 
-       run from inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
-    4. Press `CTRL+D` to exit the container when finished.
-
-=== "Linux"
-
-    On a Linux machine that meets the [system requirements](enclave-modes.md#system-requirements), you can run your 
-    app in all the modes the same way as in mock mode.
-
-    !!!Note
+!!!Note
 
     If your platform or container doesn't support SGX enclaves, you might see the following message when you run the
     host:
@@ -290,7 +292,7 @@ To generate `host-release.jar`:
     This platform does not support hardware enclaves: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the 
     CPU in this system
     ```
-    Don't worry, you will still be able to use simulation mode even if you see this message.
+Don't worry, you will still be able to use simulation mode even if you see this message.
 
 ### Run the client in other modes
 The client build is independent of the mode. The only difference is that the enclave will have a different signing key
@@ -310,16 +312,17 @@ Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75
 
 2. If you haven't built the client already, build it the same way as in mock mode
 
+=== "Linux/macOS"
+
+    ```bash
+    ./gradlew :client:shadowJar
+    ```
+
 === "Windows"
 
-```bash
+    ```bash
     gradlew.bat :client:shadowJar
-```
-=== "macOS / Linux"
-
-```bash
-    ./gradlew :client:shadowJar
-```
+    ```
 
 3. Run the client using the signing key from the host's attestation report
 ```bash
