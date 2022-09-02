@@ -11,7 +11,7 @@ If you get stuck at any step, please [talk to us on Discord](https://discord.gg/
 
 ## Prerequisites
 
-* You need to install JDK 17. You can download JDK 17 [here](https://www.oracle.com/java/technologies/downloads/).
+* You need JDK 17. You can download JDK 17 [here](https://www.oracle.com/java/technologies/downloads/).
 
 ## Compile the sample application
 
@@ -128,8 +128,7 @@ The sample app reversed the string by these steps:
 
 1. The host loads the enclave, which generates a remote attestation report.
 2. The client connects to the host and retrieves the attestation report.
-3. The client uses the attestation report to verify that it is connected to the expected enclave, and that the
-   enclave is running in the expected mode.
+3. The client uses the attestation report to verify that it is connected to the expected enclave.
 4. The client encrypts the "reverse-me" string using the public key provided in the attestation.
 5. In the message to the enclave, the client also includes a public key for the enclave to use when responding.
 6. The client sends the encrypted message to the host's REST API.
@@ -139,6 +138,8 @@ The sample app reversed the string by these steps:
 9. The enclave passes the encrypted response to the host, which forwards it to the client in an HTTP response.
 
 ## Beyond mock mode
+
+In the previous section, you run the sample app in [mock mode](enclave-modes.md). 
 This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
 simulation, debug, and release.
 
@@ -147,8 +148,7 @@ your desired mode.*
 
 ### Build the enclave in other modes
 
-In the previous section, you run the sample app in [mock mode](enclave-modes.md). Now you can run it in the other 
-modes. The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mode) such that you can define 
+The hello world sample has been [configured](enclave-modes.md#set-the-enclave-mode) such that you can define 
 the mode using the `enclaveMode` Gradle parameter. For example, you can compile the host for simulation mode with 
 the command:
 
@@ -166,7 +166,9 @@ Replace `simulation` with `debug` for debug mode.
 
 This generates the host JAR at `host/build/libs/host-simulation.jar`.
 
-For *release mode*, the sample app is configured (in the `build.gradle` of the `enclave` subproject) to use
+#### Build the enclave in release mode
+
+For *release* mode, the sample app is configured (in the `build.gradle` of the `enclave` subproject) to use
 external code signing. Note that *external code signing is optional*.
 See [enclave signing](signing.md) for more information on external signing.
 
@@ -244,7 +246,7 @@ You need a Linux environment to run the host in simulation mode. This section de
 environment using Conclave's Docker integration.
 
     !!!Note
-        * You need Docker to run the *host* on macOS. You can run the client on macOS without Docker.
+        * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
         * It is not possible to run enclaves in debug or release mode on macOS.
         * Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on
           [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64 
