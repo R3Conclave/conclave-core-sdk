@@ -26,17 +26,19 @@ cd conclave-tutorials/hello-world
 ```
 3. Generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks.
 
+=== "macOS / Linux"
+
+    ```bash
+    ./gradlew :host:bootJar :client:shadowJar
+    ```
+
+
 === "Windows"
     
     ```bash
     gradlew.bat :host:bootJar :client:shadowJar
     ```
 
-=== "macOS / Linux"
-    
-    ```bash
-    ./gradlew :host:bootJar :client:shadowJar
-    ```
 
 When the compilation is complete, you will get a success message: 'BUILD SUCCESSFUL'.
 
@@ -155,16 +157,18 @@ the mode using the `enclaveMode` Gradle parameter. For example, you can compile 
 the command:
 
 === "Windows"
-```bash
+    
+    ```bash
     gradlew.bat :host:bootJar -PenclaveMode=simulation
-```
-Replace `simulation` with `debug` for debug mode.
+    ```
+    Replace `simulation` with `debug` for debug mode.
 
 === "macOS / Linux"
-```bash
+   
+    ```bash
     ./gradlew :host:bootJar -PenclaveMode=simulation
-```
-Replace `simulation` with `debug` for debug mode.
+    ```
+    Replace `simulation` with `debug` for debug mode.
 
 This generates the host JAR at `host/build/libs/host-simulation.jar`.
 
@@ -290,7 +294,7 @@ all the modes the same way as in mock mode.
 
 ### Run the client in other modes
 The client build is independent of the mode. The only difference is that the enclave will have a different signing key
-when you are not using mock mode, which will be reflected in the enclave constraint provided to the client.
+when you are not using mock mode, which will be reflected in the enclave constraint p****rovided to the client.
 
 1. When you run the host, you should see the new signing key in the output:
 ```bash hl_lines="3"
