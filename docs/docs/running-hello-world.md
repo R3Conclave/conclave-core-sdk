@@ -4,7 +4,7 @@
 
 This tutorial describes how to compile and run the
 [sample hello world app](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
-This app contains an enclave `ReverseEnclave`, which reverses a string provided by the client and passes it 
+This application contains an enclave `ReverseEnclave`, which reverses a string provided by the client and passes it 
 back.
 
 If you get stuck at any step, please [talk to us on Discord](https://discord.gg/zpHKkMZ8Sw).
@@ -16,7 +16,7 @@ If you get stuck at any step, please [talk to us on Discord](https://discord.gg/
 ## Compile the sample application
 
 
-To get the sample app and compile it:
+To get the sample application and compile it:
 
 1. Open a command line interface.
 2. Clone the conclave-tutorials repository and navigate to the hello world sample.
@@ -43,8 +43,8 @@ When the compilation is complete, you will get a success message: 'BUILD SUCCESS
 
 ## Run the host
 
-Like all Conclave apps, this sample app has an [enclave and a client](architecture.md#primary-entities). The enclave
-runs inside a host, which is also a part of the sample app.
+Like all Conclave applications, this sample app has an [enclave and a client](architecture.md#primary-entities). The 
+enclave runs inside a host, which is also a part of the sample application.
 
 To run the host:
 
@@ -95,15 +95,6 @@ The host is ready to communicate with the client on http://localhost:8080.
 
 Now you can [run the client](#run-the-client).
 
-
-!!!Warning
-
-    The sample uses Conclave Mail which handles encryption and authentication. But the web host protocol uses
-    unencrypted request headers. So, it is important to use HTTPS for anything other than internal development.
-    Setting up an HTTPS connection is beyond the scope of this tutorial. You can try configuring Spring Boot or 
-    setting up a reverse proxy such as Nginx or Apache. See [Conclave web host](conclave-web-host.md) for more 
-    information.
-
 ## Run the client
 
 To run the client:
@@ -127,7 +118,7 @@ You have run your first enclave successfully.
 
 ## Sequence of events
 
-The sample app reversed the string by these steps:
+The sample application reversed the string by these steps:
 
 1. The host loads the enclave, which generates a remote attestation report.
 2. The client connects to the host and retrieves the attestation report.
@@ -142,7 +133,7 @@ The sample app reversed the string by these steps:
 
 ## Beyond mock mode
 
-In the previous section, you run the sample app in [mock mode](enclave-modes.md). 
+In the previous section, you run the sample application in [mock mode](enclave-modes.md). 
 This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
 simulation, debug, and release.
 
@@ -174,7 +165,7 @@ This generates the host JAR at `host/build/libs/host-simulation.jar`.
 
 #### Build the enclave in release mode
 
-For *release* mode, the sample app is configured (in the `build.gradle` of the `enclave` subproject) to use
+For *release* mode, the sample application is configured (in the `build.gradle` of the `enclave` subproject) to use
 external code signing. Note that *external code signing is optional*.
 See [enclave signing](signing.md) for more information on external signing.
 
