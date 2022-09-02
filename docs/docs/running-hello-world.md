@@ -215,41 +215,41 @@ To generate `host-release.jar`:
 
 === "Windows"
 
-You need a Linux environment to run the host in simulation mode. This section describes how to create such an
-environment using Conclave's Docker integration.
+    You need a Linux environment to run the host in simulation mode. This section describes how to create such an
+    environment using Conclave's Docker integration.
 
     !!! note
         * You need Docker to run the *host* on Windows. You don't need Docker to run the client.
         * It is not possible to run enclaves in debug or release mode on Windows.
 
 
-1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
-    ```bash
-    gradlew.bat enclave:setupLinuxExecEnvironment
-    ```
-2. Instantiate a container using the `conclave-build` image using
-   ```bash
-   docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
-   ```
-   This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this command
-   according to the specific needs of your project. Please take a look at the explanation of the options used in this
-   command [at the end of this tutorial](#appendix-summary-of-docker-command-options). Check the [Docker reference
-   manual](https://docs.docker.com/engine/reference/commandline/run/) or run `docker <command> --help` on the Docker
-   command line interface for more information.
-3. Run the host and client as you did for mock mode. The only differences are that the host must be run from inside
-   the container, and the host JAR is named `host-simulation.jar` rather than `host-mock.jar`.
-4. Press `CTRL+D` to exit the container when finished.
+    1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
+       ```bash
+       gradlew.bat enclave:setupLinuxExecEnvironment
+       ```
+    2. Instantiate a container using the `conclave-build` image using
+      ```bash
+      docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
+      ```
+      This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this command
+      according to the specific needs of your project. Please take a look at the explanation of the options used in this
+      command [at the end of this tutorial](#appendix-summary-of-docker-command-options).
+      Check the [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) or run 
+      `docker <command> --help` on the Docker command line interface for more information.
+    3. Run the host and client as you did for mock mode. The only differences are that the host must be run from inside
+      the container, and the host JAR is named `host-simulation.jar` rather than `host-mock.jar`.
+    4. Press `CTRL+D` to exit the container when finished.
 
-Alternatively, you can also install the Windows subsystem for Linux (2) and download Ubuntu 20.04 from the Windows
-store. From there, you can launch an Ubuntu 20.04 shell from the start menu and build or run Conclave applications
-as in a native Linux environment.
-Instructions for installing WSL-2 can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
-Please note that this method hasn't been extensively tested.
+    Alternatively, you can also install the Windows subsystem for Linux (2) and download Ubuntu 20.04 from the Windows
+    store. From there, you can launch an Ubuntu 20.04 shell from the start menu and build or run Conclave applications
+    as in a native Linux environment.
+    Instructions for installing WSL-2 can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
+    Please note that this method hasn't been extensively tested.
 
 === "macOS"
 
-You need a Linux environment to run the host in simulation mode. This section describes how to create such an
-environment using Conclave's Docker integration.
+    You need a Linux environment to run the host in simulation mode. This section describes how to create such an
+    environment using Conclave's Docker integration.
 
     !!!Note
         * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
@@ -259,30 +259,30 @@ environment using Conclave's Docker integration.
           binaries.
         
 
-1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
-    ```bash
-    ./gradlew enclave:setupLinuxExecEnvironment
-    ```
-2. Instantiate a container using the `conclave-build` image.
-    ```bash
-   docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
-    ```
-   This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this command
-   according to the specific needs of your project. Please take a look at the explanation of the options used in this
-   command [at the end of this tutorial](#appendix-summary-of-docker-command-options). Check the
-   [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) or
-   run `docker <command> --help` on the Docker command line interface for more information.
+    1. Create the `conclave-build` Docker image, which you can use to create a Linux environment to run the host.
+       ```bash
+       ./gradlew enclave:setupLinuxExecEnvironment
+       ```
+    2. Instantiate a container using the `conclave-build` image.
+       ```bash
+       docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
+       ```
+       This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this 
+       command according to the specific needs of your project. Please take a look at the explanation of the options 
+       used in this command [at the end of this tutorial](#appendix-summary-of-docker-command-options). Check the 
+       [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) or run
+       `docker <command> --help` on the Docker command line interface for more information.
 
-3. You can now run the host and client as we did for mock mode. The only differences are that the host must be run from
-   inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
-4. Press `CTRL+D` to exit the container when finished.
+    3. You can now run the host and client as we did for mock mode. The only differences are that the host must be 
+       run from inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+    4. Press `CTRL+D` to exit the container when finished.
 
 === "Linux"
 
-On a Linux machine that meets the [system requirements](enclave-modes.md#system-requirements), you can run your app in
-all the modes the same way as in mock mode.
+    On a Linux machine that meets the [system requirements](enclave-modes.md#system-requirements), you can run your 
+    app in all the modes the same way as in mock mode.
 
-!!!Note
+    !!!Note
 
     If your platform or container doesn't support SGX enclaves, you might see the following message when you run the
     host:
