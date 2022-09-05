@@ -20,8 +20,8 @@ could be earlier than in a previous instance. Additionally, the host may pause t
 an enclave at any moment for an arbitrary duration without the enclave code being aware of that. So, if you were to
 read a timestamp, it might be very old by the time you use it.
 
-However, the protocol for accessing the timestamp doesn't involve doing any calls out of the enclave. So, the host can't
-observe the program's progress by watching Outside Calls (OCall).
+However, the protocol for accessing the timestamp doesn't involve any calls out of the enclave. This avoids 
+side channel attacks as the host can't observe the program's progress by watching Outside Calls (OCALL).
 
 ## Memento/rewind/replay attacks
 
@@ -49,14 +49,8 @@ provided after each network message from a client is delivered, the enclave can 
 point. Then, stored messages from the clients can be replayed back to the enclave in different orders, or with some
 messages dropped.
 
-Such attacks are called memento/rewind/replay attacks. You need to consider this type of attack while designing your
-app.
-
-!!!Warning
-
-    A full discussion of memento attacks is beyond the scope of this document. The Conclave project strives to provide
-    you with high-level protocol constructs that take them into account, but when writing your own protocols, you should
-    consider what happens when messages can be re-ordered and re-tried by the host.
+Such attacks are called memento/rewind/replay attacks.
+You can use Conclave's [persistent map](persistence.md#PersistentMap) to mitigate rewind attacks.
 
 ## Side-channel attacks
 
@@ -96,20 +90,26 @@ Here is a non-exhaustive set of examples:
 
 * **Message sizes**. If an enclave is known to process only two kinds of message of around 1 kilobyte or 100 
   kilobytes, then the size of the encrypted message by itself leaks information about what kind of message it is.
+
+  Conclave can pad all messages to make all encrypted messages appear the same size. This approach works
+  if message sizes don't vary wildly, and you can afford to use the bandwidth and storage required to set all messages
+  to their maximum possible size.
+
 * **Message processing time**. If an enclave processes a message type in 1 millisecond and another message type in 
   100 milliseconds, observing how much work the enclave does for a new message, can reveal what kind of message it is.
+
 * **Storage access patterns**. Suppose an enclave doesn't access the database when processing a message of type A, 
   but does when processing a message of type B, or accesses the database with a different sequence, number or type 
   of accesses. In that case, the host can learn the message type by observing those accesses.
+
+  Conclave's [persistent file system](persistence.md#PersistentEncryptedFilesystem) randomizes sector accesses to
+  reduce such side-channel attacks.
 
 Malicious actors can use these techniques to reveal fine-grained information as well. For instance, if an encrypted
 piece of data contains a number used to control a loop that does data lookups, counting the number of external data
 lookups reveals the number.
 
-Conclave can mitigate some of these architectural side-channel attacks. For instance, Conclave can pad all messages 
-to make all encrypted messages appear the same size. This approach works if message sizes don't vary wildly and you 
-can afford to use the bandwidth and storage required to set all messages to their maximum possible size. Consider 
-these tradeoffs while designing your app.
+Conclave offers the following defenses against architectural side-channel attacks.
 
 ### Micro-architectural
 
@@ -121,7 +121,7 @@ execution capability of the processor to make an enclave compute on invalid data
 security mechanisms and leak data out of the enclave - not via normal means (which the CPU doesn't allow) but
 by affecting the timing of subsequent operations, which can then be measured.
 
-You can prevent Micro-architectural side-channel attacks at a layer lower than the architecture of your application. 
+You can prevent micro-architectural side-channel attacks at a layer lower than the architecture of your application. 
 These methods often require reducing the performance of either the enclave or the host system. So, it's worth
 always planning for a large buffer of unused per-host performance.
 
@@ -148,8 +148,10 @@ side-channel attacks when planning the architecture of your application.
 To generate random numbers inside the enclave, you need to use a strong random number generator that cannot be
 weakened by the host.
 
-The safest way is to use the `SecureRandom` class to generate random numbers. In Conclave enclaves, the 
-implementation of this class uses the `RDRAND` instruction to use an on-CPU hardware random number generator.
+The safest way is to use the
+[`SecureRandom`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/SecureRandom.html) class 
+to generate random numbers. In Conclave enclaves, the implementation of this class uses the `RDRAND` instruction, 
+which uses an on-CPU hardware random number generator.
 
 The JDK `Random` class normally uses the system time as a seed, XORing it with a fixed value
 that is updated predictably with each new `Random` class instance. If you use the JDK `Random` class, the host can
