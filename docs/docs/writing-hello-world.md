@@ -204,10 +204,10 @@ or `INSECURE`. An assessment of `STALE` means a software/firmware/microcode upda
 available. The client needs to define a time span by which the remote enclave operator must upgrade when the 
 security assessment turns `STALE`.
 
-An attestation doesn't expire. As the SGX ecosystem is constantly changes, the client code needs to define a frequency 
+An attestation doesn't expire. As the SGX ecosystem constantly changes, the client code needs to define a frequency 
 with which it expects the host code to refresh the
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). Currently, 
-the host code is refreshed by restarting the enclave.
+the host code refreshes every time the enclave restarts.
 
 Intel signs the remote attestation only in debug and release modes.
 
