@@ -8,10 +8,8 @@
 Use this tutorial to:
 
 * Set up a new Conclave project using [Conclave Init](conclave-init.md).
-* Modify the files to create an implementation of the Conclave *sample app* which we explored in the
+* Modify the files to create an implementation of the Conclave *sample application* which we explored in the
   [previous tutorial](running-hello-world.md).
-
-This tutorial uses [Conclave web host](conclave-web-host.md) to write a Conclave app.
 
 The client is a command line app for simplicity. You can implement your client as a GUI app or integrate it with 
 another program.
@@ -194,11 +192,10 @@ the build process prints out.
 
 !!!Note
 
-    1. You can get all this data using individual getters on the
-       [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). So 
-       you don't need to parse the output of `toString`.
-    2. You can easily build mock attestations in your tests using `EnclaveInstanceInfo` interface.
-    3. When not in simulation mode, the timestamp is signed by Intel.
+    You can get all this data using individual getters on the
+    [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). So you 
+    don't need to parse the output of `toString`.
+
 
 An instance has a [security assessment](api/-conclave%20-core/com.r3.conclave.common/-enclave-security-info/index.html),
 which changes when infrastructure vulnerabilities are discovered (even without any changes in the host or enclave). 
@@ -211,6 +208,8 @@ An attestation doesn't expire. As the SGX ecosystem is constantly changes, the c
 with which it expects the host code to refresh the
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). Currently, 
 the host code is refreshed by restarting the enclave.
+
+Intel signs the remote attestation only in debug and release modes.
 
 ## Run the host and enclave
 
@@ -368,7 +367,8 @@ mockHost.start(null, null);
 
 Conclave detects the enclave class on the classpath and starts the enclave in mock mode. You
 can obtain the enclave instance using the
-[`EnclaveHost.mockEnclave`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/get-mock-enclave.html) property.
+[`EnclaveHost.mockEnclave`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/get-mock-enclave.html) property,
+like in this [sample mock unit test](https://github.com/R3Conclave/conclave-tutorials/blob/HEAD/hello-world/enclave/src/test/java/com/r3/conclave/sample/enclave/MockTest.java).
 
 ```java
 ReverseEnclave reverseEnclave = (ReverseEnclave)mockHost.getMockEnclave();
@@ -409,6 +409,7 @@ public class NativeTest {
 The test class is annotated with `@EnabledOnOs(OS.LINUX)`. This is from
 [JUnit 5](https://junit.org/junit5/docs/current/user-guide/#writing-tests-conditional-execution-os) to ensure that the
 native test is run only on a Linux environment.
+Here is a [sample native test](https://github.com/R3Conclave/conclave-tutorials/blob/HEAD/hello-world/host/src/test/java/com/r3/conclave/sample/host/NativeTest.java) for your reference.
 
 To execute the test using a simulation enclave, run:
 

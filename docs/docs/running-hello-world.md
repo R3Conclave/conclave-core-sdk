@@ -4,8 +4,7 @@
 
 This tutorial describes how to compile and run the
 [sample hello world app](https://github.com/R3Conclave/conclave-tutorials/tree/HEAD/hello-world).
-This application contains an enclave `ReverseEnclave`, which reverses a string provided by the client and passes it 
-back.
+This application contains an enclave which reverses a string provided by the client and passes it back.
 
 If you get stuck at any step, please [talk to us on Discord](https://discord.gg/zpHKkMZ8Sw).
 
@@ -14,7 +13,6 @@ If you get stuck at any step, please [talk to us on Discord](https://discord.gg/
 * You need JDK 17, which you can download [here](https://www.oracle.com/java/technologies/downloads/).
 
 ## Compile the sample application
-
 
 To get the sample application and compile it:
 
@@ -138,12 +136,13 @@ The sample application reversed the string securely and confidentially by these 
 
 ## Beyond mock mode
 
-In the previous section, you run the sample application in [mock mode](enclave-modes.md). 
-This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
-simulation, debug, and release.
+In the previous section, you run the sample application in [mock mode](enclave-modes.md). Mock mode, as the name 
+suggests, isn't secure at all.
 
-*First, ensure that your system fulfills the [system requirements](enclave-modes.md#system-requirements) for
-your desired mode.*
+This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
+simulation, debug, and release. Note that only release mode provides confidential guarantees of SGX.
+
+*First, ensure that your system fulfills the [system requirements](enclave-modes.md#system-requirements).*
 
 ### Build the enclave in other modes
 
@@ -237,8 +236,7 @@ To generate `host-release.jar`:
        docker run -it --rm -p 8080:8080 -v ${PWD}:/project -w /project conclave-build /bin/bash
        ```
        This will give you a bash shell in the container that simulates a native Linux machine. You can tweak this 
-       command according to the specific needs of your project. Please take a look at the explanation of the options 
-       used in this command [at the end of this tutorial](#appendix-summary-of-docker-command-options). Check the 
+       command according to the specific needs of your project. Check the 
        [Docker reference manual](https://docs.docker.com/engine/reference/commandline/run/) or run
        `docker <command> --help` on the Docker command line interface for more information.
 
@@ -277,7 +275,7 @@ To generate `host-release.jar`:
     store. From there, you can launch an Ubuntu 20.04 shell from the start menu and build or run Conclave applications
     as in a native Linux environment.
     Instructions for installing WSL-2 can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
-    Please note that this method hasn't been extensively tested.
+    Please [talk to us on Discord](https://discord.gg/zpHKkMZ8Sw) if you need help with this.
 
 
 !!!Note
@@ -288,19 +286,16 @@ To generate `host-release.jar`:
     This platform does not support hardware enclaves: SGX_DISABLED_UNSUPPORTED_CPU: SGX is not supported by the 
     CPU in this system
     ```
-Don't worry, you will still be able to use simulation mode even if you see this message.
+You will still be able to use simulation mode even if you see this message.
 
 ### Run the client in other modes
-The client build is independent of the mode. The only difference is that the enclave will have a different signing key
-when you are not using mock mode, which will be reflected in the enclave constraint provided to the client.
-
-
-
+The client build is independent of the mode. The only difference is that the enclave might have a different code 
+signer, which will be reflected in the enclave constraint provided to the client.
 
 
 === "Linux/macOS"
     
-    1. When you run the host, you should see the new signing key in the output:
+    1. When you run the host, you should see the new code signer in the output:
     ```bash hl_lines="3"
     [main] INFO com.r3.conclave.host.web.EnclaveWebController -
     Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
@@ -315,13 +310,13 @@ when you are not using mock mode, which will be reflected in the enclave constra
     ```bash
     ./gradlew :client:shadowJar
     ```
-    3. Run the client using the signing key from the host's attestation report
+    3. Run the client using the code signer from the host's attestation report
     ```bash
     java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" reverse-me
     ```
 === "Windows"
     
-    1. When you run the host, you should see the new signing key in the output:
+    1. When you run the host, you should see the new code signer in the output:
     ```bash hl_lines="3"
     [main] INFO com.r3.conclave.host.web.EnclaveWebController -
     Remote attestation for enclave A92F481B7EEAE42D3EBB162BF77613605AF214D77D2E63D75A610FD485CFD7D6:
@@ -336,14 +331,17 @@ when you are not using mock mode, which will be reflected in the enclave constra
     ```bash
     gradlew.bat :client:shadowJar
     ```
-    3. Run the client using the signing key from the host's attestation report
+    3. Run the client using the code signer from the host's attestation report
     ```bash
     java -jar client/build/libs/client.jar "S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE" reverse-me
     ```
 
 ## Next steps
+
 Now you know how to build and run the hello world sample, see how it is implemented in
 [Writing hello world](writing-hello-world.md).
+
+You can also learn more about enclaves [here](enclaves.md.).
 
 ## Got this far? Join the community
 
@@ -359,15 +357,3 @@ other Trusted Execution Environment (TEE) technologies.
 [:fontawesome-solid-paper-plane: Join conclave-discuss@groups.io](https://groups.io/g/conclave-discuss){: .md-button }
 
 [:fontawesome-solid-paper-plane: Email us](mailto:conclave@r3.com){: .md-button }
-
-## Appendix: Summary of Docker command options
-- `-i`: Run container interactively.
-- `-t`: Allocate a pseudo TTY.
-- `--rm`: Automatically remove the container once it exits.
-- `-p <system-port>:<container-port>`: This option maps a port from your system to a port "inside" the container.
-  If your project listens for connections on any port, you will need to use this option to forward that port into
-  the container. In the above command, the port 8080 is mapped to port 8080 inside the container.
-- `-v <system-dir>:<container-dir>`: This option mounts a directory from your filesystem inside the container. You need
-  to ensure that any files your project need to access at runtime are mounted inside the container.
-- `-w <directory>` This is the directory within the container where you want the prompt to start (in this case, the
-  directory where the project was mounted).
