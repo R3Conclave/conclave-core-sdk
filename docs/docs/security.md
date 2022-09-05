@@ -90,7 +90,6 @@ Here is a non-exhaustive set of examples:
 
 * **Message sizes**. If an enclave is known to process only two kinds of message of around 1 kilobyte or 100 
   kilobytes, then the size of the encrypted message by itself leaks information about what kind of message it is.
-
   Conclave can pad all messages to make all encrypted messages appear the same size. This approach works
   if message sizes don't vary wildly, and you can afford to use the bandwidth and storage required to set all messages
   to their maximum possible size.
@@ -101,15 +100,12 @@ Here is a non-exhaustive set of examples:
 * **Storage access patterns**. Suppose an enclave doesn't access the database when processing a message of type A, 
   but does when processing a message of type B, or accesses the database with a different sequence, number or type 
   of accesses. In that case, the host can learn the message type by observing those accesses.
-
   Conclave's [persistent file system](persistence.md#PersistentEncryptedFilesystem) randomizes sector accesses to
   reduce such side-channel attacks.
 
 Malicious actors can use these techniques to reveal fine-grained information as well. For instance, if an encrypted
 piece of data contains a number used to control a loop that does data lookups, counting the number of external data
 lookups reveals the number.
-
-Conclave offers the following defenses against architectural side-channel attacks.
 
 ### Micro-architectural
 
