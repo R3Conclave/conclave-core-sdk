@@ -147,8 +147,6 @@ configures the host to use the web host.
 
 #### `enclave/build.gradle`
 
-=== "enclave/build.gradle"
-
 The enclave `build.gradle` file applies the [Conclave plugin](enclave-configuration.md) which enables a Gradle 
 module to be compiled into an enclave binary.
 
@@ -157,7 +155,7 @@ module to be compiled into an enclave binary.
     the section on [signing](signing.md) to learn how to configure this.
 
 
-#### "client/build.gradle"
+#### `client/build.gradle`
 
 The client is a simple Java application. It uses the `conclave-web-client` dependency to be able to communicate with 
 the web host.
