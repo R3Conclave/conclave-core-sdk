@@ -50,7 +50,7 @@ point. Then, stored messages from the clients can be replayed back to the enclav
 messages dropped.
 
 Such attacks are called memento/rewind/replay attacks.
-You can use Conclave's [persistent map](persistence.md#PersistentMap) to mitigate rewind attacks.
+You can use Conclave's [persistent map](persistence.md#persistent-map) to mitigate rewind attacks.
 
 ## Side-channel attacks
 
@@ -100,7 +100,7 @@ Here is a non-exhaustive set of examples:
 * **Storage access patterns**. Suppose an enclave doesn't access the database when processing a message of type A, 
   but does when processing a message of type B, or accesses the database with a different sequence, number or type 
   of accesses. In that case, the host can learn the message type by observing those accesses.
-  Conclave's [persistent file system](persistence.md#PersistentEncryptedFilesystem) randomizes sector accesses to
+  Conclave's [persistent file system](persistence.md#persistent-encrypted-filesystem) randomizes sector accesses to
   reduce such side-channel attacks.
 
 Malicious actors can use these techniques to reveal fine-grained information as well. For instance, if an encrypted
