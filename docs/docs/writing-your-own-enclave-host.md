@@ -2,24 +2,22 @@
 
 ## Prerequisites
 
-This tutorial assumes you have a good understanding of Conclave and at a minimum have gone through the 
-[introduction tutorial](writing-hello-world.md).
+* Complete the [Running your first enclave](running-hello-world.md) tutorial.
+* Complete the [Writing your first enclave](writing-hello-world.md) tutorial.
 
 ## Introduction
 
-Conclave projects will typically consist of three modules; the client, the host and the enclave. The host is responsible for 
-instantiating the enclave, persisting data to disk, and passing messages between the enclave and its clients.
-Conclave provides a built-in web host that manages these details for you and allows communication with the enclave 
-via a REST API sufficient for simple use cases (see [Conclave web host](conclave-web-host.md) for more information).
+Conclave projects consist of three modules: the client, the host, and the enclave.
 
-If however this default web host does not suit the needs of your project, a custom host can be implemented instead. The 
-following section will outline how to do that by implementing a very basic host server using raw sockets.
+The host is responsible for instantiating the enclave, persisting data to disk, and passing messages between the 
+enclave and its clients. [Conclave web host](conclave-web-host.md) is a built-in web host that manages these tasks 
+for simple use cases. You can implement a custom host for complex use cases. The following section will outline how 
+to implement a basic host server using raw sockets.
 
 ## Project setup
 
-Start by creating a new Conclave project using [Conclave Init](conclave-init.md) and implement your enclave.
-Conclave Init generates a project which uses the [web host](conclave-web-host.md). We need to replace that with our own 
-host. Start by creating a main class:
+1. Create a new Conclave project using [Conclave Init](conclave-init.md) and implement your enclave.
+2. Create a main class for the new host.
 
 ```java
 package com.example.tutorial.host;
@@ -31,7 +29,7 @@ public class MyEnclaveHost {
 }
 ```
 
-Update the host build.gradle to reference it:
+3. Update the host build.gradle to reference it:
 
 ```groovy hl_lines="2"
 application {
