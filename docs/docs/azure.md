@@ -38,7 +38,7 @@ question mark is the size. Other distributions should work as long as they are o
     * Pick a size that's got plenty of RAM. For example, you might want to click "Change size" to find `DC4s_v3` type
     * Ensure that the public inbound ports are open for SSH access
 
-    ![](images/DC4S_V3 Screenshot.png)
+    ![](images/DC4S_V3_Screenshot.png)
     ![](images/create-d4sv3-vm-publicinbound.png)
 
 After you have logged on to the VM:
