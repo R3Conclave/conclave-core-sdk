@@ -4,9 +4,6 @@
     Azure does not guarantee access to the same machine on reboot. On reboot, you might lose encrypted secrets for a particular enclave.
     To prevent loss of data, consider using the [Key Derivation Service](kds-detail.html) (KDS).
 
-## Attestation
-
-Microsoft Azure provides ready-made VMs that support the latest attestation protocols. Follow the instructions below to set up such a VM.
 
 ## Machine setup
 
@@ -41,28 +38,23 @@ question mark is the size. Other distributions should work as long as they are o
     * Pick a size that's got plenty of RAM. For example, you might want to click "Change size" to find `DC4s_v3` type
     * Ensure that the public inbound ports are open for SSH access
 
-    ![](images/create-d4sv3-vm.png)
+    ![](images/DC4S_V3 Screenshot.png)
     ![](images/create-d4sv3-vm-publicinbound.png)
 
 After you have logged on to the VM:
 
-1. Check that the `enclave` device is present in the `/dev/sgx/` or `/dev/sgx_*` directory
-2. Check driver version `dmesg | grep sgx`. Conclave requires driver version 1.33+
-3. If either check fails:
-    * Download the [driver](https://download.01.org/intel-sgx/latest/dcap-latest/linux/distro/ubuntu20.04-server/)
-    * Follow the [install instructions](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf)
-4. Add your user into `sgx_prv` group to give it access to SGX.
+1. Check that the `enclave` device is present in the `/dev/sgx/` directory.
+2. Add your user into `sgx_prv` group to give it access to SGX.
 
 ```sh
 sudo usermod -aG sgx_prv $USER
 ```
-5. Log out from the VM and log in again.
+3. Log out from the VM and log in again.
 
 You have set up an Azure VM with the latest attestation protocols.
 
-You can skip the rest of this document if you are only looking for a quick set up.
 
-## Background: The DCAP protocol
+## The DCAP protocol
 
 There are two protocols for establishing what code runs in an enclave: EPID and DCAP. EPID is an older
 protocol designed for consumer applications and includes some sophisticated privacy features. For servers
@@ -132,10 +124,12 @@ grep AZDCAP /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so*
 grep AZDCAP /usr/lib/libdcap_quoteprov.so*
 ```
 * If the Azure plugin is not currently installed then:
-    * You can build it from [source](github.com/microsoft/Azure-DCAP-Client).
+    * You can build it from [source](https://github.com/microsoft/Azure-DCAP-Client).
     * Or extract from a pre-built package provided by Microsoft. E.g. for Ubuntu 20.04 via the command below (only libdcap_quoteprov.so is required).
 ```sh
-wget https://packages.microsoft.com/ubuntu/20.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.8_amd64.deb && ar x az-dcap-client_1.8_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.8_amd64.deb data.tar.xz
+wget https://packages.microsoft.com/ubuntu/20.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.11.2_amd64.deb && ar x az-dcap-client_1.11.2_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///'
+./usr/lib/libdcap_quoteprov.so
+&& rm az-dcap-client_1.11.2_amd64.deb data.tar.xz
 ```
 * The preferred name and location of the DCAP client plugin is `/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1`.
 ```sh
