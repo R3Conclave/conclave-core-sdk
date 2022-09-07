@@ -11,14 +11,14 @@ Conclave projects consist of three modules: the client, the host, and the enclav
 
 The host is responsible for instantiating the enclave, persisting data to disk, and passing messages between the 
 enclave and its clients. [Conclave web host](conclave-web-host.md) is a built-in web host that manages these tasks 
-for simple use cases. You can implement a custom host for complex use cases. The following section will outline how 
-to implement a basic host server using raw sockets.
+for simple use cases. You can implement a custom host for complex use cases.
+
+To implement a basic host server using raw sockets:
 
 ## Project setup
 
 1. Create a new Conclave project using [Conclave Init](conclave-init.md) and implement your enclave.
 2. Create a main class for the new host.
-
 ```java
 package com.example.tutorial.host;
 
@@ -28,26 +28,20 @@ public class MyEnclaveHost {
     }
 }
 ```
-
-3. Update the host build.gradle to reference it:
-
+3. Update the host build.gradle to reference the main class:
 ```groovy hl_lines="2"
 application {
     mainClass.set("com.example.tutorial.host.MyEnclaveHost")
 }
 ```
-
-And replace the `runtimeOnly conclave-web-host` dependency with `implementation conclave-host`:
-
+4. Replace the `runtimeOnly conclave-web-host` dependency with `implementation conclave-host`:
 ```groovy hl_lines="3"
 dependencies {
     runtimeOnly project(path: ":enclave", configuration: mode)
     implementation "com.r3.conclave:conclave-host:$conclaveVersion"
 }
 ```
-
-Next, remove the generated client code provided and create a blank main class:
-
+5. Remove the generated client code provided and create a blank main class:
 ```java
 package com.example.tutorial.client;
 
@@ -57,17 +51,13 @@ class MyEnclaveClient {
     }
 }
 ```
-
-Replace the `conclave-web-client` dependency with just `conclave-client`:
-
+6. Replace the `conclave-web-client` dependency with just `conclave-client`:
 ```groovy hl_lines="2"
 dependencies {
     implementation "com.r3.conclave:conclave-client:$conclaveVersion"
 }
 ```
-
-Check that the host and client run without any issues:
-
+7. Check that the host and client run without any issues:
 ```bash
 ./gradlew :host:run
 ./gradlew :client:run
@@ -75,8 +65,7 @@ Check that the host and client run without any issues:
 
 ## Implementing the client
 
-Now that the project modules have been set up, we can start implementing functionality. Perhaps counterintuitively, 
-the first step is to actually write our client, as that will direct how we implement the host.
+You need to write the client first as that will direct how to implement the host.
 
 We recommend clients use the [`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) 
 class for managing communication with the enclave. It deals with the encryption of mail messages and amongst other 
