@@ -1,9 +1,13 @@
 # Deploying to Azure
 
-!!! important
-    Azure does not guarantee access to the same machine on reboot. On reboot, you might lose encrypted secrets for a particular enclave.
-    To prevent data loss, you need to use the [Key Derivation Service](kds-detail.html) (KDS).
+!!!Important
 
+     Azure does not guarantee access to the same machine on reboot. On reboot, you might lose encrypted secrets for 
+     a particular enclave. To prevent loss of data, consider using the [Key Derivation Service](kds-detail.html)(KDS).
+
+## Attestation
+
+Microsoft Azure provides ready-made VMs that support the latest attestation protocols. Follow the instructions below to set up such a VM.
 
 ## Machine setup
 
@@ -50,9 +54,9 @@ sudo usermod -aG sgx_prv $USER
 ```
 3. Log out from the VM and log in again.
 
-You have set up an Azure VM with SGX.
+You have set up an Azure VM with the latest attestation protocols.
 
-You need to use the DCAP protocol for attestation. For this, you need to use the `AttestationParameters.DCAP()` class 
-when starting the enclave via `EnclaveHost.start`.
-
-
+You need to use the DCAP protocol for attestation. For this, you need to use the
+[`AttestationParameters.DCAP()`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-attestation-parameters/-d-c-a-p/-attestation-parameters.-d-c-a-p.html) class when starting the
+enclave via
+[`EnclaveHost.start`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
