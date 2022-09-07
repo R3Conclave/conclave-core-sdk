@@ -6,9 +6,10 @@ where the IP address doesn't need to be hidden (because it's public in DNS, to b
 aren't helpful, and thus there is DCAP (_Data Center Attestation Primitives_). DCAP requires more modern hardware
 but is otherwise simpler and more robust. You may also see DCAP referred to as "ECDSA attestation".
 
-!!! important
-Intel does not provide EPID attestation support on any Xeon Scalable processors including the Ice Lake Xeon CPUs and any future
-generations. Please ensure you are using DCAP attestation on these platforms.
+!!!Important
+
+    Intel does not provide EPID attestation support on any Xeon Scalable processors including the Ice Lake Xeon CPUs 
+    and any future generations. Please ensure you are using DCAP attestation on these platforms.
 
 
 In DCAP, repeated attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed
@@ -40,12 +41,13 @@ The runtime will use the first `.so` it encounters in the search order below:
 Should you decide to use a bundled version (recommended), ensure the files listed above don't exist (delete or rename
 them if necessary).
 
-!!! important
-The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs, as well as existing
-CPUs. However, if Azure extends their offerings to include new platforms, or if you use a new generation
-system, then the bundled Azure client plugin may throw an error
-when attempting to load your enclave. In this case, [follow the instructions below](#azure-client-plugin) to
-build/install an updated version of the Azure client plugin that supports the platform.
+!!!Important
+
+    The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs, as well as existing
+    CPUs. However, if Azure extends their offerings to include new platforms, or if you use a new generation system, 
+    then the bundled Azure client plugin may throw an error when attempting to load your enclave. In this case,
+    [follow the instructions below](#azure-client-plugin) to build/install an updated version of the Azure client 
+    plugin that supports the platform.
 
 You may want to set the Azure DCAP client logging level to FATAL as the default setting is quite verbose:
 ```sh
@@ -85,8 +87,10 @@ export AZDCAP_DEBUG_LOG_LEVEL=FATAL
 #### Intel DCAP plugin
 Please read the installation instructions in the "Install the DCAP packages" section of the [installation guide](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf).
 
-!!! note
-If you have the Intel DCAP plugin installed alongside the Azure one, remember that running `apt update` might reset the symlink above to point to Intel's plugin.
+!!!Note
+
+    If you have the Intel DCAP plugin installed alongside the Azure one, remember that running `apt update` might 
+    reset the symlink above to point to Intel's plugin.
 
 ## Using Docker container(s)
 If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
@@ -95,9 +99,10 @@ If you plan to use a Docker container with DCAP hardware, you must map two diffe
 docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
 ```
 
-!!! note
-Azure offers a "Confidential Kubernetes" service. At this time, we haven't tested Conclave with that. If you try it,
-let us and the community know if it works (conclave-discuss@groups.io)
+!!!Note
+
+    Azure offers a "Confidential Kubernetes" service. At this time, we haven't tested Conclave with that. If you try it,
+    let us and the community know if it works (conclave-discuss@groups.io)
 
 ## Running a Conclave Application
 After setting up the machine, you can follow the [Compiling and running](running-hello-world.md) tutorial to run the `hello-world` sample.
