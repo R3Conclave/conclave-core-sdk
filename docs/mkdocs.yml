@@ -44,10 +44,9 @@ nav:
   - Release notes: release-notes.md
   - Operations:
     - Server deployment:
-      - Machine setup:
-         - Overview: machine-setup.md
-         - Cloud Deployment: azure.md
-         - Self-Hosting: ias.md
+        - Machine Setup: machine-setup.md
+        - Cloud Deployment: azure.md
+        - Self-Hosting: ias.md
     - Upgrades:
       - Enclave signing: signing.md
       - Renewability: renewability.md
