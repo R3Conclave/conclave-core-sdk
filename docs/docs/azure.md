@@ -45,7 +45,6 @@ After you have logged on to the VM:
 
 1. Check that the `enclave` device is present in the `/dev/sgx/` or `/dev/sgx_*` directory.
 2. Add your user into `sgx_prv` group to give it access to SGX.
-
 ```sh
 sudo usermod -aG sgx_prv $USER
 ```
