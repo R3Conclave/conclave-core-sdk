@@ -33,6 +33,7 @@ nav:
         - Performance: performance.md
         - Conclave Init: conclave-init.md
         - Conclave web host: conclave-web-host.md
+        - DCAP: dcap.md
         - IDE Configuration: ide-configuration.md
     - API:
         - JavaDocs: api/index.html
