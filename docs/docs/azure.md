@@ -57,6 +57,6 @@ sudo usermod -aG sgx_prv $USER
 You have set up an Azure VM with the latest attestation protocols.
 
 You need to use the DCAP protocol for attestation. For this, you need to use the
-[`AttestationParameters.DCAP()`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-attestation-parameters/-d-c-a-p/-attestation-parameters.-d-c-a-p.html) class when starting the
+[`AttestationParameters.DCAP`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-attestation-parameters/-d-c-a-p/-attestation-parameters.-d-c-a-p.html) class when starting the
 enclave via
 [`EnclaveHost.start`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
