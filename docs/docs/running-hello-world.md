@@ -108,7 +108,7 @@ To run the client:
 cd conclave-tutorials/hello-world
 java -jar client/build/libs/client.jar "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" reverse-me
 ```
-In the above command, the parameters in quotes are the [constraints](constraints.md)), and 'reverse-me' is the 
+In the above command, the parameters in quotes are the [constraints](constraints.md), and 'reverse-me' is the 
 string to be reversed.
 
 You will see the output:
