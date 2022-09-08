@@ -2,8 +2,8 @@
 
 ## Prerequisites
 
-* Complete the [Running your first enclave](running-hello-world.md) tutorial.
-* Complete the [Writing your first enclave](writing-hello-world.md) tutorial.
+* Complete the [running your first enclave](running-hello-world.md) tutorial.
+* Complete the [writing your first enclave](writing-hello-world.md) tutorial.
 
 ## Introduction
 
