@@ -3,6 +3,7 @@
 ## Prerequisites
 
 Complete the following tutorials:
+
 * [Running your first enclave](running-hello-world.md).
 * [Writing your first enclave](writing-hello-world.md).
 
