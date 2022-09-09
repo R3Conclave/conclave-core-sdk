@@ -274,7 +274,7 @@ public class MyEnclaveHost {
 }
 ```
 
-!!! Note
+!!!Note
 
     In projects containing multiple enclave modules, you can specify the enclave to load by using the fully qualified
     class name:
@@ -306,7 +306,7 @@ parameter is a reference to the host directory, which will contain the file for 
 [encrypted file system](persistence.md#conclave-filesystems) and a file for the enclave's
 [sealed state](persistence.md#persistent-map). This parameter is optional.
 
-!!! Note
+!!!Note
 
     The enclave's sealed state should ideally be stored in a database and committed as part of the same transaction 
     that processes outbound Mail from the enclave. This is why the sealed state parameter is a byte array and not a 
@@ -390,7 +390,7 @@ while (true) {
 serverSocket.close();
 ```
 
-!!! Note
+!!!Note
 
     This host implementation accepts only a single client connection. To support multiple concurrent clients, you need
     to make necessary changes to both the host and the client.
