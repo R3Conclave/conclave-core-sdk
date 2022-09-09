@@ -9,9 +9,14 @@
 
 Conclave projects consist of three modules: the client, the host, and the enclave.
 
-The host is responsible for instantiating the enclave, persisting data to disk, and passing messages between the 
-enclave and its clients. [Conclave web host](conclave-web-host.md) is a built-in web host that manages these tasks 
-for simple use cases. You can implement a custom host for complex use cases.
+The host is responsible for:
+
+1. Instantiating the enclave.
+2. Persisting data to disk.
+3. Passing messages between the enclave and its clients.
+
+[Conclave web host](conclave-web-host.md) is a built-in web host that manages these tasks for simple use cases.
+You can implement a custom host for complex use cases.
 
 To implement a simple host server using raw sockets:
 
@@ -51,7 +56,7 @@ class MyEnclaveClient {
     }
 }
 ```
-6. Replace the `conclave-web-client` dependency with just `conclave-client`:
+6. Replace the `conclave-web-client` dependency with `conclave-client`:
 ```groovy hl_lines="2"
 dependencies {
     implementation "com.r3.conclave:conclave-client:$conclaveVersion"
@@ -72,13 +77,13 @@ managing communication with the enclave. It deals with the encryption of Conclav
 restarts.
 
 You can use the [`EnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/index.html) 
-interface to deal with the details of the transport layer to the host.
+interface to handle the details of the transport layer to the host.
 The [`EnclaveClient.start`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/start.html) method needs an 
 implementation of the `EnclaveTransport` class. For example, if the enclave is running behind the
 [Conclave web host](conclave-web-host.md), then the client needs to use the
 [`WebEnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client.web/-web-enclave-transport/index.html) class.
 
-This sample uses a simple socket-based `EnclaveTransport`.
+This sample uses a simple, socket-based `EnclaveTransport`.
 
 ```java
 public class MyEnclaveTransport implements EnclaveTransport, Closeable {
@@ -197,7 +202,7 @@ waits for a response from the host. The
 [`sendMail`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
 specification states that the method must block and wait for the enclave to process the Mail. If the enclave 
 processes the Mail successfully, the client must receive and return any response from the enclave. A response type 1
-represents such a response from the client.
+represents such a success response from the client.
 
 ```java
 private byte[] readMail() throws IOException {
@@ -335,7 +340,7 @@ come from the enclave grouped together in a list after every
 [`callEnclave`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/call-enclave.html) or
 [`deliverMail`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/deliver-mail.html) call.
 
-When the enclave has starts, the host logs the
+When the enclave starts, the host logs the
 [enclave's attestation report](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/get-enclave-instance-info.html) 
 to the console. You can use these logs for debugging and choosing the enclave constraint when running the client. 
 
@@ -460,7 +465,7 @@ private static void processMailCommands(List<MailCommand> commands) throws IOExc
 
 Mail responses from the enclave go through the
 [`PostMail`](api/-conclave%20-core/com.r3.conclave.host/-mail-command/-post-mail/index.html) command. In this 
-tutorial, you store the Mail responses in a queue to retrieve later. 
+tutorial, you store the Mail responses in a queue. 
 
 This tutorial also uses the
 [`StoreSealedState`](api/-conclave%20-core/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html) command.
