@@ -74,8 +74,8 @@ dependencies {
 Write the client first as that will direct how to implement the host.
 
 Use the [`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) class for
-managing communication with the enclave. It deals with the encryption of Conclave Mail messages and simplifies enclave
-restarts.
+managing communication with the enclave. It deals with the encryption of [Conclave Mail](mail.md) messages and
+simplifies enclave restarts.
 
 You can use the [`EnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/index.html) 
 interface to handle the details of the transport layer to the host.
@@ -175,7 +175,7 @@ method is empty in this simple implementation as there's nothing to do when the 
 
 ### [`sendMail()`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html)
 
-To send [encrypted Mail](mail.md) to the host, you need to implement
+To send encrypted Mail to the host, you need to implement
 [`sendMail`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/-client-connection/send-mail.html):
 
 ```java
@@ -263,7 +263,7 @@ You need to implement the corresponding logic on the host to receive and process
 
 ### Loading the enclave
 
-[Load the enclave](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/load.html) by scanning the classpath.
+Load the enclave using [EnclaveHost.load()](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/load.html).
 
 ```java
 public class MyEnclaveHost {
@@ -303,8 +303,9 @@ if (Files.exists(enclaveStateFile)) {
 ```
 
 In this tutorial, you can pass the parameters of `EnclaveHost.start` method from the command line. The first 
-parameter is a reference to the host directory, which will contain the file for the enclave's encrypted file system 
-and a file for the enclave's *sealed state*. This parameter is optional.
+parameter is a reference to the host directory, which will contain the file for the enclave's
+[encrypted file system](persistence.md#conclave-filesystems) and a file for the enclave's
+[sealed state](persistence.md#persistent-map). This parameter is optional.
 
 !!! Note
 
@@ -313,7 +314,7 @@ and a file for the enclave's *sealed state*. This parameter is optional.
     file path. You can find more information about this [here](persistence.md).
 
 The second command line parameter is for the URL to the [Key Derivation Service (KDS)](kds-configuration.md). You 
-can leave out this parameter if your enclave doesn't use KDS.
+can leave out this parameter if your enclave doesn't use the KDS.
 
 Call `enclaveHost.start`:
 
