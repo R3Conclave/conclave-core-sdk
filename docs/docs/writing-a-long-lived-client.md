@@ -10,21 +10,18 @@ Complete the following tutorials.
 
 ## Introduction
 
-In the [hello-world sample](running-hello-world.md) and [writing your first enclave](writing-hello-world.md) tutorial,
-each run is independent. In such cases, the client doesn't need to maintain any state between runs.
+Each run is independent in the [hello-world tutorial](running-hello-world.md) and the
+[writing your first enclave](writing-hello-world.md) tutorial. In such cases, the client doesn't need to maintain 
+any state between runs.
 
 However, in most real-world applications, the client and the enclave interact over an extended period. To support such
-applications, the client has to maintain its state and resume successfully after a restart.
+applications, the client has to maintain its state and resume it successfully after a restart.
 
 ## Add state to your client
 
 [`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) provides a
 [`save`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/save.html) method to serialize the state to 
-a bytes array. You can call the `EnclaveClient` constructor with this byte array to restore the client.
-
-!!!Warning
-    
-    If you are using a file to store the bytes, you must store it securely as it contains the client's private key.
+a byte array. You can call the `EnclaveClient` constructor with this byte array to restore the client.
 
 ```java 
 enclaveClient = new EnclaveClient(Files.readAllBytes(stateFile));
@@ -44,6 +41,6 @@ if (providedConstraint != null && loadedConstraint != providedConstraint) {
 Files.write(stateFile, enclaveClient.save())
 ```
 
-Note that you don't need an [enclave constraint](constraints.md) to load the state from the file. This is because the
-constraint doesn't usually change for a long-lived client. You can update the constraint, if necessary, using
-[`EnclaveClient.setEnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/set-enclave-constraint.html).
+!!!Warning
+
+    If you are using a file to store the bytes, you must store it securely as it contains the client's private key.

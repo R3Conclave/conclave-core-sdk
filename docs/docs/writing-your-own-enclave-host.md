@@ -20,9 +20,9 @@ The host is responsible for:
 [Conclave web host](conclave-web-host.md) is a built-in web host that manages these tasks for simple use cases.
 You can implement a custom host for complex use cases.
 
-To implement a simple host server using raw sockets:
-
 ## Project setup
+
+To implement a simple host server using raw sockets:
 
 1. Create a new Conclave project using [Conclave Init](conclave-init.md) and implement your enclave.
 2. Create a main class for the new host.
@@ -35,7 +35,7 @@ public class MyEnclaveHost {
     }
 }
 ```
-3. Update the host build.gradle to reference the main class:
+3. Update the `build.gradle` file to reference the main class:
 ```groovy hl_lines="2"
 application {
     mainClass.set("com.example.tutorial.host.MyEnclaveHost")
@@ -72,10 +72,8 @@ dependencies {
 
 ## Implementing the client
 
-Write the client first as that will direct how to implement the host.
-
-Use the [`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) class for
-managing communication with the enclave. It deals with the encryption of [Conclave Mail](mail.md) messages and
+Use the [`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) class 
+to manage communication with the enclave. It deals with the encryption of [Conclave Mail](mail.md) messages and
 simplifies enclave restarts.
 
 You can use the [`EnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client/-enclave-transport/index.html) 
@@ -85,7 +83,7 @@ implementation of the `EnclaveTransport` class. For example, if the enclave is r
 [Conclave web host](conclave-web-host.md), then the client needs to use the
 [`WebEnclaveTransport`](api/-conclave%20-core/com.r3.conclave.client.web/-web-enclave-transport/index.html) class.
 
-This sample uses a simple, socket-based `EnclaveTransport`.
+This sample uses a simple, socket-based `EnclaveTransport`. It requires `host` and `port` parameters. It 
 
 ```java
 public class MyEnclaveTransport implements EnclaveTransport, Closeable {
@@ -114,8 +112,8 @@ public class MyEnclaveTransport implements EnclaveTransport, Closeable {
     }
 }
 ```
-This sample implements `Closeable` on the host and port parameters to allow the caller to close any underlying 
-connections.
+This sample implements `Closeable` on the host and port parameters of the `SocketEnclaveTransport()` method to allow 
+the caller to close any underlying connections.
 The `input` and `output` streams are the communication channels with the host server for receiving and sending raw 
 bytes.
 
@@ -276,7 +274,7 @@ public class MyEnclaveHost {
 }
 ```
 
-!!!Note
+!!! Note
 
     In projects containing multiple enclave modules, you can specify the enclave to load by using the fully qualified
     class name:
