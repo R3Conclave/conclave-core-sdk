@@ -10,7 +10,7 @@ Complete the following tutorials.
 
 ## Introduction
 
-Each run is independent in the [hello-world tutorial](running-hello-world.md) and the
+Each run is independent in the [hello-world](running-hello-world.md) tutorial and the
 [writing your first enclave](writing-hello-world.md) tutorial. In such cases, the client doesn't need to maintain 
 any state between runs.
 
