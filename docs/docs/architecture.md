@@ -107,7 +107,8 @@ not correct, this will be reported to the client by Intel's servers as part of v
 the remote attestation provided by the host.
 
 **Cloud provider.** A cloud provider needs to support SGX for Conclave to be usable. They may operate their own
-provisioning servers that take over from Intel's. Instructions for using Conclave on [Microsoft Azure](azure.md) are available.
+provisioning servers that take over from Intel's. Instructions for using Conclave on
+[Microsoft Azure](machine-setup.md) are available.
 
 **Auditor.** In the pure enclave-oriented model, the user is responsible for understanding what the enclave does before
 using it by reading the enclave's source code. If the user doesn't do this then enclaves have no point. In practice the

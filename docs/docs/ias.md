@@ -2,7 +2,7 @@
 
 !!!Note
     
-    You don't need to perform these steps if you use [Azure Gen 2 VMs](azure.md) or hardware that supports the
+    You don't need to perform these steps if you use [Azure Gen 2 VMs](machine-setup.md) or hardware that supports the
     DCAP attestation protocol.
 
 Intel's Attestation Service (IAS) helps to verify that a remote computer isn't physically compromised and has the 
@@ -53,5 +53,5 @@ enclave.start(
 
 !!!Important
     
-    [Install the kernel driver and system software](machine-setup.md#install-the-kernel-driver-and-system-software)
+    [Install the kernel driver and system software](non-cloud-deployment.md#install-the-kernel-driver-and-system-software)
     on your machine before trying to use EPID attestation in debug or release mode.
