@@ -44,9 +44,9 @@ nav:
   - Release notes: release-notes.md
   - Operations:
     - Server deployment:
-        - Machine Setup: machine-setup.md
-        - Cloud Deployment: azure.md
-        - Self-Hosting: ias.md
+        - Azure deployment: machine-setup.md
+        - Non-cloud deployment: non-cloud-deployment.md
+        - Intel Attestation Service: ias.md
     - Upgrades:
       - Enclave signing: signing.md
       - Renewability: renewability.md
