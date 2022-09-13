@@ -11,11 +11,11 @@ echo
 
 pushd build
 
-conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*.jar')
+conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar')
 
 echo Create Java project
 
-$JAVA_HOME/bin/java -jar $conclaveInitJar \
+"$JAVA_HOME"/bin/java -jar "$conclaveInitJar" \
   --enclave-class-name "MegaEnclave" \
   --package "com.megacorp" \
   --target "mega-project" \
@@ -52,7 +52,7 @@ popd
 
 echo Create Kotlin project
 
-$JAVA_HOME/bin/java -jar $conclaveInitJar \
+"$JAVA_HOME"/bin/java -jar $conclaveInitJar \
   --enclave-class-name "MegaEnclave" \
   --package "com.megacorp" \
   --target "mega-kotlin-project" \

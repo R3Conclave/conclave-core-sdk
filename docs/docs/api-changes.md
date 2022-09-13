@@ -31,19 +31,19 @@ supported but deprecated and will be removed in a future version.
 
 ### API changes
 
-[`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) now throws an 
+[`EnclaveHost.deliverMail`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/deliver-mail.html) now throws an 
 `IOException`. This can occur if the mail to be delivered was encrypted using a KDS key and the host is unable to 
 retrieve it from the KDS.
 
-Though technically not an API change, the docs for [`PostOffice`](api/-conclave/com.r3.conclave.mail/-post-office)
-and [`EnclavePostOffice`](api/-conclave/com.r3.conclave.enclave/-enclave-post-office) have been fixed to state that 
+Though technically not an API change, the docs for [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office)
+and [`EnclavePostOffice`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave-post-office) have been fixed to state that 
 they are _not_ thread-safe.
 
 ### Conclave Init
 
 Conclave Init now requires Java 17 to run, and generated projects will target Java 17 by default.
 
-Conclave SDK version is now set at the individual project level, rather at the OS user
+The SDK version is now set at the individual project level rather than at the OS user
 level. This means the `--configure-gradle` option is no longer needed and has been removed.
 
 ## 1.1 to 1.2
@@ -58,8 +58,8 @@ upgrading your code.
 Firstly, mail acknowledgement no longer exists. Mail will no longer be replayed on enclave startup and so you no longer
 need to think about having to acknowledge any mail. That means the `acknowledgeMail` method in `Enclave` has been
 removed. This also means the mail ID parameter that's used for acknowledgement is no longer needed and has been
-removed as a parameter to the methods [`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html) 
-and [`Enclave.receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html).
+removed as a parameter to the methods [`EnclaveHost.deliverMail`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/deliver-mail.html) 
+and [`Enclave.receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html).
 
 You will need to change the signature of your `receiveMail` method in your enclave class:
 
@@ -86,16 +86,16 @@ enclave to _not_ think about redelivery of mail, but this may actually make your
 
 Another consequence of no longer having mail redelivery is that the mail-to-self pattern to persist data across
 enclave restarts is no longer valid. However, this has been replaced by a more secure and easier to use API with
-the introduction of a [`persistentMap`](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html)
+the introduction of a [`persistentMap`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/get-persistent-map.html)
 inside the enclave. This is a normal `java.util.Map` object which stores
 key strings to arbitrary byte arrays. Use this map to persist data that you need available across restarts.
 [Learn more about enclave persistence](persistence.md).
 
 On the host side the API has changed slightly as well. Since mail acknowledgement no longer exists then the mail
 commands `AcknowledgeMail` and `AcknowledgementReceipt` have also been removed. They have been replaced by a new
-command [`StoreSealedState`](api/-conclave/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html). These 
+command [`StoreSealedState`](api/-conclave%20-core/com.r3.conclave.host/-mail-command/-store-sealed-state/index.html). These 
 changes have a small knock-on effect with the
-[`start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html) method. The second byte array
+[`start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html) method. The second byte array
 parameter has changed its _meaning_ to represent a sealed state blob rather than the acknowledgement receipt blob.
 Also, the mail commands callback is no longer optional and must be specified.
 
@@ -108,11 +108,11 @@ ever have the same encryption key, a malicious host is prevented from spinning u
 and trying to manipulate their state by replaying old mail.
 
 As a consequence, when the enclave restarts, clients will need to download the new
-[`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) and use this to 
+[`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) and use this to 
 create a new post office with the enclave's new key. The new post office must be used to send all subsequent mails.
 
-How can a client detect when the enclave restarts? We've updated [`EnclaveHost.deliverMail`](api/-conclave/com.r3.conclave.host/-enclave-host/deliver-mail.html)
-to throw a new checked exception [`MailDecryptionException`](api/-conclave/com.r3.conclave.mail/-mail-decryption-exception/index.html)
+How can a client detect when the enclave restarts? We've updated [`EnclaveHost.deliverMail`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/deliver-mail.html)
+to throw a new checked exception [`MailDecryptionException`](api/-conclave%20-core/com.r3.conclave.mail/-mail-decryption-exception/index.html)
 if the enclave was unable to decrypt the mail message. Since now the most likely
 explanation for this decryption error is that the enclave was restarted and is using a new key, the host should 
 catch this exception and use it to inform the client.
@@ -120,8 +120,8 @@ catch this exception and use it to inform the client.
 ### Attestation check functionality moved from client to common
 
 To facilitate enclave to enclave communication,
-[`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) and
-[`InvalidEnclaveException`](api/-conclave/com.r3.conclave.common/-invalid-enclave-exception/index.html) have moved from
+[`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) and
+[`InvalidEnclaveException`](api/-conclave%20-core/com.r3.conclave.common/-invalid-enclave-exception/index.html) have moved from
 `com.r3.conclave.client` to `com.r3.conclave.common`.
 
 Client code should be updated appropriately.
@@ -130,10 +130,10 @@ Client code should be updated appropriately.
 
 `EnclaveHost.checkPlatformSupportsEnclaves()` has been removed and replaced by several smaller methods to make it 
 easier to determine what level of hardware support is provided by the platform:
-[`EnclaveHost.getSupportedModes`](api/-conclave/com.r3.conclave.host/-enclave-host/get-supported-modes.html),
-[`EnclaveHost.isSimulatedEnclaveSupported`](api/-conclave/com.r3.conclave.host/-enclave-host/is-simulated-enclave-supported.html),
-[`EnclaveHost.isHardwareEnclaveSupported`](api/-conclave/com.r3.conclave.host/-enclave-host/is-hardware-enclave-supported.html),
-[`EnclaveHost.enableHardwareEnclaveSupport`](api/-conclave/com.r3.conclave.host/-enclave-host/enable-hardware-enclave-support.html),
+[`EnclaveHost.getSupportedModes`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/get-supported-modes.html),
+[`EnclaveHost.isSimulatedEnclaveSupported`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/is-simulated-enclave-supported.html),
+[`EnclaveHost.isHardwareEnclaveSupported`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/is-hardware-enclave-supported.html),
+[`EnclaveHost.enableHardwareEnclaveSupport`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/enable-hardware-enclave-support.html),
 
 Example usage of the new API:
 
@@ -157,7 +157,7 @@ public static void main(String args[]) {
 ```
 
 Note that `MockOnlySupportedException` is no longer a part of the API, and has been entirely superseded by
-[`PlatformSupportException`](api/-conclave/com.r3.conclave.host/-platform-support-exception/index.html).
+[`PlatformSupportException`](api/-conclave%20-core/com.r3.conclave.host/-platform-support-exception/index.html).
 
 ### Java 11
 
