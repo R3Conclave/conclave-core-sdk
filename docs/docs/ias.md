@@ -32,7 +32,8 @@ To obtain an IAS access key:
 1. Sign the commercial use agreement [as part of getting an enclave signing key](signing.md). You need to do this 
    well in advance before using the release mode, as the application process can be lengthy. You can run 
    your application in simulation or debug mode without this agreement.
-2. Get an Intel developer zone account and sign in[on the IAS API site](https://api.portal.trustedservices.intel.com/EPID-attestation).
+2. Get an Intel developer zone account and sign in to the [IAS API site](https://api.portal.trustedservices.intel.
+   com/EPID-attestation).
 3. Subscribe to development and production access for
    [EPID Name Base Mode (Linkable Quotes)](https://api.portal.trustedservices.intel.com/EPID-attestation).
 
