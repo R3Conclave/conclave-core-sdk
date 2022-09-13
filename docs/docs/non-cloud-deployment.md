@@ -1,10 +1,11 @@
 
 # Non-cloud deployment
 
-Conclave recommends users to [deploy applications in Azure VMs](machine-setup.md) that support the latest 
-attestation protocols. However, you can also deploy your enclaves on-premise.
+Conclave recommends users to [deploy applications in Azure VMs](machine-setup.md) as it's the easiest method. 
 
-If your hardware does not support DCAP attestation, you need to get access to the
+However, you can also deploy your enclaves on-premise.
+
+If your hardware supports EPID attestation instead of DCAP, you need to get access to the
 [Intel Attestation Service (IAS)](ias.md).
 
 To configure the host:

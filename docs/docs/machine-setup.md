@@ -16,7 +16,7 @@ You need to create an Ubuntu 20.04 LTS Gen2 VM from the
 
     1. You need to create the VM inside a resource group. You may use an existing resource group or create one with the
     following command:
-    ```
+    ```bash
     az group create -l <LOCATION> -n <GROUP-NAME>
     ```
 
@@ -40,25 +40,25 @@ You need to create an Ubuntu 20.04 LTS Gen2 VM from the
     * Ensure that the public inbound ports are open for SSH access
 
     ![](images/create-dc4sv3-vm.png)
-    ![](images/create-d4sv3-vm-publicinbound.png)
+    ![](images/create-dc4sv3-vm-publicinbound.png)
 
 After you have logged on to the VM:
 
 1. Check that the `enclave` device is in the `/dev/sgx/` or `/dev/sgx_*` directory.
 2. Add your user into the `sgx_prv` group to give it access to SGX.
-```sh
+```bash
 sudo usermod -aG sgx_prv $USER
 ```
-3. Log out from the VM and log in again.
+3. Log out from the VM and log in again so that your user has SGX access.
 
-You have set up an Azure VM with the latest attestation protocols.
+You have set up your Azure VM successfully.
 
 You need to use the DCAP protocol for attestation. For this, you need to use the
-[`AttestationParameters.DCAP`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-attestation-parameters/-d-c-a-p/-attestation-parameters.-d-c-a-p.html) class when starting the
-enclave via
+[`AttestationParameters.DCAP`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-attestation-parameters/-d-c-a-p/-attestation-parameters.-d-c-a-p.html)
+class when starting the enclave using
 [`EnclaveHost.start`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
 
-!!!Important
-
-    Azure does not guarantee access to the same machine on reboot. On reboot, you might lose encrypted secrets for a
-    particular enclave. To prevent data loss, you will need to use the [Key Derivation Service](kds-detail.md)(KDS).
+When using a Conclave application on Azure, you should remember that Azure does not guarantee access to the same 
+machine on reboot. As encrypted secrets are strictly tightened to the Intel SGX CPU running the VM, you might lose data 
+if Azure moves the VM to a different machine. To prevent data loss, you need to use the
+[Key Derivation Service](kds-detail.md)(KDS).

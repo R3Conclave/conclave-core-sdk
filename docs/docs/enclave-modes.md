@@ -69,7 +69,7 @@ We test building and running release-mode enclaves on Ubuntu 20.04 LTS Server x8
 === "macOS / Windows"
     **Running** debug and release mode enclaves is not possible on macOS or Windows.
 === "Linux"
-    **Running** debug and release mode enclaves requires SGX hardware and an installation of the intel
+    **Running** debug and release mode enclaves requires SGX hardware and an installation of the Intel
     SGX driver stack. See [non-cloud deployment](non-cloud-deployment.md) for instructions.
 
     Please be sure that the environment variable _SGX_AESM_ADDR_ is not set.
