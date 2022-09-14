@@ -61,4 +61,4 @@ class when starting the enclave using
 When using a Conclave application on Azure, you should remember that Azure does not guarantee access to the same 
 machine on reboot. As encrypted secrets are strictly tightened to the Intel SGX CPU running the VM, you might lose data 
 if Azure moves the VM to a different machine. To prevent data loss, you need to use the
-[Key Derivation Service](kds-detail.md)(KDS).
+[Key Derivation Service](kds-detail.md) (KDS).

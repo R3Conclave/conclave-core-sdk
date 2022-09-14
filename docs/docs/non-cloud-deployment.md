@@ -53,8 +53,12 @@ You can get the installers for the system software from Intel
 [here](https://01.org/intel-software-guard-extensions/downloads).
 
 Follow this
-[user guide](https://download.01.org/intel-sgx/sgx-linux/2.13.3/docs/Intel_SGX_Installation_Guide_Linux_2.13.3_Open_Source.pdf)
-to install the driver and the system software.
+[user guide](https://download.01.org/intel-sgx/sgx-linux/2.17.1/docs/Intel_SGX_SDK_Release_Notes_Linux_2.17.1_Open_Source.pdf)
+to install the driver and the system software. 
+
+<!-- The above user-guide link needs to be updated often. Find the version of the Intel SGX SDK in 
+cpp/linux-sgx/CMakeLists.txt file, then you can search these Intel softwares here
+https://download.01.org/intel-sgx/sgx-linux -->
 
 Intel provides:
 
@@ -65,7 +69,7 @@ Intel provides:
 
     You need to re-run the installer after upgrading the kernel.
 
-Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.13.3)
+Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.17.1)
 yourself.
 The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).
 
@@ -79,7 +83,7 @@ A quick summary:
     * For Ubuntu 18 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' > /etc/apt/sources.list.d/intelsgx.list`
     * For Ubuntu 20 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intelsgx.list`
     * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`
-    * Run `apt-get update`.
+    * Run `apt-get update`
     * Run `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`
 3. For non-Ubuntu users, use the SDK installer (which also installs the platform services software).
 
@@ -100,7 +104,7 @@ as well.
 
 ## Using containers
 
-To configure Docker for use with SGX, you must pass at least these flags when creating the container:
+If your hardware supports EPID instead of DCAP, you must pass at least these flags when creating the Docker container:
 
 `--device=/dev/isgx -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket`
 

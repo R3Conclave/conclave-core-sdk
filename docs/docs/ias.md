@@ -1,8 +1,8 @@
 # Intel Attestation Service (EPID attestation only)
 
 The Intel Attestation Service (IAS) helps you to verify that a remote computer isn't physically compromised and has the 
-latest security patches. IAS is used in the context of EPID attestation protocol. DCAP, the
-more recent attestation protocol, follows a different attestation flow
+latest security patches. IAS is used in the context of EPID attestation protocol. DCAP, the more recent attestation 
+protocol, follows a different attestation flow (not discussed here).
 
 IAS evaluates evidence from an enclave and returns:
 
@@ -30,8 +30,7 @@ To obtain an IAS access key:
 1. [Sign the commercial use agreement](signing.md) as part of getting an enclave signing key. You need to do this 
    well in advance before using the release mode, as the application process can be lengthy. You can run 
    your application in simulation or debug mode without this agreement.
-2. Get an Intel developer zone account and sign in to the [IAS API site](https://api.portal.trustedservices.intel.
-   com/EPID-attestation).
+2. Get an Intel developer zone account and sign in to the [IAS API site](https://api.portal.trustedservices.intel.com/EPID-attestation).
 3. Subscribe to development and production access for EPID Name Base Mode (Linkable Quotes).
 
 !!!Note
