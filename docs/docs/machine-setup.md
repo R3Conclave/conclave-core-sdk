@@ -39,8 +39,8 @@ You need to create an Ubuntu 20.04 LTS Gen2 VM from the
     * Pick a size that's got plenty of RAM. You might have to click "Change size" to find the `DC4s_v3` type
     * Ensure that the public inbound ports are open for SSH access
 
-    ![](images/create-dc4sv3-vm.png)
-    ![](images/create-dc4sv3-vm-publicinbound.png)
+    ![select dc4sv3 VM](images/create-dc4sv3-vm.png)
+    ![open public inbound ports](images/create-dc4sv3-vm-publicinbound.png)
 
 After you have logged on to the VM:
 
@@ -53,7 +53,7 @@ sudo usermod -aG sgx_prv $USER
 
 You have set up your Azure VM successfully.
 
-You need to use the DCAP protocol for attestation. For this, you need to use the
+To make the enclave use the DCAP protocol for attestation, use the
 [`AttestationParameters.DCAP`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-attestation-parameters/-d-c-a-p/-attestation-parameters.-d-c-a-p.html)
 class when starting the enclave using
 [`EnclaveHost.start`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
