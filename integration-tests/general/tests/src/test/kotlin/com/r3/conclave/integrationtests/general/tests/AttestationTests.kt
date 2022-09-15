@@ -2,7 +2,8 @@ package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxEnclaveMetadata
 import com.r3.conclave.common.internal.SgxEnclaveMetadata.enclaveCss
 import com.r3.conclave.common.internal.SgxMetadataCssBody.enclaveHash
 import com.r3.conclave.common.internal.SgxMetadataCssKey.modulus
@@ -10,28 +11,43 @@ import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
 import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReportBody.reportData
+import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.CreateAttestationQuoteAction
 import com.r3.conclave.integrationtests.general.common.tasks.GetEnclaveInstanceInfo
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import net.fornwall.jelf.ElfFile
+import net.fornwall.jelf.ElfNoteSection
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
+import java.nio.channels.FileChannel
+import java.nio.channels.FileChannel.MapMode.READ_ONLY
+import java.nio.file.Path
 
 class AttestationTests : AbstractEnclaveActionTest() {
     @Test
     fun `enclave info`() {
-        // TODO consider using Java/Kotlin code to read ELF file - https://github.com/fornwall/jelf/
+        val f = getEnclaveFile()
+
         val metadataCursor = Cursor.allocate(SgxEnclaveMetadata.INSTANCE)
-        Native.getMetadata(getEnclaveFilename(), metadataCursor.buffer.array())
+        //  This is called just to produce some C useful output in the logs
+        Native.getMetadata(f.toString(), metadataCursor.buffer.array())
 
-        val metadata = Cursor.wrap(SgxEnclaveMetadata.INSTANCE, metadataCursor.buffer.array())
+        val metadataBytes = FileChannel.open(f).use { channel ->
+            // We use a mapped byte buffer as that's the only entry point where ElfFile doesn't read in the entire file.
+            val elfFile = ElfFile.from(channel.map(READ_ONLY, 0, channel.size()))
 
 
-        println("")
-        println("Metadata $metadata")
+            val metadataSection = elfFile.firstSectionByName(".note.sgxmeta") as ElfNoteSection
+            check(metadataSection.name == "sgx_metadata")
+            metadataSection.descriptorBytes()
+        }
+
+        val metadata = Cursor.wrap(SgxEnclaveMetadata.INSTANCE, metadataBytes)
+
         val metaCodeHash = SHA256Hash.get(metadata[enclaveCss][body][enclaveHash].read())
         val metaCodeSigningKeyHash = SHA256Hash.hash(metadata[enclaveCss][key][modulus].bytes)
 
@@ -41,12 +57,12 @@ class AttestationTests : AbstractEnclaveActionTest() {
         }
     }
 
-    private fun getEnclaveFilename(): String {
+    private fun getEnclaveFile(): Path {
         val enclaveHandleField = EnclaveHost::class.java.getDeclaredField("enclaveHandle").apply { isAccessible = true }
         val enclaveHandle = enclaveHandleField.get(enclaveHost())
 
         val enclaveFileField = enclaveHandle.javaClass.getDeclaredField("enclaveFile").apply { isAccessible = true }
-        return enclaveFileField.get(enclaveHandle).toString()
+        return enclaveFileField.get(enclaveHandle) as Path
     }
 
     @Test

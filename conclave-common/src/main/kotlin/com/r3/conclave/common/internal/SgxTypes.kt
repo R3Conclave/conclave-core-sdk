@@ -712,9 +712,8 @@ object SgxMetadataEnclaveCss : Struct() {
     val buffer = field(SgxMetadataCssBuffer)
 }
 
-object SgxEnclaveMetadata: Struct() {
-    private const val DATA_SIZE = 18592
-
+@Suppress("unused")  // Used in the integration tests
+object SgxEnclaveMetadata : Struct() {
     @JvmField
     val magic = field(Int64()) // uint64
     @JvmField
@@ -742,5 +741,5 @@ object SgxEnclaveMetadata: Struct() {
     @JvmField
     val dataDirectory2 = field(SgxMetadataDirectory)
     @JvmField
-    val data = field(FixedBytes(DATA_SIZE))
+    val data = field(FixedBytes(18592))
 }
