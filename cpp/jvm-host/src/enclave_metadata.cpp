@@ -99,7 +99,7 @@ sgx_status_t retrieve_enclave_metadata(const char *path, metadata_t *metadata) {
 
     size_t meta_data_offset = section.sh_offset + sizeof(Elf64_Note) + note.namesz;
 
-    printf("C SGX Metadata in starts at this position in the file: %lu\n", meta_data_offset);
+    printf("C SGX Metadata starts at this position in the file: %lu\n", meta_data_offset);
     fseek(fp, meta_data_offset, SEEK_SET);
     if (1 != fread(metadata, sizeof(metadata_t), 1, fp)) {
         return SGX_ERROR_FILE_NOT_SGX_FILE;
