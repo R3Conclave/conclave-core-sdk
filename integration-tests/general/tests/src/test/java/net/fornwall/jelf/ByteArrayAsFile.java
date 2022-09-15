@@ -34,6 +34,7 @@ class ByteArrayAsFile implements BackingFile{
     }
 
     public int pos() {
+        // MB: just a hack, this is not used in our code
         return 1;
     }
 

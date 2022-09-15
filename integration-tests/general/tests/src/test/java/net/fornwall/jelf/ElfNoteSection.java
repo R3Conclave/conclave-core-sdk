@@ -97,29 +97,29 @@ public class ElfNoteSection extends ElfSection {
         if (bytesRead != n_namesz) {
             throw new ElfException("Error reading note name (read=" + bytesRead + ", expected=" + n_namesz + ")");
         }
+        n_name = new String(nameBytes, 0, n_namesz - 1); // unnecessary trailing 0
 
-        //parser.skip(bytesRead % 4);
+        // MB: Commented out intentionally to align with C implementation
+        // parser.skip(bytesRead % 4);
 
-        //parser.seek(12 + n_namesz + header.sh_offset);
-        long r = 12 + n_namesz + header.sh_offset;
-
-        switch (n_type) {
-            case NT_GNU_ABI_TAG:
-                gnuAbiDescriptor = null;//new GnuAbiDescriptor(parser.readInt(), parser.readInt(), parser.readInt(), parser.readInt());
-                break;
-            default:
-                gnuAbiDescriptor = null;
+        if (!n_name.equals("sgx_metadata")) {
+            switch (n_type) {
+                case NT_GNU_ABI_TAG:
+                    gnuAbiDescriptor = new GnuAbiDescriptor(parser.readInt(), parser.readInt(), parser.readInt(), parser.readInt());
+                    break;
+                default:
+                    gnuAbiDescriptor = null;
+            }
+        } else {
+            gnuAbiDescriptor = null;
+            System.out.println("Java SGX Metadata starts at this position in the file: " +  parser.backingFile.pos());
         }
+
 
         bytesRead = parser.read(descriptorBytes);
         if (bytesRead != n_descsz) {
             throw new ElfException("Error reading note name (read=" + bytesRead + ", expected=" + n_descsz + ")");
         }
-
-        n_name = new String(nameBytes, 0, n_namesz - 1); // unnecessary trailing 0
-        System.out.println("Name:  " + n_name);
-        System.out.println("Offset Java " + r);
-        System.out.println("header.sh_offset Java " + header.sh_offset);
 
     }
 

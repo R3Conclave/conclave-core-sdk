@@ -97,19 +97,15 @@ sgx_status_t retrieve_enclave_metadata(const char *path, metadata_t *metadata) {
         return SGX_ERROR_FILE_NOT_SGX_FILE;
     }
 
-    std::cout << "Section: " << section.sh_offset << std::endl;
-    std::cout << "Note: " << sizeof(Elf64_Note) << std::endl;
-    std::cout << "Name: " << note.namesz << std::endl;
-
-
     size_t meta_data_offset = section.sh_offset + sizeof(Elf64_Note) + note.namesz;
 
-    printf("Meta data offset %lu\n", meta_data_offset);
+    printf("C SGX Metadata in starts at this position in the file: %lu\n", meta_data_offset);
     fseek(fp, meta_data_offset, SEEK_SET);
     if (1 != fread(metadata, sizeof(metadata_t), 1, fp)) {
         return SGX_ERROR_FILE_NOT_SGX_FILE;
     }
 
+    /*
     size_t arrlen = sizeof(metadata_t);
     printf("Metadata in C, size %lu\n", arrlen);
 
@@ -119,6 +115,6 @@ sgx_status_t retrieve_enclave_metadata(const char *path, metadata_t *metadata) {
         printf("%.2x", p[i]);
     }
     printf("\n");
-        
+    */    
     return SGX_SUCCESS;
 }
