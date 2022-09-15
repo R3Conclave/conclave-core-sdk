@@ -1,7 +1,7 @@
 # Conclave Init
 
 Conclave Init is a tool for bootstrapping Conclave projects, reducing the amount of boilerplate you need to write.
-It will automatically generate your Conclave project so that you can focus on writing enclave code!
+It will automatically generate your Conclave project so that you can focus on writing enclave code.
 
 ## Generate a new project
 
