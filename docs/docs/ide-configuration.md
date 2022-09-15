@@ -35,7 +35,7 @@ idea {
 }
 ```
 
-Finally apply the same configuration to all subprojects.
+Finally, apply the same configuration to all subprojects.
 
 ```groovy hl_lines="2-13"
 subprojects {
