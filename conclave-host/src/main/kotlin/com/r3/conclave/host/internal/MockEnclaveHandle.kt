@@ -24,6 +24,8 @@ class MockEnclaveHandle<CONNECTION>(
 
     override val enclaveClassName: String get() = mockEnclave.javaClass.name
 
+    override val callInterface: EnclaveCallInterface = MockEnclaveCallInterface()
+
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
         try {

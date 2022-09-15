@@ -16,6 +16,11 @@ interface EnclaveHandle<CONNECTION> {
      */
     val connection: CONNECTION
 
+    /**
+     * Object for initiating enclave calls from.
+     */
+    val callInterface: EnclaveCallInterface
+
     /** The name of the Enclave subclass inside the sub-JVM. */
     val enclaveClassName: String
 

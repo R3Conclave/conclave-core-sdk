@@ -28,6 +28,21 @@ class NativeEnclaveEnvironment(
                 Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
                         .apply { isAccessible = true }
 
+        private val hostCallInterface by lazy {
+            val hostCallInterface = NativeHostCallInterface()
+
+            // Enclave initialization handler
+            hostCallInterface.registerCallHandler(EnclaveCallType.INITIALIZE_ENCLAVE, object : CallHandler {
+                override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
+                    val classNameBuffer = checkNotNull(messageBuffer) { "Enclave class name parameter missing from initial enclave call." }
+                    singletonHandler = initialiseEnclave(classNameBuffer)
+                    return null
+                }
+            })
+
+            hostCallInterface
+        }
+
         /** The singleton instance of the user supplied enclave. */
         private var singletonHandler: HandlerConnected<*>? = null
 
@@ -46,6 +61,16 @@ class NativeEnclaveEnvironment(
                 }
             }
             singletonHandler?.onReceive(buffer)
+        }
+
+        /**
+         * Temporary ECALL entry point for new handler system.
+         *
+         * @param buffer The chunk of data from the host.
+         */
+        @JvmStatic
+        fun enclaveEntryCon1025(callTypeID: Short, isReturn: Boolean, dataBuffer: ByteBuffer) {
+            hostCallInterface.handleEcall(callTypeID, isReturn, dataBuffer)
         }
 
         private fun seedRandom() {

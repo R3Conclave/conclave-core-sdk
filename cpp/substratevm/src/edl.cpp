@@ -44,6 +44,19 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(jniEnv.get(), reinterpret_cast<char*>(bufferIn), bufferInLen);
 }
 
+void jvm_ecall_con1025(short callType, char isReturn, void *data, int dataLengthBytes) {
+    enclave_trace(">>> Enclave\n");
+
+    using namespace r3::conclave;
+    auto jniEnv = Jvm::instance().jniEnv();
+
+    // Make sure this enclave has determined the host shared data address
+    EnclaveSharedData::instance().init();
+
+    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPointCon1025(
+        jniEnv.get(), callType, isReturn != 0, reinterpret_cast<char*>(data), dataLengthBytes);
+}
+
 void ecall_initialise_enclave(void* initStruct, int initStructLen) {
     if (!initStruct ||(initStructLen != sizeof(r3::conclave::EnclaveInit))) {
         throw std::runtime_error("Invalid configuration structure passed to ecall_initialise_enclave()");

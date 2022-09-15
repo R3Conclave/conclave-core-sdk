@@ -10,6 +10,17 @@ public class Native {
      */
     public static native void jvmOcall(byte[] data);
 
+    // TODO: Temporary for con 1025
+    /**
+     * Makes an OCALL.
+     * @param callTypeID The numeric value representing the call type. When isReturn is false, this is a value of
+     *                   corresponding to a host call type. If isReturn is true, this is the value of the enclave call
+     *                   type which is being responded to.
+     * @param isReturn Is the data a return value in response to an enclave call, or is it initiating a host call.
+     * @param data The chunk of data to be passed to the ocall.
+     */
+    public static native void jvmOcallCon1025(short callTypeID, boolean isReturn, byte[] data);
+
     /**
      * Thin JNI wrapper around `sgx_create_report`.
      * @param targetInfo The bytes of an optional [SgxTargetInfo] object.

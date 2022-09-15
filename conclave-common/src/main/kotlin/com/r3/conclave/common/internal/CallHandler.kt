@@ -2,11 +2,8 @@ package com.r3.conclave.common.internal
 
 import java.nio.ByteBuffer
 
-/**
- * Handles a message from host or enclave.
- */
 interface CallHandler {
-    fun handleCall(messageBytes: ByteBuffer): ByteBuffer
+    fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer?
 }
 
 /**

@@ -119,6 +119,49 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
     }
 }
 
+JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcallCon1025
+        (JNIEnv *jniEnv, jclass, jshort callTypeID, jboolean isReturn, jbyteArray data) {
+    auto size = jniEnv->GetArrayLength(data);
+    abortOnJniException(jniEnv);
+    auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
+    abortOnJniException(jniEnv);
+
+    // If the data is "small" we can pass it on the untrusted stack and
+    // save ourselves 2 ocalls and a malloc/free!
+    if (size < 131072) {
+        auto returnCode = jvm_ocall_stack_con1025(callTypeID, isReturn ? 1 : 0, inputBuffer, size);
+        jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
+        if (returnCode != SGX_SUCCESS) {
+            raiseException(jniEnv, getErrorMessage(returnCode));
+        }
+        return;
+    }
+
+    void *inputBufferUntrusted = NULL;
+    auto returnCode = allocate_untrusted_memory(&inputBufferUntrusted, size);
+    if (returnCode != SGX_SUCCESS) {
+        raiseException(jniEnv, getErrorMessage(returnCode));
+    } else if (inputBufferUntrusted == NULL) {
+        raiseException(jniEnv, "Failed to allocate host side buffer for ocall data.");
+    } else if (!sgx_is_outside_enclave(inputBufferUntrusted, size)) {
+        // This suggests a malicious host so just abort the enclave.
+        abort();
+    }
+
+    memcpy(inputBufferUntrusted, inputBuffer, size);
+    jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
+
+    returnCode = jvm_ocall_heap_con1025(callTypeID, isReturn ? 1 : 0, inputBufferUntrusted, size);
+    if (returnCode != SGX_SUCCESS) {
+        raiseException(jniEnv, getErrorMessage(returnCode));
+    }
+
+    returnCode = free_untrusted_memory(&inputBufferUntrusted);
+    if (returnCode != SGX_SUCCESS) {
+        raiseException(jniEnv, getErrorMessage(returnCode));
+    }
+}
+
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_createReport
         (JNIEnv *jniEnv, jclass, jbyteArray targetInfoIn, jbyteArray reportDataIn, jbyteArray reportOut) {
     jbyte *target_info = nullptr;
@@ -343,6 +386,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_getKey
 
 DLSYM_STATIC {
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOcall);
+    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOcallCon1025);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_createReport);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_isEnclaveSimulation);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_sealData);

@@ -6,6 +6,12 @@ enclave {
             [in, size=bufferInLen] void* bufferIn,
             int bufferInLen
         );
+        public void jvm_ecall_con1025(
+            short callType,
+            char isReturn,
+            [in, size=dataLengthBytes] void* data,
+            int dataLengthBytes
+        );
         public void ecall_initialise_enclave(
             [in, out, size=initStructLen] void* initStruct,
             int initStructLen
@@ -23,6 +29,20 @@ enclave {
             [in, size=bufferInLen] void* bufferIn,
             int bufferInLen
         ) allow(jvm_ecall);
+
+        void jvm_ocall_heap_con1025(
+            short callType,
+            char isReturn,
+            [in, size=dataLengthBytes] void* data,
+            int dataLengthBytes
+        ) allow(jvm_ecall_con1025);
+
+        void jvm_ocall_stack_con1025(
+            short callType,
+            char isReturn,
+            [in, size=dataLengthBytes] void* data,
+            int dataLengthBytes
+        ) allow(jvm_ecall_con1025);
 
         void shared_data_ocall(
             [out] void** sharedBufferAddr

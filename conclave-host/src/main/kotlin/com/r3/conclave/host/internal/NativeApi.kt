@@ -3,6 +3,7 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.CpuFeature
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
+import com.r3.conclave.utilities.internal.getRemainingString
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -10,11 +11,22 @@ import java.util.concurrent.ConcurrentHashMap
 object NativeApi {
     private val connectedOcallHandlers = ConcurrentHashMap<Long, HandlerConnected<*>>()
 
+    private val enclaveCallInterfaces = ConcurrentHashMap<Long, NativeEnclaveCallInterface>()
+
     @JvmStatic
     fun registerOcallHandler(enclaveId: Long, handlerConnected: HandlerConnected<*>) {
         val previous = connectedOcallHandlers.putIfAbsent(enclaveId, handlerConnected)
         if (previous != null) {
             throw IllegalStateException("Attempt to re-register handler for enclave id $enclaveId")
+        }
+    }
+
+    // TODO: Temporary for con 1025
+    @JvmStatic
+    fun registerEnclaveCallInterface(enclaveId: Long, enclaveCallInterface: NativeEnclaveCallInterface) {
+        val previous = enclaveCallInterfaces.putIfAbsent(enclaveId, enclaveCallInterface)
+        if (previous != null) {
+            throw IllegalStateException("Attempt to re-register call interface for enclave id $enclaveId")
         }
     }
 
@@ -31,9 +43,23 @@ object NativeApi {
         ocallHandler.onReceive(buffer.asReadOnlyBuffer())
     }
 
+    // TODO: Temporary for CON 1025
+    @JvmStatic
+    @Suppress("UNUSED")
+    fun enclaveToHostCon1025(enclaveId: Long, callTypeID: Short, isReturn: Boolean, data: ByteBuffer) {
+        val enclaveCallInterface = checkNotNull(enclaveCallInterfaces[enclaveId])
+        enclaveCallInterface.handleOcall(enclaveId, callTypeID, isReturn, data)
+    }
+
     @JvmStatic
     fun hostToEnclave(enclaveId: Long, data: ByteArray) {
         Native.jvmEcall(enclaveId, data)
+    }
+
+    // TODO: Temporary for CON 1025
+    @JvmStatic
+    fun hostToEnclaveCon1025(enclaveId: Long, callType: Short, isReturn: Boolean, data: ByteArray) {
+        Native.jvmEcallCon1025(enclaveId, callType, isReturn, data)
     }
 
     /**
