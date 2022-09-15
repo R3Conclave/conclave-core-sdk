@@ -22,7 +22,7 @@ With Conclave, you can build:
 
 Conclave is a software development kit for the rapid development of privacy-first applications using hardware-based Trusted Execution Environments (TEEs) known as [enclaves](enclaves.md).
 Conclave makes [Confidential Computing](enclaves.md) using Intel® Security Guard Extension (SGX) more accessible for 
-developers. Take a look at our source code on [this GitHub repository](https://github.com/R3Conclave/conclave-core-sdk).
+developers. Take a look at the source code on [this GitHub repository](https://github.com/R3Conclave/conclave-core-sdk).
 
 ### Advantages of Conclave
 
