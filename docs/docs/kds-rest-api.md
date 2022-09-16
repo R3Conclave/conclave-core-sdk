@@ -2,21 +2,26 @@
 
 ## Introduction
 
-This page describes how applications can communicate with the Key Derivation Service, also known as KDS. The service is made accessible
-through its REST API endpoints which are presented below. As many applications, KDS also uses JSON to send and receive data.
+This page describes how applications can communicate with the Key Derivation Service (KDS). KDS uses JSON to send 
+and receive data. You can access the KDS through its REST API endpoints given below.
 
 ## Endpoints
-Currently, the service supports the endpoints [`/public`](#endpoint-public), and [`/private`](#endpoint-private). Samples of the requests and responses are provided for each one of them.
+The Key Derivation Service (KDS) supports two endpoints.
+
+* [`/public`](#endpoint-public)
+* [`/private`](#endpoint-private)
+
+You can find the request & response parameters, and other details for these endpoints below.
 
 ### Endpoint - `/public`
-Returns a Curve25519 public key corresponding to a private key that was created using key material derived from the given
-key specification. Access to a public key is not subject to constraints.
+The `/public` endpoint returns a [Curve25519](https://en.wikipedia.org/wiki/Curve25519) public key.
 
-This allows a client to firstly attest to the
-validity of the KDS to obtain trust in the KDS, then to request a public key whereby an application enclave can only get
-the private key material for the same key specification if it meets the constraints defined by the client. An application
-enclave that obtains the key material can then generate a Curve25519 private key corresponding to the public key, establishing
-a cryptographic link between the client and the enclave.
+The enclave constraints are not applicable to obtain access to this public key. This allows a client to attest to 
+the validity of the KDS to obtain trust in the KDS, then to request a 
+public key whereby an application enclave can only get the private key material for the same key specification if it 
+meets the constraints defined by the client. An application enclave that obtains the key material can then generate 
+a Curve25519 private key corresponding to the public key, establishing a cryptographic link between the client and 
+the enclave.
 
 `PUT /public`
 
@@ -79,24 +84,23 @@ curl --location --request POST 'localhost:8090/public' \
 }
 ```
 
-!!! warning
-    Ensuring the message integrity and authenticity is paramount. Failing to do so is a security risk and invalidates
-    the protection provided by Conclave. Verify that the message was sent by KDS by validating the
-    `kdsAttestationReport` and then check the integrity of the message by validating the signature of the message.
+!!!Warning
+    
+    It's critical to ensure the message integrity and authenticity. You can verify the message by validating the
+    `kdsAttestationReport` and the signature of the message.
 
 ### Endpoint - `/private`
-Retrieves the private key defined by a key specification. This always returns a 32 byte array that forms the raw
-key material. For example, this can be used directly as an AES256 key, or it can be used as the input to a
-Curve25519 private key generation function.
 
-The retrieval of the private key is performed by the KDS enclave. The enclave will only respond
-with the key if the calling enclave meets the policy requirements defined in the key specification
-provided as input parameters to this call.
+The `/private` endpoint retrieves the private key defined by a key specification. It always returns a 32-byte array 
+that forms the raw key material. This can be used directly as an AES256 key or as an input to a Curve25519 private 
+key generation function.
 
-Note that the key specification is not encrypted or authenticated therefore a malicious KDS host could modify
-the key specification, including the constraints. However, if the key specification is modified then this
-will result in a different derived key meaning that any data encrypted by a client using the correct constraint
-cannot be accessed by the altered key specification.
+The KDS enclave returns the private key only if the calling enclave meets the policy requirements defined in the key 
+specification.
+
+Note that the key specification is not encrypted or authenticated. If a malicious KDS host modifies the key 
+specification or the constraints, it creates a different derived key. So, any data encrypted by a client using the 
+correct constraint can't be accessed by a tampered key specification.
 
 
 `POST /private`
