@@ -283,9 +283,10 @@ abstract class Enclave {
     private fun initialiseMock(
         upstream: Sender,
         mockConfiguration: MockConfiguration?,
-        kdsConfig: EnclaveKdsConfig?
+        kdsConfig: EnclaveKdsConfig?,
+        callInterfaceConnector: MockCallInterfaceConnector
     ): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig), upstream)
+        return initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig, callInterfaceConnector), upstream)
     }
 
     /**

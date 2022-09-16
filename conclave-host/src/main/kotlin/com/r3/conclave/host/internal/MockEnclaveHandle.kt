@@ -1,6 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.MockCallInterfaceConnector
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
@@ -24,7 +25,13 @@ class MockEnclaveHandle<CONNECTION>(
 
     override val enclaveClassName: String get() = mockEnclave.javaClass.name
 
-    override val callInterface: EnclaveCallInterface = NativeEnclaveCallInterface(0)
+    private val callInterfaceConnector = MockCallInterfaceConnector()
+
+    override val enclaveCallInterface = run {
+        val enclaveCallInterface = MockEnclaveCallInterface(callInterfaceConnector)
+        callInterfaceConnector.setHostCallAcceptor(enclaveCallInterface)
+        enclaveCallInterface
+    }
 
     private val enclaveHandler by lazy {
         val sender = MockOcallSender(HandlerConnected(hostHandler, connection))
@@ -37,14 +44,15 @@ class MockEnclaveHandle<CONNECTION>(
                 "initialiseMock",
                 Sender::class.java,
                 MockConfiguration::class.java,
-                EnclaveKdsConfig::class.java
+                EnclaveKdsConfig::class.java,
+                MockCallInterfaceConnector::class.java
             )
             initialiseMockMethod.isAccessible = true
 
             EnclaveContext.Companion::class.java.getDeclaredField("instance").apply { isAccessible = true }
                     .set(null, ThreadLocalEnclaveContext)
 
-            initialiseMockMethod.invoke(mockEnclave, sender, mockConfiguration, kdsConfig) as HandlerConnected<*>
+            initialiseMockMethod.invoke(mockEnclave, sender, mockConfiguration, kdsConfig, callInterfaceConnector) as HandlerConnected<*>
         } catch (e: InvocationTargetException) {
             throw e.cause ?: e
         }

@@ -22,7 +22,7 @@ class NativeEnclaveHandle<CONNECTION>(
     private val enclaveFile: Path
     private val enclaveId: Long
     override val connection: CONNECTION = handler.connect(this)
-    override val callInterface: EnclaveCallInterface
+    override val enclaveCallInterface: EnclaveCallInterface
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
@@ -30,16 +30,16 @@ class NativeEnclaveHandle<CONNECTION>(
         enclaveFile = Files.createTempFile(enclaveClassName, "signed.so").toAbsolutePath()
         enclaveFileUrl.openStream().use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
         enclaveId = Native.createEnclave(enclaveFile.toString(), enclaveMode != EnclaveMode.RELEASE)
-        callInterface = NativeEnclaveCallInterface(enclaveId)
+        enclaveCallInterface = NativeEnclaveCallInterface(enclaveId)
         NativeApi.registerOcallHandler(enclaveId, HandlerConnected(handler, connection))
-        NativeApi.registerEnclaveCallInterface(enclaveId, callInterface)
+        NativeApi.registerEnclaveCallInterface(enclaveId, enclaveCallInterface)
     }
 
     private var initialized = false
     private fun maybeInit() {
         synchronized(this) {
             if (!initialized) {
-                callInterface.initializeEnclave(enclaveClassName)
+                enclaveCallInterface.initializeEnclave(enclaveClassName)
                 initialized = true
             }
         }
