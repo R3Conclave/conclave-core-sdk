@@ -39,8 +39,7 @@ class NativeEnclaveHandle<CONNECTION>(
     private fun maybeInit() {
         synchronized(this) {
             if (!initialized) {
-                // The first ECALL has to be the class name of the enclave to be instantiated.
-                NativeApi.hostToEnclave(enclaveId, enclaveClassName.toByteArray())
+                callInterface.initializeEnclave(enclaveClassName)
                 initialized = true
             }
         }

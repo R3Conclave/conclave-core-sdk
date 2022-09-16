@@ -28,15 +28,18 @@ class NativeEnclaveEnvironment(
                 Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
                         .apply { isAccessible = true }
 
+        /** The singleton host call interface for the user enclave. */
         private val hostCallInterface by lazy {
             val hostCallInterface = NativeHostCallInterface()
 
-            // Enclave initialization handler
+            /** The host call interface begins with a single handler for initialising the enclave. */
             hostCallInterface.registerCallHandler(EnclaveCallType.INITIALIZE_ENCLAVE, object : CallHandler {
                 override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
-                    val classNameBuffer = checkNotNull(messageBuffer) { "Enclave class name parameter missing from initial enclave call." }
-                    singletonHandler = initialiseEnclave(classNameBuffer)
-                    return null
+                    synchronized(Companion) {
+                        val classNameBuffer = checkNotNull(messageBuffer) { "Enclave class name parameter missing from initial enclave call." }
+                        singletonHandler = initialiseEnclave(classNameBuffer)
+                        return null
+                    }
                 }
             })
 
@@ -53,13 +56,7 @@ class NativeEnclaveEnvironment(
          */
         @JvmStatic
         fun enclaveEntry(buffer: ByteBuffer) {
-            val singletonHandler = synchronized(this) {
-                singletonHandler ?: run {
-                    // The first ECALL is always the enclave class name, which we only use to instantiate the enclave.
-                    singletonHandler = initialiseEnclave(buffer)
-                    null
-                }
-            }
+            checkNotNull(singletonHandler) { "Ecall handler has not been initialised." }
             singletonHandler?.onReceive(buffer)
         }
 

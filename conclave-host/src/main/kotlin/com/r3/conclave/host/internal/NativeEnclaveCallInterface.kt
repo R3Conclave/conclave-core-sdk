@@ -27,7 +27,7 @@ class NativeEnclaveCallInterface(val enclaveId: Long) : EnclaveCallInterface() {
 
     override fun initiateCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer?): ByteBuffer? {
         val parameterBufferActual = if (callType.hasParameters) {
-            requireNotNull(parameterBuffer) { "No parameters provided to function ${callType.name}" }
+            requireNotNull(parameterBuffer) { "Missing parameter buffer for enclave call of type ${callType.name}." }
         } else {
             EMPTY_BYTE_BUFFER
         }
@@ -64,7 +64,10 @@ class NativeEnclaveCallInterface(val enclaveId: Long) : EnclaveCallInterface() {
     }
 
     private fun handleInitOcall(callType: HostCallType, parameterBuffer: ByteBuffer?) {
-        val returnBytes = acceptCall(callType, parameterBuffer)?.getRemainingBytes() ?: EMPTY_BYTE_ARRAY
-        NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), true, returnBytes)
+        val returnBytes = acceptCall(callType, parameterBuffer)?.getRemainingBytes()
+        if (callType.hasReturnValue) {
+            checkNotNull(returnBytes) { "Missing return buffer for host call of type ${callType.name}." }
+            NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), true, returnBytes)
+        }
     }
 }
