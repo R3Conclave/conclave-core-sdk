@@ -57,10 +57,8 @@ The client requests a public key after validating the KDS.
 | kdsAttestationReport | The `EnclaveInstanceInfo` of the KDS enclave in Base64. The application enclave needs to validate this report before checking the public key signature to ensure that the the KDS enclave returned the public key. |
 
 The client can access this Curve25519 public key irrespective of the enclave constraints. In contrast, the
-application enclave gets the private key material only if it meets the constraints defined by the client. After
-getting the private key material, the application enclave generates a Curve25519 private key corresponding to the
-public key to create a cryptographic link between the client and the enclave.
-
+KDS provides a Curve25519 private key material to the application enclave only if it meets the constraints defined 
+by the client.
 
 #### Request Example
 
