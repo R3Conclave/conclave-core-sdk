@@ -447,7 +447,6 @@ class EnclaveHost private constructor(
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
     private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
-    private lateinit var signedQuoteHandler: SignedQuoteHandler
 
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
 
@@ -552,7 +551,7 @@ class EnclaveHost private constructor(
 
             // Connect handlers associated with attestation
             quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
-            signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
+            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
@@ -961,18 +960,11 @@ class EnclaveHost private constructor(
     /**
      * Handler for servicing requests from the enclave for signed quotes.
      */
-    private inner class SignedQuoteHandler : Handler<SignedQuoteHandler> {
-        private lateinit var sender: Sender
-
-        override fun connect(upstream: Sender): SignedQuoteHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: SignedQuoteHandler, input: ByteBuffer) {
-            val report = Cursor.slice(SgxReport, input)
+    private inner class GetSignedQuoteHandler : CallHandler {
+        override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
+            val report = Cursor.slice(SgxReport, messageBuffer!!)
             val signedQuote = quotingService.retrieveQuote(report)
-            sender.send(signedQuote.size) { buffer -> buffer.put(signedQuote.buffer) }
+            return signedQuote.buffer
         }
     }
 

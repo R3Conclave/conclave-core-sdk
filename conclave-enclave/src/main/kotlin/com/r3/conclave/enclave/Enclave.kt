@@ -81,7 +81,6 @@ abstract class Enclave {
     private lateinit var signingKeyPair: KeyPair
     private lateinit var adminHandler: AdminHandler
     private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
-    private lateinit var signedQuoteHandler: SignedQuoteHandler
     private lateinit var enclaveInstanceInfoQuoteHandler: GetEnclaveInstanceInfoQuoteHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private lateinit var aesPersistenceKey: ByteArray
@@ -231,7 +230,6 @@ abstract class Enclave {
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
             quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
-            signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
             enclaveInstanceInfoQuoteHandler = GetEnclaveInstanceInfoQuoteHandler()
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, enclaveInstanceInfoQuoteHandler)
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
@@ -273,7 +271,7 @@ abstract class Enclave {
             reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         val report = env.createReport(quotingEnclaveInfo, reportData)
-        return signedQuoteHandler.getSignedQuote(report)
+        return env.hostCallInterface.getSignedQuote(report)
     }
 
     /**
