@@ -554,9 +554,7 @@ class EnclaveHost private constructor(
             quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
             signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
 
-            // The enclave is initialised when it receives its first bytes. We use the request for
-            // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
-            // for us to query.
+            // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
