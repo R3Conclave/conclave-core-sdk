@@ -3,6 +3,8 @@ package com.r3.conclave.common
 import com.r3.conclave.common.internal.CallAcceptor
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
+import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
+import com.r3.conclave.utilities.internal.EnclaveContext
 import java.nio.ByteBuffer
 
 /**
@@ -23,10 +25,22 @@ class MockCallInterfaceConnector {
     }
 
     fun enclaveToHost(callType: HostCallType, parameterBuffer: ByteBuffer?): ByteBuffer? {
-        return hostCallAcceptor.acceptCall(callType, parameterBuffer)
+        check(EnclaveContext.isInsideEnclave())
+        ThreadLocalEnclaveContext.set(false)
+        try {
+            return hostCallAcceptor.acceptCall(callType, parameterBuffer)
+        } finally {
+            ThreadLocalEnclaveContext.set(true)
+        }
     }
 
     fun hostToEnclave(callType: EnclaveCallType, parameterBuffer: ByteBuffer?): ByteBuffer? {
-        return enclaveCallAcceptor.acceptCall(callType, parameterBuffer)
+        check(!EnclaveContext.isInsideEnclave())
+        ThreadLocalEnclaveContext.set(true)
+        try {
+            return enclaveCallAcceptor.acceptCall(callType, parameterBuffer)
+        } finally {
+            ThreadLocalEnclaveContext.set(false)
+        }
     }
 }

@@ -448,7 +448,6 @@ class EnclaveHost private constructor(
 
     private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
     private lateinit var signedQuoteHandler: SignedQuoteHandler
-    private lateinit var enclaveInstanceInfoQuoteHandler: EnclaveInstanceInfoQuoteHandler
 
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
 
@@ -554,11 +553,11 @@ class EnclaveHost private constructor(
             // Connect handlers associated with attestation
             quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
             signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
-            enclaveInstanceInfoQuoteHandler = mux.addDownstream(EnclaveInstanceInfoQuoteHandler())
 
             // The enclave is initialised when it receives its first bytes. We use the request for
             // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
             // for us to query.
+            enclaveHandle.initialise()
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 
@@ -678,7 +677,7 @@ class EnclaveHost private constructor(
     private fun getAttestation(): Attestation {
         val quotingEnclaveTargetInfo = quotingService.initializeQuote()
         log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
-        val signedQuote = enclaveInstanceInfoQuoteHandler.getQuote(quotingEnclaveTargetInfo)
+        val signedQuote = enclaveHandle.enclaveCallInterface.getEnclaveInstanceInfoQuote(quotingEnclaveTargetInfo)
         log.debug { "Got quote $signedQuote" }
         return attestationService.attestQuote(signedQuote)
     }
@@ -993,36 +992,6 @@ class EnclaveHost private constructor(
         override fun onReceive(connection: QuotingEnclaveInfoHandler, input: ByteBuffer) {
             val quotingEnclaveInfo = quotingService.initializeQuote()
             sender.send(quotingEnclaveInfo.size) { buffer -> buffer.put(quotingEnclaveInfo.buffer) }
-        }
-    }
-
-    /**
-     * Handler for retrieving a report from the enclave for enclave instance info.
-     */
-    private inner class EnclaveInstanceInfoQuoteHandler : Handler<EnclaveInstanceInfoQuoteHandler> {
-        private lateinit var sender: Sender
-
-        private val quote = ThreadLocal<ByteCursor<SgxSignedQuote>>()
-
-        override fun connect(upstream: Sender): EnclaveInstanceInfoQuoteHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: EnclaveInstanceInfoQuoteHandler, input: ByteBuffer) {
-            check(quote.get() == null)
-            quote.set(Cursor.copy(SgxSignedQuote, input))
-        }
-
-        fun getQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-            try {
-                sender.send(target.size) { buffer ->
-                    buffer.put(target.buffer)
-                }
-                return checkNotNull(quote.get())
-            } finally {
-                quote.remove()
-            }
         }
     }
 

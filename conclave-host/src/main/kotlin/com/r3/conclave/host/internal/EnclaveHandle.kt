@@ -31,6 +31,11 @@ interface EnclaveHandle<CONNECTION> {
     val mockEnclave: Any
 
     /**
+     * Initialise the enclave.
+     */
+    fun initialise()
+
+    /**
      * Destroy the enclave.
      *
      * Do not call this whilst there are non-terminated enclave threads.

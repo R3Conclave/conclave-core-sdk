@@ -82,7 +82,7 @@ abstract class Enclave {
     private lateinit var adminHandler: AdminHandler
     private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
     private lateinit var signedQuoteHandler: SignedQuoteHandler
-    private lateinit var enclaveInstanceInfoQuoteHandler: EnclaveInstanceInfoQuoteHandler
+    private lateinit var enclaveInstanceInfoQuoteHandler: GetEnclaveInstanceInfoQuoteHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private lateinit var aesPersistenceKey: ByteArray
 
@@ -232,7 +232,8 @@ abstract class Enclave {
             adminHandler = mux.addDownstream(AdminHandler(this, env))
             quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
             signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
-            enclaveInstanceInfoQuoteHandler = mux.addDownstream(EnclaveInstanceInfoQuoteHandler())
+            enclaveInstanceInfoQuoteHandler = GetEnclaveInstanceInfoQuoteHandler()
+            env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, enclaveInstanceInfoQuoteHandler)
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
             connected
         }
@@ -997,24 +998,15 @@ Received: $attestationReportBody"""
     /**
      * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
      */
-    private inner class EnclaveInstanceInfoQuoteHandler : Handler<EnclaveInstanceInfoQuoteHandler> {
-        private lateinit var sender: Sender
-
+    private inner class GetEnclaveInstanceInfoQuoteHandler : CallHandler {
         private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
         val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
 
-        override fun connect(upstream: Sender): EnclaveInstanceInfoQuoteHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: EnclaveInstanceInfoQuoteHandler, input: ByteBuffer) {
-            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, input)
+        override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
+            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer!!)
             val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
-            sender.send(quote.size) { buffer ->
-                buffer.put(quote.buffer)
-            }
+            return ByteBuffer.wrap(quote.bytes)
         }
     }
 

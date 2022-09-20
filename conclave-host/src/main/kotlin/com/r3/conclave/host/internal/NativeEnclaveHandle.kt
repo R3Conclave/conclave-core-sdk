@@ -35,19 +35,14 @@ class NativeEnclaveHandle<CONNECTION>(
         NativeApi.registerEnclaveCallInterface(enclaveId, enclaveCallInterface)
     }
 
-    private var initialized = false
-    private fun maybeInit() {
-        synchronized(this) {
-            if (!initialized) {
-                enclaveCallInterface.initializeEnclave(enclaveClassName)
-                initialized = true
-            }
-        }
+    override fun sendSerialized(serializedBuffer: ByteBuffer) {
+        NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes(avoidCopying = true))
     }
 
-    override fun sendSerialized(serializedBuffer: ByteBuffer) {
-        maybeInit()
-        NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes(avoidCopying = true))
+    override fun initialise() {
+        synchronized(this) {
+            enclaveCallInterface.initializeEnclave(enclaveClassName)
+        }
     }
 
     override fun destroy() {
