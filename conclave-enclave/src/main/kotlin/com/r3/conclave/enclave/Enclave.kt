@@ -80,7 +80,6 @@ abstract class Enclave {
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
     private lateinit var adminHandler: AdminHandler
-    private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
     private lateinit var enclaveInstanceInfoQuoteHandler: GetEnclaveInstanceInfoQuoteHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private lateinit var aesPersistenceKey: ByteArray
@@ -229,7 +228,6 @@ abstract class Enclave {
             val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
-            quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
             enclaveInstanceInfoQuoteHandler = GetEnclaveInstanceInfoQuoteHandler()
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, enclaveInstanceInfoQuoteHandler)
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
@@ -259,7 +257,7 @@ abstract class Enclave {
             }
             ByteCursor.wrap(SgxReportData, reportData)
         }
-        val quotingEnclaveInfo = quotingEnclaveInfoHandler.getQuotingEnclaveInfo()
+        val quotingEnclaveInfo = env.hostCallInterface.getQuotingEnclaveInfo()
         return createAttestationQuote(quotingEnclaveInfo, reportDataCursor).bytes
     }
 

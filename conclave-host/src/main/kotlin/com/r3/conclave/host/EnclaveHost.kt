@@ -446,7 +446,7 @@ class EnclaveHost private constructor(
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
-    private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
+    private lateinit var quotingEnclaveInfoHandler: GetQuotingEnclaveInfoHandler
 
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
 
@@ -550,7 +550,7 @@ class EnclaveHost private constructor(
             adminHandler = mux.addDownstream(AdminHandler(this))
 
             // Connect handlers associated with attestation
-            quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
+            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
 
             // Initialise the enclave before fetching enclave instance info
@@ -971,17 +971,9 @@ class EnclaveHost private constructor(
     /**
      * Handler for servicing requests from the enclave for quoting info.
      */
-    private inner class QuotingEnclaveInfoHandler : Handler<QuotingEnclaveInfoHandler> {
-        private lateinit var sender: Sender
-
-        override fun connect(upstream: Sender): QuotingEnclaveInfoHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: QuotingEnclaveInfoHandler, input: ByteBuffer) {
-            val quotingEnclaveInfo = quotingService.initializeQuote()
-            sender.send(quotingEnclaveInfo.size) { buffer -> buffer.put(quotingEnclaveInfo.buffer) }
+    private inner class GetQuotingEnclaveInfoHandler : CallHandler {
+        override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
+            return quotingService.initializeQuote().buffer
         }
     }
 

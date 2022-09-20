@@ -7,4 +7,9 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
         val quoteBuffer = initiateCall(HostCallType.GET_SIGNED_QUOTE, report.buffer)
         return Cursor.slice(SgxSignedQuote, quoteBuffer!!)
     }
+
+    fun getQuotingEnclaveInfo(): ByteCursor<SgxTargetInfo> {
+        val infoBuffer = initiateCall(HostCallType.GET_QUOTING_ENCLAVE_INFO, null)
+        return Cursor.slice(SgxTargetInfo, infoBuffer!!)
+    }
 }
