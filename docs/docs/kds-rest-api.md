@@ -50,11 +50,11 @@ The client requests a public key after validating the KDS.
 }
 ```
 
-| Field | Description                                                                                                                                                                                                                    |
-| ----- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| publicKey | A [Base64](https://en.wikipedia.org/wiki/Base64) encoded public key.                                                                                                                                                           |
-| signature | A signature in Base64 that the caller can use with the `kdsAttestationReport` to verify that the KDS enclave returned the public key. This verification is [crucial for security reasons](#appendix-a-signature-verification). |
-| kdsAttestationReport | The `EnclaveInstanceInfo` of the KDS enclave in Base64. The application enclave needs to validate this report before checking the public key signature to ensure that the the KDS enclave returned the public key. |
+| Field | Description                                                                                                                                                                                                                          |
+| ----- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| publicKey | A [Base64](https://en.wikipedia.org/wiki/Base64) encoded public key.                                                                                                                                                                 |
+| signature | A signature in Base64 that the caller can use with the `kdsAttestationReport` to verify that the KDS enclave returned the public key. This verification is [crucial for security reasons](#appendix-a---public-key-integrity-check). |
+| kdsAttestationReport | The `EnclaveInstanceInfo` of the KDS enclave in Base64. The application enclave needs to validate this report before checking the public key signature to ensure that the the KDS enclave returned the public key.                   |
 
 The client can access this Curve25519 public key irrespective of the enclave constraints. In contrast, the
 KDS provides a Curve25519 private key material to the application enclave only if it meets the constraints defined 
