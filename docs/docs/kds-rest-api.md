@@ -2,8 +2,8 @@
 
 ## Introduction
 
-This page describes how applications can communicate with the Key Derivation Service (KDS). The KDS uses JSON to send 
-and receive data. You can access the KDS through its REST API endpoints given below.
+This page describes how applications can communicate with the Key Derivation Service (KDS). The KDS is a web server 
+which implements a REST API for deriving public and private keys.
 
 ## Endpoints
 The Key Derivation Service (KDS) supports two endpoints.
@@ -14,7 +14,8 @@ The Key Derivation Service (KDS) supports two endpoints.
 You can find the request & response parameters and other details for these endpoints below.
 
 ### Endpoint - `/public`
-The `/public` endpoint returns a [Curve25519](https://en.wikipedia.org/wiki/Curve25519) public key.
+The `/public` endpoint accepts a key specification and returns a [Curve25519](https://en.wikipedia.org/wiki/Curve25519) 
+public key.
 
 The client requests a public key after validating the KDS.
 
@@ -33,11 +34,11 @@ The client requests a public key after validating the KDS.
 }
 ```
 
-| Field | Description                                                                                                              |
-| ----- |--------------------------------------------------------------------------------------------------------------------------|
-| name | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration. |
-| masterKeyType | The type of master key provider the KDS should use to source the master key.                                          |
-| policyConstraint | The constraint policy to apply to the key. The KDS will reveal the keys only to an enclave that meets these constraints. |
+| Field                                                | Description                                                                                                                                   |
+|------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| name                                                 | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration.                |
+| [masterKeyType](kdsdetail.md#what-is-the-master-key) | The type of master key provider the KDS should use to source the master key.                                                                  |
+| [policyConstraint](constraints.md)                   | The constraint policy to apply to the key. The KDS will reveal the corresponding private key only to an enclave that meets these constraints. |
 
 
 `Response body`
@@ -56,9 +57,6 @@ The client requests a public key after validating the KDS.
 | signature | A signature in Base64 that the caller can use with the `kdsAttestationReport` to verify that the KDS enclave returned the public key. This verification is [crucial for security reasons](#public-key-integrity-check). |
 | kdsAttestationReport | The `EnclaveInstanceInfo` of the KDS enclave in Base64. The application enclave needs to validate this report before checking the public key signature to ensure that the the KDS enclave returned the public key. |
 
-The client can access this Curve25519 public key irrespective of the enclave constraints. In contrast, the
-KDS provides a Curve25519 private key material to the application enclave only if it meets the constraints defined 
-by the client.
 
 #### Request Example
 
@@ -117,12 +115,12 @@ correct constraint can't be accessed using a tampered key specification.
 }
 ```
 
-| Field | Description                                                                                                                                                                           |
-| ----- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| appAttestationReport | The `EnclaveInstanceInfo` in Base64 of the application enclave requesting access to the private key. The KDS validates this field against the policy referred in the key specification. The KDS returns the private key only if the policy check passes. |
-| name | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration. |
-| masterKeyType | The type of master key provider the KDS should use to source the master key.                                          |
-| policyConstraint | The constraint policy to apply to the key. The KDS will reveal the keys only to an enclave that meets these constraints. |
+| Field                                                | Description                                                                                                                                                                                                                                            |
+|------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| appAttestationReport                                 | The `EnclaveInstanceInfo` in Base64 of the application enclave requesting access to the private key. The KDS validates this field against the policy given in the key specification. The KDS returns the private key only if the policy check passes.  |
+| name                                                 | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration.                                                                                                                         |
+| [masterKeyType](kdsdetail.md#what-is-the-master-key) | The type of master key provider the KDS should use to source the master key.                                                                                                                                                                           |
+| [policyConstraint](constraints.md)                   | The constraint policy to apply to the key. The KDS will reveal the keys only to an enclave that meets these constraints.                                                                                                                               |
 
 
 `Response body`
@@ -133,10 +131,10 @@ correct constraint can't be accessed using a tampered key specification.
 }
 ```
 
-| Field | Description                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| kdsAttestationReport | The `EnclaveInstanceInfo` in Base64 of the KDS enclave. The application enclave should validate this report before trusting the private key returned by the KDS enclave.                                                                                                                                                                                                                                           |
-| encryptedPrivateKey | A Base64 field that contains the private key packaged as a Mail object encrypted using the application enclave key. The application enclave decrypts the Mail object to extract the private key. The envelope in the Mail contains the name, masterKeyType, and policyConstraint parameters of the KDS request. These parameters must be checked against the original. See below for how to deserialize the envelope. |
+| Field                 | Description                                                                                                                                                                                                                                                                                                                                                                                                           |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| kdsAttestationReport  | The `EnclaveInstanceInfo` in Base64 of the KDS enclave. The application enclave should validate this report before trusting the private key returned by the KDS enclave.                                                                                                                                                                                                                                              |
+| encryptedPrivateKey   | A Base64 field that contains the private key packaged as a Mail object encrypted using the application enclave key. The application enclave decrypts the Mail object to extract the private key. The envelope in the Mail contains the name, masterKeyType, and policyConstraint parameters of the KDS request. These parameters must be checked against the original. See below for how to deserialize the envelope. |
 
 #### How to Deserialize the Envelope
 The envelope in the private key Mail is a byte array structured as below.
@@ -188,8 +186,8 @@ The endpoints send error responses in the below format:
 }
 ```
 
-| Field | Description |
-| ----- | ----------- |
+| Field | Description     |
+| ----- |-----------------|
 | reason | Error message. |
 
 | Error Response | Reason |
@@ -215,8 +213,9 @@ Create a byte array as described in the diagram below:
             (BE)    sized field            (BE)    sized field   (BE)     sized field
 ```
 
-The name, master key type, and the policy constraint come from the request. The public key comes from the response 
-after being decoded from Base64. The API version field contains the API version used for the request.
+The request includes the name, the master key type, and the policy constraint. The public key comes from the response 
+after 
+being decoded from Base64. The API version field contains the API version used for the request.
 
 You can use this data, along with the `dataSigningKey` contained in the `kdsAttestationReport` from the response, and 
 the `signature` field to check the response integrity.
@@ -232,10 +231,10 @@ this failure in two ways:
 * Check the first 12 bytes to know if the algorithm is supported, and use the last 32 bytes to read the key.
 
 The integrity check ensures that no one has tampered with the public key inside the response. But it 
-does not guarantee that the KDS sent the message. To ensure the authenticity of the sender, you must validate 
+does not guarantee that the KDS sent the message. To ensure the sender's authenticity, you must validate 
 the `kdsAttestationReport` field in the response.
 
 !!!Note
 
     Java and Kotlin developers can use [`post office`](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/using-k-d-s.html)
-    instead of the `/public` end point to retrieve the KDS public keys.
+    instead of the `/public` endpoint to retrieve the KDS public keys.
