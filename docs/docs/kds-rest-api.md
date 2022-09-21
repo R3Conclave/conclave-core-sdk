@@ -17,7 +17,6 @@ You can find the request & response parameters and other details for these endpo
 The `/public` endpoint accepts a key specification and returns a [Curve25519](https://en.wikipedia.org/wiki/Curve25519) 
 public key.
 
-The client requests a public key after validating the KDS.
 
 `PUT /public`
 
@@ -51,11 +50,11 @@ The client requests a public key after validating the KDS.
 }
 ```
 
-| Field | Description                                                                                                                                                                                                             |
-| ----- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| publicKey | A [Base64](https://en.wikipedia.org/wiki/Base64) encoded public key.                                                                                                                                                    |
-| signature | A signature in Base64 that the caller can use with the `kdsAttestationReport` to verify that the KDS enclave returned the public key. This verification is [crucial for security reasons](#public-key-integrity-check). |
-| kdsAttestationReport | The `EnclaveInstanceInfo` of the KDS enclave in Base64. The application enclave needs to validate this report before checking the public key signature to ensure that the the KDS enclave returned the public key. |
+| Field | Description                                                                                                                                                                                                                           |
+| ----- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| publicKey | A [Base64](https://en.wikipedia.org/wiki/Base64) encoded public key.                                                                                                                                                              |
+| kdsAttestationReport | The `EnclaveInstanceInfo` of the KDS enclave in Base64. The client should checked this to verify the KDS instance that the key came from.                                                                              |
+| signature | A signature in Base64 that the caller can use with the `kdsAttestationReport` to verify that the public key came from the verified KDS instance. This verification is [crucial for security reasons](#public-key-integrity-check).|
 
 
 #### Request Example
@@ -131,10 +130,10 @@ correct constraint can't be accessed using a tampered key specification.
 }
 ```
 
-| Field                 | Description                                                                                                                                                                                                                                                                                                                                                                                                           |
-|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| kdsAttestationReport  | The `EnclaveInstanceInfo` in Base64 of the KDS enclave. The application enclave should validate this report before trusting the private key returned by the KDS enclave.                                                                                                                                                                                                                                              |
-| encryptedPrivateKey   | A Base64 field that contains the private key packaged as a Mail object encrypted using the application enclave key. The application enclave decrypts the Mail object to extract the private key. The envelope in the Mail contains the name, masterKeyType, and policyConstraint parameters of the KDS request. These parameters must be checked against the original. See below for how to deserialize the envelope. |
+| Field                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| kdsAttestationReport  | The `EnclaveInstanceInfo` in Base64 of the KDS enclave. The application enclave should validate this report before trusting the private key returned by the KDS enclave.                                                                                                                                                                                                                                                                                                                                 |
+| encryptedPrivateKey   | A Base64 field that contains the private key packaged as a Mail object encrypted using the application enclave key. The application enclave decrypts the Mail object to extract the private key. The envelope in the Mail object contains the name, masterKeyType, and policyConstraint parameters of the KDS request. These parameters must be checked against the parameters in the original request to verify that the KDS derived the keys correctly. See below for how to deserialize the envelope. |
 
 #### How to Deserialize the Envelope
 The envelope in the private key Mail is a byte array structured as below.
