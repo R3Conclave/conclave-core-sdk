@@ -961,8 +961,8 @@ class EnclaveHost private constructor(
      * Handler for servicing requests from the enclave for signed quotes.
      */
     private inner class GetSignedQuoteHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
-            val report = Cursor.slice(SgxReport, messageBuffer!!)
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            val report = Cursor.slice(SgxReport, messageBuffer)
             val signedQuote = quotingService.retrieveQuote(report)
             return signedQuote.buffer
         }
@@ -972,7 +972,7 @@ class EnclaveHost private constructor(
      * Handler for servicing requests from the enclave for quoting info.
      */
     private inner class GetQuotingEnclaveInfoHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
             return quotingService.initializeQuote().buffer
         }
     }

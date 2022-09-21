@@ -998,8 +998,8 @@ Received: $attestationReportBody"""
         private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
         val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
 
-        override fun handleCall(messageBuffer: ByteBuffer?): ByteBuffer? {
-            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer!!)
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer)
             val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
             return ByteBuffer.wrap(quote.bytes)

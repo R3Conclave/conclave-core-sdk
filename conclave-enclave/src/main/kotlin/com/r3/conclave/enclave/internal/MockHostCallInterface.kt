@@ -5,7 +5,7 @@ import com.r3.conclave.common.internal.HostCallType
 import java.nio.ByteBuffer
 
 class MockHostCallInterface(private val connector: MockCallInterfaceConnector) : HostCallInterface() {
-    override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer?): ByteBuffer? {
+    override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer {
         return connector.enclaveToHost(callType, parameterBuffer)
     }
 }

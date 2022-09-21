@@ -24,7 +24,7 @@ class MockCallInterfaceConnector {
         enclaveCallAcceptor = acceptor
     }
 
-    fun enclaveToHost(callType: HostCallType, parameterBuffer: ByteBuffer?): ByteBuffer? {
+    fun enclaveToHost(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer {
         check(EnclaveContext.isInsideEnclave())
         ThreadLocalEnclaveContext.set(false)
         try {
@@ -34,7 +34,7 @@ class MockCallInterfaceConnector {
         }
     }
 
-    fun hostToEnclave(callType: EnclaveCallType, parameterBuffer: ByteBuffer?): ByteBuffer? {
+    fun hostToEnclave(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer {
         check(!EnclaveContext.isInsideEnclave())
         ThreadLocalEnclaveContext.set(true)
         try {
