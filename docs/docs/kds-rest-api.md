@@ -34,11 +34,11 @@ The client requests a public key after validating the KDS.
 }
 ```
 
-| Field                                                | Description                                                                                                                                   |
-|------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| name                                                 | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration.                |
-| [masterKeyType](kdsdetail.md#what-is-the-master-key) | The type of master key provider the KDS should use to source the master key.                                                                  |
-| [policyConstraint](constraints.md)                   | The constraint policy to apply to the key. The KDS will reveal the corresponding private key only to an enclave that meets these constraints. |
+| Field                                                 | Description                                                                                                                                   |
+|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| name                                                  | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration.                |
+| [masterKeyType](kds-detail.md#what-is-the-master-key) | The type of master key provider the KDS should use to source the master key.                                                                  |
+| [policyConstraint](constraints.md)                    | The constraint policy to apply to the key. The KDS will reveal the corresponding private key only to an enclave that meets these constraints. |
 
 
 `Response body`
@@ -115,12 +115,12 @@ correct constraint can't be accessed using a tampered key specification.
 }
 ```
 
-| Field                                                | Description                                                                                                                                                                                                                                            |
-|------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| appAttestationReport                                 | The `EnclaveInstanceInfo` in Base64 of the application enclave requesting access to the private key. The KDS validates this field against the policy given in the key specification. The KDS returns the private key only if the policy check passes.  |
-| name                                                 | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration.                                                                                                                         |
-| [masterKeyType](kdsdetail.md#what-is-the-master-key) | The type of master key provider the KDS should use to source the master key.                                                                                                                                                                           |
-| [policyConstraint](constraints.md)                   | The constraint policy to apply to the key. The KDS will reveal the keys only to an enclave that meets these constraints.                                                                                                                               |
+| Field                                                 | Description                                                                                                                                                                                                                                            |
+|-------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| appAttestationReport                                  | The `EnclaveInstanceInfo` in Base64 of the application enclave requesting access to the private key. The KDS validates this field against the policy given in the key specification. The KDS returns the private key only if the policy check passes.  |
+| name                                                  | A name for the key. The KDS uses the name field to generate unique keys with the same master key and constraint configuration.                                                                                                                         |
+| [masterKeyType](kds-detail.md#what-is-the-master-key) | The type of master key provider the KDS should use to source the master key.                                                                                                                                                                           |
+| [policyConstraint](constraints.md)                    | The constraint policy to apply to the key. The KDS will reveal the keys only to an enclave that meets these constraints.                                                                                                                               |
 
 
 `Response body`
