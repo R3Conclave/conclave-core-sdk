@@ -1,6 +1,7 @@
 pluginManagement {
     apply from: 'versions.gradle'
 
+    // Dokka artifacts location
     repositories {
         maven {
             url = "https://software.r3.com/artifactory/conclave-maven"
