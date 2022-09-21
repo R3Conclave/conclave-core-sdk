@@ -10,7 +10,6 @@ import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.common.kds.KDSKeySpec
-import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
@@ -446,8 +445,6 @@ class EnclaveHost private constructor(
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
-    private lateinit var quotingEnclaveInfoHandler: GetQuotingEnclaveInfoHandler
-
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
 
     /**
@@ -547,11 +544,12 @@ class EnclaveHost private constructor(
             // a prefixed channel ID that lets us split them out to separate classes.
             val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
             // The admin handler deserializes keys and other info from the enclave during initialisation.
-            adminHandler = mux.addDownstream(AdminHandler(this))
+            adminHandler = mux.addDownstream(AdminHandler())
 
             // Connect handlers associated with attestation
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
+            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
@@ -868,8 +866,38 @@ class EnclaveHost private constructor(
 
     private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
 
+    /**
+     * Handler for servicing requests from the enclave for signed quotes.
+     */
+    private inner class GetSignedQuoteHandler : CallHandler {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            val report = Cursor.slice(SgxReport, messageBuffer)
+            val signedQuote = quotingService.retrieveQuote(report)
+            return signedQuote.buffer
+        }
+    }
+
+    /**
+     * Handler for servicing requests from the enclave for quoting info.
+     */
+    private inner class GetQuotingEnclaveInfoHandler : CallHandler {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            return quotingService.initializeQuote().buffer
+        }
+    }
+
+    /**
+     * Handler for servicing attestation requests from the enclave.
+     */
+    private inner class GetAttestationHandler : CallHandler {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            val attestationBytes = writeData { _enclaveInstanceInfo!!.attestation.writeTo(this) }
+            return ByteBuffer.wrap(attestationBytes)
+        }
+    }
+
     /** Deserializes keys and other info from the enclave during initialisation. */
-    private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
+    private class AdminHandler : Handler<AdminHandler> {
         private lateinit var sender: Sender
 
         private var _enclaveInfo: EnclaveInfo? = null
@@ -882,7 +910,6 @@ class EnclaveHost private constructor(
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             when (messageTypes[input.get().toInt()]) {
                 EnclaveToHost.ENCLAVE_INFO -> onEnclaveInfo(input)
-                EnclaveToHost.ATTESTATION -> onAttestation()
             }
         }
 
@@ -891,13 +918,6 @@ class EnclaveHost private constructor(
             val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
             val encryptionKey = Curve25519PublicKey(input.getBytes(32))
             _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
-        }
-
-        private fun onAttestation() {
-            val attestationBytes = writeData { host._enclaveInstanceInfo!!.attestation.writeTo(this) }
-            sendToEnclave(HostToEnclave.ATTESTATION, attestationBytes.size) { buffer ->
-                buffer.put(attestationBytes)
-            }
         }
 
         fun sendOpen(sealedState: ByteArray?) {
@@ -923,13 +943,6 @@ class EnclaveHost private constructor(
                 payload(buffer)
             }
         }
-
-        private fun getKdsKeySpec(input: ByteBuffer): KDSKeySpec {
-            val name = input.getIntLengthPrefixString()
-            val masterKeyType = MasterKeyType.fromID(input.get().toInt())
-            val policyConstraint = input.getRemainingString()
-            return KDSKeySpec(name, masterKeyType, policyConstraint)
-        }
     }
 
     private class Transaction {
@@ -941,26 +954,6 @@ class EnclaveHost private constructor(
             val commandsCopy = ArrayList(mailCommands)
             mailCommands.clear()
             commandsCallback.accept(commandsCopy)
-        }
-    }
-
-    /**
-     * Handler for servicing requests from the enclave for signed quotes.
-     */
-    private inner class GetSignedQuoteHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
-            val report = Cursor.slice(SgxReport, messageBuffer)
-            val signedQuote = quotingService.retrieveQuote(report)
-            return signedQuote.buffer
-        }
-    }
-
-    /**
-     * Handler for servicing requests from the enclave for quoting info.
-     */
-    private inner class GetQuotingEnclaveInfoHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
-            return quotingService.initializeQuote().buffer
         }
     }
 

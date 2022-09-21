@@ -150,7 +150,30 @@ abstract class Enclave {
     protected val signatureKey: PublicKey get() = signingKeyPair.public
 
     /** The serializable remote attestation object for this enclave instance. */
-    protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
+    protected val enclaveInstanceInfo: EnclaveInstanceInfo by lazy {
+        val attestation = env.hostCallInterface.getAttestation()
+        val attestationReportBody = attestation.reportBody
+        val enclaveReportBody = enclaveInstanceInfoQuoteHandler.mostRecentQuote[quote][reportBody]
+
+        check(attestationReportBody == enclaveReportBody) {
+            """Host has provided attestation for a different enclave.
+               Expected: $enclaveReportBody
+               Received: $attestationReportBody""".trimIndent()
+        }
+
+        // It's also important to check the enclave modes match. Specifically we want to prevent an attestation marked
+        // as secure from being used when the enclave is running in non-hardware mode (all non-hardware attestations
+        // are insecure).
+        check(attestation.enclaveMode == env.enclaveMode) {
+            "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
+        }
+
+        EnclaveInstanceInfoImpl(
+                signatureKey,
+                encryptionKeyPair.public as Curve25519PublicKey,
+                attestation
+        )
+    }
 
     /**
      * The remote attestation object for the KDS enclave this enclave is using for persistence. This will be null if
@@ -530,36 +553,10 @@ abstract class Enclave {
 
         override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
             when (messageTypes[input.get().toInt()]) {
-                HostToEnclave.ATTESTATION -> onAttestation(input)
                 HostToEnclave.OPEN -> onOpen(input)
                 HostToEnclave.CLOSE -> onClose()
                 HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE -> onPersistenceKdsPrivateKeyResponse(input)
             }
-        }
-
-        private fun onAttestation(input: ByteBuffer) {
-            // Ensure this method is only called once
-            check(_enclaveInstanceInfo == null)
-
-            val attestation = Attestation.getFromBuffer(input)
-            val attestationReportBody = attestation.reportBody
-            val enclaveReportBody = enclave.enclaveInstanceInfoQuoteHandler.mostRecentQuote[quote][reportBody]
-            check(attestationReportBody == enclaveReportBody) {
-                """Host has provided attestation for a different enclave.
-Expected: $enclaveReportBody
-Received: $attestationReportBody"""
-            }
-            // It's also important to check the enclave modes match. Specifically we want to prevent an attestation marked
-            // as secure from being used when the enclave is running in non-hardware mode (all non-hardware attestations
-            // are insecure).
-            check(attestation.enclaveMode == env.enclaveMode) {
-                "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
-            }
-            _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-                enclave.signatureKey,
-                enclave.encryptionKeyPair.public as Curve25519PublicKey,
-                attestation
-            )
         }
 
         private fun onOpen(input: ByteBuffer) {
@@ -638,29 +635,6 @@ Received: $attestationReportBody"""
             val kdsResponseMail = mailDecryptingStream.decryptMail(enclave.encryptionKeyPair.private)
             val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixSlice())
             return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
-        }
-
-        /**
-         * Return the [EnclaveInstanceInfoImpl] for this enclave. The first time this is called it asks the host for the
-         * [Attestation] object it received from the attestation service. From that the enclave is able to construct the
-         * info object. By making this lazy we avoid slowing down the enclave startup process if it's never used.
-         */
-        @get:Synchronized
-        val enclaveInstanceInfo: EnclaveInstanceInfoImpl
-            get() {
-                if (_enclaveInstanceInfo == null) {
-                    sendAttestationRequest()
-                }
-                return _enclaveInstanceInfo!!
-            }
-
-        /**
-         * Send a request to the host for the [Attestation] object. The enclave has the other properties needed
-         * to construct its [EnclaveInstanceInfoImpl]. This way less bytes are transferred and there's less checking that
-         * needs to be done.
-         */
-        private fun sendAttestationRequest() {
-            sendToHost(EnclaveToHost.ATTESTATION, 0) { }
         }
 
         private fun sendToHost(type: EnclaveToHost, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
