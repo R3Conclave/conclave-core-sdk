@@ -53,7 +53,7 @@ class NativeHostCallInterface : HostCallInterface() {
     }
 
     private fun handleInitEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
-        val returnBuffer = acceptCall(callType, parameterBuffer) ?: EMPTY_BYTE_BUFFER
+        val returnBuffer = acceptCall(callType, parameterBuffer)
         if (callType.hasReturnValue) {
             Native.jvmOcallCon1025(callType.toShort(), true, returnBuffer.getRemainingBytes())
         }
