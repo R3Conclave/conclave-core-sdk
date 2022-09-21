@@ -2,6 +2,7 @@ package com.r3.conclave.enclave
 
 import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.CallInitiator.Companion.EMPTY_BYTE_BUFFER
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
@@ -79,6 +80,7 @@ abstract class Enclave {
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
+    private lateinit var kdsPersistenceKeySpecHandler: GetKdsPersistenceKeySpecificationHandler
     private lateinit var adminHandler: AdminHandler
     private lateinit var enclaveInstanceInfoQuoteHandler: GetEnclaveInstanceInfoQuoteHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
@@ -228,9 +230,13 @@ abstract class Enclave {
             val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
+            kdsPersistenceKeySpecHandler = GetKdsPersistenceKeySpecificationHandler()
             enclaveInstanceInfoQuoteHandler = GetEnclaveInstanceInfoQuoteHandler()
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, enclaveInstanceInfoQuoteHandler)
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
+
+            env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, kdsPersistenceKeySpecHandler)
+            env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, enclaveInstanceInfoQuoteHandler)
+
             connected
         }
     }
@@ -422,6 +428,85 @@ abstract class Enclave {
     }
 
     /**
+     * Create a policy constraint string from a persistence key spec.
+     * This method handles the logic for "useOwnCodeHash" and "useOwnSignerAndProductID".
+     */
+    private fun buildPersistencePolicyConstraint(persistenceKeySpec: EnclaveKdsConfig.PersistenceKeySpec): String {
+        val builder = StringBuilder(persistenceKeySpec.policyConstraint.constraint)
+
+        val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
+
+        val report = env.createReport(null, null)
+        if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
+            val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
+            if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
+                builder.append(" C:").append(mrenclave)
+            }
+        }
+
+        if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
+            val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
+            val productId = report[body][isvProdId].read()
+            if (mrsigner !in parsedUserConstraint.acceptableSigners) {
+                builder.append(" S:").append(mrsigner)
+            }
+            if (parsedUserConstraint.productID == null) {
+                builder.append(" PROD:").append(productId)
+            } else {
+                require(parsedUserConstraint.productID == productId) {
+                    "Cannot apply useOwnCodeSignerAndProductID to the KDS persistence policy constraint as " +
+                            "PROD:${parsedUserConstraint.productID} is already specified"
+                }
+            }
+        }
+
+        return builder.toString()
+    }
+
+    /**
+     * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
+     */
+    private inner class GetEnclaveInstanceInfoQuoteHandler : CallHandler {
+        private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
+        val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
+
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer)
+            val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
+            _mostRecentQuote = quote
+            return ByteBuffer.wrap(quote.bytes)
+        }
+    }
+
+    // TODO: Remove or refactor this once the AdminHandler is removed
+    lateinit var persistenceKdsKeySpec: KDSKeySpec
+
+    /**
+     * Handler which services requests from the host for the enclave persistence key specification.
+     */
+    private inner class GetKdsPersistenceKeySpecificationHandler : CallHandler {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            val persistenceKeySpec = env.kdsConfiguration?.persistenceKeySpec ?: return EMPTY_BYTE_BUFFER
+
+            persistenceKdsKeySpec = KDSKeySpec(
+                    KDS_PERSISTENCE_KEY_NAME,
+                    persistenceKeySpec.masterKeyType,
+                    buildPersistencePolicyConstraint(persistenceKeySpec)
+            )
+
+            val nameBytes = persistenceKdsKeySpec.name.toByteArray()
+            val policyConstraintBytes = persistenceKdsKeySpec.policyConstraint.toByteArray()
+            val payloadSize = nameBytes.intLengthPrefixSize + 1 + policyConstraintBytes.size
+
+            return ByteBuffer.wrap(ByteArray(payloadSize)).apply {
+                this.putIntLengthPrefixBytes(nameBytes)
+                this.put(persistenceKdsKeySpec.masterKeyType.id.toByte())
+                this.put(policyConstraintBytes)
+            }
+        }
+    }
+
+    /**
      * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
      * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
      */
@@ -431,7 +516,6 @@ abstract class Enclave {
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
         private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
-        private lateinit var persistenceKdsKeySpec: KDSKeySpec
 
         private val messageTypes = HostToEnclave.values()
 
@@ -449,7 +533,6 @@ abstract class Enclave {
                 HostToEnclave.ATTESTATION -> onAttestation(input)
                 HostToEnclave.OPEN -> onOpen(input)
                 HostToEnclave.CLOSE -> onClose()
-                HostToEnclave.PERSISTENCE_KDS_KEY_SPEC_REQUEST -> onPersistenceKdsKeySpecRequest()
                 HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE -> onPersistenceKdsPrivateKeyResponse(input)
             }
         }
@@ -535,50 +618,6 @@ Received: $attestationReportBody"""
             }
         }
 
-        private fun onPersistenceKdsKeySpecRequest() {
-            // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
-            // defined. The host will see that we've not sent back a key spec.
-            val persistenceKeySpec = enclave.env.kdsConfiguration?.persistenceKeySpec ?: return
-            persistenceKdsKeySpec = KDSKeySpec(
-                KDS_PERSISTENCE_KEY_NAME,
-                persistenceKeySpec.masterKeyType,
-                buildPersistencePolicyConstraint(persistenceKeySpec)
-            )
-            sendKdsPersistenceKeySpecToHost(persistenceKdsKeySpec)
-        }
-
-        private fun buildPersistencePolicyConstraint(persistenceKeySpec: EnclaveKdsConfig.PersistenceKeySpec): String {
-            val builder = StringBuilder(persistenceKeySpec.policyConstraint.constraint)
-
-            val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
-
-            val report = env.createReport(null, null)
-            if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
-                val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
-                if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
-                    builder.append(" C:").append(mrenclave)
-                }
-            }
-
-            if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
-                val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
-                val productId = report[body][isvProdId].read()
-                if (mrsigner !in parsedUserConstraint.acceptableSigners) {
-                    builder.append(" S:").append(mrsigner)
-                }
-                if (parsedUserConstraint.productID == null) {
-                    builder.append(" PROD:").append(productId)
-                } else {
-                    require(parsedUserConstraint.productID == productId) {
-                        "Cannot apply useOwnCodeSignerAndProductID to the KDS persistence policy constraint as " +
-                                "PROD:${parsedUserConstraint.productID} is already specified"
-                    }
-                }
-            }
-
-            return builder.toString()
-        }
-
         private fun onPersistenceKdsPrivateKeyResponse(input: ByteBuffer) {
             check(enclave.kdsEiiForPersistence == null) {
                 "Enclave has already received a KDS persistence private key."
@@ -589,7 +628,7 @@ Received: $attestationReportBody"""
             }
             val privateKeyResponse = getKdsPrivateKeyResponse(input)
             enclave.kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
-            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
+            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = enclave.persistenceKdsKeySpec)
             // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
             enclave.aesPersistenceKey = kdsPersistenceKey.copyOf(16)
         }
@@ -622,17 +661,6 @@ Received: $attestationReportBody"""
          */
         private fun sendAttestationRequest() {
             sendToHost(EnclaveToHost.ATTESTATION, 0) { }
-        }
-
-        fun sendKdsPersistenceKeySpecToHost(keySpec: KDSKeySpec) {
-            val nameBytes = keySpec.name.toByteArray()
-            val policyConstraintBytes = keySpec.policyConstraint.toByteArray()
-            val payloadSize = nameBytes.intLengthPrefixSize + 1 + policyConstraintBytes.size
-            sendToHost(EnclaveToHost.PERSISTENCE_KDS_KEY_SPEC_RESPONSE, payloadSize) { buffer ->
-                buffer.putIntLengthPrefixBytes(nameBytes)
-                buffer.put(keySpec.masterKeyType.id.toByte())
-                buffer.put(policyConstraintBytes)
-            }
         }
 
         private fun sendToHost(type: EnclaveToHost, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
@@ -988,21 +1016,6 @@ Received: $attestationReportBody"""
                 buffer.put(encryptedBytes)
             }
             currentReceiveContext?.run { pendingPostMails-- }
-        }
-    }
-
-    /**
-     * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
-     */
-    private inner class GetEnclaveInstanceInfoQuoteHandler : CallHandler {
-        private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
-        val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
-
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
-            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer)
-            val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
-            _mostRecentQuote = quote
-            return ByteBuffer.wrap(quote.bytes)
         }
     }
 

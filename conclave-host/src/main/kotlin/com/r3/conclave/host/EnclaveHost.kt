@@ -563,7 +563,7 @@ class EnclaveHost private constructor(
                 this.kdsConfiguration = kdsConfiguration
                 // TODO We can avoid this ECALL if we get the enclave to send its persistence key spec when it's
                 //  first initialised.
-                val persistenceKeySpec = adminHandler.requestPersistenceKdsKeySpec()
+                val persistenceKeySpec = enclaveHandle.enclaveCallInterface.getKdsPersistenceKeySpec()
                 //  If the enclave is configured also with KDS spec for persistence, we trigger the private key request.
                 //    Note that the kdsConfiguration is also used in the context of KdsPostOffice
                 if (persistenceKeySpec != null) {
@@ -875,8 +875,6 @@ class EnclaveHost private constructor(
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
 
-        private var persistenceKdsKeySpec: KDSKeySpec? = null
-
         private val messageTypes = EnclaveToHost.values()
 
         override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
@@ -885,7 +883,6 @@ class EnclaveHost private constructor(
             when (messageTypes[input.get().toInt()]) {
                 EnclaveToHost.ENCLAVE_INFO -> onEnclaveInfo(input)
                 EnclaveToHost.ATTESTATION -> onAttestation()
-                EnclaveToHost.PERSISTENCE_KDS_KEY_SPEC_RESPONSE -> onPersistenceKdsKeySpecResponse(input)
             }
         }
 
@@ -903,11 +900,6 @@ class EnclaveHost private constructor(
             }
         }
 
-        private fun onPersistenceKdsKeySpecResponse(input: ByteBuffer) {
-            check(persistenceKdsKeySpec == null)
-            persistenceKdsKeySpec = getKdsKeySpec(input)
-        }
-
         fun sendOpen(sealedState: ByteArray?) {
             val payloadSize = nullableSize(sealedState) { it.size }
             sendToEnclave(HostToEnclave.OPEN, payloadSize) { buffer ->
@@ -917,11 +909,6 @@ class EnclaveHost private constructor(
 
         fun sendClose() {
             sendToEnclave(HostToEnclave.CLOSE, 0) { }
-        }
-
-        fun requestPersistenceKdsKeySpec(): KDSKeySpec? {
-            sendToEnclave(HostToEnclave.PERSISTENCE_KDS_KEY_SPEC_REQUEST, 0) { }
-            return persistenceKdsKeySpec
         }
 
         fun sendKdsPrivateKeyResponseToEnclave(response: KDSPrivateKeyResponse, kdsResponseType: HostToEnclave) {
