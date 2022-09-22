@@ -18,6 +18,24 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
     }
 
     /**
+     * Starts the enclave, passing the sealed state blob and calling the onStartup hook.
+     */
+    fun startEnclave(sealedState: ByteArray?) {
+        val bufferSize = nullableSize(sealedState) { it.size }
+        val sealedStateBuffer = ByteBuffer.allocate(bufferSize).apply {
+            this.putNullable(sealedState) { put(it) }
+        }
+        initiateCall(EnclaveCallType.START_ENCLAVE, sealedStateBuffer)
+    }
+
+    /**
+     * Stops the enclave, calling the onShutdown hook.
+     */
+    fun stopEnclave() {
+        initiateCall(EnclaveCallType.STOP_ENCLAVE)
+    }
+
+    /**
      * Request a quote for enclave instance info from the enclave.
      */
     fun getEnclaveInstanceInfoQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {

@@ -568,7 +568,7 @@ class EnclaveHost private constructor(
                 log.info("Setting up persistent enclave file system...")
             }
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
-            adminHandler.sendOpen(sealedState)
+            enclaveHandle.enclaveCallInterface.startEnclave(sealedState)
             if (enclaveFileSystemFile != null) {
                 log.info("Setup of the file system completed successfully.")
             }
@@ -837,7 +837,7 @@ class EnclaveHost private constructor(
         if (hostStateManager.state !is Started) return
         try {
             // Ask the enclave to close so all its resources are released before the enclave is destroyed
-            adminHandler.sendClose()
+            enclaveHandle.enclaveCallInterface.stopEnclave()
 
             // Destroy the enclave
             enclaveHandle.destroy()
@@ -902,24 +902,6 @@ class EnclaveHost private constructor(
             val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
             val encryptionKey = Curve25519PublicKey(input.getBytes(32))
             _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
-        }
-
-        fun sendOpen(sealedState: ByteArray?) {
-            val payloadSize = nullableSize(sealedState) { it.size }
-            sendToEnclave(HostToEnclave.OPEN, payloadSize) { buffer ->
-                buffer.putNullable(sealedState) { put(it) }
-            }
-        }
-
-        fun sendClose() {
-            sendToEnclave(HostToEnclave.CLOSE, 0) { }
-        }
-
-        private fun sendToEnclave(type: HostToEnclave, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
-            sender.send(1 + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                payload(buffer)
-            }
         }
     }
 
