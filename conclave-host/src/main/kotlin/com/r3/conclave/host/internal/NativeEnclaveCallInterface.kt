@@ -53,7 +53,7 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
     }
 
     private fun handleInitOcall(callType: HostCallType, parameterBuffer: ByteBuffer) {
-        val returnBuffer = acceptCall(callType, parameterBuffer) ?: EMPTY_BYTE_BUFFER
+        val returnBuffer = acceptCall(callType, parameterBuffer)
         if (callType.hasReturnValue) {
             NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), true, returnBuffer.getRemainingBytes())
         }
