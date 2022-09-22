@@ -10,7 +10,6 @@ import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
-import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
@@ -81,6 +80,7 @@ abstract class Enclave {
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
     private lateinit var kdsPersistenceKeySpecHandler: GetKdsPersistenceKeySpecificationHandler
+    private lateinit var kdsPersistenceKeySetHandler: SetKdsPersistenceKeyHandler
     private lateinit var adminHandler: AdminHandler
     private lateinit var enclaveInstanceInfoQuoteHandler: GetEnclaveInstanceInfoQuoteHandler
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
@@ -254,10 +254,12 @@ abstract class Enclave {
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
             adminHandler = mux.addDownstream(AdminHandler(this, env))
             kdsPersistenceKeySpecHandler = GetKdsPersistenceKeySpecificationHandler()
+            kdsPersistenceKeySetHandler = SetKdsPersistenceKeyHandler()
             enclaveInstanceInfoQuoteHandler = GetEnclaveInstanceInfoQuoteHandler()
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
 
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, kdsPersistenceKeySpecHandler)
+            env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsPersistenceKeySetHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, enclaveInstanceInfoQuoteHandler)
 
             connected
@@ -530,6 +532,34 @@ abstract class Enclave {
     }
 
     /**
+     * Handler which handles requests from the host to set the KDS persistence key.
+     */
+    private inner class SetKdsPersistenceKeyHandler : CallHandler {
+        fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
+            val mailDecryptingStream = getMailDecryptingStream(input.getIntLengthPrefixSlice())
+            val kdsResponseMail = mailDecryptingStream.decryptMail(encryptionKeyPair.private)
+            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixSlice())
+            return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
+        }
+
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+            check(kdsEiiForPersistence == null) {
+                "Enclave has already received a KDS persistence private key."
+            }
+            val kdsConfig = checkNotNull(env.kdsConfiguration) {
+                "Host is attempting to send in a KDS persistence private key even though the enclave is not " +
+                        "configured to use a KDS"
+            }
+            val privateKeyResponse = getKdsPrivateKeyResponse(messageBuffer)
+            kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
+            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
+            // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
+            aesPersistenceKey = kdsPersistenceKey.copyOf(16)
+            return EMPTY_BYTE_BUFFER
+        }
+    }
+
+    /**
      * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
      * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
      */
@@ -538,7 +568,6 @@ abstract class Enclave {
         private val env: EnclaveEnvironment
     ) : Handler<AdminHandler> {
         private lateinit var sender: Sender
-        private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
         private val messageTypes = HostToEnclave.values()
 
@@ -555,7 +584,6 @@ abstract class Enclave {
             when (messageTypes[input.get().toInt()]) {
                 HostToEnclave.OPEN -> onOpen(input)
                 HostToEnclave.CLOSE -> onClose()
-                HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE -> onPersistenceKdsPrivateKeyResponse(input)
             }
         }
 
@@ -613,28 +641,6 @@ abstract class Enclave {
                 buffer.put(encodedSigningKey)
                 buffer.put(encodedEncryptionKey)
             }
-        }
-
-        private fun onPersistenceKdsPrivateKeyResponse(input: ByteBuffer) {
-            check(enclave.kdsEiiForPersistence == null) {
-                "Enclave has already received a KDS persistence private key."
-            }
-            val kdsConfig = checkNotNull(env.kdsConfiguration) {
-                "Host is attempting to send in a KDS persistence private key even though the enclave is not " +
-                        "configured to use a KDS"
-            }
-            val privateKeyResponse = getKdsPrivateKeyResponse(input)
-            enclave.kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
-            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = enclave.persistenceKdsKeySpec)
-            // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
-            enclave.aesPersistenceKey = kdsPersistenceKey.copyOf(16)
-        }
-
-        fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
-            val mailDecryptingStream = getMailDecryptingStream(input.getIntLengthPrefixSlice())
-            val kdsResponseMail = mailDecryptingStream.decryptMail(enclave.encryptionKeyPair.private)
-            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixSlice())
-            return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
         }
 
         private fun sendToHost(type: EnclaveToHost, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
@@ -720,7 +726,7 @@ abstract class Enclave {
             // This is the KDS private key response the host made on behalf of the enclave. The host is only required
             // to provide this if the enclave hasn't previously cached the private key this Mail needs. The host
             // determines this by examining the mail's unencrypted derivation header.
-            val kdsPrivateKeyResponse = input.getNullable { adminHandler.getKdsPrivateKeyResponse(this) }
+            val kdsPrivateKeyResponse = input.getNullable { kdsPersistenceKeySetHandler.getKdsPrivateKeyResponse(this) }
             val mailStream = getMailDecryptingStream(input)
 
             val keyDerivation = MailKeyDerivation.deserialiseFromMailStream(mailStream)

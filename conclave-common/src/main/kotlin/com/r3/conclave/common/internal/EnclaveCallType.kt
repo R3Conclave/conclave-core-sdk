@@ -6,7 +6,8 @@ package com.r3.conclave.common.internal
 enum class EnclaveCallType(val hasReturnValue: Boolean) {
     INITIALIZE_ENCLAVE(false),
     GET_ENCLAVE_INSTANCE_INFO_QUOTE(true),
-    GET_KDS_PERSISTENCE_KEY_SPEC(true);
+    GET_KDS_PERSISTENCE_KEY_SPEC(true),
+    SET_KDS_PERSISTENCE_KEY(false);
 
     fun toShort(): Short {
         check(VALUES.size < Short.MAX_VALUE)

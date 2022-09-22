@@ -424,15 +424,6 @@ class EnclaveHost private constructor(
                 throw PlatformSupportException(message)
             }
         }
-
-        private val KDSPrivateKeyResponse.size: Int get() {
-            return encryptedPrivateKey.intLengthPrefixSize + kdsAttestationReport.intLengthPrefixSize
-        }
-
-        private fun ByteBuffer.putKdsPrivateKeyResponse(response: KDSPrivateKeyResponse) {
-            putIntLengthPrefixBytes(response.encryptedPrivateKey)
-            putIntLengthPrefixBytes(response.kdsAttestationReport)
-        }
     }
 
     private var kdsConfiguration: KDSConfiguration? = null
@@ -565,7 +556,8 @@ class EnclaveHost private constructor(
                 //  If the enclave is configured also with KDS spec for persistence, we trigger the private key request.
                 //    Note that the kdsConfiguration is also used in the context of KdsPostOffice
                 if (persistenceKeySpec != null) {
-                    requestPersistenceKdsPrivateKey(persistenceKeySpec, kdsConfiguration)
+                    val kdsResponse = executeKdsPrivateKeyRequest(persistenceKeySpec, kdsConfiguration)
+                    enclaveHandle.enclaveCallInterface.setKdsPersistenceKey(kdsResponse)
                 }
             }
 
@@ -594,14 +586,6 @@ class EnclaveHost private constructor(
         } else {
             null
         }
-    }
-
-    private fun requestPersistenceKdsPrivateKey(keySpec: KDSKeySpec, kdsConfiguration: KDSConfiguration) {
-        val kdsResponse = executeKdsPrivateKeyRequest(keySpec, kdsConfiguration)
-        adminHandler.sendKdsPrivateKeyResponseToEnclave(
-            kdsResponse,
-            HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE
-        )
     }
 
     private fun executeKdsPrivateKeyRequest(
@@ -929,12 +913,6 @@ class EnclaveHost private constructor(
 
         fun sendClose() {
             sendToEnclave(HostToEnclave.CLOSE, 0) { }
-        }
-
-        fun sendKdsPrivateKeyResponseToEnclave(response: KDSPrivateKeyResponse, kdsResponseType: HostToEnclave) {
-            sendToEnclave(kdsResponseType, response.size) { buffer ->
-                buffer.putKdsPrivateKeyResponse(response)
-            }
         }
 
         private fun sendToEnclave(type: HostToEnclave, payloadSize: Int, payload: (ByteBuffer) -> Unit) {

@@ -3,9 +3,8 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
-import com.r3.conclave.utilities.internal.getIntLengthPrefixString
-import com.r3.conclave.utilities.internal.getRemainingBytes
-import com.r3.conclave.utilities.internal.getRemainingString
+import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
+import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
@@ -41,5 +40,15 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
         val masterKeyType = MasterKeyType.fromID(buffer.get().toInt())
         val policyConstraint = buffer.getRemainingString()
         return KDSKeySpec(name, masterKeyType, policyConstraint)
+    }
+
+    /**
+     * Set the KDS persistence key using the response from the KDS.
+     */
+    fun setKdsPersistenceKey(kdsResponse: KDSPrivateKeyResponse) {
+        val kdsResponseBuffer = ByteBuffer.allocate(kdsResponse.size).apply {
+            this.putKdsPrivateKeyResponse(kdsResponse)
+        }
+        initiateCall(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsResponseBuffer)
     }
 }
