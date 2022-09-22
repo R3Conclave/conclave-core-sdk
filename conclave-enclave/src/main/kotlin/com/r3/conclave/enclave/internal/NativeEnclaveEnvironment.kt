@@ -35,7 +35,7 @@ class NativeEnclaveEnvironment(
             val hostCallInterface = NativeHostCallInterface()
 
             /** The host call interface begins with a single handler for initialising the enclave. */
-            hostCallInterface.registerCallHandler(EnclaveCallType.INITIALIZE_ENCLAVE, object : CallHandler {
+            hostCallInterface.registerCallHandler(EnclaveCallType.LOAD_ENCLAVE, object : CallHandler {
                 override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
                     synchronized(Companion) {
                         singletonHandler = initialiseEnclave(messageBuffer)

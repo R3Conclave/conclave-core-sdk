@@ -14,7 +14,7 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
      * This is not currently used in mock mode.
      */
     fun initializeEnclave(enclaveClassName: String) {
-        initiateCall(EnclaveCallType.INITIALIZE_ENCLAVE, ByteBuffer.wrap(enclaveClassName.toByteArray(StandardCharsets.UTF_8)))
+        initiateCall(EnclaveCallType.LOAD_ENCLAVE, ByteBuffer.wrap(enclaveClassName.toByteArray(StandardCharsets.UTF_8)))
     }
 
     /**
