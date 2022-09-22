@@ -23,7 +23,8 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
     fun startEnclave(sealedState: ByteArray?) {
         val bufferSize = nullableSize(sealedState) { it.size }
         val sealedStateBuffer = ByteBuffer.allocate(bufferSize).apply {
-            this.putNullable(sealedState) { put(it) }
+            putNullable(sealedState) { put(it) }
+            rewind()
         }
         initiateCall(EnclaveCallType.START_ENCLAVE, sealedStateBuffer)
     }
