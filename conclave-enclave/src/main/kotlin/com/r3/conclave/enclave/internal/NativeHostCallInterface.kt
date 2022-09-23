@@ -11,7 +11,9 @@ import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.util.*
 
-class NativeHostCallInterface(private val isRelease: Boolean) : HostCallInterface() {
+class NativeHostCallInterface : HostCallInterface() {
+    var sanitiseExceptions: Boolean = false
+
     private inner class StackFrame(
             val callType: HostCallType,
             var exceptionBuffer: ByteBuffer?,
@@ -62,10 +64,6 @@ class NativeHostCallInterface(private val isRelease: Boolean) : HostCallInterfac
      * to reduce the likelihood of secrets being leaked out of the enclave.
      */
     private fun sanitiseThrowable(throwable: Throwable): Throwable {
-        if (!isRelease) {
-            return throwable
-        }
-
         return when (throwable) {
             is EnclaveStartException -> throwable
             // Release enclaves still need to notify the host if they were unable to decrypt mail, but there's
@@ -83,7 +81,8 @@ class NativeHostCallInterface(private val isRelease: Boolean) : HostCallInterfac
             if (callType.hasReturnValue) {
                 Native.jvmOcallCon1025(callType.toShort(), NativeMessageType.RETURN.toByte(), returnBuffer.getRemainingBytes())
             }
-        } catch (throwable: Throwable) {
+        } catch (t: Throwable) {
+            val throwable = if (sanitiseExceptions) sanitiseThrowable(t) else t
             val serializedException = ThrowableSerialisation.serialise(sanitiseThrowable(throwable))
             Native.jvmOcallCon1025(callType.toShort(), NativeMessageType.EXCEPTION.toByte(), serializedException)
         }

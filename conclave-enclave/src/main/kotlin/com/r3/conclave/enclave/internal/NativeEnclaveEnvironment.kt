@@ -32,7 +32,7 @@ class NativeEnclaveEnvironment(
 
         /** The singleton host call interface for the user enclave. */
         private val hostCallInterface by lazy {
-            val hostCallInterface = NativeHostCallInterface(false)
+            val hostCallInterface = NativeHostCallInterface()
 
             /** The host call interface begins with a single handler for initialising the enclave. */
             hostCallInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
@@ -113,6 +113,7 @@ class NativeEnclaveEnvironment(
                     .apply { isAccessible = true }
                     .newInstance()
                 val env = NativeEnclaveEnvironment(enclaveClass, hostCallInterface)
+                env.hostCallInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
                 initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e
