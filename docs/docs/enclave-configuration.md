@@ -319,9 +319,8 @@ The path should be absolute or relative to the root of the enclave module.
 ## Assisted Configuration of Native Image Builds
 
 One way of generating the reflection and serialization configuration files is by using
-[native-image-agent](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#assisted-configuration-of-native-image-builds).
-The agent will track usage of dynamic features and generate the configuration files when run
-against a regular Java VM.
+[native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds).
+The agent will track usage of dynamic features and generate the configuration files when run against a regular Java VM.
 
 To ensure all the necessary classes/resources are included in the configuration files you should ensure
 all enclave code paths are executed, for example by writing extensive tests and running them in `mock` mode.
@@ -331,7 +330,7 @@ by Gradle when building the `enclave` in `simulation`, `debug` or `release` mode
 
 Running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause Gradle, JUnit
 or host classes to be present in the configuration files. To avoid this you can configure
-[filters](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#agent-advanced-usage)
+[filters](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#agent-advanced-usage)
 to ensure host code is excluded or you can run the host as an executable JAR and trigger enclave logic
 by running it normally, like you would if you were to deploy it, for example, by sending requests from the
 host and/or client triggering as much of the enclave logic as possible.
