@@ -1,9 +1,12 @@
 package com.r3.conclave.host.internal
 
+import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.internal.CallInitiator.Companion.EMPTY_BYTE_BUFFER
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
 import com.r3.conclave.common.internal.NativeMessageType
+import com.r3.conclave.common.internal.ThrowableSerialisation
+import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.util.Stack
@@ -31,18 +34,15 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
 
         val stackFrame = stack.pop()
 
-        stackFrame.exceptionBuffer?.let {}
+        stackFrame.exceptionBuffer?.let {
+            throw ThrowableSerialisation.deserialise(it)
+        }
 
         return if (callType.hasReturnValue) {
             checkNotNull(stackFrame.returnBuffer)
         } else {
             EMPTY_BYTE_BUFFER
         }
-    }
-
-    override fun acceptCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer {
-        val callHandler = getCallHandler(callType)
-        return callHandler.handleCall(parameterBuffer)
     }
 
     /**
@@ -58,9 +58,14 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
     }
 
     private fun handleCallOcall(callType: HostCallType, parameterBuffer: ByteBuffer) {
-        val returnBuffer = acceptCall(callType, parameterBuffer)
-        if (callType.hasReturnValue) {
-            NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), NativeMessageType.RETURN, returnBuffer.getRemainingBytes())
+        try {
+            val returnBuffer = acceptCall(callType, parameterBuffer)
+            if (callType.hasReturnValue) {
+                NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), NativeMessageType.RETURN, returnBuffer.getRemainingBytes())
+            }
+        } catch (throwable: Throwable) {
+            val serializedException = ThrowableSerialisation.serialise(throwable)
+            NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), NativeMessageType.EXCEPTION, serializedException)
         }
     }
 

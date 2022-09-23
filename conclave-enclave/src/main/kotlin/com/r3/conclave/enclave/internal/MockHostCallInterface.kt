@@ -9,8 +9,4 @@ class MockHostCallInterface(private val connector: MockCallInterfaceConnector) :
     override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer {
         return connector.enclaveToHost(callType, parameterBuffer)
     }
-
-    override fun acceptCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer {
-        return getCallHandler(callType).handleCall(parameterBuffer)
-    }
 }
