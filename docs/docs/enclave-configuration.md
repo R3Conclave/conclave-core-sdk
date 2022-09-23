@@ -316,44 +316,28 @@ The path should be absolute or relative to the root of the enclave module.
     when building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than
     the usual backslashes.
 
-## Assisted Configuration of Native Image Builds
+## Assisted configuration of native image builds
 
 You can generate the reflection and serialization configuration files by using the
 [native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds).
 This command will track the use of dynamic features and generate the configuration files when run against a regular 
-Java VM. These configuration files are used later on to build an enclave. 
+Java VM.
 
-To ensure that all the necessary classes/resources are included in the generation of the configuration files, and for 
-Gradle to pick up all the configuration files:
+To include all the necessary classes and resources in the generation of the configuration files and for Gradle to 
+pick up all the configuration files:
 
-1. Execute all the enclave code paths by running extensive tests in `mock mode` with flags set up to place the 
-   configuration files in the path: `enclave/src/main/resources/META-INF/native-image`.
-2. Build the enclave in `simulation` mode.
+* Execute all the enclave code paths by running extensive tests in `mock mode` with flags set up to place the 
+  configuration files in the path: `enclave/src/main/resources/META-INF/native-image`.
+* Build the enclave in `simulation` mode.
 
 Later on, Gradle will automatically pick up all the configuration files when you run the enclave in any mode.
 
-Running the host through Gradle and/or JUnit tests while the agent is enabled, will likely cause Gradle, JUnit
-or host classes to be present in the configuration files. To avoid this you can configure
-[filters](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#agent-advanced-usage)
-to ensure host code is excluded or you can run the host as an executable JAR and trigger enclave logic
-by running it normally, like you would if you were to deploy it, for example, by sending requests from the
-host and/or client triggering as much of the enclave logic as possible.
-You can use the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow)
-to create an executable JAR which contains all the host's and enclave's dependencies.
+You might need to adjust filters and edit the generated configuration files throughout development.
 
-It is possible that the generated configuration files aren't always correct. You might need to adjust filters
-and/or edit and maintain them throughout the development process. You can use a version-control tool to track these 
-configuration files.
+### Assisted configuration of native image builds using an executable JAR
 
-Conclave ships with a Linux version of [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.2.0),
-which contains the native image agent. Because of this, the config files must be generated in a linux environment, which
-will require you to set up either a VM or a container. This can be avoided by downloading a version of GraalVM for your
-system.
-
-### Example using the executable JAR
-
-1. Create a `filter.json`file in the following path: `path/to/enclave/src/main/resources/META-INF/native-image/` 
-   to exclude unnecessary classes:
+1. Create a `filter.json` file in the following path: `path/to/enclave/src/main/resources/META-INF/native-image/` 
+   with the following code to exclude unnecessary classes:
 
 ```json
 {
@@ -367,19 +351,13 @@ system.
 2. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.2.0) for your operating system and
    [install](https://www.graalvm.org/docs/getting-started/) it. 
 
-3. Install the `native-image`:
+3. Install the `native image`:
 
     ```bash
     $JAVA_HOME/bin/gu install native-image
     ```
 
-4. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file:
-
-   ```groovy
-   project.mainClassName = "com.r3.conclave.host.web.EnclaveWebHost" 
-   ```
-   
-5. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow) to the 
+4. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow) to the 
    `plugins` section of the `host`'s `build.gradle` file:
 
     ```groovy
@@ -387,14 +365,20 @@ system.
         id 'com.github.johnrengelman.shadow' version '6.1.0'
     }
     ```
+5. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file, *after* the plugins section:
 
+   ```groovy
+   project.mainClassName = "com.r3.conclave.host.web.EnclaveWebHost" 
+   ```
+   
 6. Generate the shadow jar:
 
     ```bash
     ./gradlew -PenclaveMode=mock host:shadowJar
     ```
 
-    Default location should be `host/build/libs/host-all.jar`.
+   This command creates an executable *shadow* JAR which contains all the host's and enclave's dependencies. You can 
+   find the shadow jar in the default location `host/build/libs/host-all.jar`.
 
 7. Run the host with the agent enabled to generate the configuration files:
 
