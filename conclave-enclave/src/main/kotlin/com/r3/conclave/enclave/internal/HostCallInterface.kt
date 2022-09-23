@@ -2,7 +2,6 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.Attestation
-import java.nio.ByteBuffer
 
 abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<EnclaveCallType>() {
     /**

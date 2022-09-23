@@ -172,8 +172,8 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall(JNIEnv *jniEnv,
 void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcallCon1025(JNIEnv *jniEnv,
                                                                        jclass,
                                                                        jlong enclaveId,
-                                                                       jshort callType,
-                                                                       jboolean isReturn,
+                                                                       jshort callTypeID,
+                                                                       jbyte messageTypeID,
                                                                        jbyteArray data) {
     try {
         // Prepare input buffer
@@ -186,8 +186,8 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcallCon1025(JNIEnv *j
         EcallContext context(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
         auto returnCode = jvm_ecall_con1025(
                                             static_cast<sgx_enclave_id_t>(enclaveId),
-                                            callType,
-                                            isReturn ? 1 : 0,
+                                            callTypeID,
+                                            messageTypeID,
                                             inputBuffer,
                                             size
                                             );
@@ -324,7 +324,7 @@ void jvm_ocall_heap(void* bufferIn, int bufferInLen) {
     jvm_ocall(bufferIn, bufferInLen);
 }
 
-void jvm_ocall_con1025(short callTypeID, char isReturn, void* data, int dataLengthBytes) {
+void jvm_ocall_con1025(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
     auto *jniEnv = EcallContext::getJniEnv();
     if (jniEnv == nullptr) {
         throw std::runtime_error("Cannot find JNIEnv");
@@ -340,9 +340,9 @@ void jvm_ocall_con1025(short callTypeID, char isReturn, void* data, int dataLeng
         checkJniException(jniEnv);
         // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
         // copied from it. This means it's safe to de-allocate the pointer after this function returns.
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHostCon1025", "(JSZLjava/nio/ByteBuffer;)V");
+        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHostCon1025", "(JSBLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
-        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), callTypeID, isReturn != 0, javaBuffer);
+        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
         checkJniException(jniEnv);
     } catch (JNIException&) {
         // No-op: delegate handling to the host JVM
@@ -350,13 +350,13 @@ void jvm_ocall_con1025(short callTypeID, char isReturn, void* data, int dataLeng
 }
 
 // Called by the EDL when the enclave has decided to allocate the buffer on the untrusted stack
-void jvm_ocall_stack_con1025(short callTypeID, char isReturn, void* data, int dataLengthBytes) {
-    jvm_ocall_con1025(callTypeID, isReturn, data, dataLengthBytes);
+void jvm_ocall_stack_con1025(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
+    jvm_ocall_con1025(callTypeID, messageTypeID, data, dataLengthBytes);
 }
 
 // Called by the EDL when the enclave has decided to allocate the buffer on the hosts heap
-void jvm_ocall_heap_con1025(short callTypeID, char isReturn, void* data, int dataLengthBytes) {
-    jvm_ocall_con1025(callTypeID, isReturn, data, dataLengthBytes);
+void jvm_ocall_heap_con1025(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
+    jvm_ocall_con1025(callTypeID, messageTypeID, data, dataLengthBytes);
 }
 
 void shared_data_ocall(void** sharedBufferAddr) {

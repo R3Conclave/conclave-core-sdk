@@ -120,7 +120,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
 }
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcallCon1025
-        (JNIEnv *jniEnv, jclass, jshort callTypeID, jboolean isReturn, jbyteArray data) {
+        (JNIEnv *jniEnv, jclass, jshort callTypeID, jbyte messageTypeID, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
     abortOnJniException(jniEnv);
     auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
@@ -129,7 +129,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcallCon1
     // If the data is "small" we can pass it on the untrusted stack and
     // save ourselves 2 ocalls and a malloc/free!
     if (size < 131072) {
-        auto returnCode = jvm_ocall_stack_con1025(callTypeID, isReturn ? 1 : 0, inputBuffer, size);
+        auto returnCode = jvm_ocall_stack_con1025(callTypeID, messageTypeID, inputBuffer, size);
         jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
         if (returnCode != SGX_SUCCESS) {
             raiseException(jniEnv, getErrorMessage(returnCode));
@@ -151,7 +151,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcallCon1
     memcpy(inputBufferUntrusted, inputBuffer, size);
     jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
 
-    returnCode = jvm_ocall_heap_con1025(callTypeID, isReturn ? 1 : 0, inputBufferUntrusted, size);
+    returnCode = jvm_ocall_heap_con1025(callTypeID, messageTypeID, inputBufferUntrusted, size);
     if (returnCode != SGX_SUCCESS) {
         raiseException(jniEnv, getErrorMessage(returnCode));
     }

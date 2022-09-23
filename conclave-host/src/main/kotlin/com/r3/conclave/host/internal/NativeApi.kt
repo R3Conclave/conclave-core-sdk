@@ -1,9 +1,9 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.CpuFeature
+import com.r3.conclave.common.internal.NativeMessageType
 import com.r3.conclave.common.internal.handler.Handler
 import com.r3.conclave.common.internal.handler.HandlerConnected
-import com.r3.conclave.utilities.internal.getRemainingString
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -46,9 +46,9 @@ object NativeApi {
     // TODO: Temporary for CON 1025
     @JvmStatic
     @Suppress("UNUSED")
-    fun enclaveToHostCon1025(enclaveId: Long, callTypeID: Short, isReturn: Boolean, data: ByteBuffer) {
+    fun enclaveToHostCon1025(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteBuffer) {
         val enclaveCallInterface = checkNotNull(enclaveCallInterfaces[enclaveId])
-        enclaveCallInterface.handleOcall(enclaveId, callTypeID, isReturn, data)
+        enclaveCallInterface.handleOcall(enclaveId, callTypeID, NativeMessageType.fromByte(messageTypeID), data)
     }
 
     @JvmStatic
@@ -58,8 +58,8 @@ object NativeApi {
 
     // TODO: Temporary for CON 1025
     @JvmStatic
-    fun hostToEnclaveCon1025(enclaveId: Long, callType: Short, isReturn: Boolean, data: ByteArray) {
-        Native.jvmEcallCon1025(enclaveId, callType, isReturn, data)
+    fun hostToEnclaveCon1025(enclaveId: Long, callType: Short, messageType: NativeMessageType, data: ByteArray) {
+        Native.jvmEcallCon1025(enclaveId, callType, messageType.toByte(), data)
     }
 
     /**

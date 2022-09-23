@@ -7,8 +7,8 @@ enclave {
             int bufferInLen
         );
         public void jvm_ecall_con1025(
-            short callType,
-            char isReturn,
+            short callTypeID,
+            char messageTypeID,
             [in, size=dataLengthBytes] void* data,
             int dataLengthBytes
         );
@@ -31,15 +31,15 @@ enclave {
         ) allow(jvm_ecall);
 
         void jvm_ocall_heap_con1025(
-            short callType,
-            char isReturn,
+            short callTypeID,
+            char messageTypeID,
             [in, size=dataLengthBytes] void* data,
             int dataLengthBytes
         ) allow(jvm_ecall_con1025);
 
         void jvm_ocall_stack_con1025(
-            short callType,
-            char isReturn,
+            short callTypeID,
+            char messageTypeID,
             [in, size=dataLengthBytes] void* data,
             int dataLengthBytes
         ) allow(jvm_ecall_con1025);

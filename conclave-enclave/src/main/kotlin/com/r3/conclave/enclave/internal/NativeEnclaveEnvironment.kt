@@ -67,8 +67,8 @@ class NativeEnclaveEnvironment(
          * @param buffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntryCon1025(callTypeID: Short, isReturn: Boolean, dataBuffer: ByteBuffer) {
-            hostCallInterface.handleEcall(callTypeID, isReturn, dataBuffer)
+        fun enclaveEntryCon1025(callTypeID: Short, nativeMessageType: NativeMessageType, dataBuffer: ByteBuffer) {
+            hostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 
         private fun seedRandom() {

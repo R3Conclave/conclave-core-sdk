@@ -12,7 +12,7 @@ public class Native {
     public static native void jvmEcall(long enclaveId, byte[] data);
 
     // TODO: Temporary for con 1025
-    public static native void jvmEcallCon1025(long enclaveId, short callType, boolean isReturn, byte[] data);
+    public static native void jvmEcallCon1025(long enclaveId, short callType, byte messageTypeID, byte[] data);
 
     /**
      * sgx_status_t sgx_init_quote(sgx_target_info_t *p_target_info, sgx_epid_group_id_t *p_gid)

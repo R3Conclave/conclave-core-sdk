@@ -44,7 +44,7 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(jniEnv.get(), reinterpret_cast<char*>(bufferIn), bufferInLen);
 }
 
-void jvm_ecall_con1025(short callType, char isReturn, void *data, int dataLengthBytes) {
+void jvm_ecall_con1025(short callTypeID, char messageTypeID, void *data, int dataLengthBytes) {
     enclave_trace(">>> Enclave\n");
 
     using namespace r3::conclave;
@@ -54,7 +54,7 @@ void jvm_ecall_con1025(short callType, char isReturn, void *data, int dataLength
     EnclaveSharedData::instance().init();
 
     Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPointCon1025(
-        jniEnv.get(), callType, isReturn != 0, reinterpret_cast<char*>(data), dataLengthBytes);
+        jniEnv.get(), callTypeID, messageTypeID, reinterpret_cast<char*>(data), dataLengthBytes);
 }
 
 void ecall_initialise_enclave(void* initStruct, int initStructLen) {

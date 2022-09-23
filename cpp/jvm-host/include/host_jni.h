@@ -34,10 +34,10 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
 /*
  * Class:     com_r3_conclave_host_internal_Native
  * Method:    jvmEcallCon1025
- * Signature: (JSZ[B)V
+ * Signature: (JSB[B)V
  */
 JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcallCon1025
-  (JNIEnv *, jclass, jlong, jshort, jboolean, jbyteArray);
+  (JNIEnv *, jclass, jlong, jshort, jbyte, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native

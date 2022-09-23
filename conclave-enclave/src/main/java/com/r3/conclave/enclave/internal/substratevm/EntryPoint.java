@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal.substratevm;
 
 import com.r3.conclave.common.internal.EnclaveCallType;
+import com.r3.conclave.common.internal.NativeMessageType;
 import com.r3.conclave.enclave.internal.NativeEnclaveEnvironment;
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
@@ -24,12 +25,12 @@ public class EntryPoint {
     }
 
     @CEntryPoint(name = "Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPointCon1025")
-    public static void entryPointCon1025(IsolateThread thread, short callTypeID, boolean isReturn, CCharPointer data, int dataLengthBytes) {
+    public static void entryPointCon1025(IsolateThread thread, short callTypeID, byte messageTypeID, CCharPointer data, int dataLengthBytes) {
         // As mentioned in the JavaDocs, the default byte order for a new ByteBuffer is _always_ big endian.
         // CTypeConversion.asByteBuffer however uses native byte order. So to make sure we don't break code that
         // assumes the default, we switch back to big endian.
         ByteBuffer parameterBuffer = CTypeConversion.asByteBuffer(data, dataLengthBytes).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer();
-        NativeEnclaveEnvironment.enclaveEntryCon1025(callTypeID, isReturn, parameterBuffer);
+        NativeEnclaveEnvironment.enclaveEntryCon1025(callTypeID, NativeMessageType.Companion.fromByte(messageTypeID), parameterBuffer);
     }
 
     @CEntryPoint(name = "Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_internalError")
