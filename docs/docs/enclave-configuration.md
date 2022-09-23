@@ -364,12 +364,13 @@ You might need to adjust filters and edit the generated configuration files thro
     ```
 
 5. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file, *after* the plugins section:
-
+    
     ```groovy
     project.mainClassName = "com.r3.conclave.host.web.EnclaveWebHost" 
     ```
    
 6. Generate the shadow jar:
+    
     ```bash
     ./gradlew -PenclaveMode=mock host:shadowJar
     ```
@@ -377,6 +378,7 @@ You might need to adjust filters and edit the generated configuration files thro
     can find the shadow jar in the default location `host/build/libs/host-all.jar`.
 
 7. Run the host with the agent enabled to generate the configuration files:
+
     ```bash
     $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
     ```
