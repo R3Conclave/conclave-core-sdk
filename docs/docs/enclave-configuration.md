@@ -338,22 +338,23 @@ You might need to adjust filters and edit the generated configuration files thro
 
 1. Create a `filter.json` file in the following path: `path/to/enclave/src/main/resources/META-INF/native-image/` 
    with the following code to exclude unnecessary classes:
-
-```json
-{
-"rules": [
-{"excludeClasses": "nonapi.**"},
-{"excludeClasses": "com.r3.conclave.host.**"}
-]
-} 
-```
+   ```json
+   {
+   "rules": [
+   {"excludeClasses": "nonapi.**"},
+   {"excludeClasses": "com.r3.conclave.host.**"}
+   ]
+   } 
+   ```
 2. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.2.0) for your operating system and
    [install](https://www.graalvm.org/docs/getting-started/) it. 
+
 3. Install the `native image`:
 
     ```bash
     $JAVA_HOME/bin/gu install native-image
     ```
+   
 4. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow) to the 
    `plugins` section of the `host`'s `build.gradle` file:
 
@@ -362,11 +363,13 @@ You might need to adjust filters and edit the generated configuration files thro
         id 'com.github.johnrengelman.shadow' version '6.1.0'
     }
     ```
+   
 5. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file, *after* the plugins section:
 
    ```groovy
    project.mainClassName = "com.r3.conclave.host.web.EnclaveWebHost" 
    ```
+   
 6. Generate the shadow jar:
 
     ```bash
@@ -375,11 +378,13 @@ You might need to adjust filters and edit the generated configuration files thro
 
    This command creates an executable *shadow* JAR which contains all the host's and enclave's dependencies. You can 
    find the shadow jar in the default location `host/build/libs/host-all.jar`.
+
 7. Run the host with the agent enabled to generate the configuration files:
 
     ```bash
     $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
     ```
+
 8. Trigger the `enclave` logic by sending a `client` request.
 
     ```bash
