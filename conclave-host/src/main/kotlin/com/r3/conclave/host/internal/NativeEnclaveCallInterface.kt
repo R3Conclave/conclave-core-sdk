@@ -1,12 +1,10 @@
 package com.r3.conclave.host.internal
 
-import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.internal.CallInitiator.Companion.EMPTY_BYTE_BUFFER
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
 import com.r3.conclave.common.internal.NativeMessageType
 import com.r3.conclave.common.internal.ThrowableSerialisation
-import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.util.Stack
