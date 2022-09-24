@@ -2,7 +2,6 @@ package com.r3.conclave.enclave
 
 import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.CallInitiator.Companion.EMPTY_BYTE_BUFFER
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
@@ -502,7 +501,7 @@ abstract class Enclave {
         private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
         val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
 
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
             val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer)
             val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
@@ -517,8 +516,8 @@ abstract class Enclave {
      * Handler which services requests from the host for the enclave persistence key specification.
      */
     private inner class GetKdsPersistenceKeySpecCallHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
-            val persistenceKeySpec = env.kdsConfiguration?.persistenceKeySpec ?: return EMPTY_BYTE_BUFFER
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+            val persistenceKeySpec = env.kdsConfiguration?.persistenceKeySpec ?: return null
 
             persistenceKdsKeySpec = KDSKeySpec(
                     KDS_PERSISTENCE_KEY_NAME,
@@ -530,11 +529,15 @@ abstract class Enclave {
             val policyConstraintBytes = persistenceKdsKeySpec.policyConstraint.toByteArray()
             val payloadSize = nameBytes.intLengthPrefixSize + 1 + policyConstraintBytes.size
 
-            return ByteBuffer.wrap(ByteArray(payloadSize)).apply {
-                this.putIntLengthPrefixBytes(nameBytes)
-                this.put(persistenceKdsKeySpec.masterKeyType.id.toByte())
-                this.put(policyConstraintBytes)
+            val buffer = ByteBuffer.wrap(ByteArray(payloadSize)).apply {
+                putIntLengthPrefixBytes(nameBytes)
+                put(persistenceKdsKeySpec.masterKeyType.id.toByte())
+                put(policyConstraintBytes)
             }
+
+            println("Capacity: ${buffer.capacity()}, Position: ${buffer.position()}")
+
+            return buffer
         }
     }
 
@@ -549,7 +552,8 @@ abstract class Enclave {
             return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
         }
 
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+            println("[CALL HANDLER] Capacity: ${messageBuffer.capacity()}, Position: ${messageBuffer.position()}")
             check(kdsEiiForPersistence == null) {
                 "Enclave has already received a KDS persistence private key."
             }
@@ -562,7 +566,7 @@ abstract class Enclave {
             val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
             // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
             aesPersistenceKey = kdsPersistenceKey.copyOf(16)
-            return EMPTY_BYTE_BUFFER
+            return null
         }
     }
 
@@ -570,7 +574,7 @@ abstract class Enclave {
      * Handler which handles start requests from the host.
      */
     private inner class StartCallHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
             if (env.enablePersistentMap && threadSafe) {
                 throw EnclaveStartException("The persistent map is not available in multi-threaded enclaves.")
             }
@@ -600,7 +604,7 @@ abstract class Enclave {
                     throw EnclaveStartException("Unable to start enclave", t)
                 }
             }
-            return EMPTY_BYTE_BUFFER
+            return null
         }
     }
 
@@ -608,7 +612,7 @@ abstract class Enclave {
      * Handler which handles stop calls from the host.
      */
     private inner class StopCallHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
             lock.withLock {
                 enclaveStateManager.transitionStateFrom<Started>(to = Closed)
                 // Wait until all receive calls being processed have completed
@@ -620,7 +624,7 @@ abstract class Enclave {
                 // onShutdown
                 onShutdown()
             }
-            return EMPTY_BYTE_BUFFER
+            return null
         }
     }
 

@@ -1,12 +1,12 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveStartException
-import com.r3.conclave.common.internal.CallInitiator.Companion.EMPTY_BYTE_BUFFER
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
 import com.r3.conclave.common.internal.NativeMessageType
 import com.r3.conclave.common.internal.ThrowableSerialisation
 import com.r3.conclave.mail.MailDecryptionException
+import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.util.*
@@ -22,18 +22,17 @@ class NativeHostCallInterface : HostCallInterface() {
     private val threadStacks = ThreadLocal<Stack<StackFrame>>()
     private val stack: Stack<StackFrame>
         get() {
-        if (threadStacks.get() == null) {
-            threadStacks.set(Stack<StackFrame>())
+            if (threadStacks.get() == null) {
+                threadStacks.set(Stack<StackFrame>())
+            }
+            return threadStacks.get()
         }
-        return threadStacks.get()
-    }
 
-    override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer {
+    override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
-        val paramBytes = ByteArray(parameterBuffer.remaining())
-        parameterBuffer.get(paramBytes)
-        Native.jvmOcallCon1025(callType.toShort(), NativeMessageType.CALL.toByte(), paramBytes)
+        Native.jvmOcallCon1025(
+                callType.toShort(), NativeMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
 
@@ -41,11 +40,7 @@ class NativeHostCallInterface : HostCallInterface() {
             throw ThrowableSerialisation.deserialise(it)
         }
 
-        return if (callType.hasReturnValue) {
-            checkNotNull(stackFrame.returnBuffer)
-        } else {
-            EMPTY_BYTE_BUFFER
-        }
+        return stackFrame.returnBuffer
     }
 
     /**
@@ -77,24 +72,24 @@ class NativeHostCallInterface : HostCallInterface() {
 
     private fun handleCallEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
-            val returnBuffer = acceptCall(callType, parameterBuffer)
-            if (callType.hasReturnValue) {
-                Native.jvmOcallCon1025(callType.toShort(), NativeMessageType.RETURN.toByte(), returnBuffer.getRemainingBytes())
+            acceptCall(callType, parameterBuffer)?.let {
+                Native.jvmOcallCon1025(
+                        callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
-        } catch (t: Throwable) {
-            val throwable = if (sanitiseExceptions) sanitiseThrowable(t) else t
-            val serializedException = ThrowableSerialisation.serialise(sanitiseThrowable(throwable))
+        } catch (throwable: Throwable) {
+            val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
+            val serializedException = ThrowableSerialisation.serialise(maybeSanitisedThrowable)
             Native.jvmOcallCon1025(callType.toShort(), NativeMessageType.EXCEPTION.toByte(), serializedException)
         }
     }
 
     private fun handleReturnEcall(callType: HostCallType, returnBuffer: ByteBuffer) {
         check(callType == stack.peek().callType) { "Return Ecall type mismatch." }
-        stack.peek().returnBuffer = ByteBuffer.wrap(returnBuffer.getRemainingBytes())
+        stack.peek().returnBuffer = ByteBuffer.wrap(returnBuffer.getAllBytes())
     }
 
     private fun handleExceptionEcall(callType: HostCallType, exceptionBuffer: ByteBuffer) {
         check(callType == stack.peek().callType) { "Exception Ecall type mismatch." }
-        stack.peek().exceptionBuffer = ByteBuffer.wrap(exceptionBuffer.getRemainingBytes())
+        stack.peek().exceptionBuffer = ByteBuffer.wrap(exceptionBuffer.getAllBytes())
     }
 }

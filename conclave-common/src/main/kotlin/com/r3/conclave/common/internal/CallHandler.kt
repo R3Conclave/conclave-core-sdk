@@ -3,7 +3,7 @@ package com.r3.conclave.common.internal
 import java.nio.ByteBuffer
 
 interface CallHandler {
-    fun handleCall(messageBuffer: ByteBuffer): ByteBuffer
+    fun handleCall(messageBuffer: ByteBuffer): ByteBuffer?
 }
 
 /**
@@ -17,6 +17,8 @@ fun ByteBuffer.encodeDynamicLengthField(length: Long) {
     do {
         var byte = tmp and 0x7f
         tmp = tmp shr 7
+
+
         if (tmp != 0L) {
             byte = byte or 0x10
         }

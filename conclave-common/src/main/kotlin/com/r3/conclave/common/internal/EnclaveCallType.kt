@@ -3,13 +3,13 @@ package com.r3.conclave.common.internal
 /**
  * Enumeration of all possible host -> enclave calls
  */
-enum class EnclaveCallType(val hasReturnValue: Boolean) {
-    INITIALISE_ENCLAVE(false),
-    START_ENCLAVE(true),
-    STOP_ENCLAVE(false),
-    GET_ENCLAVE_INSTANCE_INFO_QUOTE(true),
-    GET_KDS_PERSISTENCE_KEY_SPEC(true),
-    SET_KDS_PERSISTENCE_KEY(false);
+enum class EnclaveCallType {
+    INITIALISE_ENCLAVE,
+    START_ENCLAVE,
+    STOP_ENCLAVE,
+    GET_ENCLAVE_INSTANCE_INFO_QUOTE,
+    GET_KDS_PERSISTENCE_KEY_SPEC,
+    SET_KDS_PERSISTENCE_KEY;
 
     fun toShort(): Short {
         check(VALUES.size < Short.MAX_VALUE)

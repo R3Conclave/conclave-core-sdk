@@ -9,6 +9,10 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAcceptor<HostCallType>() {
+    companion object {
+        private const val MISSING_RETURN_VALUE_ERROR_MESSAGE = "Missing enclave call return buffer"
+    }
+
     /**
      * Initialises the enclave by instantiating the specified class.
      * This is not currently used in mock mode.
@@ -40,7 +44,9 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
      * Request a quote for enclave instance info from the enclave.
      */
     fun getEnclaveInstanceInfoQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-        val returnBuffer = initiateCall(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
+        val returnBuffer = checkNotNull(initiateCall(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)) {
+            MISSING_RETURN_VALUE_ERROR_MESSAGE
+        }
         return Cursor.wrap(SgxSignedQuote, returnBuffer.getRemainingBytes())
     }
 
@@ -49,16 +55,12 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
      * Returns null if no KDS key spec is present in the enclave.
      */
     fun getKdsPersistenceKeySpec(): KDSKeySpec? {
-        val buffer = initiateCall(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC)
-
-        if (buffer.remaining() == 0) {
-            return null
+        return initiateCall(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC)?.let { buffer ->
+            val name = buffer.getIntLengthPrefixString()
+            val masterKeyType = MasterKeyType.fromID(buffer.get().toInt())
+            val policyConstraint = buffer.getRemainingString()
+            KDSKeySpec(name, masterKeyType, policyConstraint)
         }
-
-        val name = buffer.getIntLengthPrefixString()
-        val masterKeyType = MasterKeyType.fromID(buffer.get().toInt())
-        val policyConstraint = buffer.getRemainingString()
-        return KDSKeySpec(name, masterKeyType, policyConstraint)
     }
 
     /**
@@ -66,8 +68,9 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
      */
     fun setKdsPersistenceKey(kdsResponse: KDSPrivateKeyResponse) {
         val kdsResponseBuffer = ByteBuffer.allocate(kdsResponse.size).apply {
-            this.putKdsPrivateKeyResponse(kdsResponse)
+            putKdsPrivateKeyResponse(kdsResponse)
         }
+        println("[CALL INTERFACE] Capacity: ${kdsResponseBuffer.capacity()}, Position: ${kdsResponseBuffer.position()}")
         initiateCall(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsResponseBuffer)
     }
 }

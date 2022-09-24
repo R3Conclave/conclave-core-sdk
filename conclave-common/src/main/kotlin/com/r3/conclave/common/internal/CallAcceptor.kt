@@ -11,7 +11,7 @@ abstract class CallAcceptor<CALL_ID_TYPE> {
         callHandlers[callType] = handler
     }
 
-    fun acceptCall(callType: CALL_ID_TYPE, parameterBuffer: ByteBuffer): ByteBuffer {
+    fun acceptCall(callType: CALL_ID_TYPE, parameterBuffer: ByteBuffer): ByteBuffer? {
         val callHandler = checkNotNull(callHandlers[callType]) { "No call handler has been registered for $callType." }
         return callHandler.handleCall(parameterBuffer)
     }

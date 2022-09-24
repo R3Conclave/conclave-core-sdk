@@ -5,6 +5,7 @@ import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
 import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
 import com.r3.conclave.utilities.internal.EnclaveContext
+import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 
@@ -17,9 +18,7 @@ import java.nio.ByteBuffer
 class MockCallInterfaceConnector {
     companion object {
         private fun copyBuffer(buffer: ByteBuffer): ByteBuffer {
-            val tmp = buffer.duplicate()
-            tmp.rewind()
-            return ByteBuffer.wrap(tmp.getRemainingBytes())
+            return ByteBuffer.wrap(buffer.getAllBytes())
         }
     }
 
@@ -34,25 +33,25 @@ class MockCallInterfaceConnector {
         enclaveCallAcceptor = acceptor
     }
 
-    fun enclaveToHost(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer {
+    fun enclaveToHost(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         check(EnclaveContext.isInsideEnclave())
         ThreadLocalEnclaveContext.set(false)
         try {
             val parameterBufferCopy = copyBuffer(parameterBuffer)
-            val returnBuffer = hostCallAcceptor.acceptCall(callType, parameterBufferCopy)
-            return copyBuffer(returnBuffer)
+            hostCallAcceptor.acceptCall(callType, parameterBufferCopy)?.let { return copyBuffer(it) }
+            return null
         } finally {
             ThreadLocalEnclaveContext.set(true)
         }
     }
 
-    fun hostToEnclave(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer {
+    fun hostToEnclave(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         check(!EnclaveContext.isInsideEnclave())
         ThreadLocalEnclaveContext.set(true)
         try {
             val parameterBufferCopy = copyBuffer(parameterBuffer)
-            val returnBuffer = enclaveCallAcceptor.acceptCall(callType, parameterBufferCopy)
-            return copyBuffer(returnBuffer)
+            enclaveCallAcceptor.acceptCall(callType, parameterBufferCopy)?.let { return copyBuffer(it) }
+            return null
         } finally {
             ThreadLocalEnclaveContext.set(false)
         }

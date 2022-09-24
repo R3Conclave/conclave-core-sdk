@@ -2,7 +2,6 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.CallInitiator.Companion.EMPTY_BYTE_BUFFER
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
@@ -36,10 +35,10 @@ class NativeEnclaveEnvironment(
 
             /** The host call interface begins with a single handler for initialising the enclave. */
             hostCallInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
-                override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+                override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
                     synchronized(Companion) {
                         singletonHandler = initialiseEnclave(messageBuffer)
-                        return EMPTY_BYTE_BUFFER
+                        return null
                     }
                 }
             })
