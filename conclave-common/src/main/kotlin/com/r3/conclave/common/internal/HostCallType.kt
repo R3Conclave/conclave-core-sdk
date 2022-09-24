@@ -6,7 +6,8 @@ package com.r3.conclave.common.internal
 enum class HostCallType {
     GET_SIGNED_QUOTE,
     GET_QUOTING_ENCLAVE_INFO,
-    GET_ATTESTATION;
+    GET_ATTESTATION,
+    SET_ENCLAVE_INFO;
 
     fun toShort(): Short {
         check(VALUES.size < Short.MAX_VALUE)

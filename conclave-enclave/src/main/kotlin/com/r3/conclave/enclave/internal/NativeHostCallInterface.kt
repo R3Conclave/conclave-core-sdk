@@ -7,7 +7,6 @@ import com.r3.conclave.common.internal.NativeMessageType
 import com.r3.conclave.common.internal.ThrowableSerialisation
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getAllBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 import java.util.*
 

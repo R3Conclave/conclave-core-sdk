@@ -2,10 +2,29 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.Attestation
+import java.nio.ByteBuffer
+import java.security.KeyPair
+import java.security.PublicKey
 
 abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<EnclaveCallType>() {
     companion object {
         private const val MISSING_RETURN_VALUE_ERROR_MESSAGE = "Missing host call return buffer"
+    }
+
+    /**
+     * Send enclave info to the host.
+     * TODO: It would be better to return enclave info from the initialise enclave call
+     *       but that doesn't work in mock mode at the moment.
+     */
+    fun setEnclaveInfo(signatureKey: PublicKey, encryptionKeyPair: KeyPair) {
+        val encodedSigningKey = signatureKey.encoded                    // 44 bytes
+        val encodedEncryptionKey = encryptionKeyPair.public.encoded     // 32 bytes
+        val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
+        val buffer = ByteBuffer.wrap(ByteArray(payloadSize)).apply {
+            put(encodedSigningKey)
+            put(encodedEncryptionKey)
+        }
+        initiateCall(HostCallType.SET_ENCLAVE_INFO, buffer)
     }
 
     /**

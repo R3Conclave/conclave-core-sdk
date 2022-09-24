@@ -79,14 +79,15 @@ abstract class Enclave {
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
-    private lateinit var startCallHandler: StartCallHandler
-    private lateinit var stopCallHandler: StopCallHandler
-    private lateinit var getKdsPersistenceKeySpecCallHandler: GetKdsPersistenceKeySpecCallHandler
-    private lateinit var setKdsPersistenceKeyCallHandler: SetKdsPersistenceKeyCallHandler
-    private lateinit var adminHandler: AdminHandler
-    private lateinit var getEnclaveInstanceInfoQuoteCallHandler: GetEnclaveInstanceInfoQuoteCallHandler
-    private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private lateinit var aesPersistenceKey: ByteArray
+
+    private val startCallHandler = StartCallHandler()
+    private val stopCallHandler = StopCallHandler()
+    private val getKdsPersistenceKeySpecCallHandler = GetKdsPersistenceKeySpecCallHandler()
+    private val setKdsPersistenceKeyCallHandler = SetKdsPersistenceKeyCallHandler()
+    private val getEnclaveInstanceInfoQuoteCallHandler = GetEnclaveInstanceInfoQuoteCallHandler()
+
+    private lateinit var enclaveMessageHandler: EnclaveMessageHandler
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, SessionEnclavePostOffice>()
@@ -254,12 +255,6 @@ abstract class Enclave {
             val exceptionSendingHandler = ExceptionSendingHandler(env.enclaveMode == EnclaveMode.RELEASE)
             val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
             val mux = connected.connection.setDownstream(SimpleMuxingHandler())
-            adminHandler = mux.addDownstream(AdminHandler(this))
-            startCallHandler = StartCallHandler()
-            stopCallHandler = StopCallHandler()
-            getKdsPersistenceKeySpecCallHandler = GetKdsPersistenceKeySpecCallHandler()
-            setKdsPersistenceKeyCallHandler = SetKdsPersistenceKeyCallHandler()
-            getEnclaveInstanceInfoQuoteCallHandler = GetEnclaveInstanceInfoQuoteCallHandler()
             enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
 
             env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, startCallHandler)
@@ -267,6 +262,8 @@ abstract class Enclave {
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
+
+            env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
 
             connected
         }
@@ -625,46 +622,6 @@ abstract class Enclave {
                 onShutdown()
             }
             return null
-        }
-    }
-
-    /**
-     * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
-     * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
-     */
-    private class AdminHandler(
-        private val enclave: Enclave
-    ) : Handler<AdminHandler> {
-        private lateinit var sender: Sender
-
-        override fun connect(upstream: Sender): AdminHandler {
-            sender = upstream
-            // At the time we send upstream the mux handler hasn't been configured for receiving, but that's OK.
-            // The onReceive method will run later, when the AttestationResponse has been obtained from the attestation
-            // servers.
-            sendEnclaveInfo()
-            return this
-        }
-
-        override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-
-        }
-
-        private fun sendEnclaveInfo() {
-            val encodedSigningKey = enclave.signatureKey.encoded   // 44 bytes
-            val encodedEncryptionKey = enclave.encryptionKeyPair.public.encoded   // 32 bytes
-            val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
-            sendToHost(EnclaveToHost.ENCLAVE_INFO, payloadSize) { buffer ->
-                buffer.put(encodedSigningKey)
-                buffer.put(encodedEncryptionKey)
-            }
-        }
-
-        private fun sendToHost(type: EnclaveToHost, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
-            sender.send(1 + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                payload(buffer)
-            }
         }
     }
 

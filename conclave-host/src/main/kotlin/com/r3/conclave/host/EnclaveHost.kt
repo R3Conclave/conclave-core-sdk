@@ -430,7 +430,7 @@ class EnclaveHost private constructor(
     private var fileSystemHandler: FileSystemHandler? = null
 
     private val hostStateManager = StateManager<HostState>(New)
-    private lateinit var adminHandler: AdminHandler
+    private val setEnclaveInfoCallHandler = SetEnclaveInfoCallHandler()
 
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
     private lateinit var enclaveMessageHandler: EnclaveMessageHandler
@@ -534,13 +534,12 @@ class EnclaveHost private constructor(
             // Set up a set of channels in and out of the enclave. Each byte array sent/received comes with
             // a prefixed channel ID that lets us split them out to separate classes.
             val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
-            // The admin handler deserializes keys and other info from the enclave during initialisation.
-            adminHandler = mux.addDownstream(AdminHandler())
 
-            // Connect handlers associated with attestation
+            // Register handlers associated with attestation
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
+            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
@@ -663,8 +662,8 @@ class EnclaveHost private constructor(
 
     private fun updateEnclaveInstanceInfo(attestation: Attestation) {
         _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-            adminHandler.enclaveInfo.signatureKey,
-            adminHandler.enclaveInfo.encryptionKey,
+            setEnclaveInfoCallHandler.enclaveInfo.signatureKey,
+            setEnclaveInfoCallHandler.enclaveInfo.encryptionKey,
             attestation
         )
     }
@@ -880,28 +879,20 @@ class EnclaveHost private constructor(
         }
     }
 
-    /** Deserializes keys and other info from the enclave during initialisation. */
-    private class AdminHandler : Handler<AdminHandler> {
-        private lateinit var sender: Sender
-
+    /**
+     * Handler for receiving enclave info from the enclave on initialisation.
+     * TODO: It would be better to return enclave info from the initialise enclave call
+     *       but that doesn't work in mock mode at the moment.
+     */
+    private inner class SetEnclaveInfoCallHandler : CallHandler {
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
 
-        private val messageTypes = EnclaveToHost.values()
-
-        override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
-
-        override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            when (messageTypes[input.get().toInt()]) {
-                EnclaveToHost.ENCLAVE_INFO -> onEnclaveInfo(input)
-            }
-        }
-
-        private fun onEnclaveInfo(input: ByteBuffer) {
-            check(_enclaveInfo == null) { "Already received enclave info" }
-            val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
-            val encryptionKey = Curve25519PublicKey(input.getBytes(32))
+        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+            val signatureKey = signatureScheme.decodePublicKey(messageBuffer.getBytes(44))
+            val encryptionKey = Curve25519PublicKey(messageBuffer.getBytes(32))
             _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
+            return null
         }
     }
 
