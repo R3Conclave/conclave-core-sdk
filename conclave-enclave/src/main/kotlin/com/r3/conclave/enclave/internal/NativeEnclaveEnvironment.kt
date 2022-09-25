@@ -35,9 +35,9 @@ class NativeEnclaveEnvironment(
 
             /** The host call interface begins with a single handler for initialising the enclave. */
             hostCallInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
-                override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+                override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
                     synchronized(Companion) {
-                        singletonHandler = initialiseEnclave(messageBuffer)
+                        singletonHandler = initialiseEnclave(parameterBuffer)
                         return null
                     }
                 }

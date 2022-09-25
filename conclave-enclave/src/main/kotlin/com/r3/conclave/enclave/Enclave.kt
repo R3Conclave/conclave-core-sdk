@@ -498,8 +498,8 @@ abstract class Enclave {
         private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
         val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
 
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
-            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, messageBuffer)
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, parameterBuffer)
             val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
             return ByteBuffer.wrap(quote.bytes)
@@ -513,7 +513,7 @@ abstract class Enclave {
      * Handler which services requests from the host for the enclave persistence key specification.
      */
     private inner class GetKdsPersistenceKeySpecCallHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
             val persistenceKeySpec = env.kdsConfiguration?.persistenceKeySpec ?: return null
 
             persistenceKdsKeySpec = KDSKeySpec(
@@ -549,8 +549,8 @@ abstract class Enclave {
             return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
         }
 
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
-            println("[CALL HANDLER] Capacity: ${messageBuffer.capacity()}, Position: ${messageBuffer.position()}")
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            println("[CALL HANDLER] Capacity: ${parameterBuffer.capacity()}, Position: ${parameterBuffer.position()}")
             check(kdsEiiForPersistence == null) {
                 "Enclave has already received a KDS persistence private key."
             }
@@ -558,7 +558,7 @@ abstract class Enclave {
                 "Host is attempting to send in a KDS persistence private key even though the enclave is not " +
                         "configured to use a KDS"
             }
-            val privateKeyResponse = getKdsPrivateKeyResponse(messageBuffer)
+            val privateKeyResponse = getKdsPrivateKeyResponse(parameterBuffer)
             kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
             val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
             // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
@@ -571,7 +571,7 @@ abstract class Enclave {
      * Handler which handles start requests from the host.
      */
     private inner class StartCallHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
             if (env.enablePersistentMap && threadSafe) {
                 throw EnclaveStartException("The persistent map is not available in multi-threaded enclaves.")
             }
@@ -585,7 +585,7 @@ abstract class Enclave {
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
                 enclaveStateManager.transitionStateFrom<New>(to = Started)
-                val sealedStateBlob = messageBuffer.getNullable { this }
+                val sealedStateBlob = parameterBuffer.getNullable { this }
 
                 initialiseLocalPersistenceKeyIfNecessary()
 
@@ -609,7 +609,7 @@ abstract class Enclave {
      * Handler which handles stop calls from the host.
      */
     private inner class StopCallHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
             lock.withLock {
                 enclaveStateManager.transitionStateFrom<Started>(to = Closed)
                 // Wait until all receive calls being processed have completed

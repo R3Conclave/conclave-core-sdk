@@ -853,8 +853,8 @@ class EnclaveHost private constructor(
      * Handler for servicing requests from the enclave for signed quotes.
      */
     private inner class GetSignedQuoteHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
-            val report = Cursor.slice(SgxReport, messageBuffer)
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
+            val report = Cursor.slice(SgxReport, parameterBuffer)
             val signedQuote = quotingService.retrieveQuote(report)
             return signedQuote.buffer
         }
@@ -864,7 +864,7 @@ class EnclaveHost private constructor(
      * Handler for servicing requests from the enclave for quoting info.
      */
     private inner class GetQuotingEnclaveInfoHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
             return quotingService.initializeQuote().buffer
         }
     }
@@ -873,7 +873,7 @@ class EnclaveHost private constructor(
      * Handler for servicing attestation requests from the enclave.
      */
     private inner class GetAttestationHandler : CallHandler {
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
             val attestationBytes = writeData { _enclaveInstanceInfo!!.attestation.writeTo(this) }
             return ByteBuffer.wrap(attestationBytes)
         }
@@ -888,9 +888,9 @@ class EnclaveHost private constructor(
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
 
-        override fun handleCall(messageBuffer: ByteBuffer): ByteBuffer? {
-            val signatureKey = signatureScheme.decodePublicKey(messageBuffer.getBytes(44))
-            val encryptionKey = Curve25519PublicKey(messageBuffer.getBytes(32))
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val signatureKey = signatureScheme.decodePublicKey(parameterBuffer.getBytes(44))
+            val encryptionKey = Curve25519PublicKey(parameterBuffer.getBytes(32))
             _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
             return null
         }
