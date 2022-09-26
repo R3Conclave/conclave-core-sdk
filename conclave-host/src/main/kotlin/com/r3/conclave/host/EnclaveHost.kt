@@ -424,10 +424,10 @@ class EnclaveHost private constructor(
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
-        // For now, there is no enclave for gramine instead the mock enclave is initialised.
+        // For now, there is no enclave for Gramine instead the mock enclave is initialised.
         // This is OK because no VM is started in Mock mode and this will allow us to integrate Gramine with Conclave
         // iteratively without causing issues to the normal operation of Conclave.
-        // Start gramine only if the environment variable is set
+        // Start Gramine only if the environment variable is set
         if(Gramine.isGramineEnabled())
         {
             if(enclaveHandle !is MockEnclaveHandle) {
