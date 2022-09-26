@@ -316,23 +316,32 @@ The path should be absolute or relative to the root of the enclave module.
     when building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than
     the usual backslashes.
 
-## Assisted configuration of native image builds
+## Assisted configuration of Native Image builds
 
 You can generate the reflection and serialization configuration files by using the
-[native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds).
-This command will track the use of dynamic features and generate the configuration files when run against a regular 
-Java VM.
+[native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds)
+and run your project in mock mode. When running against a regular Java VM in mock mode, the agent will track the 
+use of dynamic features and generate the configuration files.
 
-To include all the necessary classes and resources in the generation of the configuration files and for Gradle to 
-pick up all the configuration files:
+To generate all the necessary configuration files with all the essential classes and resources, you should execute 
+all the execution paths of the enclave code. You can do that by running extensive tests in mock mode. After 
+generating all the configuration files, you can place the configuration files in: 
+`enclave/src/main/resources/META-INF/native-image` for the Native Image to pick them and use when run in 
+`simulation`, `debug`, or `release` mode.
 
-* Execute all the enclave code paths by running extensive tests in `mock mode` with flags set up to place the 
-  configuration files in the path: `enclave/src/main/resources/META-INF/native-image`.
-* Build the enclave in `simulation` mode.
+Later on, the Native Image will automatically pick up all the configuration files when you run the enclave in any mode.
 
-Later on, Gradle will automatically pick up all the configuration files when you run the enclave in any mode.
+Running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause Gradle, JUnit
+or host's classes to be present in the configuration files.
+To avoid this and ensure that only enclave-related classes and resources are included, you can configure
+[filters](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#agent-advanced-usage).
 
-You might need to adjust filters and edit the generated configuration files throughout development.
+If you are not running the agent with tests, you can run the host as an executable JAR and trigger as much enclave 
+logic as possible by sending requests from the host and the client.
+
+To create an executable Jar, you can use the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow).
+You might need to adjust the generated configuration files and the filters a few times and edit them throughout the 
+development process.
 
 ### Assisted configuration of native image builds using an executable JAR
 
@@ -374,7 +383,7 @@ You might need to adjust filters and edit the generated configuration files thro
     ```bash
     ./gradlew -PenclaveMode=mock host:shadowJar
     ```
-    This command creates an executable *shadow* JAR which contains all the host's and enclave's dependencies. You 
+    This command creates an executable *shadow* JAR which contains all the dependencies of the host and the enclave. You 
     can find the shadow jar in the default location `host/build/libs/host-all.jar`.
 
 7. Run the host with the agent enabled to generate the configuration files:
@@ -383,7 +392,7 @@ You might need to adjust filters and edit the generated configuration files thro
     $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
     ```
 
-8. Trigger the `enclave` logic by sending a `client` request.
+8. Trigger the execution of the `enclave` logic by sending a `client` request.
     ```bash
     ./gradlew client:run
     ```
