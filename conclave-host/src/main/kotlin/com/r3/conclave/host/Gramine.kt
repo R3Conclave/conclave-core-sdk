@@ -5,6 +5,7 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.absolutePathString
 
@@ -40,16 +41,8 @@ object Gramine {
         return envValue.uppercase() == "TRUE"
     }
 
-    private fun generateManifestFile(destination: Path) {
-        val file = File(destination.absolutePathString() + "/" + "bash.manifest")
-        writeToFile(manifestContent.toByteArray(), file)
-    }
-
-    private fun writeToFile(content: ByteArray, file: File) {
-        // Create an output stream to barf to the file
-        val out: OutputStream = FileOutputStream(file)
-        out.write(content, 0, content.size)
-        out.close()
+    private fun generateManifestFile(dirPath: Path) {
+        Files.write(Paths.get(dirPath.absolutePathString() + "/" + "bash.manifest"), manifestContent.toByteArray())
     }
 
     private val manifestContent =
