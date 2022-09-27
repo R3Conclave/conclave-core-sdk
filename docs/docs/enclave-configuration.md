@@ -352,6 +352,7 @@ development process.
         ]
     } 
     ```
+
 2. Place the `filter.json` file in the following directory:
 
     `path/to/enclave/src/main/resources/META-INF/native-image/`
