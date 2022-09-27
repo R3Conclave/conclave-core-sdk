@@ -353,8 +353,10 @@ development process.
    } 
    ```
 2. Place the `filter.json` file in the following directory: 
-   `path/to/enclave/src/main/resources/META-INF/native-image/` 
    
+    `path/to/enclave/src/main/resources/META-INF/native-image/`
+
+
 3. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-22.0.0.2) for your operating system 
    and [install](https://www.graalvm.org/22.0/docs/getting-started/) it.
 
