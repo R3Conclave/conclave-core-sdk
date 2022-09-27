@@ -344,16 +344,16 @@ development process.
 
 1. Create a `filter.json` file with the following code:
 
-   ```json
-   {
-       "rules": [
-           {"excludeClasses": "nonapi.**"},
-           {"excludeClasses": "com.r3.conclave.host.**"}
-       ]
-   } 
-   ```
-2. Place the `filter.json` file in the following directory: 
-   
+    ```json
+    {
+        "rules": [
+            {"excludeClasses": "nonapi.**"},
+            {"excludeClasses": "com.r3.conclave.host.**"}
+        ]
+    } 
+    ```
+2. Place the `filter.json` file in the following directory:
+
     `path/to/enclave/src/main/resources/META-INF/native-image/`
 
 
