@@ -320,16 +320,17 @@ The path should be absolute or relative to the root of the enclave module.
 
 You can generate the reflection and serialization configuration files by using the
 [native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds)
-and run your project in mock mode. The agent will track the use of dynamic features and generate the configuration 
-files.
+and by running your project in mock mode. The agent will track the use of dynamic features and generate the 
+configuration files.
 
 To make sure that you include all the essential classes and resources in the configuration files, you should execute 
 all the execution paths of the enclave code. You can do that by running extensive tests in mock mode. If you are not 
 running the agent with tests, you can run the host as an executable JAR and trigger as much enclave logic as 
 possible by sending requests from the host and the client. To create this executable Jar, you can use the [Shadow 
-Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow). After generating the files, you 
-can place the configuration files in `enclave/src/main/resources/META-INF/native-image`. Native Image uses these 
-files when you build the enclave in `simulation`, `debug`, or `release` mode.
+Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow).
+
+After generating the files, you can place the configuration files in `enclave/src/main/resources/META-INF/native-image`.
+Native Image uses these files when you build the enclave in `simulation`, `debug`, or `release` mode.
 
 Please note that running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause 
 Gradle, JUnit, or host's classes to be present in the configuration files.
@@ -345,13 +346,13 @@ development process.
 
    ```json
    {
-   "rules": [
-   {"excludeClasses": "nonapi.**"},
-   {"excludeClasses": "com.r3.conclave.host.**"}
-   ]
+       "rules": [
+           {"excludeClasses": "nonapi.**"},
+           {"excludeClasses": "com.r3.conclave.host.**"}
+       ]
    } 
    ```
-2. Place the `filter.json` file in the following path: 
+2. Place the `filter.json` file in the following directory: 
    `path/to/enclave/src/main/resources/META-INF/native-image/` 
    
 3. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-22.0.0.2) for your operating system 
@@ -395,5 +396,5 @@ development process.
     ```bash
     ./gradlew client:run
     ```
-Now you should have generated your configuration files in /path/to/enclave/src/main/resources/META-INF/native-image. 
-Native Image will pick up these files when you build the enclave in debug, simulation, or release mode.
+Now you should have generated your configuration files in ```/path/to/enclave/src/main/resources/META-INF/native-image```. 
+Native Image will pick up these files when you build the enclave in simulation, debug, or release mode.
