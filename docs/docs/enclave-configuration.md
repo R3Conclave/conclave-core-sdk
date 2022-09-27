@@ -320,33 +320,29 @@ The path should be absolute or relative to the root of the enclave module.
 
 You can generate the reflection and serialization configuration files by using the
 [native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds)
-and run your project in mock mode. When running against a regular Java VM in mock mode, the agent will track the 
-use of dynamic features and generate the configuration files.
+and run your project in mock mode. The agent will track the use of dynamic features and generate the configuration 
+files.
 
-To generate all the necessary configuration files with all the essential classes and resources, you should execute 
-all the execution paths of the enclave code. You can do that by running extensive tests in mock mode. After 
-generating all the configuration files, you can place the configuration files in: 
-`enclave/src/main/resources/META-INF/native-image` for the Native Image to pick them and use when run in 
-`simulation`, `debug`, or `release` mode.
+To make sure that you include all the essential classes and resources in the configuration files, you should execute 
+all the execution paths of the enclave code. You can do that by running extensive tests in mock mode. If you are not 
+running the agent with tests, you can run the host as an executable JAR and trigger as much enclave logic as 
+possible by sending requests from the host and the client. To create this executable Jar, you can use the [Shadow 
+Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow). After generating the files, you 
+can place the configuration files in `enclave/src/main/resources/META-INF/native-image`. Native Image uses these 
+files when you build the enclave in `simulation`, `debug`, or `release` mode.
 
-Later on, the Native Image will automatically pick up all the configuration files when you run the enclave in any mode.
-
-Running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause Gradle, JUnit
-or host's classes to be present in the configuration files.
+Please note that running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause 
+Gradle, JUnit, or host's classes to be present in the configuration files.
 To avoid this and ensure that only enclave-related classes and resources are included, you can configure
 [filters](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#agent-advanced-usage).
 
-If you are not running the agent with tests, you can run the host as an executable JAR and trigger as much enclave 
-logic as possible by sending requests from the host and the client.
-
-To create an executable Jar, you can use the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow).
 You might need to adjust the generated configuration files and the filters a few times and edit them throughout the 
 development process.
 
-### Assisted configuration of native image builds using an executable JAR
+### Generate configuration files using an executable JAR
 
-1. Create a `filter.json` file in the following path: `path/to/enclave/src/main/resources/META-INF/native-image/` 
-   with the following code to exclude unnecessary classes:
+1. Create a `filter.json` file with the following code:
+
    ```json
    {
    "rules": [
@@ -355,15 +351,18 @@ development process.
    ]
    } 
    ```
-2. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.2.0) for your operating system 
-   and [install](https://www.graalvm.org/docs/getting-started/) it.
+2. Place the `filter.json` file in the following path: 
+   `path/to/enclave/src/main/resources/META-INF/native-image/` 
+   
+3. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-22.0.0.2) for your operating system 
+   and [install](https://www.graalvm.org/22.0/docs/getting-started/) it.
 
-3. Install the `native image`:
+4. Install the `native image`:
     ```bash
     $JAVA_HOME/bin/gu install native-image
     ```
 
-4. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow) to the 
+5. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow) to the 
    `plugins` section of the `host`'s `build.gradle` file:
 
     ```groovy
@@ -372,13 +371,13 @@ development process.
     }
     ```
 
-5. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file, *after* the plugins section:
+6. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file, *after* the plugins section:
     
     ```groovy
     project.mainClassName = "com.r3.conclave.host.web.EnclaveWebHost" 
     ```
    
-6. Generate the shadow jar:
+7. Generate the shadow jar:
     
     ```bash
     ./gradlew -PenclaveMode=mock host:shadowJar
@@ -386,13 +385,15 @@ development process.
     This command creates an executable *shadow* JAR which contains all the dependencies of the host and the enclave. You 
     can find the shadow jar in the default location `host/build/libs/host-all.jar`.
 
-7. Run the host with the agent enabled to generate the configuration files:
+8. Run the host with the agent enabled to generate the configuration files:
 
     ```bash
     $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
     ```
 
-8. Trigger the execution of the `enclave` logic by sending a `client` request.
+9. Trigger the execution of the `enclave` logic by sending a `client` request.
     ```bash
     ./gradlew client:run
     ```
+Now you should have generated your configuration files in /path/to/enclave/src/main/resources/META-INF/native-image. 
+Native Image will pick up these files when you build the enclave in debug, simulation, or release mode.
