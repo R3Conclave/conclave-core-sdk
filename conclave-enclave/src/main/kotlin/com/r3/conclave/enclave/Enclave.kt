@@ -271,8 +271,16 @@ abstract class Enclave {
             quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
             reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
+        println("quotingEnclaveInfo: ${quotingEnclaveInfo.bytes.contentToString()}")
+
+        if (reportData != null) {
+            println("Report data: ${reportData.bytes.contentToString()}")
+        }
         val report = env.createReport(quotingEnclaveInfo, reportData)
-        return signedQuoteHandler.getSignedQuote(report)
+        println("Report : ${report.bytes.contentToString()}")
+        val signedQuote = signedQuoteHandler.getSignedQuote(report)
+        println("signedQuote : ${signedQuote.bytes.contentToString()}")
+        return signedQuote
     }
 
     /**
