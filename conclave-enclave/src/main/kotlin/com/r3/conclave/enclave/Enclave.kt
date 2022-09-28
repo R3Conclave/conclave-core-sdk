@@ -548,7 +548,6 @@ abstract class Enclave {
         }
 
         override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-            println("[CALL HANDLER] Capacity: ${parameterBuffer.capacity()}, Position: ${parameterBuffer.position()}")
             check(kdsEiiForPersistence == null) {
                 "Enclave has already received a KDS persistence private key."
             }

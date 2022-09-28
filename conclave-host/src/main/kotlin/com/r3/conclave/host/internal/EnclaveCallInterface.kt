@@ -70,7 +70,6 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
         val kdsResponseBuffer = ByteBuffer.allocate(kdsResponse.size).apply {
             putKdsPrivateKeyResponse(kdsResponse)
         }
-        println("[CALL INTERFACE] Capacity: ${kdsResponseBuffer.capacity()}, Position: ${kdsResponseBuffer.position()}")
         initiateCall(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsResponseBuffer)
     }
 
