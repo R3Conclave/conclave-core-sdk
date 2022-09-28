@@ -33,7 +33,7 @@ enclave {
         void jvm_ocall_heap_con1025(
             short callTypeID,
             char messageTypeID,
-            [in, size=dataLengthBytes] void* data,
+            [user_check] void* data,
             int dataLengthBytes
         ) allow(jvm_ecall_con1025);
 
