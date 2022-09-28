@@ -56,4 +56,11 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
         }
         return Attestation.getFromBuffer(buffer)
     }
+
+    /**
+     * Send a response to the host enclave message handler.
+     */
+    fun sendEnclaveMessageResponse(response: ByteBuffer) {
+        initiateCall(HostCallType.SEND_MESSAGE_HANDLER_RESPONSE, response)
+    }
 }

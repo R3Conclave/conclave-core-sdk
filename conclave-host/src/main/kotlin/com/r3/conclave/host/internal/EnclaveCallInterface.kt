@@ -73,4 +73,11 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
         println("[CALL INTERFACE] Capacity: ${kdsResponseBuffer.capacity()}, Position: ${kdsResponseBuffer.position()}")
         initiateCall(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsResponseBuffer)
     }
+
+    /**
+     * Send a command to the enclave message handler.
+     */
+    fun sendMessageHandlerCommand(command: ByteBuffer) {
+        initiateCall(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, command)
+    }
 }

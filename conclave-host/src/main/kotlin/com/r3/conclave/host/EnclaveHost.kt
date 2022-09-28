@@ -433,7 +433,7 @@ class EnclaveHost private constructor(
     private val setEnclaveInfoCallHandler = SetEnclaveInfoCallHandler()
 
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
-    private lateinit var enclaveMessageHandler: EnclaveMessageHandler
+    private val enclaveMessageHandler = EnclaveMessageHandler()
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
 
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
@@ -531,15 +531,13 @@ class EnclaveHost private constructor(
 
         try {
             this.commandsCallback = commandsCallback
-            // Set up a set of channels in and out of the enclave. Each byte array sent/received comes with
-            // a prefixed channel ID that lets us split them out to separate classes.
-            val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
 
             // Register handlers associated with attestation
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
+            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.SEND_MESSAGE_HANDLER_RESPONSE, enclaveMessageHandler)
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
@@ -559,9 +557,6 @@ class EnclaveHost private constructor(
                     enclaveHandle.enclaveCallInterface.setKdsPersistenceKey(kdsResponse)
                 }
             }
-
-            // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
-            enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
 
             if (enclaveFileSystemFile != null) {
                 log.info("Setting up persistent enclave file system...")
@@ -909,9 +904,7 @@ class EnclaveHost private constructor(
     }
 
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
-    private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
-        private lateinit var sender: Sender
-
+    private inner class EnclaveMessageHandler : CallHandler {
         private val callTypeValues = InternalCallType.values()
         @PotentialPackagePrivate("Access for EnclaveHostMockTest")
         private val threadIDToTransaction = ConcurrentHashMap<Long, Transaction>()
@@ -920,9 +913,7 @@ class EnclaveHost private constructor(
         // private key).
         private val seenKdsKeySpecs = ConcurrentHashMap.newKeySet<KDSKeySpec>()
 
-        override fun connect(upstream: Sender): EnclaveMessageHandler = this.also { sender = upstream }
-
-        override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
+        override fun handleCall(input: ByteBuffer): ByteBuffer? {
             val type = callTypeValues[input.get().toInt()]
             val threadID = input.getLong()
             val transaction = threadIDToTransaction.getValue(threadID)
@@ -934,6 +925,7 @@ class EnclaveHost private constructor(
                 CALL_RETURN -> onCallReturn(callStateManager, input)
                 SEALED_STATE -> onSealedState(transaction, input)
             }
+            return null
         }
 
         private fun onMail(transaction: Transaction, input: ByteBuffer) {
@@ -1088,11 +1080,12 @@ class EnclaveHost private constructor(
             payloadSize: Int,
             payload: (ByteBuffer) -> Unit
         ) {
-            sender.send(1 + Long.SIZE_BYTES + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                buffer.putLong(threadID)
-                payload(buffer)
+            val buffer = ByteBuffer.allocate(1 + Long.SIZE_BYTES + payloadSize).apply {
+                put(type.ordinal.toByte())
+                putLong(threadID)
+                payload(this)
             }
+            enclaveHandle.enclaveCallInterface.sendMessageHandlerCommand(buffer)
         }
     }
 

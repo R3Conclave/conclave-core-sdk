@@ -7,7 +7,8 @@ enum class HostCallType {
     GET_SIGNED_QUOTE,
     GET_QUOTING_ENCLAVE_INFO,
     GET_ATTESTATION,
-    SET_ENCLAVE_INFO;
+    SET_ENCLAVE_INFO,
+    SEND_MESSAGE_HANDLER_RESPONSE;
 
     fun toShort(): Short {
         check(VALUES.size < Short.MAX_VALUE)

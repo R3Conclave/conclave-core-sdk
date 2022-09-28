@@ -9,7 +9,8 @@ enum class EnclaveCallType {
     STOP_ENCLAVE,
     GET_ENCLAVE_INSTANCE_INFO_QUOTE,
     GET_KDS_PERSISTENCE_KEY_SPEC,
-    SET_KDS_PERSISTENCE_KEY;
+    SET_KDS_PERSISTENCE_KEY,
+    SEND_MESSAGE_HANDLER_COMMAND;
 
     fun toShort(): Short {
         check(VALUES.size < Short.MAX_VALUE)

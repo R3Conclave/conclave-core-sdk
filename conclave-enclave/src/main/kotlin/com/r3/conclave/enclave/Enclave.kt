@@ -86,8 +86,7 @@ abstract class Enclave {
     private val getKdsPersistenceKeySpecCallHandler = GetKdsPersistenceKeySpecCallHandler()
     private val setKdsPersistenceKeyCallHandler = SetKdsPersistenceKeyCallHandler()
     private val getEnclaveInstanceInfoQuoteCallHandler = GetEnclaveInstanceInfoQuoteCallHandler()
-
-    private lateinit var enclaveMessageHandler: EnclaveMessageHandler
+    private val enclaveMessageHandler = EnclaveMessageHandler()
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, SessionEnclavePostOffice>()
@@ -254,14 +253,13 @@ abstract class Enclave {
             */
             val exceptionSendingHandler = ExceptionSendingHandler(env.enclaveMode == EnclaveMode.RELEASE)
             val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
-            val mux = connected.connection.setDownstream(SimpleMuxingHandler())
-            enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
 
             env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, startCallHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, stopCallHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
             env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
+            env.hostCallInterface.registerCallHandler(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, enclaveMessageHandler)
 
             env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
 
@@ -646,9 +644,8 @@ abstract class Enclave {
 
     }
 
-    private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
+    private inner class EnclaveMessageHandler : CallHandler {
         private val kdsPrivateKeyCache = ConcurrentHashMap<KDSKeySpec, PrivateKey>()
-        private lateinit var sender: Sender
 
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
@@ -664,11 +661,6 @@ abstract class Enclave {
          */
         var currentReceiveContext: ReceiveContext? = null
 
-        override fun connect(upstream: Sender): EnclaveMessageHandler {
-            sender = upstream
-            return this
-        }
-
         // .values() returns a fresh array each time so cache it here.
         private val callTypeValues = InternalCallType.values()
 
@@ -676,9 +668,9 @@ abstract class Enclave {
         private val receiveFromUntrustedHostCallback = HostCallback(::receiveFromUntrustedHost)
 
         // This method can be called concurrently by the host.
-        override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val type = callTypeValues[input.get().toInt()]
-            val hostThreadId = input.long
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val type = callTypeValues[parameterBuffer.get().toInt()]
+            val hostThreadId = parameterBuffer.long
             // Assign the host thread ID to the current thread so that callUntrustedHost/postMail/etc can pick up the
             // right state for the thread.
             currentEnclaveCall.set(hostThreadId)
@@ -687,11 +679,12 @@ abstract class Enclave {
                 StateManager(Receive(receiveFromUntrustedHostCallback, receiveFromUntrustedHost = true))
             }
             when (type) {
-                MAIL -> onMail(hostThreadId, input)
-                UNTRUSTED_HOST -> onUntrustedHost(stateManager, hostThreadId, input)
-                CALL_RETURN -> onCallReturn(stateManager, input)
+                MAIL -> onMail(hostThreadId, parameterBuffer)
+                UNTRUSTED_HOST -> onUntrustedHost(stateManager, hostThreadId, parameterBuffer)
+                CALL_RETURN -> onCallReturn(stateManager, parameterBuffer)
                 SEALED_STATE -> throw UnsupportedOperationException("SEALED_STATE is not expected from the host")
             }
+            return null
         }
 
         // TODO Mail acks: https://r3-cev.atlassian.net/browse/CON-616
@@ -951,11 +944,12 @@ abstract class Enclave {
             payloadSize: Int,
             payload: (ByteBuffer) -> Unit
         ) {
-            sender.send(1 + Long.SIZE_BYTES + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                buffer.putLong(hostThreadId)
-                payload(buffer)
+            val buffer = ByteBuffer.allocate(1 + Long.SIZE_BYTES + payloadSize).apply {
+                put(type.ordinal.toByte())
+                putLong(hostThreadId)
+                payload(this)
             }
+            env.hostCallInterface.sendEnclaveMessageResponse(buffer)
         }
 
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
