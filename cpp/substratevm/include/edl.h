@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 void Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(graal_isolatethread_t*, char*, int);
-void Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPointCon1025(graal_isolatethread_t*, short, bool, char*, int);
+void Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPointCon1025(graal_isolatethread_t*, short, char, char*, int);
 void Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_internalError(graal_isolatethread_t*, char*, int);
 
 void jvm_ecall(void* bufferIn, int bufferSize);
