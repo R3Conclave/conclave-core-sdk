@@ -28,7 +28,7 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
         stack.push(StackFrame(callType, null, null))
 
         NativeApi.hostToEnclaveCon1025(
-                enclaveId, callType.toShort(), NativeMessageType.CALL, parameterBuffer.getAllBytes(avoidCopying = true))
+                enclaveId, callType.toShort(), NativeMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
 
@@ -55,11 +55,13 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
         try {
             acceptCall(callType, parameterBuffer)?.let {
                 NativeApi.hostToEnclaveCon1025(
-                        enclaveId, callType.toShort(), NativeMessageType.RETURN, it.getAllBytes(avoidCopying = true))
+                        enclaveId, callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val serializedException = ThrowableSerialisation.serialise(throwable)
-            NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), NativeMessageType.EXCEPTION, serializedException)
+            System.err.println("Sending exception to enclave...")
+            NativeApi.hostToEnclaveCon1025(enclaveId, callType.toShort(), NativeMessageType.EXCEPTION.toByte(), serializedException)
+            System.err.println("Exception sent.")
         }
     }
 

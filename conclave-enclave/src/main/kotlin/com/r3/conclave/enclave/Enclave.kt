@@ -237,34 +237,18 @@ abstract class Enclave {
 
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
-    private fun initialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
+    private fun initialise(env: EnclaveEnvironment) {
         this.env = env
-        // If the Enclave class implements InternalEnclave then the behaviour of the enclave is entirely delegated
-        // to the InternalEnclave implementation and the Conclave-specific APIs (e.g. callUntrustedHost, etc) are
-        // disabled. This allows us to test the enclave environment in scenarios where we don't want the Conclave handlers.
-        return if (this is InternalEnclave) {
-            this.internalInitialise(env, upstream)
-        } else {
-            initCryptography()
-            /*
-            Here we should not add any code that throws exceptions. This is because the handler mechanisms haven't
-            yet been put in place and an exception would cause the Enclave to terminate in such a way that we can't
-            control and without meaningful stacktrace as this can't be reported back.
-            */
-            val exceptionSendingHandler = ExceptionSendingHandler(env.enclaveMode == EnclaveMode.RELEASE)
-            val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
+        initCryptography()
 
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, startCallHandler)
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, stopCallHandler)
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
-            env.hostCallInterface.registerCallHandler(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, enclaveMessageHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, startCallHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, stopCallHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, enclaveMessageHandler)
 
-            env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
-
-            connected
-        }
+        env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
     }
 
     /**
@@ -310,12 +294,11 @@ abstract class Enclave {
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
     private fun initialiseMock(
-        upstream: Sender,
         mockConfiguration: MockConfiguration?,
         kdsConfig: EnclaveKdsConfig?,
         callInterfaceConnector: MockCallInterfaceConnector
-    ): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig, callInterfaceConnector), upstream)
+    ) {
+        initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig, callInterfaceConnector))
     }
 
     /**
@@ -529,8 +512,6 @@ abstract class Enclave {
                 put(persistenceKdsKeySpec.masterKeyType.id.toByte())
                 put(policyConstraintBytes)
             }
-
-            println("Capacity: ${buffer.capacity()}, Position: ${buffer.position()}")
 
             return buffer
         }

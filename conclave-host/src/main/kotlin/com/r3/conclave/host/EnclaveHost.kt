@@ -54,7 +54,7 @@ import java.util.regex.Pattern
  * version of Java that is supported.
  */
 class EnclaveHost private constructor(
-    private val enclaveHandle: EnclaveHandle<ExceptionReceivingHandler.Connection>
+    private val enclaveHandle: EnclaveHandle
 ) : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
@@ -209,7 +209,7 @@ class EnclaveHost private constructor(
             enclaveFileUrl: URL,
             enclaveClassName: String,
         ): EnclaveHost {
-            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ExceptionReceivingHandler())
+            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName)
             return EnclaveHost(enclaveHandle)
         }
 
@@ -227,8 +227,7 @@ class EnclaveHost private constructor(
             val enclaveHandle = MockEnclaveHandle(
                 constructor.newInstance(),
                 mockConfiguration,
-                kdsConfig,
-                ExceptionReceivingHandler()
+                kdsConfig
             )
             return EnclaveHost(enclaveHandle)
         }
@@ -532,7 +531,7 @@ class EnclaveHost private constructor(
         try {
             this.commandsCallback = commandsCallback
 
-            // Register handlers associated with attestation
+            // Register call handlers
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())

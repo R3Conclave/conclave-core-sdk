@@ -5,16 +5,11 @@ import com.r3.conclave.common.EnclaveMode
 /**
  * A handle to an enclave instance.
  */
-interface EnclaveHandle<CONNECTION> {
+interface EnclaveHandle {
     /**
      * The mode in which the enclave is running in.
      */
     val enclaveMode: EnclaveMode
-
-    /**
-     * The base connection to the enclave.
-     */
-    val connection: CONNECTION
 
     /**
      * Object for initiating enclave calls from.
