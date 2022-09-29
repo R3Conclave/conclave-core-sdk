@@ -219,8 +219,8 @@ In release mode any output to `stdout` and `stderr` is suppressed inside the enc
 
 ### Deployment
 
-You can get SGX capable virtual machines from cloud providers. Currently Microsoft Azure provides the easiest, up to
-date source of SGX VMs. A Conclave host app includes the enclave bundled into the same JAR and the native libraries
+You can get SGX capable virtual machines from cloud providers. Currently, Microsoft Azure provides the easiest, 
+up-to-date source of SGX VMs. A Conclave host app includes the enclave bundled into the same JAR and the native libraries
 required for working with the kernel driver and Intel infrastructure, so you can deploy a Conclave app by simply using
 regular Java deployment procedures. For example, use the Gradle `assemble` plugin to create a tarball/zip of your
 app, or create a fat JAR and copy it to the server.

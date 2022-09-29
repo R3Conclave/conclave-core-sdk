@@ -35,9 +35,9 @@ supported but deprecated and will be removed in a future version.
 `IOException`. This can occur if the mail to be delivered was encrypted using a KDS key and the host is unable to 
 retrieve it from the KDS.
 
-Though technically not an API change, the docs for [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office)
-and [`EnclavePostOffice`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave-post-office) have been fixed to state that 
-they are _not_ thread-safe.
+Though technically not an API change, the docs for [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html)
+and [`EnclavePostOffice`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave-post-office/index.html) have been 
+fixed to state that they are _not_ thread-safe.
 
 ### Conclave Init
 
