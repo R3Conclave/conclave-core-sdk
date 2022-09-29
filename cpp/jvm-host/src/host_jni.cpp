@@ -275,7 +275,7 @@ void jvm_ocall(short callTypeID, char messageTypeID, void* data, int dataLengthB
         checkJniException(jniEnv);
         // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
         // copied from it. This means it's safe to de-allocate the pointer after this function returns.
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(JSBLjava/nio/ByteBuffer;)V");
+        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "receiveOcall", "(JSBLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
         jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
         checkJniException(jniEnv);
