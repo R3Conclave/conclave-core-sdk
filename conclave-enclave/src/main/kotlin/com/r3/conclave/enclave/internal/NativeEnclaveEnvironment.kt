@@ -9,7 +9,6 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.getRemainingString
-import java.lang.RuntimeException
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -46,22 +45,12 @@ class NativeEnclaveEnvironment(
         }
 
         /**
-         * The ECALL entry point.
-         *
-         * @param buffer The chunk of data sent from the host.
-         */
-        @JvmStatic
-        fun enclaveEntry(buffer: ByteBuffer) {
-            throw RuntimeException("Should not reach here! (old ecall entry point)")
-        }
-
-        /**
          * Temporary ECALL entry point for new handler system.
          *
          * @param buffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntryCon1025(callTypeID: Short, nativeMessageType: NativeMessageType, dataBuffer: ByteBuffer) {
+        fun enclaveEntry(callTypeID: Short, nativeMessageType: NativeMessageType, dataBuffer: ByteBuffer) {
             hostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 

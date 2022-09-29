@@ -7,5 +7,5 @@ interface CallInitiator<CALL_ID_TYPE> {
         private val EMPTY_BYTE_BUFFER: ByteBuffer = ByteBuffer.wrap(ByteArray(0)).asReadOnlyBuffer()
     }
 
-    fun initiateCall(callType: CALL_ID_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
+    fun executeCall(callType: CALL_ID_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
 }

@@ -144,6 +144,8 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave(JNIEnv *jn
 void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall(JNIEnv *jniEnv,
                                                                 jclass,
                                                                 jlong enclaveId,
+                                                                jshort callTypeID,
+                                                                jbyte messageTypeID,
                                                                 jbyteArray data) {
     try {
         // Prepare input buffer
@@ -154,43 +156,11 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall(JNIEnv *jniEnv,
 
         // Set the enclave ID TLS so that OCALLs have access to it
         EcallContext context(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
-        auto returnCode = jvm_ecall(
-                                    static_cast<sgx_enclave_id_t>(enclaveId),
+        auto returnCode = jvm_ecall(static_cast<sgx_enclave_id_t>(enclaveId),
+                                    callTypeID,
+                                    messageTypeID,
                                     inputBuffer,
-                                    size
-                                    );
-        jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
-
-        if (returnCode != SGX_SUCCESS) {
-            raiseException(jniEnv, getErrorMessage(returnCode));
-        }
-    } catch (JNIException&) {
-        // No-op: the host JVM will deal with it
-    }
-}
-
-void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcallCon1025(JNIEnv *jniEnv,
-                                                                       jclass,
-                                                                       jlong enclaveId,
-                                                                       jshort callTypeID,
-                                                                       jbyte messageTypeID,
-                                                                       jbyteArray data) {
-    try {
-        // Prepare input buffer
-        auto size = jniEnv->GetArrayLength(data);
-        checkJniException(jniEnv);
-        auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);
-        checkJniException(jniEnv);
-
-        // Set the enclave ID TLS so that OCALLs have access to it
-        EcallContext context(static_cast<sgx_enclave_id_t>(enclaveId), jniEnv, {});
-        auto returnCode = jvm_ecall_con1025(
-                                            static_cast<sgx_enclave_id_t>(enclaveId),
-                                            callTypeID,
-                                            messageTypeID,
-                                            inputBuffer,
-                                            size
-                                            );
+                                    size);
         jniEnv->ReleaseByteArrayElements(data, inputBuffer, 0);
 
         if (returnCode != SGX_SUCCESS) {
@@ -289,42 +259,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getMetadata(JNI
     metadata.releaseMode = 0;
 }
 
-void jvm_ocall(void* bufferIn, int bufferInLen) {
-    auto *jniEnv = EcallContext::getJniEnv();
-    if (jniEnv == nullptr) {
-        throw std::runtime_error("Cannot find JNIEnv");
-    }
-
-    try {
-        // Wrap the native bytes in a Java direct byte buffer to avoid unnecessary copying. This is safe to do since the
-        // memory is not de-allocated until after this function returns in
-        // Java_com_r3_conclave_enclave_internal_Native_jvmOcall.
-        auto javaBuffer = jniEnv->NewDirectByteBuffer(bufferIn, bufferInLen);
-        checkJniException(jniEnv);
-        auto hostEnclaveApiClass = jniEnv->FindClass("com/r3/conclave/host/internal/NativeApi");
-        checkJniException(jniEnv);
-        // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
-        // copied from it. This means it's safe to de-allocate the pointer after this function returns.
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(JLjava/nio/ByteBuffer;)V");
-        checkJniException(jniEnv);
-        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), javaBuffer);
-        checkJniException(jniEnv);
-    } catch (JNIException&) {
-        // No-op: delegate handling to the host JVM
-    }
-}
-
-// Called by the EDL when the enclave has decided to allocate the buffer on the untrusted stack
-void jvm_ocall_stack(void* bufferIn, int bufferInLen) {
-    jvm_ocall(bufferIn, bufferInLen);
-}
-
-// Called by the EDL when the enclave has decided to allocate the buffer on the hosts heap
-void jvm_ocall_heap(void* bufferIn, int bufferInLen) {
-    jvm_ocall(bufferIn, bufferInLen);
-}
-
-void jvm_ocall_con1025(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
+void jvm_ocall(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
     auto *jniEnv = EcallContext::getJniEnv();
     if (jniEnv == nullptr) {
         throw std::runtime_error("Cannot find JNIEnv");
@@ -340,7 +275,7 @@ void jvm_ocall_con1025(short callTypeID, char messageTypeID, void* data, int dat
         checkJniException(jniEnv);
         // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
         // copied from it. This means it's safe to de-allocate the pointer after this function returns.
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHostCon1025", "(JSBLjava/nio/ByteBuffer;)V");
+        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "enclaveToHost", "(JSBLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
         jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
         checkJniException(jniEnv);
@@ -350,13 +285,13 @@ void jvm_ocall_con1025(short callTypeID, char messageTypeID, void* data, int dat
 }
 
 // Called by the EDL when the enclave has decided to allocate the buffer on the untrusted stack
-void jvm_ocall_stack_con1025(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
-    jvm_ocall_con1025(callTypeID, messageTypeID, data, dataLengthBytes);
+void jvm_ocall_stack(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
+    jvm_ocall(callTypeID, messageTypeID, data, dataLengthBytes);
 }
 
 // Called by the EDL when the enclave has decided to allocate the buffer on the hosts heap
-void jvm_ocall_heap_con1025(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
-    jvm_ocall_con1025(callTypeID, messageTypeID, data, dataLengthBytes);
+void jvm_ocall_heap(short callTypeID, char messageTypeID, void* data, int dataLengthBytes) {
+    jvm_ocall(callTypeID, messageTypeID, data, dataLengthBytes);
 }
 
 void shared_data_ocall(void** sharedBufferAddr) {

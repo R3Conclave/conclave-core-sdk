@@ -3,10 +3,6 @@ enclave {
     from "sgx_pthread.edl" import *;
     trusted {
         public void jvm_ecall(
-            [in, size=bufferInLen] void* bufferIn,
-            int bufferInLen
-        );
-        public void jvm_ecall_con1025(
             short callTypeID,
             char messageTypeID,
             [in, size=dataLengthBytes] void* data,
@@ -21,28 +17,18 @@ enclave {
 
     untrusted {
         void jvm_ocall_heap(
-            [user_check] void* bufferIn,
-            int bufferInLen
-        ) allow(jvm_ecall);
-
-        void jvm_ocall_stack(
-            [in, size=bufferInLen] void* bufferIn,
-            int bufferInLen
-        ) allow(jvm_ecall);
-
-        void jvm_ocall_heap_con1025(
             short callTypeID,
             char messageTypeID,
             [user_check] void* data,
             int dataLengthBytes
-        ) allow(jvm_ecall_con1025);
+        ) allow(jvm_ecall);
 
-        void jvm_ocall_stack_con1025(
+        void jvm_ocall_stack(
             short callTypeID,
             char messageTypeID,
             [in, size=dataLengthBytes] void* data,
             int dataLengthBytes
-        ) allow(jvm_ecall_con1025);
+        ) allow(jvm_ecall);
 
         void shared_data_ocall(
             [out] void** sharedBufferAddr

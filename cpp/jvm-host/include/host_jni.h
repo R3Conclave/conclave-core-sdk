@@ -26,17 +26,9 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave
 /*
  * Class:     com_r3_conclave_host_internal_Native
  * Method:    jvmEcall
- * Signature: (J[B)V
- */
-JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
-  (JNIEnv *, jclass, jlong, jbyteArray);
-
-/*
- * Class:     com_r3_conclave_host_internal_Native
- * Method:    jvmEcallCon1025
  * Signature: (JSB[B)V
  */
-JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcallCon1025
+JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall
   (JNIEnv *, jclass, jlong, jshort, jbyte, jbyteArray);
 
 /*

@@ -32,7 +32,7 @@ extern "C" {
 int printf(const char *s, ...);
 }
 
-void jvm_ecall(void *bufferIn, int bufferInLen) {
+void jvm_ecall(short callTypeID, char messageTypeID, void *data, int dataLengthBytes) {
     enclave_trace(">>> Enclave\n");
 
     using namespace r3::conclave;
@@ -41,19 +41,7 @@ void jvm_ecall(void *bufferIn, int bufferInLen) {
     // Make sure this enclave has determined the host shared data address
     EnclaveSharedData::instance().init();
 
-    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(jniEnv.get(), reinterpret_cast<char*>(bufferIn), bufferInLen);
-}
-
-void jvm_ecall_con1025(short callTypeID, char messageTypeID, void *data, int dataLengthBytes) {
-    enclave_trace(">>> Enclave\n");
-
-    using namespace r3::conclave;
-    auto jniEnv = Jvm::instance().jniEnv();
-
-    // Make sure this enclave has determined the host shared data address
-    EnclaveSharedData::instance().init();
-
-    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPointCon1025(
+    Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint(
         jniEnv.get(), callTypeID, messageTypeID, reinterpret_cast<char*>(data), dataLengthBytes);
 }
 

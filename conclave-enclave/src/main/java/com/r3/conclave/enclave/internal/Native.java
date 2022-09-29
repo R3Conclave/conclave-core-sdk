@@ -18,7 +18,7 @@ public class Native {
      * @param messageTypeID The message type (call/return/exception) of the message, encoded as a byte.
      * @param data The chunk of data to be passed to the ocall.
      */
-    public static native void jvmOcallCon1025(short callTypeID, byte messageTypeID, byte[] data);
+    public static native void jvmOcall(short callTypeID, byte messageTypeID, byte[] data);
 
     /**
      * Thin JNI wrapper around `sgx_create_report`.

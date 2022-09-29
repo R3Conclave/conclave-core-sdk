@@ -30,7 +30,7 @@ class NativeHostCallInterface : HostCallInterface() {
     override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
-        Native.jvmOcallCon1025(
+        Native.jvmOcall(
                 callType.toShort(), NativeMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
@@ -72,13 +72,13 @@ class NativeHostCallInterface : HostCallInterface() {
     private fun handleCallEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
             acceptCall(callType, parameterBuffer)?.let {
-                Native.jvmOcallCon1025(
+                Native.jvmOcall(
                         callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
             val serializedException = ThrowableSerialisation.serialise(maybeSanitisedThrowable)
-            Native.jvmOcallCon1025(callType.toShort(), NativeMessageType.EXCEPTION.toByte(), serializedException)
+            Native.jvmOcall(callType.toShort(), NativeMessageType.EXCEPTION.toByte(), serializedException)
         }
     }
 

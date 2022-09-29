@@ -6,19 +6,18 @@ import com.r3.conclave.common.internal.HostCallType
 import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getAllBytes
-import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.nio.ByteBuffer
 
 /**
- * This class serves as the glue between the host and a mock enclave.
- * An object of this class exists "between" the mock enclave and the enclave host and servers
- * to connect the MockHostCallInterface to the MockEnclaveCallInterface.
- * Parameter and return value buffers are deep copied to better emulate the behaviour of a real enclave.
+ * This class serves as the glue between a mock host and a mock enclave.
+ * An instance of this class exists "between" the mock enclave and the host, bridging the
+ * [com.r3.conclave.enclave.internal.HostCallInterface] to the [com.r3.conclave.host.internal.EnclaveCallInterface].
+ * Parameter and return value buffers are deep copied to more accurately emulate the behaviour of an actual enclave.
  */
 class MockCallInterfaceConnector {
     companion object {
         private fun copyBuffer(buffer: ByteBuffer): ByteBuffer {
-            return ByteBuffer.wrap(buffer.getAllBytes())
+            return ByteBuffer.wrap(buffer.getAllBytes(avoidCopying = false))
         }
     }
 

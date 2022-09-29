@@ -24,14 +24,14 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
             put(encodedSigningKey)
             put(encodedEncryptionKey)
         }
-        initiateCall(HostCallType.SET_ENCLAVE_INFO, buffer)
+        executeCall(HostCallType.SET_ENCLAVE_INFO, buffer)
     }
 
     /**
      * Get a signed quote from the host.
      */
     fun getSignedQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        val quoteBuffer = checkNotNull(initiateCall(HostCallType.GET_SIGNED_QUOTE, report.buffer)) {
+        val quoteBuffer = checkNotNull(executeCall(HostCallType.GET_SIGNED_QUOTE, report.buffer)) {
             MISSING_RETURN_VALUE_ERROR_MESSAGE
         }
         return Cursor.slice(SgxSignedQuote, quoteBuffer)
@@ -41,7 +41,7 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
      * Get quoting enclave info from the host.
      */
     fun getQuotingEnclaveInfo(): ByteCursor<SgxTargetInfo> {
-        val infoBuffer = checkNotNull(initiateCall(HostCallType.GET_QUOTING_ENCLAVE_INFO)) {
+        val infoBuffer = checkNotNull(executeCall(HostCallType.GET_QUOTING_ENCLAVE_INFO)) {
             MISSING_RETURN_VALUE_ERROR_MESSAGE
         }
         return Cursor.slice(SgxTargetInfo, infoBuffer)
@@ -51,7 +51,7 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
      * Request an attestation from the host.
      */
     fun getAttestation(): Attestation {
-        val buffer = checkNotNull(initiateCall(HostCallType.GET_ATTESTATION)) {
+        val buffer = checkNotNull(executeCall(HostCallType.GET_ATTESTATION)) {
             MISSING_RETURN_VALUE_ERROR_MESSAGE
         }
         return Attestation.getFromBuffer(buffer)
@@ -61,6 +61,6 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
      * Send a response to the host enclave message handler.
      */
     fun sendEnclaveMessageResponse(response: ByteBuffer) {
-        initiateCall(HostCallType.SEND_MESSAGE_HANDLER_RESPONSE, response)
+        executeCall(HostCallType.SEND_MESSAGE_HANDLER_RESPONSE, response)
     }
 }

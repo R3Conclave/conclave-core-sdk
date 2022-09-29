@@ -9,7 +9,14 @@ import java.util.concurrent.ConcurrentHashMap
 object NativeApi {
     private val enclaveCallInterfaces = ConcurrentHashMap<Long, NativeEnclaveCallInterface>()
 
-    // TODO: Temporary for con 1025
+    /**
+     * Register an enclave call interface with the native API.
+     * Each call interface serves as the communication endpoint for one enclave.
+     * It serves as the initiator for calls to the enclave, and the handler for calls originating from the enclave.
+     *
+     * @param enclaveId The ID of the enclave to register the call interface with.
+     * @param enclaveCallInterface An instance of the [EnclaveCallInterface] class to be used for communication with the specified enclave.
+     */
     @JvmStatic
     fun registerEnclaveCallInterface(enclaveId: Long, enclaveCallInterface: NativeEnclaveCallInterface) {
         val previous = enclaveCallInterfaces.putIfAbsent(enclaveId, enclaveCallInterface)
@@ -18,18 +25,34 @@ object NativeApi {
         }
     }
 
-    // TODO: Temporary for CON 1025
+    /**
+     * This method is the entry point for messages delivered from the enclave to the host.
+     * This is part of the low-level communication mechanism used by native enclaves.
+     *
+     * @param enclaveId The ID of the enclave the message originated from.
+     * @param callTypeID The type of call which the message is part of, see [com.r3.conclave.common.internal.EnclaveCallType] and [com.r3.conclave.common.internal.HostCallType].
+     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.NativeMessageType].
+     * @param data A byte buffer containing message data.
+     */
     @JvmStatic
     @Suppress("UNUSED")
-    fun enclaveToHostCon1025(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteBuffer) {
+    fun receiveOcall(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteBuffer) {
         val enclaveCallInterface = checkNotNull(enclaveCallInterfaces[enclaveId])
         enclaveCallInterface.handleOcall(enclaveId, callTypeID, NativeMessageType.fromByte(messageTypeID), data)
     }
 
-    // TODO: Temporary for CON 1025
+    /**
+     * Sends a message from the host to the enclave.
+     * This is part of the low-level communication mechanism used by native enclaves.
+     *
+     * @param enclaveId The ID of the enclave to send the message to.
+     * @param callTypeID The type of call which the message is part of, see [com.r3.conclave.common.internal.EnclaveCallType] and [com.r3.conclave.common.internal.HostCallType].
+     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.NativeMessageType].
+     * @param data A byte buffer containing data to send to the enclave.
+     */
     @JvmStatic
-    fun hostToEnclaveCon1025(enclaveId: Long, callType: Short, messageType: Byte, data: ByteArray) {
-        Native.jvmEcallCon1025(enclaveId, callType, messageType, data)
+    fun sendEcall(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteArray) {
+        Native.jvmEcall(enclaveId, callTypeID, messageTypeID, data)
     }
 
     /**
