@@ -1,167 +1,160 @@
-In this section we discuss some security issues inherent to the enclave model which may not be immediately apparent.
+# Maximize the security of your enclave
+
+This section covers the security aspects you must consider while designing an application using the enclave model.
 
 ## Secure time access
 
-The *trusted computing base* is very small in the SGX architecture. Only the CPU and some support software needs to be
-trusted to work correctly. That means anything else in the computer *other* than the CPU is assumed to be broken or
-malicious, and defended against using encryption and authentication.
+The SGX architecture has a very small Trusted Computing Base (TCB). You need to trust only the CPU and some support
+software. Anything else in the computer *other* than the CPU is assumed to be malicious and defended
+against using encryption and authentication.
 
-This has implications for reading the system clock. The current time is maintained by a battery powered real-time clock chip
-outside the CPU, which can be tampered with by the untrusted machine owner at any time. For this reason inside the
-enclave the current time should only be used with care, e.g. when errors in it aren't security critical. Trying to read
-it will yield a time from the host that may not map to real time, may be invalid, or have other problems. Inside an
-instance of an enclave, Conclave will always return a time value that is greater than or equal to any previously
-presented time. If the host rewinds the clock then the enclave time will pause until the host time again catches up
-with the latest time in the enclave. However, if the enclave is restarted then the time inside the enclave could
-be earlier than in a previous instance of the enclave. Additionally, the host may pause execution of an enclave at 
-any moment for an arbitrary duration without the enclave code being aware of that, so if you were to read a timestamp 
-it might be very old at the moment you actually used it.
+The small TCB has implications for reading the system clock. As a real-time clock chip outside the CPU maintains the
+current time in a computer, the untrusted machine owner can tamper with it. So, you should use the current
+time inside the enclave only if any errors in it are not critical to the security of the enclave.
 
-However the protocol for accessing the timestamp doesn't involve doing any calls out of the enclave, so, the host can't
-observe the program's progress by watching OCALLs (which would otherwise be a side channel).
+If you try to read the current time from the host, it may not map to real-time, be invalid, or have other problems.
+Inside an instance of an enclave, Conclave will always return a time value greater than or equal to any
+previously presented time. If the host rewinds the clock, the enclave time will pause until the host time again
+catches up with the latest time in the enclave. However, if the enclave restarts, the time inside the enclave
+could be earlier than in a previous instance. Additionally, the host may pause the execution of
+an enclave at any moment for an arbitrary duration without the enclave code being aware of that. So, if you were to
+read a timestamp, it might be very old by the time you use it.
+
+However, the protocol for accessing the timestamp doesn't involve any calls out of the enclave. This avoids 
+side channel attacks as the host can't observe the program's progress by watching Outside Calls (OCALL).
 
 ## Memento/rewind/replay attacks
 
-Your enclave has protected RAM which it uses to store normal, in-memory data. Reads are guaranteed to observe prior writes.
+An enclave cannot directly access hardware. Like any other program, it has to ask the kernel of the OS to handle
+requests on its behalf, as the kernel is the only program that can control the hardware. However, inside an enclave,
+there is no direct access to the OS. Enclaves can communicate with the OS only by exchanging messages through the
+host code.
 
-But an enclave is just an ordinary piece of code running in an ordinary program. That means it cannot directly access
-hardware. Like any other program it has to ask the kernel to handle requests on its behalf, because the kernel is the
-only program running in the CPU's supervisor mode where hardware can be controlled ("ring 0" on Intel architecture chips).
-In fact, inside an enclave there is no direct access to the operating system at all. The only thing you can do is
-exchange messages with the host code. The host may choose to relay your requests through the kernel to the hardware
-honestly, or any of those components (host software, kernel, the hardware itself) may have been modified maliciously.
-The enclave protections are a feature of the *CPU*, not the entire computer, and the CPU maintains state only until
-it is reset or the power is lost.
+If any of the components (host software, kernel, the hardware itself) are malicious, there is a security
+issue when enclaves access hardware through exchanging messages with the host. Remember that enclave protections are a
+feature of the *CPU*, not the entire computer.
 
-You can think of this another way. If the enclave stores some data to disk, nothing stops the owner of the computer
+You can think of this another way. If the enclave stores data to disk, nothing stops the owner of the computer from
 stopping the enclave host process and then editing the files on disk.
 
-Because enclaves can generate encryption keys private to themselves, encryption and authentication can be used to stop
-the host editing the data. Data encrypted in this way is called **sealed data**. Sealed data can be re-requested from
-the operating system and decrypted inside the enclave.
+You can encrypt and authenticate data using the private keys generated by enclaves to stop the host from editing it.
+Data encrypted in this way is called **sealed data**. Sealed data can be re-requested from the OS and
+decrypted inside the enclave. Conclave handles the sealing process for you.
 
+However, there's one class of attack encryption cannot stop. This attack is when the host gives you back older data than
+was requested. The owner of the computer controls the system clock, which makes it unreliable. Additionally,
+the owner can kill and restart the host process whenever they like. This means that a system owner can tamper with 
+the enclave's sense of time and order of events. By snapshotting the stored (sealed, encrypted) data an enclave has 
+provided after each network message from a client is delivered, the enclave can be "rewound" to any
+point. Then, stored messages from the clients can be replayed back to the enclave in different orders, or with some
+messages dropped.
 
-Conclave handles the sealing process for you. Unfortunately there's one class of attack encryption cannot stop. It
-must instead be considered in the design of your app. That attack is when the host gives you back older data than
-was requested. The system clock is controlled by the owner of the computer and so can't be relied on. Additionally,
-the owner can kill and restart the host process whenever they like.
+Such attacks are called memento/rewind/replay attacks.
+You can use Conclave's [persistent map](persistence.md#persistent-map) to mitigate rewind attacks.
 
-Together this means an enclave's sense of time and ordering of events can be tampered with to create confusion. By
-snapshotting the stored (sealed, encrypted) data an enclave has provided after each network message from a client is
-delivered, the enclave can be "rewound" to any point. Then stored messages from the clients can be replayed back to
-the enclave in different orders, or with some messages dropped. We call this a Memento attack, after [the film in which
-the protagonist has anterograde amnesia](https://en.wikipedia.org/wiki/Memento_(film)).
+## Side-channel attacks
 
-!!! warning
+Side-channel attacks break encryption without defeating the underlying algorithms by making precise observations 
+from outside a machine or a program doing a secure computation. These observations may be of timings or 
+power draw fluctuations.
 
-    A full discussion of Memento attacks is beyond the scope of this document. The Conclave project strives to provide
-    you with high level protocol constructs that take them into account, but when writing your own protocols you should
-    consider carefully what happens when messages can be re-ordered and re-tried by the host.
+As enclaves run in an environment controlled by an untrusted host, you must assume that the operator of the host
+hardware is observing such values in an attempt to break the enclave's security.
 
-## Side channel attacks
+Side-channel attacks introduce a fundamental tradeoff between performance, scalability, and security. A part of
+Conclave's purpose is to make it easy for you to understand and control these tradeoffs while automatically
+blocking as many attacks as possible.
 
-Side channel attacks are a way to break encryption without actually defeating the underlying algorithms, by making very
-precise observations from the outside of a machine or program doing a secure computation. Those observations may be
-of timings or power draw fluctuations.
+As side-channel attacks present tradeoffs between privacy and performance, analyzing them requires a different
+mindset from regular security analysis. Theoretically, one could claim that a side-channel attack occurred even when a
+single bit of data leaked. However, such minor leaks wouldn't risk any serious data loss. It might be better to allow
+a limited amount of leakage to obtain better performance.
 
-Because enclaves run in an environment controlled by an untrusted host, we must assume the operator of the host hardware
-is doing these kinds of observations in an attempt to break the security of the enclave.
+A standard example is when a malicious program tries to identify whether a message is of type A or B. In many 
+cases, the number or sequencing of message types doesn't reveal any vital information and thus doesn't need to be
+protected. In such cases, only the specific data within the messages need to be protected.
 
-Side channel attacks introduce a fundamental tradeoff between performance, scalability and security. A part of 
-Conclave's intended value proposition is to surface these tradeoffs to you in a way that's easy to understand and 
-control, whilst blocking as many attacks as possible automatically.
-
-Side channel attacks on enclaves can be divided into two categories:
+Side-channel attacks on enclaves are of two categories:
 
 1. Architectural
 2. Micro-architectural
 
 These types are discussed more below.
 
-Because side channel attacks present tradeoffs between privacy and performance, analysing them requires a different 
-mindset to normal security analysis. Formally, we can say a secret has been leaked via a side channel if we can 
-learn even a single binary bit of data about an encrypted message. However often the leaked data doesn't matter or 
-isn't a secret worth protecting. In these cases it may be better to allow a limited amount of leakage to obtain
-better performance. Future versions of this guide and the Conclave API will assist you in studying and making these
-tradeoffs.
-
-A standard example is whether a message is of type A or type B, under the assumption that most apps have at least 
-two kinds of message that an enclave can process from clients. Careful requirements analysis may reveal that
-the number or sequencing of message types doesn't reveal any important information and thus doesn't need to be 
-protected: only the specific data within the messages.      
-
 ### Architectural attacks
 
-Architectural side channel attacks exploit the nature, structure or specific code of your application architecture to 
-reveal secrets. 
-  
+Architectural side-channel attacks exploit the nature, structure, or specific code of your application architecture to
+reveal secrets.
+
 Here is a non-exhaustive set of examples:
 
-* **Message sizes**. If your enclave is known to process only two kinds of message of around 1 kilobyte or 100 kilobytes
-  respectively, then the size of the encrypted message by itself leaks information about what kind of message it is.
-* **Message processing time**. The same as message sizes but with processing time, e.g. a message type that takes 1 millisecond 
-  to process vs 100 milliseconds can leak what kind of message it is by simply observing how much work the enclave does when
-  the host passes it the new data.
-* **Storage access patterns**. If your enclave doesn't access the database when processing a message of type A, but does
-  when processing a message of type B, or accesses the database with a different sequence, number or type of accesses,
-  the host can learn the message type by observing those accesses.  
+* **Message sizes**. If an enclave is known to process only two kinds of message of around 1 kilobyte or 100 
+  kilobytes, then the size of the encrypted message by itself leaks information about what kind of message it is.
+  Conclave can pad all messages to make all encrypted messages appear the same size. This approach works
+  if message sizes don't vary wildly, and you can afford to use the bandwidth and storage required to set all messages
+  to their maximum possible size.
 
-Many of these techniques can be used to reveal fine-grained information, not just message types. For instance if an
-encrypted piece of data contains a number that's then used to control a loop that does data lookups, counting the
-number of external data lookups reveals the number.
+* **Message processing time**. If an enclave processes a message type in 1 millisecond and another message type in 
+  100 milliseconds, observing how much work the enclave does for a new message, can reveal what kind of message it is.
 
-Some kinds of architectural side channel attacks can be mitigated by Conclave for you, for instance, messages can be
-padded so all encrypted messages look the same size. This sort of approach works if message sizes don't vary too wildly
-and you can afford to use the bandwidth and storage to set all messages to their maximum possible size. How valuable it
-is in your situation is a topic for you to consider as you design your app.
+* **Storage access patterns**. Suppose an enclave doesn't access the database when processing a message of type A, 
+  but does when processing a message of type B, or accesses the database with a different sequence, number or type 
+  of accesses. In that case, the host can learn the message type by observing those accesses.
+  Conclave's [persistent file system](persistence.md#persistent-encrypted-filesystem) randomizes sector accesses to
+  reduce such side-channel attacks.
+
+Malicious actors can use these techniques to reveal fine-grained information as well. For instance, if an encrypted
+piece of data contains a number used to control a loop that does data lookups, counting the number of external data
+lookups reveals the number.
 
 ### Micro-architectural
 
-Enclave memory is encrypted. Micro-architectural side channel attacks exploit the inner workings of the CPU itself to 
-reveal information whilst it's being processed by the CPU in its normal unencrypted state.
+Enclave memory is encrypted. Micro-architectural side-channel attacks exploit the inner workings of the CPU to
+reveal information while the CPU processes the data in its normal unencrypted state.
 
-There are a variety of different attacks with varying details. They work by exploiting the speculative execution
-capability of the processor to make an enclave compute on invalid data, which can then be used to bypass normal security
-mechanisms and leak data out of the enclave - not via normal means (which the CPU doesn't allow) but by affecting the
-timing of subsequent operations which can then be measured.
+There are a variety of different attacks with varying details. These attacks work by exploiting the speculative
+execution capability of the processor to make an enclave compute on invalid data, which can then be used to bypass 
+security mechanisms and leak data out of the enclave - not via normal means (which the CPU doesn't allow) but
+by affecting the timing of subsequent operations, which can then be measured.
 
-Micro-architectural side channel attacks can be resolved at a layer lower than the architecture of your own application.
-They often require reducing the performance of either the enclave or the entire host system however, so it's worth
+You can prevent micro-architectural side-channel attacks at a layer lower than the architecture of your application. 
+These methods often require reducing the performance of either the enclave or the host system. So, it's worth
 always planning for a large buffer of unused per-host performance.
 
-The mitigations suggested for the latest round of micro-architectural side channel attacks (load value injection or LVI 
-attacks) work by effectively disabling speculative execution when in enclave mode. Combined with the overhead of memory
-encryption, execution inside an enclave can run a lot slower than normal software running outside.
+The mitigations suggested for micro-architectural side-channel attacks like
+[Load Value Injection (LVI)](https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/technical-documentation/load-value-injection.html)
+attacks work by effectively disabling speculative execution when in enclave mode. Consider the performance
+tradeoffs while mitigating micro-architectural attacks on your app.
 
-### Impact of side channel attacks
+### Impact of side-channel attacks
 
-Not all enclaves operate on secret data. Some types of enclave are used for their auditable execution rather than to
-work with secret data inaccessible to the host. For those kinds of enclave it's sufficient to protect the signing keys
-rather than all data the enclave accesses. Other types of enclave work purely with secret data, but expect that the host
-isn't normally malicious: in this scenario enclaves are being used to slow down or stop attackers in the face of a 
-hacked host network. It thus makes up one part of a standard suite of security measures.   
+Not all enclaves operate on secret data. Some enclaves are used for their auditable execution rather than for
+protecting secret data from the host. For such enclaves, it's sufficient to protect the signing keys rather than all
+data the enclave accesses. Other types of enclaves work purely with secret data but expect that the host
+isn't normally malicious. In this scenario, enclaves are used to slow down or stop attackers in the face of a hacked
+host network. It thus makes up one part of a standard suite of security measures.
 
-Because the performance/privacy tradeoff presented by side channel attacks can vary so widely, and this is an active area
-of academic research, the expectation is that every new Conclave version will provide new tools and tunable settings 
-to control their impact. This will continue for the lifespan of the product. As a developer it's your responsibility to
-both upgrade to new versions as they come out, and to take side channels into account when planning the architecture
-and capacity needs of your application.
+As the performance/privacy tradeoff presented by side-channel attacks can vary widely, and this is an active area
+of academic research, Conclave will provide new tools and tunable settings to control their impact with new versions.
+As a developer, you need to upgrade to new versions as they come out, and take other mitigations steps against 
+side-channel attacks when planning the architecture of your application.
 
 ### Random numbers
 
-Care must be taken when generating random numbers inside the enclave to ensure that you use a suitably strong
-random number generator that cannot be weakened or influenced by the host by tampering with data that is used
-to seed the random number generator.
+To generate random numbers inside the enclave, you need to use a strong random number generator that cannot be
+weakened by the host.
 
-The safest way to ensure you are using a safe random number generator is to use the `SecureRandom` class to generate
-your random numbers. In Conclave enclaves, the implementation of this class uses the `RDRAND` instruction to 
-use an on-CPU hardware random number generator.
+The safest way is to use the
+[`SecureRandom`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/SecureRandom.html) class 
+to generate random numbers. In Conclave enclaves, the implementation of this class uses the `RDRAND` instruction, 
+which uses an on-CPU hardware random number generator.
 
-The implementation of the JDK `Random` class normally uses the system time as a seed, XORing it with a fixed value
-that is updated predictably with each new `Random` class instance. This provides an attack surface for the
-host as the time inside the enclave is provided directly by the host. In order to prevent accidental use of
-an insecure random number generator, Conclave modifies this behaviour so the first instance of a `Random`
-class XORs the system time with a truly random number derived from the `RDRAND` instruction. This results in
-the class using a truly unique high entropy seed. Subsequent instances of `Random` transform the seed to
-ensure no two sequences are the same but the entropy is not renewed using the `RDRAND` instruction.
-Therefore for the best quality random data it is still recommended to use `SecureRandom`.
+The JDK `Random` class normally uses the system time as a seed, XORing it with a fixed value
+that is updated predictably with each new `Random` class instance. If you use the JDK `Random` class, the host can
+break the security provided by the random numbers as the time inside the enclave is provided directly by the host.
+To prevent accidental use of an insecure random number generator, Conclave XORs the first instance of the system time
+with a truly random number derived from the `RDRAND` instruction. This results in the class using a truly unique
+high-entropy seed. Subsequent instances of `Random` transform the seed to ensure no two sequences are the same, but
+the entropy is not renewed using the `RDRAND` instruction.
+
+For the best quality random data, it is still recommended to use `SecureRandom`.
