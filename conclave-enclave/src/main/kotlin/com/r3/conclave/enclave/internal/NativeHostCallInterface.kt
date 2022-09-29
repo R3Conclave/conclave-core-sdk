@@ -10,9 +10,21 @@ import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
 import java.util.*
 
+/**
+ * This class is the implementation of the [HostCallInterface] for native enclaves.
+ * It has three jobs:
+ *  - Serve as the endpoint for calls to make to the host, see [com.r3.conclave.common.internal.CallInitiator]
+ *  - Route calls from the host to the appropriate enclave side call handler, see [com.r3.conclave.common.internal.CallAcceptor]
+ *  - Handle the low-level details of the messaging protocol (ecalls and ocalls).
+ */
 class NativeHostCallInterface : HostCallInterface() {
+    /** In release mode we want to sanitise exceptions to prevent leakage of information from the enclave */
     var sanitiseExceptions: Boolean = false
 
+    /**
+     * Each thread has a lazily created stack which contains a frame for the currently active host call.
+     * When a message arrives from the host, this stack is used to associate the return value with the corresponding call.
+     */
     private inner class StackFrame(
             val callType: HostCallType,
             var exceptionBuffer: ByteBuffer?,
@@ -27,7 +39,13 @@ class NativeHostCallInterface : HostCallInterface() {
             return threadStacks.get()
         }
 
-    override fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    private fun checkCallType(type: HostCallType) = check(type == stack.peek().callType) { "Call type mismatch" }
+
+    /**
+     * Internal method for initiating a host call with specific arguments.
+     * This should not be called directly, but instead by implementations in [HostCallInterface].
+     */
+    override fun executeCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
         Native.jvmOcall(
@@ -43,7 +61,7 @@ class NativeHostCallInterface : HostCallInterface() {
     }
 
     /**
-     * Handle Ecalls that originate from the host.
+     * Handle ecalls that originate from the host.
      */
     fun handleEcall(callTypeID: Short, ecallType: NativeMessageType, data: ByteBuffer) {
         when (ecallType) {
@@ -55,7 +73,7 @@ class NativeHostCallInterface : HostCallInterface() {
 
     /**
      * In release mode we want exceptions propagated out of the enclave to be sanitised
-     * to reduce the likelihood of secrets being leaked out of the enclave.
+     * to reduce the likelihood of secrets being leaked from the enclave.
      */
     private fun sanitiseThrowable(throwable: Throwable): Throwable {
         return when (throwable) {
@@ -69,11 +87,15 @@ class NativeHostCallInterface : HostCallInterface() {
         }
     }
 
+    /**
+     * Handle call initiations from the host.
+     * This method propagates the call to the appropriate enclave side call handler, then sanitises, serialises and
+     * propagates any exceptions that occur. If a return value is produced, a reply message is sent back to the host.
+     */
     private fun handleCallEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
             acceptCall(callType, parameterBuffer)?.let {
-                Native.jvmOcall(
-                        callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+                Native.jvmOcall(callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
@@ -82,13 +104,19 @@ class NativeHostCallInterface : HostCallInterface() {
         }
     }
 
+    /**
+     * Handle return messages originating from the host.
+     */
     private fun handleReturnEcall(callType: HostCallType, returnBuffer: ByteBuffer) {
-        check(callType == stack.peek().callType) { "Return Ecall type mismatch." }
+        checkCallType(callType)
         stack.peek().returnBuffer = ByteBuffer.wrap(returnBuffer.getAllBytes())
     }
 
+    /**
+     * Handle exception messages originating from the host.
+     */
     private fun handleExceptionEcall(callType: HostCallType, exceptionBuffer: ByteBuffer) {
-        check(callType == stack.peek().callType) { "Exception Ecall type mismatch." }
+        checkCallType(callType)
         stack.peek().exceptionBuffer = ByteBuffer.wrap(exceptionBuffer.getAllBytes())
     }
 }

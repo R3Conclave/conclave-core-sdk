@@ -23,7 +23,7 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
 
     /**
      * Each thread has a lazily created stack which contains a frame for the currently active enclave call.
-     * When a message arrives from the enclave, this stack is used to associate the return value with the call.
+     * When a message arrives from the enclave, this stack is used to associate the return value with the corresponding call.
      */
     private val threadLocalStacks = ThreadLocal<Stack<StackFrame>>()
     private val stack: Stack<StackFrame>
@@ -60,7 +60,7 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
      * Handler low level messages arriving from the enclave.
      */
     fun handleOcall(enclaveId: Long, callTypeID: Short, ocallType: NativeMessageType, data: ByteBuffer) {
-        check(enclaveId == this.enclaveId) { "Enclave ID mismatch." }
+        checkEnclaveID(enclaveId)
         when (ocallType) {
             NativeMessageType.CALL -> handleCallOcall(HostCallType.fromShort(callTypeID), data)
             NativeMessageType.RETURN -> handleReturnOcall(EnclaveCallType.fromShort(callTypeID), data)
@@ -70,14 +70,13 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
 
     /**
      * Handle call initiations from the enclave.
-     * This method propagates the call to the appropriate call handler, then serialises and propagates any exceptions
-     * which might occur. If a return value is produced, a reply message is sent back to the enclave.
+     * This method propagates the call to the appropriate host side call handler, then serialises and propagates any
+     * exceptions that occur. If a return value is produced, a reply message is sent back to the enclave.
      */
     private fun handleCallOcall(callType: HostCallType, parameterBuffer: ByteBuffer) {
         try {
             acceptCall(callType, parameterBuffer)?.let {
-                NativeApi.sendEcall(
-                        enclaveId, callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+                NativeApi.sendEcall(enclaveId, callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val serializedException = ThrowableSerialisation.serialise(throwable)
