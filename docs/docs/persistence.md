@@ -6,7 +6,7 @@ it correctly or it may even try to deduce information if it can observe access p
 writes to it.
 
 To address these issues, Conclave provides two perisistence mechanisms: the the enclave filesystem and the 
-[persistent map](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html). Both come with their 
+[persistent map](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/get-persistent-map.html). Both come with their 
 pros and cons. Which one to use depends on the application logic and how much the users of the enclave trust the host.
 
 ## Conclave filesystems
@@ -62,8 +62,8 @@ Either or both filesystems can be enabled, and they will be mounted onto a singl
 
 On the host side, it must provide a single file to store the persistent filesystem. If using the
 [Conclave web host](conclave-web-host.md) then this is the `--filesystem.file` flag. If using
-[`EnclaveHost`](api/-conclave/com.r3.conclave.host/-enclave-host/index.html) directly 
-then this is specified in the [`start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html) method.
+[`EnclaveHost`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/index.html) directly 
+then this is specified in the [`start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html) method.
 
 ### Rewind attacks against the persistent filesystem
 
@@ -86,18 +86,18 @@ the state of the clients will not be in-line.
 ## Persistent Map
 
 To help prevent against rewind attacks and deal with transactionality, Conclave provides a simple
-[key-value store](api/-conclave/com.r3.conclave.enclave/-enclave/get-persistent-map.html), represented as a
+[key-value store](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/get-persistent-map.html), represented as a
 `java.util.Map` object, mapping string keys to arbitrary bytes.
 
 To prevent the host from using an older version of this map (i.e. a rewind attack), the enclave includes a small 
 amount of (hidden) data in every mail it sends to its client. The clients on their part have to keep track of this 
 data and make sure the values they receive are what was expected. If the host does restart the enclave with an 
 older version of the map then the clients will detect a mismatch. The
-[`EnclaveClient`](api/-conclave/com.r3.conclave.client/-enclave-client/index.html) class deals with all of this.
+[`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) class deals with all of this.
 
 Changes to the persistent map are only committed at the end of every
-[`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) and
-[`receiveFromUntrustedHost`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) call 
+[`receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html) and
+[`receiveFromUntrustedHost`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) call 
 where its _entire_ contents is serialized and encrypted into a single blob. This enables transactionality with 
 respect to the processing of mail but also protects against any access pattern side channel attacks. However, this 
 does come at the cost of a performance overhead and so the map should be used judiciously.
@@ -116,8 +116,8 @@ can also be specified.
 
 On the host side, the encrypted persistent map is represented by the "sealed state" byte array. If using the
 [Conclave web host](conclave-web-host.md) then this is the `--sealed.state.file` flag. If using
-[`EnclaveHost`](api/-conclave/com.r3.conclave.host/-enclave-host/index.html) directly then this is specified in the 
-[`start`](api/-conclave/com.r3.conclave.host/-enclave-host/start.html) method.
+[`EnclaveHost`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/index.html) directly then this is specified in the 
+[`start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html) method.
 
 ### Persistent filesystem with the persistent map
 

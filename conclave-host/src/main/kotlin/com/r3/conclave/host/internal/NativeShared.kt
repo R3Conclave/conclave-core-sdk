@@ -25,8 +25,6 @@ object NativeShared {
                 it.allResources.forEachInputStream { resource, stream ->
                     val name = resource.path.substringAfterLast('/')
                     val destination = tempDirectory.resolve(name)
-                    // REPLACE_EXISTING is a hack to work around an issue observed by IntellectEU that has not
-                    // yet been diagnosed. See bug CON-239.
                     logger.debug("Copying $name to $destination")
                     Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING)
                 }

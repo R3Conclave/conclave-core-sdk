@@ -129,8 +129,8 @@ interface EnclaveMail : EnclaveMailHeader {
  * For a mail response this will be the same post office that created the original request. Inside an enclave nothing
  * needs to be done as mail is automatically decrypted.
  *
- * When inside an enclave instances can only be created using one of the `Enclave.postOffice()` methods, and cannot be
- * created using [PostOffice.create] or `EnclaveInstanceInfo.createPostOffice()`. This is to ensure the enclave's
+ * When inside an enclave instances can only be created using one of the [com.r3.conclave.enclave.Enclave.postOffice] methods, and cannot be
+ * created using [PostOffice.create] or [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice]. This is to ensure the enclave's
  * private key is correctly applied as the sender.
  *
  * [PostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
@@ -161,8 +161,8 @@ abstract class PostOffice(
          *
          * A new random sender key can be created using [Curve25519PrivateKey.random].
          *
-         * Do not use this for mail targeted at an enclave. Instead use `EnclaveInstanceInfo.createPostOffice()`, or if
-         * inside an enclave, `Enclave.postOffice()`.
+         * Do not use this for mail targeted at an enclave. Instead use [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice], or if
+         * inside an enclave, [com.r3.conclave.enclave.Enclave.postOffice].
          */
         @JvmStatic
         fun create(destinationPublicKey: PublicKey, senderPrivateKey: PrivateKey, topic: String): PostOffice {
@@ -174,8 +174,8 @@ abstract class PostOffice(
          * be created and each mail will be authenticated with it (it can be retrieved using [senderPrivateKey]). The mail
          * topic will be "default".
          *
-         * Do not use this for mail targeted at an enclave. Instead use `EnclaveInstanceInfo.createPostOffice()`, or if
-         * inside an enclave, `Enclave.postOffice()`.
+         * Do not use this for mail targeted at an enclave. Instead use [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice], or if
+         * inside an enclave, [com.r3.conclave.enclave.Enclave.postOffice].
          */
         @JvmStatic
         fun create(destinationPublicKey: PublicKey): PostOffice {

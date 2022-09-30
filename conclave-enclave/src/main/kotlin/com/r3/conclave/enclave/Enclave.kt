@@ -43,7 +43,7 @@ import kotlin.concurrent.withLock
  * 1. Local connections from the host. But remember the host is malicious in the SGX
  *    threat model, so anything received from the host cannot be completely trusted.
  *    Override and implement [receiveFromUntrustedHost] to receive the byte arrays sent via
- *    `EnclaveHost.callEnclave`.
+ *    [com.r3.conclave.host.EnclaveHost.callEnclave].
  * 2. [EnclaveMail], an encrypted, authenticated and padded asynchronous messaging
  *    scheme. Clients that obtain a [EnclaveInstanceInfo] from the host can create
  *    mails and send it to the host for delivery. Override and implement [receiveMail] to receive mail via the host.
@@ -192,39 +192,39 @@ abstract class Enclave {
     protected open val threadSafe: Boolean get() = false
 
     /**
-     * Override this method to receive bytes from the untrusted host via `EnclaveHost.callEnclave`.
+     * Override this method to receive bytes from the untrusted host via [com.r3.conclave.host.EnclaveHost.callEnclave].
      *
      * Default implementation throws [UnsupportedOperationException] so you should not perform a supercall.
      *
-     * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.callEnclave`. In Java, checked
+     * Any uncaught exceptions thrown by this method propagate to the calling [com.r3.conclave.host.EnclaveHost.callEnclave]. In Java, checked
      * exceptions can be made to propagate by rethrowing them in an unchecked one.
      *
      * @param bytes Bytes received from the host.
      *
-     * @return Bytes to sent back to the host as the return value of the `EnclaveHost.callEnclave` call. Can be null.
+     * @return Bytes to sent back to the host as the return value of the [com.r3.conclave.host.EnclaveHost.callEnclave] call. Can be null.
      */
     protected open fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
         throw UnsupportedOperationException("This enclave does not support local host communication.")
     }
 
     /**
-     * Sends the given bytes to the callback provided to `EnclaveHost.callEnclave`.
+     * Sends the given bytes to the callback provided to [com.r3.conclave.host.EnclaveHost.callEnclave].
      *
      * @return The bytes returned from the host's callback.
      *
-     * @throws IllegalStateException If no callback was provided to `EnclaveHost.callEnclave`.
+     * @throws IllegalStateException If no callback was provided to [com.r3.conclave.host.EnclaveHost.callEnclave].
      */
     protected fun callUntrustedHost(bytes: ByteArray): ByteArray? = callUntrustedHostInternal(bytes, null)
 
     /**
-     * Sends the given bytes to the callback provided to `EnclaveHost.callEnclave`.
+     * Sends the given bytes to the callback provided to [com.r3.conclave.host.EnclaveHost.callEnclave].
      * If the host responds by doing another call back into the enclave rather than immediately returning
      * from the callback, that call will be routed to [callback]. In this way a form of virtual stack can
      * be built up between host and enclave as they call back and forth.
      *
      * @return The bytes returned from the host's callback.
      *
-     * @throws IllegalStateException If no callback was provided to `EnclaveHost.callEnclave`.
+     * @throws IllegalStateException If no callback was provided to [com.r3.conclave.host.EnclaveHost.callEnclave].
      */
     protected fun callUntrustedHost(bytes: ByteArray, callback: Function<ByteArray, ByteArray?>): ByteArray? {
         return callUntrustedHostInternal(bytes, callback)
@@ -996,14 +996,14 @@ abstract class Enclave {
     private lateinit var encryptionKeyPair: KeyPair
 
     /**
-     * Invoked when a mail has been delivered by the host (via `EnclaveHost.deliverMail`), successfully decrypted
-     * and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
+     * Invoked when a mail has been delivered by the host (via [com.r3.conclave.host.EnclaveHost.deliverMail]),
+     * successfully decrypted and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
      *
      * Default implementation throws [UnsupportedOperationException] so you should not
      * perform a supercall.
      *
-     * Any uncaught exceptions thrown by this method propagate to the calling `EnclaveHost.deliverMail`. In Java, checked
-     * exceptions can be made to propagate by rethrowing them in an unchecked one.
+     * Any uncaught exceptions thrown by this method propagate to the calling [com.r3.conclave.host.EnclaveHost.deliverMail].
+     * In Java, checked exceptions can be made to propagate by rethrowing them in an unchecked one.
      *
      * @param mail Access to the decrypted/authenticated mail body+envelope.
      * @param routingHint An optional string provided by the host that can be passed to [postMail] to tell the
