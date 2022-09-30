@@ -12,6 +12,7 @@ import com.r3.conclave.common.internal.attestation.HardwareAttestation
  */
 interface AttestationService {
     fun attestQuote(signedQuote: ByteCursor<SgxSignedQuote>): Attestation
+    fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray
 }
 
 /**

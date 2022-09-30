@@ -67,6 +67,10 @@ class EpidAttestationService(override val isRelease: Boolean, private val subscr
         }
     }
 
+    override fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {
+        return byteArrayOf()
+    }
+
     /**
      * The certificate chain is stored in the `X-IASReport-Signing-Certificate` header in PEM format as an URL encoded
      * string.
