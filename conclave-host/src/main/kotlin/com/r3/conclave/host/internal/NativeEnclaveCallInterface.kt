@@ -1,12 +1,11 @@
 package com.r3.conclave.host.internal
 
-import com.r3.conclave.common.internal.EnclaveCallType
-import com.r3.conclave.common.internal.HostCallType
-import com.r3.conclave.common.internal.CallInterfaceMessageType
-import com.r3.conclave.common.internal.ThrowableSerialisation
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
 import java.util.Stack
+
+typealias StackFrame = CallInterfaceStackFrame<EnclaveCallType>
 
 /**
  * This class is the implementation of the [EnclaveCallInterface] for native enclaves.
@@ -16,11 +15,6 @@ import java.util.Stack
  *  - Handle the low-level details of the messaging protocol (ecalls and ocalls).
  */
 class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInterface() {
-    private inner class StackFrame(
-            val callType: EnclaveCallType,
-            var exceptionBuffer: ByteBuffer?,
-            var returnBuffer: ByteBuffer?)
-
     /**
      * Each thread has a lazily created stack which contains a frame for the currently active enclave call.
      * When a message arrives from the enclave, this stack is used to associate the return value with the corresponding call.

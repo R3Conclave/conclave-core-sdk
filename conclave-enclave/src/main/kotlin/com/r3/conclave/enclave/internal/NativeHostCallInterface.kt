@@ -1,14 +1,13 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveStartException
-import com.r3.conclave.common.internal.EnclaveCallType
-import com.r3.conclave.common.internal.HostCallType
-import com.r3.conclave.common.internal.CallInterfaceMessageType
-import com.r3.conclave.common.internal.ThrowableSerialisation
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
 import java.util.*
+
+typealias StackFrame = CallInterfaceStackFrame<HostCallType>
 
 /**
  * This class is the implementation of the [HostCallInterface] for native enclaves.
@@ -25,11 +24,6 @@ class NativeHostCallInterface : HostCallInterface() {
      * Each thread has a lazily created stack which contains a frame for the currently active host call.
      * When a message arrives from the host, this stack is used to associate the return value with the corresponding call.
      */
-    private inner class StackFrame(
-            val callType: HostCallType,
-            var exceptionBuffer: ByteBuffer?,
-            var returnBuffer: ByteBuffer?)
-
     private val threadStacks = ThreadLocal<Stack<StackFrame>>()
     private val stack: Stack<StackFrame>
         get() {
