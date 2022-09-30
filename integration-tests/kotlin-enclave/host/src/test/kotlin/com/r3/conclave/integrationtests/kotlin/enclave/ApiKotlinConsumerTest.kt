@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test
 import java.security.PrivateKey
 
 /**
- * This test makes sure that the shading of Kotlin into the Conclave SDK does not prevent an app from being written in
- * Kotlin.
+ * This test makes sure that the shading of Kotlin into the Conclave libraries does not prevent an app from being
+ * written in Kotlin.
  */
 class ApiKotlinConsumerTest {
     private lateinit var host: EnclaveHost

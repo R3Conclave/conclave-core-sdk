@@ -5,14 +5,14 @@
 Writing a thread safe enclave is no different to writing any other thread safe code in Java as all the usual concurrency
 tools are available. However, concurrency must be manually enabled or all calls that enter the enclave will execute
 serially, blocking until the previous call has ended. To opt in to concurrency, you must override the
-[`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html) method of your enclave so that it
+[`getThreadSafe`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/get-thread-safe.html) method of your enclave so that it
 returns true.
 
 !!! warning
-    When you return true from [`getThreadSafe`](api/-conclave/com.r3.conclave.enclave/-enclave/get-thread-safe.html),
+    When you return true from [`getThreadSafe`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/get-thread-safe.html),
     you are asserting to Conclave that you've taken the appropriate steps to ensure that your implementations of
-    [`receiveFromUntrustedHost`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) and
-    [`receiveMail`](api/-conclave/com.r3.conclave.enclave/-enclave/receive-mail.html) are thread safe and able to be
+    [`receiveFromUntrustedHost`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html) and
+    [`receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html) are thread safe and able to be
     entered concurrently. As such, when dealing with threaded enclaves, the usual care should be taken to avoid race
     conditions, deadlocks or other synchronization related bugs.
 

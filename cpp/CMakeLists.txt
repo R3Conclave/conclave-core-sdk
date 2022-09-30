@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(conclave-sdk-cpp VERSION 0.1 LANGUAGES CXX)
+project(conclave-core-sdk-cpp VERSION 0.1 LANGUAGES CXX)
 include(CTest)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)

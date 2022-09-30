@@ -1,6 +1,6 @@
 ### Constraints
 
-How do you know the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) you've got is for the enclave you really intend to interact with? In normal
+How do you know the [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) you've got is for the enclave you really intend to interact with? In normal
 client/server programming you connect to a host using some sort of identity, like a domain name or IP address. TLS
 is used to ensure the server that picks up is the rightful owner of the domain name you intended to connect to. In
 enclave programming the location of the enclave might not matter much because the host is untrusted. Instead, you have
@@ -10,11 +10,11 @@ to verify *what* is running, rather than *where* it's running.
     The domain name of the server can still be important in some applications, in which case you should still use TLS
     in addition to enclave constraints.
 
-One way to do this is by inspecting the properties on the [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) object and hard-coding some logic. That
+One way to do this is by inspecting the properties on the [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object and hard-coding some logic. That
 works fine, but testing an `EnclaveInstanceInfo` is a common pattern in enclave programming, so we provide an API to
 do it for you.
 
-The [`EnclaveConstraint`](api/-conclave/com.r3.conclave.common/-enclave-constraint/index.html) class takes an [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) and
+The [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) class takes an [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) and
 performs some matching against it. A constraint object can be built in code, or it can be loaded from a small domain
 specific language encoded as a one-line string. The string form is helpful if you anticipate frequent upgrades that
 should be whitelisted or other frequent changes to the acceptable enclave, as it can be easily put into a
@@ -64,11 +64,11 @@ The above constraint says that any enclave (even if run in simulation mode) sign
 with product ID of 1 is acceptable. Obviously in a real app, you would remove the part that says `SEC:INSECURE`, but
 it's convenient to have this whilst developing.
 
-[`EnclaveConstraint.check`](api/-conclave/com.r3.conclave.common/-enclave-constraint/check.html) compares the
-enclave's [`EnclaveInstanceInfo`](api/-conclave/com.r3.conclave.common/-enclave-instance-info/index.html) against the constraint and
-throws an [`InvalidEnclaveException`](api/-conclave/com.r3.conclave.common/-invalid-enclave-exception/index.html)) if it doesn't
+[`EnclaveConstraint.check`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/check.html) compares the
+enclave's [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) against the constraint and
+throws an [`InvalidEnclaveException`](api/-conclave%20-core/com.r3.conclave.common/-invalid-enclave-exception/index.html)) if it doesn't
 match. This check is done automatically by
-[`EnclaveClient.start`](api/-conclave/com.r3.conclave.client/-enclave-client/start.html) when using `EnclaveClient`.
+[`EnclaveClient.start`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/start.html) when using `EnclaveClient`.
 
 If needed, more than one key hash could be added to the list of enclave constraints (e.g. if simulation and debug
 modes use a distinct key from release mode). The enclave is accepted if one key hash matches.

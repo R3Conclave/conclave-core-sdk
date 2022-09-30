@@ -1,6 +1,6 @@
 # Integration Tests
 
-This is a separate Gradle project which uses a locally published repository containing the Conclave SDK libraries to 
+This is a separate Gradle project which uses a locally published repository containing the Core SDK libraries to 
 run integration-level tests. This repository is expected at the location `../build/repo`, which can be produced by 
 running
 

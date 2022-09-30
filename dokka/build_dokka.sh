@@ -7,7 +7,7 @@ REPO_HOME=/home/`whoami`/.m2/repository/org/jetbrains/dokka
 rm -fr $REPO_HOME
 rm -fr dokka
 
-git clone --depth 1 https://github.com/R3Conclave/dokka.git -b "conclave-changes"
+git clone --depth 1 https://github.com/R3Conclave/dokka.git -b "conclave"
 cd dokka
 ./gradlew publishToMavenLocal -x test -x integrationTest
 cd ..

@@ -124,7 +124,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(findEnclave(enclaveClassName), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner.findEnclave(enclaveClassName), mockConfiguration)
         }
 
         /**
@@ -144,7 +144,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(findEnclave(), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner.findEnclave(), mockConfiguration)
         }
 
         /**
@@ -231,128 +231,15 @@ class EnclaveHost private constructor(
             return EnclaveHost(enclaveHandle)
         }
 
-        /**
-         * Searches for an enclave. There are two places where an enclave can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class named 'className' in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
-         * For example, it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
-         *
-         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         */
-        private fun findEnclave(enclaveClassName: String): EnclaveScanResult {
-            val results = ArrayList<EnclaveScanResult>()
-            EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
-            findMockEnclave(enclaveClassName)?.let { results += it }
-            return getSingleResult(results, enclaveClassName)
-        }
-
-        private fun findNativeEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): EnclaveScanResult.Native? {
-            val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
-            val url = EnclaveHost::class.java.getResource(resourceName)
-            return url?.let { EnclaveScanResult.Native(enclaveClassName, enclaveMode, url) }
-        }
-
-        private fun findMockEnclave(enclaveClassName: String): EnclaveScanResult.Mock? {
-            return try {
-                Class.forName(enclaveClassName)
-                EnclaveScanResult.Mock(enclaveClassName)
-            } catch (e: ClassNotFoundException) {
-                null
-            }
-        }
-
-        /**
-         * Performs a search for an enclave by performing a classpath and module scan. There are two places where an enclave
-         * can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath and search for a file name that matches the pattern
-         * ^.*(simulation|debug|release)\.signed\.so$.
-         *
-         * For mock enclaves, the function searches for classes that extend com.r3.conclave.enclave.Enclave.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         *
-         * @return Pair with the class name and URL (if not a mock enclave) of the enclave found.
-         */
-        private fun findEnclave(): EnclaveScanResult {
-            val classGraph = ClassGraph()
-            val results = ArrayList<EnclaveScanResult>()
-            findNativeEnclaves(classGraph, results)
-            findMockEnclaves(classGraph, results)
-            return getSingleResult(results, null)
-        }
-
-        /**
-         * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
-         */
-        private fun findNativeEnclaves(classGraph: ClassGraph, results: MutableList<EnclaveScanResult>) {
-            val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
-
-            classGraph.scan().use {
-                for (resource in it.allResources) {
-                    val pathMatcher = nativeSoFilePattern.matcher(resource.path)
-                    if (pathMatcher.matches()) {
-                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
-                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        results += EnclaveScanResult.Native(enclaveClassName, enclaveMode, resource.url)
-                    }
-                }
-            }
-        }
-
-        /**
-         * Performs a search for mock enclave files using ClassGraph. The search is performed by looking for classes that
-         * extend com.r3.conclave.enclave.Enclave.
-         */
-        private fun findMockEnclaves(classGraph: ClassGraph, results: MutableList<EnclaveScanResult>) {
-            classGraph.enableClassInfo().scan().use {
-                for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
-                    if (!classInfo.isAbstract) {
-                        results += EnclaveScanResult.Mock(classInfo.name)
-                    }
-                }
-            }
-        }
-
-        private fun getSingleResult(results: List<EnclaveScanResult>, className: String?): EnclaveScanResult {
-            when (results.size) {
-                1 -> return results[0]
-                0 -> {
-                    val beginning = if (className != null) "Enclave $className does not exist" else "No enclaves found"
-                    throw IllegalArgumentException(
-                        """$beginning on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
-                            |    runtimeOnly project(path: ":enclave project", configuration: mode)
-                            |
-                            |    where:
-                            |      mode is either "release", "debug", "simulation" or "mock"
-                            """.trimMargin()
-                    )
-                }
-                else -> throw IllegalStateException("Multiple enclaves were found: $results")
-            }
-        }
-
-        private fun createEnclaveHost(result: EnclaveScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
+        private fun createEnclaveHost(result: EnclaveScanner.ScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
             try {
                 return when (result) {
-                    is EnclaveScanResult.Mock -> {
+                    is EnclaveScanner.ScanResult.Mock -> {
                         // Here we do not call checkPlatformEnclaveSupport as mock mode is supported on any platform
                         val enclaveClass = Class.forName(result.enclaveClassName)
                         internalCreateMock(enclaveClass, mockConfiguration)
                     }
-                    is EnclaveScanResult.Native -> {
+                    is EnclaveScanner.ScanResult.Native -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
                     }
@@ -471,7 +358,7 @@ class EnclaveHost private constructor(
     }
 
     /**
-     * Causes the enclave to be loaded and the `Enclave` object constructed inside.
+     * Causes the enclave to be loaded and the [com.r3.conclave.enclave.Enclave] object constructed inside.
      * This method must be called before sending is possible. Remember to call
      * [close] to free the associated enclave resources when you're done with it.
      *
@@ -483,7 +370,7 @@ class EnclaveHost private constructor(
      *
      * @param sealedState The last sealed state that was emitted by the enclave via [MailCommand.StoreSealedState]. The
      * sealed state is an encrypted blob of the enclave's internal state and it's updated by the enclave as it processes
-     * mail (the contents of `Enclave.getPersistentMap()` is also part of this state). Each new sealed state that is
+     * mail (the contents of [com.r3.conclave.enclave.Enclave.persistentMap] is also part of this state). Each new sealed state that is
      * emitted via [MailCommand.StoreSealedState] supercedes the previous one and must be securely persisted. Failure
      * to do this will result in the enclave's clients detecting a "rollback" attack if the enclave is restarted.
      * Typically the sealed state should be stored in a database, inside the same database transaction that
@@ -520,6 +407,18 @@ class EnclaveHost private constructor(
     ) {
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
+
+        // For now, there is no enclave for Gramine instead the mock enclave is initialised.
+        // This is OK because no VM is started in Mock mode and this will allow us to integrate Gramine with Conclave
+        // iteratively without causing issues to the normal operation of Conclave.
+        // Start Gramine only if the environment variable is set
+        if(Gramine.isGramineEnabled())
+        {
+            if(enclaveHandle !is MockEnclaveHandle) {
+                throw Exception("Gramine cannot be started in non-mock modes")
+            }
+            Gramine.start()
+        }
 
         checkAesmAddrEnvVar()
 
@@ -677,23 +576,24 @@ class EnclaveHost private constructor(
      * mechanism, alternatively, [DataOutputStream] is a convenient way to lay out
      * pieces of data in a fixed order.
      *
-     * For this method to work the enclave class must override and implement `receiveFromUntrustedHost` The return
+     * For this method to work the enclave class must override and implement [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] The return
      * value from that method (which can be null) is returned here. It will not be received via the provided callback.
      *
      * With the provided callback the enclave also has the option of using
-     * `Enclave.callUntrustedHost` and sending/receiving byte arrays in the opposite
+     * [com.r3.conclave.enclave.Enclave.callUntrustedHost] and sending/receiving byte arrays in the opposite
      * direction. By chaining callbacks together, a kind of virtual stack can be constructed
      * allowing complex back-and-forth conversations between enclave and untrusted host.
      *
-     * Any uncaught exceptions thrown by `receiveFromUntrustedHost` will propagate across the enclave-host boundary and
+     * Any uncaught exceptions thrown by [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] will propagate across the enclave-host boundary and
      * will be rethrown here.
      *
      * @param bytes Bytes to send to the enclave.
-     * @param callback Bytes received from the enclave via `Enclave.callUntrustedHost`.
+     * @param callback Bytes received from the enclave via [com.r3.conclave.enclave.Enclave.callUntrustedHost].
      *
-     * @return The return value of the enclave's `receiveFromUntrustedHost`.
+     * @return The return value of the enclave's [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of
+     * [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      * @throws IllegalStateException If the host has not been started.
      * @throws EnclaveException If an exception is raised from within the enclave.
      */
@@ -707,20 +607,20 @@ class EnclaveHost private constructor(
      * mechanism, alternatively, [DataOutputStream] is a convenient way to lay out
      * pieces of data in a fixed order.
      *
-     * For this method to work the enclave class must override and implement `receiveFromUntrustedHost` The return
+     * For this method to work the enclave class must override and implement [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] The return
      * value from that method (which can be null) is returned here. It will not be received via the provided callback.
      *
-     * The enclave does not have the option of using `Enclave.callUntrustedHost` for
+     * The enclave does not have the option of using [com.r3.conclave.enclave.Enclave.callUntrustedHost] for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
-     * Any uncaught exceptions thrown by `receiveFromUntrustedHost` will propagate across the enclave-host boundary and
-     * will be rethrown here.
+     * Any uncaught exceptions thrown by [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost] will propagate
+     * across the enclave-host boundary and will be rethrown here.
      *
      * @param bytes Bytes to send to the enclave.
      *
-     * @return The return value of the enclave's `receiveFromUntrustedHost`.
+     * @return The return value of the enclave's [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation of `receiveFromUntrustedHost`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation of [com.r3.conclave.enclave.Enclave.receiveFromUntrustedHost].
      * @throws IllegalStateException If the host has not been started.
      * @throws EnclaveException If an exception is raised from within the enclave.
      */
@@ -731,7 +631,8 @@ class EnclaveHost private constructor(
     }
 
     /**
-     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement `receiveMail`
+     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement
+     * [com.r3.conclave.enclave.Enclave.receiveMail]
      * to receive it. If the enclave throws an exception it will be rethrown.
      * It's up to the caller to decide what to do with mails that don't seem to be
      * handled properly: discarding it and logging an error is a simple option, or
@@ -750,11 +651,12 @@ class EnclaveHost private constructor(
      * @param mail The encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
      * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
-     * @param callback If the enclave calls `Enclave.callUntrustedHost` then the
+     * @param callback If the enclave calls [com.r3.conclave.enclave.Enclave.callUntrustedHost] then the
      * bytes will be passed to this object for consumption and generation of the
      * response.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation for
+     * [com.r3.conclave.enclave.Enclave.receiveMail].
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
      * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
@@ -768,7 +670,8 @@ class EnclaveHost private constructor(
     }
 
     /**
-     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement `receiveMail`
+     * Delivers the given encrypted mail bytes to the enclave. The enclave is required to override and implement
+     * [com.r3.conclave.enclave.Enclave.receiveMail]
      * to receive it. If the enclave throws an exception it will be rethrown.
      * It's up to the caller to decide what to do with mails that don't seem to be
      * handled properly: discarding it and logging an error is a simple option, or
@@ -784,14 +687,14 @@ class EnclaveHost private constructor(
      * restarted and the client had used the enclave's old encryption key. In such a scenerio the client must be
      * informed so that it re-send the mail using the enclave's new encryption key.
      *
-     * Note: The enclave does not have the option of using `Enclave.callUntrustedHost` for
+     * Note: The enclave does not have the option of using [com.r3.conclave.enclave.Enclave.callUntrustedHost] for
      * sending bytes back to the host. Use the overload which takes in a callback [Function] instead.
      *
      * @param mail the encrypted mail received from a remote client.
      * @param routingHint An arbitrary bit of data identifying the sender on the host side. The enclave can pass this
      * back through to [MailCommand.PostMail] to ask the host to deliver the reply to the right location.
      *
-     * @throws UnsupportedOperationException If the enclave has not provided an implementation for `receiveMail`.
+     * @throws UnsupportedOperationException If the enclave has not provided an implementation for [com.r3.conclave.enclave.Enclave.receiveMail].
      * @throws MailDecryptionException If the enclave was unable to decrypt the mail due to either key mismatch or
      * corrupted mail bytes.
      * @throws IOException If the mail is encrypted with a KDS private key and the host was unable to communicate
@@ -816,6 +719,9 @@ class EnclaveHost private constructor(
 
     @Synchronized
     override fun close() {
+        if(Gramine.isGramineEnabled()) {
+            Gramine.stop()
+        }
         // Closing an unstarted or already closed EnclaveHost is allowed, because this makes it easier to use
         // Java try-with-resources and makes finally blocks more forgiving, e.g.
         //
@@ -1099,20 +1005,139 @@ class EnclaveHost private constructor(
         object Closed : HostState()
     }
 
-    private sealed class EnclaveScanResult {
-        class Mock(val enclaveClassName: String) : EnclaveScanResult() {
-            override fun toString(): String = "mock $enclaveClassName"
+    /**
+     * The following singleton contains the necessary functions to search for enclave classes
+     **/
+    private object EnclaveScanner {
+
+        /**
+         * Performs a search for an enclave by performing a classpath and module scan. There are two places where an enclave
+         * can be found.
+         * 1) In an SGX signed enclave file (.so)
+         * 2) For mock enclaves, an existing class in the classpath
+         *
+         * For a .so enclave file the function looks in the classpath and search for a file name that matches the pattern
+         * ^.*(simulation|debug|release)\.signed\.so$.
+         *
+         * For mock enclaves, the function searches for classes that extend com.r3.conclave.enclave.Enclave.
+         *
+         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
+         *
+         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
+         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
+         *
+         * @return Pair with the class name and URL (if not a mock enclave) of the enclave found.
+         */
+        fun findEnclave(): ScanResult {
+            val classGraph = ClassGraph()
+            val results = ArrayList<ScanResult>()
+            findNativeEnclaves(classGraph, results)
+            findMockEnclaves(classGraph, results)
+            return getSingleResult(results, null)
         }
 
-        class Native(
-            val enclaveClassName: String,
-            val enclaveMode: EnclaveMode,
-            val soFileUrl: URL
-        ) : EnclaveScanResult() {
-            init {
-                require(enclaveMode != EnclaveMode.MOCK)
+        /**
+         * Searches for an enclave. There are two places where an enclave can be found.
+         * 1) In an SGX signed enclave file (.so)
+         * 2) For mock enclaves, an existing class named 'className' in the classpath
+         *
+         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
+         * For example, it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
+         *
+         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
+         *
+         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
+         *
+         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
+         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
+         */
+        fun findEnclave(enclaveClassName: String): ScanResult {
+            val results = ArrayList<ScanResult>()
+            EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
+            findMockEnclave(enclaveClassName)?.let { results += it }
+            return getSingleResult(results, enclaveClassName)
+        }
+
+        private fun findNativeEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Native? {
+            val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
+            val url = EnclaveHost::class.java.getResource(resourceName)
+            return url?.let { ScanResult.Native(enclaveClassName, enclaveMode, url) }
+        }
+
+        private fun findMockEnclave(enclaveClassName: String): ScanResult.Mock? {
+            return try {
+                Class.forName(enclaveClassName)
+                ScanResult.Mock(enclaveClassName)
+            } catch (e: ClassNotFoundException) {
+                null
             }
-            override fun toString(): String = "${enclaveMode.name.lowercase()} $enclaveClassName"
+        }
+
+        /**
+         * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
+         */
+        private fun findNativeEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+            val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
+
+            classGraph.scan().use {
+                for (resource in it.allResources) {
+                    val pathMatcher = nativeSoFilePattern.matcher(resource.path)
+                    if (pathMatcher.matches()) {
+                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
+                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
+                        results += ScanResult.Native(enclaveClassName, enclaveMode, resource.url)
+                    }
+                }
+            }
+        }
+
+        /**
+         * Performs a search for mock enclave files using ClassGraph. The search is performed by looking for classes that
+         * extend com.r3.conclave.enclave.Enclave.
+         */
+        private fun findMockEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+            classGraph.enableClassInfo().scan().use {
+                for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
+                    if (!classInfo.isAbstract) {
+                        results += ScanResult.Mock(classInfo.name)
+                    }
+                }
+            }
+        }
+
+        private fun getSingleResult(results: List<ScanResult>, className: String?): ScanResult {
+            when (results.size) {
+                1 -> return results[0]
+                0 -> {
+                    val beginning = if (className != null) "Enclave $className does not exist" else "No enclaves found"
+                    throw IllegalArgumentException(
+                        """$beginning on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
+                            |    runtimeOnly project(path: ":enclave project", configuration: mode)
+                            |
+                            |    where:
+                            |      mode is either "release", "debug", "simulation" or "mock"
+                            """.trimMargin()
+                    )
+                }
+                else -> throw IllegalStateException("Multiple enclaves were found: $results")
+            }
+        }
+
+        sealed class ScanResult {
+            class Mock(val enclaveClassName: String) : ScanResult() {
+                override fun toString(): String = "mock $enclaveClassName"
+            }
+
+            class Native(
+                val enclaveClassName: String,
+                val enclaveMode: EnclaveMode,
+                val soFileUrl: URL
+            ) : ScanResult() {
+                init {
+                    require(enclaveMode != EnclaveMode.MOCK)
+                }
+                override fun toString(): String = "${enclaveMode.name.lowercase()} $enclaveClassName"
+            }
         }
     }
 }
