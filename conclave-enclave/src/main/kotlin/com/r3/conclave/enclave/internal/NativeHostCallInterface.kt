@@ -3,7 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
-import com.r3.conclave.common.internal.NativeMessageType
+import com.r3.conclave.common.internal.CallInterfaceMessageType
 import com.r3.conclave.common.internal.ThrowableSerialisation
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getAllBytes
@@ -49,7 +49,7 @@ class NativeHostCallInterface : HostCallInterface() {
         stack.push(StackFrame(callType, null, null))
 
         Native.jvmOcall(
-                callType.toShort(), NativeMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
+                callType.toShort(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
 
@@ -63,11 +63,11 @@ class NativeHostCallInterface : HostCallInterface() {
     /**
      * Handle ecalls that originate from the host.
      */
-    fun handleEcall(callTypeID: Short, ecallType: NativeMessageType, data: ByteBuffer) {
+    fun handleEcall(callTypeID: Short, ecallType: CallInterfaceMessageType, data: ByteBuffer) {
         when (ecallType) {
-            NativeMessageType.CALL -> handleCallEcall(EnclaveCallType.fromShort(callTypeID), data)
-            NativeMessageType.RETURN -> handleReturnEcall(HostCallType.fromShort(callTypeID), data)
-            NativeMessageType.EXCEPTION -> handleExceptionEcall(HostCallType.fromShort(callTypeID), data)
+            CallInterfaceMessageType.CALL -> handleCallEcall(EnclaveCallType.fromShort(callTypeID), data)
+            CallInterfaceMessageType.RETURN -> handleReturnEcall(HostCallType.fromShort(callTypeID), data)
+            CallInterfaceMessageType.EXCEPTION -> handleExceptionEcall(HostCallType.fromShort(callTypeID), data)
         }
     }
 
@@ -95,12 +95,12 @@ class NativeHostCallInterface : HostCallInterface() {
     private fun handleCallEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
             acceptCall(callType, parameterBuffer)?.let {
-                Native.jvmOcall(callType.toShort(), NativeMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+                Native.jvmOcall(callType.toShort(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
             val serializedException = ThrowableSerialisation.serialise(maybeSanitisedThrowable)
-            Native.jvmOcall(callType.toShort(), NativeMessageType.EXCEPTION.toByte(), serializedException)
+            Native.jvmOcall(callType.toShort(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
         }
     }
 

@@ -1,7 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.CpuFeature
-import com.r3.conclave.common.internal.NativeMessageType
+import com.r3.conclave.common.internal.CallInterfaceMessageType
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -31,14 +31,14 @@ object NativeApi {
      *
      * @param enclaveId The ID of the enclave the message originated from.
      * @param callTypeID The type of call which the message is part of, see [com.r3.conclave.common.internal.EnclaveCallType] and [com.r3.conclave.common.internal.HostCallType].
-     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.NativeMessageType].
+     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.CallInterfaceMessageType].
      * @param data A byte buffer containing message data.
      */
     @JvmStatic
     @Suppress("UNUSED")
     fun receiveOcall(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteBuffer) {
         val enclaveCallInterface = checkNotNull(enclaveCallInterfaces[enclaveId])
-        enclaveCallInterface.handleOcall(enclaveId, callTypeID, NativeMessageType.fromByte(messageTypeID), data)
+        enclaveCallInterface.handleOcall(enclaveId, callTypeID, CallInterfaceMessageType.fromByte(messageTypeID), data)
     }
 
     /**
@@ -47,7 +47,7 @@ object NativeApi {
      *
      * @param enclaveId The ID of the enclave to send the message to.
      * @param callTypeID The type of call which the message is part of, see [com.r3.conclave.common.internal.EnclaveCallType] and [com.r3.conclave.common.internal.HostCallType].
-     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.NativeMessageType].
+     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.CallInterfaceMessageType].
      * @param data A byte buffer containing data to send to the enclave.
      */
     @JvmStatic
