@@ -287,7 +287,7 @@ on these settings.
 _Default:_ empty list
 
 A list of reflection configuration files as specified in the
-[Reflection](https://www.graalvm.org/reference-manual/native-image/Reflection/#manual-configuration) section
+[reflection](https://www.graalvm.org/22.0/reference-manual/native-image/Reflection/#manual-configuration) section
 of Graal's reference manual.
 
 This allows for code which rely on reflection to specify which classes, methods, fields and their properties
@@ -297,7 +297,7 @@ The path should be absolute or relative to the root of the enclave module.
 
 !!!warning
     Due to a [known issue](known-issues.md), reflection configuration files must be specified using relative paths when
-    building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than the
+    building on Windows and macOS platforms. Additionally, on Windows, paths must use forward slashes rather than the
     usual backslashes.
 
 ### serializationConfigurationFiles
