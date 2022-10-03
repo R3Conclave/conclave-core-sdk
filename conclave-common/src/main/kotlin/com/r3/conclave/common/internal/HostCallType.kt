@@ -8,7 +8,7 @@ enum class HostCallType {
     GET_QUOTING_ENCLAVE_INFO,
     GET_ATTESTATION,
     SET_ENCLAVE_INFO,
-    SEND_MESSAGE_HANDLER_RESPONSE;
+    CALL_MESSAGE_HANDLER;
 
     fun toByte(): Byte {
         check(VALUES.size < Byte.MAX_VALUE)

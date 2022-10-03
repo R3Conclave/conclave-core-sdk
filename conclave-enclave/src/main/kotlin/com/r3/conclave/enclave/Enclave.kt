@@ -245,7 +245,7 @@ abstract class Enclave {
         env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
         env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
         env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, enclaveMessageHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
 
         env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
     }

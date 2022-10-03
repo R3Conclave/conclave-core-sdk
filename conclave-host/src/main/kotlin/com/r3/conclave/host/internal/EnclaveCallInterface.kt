@@ -77,6 +77,6 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
      * Send a command to the enclave message handler.
      */
     fun sendMessageHandlerCommand(command: ByteBuffer) {
-        executeCall(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, command)
+        executeCall(EnclaveCallType.CALL_MESSAGE_HANDLER, command)
     }
 }

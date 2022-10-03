@@ -61,6 +61,6 @@ abstract class HostCallInterface : CallInitiator<HostCallType>, CallAcceptor<Enc
      * Send a response to the host enclave message handler.
      */
     fun sendEnclaveMessageResponse(response: ByteBuffer) {
-        executeCall(HostCallType.SEND_MESSAGE_HANDLER_RESPONSE, response)
+        executeCall(HostCallType.CALL_MESSAGE_HANDLER, response)
     }
 }

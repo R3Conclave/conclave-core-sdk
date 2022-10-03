@@ -10,7 +10,7 @@ enum class EnclaveCallType {
     GET_ENCLAVE_INSTANCE_INFO_QUOTE,
     GET_KDS_PERSISTENCE_KEY_SPEC,
     SET_KDS_PERSISTENCE_KEY,
-    SEND_MESSAGE_HANDLER_COMMAND;
+    CALL_MESSAGE_HANDLER;
 
     fun toByte(): Byte {
         check(VALUES.size < Byte.MAX_VALUE)
