@@ -14,7 +14,7 @@ abstract class CallAcceptor<CALL_ID_TYPE> {
      * If the call type already has a handler, throw an exception.
      */
     fun registerCallHandler(callType: CALL_ID_TYPE, handler: CallHandler) {
-        check(callHandlers[callType] == null) { "Call handler already registered for $callType." }
+        check(!callHandlers.containsKey(callType)) { "Call handler already registered for $callType." }
         callHandlers[callType] = handler
     }
 
