@@ -27,7 +27,11 @@ class NativeEnclaveEnvironment(
                 Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java)
                         .apply { isAccessible = true }
 
-        /** The singleton host call interface for the user enclave. */
+        /**
+         * The singleton host call interface for the user enclave.
+         * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
+         * See [initialiseEnclave] below.
+         */
         private val hostCallInterface by lazy {
             val hostCallInterface = NativeHostCallInterface()
 
