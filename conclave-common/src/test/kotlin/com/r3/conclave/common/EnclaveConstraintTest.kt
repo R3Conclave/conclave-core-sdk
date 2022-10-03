@@ -4,6 +4,8 @@ import com.r3.conclave.common.EnclaveSecurityInfo.Summary.*
 import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
@@ -261,7 +263,7 @@ class EnclaveConstraintTest {
     }
 
     @Test
-    fun `check against min security level`() {
+    fun `check against min security level - secure`() {
         val staleEnclave = TestEnclaveInstanceInfo(summary = STALE)
         listOf(STALE, INSECURE).forEach { minLevel ->
             staleEnclave.checkAgainstConstraint {
@@ -275,6 +277,29 @@ class EnclaveConstraintTest {
         ) {
             acceptableCodeHashes.add(codeHash)
             minSecurityLevel = SECURE
+        }
+    }
+
+    @Test
+    fun `check against security level - insecure`() {
+        val secureEnclave = TestEnclaveInstanceInfo(summary = SECURE)
+
+        assertThatCheckThrowsInvalidEnclaveException(
+            "Enclave has a security level of SECURE which does not match the required level of INSECURE.",
+            secureEnclave
+        ) {
+            acceptableCodeHashes.add(codeHash)
+            minSecurityLevel = INSECURE
+        }
+    }
+
+    @Test
+    fun `check against security level - stale`() {
+        val secureEnclave = TestEnclaveInstanceInfo(summary = SECURE)
+        val constraint = EnclaveConstraint.parse("SEC:STALE C:${secureEnclave.enclaveInfo.codeHash}")
+
+        assertDoesNotThrow {
+            constraint.check(secureEnclave)
         }
     }
 
