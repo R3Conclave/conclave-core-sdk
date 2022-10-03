@@ -4,7 +4,7 @@ plugins {
     id "com.github.ben-manes.versions" version "0.39.0"
     id 'base'
     id 'idea'
-    id 'org.jetbrains.dokka' version '1.5.31-SNAPSHOT'
+    id 'org.jetbrains.dokka' version '1.5.31'
     id 'com.github.jk1.dependency-license-report' version '1.16'
 }
 
@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     // We use a custom build of Dokka so we have to use the snapshot version.
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.31-SNAPSHOT")
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.31")
 }
 
 String getConclaveRevision() {
