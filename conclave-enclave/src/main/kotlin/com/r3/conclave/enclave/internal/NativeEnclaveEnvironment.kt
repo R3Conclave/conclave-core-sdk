@@ -50,7 +50,7 @@ class NativeEnclaveEnvironment(
          * @param buffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntry(callTypeID: Short, nativeMessageType: NativeMessageType, dataBuffer: ByteBuffer) {
+        fun enclaveEntry(callTypeID: Short, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
             hostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 
