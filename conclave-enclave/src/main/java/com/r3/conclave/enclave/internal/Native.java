@@ -6,13 +6,6 @@ package com.r3.conclave.enclave.internal;
 public class Native {
     /**
      * Makes an OCALL.
-     * @param data The chunk of data to be passed to the ocall.
-     */
-    public static native void jvmOcall(byte[] data);
-
-    // TODO: Temporary for con 1025
-    /**
-     * Makes an OCALL.
      * @param callTypeID When the Ocall initiates a call, this contains the host call type. If the Ocall is a return or
      *                   an exception, then it is the type of the corresponding return.
      * @param messageTypeID The message type (call/return/exception) of the message, encoded as a byte.
