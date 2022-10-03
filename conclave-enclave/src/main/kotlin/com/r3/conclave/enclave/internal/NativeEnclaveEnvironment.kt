@@ -45,12 +45,12 @@ class NativeEnclaveEnvironment(
         }
 
         /**
-         * Temporary ECALL entry point for new handler system.
+         * Temporary ECALL entry point for the enclave interface system.
          *
          * @param buffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntry(callTypeID: Short, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
+        fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
             hostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 

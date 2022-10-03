@@ -10,15 +10,15 @@ enum class HostCallType {
     SET_ENCLAVE_INFO,
     SEND_MESSAGE_HANDLER_RESPONSE;
 
-    fun toShort(): Short {
-        check(VALUES.size < Short.MAX_VALUE)
-        return ordinal.toShort()
+    fun toByte(): Byte {
+        check(VALUES.size < Byte.MAX_VALUE)
+        return ordinal.toByte()
     }
 
     companion object {
         private val VALUES = HostCallType.values()
 
-        fun fromShort(i: Short): HostCallType {
+        fun fromByte(i: Byte): HostCallType {
             require(i < VALUES.size) { "$i does not correspond to a valid host call type." }
             return VALUES[i.toInt()]
         }

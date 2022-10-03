@@ -43,7 +43,7 @@ class NativeHostCallInterface : HostCallInterface() {
         stack.push(StackFrame(callType, null, null))
 
         Native.jvmOcall(
-                callType.toShort(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
+                callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
 
@@ -57,11 +57,11 @@ class NativeHostCallInterface : HostCallInterface() {
     /**
      * Handle ecalls that originate from the host.
      */
-    fun handleEcall(callTypeID: Short, ecallType: CallInterfaceMessageType, data: ByteBuffer) {
-        when (ecallType) {
-            CallInterfaceMessageType.CALL -> handleCallEcall(EnclaveCallType.fromShort(callTypeID), data)
-            CallInterfaceMessageType.RETURN -> handleReturnEcall(HostCallType.fromShort(callTypeID), data)
-            CallInterfaceMessageType.EXCEPTION -> handleExceptionEcall(HostCallType.fromShort(callTypeID), data)
+    fun handleEcall(callTypeID: Byte, messageType: CallInterfaceMessageType, data: ByteBuffer) {
+        when (messageType) {
+            CallInterfaceMessageType.CALL -> handleCallEcall(EnclaveCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.RETURN -> handleReturnEcall(HostCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.EXCEPTION -> handleExceptionEcall(HostCallType.fromByte(callTypeID), data)
         }
     }
 
@@ -89,12 +89,12 @@ class NativeHostCallInterface : HostCallInterface() {
     private fun handleCallEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
             acceptCall(callType, parameterBuffer)?.let {
-                Native.jvmOcall(callType.toShort(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+                Native.jvmOcall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
             val serializedException = ThrowableSerialisation.serialise(maybeSanitisedThrowable)
-            Native.jvmOcall(callType.toShort(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
+            Native.jvmOcall(callType.toByte(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
         }
     }
 

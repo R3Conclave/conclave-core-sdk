@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 public class EntryPoint {
 
     @CEntryPoint(name = "Java_com_r3_conclave_enclave_internal_substratevm_EntryPoint_entryPoint")
-    public static void entryPoint(IsolateThread thread, short callTypeID, byte messageTypeID, CCharPointer data, int dataLengthBytes) {
+    public static void entryPoint(IsolateThread thread, byte callTypeID, byte messageTypeID, CCharPointer data, int dataLengthBytes) {
         // As mentioned in the JavaDocs, the default byte order for a new ByteBuffer is _always_ big endian.
         // CTypeConversion.asByteBuffer however uses native byte order. So to make sure we don't break code that
         // assumes the default, we switch back to big endian.

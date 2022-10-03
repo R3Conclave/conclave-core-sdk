@@ -36,7 +36,7 @@ object NativeApi {
      */
     @JvmStatic
     @Suppress("UNUSED")
-    fun receiveOcall(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteBuffer) {
+    fun receiveOcall(enclaveId: Long, callTypeID: Byte, messageTypeID: Byte, data: ByteBuffer) {
         val enclaveCallInterface = checkNotNull(enclaveCallInterfaces[enclaveId])
         enclaveCallInterface.handleOcall(enclaveId, callTypeID, CallInterfaceMessageType.fromByte(messageTypeID), data)
     }
@@ -51,7 +51,7 @@ object NativeApi {
      * @param data A byte buffer containing data to send to the enclave.
      */
     @JvmStatic
-    fun sendEcall(enclaveId: Long, callTypeID: Short, messageTypeID: Byte, data: ByteArray) {
+    fun sendEcall(enclaveId: Long, callTypeID: Byte, messageTypeID: Byte, data: ByteArray) {
         Native.jvmEcall(enclaveId, callTypeID, messageTypeID, data)
     }
 
