@@ -8,4 +8,10 @@ interface CallInitiator<CALL_ID_TYPE> {
     }
 
     fun executeCall(callType: CALL_ID_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
+
+    fun executeCallAndCheckReturn(callType: CALL_ID_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
+        return checkNotNull(executeCall(callType, parameterBuffer)) {
+            "Missing return value from call '$callType'"
+        }
+    }
 }

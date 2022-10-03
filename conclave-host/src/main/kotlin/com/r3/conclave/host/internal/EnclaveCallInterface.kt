@@ -9,10 +9,6 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAcceptor<HostCallType>() {
-    companion object {
-        private const val MISSING_RETURN_VALUE_ERROR_MESSAGE = "Missing enclave call return buffer"
-    }
-
     /**
      * Initialises the enclave by instantiating the specified class.
      * This is not currently used in mock mode.
@@ -44,9 +40,7 @@ abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAccept
      * Request a quote for enclave instance info from the enclave.
      */
     fun getEnclaveInstanceInfoQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-        val returnBuffer = checkNotNull(executeCall(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)) {
-            MISSING_RETURN_VALUE_ERROR_MESSAGE
-        }
+        val returnBuffer = executeCallAndCheckReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
         return Cursor.wrap(SgxSignedQuote, returnBuffer.getRemainingBytes())
     }
 
