@@ -146,7 +146,8 @@ class EnclaveConstraint {
 
     private fun checkSecurityLevel(enclave: EnclaveInstanceInfo) {
         // If the security level required by the client is insecure than the enclave security should be insecure. This prevents
-        // clients from connecting to enclaves running in production by mistake.
+        // clients from connecting to enclaves running in production by mistake. This also stops a malicious host from connecting
+        // a client to a production enclave in order to corrupt data. Check CON-806 for more details
         if (minSecurityLevel == EnclaveSecurityInfo.Summary.INSECURE) {
             checkEnclave(enclave.securityInfo.summary == minSecurityLevel) {
                 "Enclave has a security level of ${enclave.securityInfo.summary} which does not match the required level of $minSecurityLevel."
