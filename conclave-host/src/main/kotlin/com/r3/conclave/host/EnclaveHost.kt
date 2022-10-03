@@ -434,7 +434,7 @@ class EnclaveHost private constructor(
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
             enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
-            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.SEND_MESSAGE_HANDLER_RESPONSE, enclaveMessageHandler)
+            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()

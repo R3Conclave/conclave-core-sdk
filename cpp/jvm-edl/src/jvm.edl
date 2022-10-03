@@ -3,7 +3,7 @@ enclave {
     from "sgx_pthread.edl" import *;
     trusted {
         public void jvm_ecall(
-            short callTypeID,
+            char callTypeID,
             char messageTypeID,
             [in, size=dataLengthBytes] void* data,
             int dataLengthBytes
@@ -17,14 +17,14 @@ enclave {
 
     untrusted {
         void jvm_ocall_heap(
-            short callTypeID,
+            char callTypeID,
             char messageTypeID,
             [user_check] void* data,
             int dataLengthBytes
         ) allow(jvm_ecall);
 
         void jvm_ocall_stack(
-            short callTypeID,
+            char callTypeID,
             char messageTypeID,
             [in, size=dataLengthBytes] void* data,
             int dataLengthBytes

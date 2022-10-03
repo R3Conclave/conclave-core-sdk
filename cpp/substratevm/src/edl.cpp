@@ -32,7 +32,7 @@ extern "C" {
 int printf(const char *s, ...);
 }
 
-void jvm_ecall(short callTypeID, char messageTypeID, void *data, int dataLengthBytes) {
+void jvm_ecall(char callTypeID, char messageTypeID, void *data, int dataLengthBytes) {
     enclave_trace(">>> Enclave\n");
 
     using namespace r3::conclave;

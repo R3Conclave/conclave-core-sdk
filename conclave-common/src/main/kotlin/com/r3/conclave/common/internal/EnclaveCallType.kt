@@ -10,17 +10,17 @@ enum class EnclaveCallType {
     GET_ENCLAVE_INSTANCE_INFO_QUOTE,
     GET_KDS_PERSISTENCE_KEY_SPEC,
     SET_KDS_PERSISTENCE_KEY,
-    SEND_MESSAGE_HANDLER_COMMAND;
+    CALL_MESSAGE_HANDLER;
 
-    fun toShort(): Short {
-        check(VALUES.size < Short.MAX_VALUE)
-        return ordinal.toShort()
+    fun toByte(): Byte {
+        check(VALUES.size < Byte.MAX_VALUE)
+        return ordinal.toByte()
     }
 
     companion object {
         private val VALUES = EnclaveCallType.values()
 
-        fun fromShort(i: Short): EnclaveCallType {
+        fun fromByte(i: Byte): EnclaveCallType {
             require(i < VALUES.size) { "$i does not correspond to a valid enclave call type." }
             return VALUES[i.toInt()]
         }

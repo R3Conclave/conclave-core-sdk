@@ -80,9 +80,6 @@ abstract class Enclave {
     private lateinit var signingKeyPair: KeyPair
     private lateinit var aesPersistenceKey: ByteArray
 
-    private val startCallHandler = StartCallHandler()
-    private val stopCallHandler = StopCallHandler()
-    private val getKdsPersistenceKeySpecCallHandler = GetKdsPersistenceKeySpecCallHandler()
     private val setKdsPersistenceKeyCallHandler = SetKdsPersistenceKeyCallHandler()
     private val getEnclaveInstanceInfoQuoteCallHandler = GetEnclaveInstanceInfoQuoteCallHandler()
     private val enclaveMessageHandler = EnclaveMessageHandler()
@@ -240,12 +237,12 @@ abstract class Enclave {
         this.env = env
         initCryptography()
 
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, startCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, stopCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, StartCallHandler())
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, StopCallHandler())
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, GetKdsPersistenceKeySpecCallHandler())
         env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
         env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, enclaveMessageHandler)
+        env.hostCallInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
 
         env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
     }

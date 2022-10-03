@@ -27,7 +27,11 @@ class NativeEnclaveEnvironment(
                 Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java)
                         .apply { isAccessible = true }
 
-        /** The singleton host call interface for the user enclave. */
+        /**
+         * The singleton host call interface for the user enclave.
+         * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
+         * See [initialiseEnclave] below.
+         */
         private val hostCallInterface by lazy {
             val hostCallInterface = NativeHostCallInterface()
 
@@ -45,12 +49,12 @@ class NativeEnclaveEnvironment(
         }
 
         /**
-         * Temporary ECALL entry point for new handler system.
+         * Temporary ECALL entry point for the enclave interface system.
          *
          * @param buffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntry(callTypeID: Short, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
+        fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
             hostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 
