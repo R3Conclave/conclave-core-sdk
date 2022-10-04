@@ -10,13 +10,13 @@ import java.util.*
 typealias StackFrame = CallInterfaceStackFrame<HostCallType>
 
 /**
- * This class is the implementation of the [HostCallInterface] for native enclaves.
+ * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
  * It has three jobs:
  *  - Serve as the endpoint for calls to make to the host, see [com.r3.conclave.common.internal.CallInitiator]
  *  - Route calls from the host to the appropriate enclave side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (ecalls and ocalls).
  */
-class NativeHostCallInterface : HostCallInterface() {
+class NativeEnclaveHostInterface : EnclaveHostInterface() {
     /** In release mode we want to sanitise exceptions to prevent leakage of information from the enclave */
     var sanitiseExceptions: Boolean = false
 
@@ -37,7 +37,7 @@ class NativeHostCallInterface : HostCallInterface() {
 
     /**
      * Internal method for initiating a host call with specific arguments.
-     * This should not be called directly, but instead by implementations in [HostCallInterface].
+     * This should not be called directly, but instead by implementations in [EnclaveHostInterface].
      */
     override fun initiateOutgoingCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))

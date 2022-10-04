@@ -430,11 +430,11 @@ class EnclaveHost private constructor(
             this.commandsCallback = commandsCallback
 
             // Register call handlers
-            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
-            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
-            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
-            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
-            enclaveHandle.enclaveCallInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
+            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
+            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
+            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
+            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
@@ -446,12 +446,12 @@ class EnclaveHost private constructor(
                 this.kdsConfiguration = kdsConfiguration
                 // TODO We can avoid this ECALL if we get the enclave to send its persistence key spec when it's
                 //  first initialised.
-                val persistenceKeySpec = enclaveHandle.enclaveCallInterface.getKdsPersistenceKeySpec()
+                val persistenceKeySpec = enclaveHandle.enclaveInterface.getKdsPersistenceKeySpec()
                 //  If the enclave is configured also with KDS spec for persistence, we trigger the private key request.
                 //    Note that the kdsConfiguration is also used in the context of KdsPostOffice
                 if (persistenceKeySpec != null) {
                     val kdsResponse = executeKdsPrivateKeyRequest(persistenceKeySpec, kdsConfiguration)
-                    enclaveHandle.enclaveCallInterface.setKdsPersistenceKey(kdsResponse)
+                    enclaveHandle.enclaveInterface.setKdsPersistenceKey(kdsResponse)
                 }
             }
 
@@ -459,7 +459,7 @@ class EnclaveHost private constructor(
                 log.info("Setting up persistent enclave file system...")
             }
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
-            enclaveHandle.enclaveCallInterface.startEnclave(sealedState)
+            enclaveHandle.enclaveInterface.startEnclave(sealedState)
             if (enclaveFileSystemFile != null) {
                 log.info("Setup of the file system completed successfully.")
             }
@@ -547,7 +547,7 @@ class EnclaveHost private constructor(
     private fun getAttestation(): Attestation {
         val quotingEnclaveTargetInfo = quotingService.initializeQuote()
         log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
-        val signedQuote = enclaveHandle.enclaveCallInterface.getEnclaveInstanceInfoQuote(quotingEnclaveTargetInfo)
+        val signedQuote = enclaveHandle.enclaveInterface.getEnclaveInstanceInfoQuote(quotingEnclaveTargetInfo)
         log.debug { "Got quote $signedQuote" }
         return attestationService.attestQuote(signedQuote)
     }
@@ -735,7 +735,7 @@ class EnclaveHost private constructor(
         if (hostStateManager.state !is Started) return
         try {
             // Ask the enclave to close so all its resources are released before the enclave is destroyed
-            enclaveHandle.enclaveCallInterface.stopEnclave()
+            enclaveHandle.enclaveInterface.stopEnclave()
 
             // Destroy the enclave
             enclaveHandle.destroy()
@@ -989,7 +989,7 @@ class EnclaveHost private constructor(
                 putLong(threadID)
                 payload(this)
             }
-            enclaveHandle.enclaveCallInterface.sendMessageHandlerCommand(buffer)
+            enclaveHandle.enclaveInterface.sendMessageHandlerCommand(buffer)
         }
     }
 

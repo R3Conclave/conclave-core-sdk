@@ -7,7 +7,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object NativeApi {
-    private val enclaveCallInterfaces = ConcurrentHashMap<Long, NativeEnclaveCallInterface>()
+    private val enclaveCallInterfaces = ConcurrentHashMap<Long, NativeHostEnclaveInterface>()
 
     /**
      * Register an enclave call interface with the native API.
@@ -15,10 +15,10 @@ object NativeApi {
      * It serves as the initiator for calls to the enclave, and the handler for calls originating from the enclave.
      *
      * @param enclaveId The ID of the enclave to register the call interface with.
-     * @param enclaveCallInterface An instance of the [EnclaveCallInterface] class to be used for communication with the specified enclave.
+     * @param enclaveCallInterface An instance of the [HostEnclaveInterface] class to be used for communication with the specified enclave.
      */
     @JvmStatic
-    fun registerEnclaveCallInterface(enclaveId: Long, enclaveCallInterface: NativeEnclaveCallInterface) {
+    fun registerEnclaveCallInterface(enclaveId: Long, enclaveCallInterface: NativeHostEnclaveInterface) {
         val previous = enclaveCallInterfaces.putIfAbsent(enclaveId, enclaveCallInterface)
         if (previous != null) {
             throw IllegalStateException("Attempt to re-register call interface for enclave id $enclaveId")

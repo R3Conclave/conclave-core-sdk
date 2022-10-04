@@ -14,7 +14,7 @@ interface EnclaveHandle {
     /**
      * Object for initiating enclave calls from.
      */
-    val enclaveCallInterface: EnclaveCallInterface
+    val enclaveInterface: HostEnclaveInterface
 
     /** The name of the Enclave subclass inside the sub-JVM. */
     val enclaveClassName: String

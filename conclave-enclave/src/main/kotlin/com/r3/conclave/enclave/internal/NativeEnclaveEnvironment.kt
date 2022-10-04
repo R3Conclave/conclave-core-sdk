@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 @PotentialPackagePrivate
 class NativeEnclaveEnvironment(
     enclaveClass: Class<*>,
-    override val hostCallInterface: NativeHostCallInterface
+    override val hostInterface: NativeEnclaveHostInterface
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
@@ -32,7 +32,7 @@ class NativeEnclaveEnvironment(
          * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
          * See [initialiseEnclave] below.
          */
-        private val bootstrapHostCallInterface = NativeHostCallInterface().apply {
+        private val bootstrapHostCallInterface = NativeEnclaveHostInterface().apply {
             registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
                 var isInitialised = false
                 override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
@@ -100,7 +100,7 @@ class NativeEnclaveEnvironment(
                     .apply { isAccessible = true }
                     .newInstance()
                 val env = NativeEnclaveEnvironment(enclaveClass, bootstrapHostCallInterface)
-                env.hostCallInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
+                env.hostInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
                 initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e

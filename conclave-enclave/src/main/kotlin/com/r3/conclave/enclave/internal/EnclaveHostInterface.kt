@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PublicKey
 
-abstract class HostCallInterface : CallInterface<HostCallType, EnclaveCallType>() {
+abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallType>() {
     /**
      * Send enclave info to the host.
      * TODO: It would be better to return enclave info from the initialise enclave call
