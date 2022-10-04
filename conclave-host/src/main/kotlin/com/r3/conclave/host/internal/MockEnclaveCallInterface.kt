@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
  *  - Handle the low-level details of the messaging protocol (in this case, not much!), see [MockCallInterfaceConnector].
  */
 class MockEnclaveCallInterface(private val connector: MockCallInterfaceConnector) : EnclaveCallInterface() {
-    override fun executeCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeECall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         return connector.hostToEnclave(callType, parameterBuffer)
     }
 }

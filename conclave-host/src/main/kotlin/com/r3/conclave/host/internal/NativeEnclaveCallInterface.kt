@@ -35,7 +35,7 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
      * Internal method for initiating an enclave call with specific arguments.
      * This should not be called directly, but instead by implementations in [EnclaveCallInterface].
      */
-    override fun executeCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeECall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
         NativeApi.sendEcall(

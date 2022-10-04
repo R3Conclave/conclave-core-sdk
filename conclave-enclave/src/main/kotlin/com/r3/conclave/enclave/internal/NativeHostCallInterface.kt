@@ -39,7 +39,7 @@ class NativeHostCallInterface : HostCallInterface() {
      * Internal method for initiating a host call with specific arguments.
      * This should not be called directly, but instead by implementations in [HostCallInterface].
      */
-    override fun executeCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeOCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
         Native.jvmOcall(
