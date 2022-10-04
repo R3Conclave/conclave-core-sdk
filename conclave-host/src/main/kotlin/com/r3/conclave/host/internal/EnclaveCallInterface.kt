@@ -8,7 +8,7 @@ import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
-abstract class EnclaveCallInterface : CallInitiator<EnclaveCallType>, CallAcceptor<HostCallType>() {
+abstract class EnclaveCallInterface : CallInterface<EnclaveCallType, HostCallType>() {
     /**
      * Initialises the enclave by instantiating the specified class.
      * This is not currently used in mock mode.

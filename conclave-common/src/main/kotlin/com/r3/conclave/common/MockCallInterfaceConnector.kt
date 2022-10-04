@@ -1,6 +1,6 @@
 package com.r3.conclave.common
 
-import com.r3.conclave.common.internal.CallAcceptor
+import com.r3.conclave.common.internal.CallInterface
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
 import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
@@ -21,14 +21,14 @@ class MockCallInterfaceConnector {
         }
     }
 
-    private lateinit var enclaveCallAcceptor: CallAcceptor<EnclaveCallType>
-    private lateinit var hostCallAcceptor: CallAcceptor<HostCallType>
+    private lateinit var enclaveCallAcceptor: CallInterface<HostCallType, EnclaveCallType>
+    private lateinit var hostCallAcceptor: CallInterface<EnclaveCallType, HostCallType>
 
-    fun setHostCallAcceptor(acceptor: CallAcceptor<HostCallType>) {
+    fun setHostCallAcceptor(acceptor: CallInterface<EnclaveCallType, HostCallType>) {
         hostCallAcceptor = acceptor
     }
 
-    fun setEnclaveCallAcceptor(acceptor: CallAcceptor<EnclaveCallType>) {
+    fun setEnclaveCallAcceptor(acceptor: CallInterface<HostCallType, EnclaveCallType>) {
         enclaveCallAcceptor = acceptor
     }
 
