@@ -21,7 +21,7 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
     abstract fun executeCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
 
     /**
-     * Execure a call and get a return buffer. Throw an exception if no buffer is provided.
+     * Execute a call and get a return buffer. Throw an exception if no buffer is provided.
      */
     fun executeCallAndCheckReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
         return checkNotNull(executeCall(callType, parameterBuffer)) {

@@ -64,12 +64,17 @@ class NativeEnclaveCallInterface(private val enclaveId: Long) : EnclaveCallInter
 
     /**
      * Handle call initiations from the enclave.
-     * This method propagates the call to the appropriate host side call handler, then serialises and propagates any
-     * exceptions that occur. If a return value is produced, a reply message is sent back to the enclave.
+     * This method propagates the call to the appropriate host side call handler. If a return value is produced or an
+     * exception occurs, a reply message is sent back to the enclave.
      */
     private fun handleCallOcall(callType: HostCallType, parameterBuffer: ByteBuffer) {
         try {
             acceptCall(callType, parameterBuffer)?.let {
+                /**
+                 * If there was a non-null return value, send it back to the enclave.
+                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeHostCallInterface.executeCall]
+                 * will return null to the caller on the enclave side.
+                 */
                 NativeApi.sendEcall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
