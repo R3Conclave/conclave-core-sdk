@@ -134,14 +134,27 @@ class EnclaveConstraint {
             }
         }
 
-        checkEnclave(enclave.securityInfo.summary >= minSecurityLevel) {
-            "Enclave has a security level of ${enclave.securityInfo.summary} which is lower than the required level of $minSecurityLevel."
-        }
+        checkSecurityLevel(enclave)
 
         maxAttestationAge?.let {
             val earliestAllowedAttestation = ZonedDateTime.now() - maxAttestationAge
             checkEnclave(earliestAllowedAttestation.toInstant().isBefore(enclave.securityInfo.timestamp)) {
                 "Enclave attestation data is out of date with an age that exceeds ${maxAttestationAge}."
+            }
+        }
+    }
+
+    private fun checkSecurityLevel(enclave: EnclaveInstanceInfo) {
+        // If the security level required by the client is insecure then the enclave security must be insecure. This prevents
+        // clients from connecting to enclaves running in production by mistake. This also stops a malicious host from connecting
+        // a client to a production enclave in order to corrupt data. Check CON-806 for more details
+        if (minSecurityLevel == EnclaveSecurityInfo.Summary.INSECURE) {
+            checkEnclave(enclave.securityInfo.summary == minSecurityLevel) {
+                "Enclave has a security level of ${enclave.securityInfo.summary} which does not match the required level of $minSecurityLevel."
+            }
+        } else {
+            checkEnclave(enclave.securityInfo.summary >= minSecurityLevel) {
+                "Enclave has a security level of ${enclave.securityInfo.summary} which is lower than the required level of $minSecurityLevel."
             }
         }
     }
