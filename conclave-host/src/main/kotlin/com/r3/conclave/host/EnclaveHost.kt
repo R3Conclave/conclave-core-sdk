@@ -430,11 +430,13 @@ class EnclaveHost private constructor(
             this.commandsCallback = commandsCallback
 
             // Register call handlers
-            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
-            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
-            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
-            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
-            enclaveHandle.enclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+            enclaveHandle.enclaveInterface.apply {
+                registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
+                registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
+                registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
+                registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
+                registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+            }
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()

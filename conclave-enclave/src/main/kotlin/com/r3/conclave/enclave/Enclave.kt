@@ -237,12 +237,14 @@ abstract class Enclave {
         this.env = env
         initCryptography()
 
-        env.hostInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, StartCallHandler())
-        env.hostInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, StopCallHandler())
-        env.hostInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, GetKdsPersistenceKeySpecCallHandler())
-        env.hostInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
-        env.hostInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
-        env.hostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+        env.hostInterface.apply {
+            registerCallHandler(EnclaveCallType.START_ENCLAVE, StartCallHandler())
+            registerCallHandler(EnclaveCallType.STOP_ENCLAVE, StopCallHandler())
+            registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, GetKdsPersistenceKeySpecCallHandler())
+            registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
+            registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
+            registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+        }
 
         env.hostInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
     }
