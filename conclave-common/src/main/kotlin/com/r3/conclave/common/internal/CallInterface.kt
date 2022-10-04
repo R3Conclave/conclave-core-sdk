@@ -18,14 +18,14 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
     /**
      * Execute a call and maybe get a return buffer.
      */
-    abstract fun executeCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
+    abstract fun initiateOutgoingCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
 
     /**
      * Execute a call and get a return buffer. Throw an exception if no buffer is provided.
      */
-    fun executeCallAndCheckReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
-        return checkNotNull(executeCall(callType, parameterBuffer)) {
-            "Missing return value from call '$callType'"
+    fun initiateOutgoingCallAndCheckReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
+        return checkNotNull(initiateOutgoingCall(callType, parameterBuffer)) {
+            "Missing return value from $callType call."
         }
     }
 
@@ -42,7 +42,7 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
      * Route a call to a registered call handler.
      * If no handler is registered, throw an exception.
      */
-    fun acceptCall(callType: INCOMING_CALL_TYPE, parameterBuffer: ByteBuffer): ByteBuffer? {
+    fun handleIncomingCall(callType: INCOMING_CALL_TYPE, parameterBuffer: ByteBuffer): ByteBuffer? {
         val callHandler = checkNotNull(callHandlers[callType]) { "No call handler has been registered for $callType." }
         return callHandler.handleCall(parameterBuffer)
     }
