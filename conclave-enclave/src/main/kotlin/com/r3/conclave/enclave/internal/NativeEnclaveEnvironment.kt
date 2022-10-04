@@ -32,11 +32,8 @@ class NativeEnclaveEnvironment(
          * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
          * See [initialiseEnclave] below.
          */
-        private val bootstrapHostCallInterface = run {
-            val hostCallInterface = NativeHostCallInterface()
-
-            /** The host call interface begins with a single handler for initialising the enclave. */
-            hostCallInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
+        private val bootstrapHostCallInterface = NativeHostCallInterface().apply {
+            registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
                 var isInitialised = false
                 override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
                     synchronized(this) {
@@ -47,14 +44,14 @@ class NativeEnclaveEnvironment(
                     return null
                 }
             })
-
-            hostCallInterface
         }
 
         /**
          * Entry point for messages arriving from the host.
          *
-         * @param buffer The chunk of data from the host.
+         * @param callTypeID The type of the call this is for, encoded as byte.
+         * @param nativeMessageType The purpose of the message (call/exception/return etc)
+         * @param dataBuffer The chunk of data from the host.
          */
         @JvmStatic
         fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
