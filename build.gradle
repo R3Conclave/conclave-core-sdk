@@ -6,7 +6,6 @@ plugins {
     id 'idea'
     id 'org.jetbrains.dokka' version '1.5.31-SNAPSHOT'
     id 'com.github.jk1.dependency-license-report' version '1.16'
-    id "com.dorongold.task-tree" version "2.1.0"
 }
 
 apply from: 'versions.gradle'
