@@ -72,7 +72,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
             handleIncomingCall(callType, parameterBuffer)?.let {
                 /**
                  * If there was a non-null return value, send it back to the enclave.
-                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeHostCallInterface.initiateOutgoingCall]
+                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.initiateOutgoingCall]
                  * will return null to the caller on the enclave side.
                  */
                 NativeApi.sendEcall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))

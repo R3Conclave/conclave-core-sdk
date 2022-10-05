@@ -91,7 +91,7 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
             handleIncomingCall(callType, parameterBuffer)?.let {
                 /**
                  * If there was a non-null return value, send it back to the host.
-                 * If no value is received by the host, then [com.r3.conclave.host.internal.NativeEnclaveCallInterface.initiateOutgoingCall]
+                 * If no value is received by the host, then [com.r3.conclave.host.internal.NativeHostEnclaveInterface.initiateOutgoingCall]
                  * will return null to the caller on the host side.
                  */
                 Native.jvmOcall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))

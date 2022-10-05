@@ -32,7 +32,7 @@ class NativeEnclaveEnvironment(
          * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
          * See [initialiseEnclave] below.
          */
-        private val bootstrapHostCallInterface = NativeEnclaveHostInterface().apply {
+        private val bootstrapHostInterface = NativeEnclaveHostInterface().apply {
             registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
                 var isInitialised = false
                 override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
@@ -55,7 +55,7 @@ class NativeEnclaveEnvironment(
          */
         @JvmStatic
         fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
-            bootstrapHostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
+            bootstrapHostInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 
         private fun seedRandom() {
@@ -99,7 +99,7 @@ class NativeEnclaveEnvironment(
                     .getDeclaredConstructor()
                     .apply { isAccessible = true }
                     .newInstance()
-                val env = NativeEnclaveEnvironment(enclaveClass, bootstrapHostCallInterface)
+                val env = NativeEnclaveEnvironment(enclaveClass, bootstrapHostInterface)
                 env.hostInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
                 initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
