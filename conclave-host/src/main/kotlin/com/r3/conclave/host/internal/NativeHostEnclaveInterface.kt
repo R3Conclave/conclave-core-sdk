@@ -10,7 +10,7 @@ typealias StackFrame = CallInterfaceStackFrame<EnclaveCallType>
 /**
  * This class is the implementation of the [HostEnclaveInterface] for native enclaves.
  * It has three jobs:
- *  - Serve as the endpoint for calls to make to the enclave, see [com.r3.conclave.common.internal.CallInitiator]
+ *  - Serve as the endpoint for calls to make to the enclave, see [com.r3.conclave.common.internal.CallInterface]
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (ecalls and ocalls).
  */
@@ -72,7 +72,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
             handleIncomingCall(callType, parameterBuffer)?.let {
                 /**
                  * If there was a non-null return value, send it back to the enclave.
-                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeHostCallInterface.initiateOutgoingCall]
+                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.initiateOutgoingCall]
                  * will return null to the caller on the enclave side.
                  */
                 NativeApi.sendEcall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))

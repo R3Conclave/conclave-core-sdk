@@ -24,7 +24,7 @@ class NativeEnclaveHandle(
         enclaveFileUrl.openStream().use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
         enclaveId = Native.createEnclave(enclaveFile.toString(), enclaveMode != EnclaveMode.RELEASE)
         enclaveInterface = NativeHostEnclaveInterface(enclaveId)
-        NativeApi.registerEnclaveCallInterface(enclaveId, enclaveInterface)
+        NativeApi.registerHostEnclaveInterface(enclaveId, enclaveInterface)
     }
 
     override fun initialise() {

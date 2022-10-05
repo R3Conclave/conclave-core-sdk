@@ -11,7 +11,7 @@ import java.nio.ByteBuffer
 /**
  * This class serves as the glue between a mock host and a mock enclave.
  * An instance of this class exists "between" the mock enclave and the host, bridging the
- * [com.r3.conclave.enclave.internal.HostCallInterface] to the [com.r3.conclave.host.internal.EnclaveCallInterface].
+ * [com.r3.conclave.host.internal.HostEnclaveInterface] to the [com.r3.conclave.enclave.internal.EnclaveHostInterface].
  * Parameter and return value buffers are deep copied to more accurately emulate the behaviour of an actual enclave.
  */
 class MockCallInterfaceConnector {
@@ -21,15 +21,15 @@ class MockCallInterfaceConnector {
         }
     }
 
-    private lateinit var enclaveCallInterface: CallInterface<HostCallType, EnclaveCallType>
-    private lateinit var hostCallInterface: CallInterface<EnclaveCallType, HostCallType>
+    private lateinit var hostEnclaveInterface: CallInterface<HostCallType, EnclaveCallType>
+    private lateinit var enclaveHostInterface: CallInterface<EnclaveCallType, HostCallType>
 
-    fun setHostCallInterface(acceptor: CallInterface<EnclaveCallType, HostCallType>) {
-        hostCallInterface = acceptor
+    fun setEnclaveHostInterface(callInterface: CallInterface<EnclaveCallType, HostCallType>) {
+        enclaveHostInterface = callInterface
     }
 
-    fun setEnclaveCallInterface(acceptor: CallInterface<HostCallType, EnclaveCallType>) {
-        enclaveCallInterface = acceptor
+    fun setHostEnclaveInterface(callInterface: CallInterface<HostCallType, EnclaveCallType>) {
+        hostEnclaveInterface = callInterface
     }
 
     fun enclaveToHost(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
@@ -37,7 +37,7 @@ class MockCallInterfaceConnector {
         ThreadLocalEnclaveContext.set(false)
         try {
             val parameterBufferCopy = copyBuffer(parameterBuffer)
-            hostCallInterface.handleIncomingCall(callType, parameterBufferCopy)?.let { return copyBuffer(it) }
+            enclaveHostInterface.handleIncomingCall(callType, parameterBufferCopy)?.let { return copyBuffer(it) }
             return null
         } finally {
             ThreadLocalEnclaveContext.set(true)
@@ -49,7 +49,7 @@ class MockCallInterfaceConnector {
         ThreadLocalEnclaveContext.set(true)
         try {
             val parameterBufferCopy = copyBuffer(parameterBuffer)
-            enclaveCallInterface.handleIncomingCall(callType, parameterBufferCopy)?.let { return copyBuffer(it) }
+            hostEnclaveInterface.handleIncomingCall(callType, parameterBufferCopy)?.let { return copyBuffer(it) }
             return null
         } finally {
             ThreadLocalEnclaveContext.set(false)

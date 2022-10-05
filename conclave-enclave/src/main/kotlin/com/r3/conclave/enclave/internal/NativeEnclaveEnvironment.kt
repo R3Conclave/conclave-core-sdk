@@ -28,11 +28,11 @@ class NativeEnclaveEnvironment(
                         .apply { isAccessible = true }
 
         /**
-         * The initial singleton host call interface for the user enclave.
+         * The singleton host interface for the user enclave.
          * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
          * See [initialiseEnclave] below.
          */
-        private val bootstrapHostCallInterface = NativeEnclaveHostInterface().apply {
+        private val singletonHostInterface = NativeEnclaveHostInterface().apply {
             registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
                 var isInitialised = false
                 override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
@@ -55,7 +55,7 @@ class NativeEnclaveEnvironment(
          */
         @JvmStatic
         fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
-            bootstrapHostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
+            singletonHostInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 
         private fun seedRandom() {
@@ -99,8 +99,8 @@ class NativeEnclaveEnvironment(
                     .getDeclaredConstructor()
                     .apply { isAccessible = true }
                     .newInstance()
-                val env = NativeEnclaveEnvironment(enclaveClass, bootstrapHostCallInterface)
-                env.hostInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
+                val env = NativeEnclaveEnvironment(enclaveClass, singletonHostInterface)
+                env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
                 initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e
