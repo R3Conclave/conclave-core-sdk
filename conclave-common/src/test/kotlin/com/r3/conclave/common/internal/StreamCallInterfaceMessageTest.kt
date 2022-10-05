@@ -10,7 +10,7 @@ class StreamCallInterfaceMessageTest {
     companion object {
         fun randomMessage(dataSize: Int = 42): StreamCallInterfaceMessage {
             return StreamCallInterfaceMessage(
-                    0, 1,2, 3, Random.Default.nextBytes(dataSize))
+                    0, 1,2, Random.Default.nextBytes(dataSize))
         }
     }
 
@@ -40,8 +40,7 @@ class StreamCallInterfaceMessageTest {
     }
 
     private fun assertEqual(a: StreamCallInterfaceMessage, b: StreamCallInterfaceMessage) {
-        assertThat(a.targetThreadID).isEqualTo(b.targetThreadID)
-        assertThat(a.sourceThreadID).isEqualTo(b.sourceThreadID)
+        assertThat(a.hostThreadID).isEqualTo(b.hostThreadID)
         assertThat(a.callTypeID).isEqualTo(b.callTypeID)
         assertThat(a.messageTypeID).isEqualTo(b.messageTypeID)
         assertThat(a.payload).isEqualTo(b.payload)

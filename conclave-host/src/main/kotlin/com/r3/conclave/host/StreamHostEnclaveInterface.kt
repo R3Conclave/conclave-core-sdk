@@ -2,15 +2,10 @@ package com.r3.conclave.host
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.internal.HostEnclaveInterface
-import com.r3.conclave.utilities.internal.getAllBytes
-import java.awt.TrayIcon
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.IllegalStateException
 import java.nio.ByteBuffer
-import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Semaphore
 
@@ -23,52 +18,55 @@ import java.util.concurrent.Semaphore
  */
 class StreamHostEnclaveInterface(
         private val outputStream: OutputStream,     // Messages going to the enclave
-        private val inputStream: InputStream        // Messages arriving from the enclave
+        private val inputStream: InputStream,       // Messages arriving from the enclave
+        private val maximumConcurrentCalls: Int
 ) : HostEnclaveInterface() {
+    /**
+     * Message receive loop runnable.
+     */
     private val messageReceiveLoop = object : Runnable {
+        @Volatile
         var done = false
 
+        /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                try {
-                    val message = StreamCallInterfaceMessage.readFromStream(inputStream)
-                    deliverMessageToCallExecutor(message)
+                val message = try {
+                    StreamCallInterfaceMessage.readFromStream(inputStream)
                 } catch (e: InterruptedException) {
                     done = true
                     break
                 }
+                deliverMessageToCallContext(message)
             }
         }
 
-        /**
-         * Place the message received asynchronously from the enclave and put it on the top of the stack
-         * for the thread from which it originated.
-         */
-        private fun deliverMessageToCallExecutor(message: StreamCallInterfaceMessage) {
-            val currentExecutor = checkNotNull(callExecutors[message.hostThreadID]) {
+        /** Send the received message to the appropriate call context. */
+        private fun deliverMessageToCallContext(message: StreamCallInterfaceMessage) {
+            val currentExecutor = checkNotNull(enclaveCallContexts[message.hostThreadID]) {
                 "Host call may not occur outside the context of an enclave call."
             }
             currentExecutor.enqueMessage(message)
         }
     }
 
-    /**
-     * Here we start the message receive loop.
-     */
+    /** Start the message receive loop thread. */
     private val receiveLoopThread = Thread(messageReceiveLoop).apply { start() }
 
-    /**
-     * And here we stop it by setting the loop condition false and interrupting the thread.
-     */
+    /** Stop the message receive loop thread. */
     fun stop() {
+        concurrentCallSemaphore.acquire(maximumConcurrentCalls)
         messageReceiveLoop.done = true
         receiveLoopThread.interrupt()
         receiveLoopThread.join()
     }
 
-    private val callExecutors = ConcurrentHashMap<Long, CallExecutor>()
-
-    private inner class CallExecutor {
+    /**
+     * Because of the way conclave currently works, a host call (enclave->host) never arrives outside the
+     * context of a pre-existing enclave call (host->enclave).
+     * This class represents that context and any recursive calls that take place within it.
+     */
+    private inner class EnclaveCallContext {
         private val messageQueue = ArrayBlockingQueue<StreamCallInterfaceMessage>(4)
 
         fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.add(message)
@@ -84,44 +82,58 @@ class StreamHostEnclaveInterface(
         fun initiateCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
             sendMessage(callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer)
 
-            do {
-                val message = messageQueue.remove()
-                val replyMessage = checkNotNull(message) { "Message is missing from stack frame." }
-                val messageType = CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)
-                handleCallMessage(message)
-            } while(messageType == CallInterfaceMessageType.CALL)
-
-            return null
-        }
-
-        fun handleMessage(message: StreamCallInterfaceMessage) {
-            when (CallInterfaceMessageType.fromByte(message.messageTypeID)) {
-                CallInterfaceMessageType.CALL -> handleCallMessage(message.payload)
-                CallInterfaceMessageType.EXCEPTION -> handleExceptionMessage(message)
-                CallInterfaceMessageType.RETURN -> handleCallMessage(message)
+            /** Iterate, handling CALL messages until a message that is not a CALL arrives */
+            var replyMessage: StreamCallInterfaceMessage
+            while(true) {
+                replyMessage = messageQueue.remove()
+                when(CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)) {
+                    CallInterfaceMessageType.CALL -> {
+                        val replyCallType = HostCallType.fromByte(replyMessage.callTypeID)
+                        val replyPayload = checkNotNull(replyMessage.payload) { "Received call message without parameter bytes." }
+                        handleIncomingCall(replyCallType, ByteBuffer.wrap(replyPayload))
+                    }
+                    else -> break
+                }
             }
-        }
 
-        fun handleCallMessage() {
+            val replyMessageType = CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)
+            val replyPayload = replyMessage.payload
 
-        }
+            check(EnclaveCallType.fromByte(replyMessage.callTypeID) == callType)
+            check(replyMessageType != CallInterfaceMessageType.CALL)
 
-        fun handleExceptionMessage(message: StreamCallInterfaceMessage) {
+            if (replyMessageType == CallInterfaceMessageType.EXCEPTION) {
+                checkNotNull(replyPayload) { "Exception message parameter was null." }
+                throw ThrowableSerialisation.deserialise(replyPayload)
+            }
 
-        }
-
-        fun handleReturnMessage(message: StreamCallInterfaceMessage) {
-
+            return replyPayload?.let { ByteBuffer.wrap(replyPayload) }
         }
     }
+
+    /**
+     * Thread local enclave call contexts.
+     * We don't use [ThreadLocal] here because the call context for an arbitrary call has to be
+     * reachable from the message receive thread.
+     */
+    private val enclaveCallContexts = ConcurrentHashMap<Long, EnclaveCallContext>()
+
+    /** This is used to wait for all current calls to complete */
+    private val concurrentCallSemaphore = Semaphore(maximumConcurrentCalls)
 
     /**
      * Internal method for initiating an enclave call with specific arguments.
      * This should not be called directly, but instead by implementations in [HostEnclaveInterface].
      */
     override fun initiateOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+        concurrentCallSemaphore.acquire()
         val threadID = Thread.currentThread().id
-        val callExecutor = callExecutors.computeIfAbsent(threadID) { CallExecutor() }
-        return callExecutor.initiateCall(callType, parameterBuffer)
+        val enclaveCallContext = enclaveCallContexts.computeIfAbsent(threadID) { EnclaveCallContext() }
+        try {
+            return enclaveCallContext.initiateCall(callType, parameterBuffer)
+        } finally {
+            enclaveCallContexts.remove(threadID)
+            concurrentCallSemaphore.release()
+        }
     }
 }
