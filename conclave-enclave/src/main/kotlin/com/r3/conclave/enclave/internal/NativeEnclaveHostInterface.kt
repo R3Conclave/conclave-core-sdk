@@ -10,13 +10,13 @@ import java.util.*
 typealias StackFrame = CallInterfaceStackFrame<HostCallType>
 
 /**
- * This class is the implementation of the [HostCallInterface] for native enclaves.
+ * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
  * It has three jobs:
  *  - Serve as the endpoint for calls to make to the host, see [com.r3.conclave.common.internal.CallInitiator]
- *  - Route calls from the host to the appropriate enclave side call handler, see [com.r3.conclave.common.internal.CallAcceptor]
+ *  - Route calls from the host to the appropriate enclave side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (ecalls and ocalls).
  */
-class NativeHostCallInterface : HostCallInterface() {
+class NativeEnclaveHostInterface : EnclaveHostInterface() {
     /** In release mode we want to sanitise exceptions to prevent leakage of information from the enclave */
     var sanitiseExceptions: Boolean = false
 
@@ -37,13 +37,13 @@ class NativeHostCallInterface : HostCallInterface() {
 
     /**
      * Internal method for initiating a host call with specific arguments.
-     * This should not be called directly, but instead by implementations in [HostCallInterface].
+     * This should not be called directly, but instead by implementations in [EnclaveHostInterface].
      */
-    override fun executeCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun initiateOutgoingCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
         Native.jvmOcall(
-                callType.toShort(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
+                callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
 
@@ -57,11 +57,11 @@ class NativeHostCallInterface : HostCallInterface() {
     /**
      * Handle ecalls that originate from the host.
      */
-    fun handleEcall(callTypeID: Short, ecallType: CallInterfaceMessageType, data: ByteBuffer) {
-        when (ecallType) {
-            CallInterfaceMessageType.CALL -> handleCallEcall(EnclaveCallType.fromShort(callTypeID), data)
-            CallInterfaceMessageType.RETURN -> handleReturnEcall(HostCallType.fromShort(callTypeID), data)
-            CallInterfaceMessageType.EXCEPTION -> handleExceptionEcall(HostCallType.fromShort(callTypeID), data)
+    fun handleEcall(callTypeID: Byte, messageType: CallInterfaceMessageType, data: ByteBuffer) {
+        when (messageType) {
+            CallInterfaceMessageType.CALL -> handleCallEcall(EnclaveCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.RETURN -> handleReturnEcall(HostCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.EXCEPTION -> handleExceptionEcall(HostCallType.fromByte(callTypeID), data)
         }
     }
 
@@ -83,18 +83,23 @@ class NativeHostCallInterface : HostCallInterface() {
 
     /**
      * Handle call initiations from the host.
-     * This method propagates the call to the appropriate enclave side call handler, then sanitises, serialises and
-     * propagates any exceptions that occur. If a return value is produced, a reply message is sent back to the host.
+     * This method propagates the call to the appropriate enclave side call handler. If a return value is produced or an
+     * exception occurs, a reply message is sent back to the host.
      */
     private fun handleCallEcall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
-            acceptCall(callType, parameterBuffer)?.let {
-                Native.jvmOcall(callType.toShort(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+            handleIncomingCall(callType, parameterBuffer)?.let {
+                /**
+                 * If there was a non-null return value, send it back to the host.
+                 * If no value is received by the host, then [com.r3.conclave.host.internal.NativeEnclaveCallInterface.initiateOutgoingCall]
+                 * will return null to the caller on the host side.
+                 */
+                Native.jvmOcall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
             val serializedException = ThrowableSerialisation.serialise(maybeSanitisedThrowable)
-            Native.jvmOcall(callType.toShort(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
+            Native.jvmOcall(callType.toByte(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
         }
     }
 

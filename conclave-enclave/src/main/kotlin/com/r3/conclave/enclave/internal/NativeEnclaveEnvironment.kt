@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 @PotentialPackagePrivate
 class NativeEnclaveEnvironment(
     enclaveClass: Class<*>,
-    override val hostCallInterface: NativeHostCallInterface
+    override val hostInterface: NativeEnclaveHostInterface
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
@@ -27,31 +27,35 @@ class NativeEnclaveEnvironment(
                 Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java)
                         .apply { isAccessible = true }
 
-        /** The singleton host call interface for the user enclave. */
-        private val hostCallInterface by lazy {
-            val hostCallInterface = NativeHostCallInterface()
-
-            /** The host call interface begins with a single handler for initialising the enclave. */
-            hostCallInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
+        /**
+         * The initial singleton host call interface for the user enclave.
+         * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
+         * See [initialiseEnclave] below.
+         */
+        private val bootstrapHostCallInterface = NativeEnclaveHostInterface().apply {
+            registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
+                var isInitialised = false
                 override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                    synchronized(Companion) {
+                    synchronized(this) {
+                        check(!isInitialised) { "Enclave has already been initialised." }
                         initialiseEnclave(parameterBuffer)
-                        return null
+                        isInitialised = true
                     }
+                    return null
                 }
             })
-
-            hostCallInterface
         }
 
         /**
-         * Temporary ECALL entry point for new handler system.
+         * Entry point for messages arriving from the host.
          *
-         * @param buffer The chunk of data from the host.
+         * @param callTypeID The type of the call this is for, encoded as byte.
+         * @param nativeMessageType The purpose of the message (call/exception/return etc)
+         * @param dataBuffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntry(callTypeID: Short, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
-            hostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
+        fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
+            bootstrapHostCallInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
         }
 
         private fun seedRandom() {
@@ -95,8 +99,8 @@ class NativeEnclaveEnvironment(
                     .getDeclaredConstructor()
                     .apply { isAccessible = true }
                     .newInstance()
-                val env = NativeEnclaveEnvironment(enclaveClass, hostCallInterface)
-                env.hostCallInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
+                val env = NativeEnclaveEnvironment(enclaveClass, bootstrapHostCallInterface)
+                env.hostInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
                 initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e

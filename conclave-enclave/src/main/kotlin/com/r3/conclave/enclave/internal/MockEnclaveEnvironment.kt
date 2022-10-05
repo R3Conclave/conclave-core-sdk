@@ -42,9 +42,9 @@ class MockEnclaveEnvironment(
         }
     }
 
-    override val hostCallInterface = run {
-        val hostCallInterface = MockHostCallInterface(callInterfaceConnector)
-        callInterfaceConnector.setEnclaveCallAcceptor(hostCallInterface)
+    override val hostInterface = run {
+        val hostCallInterface = MockEnclaveHostInterface(callInterfaceConnector)
+        callInterfaceConnector.setEnclaveCallInterface(hostCallInterface)
         hostCallInterface
     }
 

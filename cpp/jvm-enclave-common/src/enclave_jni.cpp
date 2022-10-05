@@ -77,7 +77,7 @@ bool validateSealDataArgs
 extern "C" {
 
 JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
-        (JNIEnv *jniEnv, jclass, jshort callTypeID, jbyte messageTypeID, jbyteArray data) {
+        (JNIEnv *jniEnv, jclass, jbyte callTypeID, jbyte messageTypeID, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
     abortOnJniException(jniEnv);
     auto inputBuffer = jniEnv->GetByteArrayElements(data, nullptr);

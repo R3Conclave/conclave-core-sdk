@@ -80,9 +80,6 @@ abstract class Enclave {
     private lateinit var signingKeyPair: KeyPair
     private lateinit var aesPersistenceKey: ByteArray
 
-    private val startCallHandler = StartCallHandler()
-    private val stopCallHandler = StopCallHandler()
-    private val getKdsPersistenceKeySpecCallHandler = GetKdsPersistenceKeySpecCallHandler()
     private val setKdsPersistenceKeyCallHandler = SetKdsPersistenceKeyCallHandler()
     private val getEnclaveInstanceInfoQuoteCallHandler = GetEnclaveInstanceInfoQuoteCallHandler()
     private val enclaveMessageHandler = EnclaveMessageHandler()
@@ -152,7 +149,7 @@ abstract class Enclave {
 
     /** The serializable remote attestation object for this enclave instance. */
     protected val enclaveInstanceInfo: EnclaveInstanceInfo by lazy {
-        val attestation = env.hostCallInterface.getAttestation()
+        val attestation = env.hostInterface.getAttestation()
         val attestationReportBody = attestation.reportBody
         val enclaveReportBody = getEnclaveInstanceInfoQuoteCallHandler.mostRecentQuote[quote][reportBody]
 
@@ -240,14 +237,16 @@ abstract class Enclave {
         this.env = env
         initCryptography()
 
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, startCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.STOP_ENCLAVE, stopCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, getKdsPersistenceKeySpecCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
-        env.hostCallInterface.registerCallHandler(EnclaveCallType.SEND_MESSAGE_HANDLER_COMMAND, enclaveMessageHandler)
+        env.hostInterface.apply {
+            registerCallHandler(EnclaveCallType.START_ENCLAVE, StartCallHandler())
+            registerCallHandler(EnclaveCallType.STOP_ENCLAVE, StopCallHandler())
+            registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, GetKdsPersistenceKeySpecCallHandler())
+            registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
+            registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
+            registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+        }
 
-        env.hostCallInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
+        env.hostInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
     }
 
     /**
@@ -272,7 +271,7 @@ abstract class Enclave {
             }
             ByteCursor.wrap(SgxReportData, reportData)
         }
-        val quotingEnclaveInfo = env.hostCallInterface.getQuotingEnclaveInfo()
+        val quotingEnclaveInfo = env.hostInterface.getQuotingEnclaveInfo()
         return createAttestationQuote(quotingEnclaveInfo, reportDataCursor).bytes
     }
 
@@ -284,7 +283,7 @@ abstract class Enclave {
             reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         val report = env.createReport(quotingEnclaveInfo, reportData)
-        return env.hostCallInterface.getSignedQuote(report)
+        return env.hostInterface.getSignedQuote(report)
     }
 
     /**
@@ -928,7 +927,7 @@ abstract class Enclave {
                 putLong(hostThreadId)
                 payload(this)
             }
-            env.hostCallInterface.sendEnclaveMessageResponse(buffer)
+            env.hostInterface.sendEnclaveMessageResponse(buffer)
         }
 
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
