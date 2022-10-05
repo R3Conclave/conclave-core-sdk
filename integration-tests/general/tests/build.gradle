@@ -7,7 +7,7 @@ configurations {
 }
 
 dependencies {
-    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testImplementation "com.r3.conclave:conclave-enclave:$conclave_version"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
