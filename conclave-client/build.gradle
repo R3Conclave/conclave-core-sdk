@@ -6,7 +6,7 @@ plugins {
 dependencies {
     api project(":conclave-common")
 
-    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.20"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     implementation "net.i2p.crypto:eddsa:$i2pcrypto_eddsa_version"
 
