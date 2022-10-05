@@ -10,11 +10,11 @@ import java.nio.ByteBuffer
 class StreamCallInterfaceMessage(
         val targetThreadID: Long,
         val sourceThreadID: Long,
-        val callTypeID: Short,
+        val callTypeID: Byte,
         val messageTypeID: Byte,
         val payload: ByteArray?
 ) {
-    private val headerSize = 8 + 8 + 2 + 1
+    private val headerSize = 8 + 8 + 1 + 1
     private val payloadSize get() = (payload?.size ?: 0) + 1
 
     fun size() = headerSize + payloadSize
@@ -25,7 +25,7 @@ class StreamCallInterfaceMessage(
 
             val calleeThreadID = buffer.long
             val callerThreadID = buffer.long
-            val callTypeID = buffer.short
+            val callTypeID = buffer.get()
             val messageTypeID = buffer.get()
             val messageBytes = buffer.getNullable { getRemainingBytes() }
 
@@ -47,7 +47,7 @@ class StreamCallInterfaceMessage(
         return ByteBuffer.allocate(size()).apply {
             putLong(targetThreadID)
             putLong(sourceThreadID)
-            putShort(callTypeID)
+            put(callTypeID)
             put(messageTypeID)
             putNullable(payload) { put(payload) }
         }.array()

@@ -1,7 +1,7 @@
 package com.r3.conclave.host
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.host.internal.EnclaveCallInterface
+import com.r3.conclave.host.internal.HostEnclaveInterface
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.io.InputStream
 import java.io.OutputStream
@@ -18,10 +18,10 @@ import java.util.concurrent.Semaphore
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallAcceptor]
  *  - Handle the low-level details of the messaging protocol (streamed ecalls and ocalls).
  */
-class StreamEnclaveCallInterface(
+class StreamHostEnclaveInterface(
         private val outputStream: OutputStream,     // Messages going to the enclave
         private val inputStream: InputStream        // Messages arriving from the enclave
-) : EnclaveCallInterface() {
+) : HostEnclaveInterface() {
     private val receiveLoop = object : Runnable {
         var done = false
 
@@ -85,13 +85,13 @@ class StreamEnclaveCallInterface(
      * Internal method for initiating an enclave call with specific arguments.
      * This should not be called directly, but instead by implementations in [EnclaveCallInterface].
      */
-    override fun executeCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun initiateOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType))
 
         val outgoingMessage = StreamCallInterfaceMessage(
                 sourceThreadID = Thread.currentThread().id,
                 targetThreadID = -1,
-                callTypeID = callType.toShort(),
+                callTypeID = callType.toByte(),
                 messageTypeID = parameterBuffer.get(),
                 payload = parameterBuffer.getAllBytes(avoidCopying = true))
 
@@ -108,7 +108,7 @@ class StreamEnclaveCallInterface(
             val replyMessage = checkNotNull(stack.peek().message) { "Message is missing from stack frame." }
             val messageType = CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)
             if (messageType == CallInterfaceMessageType.CALL) {
-                val replyCallType = HostCallType.fromShort(replyMessage.callTypeID)
+                val replyCallType = HostCallType.fromByte(replyMessage.callTypeID)
                 val replyCallParameterBytes = checkNotNull(replyMessage.payload) { "Calls must have parameter bytes." }
                 handleCallMessage(replyCallType, replyCallParameterBytes)
             }
@@ -117,7 +117,7 @@ class StreamEnclaveCallInterface(
         val replyMessage = checkNotNull(stack.peek().message)
 
         /** Sanity check to ensure that the reply call type matches the outgoing call type */
-        checkCallType(EnclaveCallType.fromShort(replyMessage.callTypeID))
+        checkCallType(EnclaveCallType.fromByte(replyMessage.callTypeID))
 
         val messageType = CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)
         val messageBytes = replyMessage.payload
@@ -138,11 +138,11 @@ class StreamEnclaveCallInterface(
         val parameterBuffer = ByteBuffer.wrap(parameterBytes).asReadOnlyBuffer()
 
         val replyMessage = try {
-            val returnBuffer = acceptCall(callType, parameterBuffer)
+            val returnBuffer = handleIncomingCall(callType, parameterBuffer)
             StreamCallInterfaceMessage(
                     -1,
                     Thread.currentThread().id,
-                    callType.toShort(),
+                    callType.toByte(),
                     CallInterfaceMessageType.RETURN.toByte(),
                     returnBuffer?.getAllBytes())
         } catch (throwable: Throwable) {
@@ -150,7 +150,7 @@ class StreamEnclaveCallInterface(
             StreamCallInterfaceMessage(
                     -1,
                     Thread.currentThread().id,
-                    callType.toShort(),
+                    callType.toByte(),
                     CallInterfaceMessageType.RETURN.toByte(),
                     serializedException)
         }
