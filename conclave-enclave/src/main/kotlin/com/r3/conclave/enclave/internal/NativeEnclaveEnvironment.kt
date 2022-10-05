@@ -100,7 +100,7 @@ class NativeEnclaveEnvironment(
                     .apply { isAccessible = true }
                     .newInstance()
                 val env = NativeEnclaveEnvironment(enclaveClass, bootstrapHostInterface)
-                env.hostInterface.sanitiseExceptions = env.enclaveMode == EnclaveMode.RELEASE
+                env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
                 initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e
