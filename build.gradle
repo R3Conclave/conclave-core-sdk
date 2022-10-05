@@ -291,7 +291,7 @@ for (publishedProject in publishedProjects) {
             if (project.name == "conclave-mail" || project.name == "conclave-common") {
                 // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
                 // dependencies are compileOnly.
-                configurations = [project.configurations.compileClasspath]
+                configurations = [project.configurations.compileOnly]
                 exclude '**/pom.xml'
                 exclude '**/pom.properties'
                 exclude '**/module-info.class'
