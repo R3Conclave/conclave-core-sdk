@@ -6,7 +6,7 @@ plugins {
 dependencies {
     api project(":conclave-common")
 
-    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     implementation "com.r3.conclave:graal-sdk:$conclave_graal_version"
