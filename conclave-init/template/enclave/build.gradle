@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.13.1"
 }
 
 // See https://docs.conclave.net/enclave-configuration.html for details on how to configure the enclave.
