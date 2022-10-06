@@ -313,7 +313,7 @@ for (publishedProject in publishedProjects) {
                 }
             } else {
                 // The remaining modules are not shading anything so we turn it off.
-              //  configurations = []
+                configurations = []
             }
             //exclude 'META-INF/*.kotlin_module'
             //exclude '**/*.kotlin_metadata'
