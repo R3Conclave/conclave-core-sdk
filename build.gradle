@@ -325,7 +325,7 @@ for (publishedProject in publishedProjects) {
             // it causes the IntelliJ plugin to crash, but this does unfortunately mean internal members (which are
             // public at the bytecode level) will appear. We fix this by making them synthentic which hides them from
             // the compiler.
-            relocate('kotlin', 'com.r3.conclave.shaded.kotlin')
+           // relocate('kotlin', 'com.r3.conclave.shaded.kotlin')
             // Replace the output of the "jar" task with this one.
             archiveClassifier = ''
         }
