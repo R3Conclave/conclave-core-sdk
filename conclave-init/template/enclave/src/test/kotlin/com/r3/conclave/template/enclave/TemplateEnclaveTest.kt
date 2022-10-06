@@ -19,7 +19,7 @@ class TemplateEnclaveTest {
             commands.forEach { command ->
                 when (command) {
                     is MailCommand.PostMail -> {
-                        result = postOffice.decryptMail(command.encryptedBytes).bodyAsBystes
+                        result = postOffice.decryptMail(command.encryptedBytes).bodyAsBytes
                     }
                     is MailCommand.StoreSealedState -> throw Exception("No implementation yet")
                 }
