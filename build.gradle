@@ -136,37 +136,37 @@ List<PublishedProject> publishedProjects = [
         new PublishedProject(
                 projectPath: ':conclave-common',
                 description: 'Conclave API common to enclave, host and client',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-enclave',
                 description: 'Conclave enclave API',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-host',
                 description: 'Conclave host API',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-web-host',
                 description: 'Conclave host web server',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-client',
                 description: 'Conclave client API',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-web-client',
                 description: 'Conclave web client API',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':conclave-mail',
                 description: 'Conclave mail API',
-                shade: false
+                shade: true
         ),
         new PublishedProject(
                 projectPath: ':plugin-enclave-gradle',
