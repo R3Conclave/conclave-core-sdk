@@ -292,10 +292,9 @@ for (publishedProject in publishedProjects) {
                 // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
                 // dependencies are compileOnly.
                 configurations = [project.configurations.compileClasspath]
-      //          configurations = []
-               // exclude '**/pom.xml'
-               // exclude '**/pom.properties'
-                //exclude '**/module-info.class'
+                exclude '**/pom.xml'
+                exclude '**/pom.properties'
+                exclude '**/module-info.class'
                 mergeServiceFiles()
                 if (project.name == "conclave-mail") {
              //       exclude 'kotlin/Metadata.class'
