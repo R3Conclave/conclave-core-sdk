@@ -10,7 +10,7 @@ pluginManagement {
                     url = "https://software.r3.com/artifactory/conclave-maven"
                 }
             }
-
+            // We want to be sure only Dokka artifacts are retrieved from this location
             filter {
                 includeModuleByRegex("com\\.r3\\.conclave\\.dokka", ".*")
             }
