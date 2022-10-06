@@ -291,13 +291,13 @@ for (publishedProject in publishedProjects) {
             if (project.name == "conclave-mail" || project.name == "conclave-common") {
                 // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
                 // dependencies are compileOnly.
-                configurations = [project.configurations.compileClasspath]
-                exclude '**/pom.xml'
-                exclude '**/pom.properties'
-                exclude '**/module-info.class'
-                mergeServiceFiles()
+               // configurations = [project.configurations.compileClasspath]
+               // exclude '**/pom.xml'
+               // exclude '**/pom.properties'
+                //exclude '**/module-info.class'
+            //    mergeServiceFiles()
                 if (project.name == "conclave-mail") {
-                    exclude 'kotlin/Metadata.class'
+             //       exclude 'kotlin/Metadata.class'
                     // Only conclave-mail, as the root in the dependency tree, will contain the shaded kotlin. Everything
                     // else depends on conclave-mail (transitively) and so will inherit the shaded version.
                     dependencies {
@@ -312,11 +312,11 @@ for (publishedProject in publishedProjects) {
                 }
             } else {
                 // The remaining modules are not shading anything so we turn it off.
-                configurations = []
+               // configurations = []
             }
-            exclude 'META-INF/*.kotlin_module'
-            exclude '**/*.kotlin_metadata'
-            exclude '**/*.kotlin_builtins'
+            //exclude 'META-INF/*.kotlin_module'
+            //exclude '**/*.kotlin_metadata'
+            //exclude '**/*.kotlin_builtins'
             // Everyone needs to have their import lines modified to the new shaded ones.
             relocate('com.fasterxml.jackson', 'com.r3.conclave.shaded.jackson')
             // Get rid of the Kotlin related stuff. We don't allow the metadata annotation to leak through because
