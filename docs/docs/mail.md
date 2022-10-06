@@ -1,6 +1,7 @@
 # Mail
 
-A mail is an authenticated byte array with an encrypted body and a cleartext envelope. The mail can be up to two
+Conclave uses *Conclave Mail* to securely communicate between the client and the enclave. It is an authenticated byte 
+array with an encrypted body and a cleartext envelope. The mail can be up to two
 gigabytes in size, however, it must at this time fit into memory when loaded all at once. In practice mails will
 usually be much smaller than that. 
 
@@ -52,16 +53,16 @@ that is readable by the host and enclave simultaneously, but which the host cann
 you can be assured that the header fields contain the values set by the client, because they're checked before
 [`receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html) is invoked.
 
-In addition to the headers there is also the _authenticated sender public key_. This is the public key of the client
-that sent the mail. Like the body it's encrypted so that the host cannot learn the client identities. It's called
+In addition to the headers, there is also the _authenticated sender public key_. This is the public key of the client
+that sent the mail. Like the body, it's encrypted so that the host cannot learn the client identities. It's called
 "authenticated" because the encryption used by Conclave means you can trust that the mail was encrypted by an entity
 holding the private key matching this public key. If your enclave recognises the public key this feature can be used as
 a form of user authentication.
 
 ### Framing
 
-A typical need with any socket or stream based transport is to add framing on top, because the application
-really needs to work with messages. In textual protocols framing can be remarkably tricky to get right, as user 
+A typical need with any socket or stream-based transport is to add framing on top, because the application
+really needs to work with messages. In textual protocols, framing can be remarkably tricky to get right, as user 
 or attacker controlled data may be placed inside a message, meaning any characters that mark the end of a message need
 to be escaped. This can go wrong in [a variety of interesting ways](https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf). Mail by its nature delimits
 messages such that you can always tell where they begin and end, without needing to impose your own framing on top.
@@ -99,7 +100,7 @@ increment, on a per-topic basis, before passing the mail to your code.
 
 Simply knowing how big a message is can be [surprisingly powerful](https://www.schneier.com/blog/archives/2010/03/side-channel_at.html).
 Mail is automatically padded by Conclave to give messages a uniform size. This blocks attempts to infer the contents of
-the message based on the precise size. By default Mail uses a moving average but the policy is configurable and so if
+the message based on the precise size. By default, Mail uses a moving average but the policy is configurable and so if
 you know a reasonable upper limit on the size of your messages, you can pad every message to be that size. The host will
 be blinded and have to try and infer what's going on just from message timing. You can fix that by sending empty
 mails even when you have nothing to say. For example, if an enclave is running some sort of auction or competition 
@@ -108,7 +109,7 @@ client. Even if the winner needs additional data the padding will ensure the hos
 
 ## How does Mail work
 
-When viewed as a structured array of bytes, a mail consists of five parts:
+When viewed as a structured array of bytes, Mail consists of five parts:
 
 1. The protocol ID.
 1. The unencrypted headers, which have fields simply laid out in order.
@@ -133,7 +134,7 @@ to an exploit, for example, [by changing a zero to a one and gaining administrat
 Like all symmetric ciphers, for AES/GCM to work both sides must know the same key. But we want to be able to send
 messages to a target for which we only know a public key, and have never had a chance to securely generate a joint AES
 key with. This is the problem solved by the [Elliptic Curve Diffie-Hellman algorithm](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman).
-To use it we first select a large random number (256 bits) and then convert that to a coordinate on an elliptic
+To use it, we first select a large random number (256 bits) and then convert that to a coordinate on an elliptic
 curve - in our case, we use Curve25519, which is a modern and highly robust elliptic curve. The point on the elliptic curve is our public
 key and can be encoded in another 256 bits (32 bytes). We write this public key after the unencrypted envelope. This
 key is an *ephemeral* key - we picked it just for the purposes of creating this mail. 
@@ -148,7 +149,7 @@ public key and repeat the calculation between the enclave's public key and the s
 as a result.
 
 !!! note
-    Even if the sender doesn't have a static key a random one is generated and used. This is so that every mail
+    Even if the sender doesn't have a static key, a random one is generated and used. This is so that every mail
     has a valid sender value which allows the enclave to ensure mail is ordered per sender (and topic), as discussed
     [previously](#attacks-on-messaging).
 
@@ -156,7 +157,7 @@ As each step in the handshake progresses, a running hash is maintained that mixe
 various intermediate stages. This allows the unencrypted headers to be tamper-proofed against the host as well, because
 the host will not be able to recalculate the authentication tag emitted to the end of the handshake.
 
-Thus the handshake consists of a random public key, an 
+Thus, the handshake consists of a random public key, an 
 authenticated encryption of the sender's public key, and an authentication hash. Once this is done the mail's AES
 key has been computed. The initialization vector for each AES encryption is a counter (an exception will be thrown
 if the mail is so large the counter would wrap around, as that would potentially reveal information for cryptanalysis,
