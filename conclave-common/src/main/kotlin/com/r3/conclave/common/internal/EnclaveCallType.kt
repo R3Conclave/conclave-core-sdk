@@ -17,6 +17,7 @@ enum class EnclaveCallType {
     companion object {
         private val VALUES = EnclaveCallType.values()
 
+        @JvmStatic
         fun fromByte(i: Byte): EnclaveCallType {
             require(i < VALUES.size) { "$i does not correspond to a valid enclave call type." }
             return VALUES[i.toInt()]

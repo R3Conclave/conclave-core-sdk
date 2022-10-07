@@ -15,6 +15,7 @@ enum class HostCallType {
     companion object {
         private val VALUES = HostCallType.values()
 
+        @JvmStatic
         fun fromByte(i: Byte): HostCallType {
             require(i < VALUES.size) { "$i does not correspond to a valid host call type." }
             return VALUES[i.toInt()]

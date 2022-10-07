@@ -14,6 +14,7 @@ enum class CallInterfaceMessageType {
     companion object {
         private val VALUES = CallInterfaceMessageType.values()
 
+        @JvmStatic
         fun fromByte(byte: Byte): CallInterfaceMessageType {
             return VALUES[byte.toInt()]
         }
