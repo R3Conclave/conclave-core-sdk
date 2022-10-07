@@ -10,10 +10,7 @@ enum class HostCallType {
     SET_ENCLAVE_INFO,
     CALL_MESSAGE_HANDLER;
 
-    fun toByte(): Byte {
-        check(VALUES.size < Byte.MAX_VALUE)
-        return ordinal.toByte()
-    }
+    fun toByte(): Byte = ordinal.toByte()
 
     companion object {
         private val VALUES = HostCallType.values()

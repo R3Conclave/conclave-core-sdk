@@ -9,9 +9,7 @@ enum class CallInterfaceMessageType {
     RETURN,
     EXCEPTION;
 
-    fun toByte(): Byte {
-        return ordinal.toByte()
-    }
+    fun toByte(): Byte = ordinal.toByte()
 
     companion object {
         private val VALUES = CallInterfaceMessageType.values()
