@@ -426,11 +426,8 @@ class EnclaveHost private constructor(
         // This is OK because no VM is started in Mock mode and this will allow us to integrate Gramine with Conclave
         // iteratively without causing issues to the normal operation of Conclave.
         // Start Gramine only if the environment variable is set
-        if(Gramine.isGramineEnabled())
-        {
-            if(enclaveHandle !is MockEnclaveHandle) {
-                throw Exception("Gramine cannot be started in non-mock modes")
-            }
+        if (Gramine.isGramineEnabled()) {
+            check(enclaveHandle is MockEnclaveHandle) { "Gramine cannot be started in non-mock modes" }
             Gramine.start()
         }
 
@@ -736,7 +733,7 @@ class EnclaveHost private constructor(
 
     @Synchronized
     override fun close() {
-        if(Gramine.isGramineEnabled()) {
+        if (Gramine.isGramineEnabled()) {
             Gramine.stop()
         }
         // Closing an unstarted or already closed EnclaveHost is allowed, because this makes it easier to use
