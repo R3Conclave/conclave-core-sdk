@@ -24,14 +24,8 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
      * Each thread has a lazily created stack which contains a frame for the currently active host call.
      * When a message arrives from the host, this stack is used to associate the return value with the corresponding call.
      */
-    private val threadLocalStacks = ThreadLocal<ArrayDeque<StackFrame>>()
-    private val stack: ArrayDeque<StackFrame>
-        get() {
-            if (threadLocalStacks.get() == null) {
-                threadLocalStacks.set(ArrayDeque<StackFrame>())
-            }
-            return threadLocalStacks.get()
-        }
+    private val threadLocalStacks = ThreadLocal.withInitial { ArrayDeque<StackFrame>() }
+    private val stack = threadLocalStacks.get()
 
     private fun checkCallType(type: HostCallType) = check(type == stack.last().callType) { "Call type mismatch" }
 
