@@ -33,6 +33,7 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
      * Add a call handler for a specific call type.
      * If the call type already has a handler, throw an exception.
      */
+    @Synchronized
     fun registerCallHandler(callType: INCOMING_CALL_TYPE, handler: CallHandler) {
         check(!callHandlers.containsKey(callType)) { "Call handler already registered for $callType." }
         callHandlers[callType] = handler
