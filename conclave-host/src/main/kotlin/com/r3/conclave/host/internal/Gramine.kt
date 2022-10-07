@@ -1,34 +1,28 @@
-package com.r3.conclave.host
+package com.r3.conclave.host.internal
 
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
-import kotlin.io.path.absolutePathString
+import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 object Gramine {
-
     private lateinit var processGramineDirect: Process
 
     fun start() {
-        try {
-            val gramineWorkingDirPath = Files.createTempDirectory("conclave-gramine-runtime")
-            generateManifestFile(gramineWorkingDirPath)
+        val gramineWorkingDirPath = Files.createTempDirectory("conclave-gramine-runtime")
+        gramineWorkingDirPath.toFile().deleteOnExit()
+        generateManifestFile(gramineWorkingDirPath)
 
-            processGramineDirect = ProcessBuilder()
-                .inheritIO()
-                .directory(File(gramineWorkingDirPath.toUri()))
-                .command("gramine-direct", "bash", "-c", "echo \"Gramine bash \'enclave\' started\" && sleep 10000")
-                .start()
-        } catch (exception: Exception) {
-            exception.printStackTrace();
-        }
+        processGramineDirect = ProcessBuilder()
+            .inheritIO()
+            .directory(gramineWorkingDirPath.toFile())
+            .command("gramine-direct", "bash", "-c", """echo "Gramine bash 'enclave' started" && sleep 10000""")
+            .start()
     }
 
     fun stop() {
+        if (!::processGramineDirect.isInitialized) return
         processGramineDirect.destroy()
         processGramineDirect.waitFor(10L, TimeUnit.SECONDS)
         if (processGramineDirect.isAlive) {
@@ -42,10 +36,11 @@ object Gramine {
     }
 
     private fun generateManifestFile(dirPath: Path) {
-        Files.write(Paths.get(dirPath.absolutePathString() + "/" + "bash.manifest"), manifestContent.toByteArray())
+        val manifestFile = dirPath / "bash.manifest"
+        manifestFile.writeText(manifestContent)
     }
 
-    private val manifestContent =
+    private const val manifestContent =
         """[loader]
 entrypoint = "file:/usr/lib/x86_64-linux-gnu/gramine/libsysdb.so"
 log_level = "error"
