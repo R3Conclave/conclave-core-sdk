@@ -78,7 +78,7 @@ messages to structure a conversation logically. Clients can also hold multiple c
 message headers. You can use message headers to implement non-data-processing tasks like usage tracking and 
 prioritization at the host's end. The Mail headers contain the following fields:
 
-1. The_topic_. You can use it to distinguish between different streams of Mail items from the same client. It's a 
+1. The _topic_. You can use it to distinguish between different streams of Mail items from the same client. It's a 
    string similar to an email subject. Topics are scoped per sender and are not global. Clients can send multiple 
    streams of related Mail items using a different topic for each stream. To avoid replay attacks, you should never 
    reuse a topic for an unrelated Mail item. Using a random UUID in a topic is good practice to prevent reuse.
