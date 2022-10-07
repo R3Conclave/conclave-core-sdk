@@ -576,8 +576,6 @@ public final class Curve448 {
 	 * @param privateKey The private key to use in the evaluation.
 	 * @param publicKey The public key to use in the evaluation, or null
 	 * if the base point of the curve should be used.
-	 * @return Returns true if the curve evaluation was successful,
-	 * false if the publicKey value is out of range.
 	 */
 	public static void eval(byte[] result, int offset, byte[] privateKey, byte[] publicKey)
 	{
