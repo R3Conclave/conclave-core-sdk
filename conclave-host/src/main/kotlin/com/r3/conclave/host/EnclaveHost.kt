@@ -63,8 +63,6 @@ class EnclaveHost private constructor(
      * @suppress
      */
     companion object {
-        private const val ENV_VAR_SGX_AESM_ADDR = "SGX_AESM_ADDR"
-
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
         private val jsonMapper = JsonMapper.builder().enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS).build()
@@ -436,8 +434,6 @@ class EnclaveHost private constructor(
             Gramine.start()
         }
 
-        checkAesmAddrEnvVar()
-
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
         quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
@@ -563,15 +559,6 @@ class EnclaveHost private constructor(
     fun updateAttestation() {
         val attestation = getAttestation()
         updateEnclaveInstanceInfo(attestation)
-    }
-
-    private fun checkAesmAddrEnvVar() {
-        val sgxAesmAddrEnvVar = System.getenv(ENV_VAR_SGX_AESM_ADDR)
-        if (enclaveMode.isHardware)
-            check(sgxAesmAddrEnvVar == null) { "Cannot start the enclave with the environment variable $ENV_VAR_SGX_AESM_ADDR set. Please unset it and try again." }
-        else if (sgxAesmAddrEnvVar != null) {
-            log.warn("Enclave will not be able to start-up in debug or release mode while $ENV_VAR_SGX_AESM_ADDR is set.")
-        }
     }
 
     private fun getAttestation(): Attestation {
