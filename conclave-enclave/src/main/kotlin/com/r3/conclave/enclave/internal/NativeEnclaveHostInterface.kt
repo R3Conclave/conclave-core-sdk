@@ -59,7 +59,7 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
     }
 
     /**
-     * Handle ecalls that originate from the host.
+     * Handle ECalls that originate from the host.
      */
     fun handleECall(callTypeID: Byte, messageType: CallInterfaceMessageType, data: ByteBuffer) {
         when (messageType) {
