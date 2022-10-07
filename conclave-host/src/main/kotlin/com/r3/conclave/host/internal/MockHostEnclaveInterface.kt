@@ -16,7 +16,7 @@ class MockHostEnclaveInterface(private val connector: MockCallInterfaceConnector
         connector.setEnclaveHostInterface(this)
     }
 
-    override fun initiateOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         return connector.hostToEnclave(callType, parameterBuffer)
     }
 }

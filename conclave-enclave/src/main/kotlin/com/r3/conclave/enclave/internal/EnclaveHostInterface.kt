@@ -20,14 +20,14 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
             put(encodedSigningKey)
             put(encodedEncryptionKey)
         }
-        initiateOutgoingCall(HostCallType.SET_ENCLAVE_INFO, buffer)
+        executeOutgoingCall(HostCallType.SET_ENCLAVE_INFO, buffer)
     }
 
     /**
      * Get a signed quote from the host.
      */
     fun getSignedQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        val quoteBuffer = initiateOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
+        val quoteBuffer = executeOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
         return Cursor.slice(SgxSignedQuote, quoteBuffer)
     }
 
@@ -35,7 +35,7 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
      * Get quoting enclave info from the host.
      */
     fun getQuotingEnclaveInfo(): ByteCursor<SgxTargetInfo> {
-        val infoBuffer = initiateOutgoingCallWithReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
+        val infoBuffer = executeOutgoingCallWithReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
         return Cursor.slice(SgxTargetInfo, infoBuffer)
     }
 
@@ -43,7 +43,7 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
      * Request an attestation from the host.
      */
     fun getAttestation(): Attestation {
-        val buffer = initiateOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
+        val buffer = executeOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
         return Attestation.getFromBuffer(buffer)
     }
 
@@ -51,6 +51,6 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
      * Send a response to the host enclave message handler.
      */
     fun sendEnclaveMessageResponse(response: ByteBuffer) {
-        initiateOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, response)
+        executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, response)
     }
 }

@@ -39,7 +39,7 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
      * Internal method for initiating a host call with specific arguments.
      * This should not be called directly, but instead by implementations in [EnclaveHostInterface].
      */
-    override fun initiateOutgoingCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeOutgoingCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
         Native.jvmOcall(
@@ -91,7 +91,7 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
             handleIncomingCall(callType, parameterBuffer)?.let {
                 /**
                  * If there was a non-null return value, send it back to the host.
-                 * If no value is received by the host, then [com.r3.conclave.host.internal.NativeHostEnclaveInterface.initiateOutgoingCall]
+                 * If no value is received by the host, then [com.r3.conclave.host.internal.NativeHostEnclaveInterface.executeOutgoingCall]
                  * will return null to the caller on the host side.
                  */
                 Native.jvmOcall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))

@@ -35,7 +35,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      * Internal method for initiating an enclave call with specific arguments.
      * This should not be called directly, but instead by implementations in [HostEnclaveInterface].
      */
-    override fun initiateOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
         NativeApi.sendEcall(
@@ -72,7 +72,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
             handleIncomingCall(callType, parameterBuffer)?.let {
                 /**
                  * If there was a non-null return value, send it back to the enclave.
-                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.initiateOutgoingCall]
+                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.executeOutgoingCall]
                  * will return null to the caller on the enclave side.
                  */
                 NativeApi.sendEcall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))

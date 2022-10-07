@@ -18,13 +18,13 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
     /**
      * Execute a call and maybe get a return buffer.
      */
-    abstract fun initiateOutgoingCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
+    abstract fun executeOutgoingCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
 
     /**
      * Execute a call and get a return buffer. Throw an exception if no buffer is returned.
      */
-    fun initiateOutgoingCallWithReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
-        return checkNotNull(initiateOutgoingCall(callType, parameterBuffer)) {
+    fun executeOutgoingCallWithReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
+        return checkNotNull(executeOutgoingCall(callType, parameterBuffer)) {
             "Missing return value from $callType call."
         }
     }
