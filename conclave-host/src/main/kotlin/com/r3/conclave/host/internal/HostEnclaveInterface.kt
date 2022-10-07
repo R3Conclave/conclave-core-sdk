@@ -40,7 +40,7 @@ abstract class HostEnclaveInterface : CallInterface<EnclaveCallType, HostCallTyp
      * Request a quote for enclave instance info from the enclave.
      */
     fun getEnclaveInstanceInfoQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-        val returnBuffer = initiateOutgoingCallAndCheckReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
+        val returnBuffer = initiateOutgoingCallWithReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
         return Cursor.wrap(SgxSignedQuote, returnBuffer.getRemainingBytes())
     }
 

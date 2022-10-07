@@ -27,7 +27,7 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
      * Get a signed quote from the host.
      */
     fun getSignedQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        val quoteBuffer = initiateOutgoingCallAndCheckReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
+        val quoteBuffer = initiateOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
         return Cursor.slice(SgxSignedQuote, quoteBuffer)
     }
 
@@ -35,7 +35,7 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
      * Get quoting enclave info from the host.
      */
     fun getQuotingEnclaveInfo(): ByteCursor<SgxTargetInfo> {
-        val infoBuffer = initiateOutgoingCallAndCheckReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
+        val infoBuffer = initiateOutgoingCallWithReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
         return Cursor.slice(SgxTargetInfo, infoBuffer)
     }
 
@@ -43,7 +43,7 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
      * Request an attestation from the host.
      */
     fun getAttestation(): Attestation {
-        val buffer = initiateOutgoingCallAndCheckReturn(HostCallType.GET_ATTESTATION)
+        val buffer = initiateOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
         return Attestation.getFromBuffer(buffer)
     }
 
