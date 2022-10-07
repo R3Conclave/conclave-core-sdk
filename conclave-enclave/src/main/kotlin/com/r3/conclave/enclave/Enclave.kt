@@ -69,9 +69,8 @@ abstract class Enclave {
         private const val KDS_PERSISTENCE_KEY_NAME = "EnclavePersistence"
 
         private fun getMailDecryptingStream(input: ByteBuffer): MailDecryptingStream {
-            println("Classpath:" + System.getProperty("java.class.path"))
             // Wrap the remaining bytes in a InputStream to avoid copying.
-            return MailDecryptingStream(input.inputStream())
+            return MailDecryptingStream(input.inputStream(), null)
         }
     }
 
