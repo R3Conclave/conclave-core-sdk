@@ -141,7 +141,7 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave(JNIEnv *jn
     r3::conclave::HostSharedData::instance().free(static_cast<sgx_enclave_id_t>(enclaveId));
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall(JNIEnv *jniEnv,
+void JNICALL Java_com_r3_conclave_host_internal_Native_jvmECall(JNIEnv *jniEnv,
                                                                 jclass,
                                                                 jlong enclaveId,
                                                                 jbyte callTypeID,
@@ -268,16 +268,16 @@ void jvm_ocall(char callTypeID, char messageTypeID, void* data, int dataLengthBy
     try {
         // Wrap the native bytes in a Java direct byte buffer to avoid unnecessary copying. This is safe to do since the
         // memory is not de-allocated until after this function returns in
-        // Java_com_r3_conclave_enclave_internal_Native_jvmOcall.
+        // Java_com_r3_conclave_enclave_internal_Native_jvmOCall.
         auto javaBuffer = jniEnv->NewDirectByteBuffer(data, dataLengthBytes);
         checkJniException(jniEnv);
         auto hostEnclaveApiClass = jniEnv->FindClass("com/r3/conclave/host/internal/NativeApi");
         checkJniException(jniEnv);
         // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
         // copied from it. This means it's safe to de-allocate the pointer after this function returns.
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "receiveOcall", "(JBBLjava/nio/ByteBuffer;)V");
+        auto jvmOCallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "receiveOCall", "(JBBLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
-        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
+        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOCallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
         checkJniException(jniEnv);
     } catch (JNIException&) {
         // No-op: delegate handling to the host JVM

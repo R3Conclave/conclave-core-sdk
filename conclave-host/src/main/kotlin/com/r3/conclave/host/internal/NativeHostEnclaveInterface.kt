@@ -12,7 +12,7 @@ typealias StackFrame = CallInterfaceStackFrame<EnclaveCallType>
  * It has three jobs:
  *  - Serve as the endpoint for calls to make to the enclave, see [com.r3.conclave.common.internal.CallInterface]
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
- *  - Handle the low-level details of the messaging protocol (ecalls and ocalls).
+ *  - Handle the low-level details of the messaging protocol (ECalls and OCalls).
  */
 class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInterface() {
     /**
@@ -38,7 +38,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         stack.push(StackFrame(callType, null, null))
 
-        NativeApi.sendEcall(
+        NativeApi.sendECall(
                 enclaveId, callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
         val stackFrame = stack.pop()
@@ -53,12 +53,12 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
     /**
      * Handler low level messages arriving from the enclave.
      */
-    fun handleOcall(enclaveId: Long, callTypeID: Byte, ocallType: CallInterfaceMessageType, data: ByteBuffer) {
+    fun handleOCall(enclaveId: Long, callTypeID: Byte, ocallType: CallInterfaceMessageType, data: ByteBuffer) {
         checkEnclaveID(enclaveId)
         when (ocallType) {
-            CallInterfaceMessageType.CALL -> handleCallOcall(HostCallType.fromByte(callTypeID), data)
-            CallInterfaceMessageType.RETURN -> handleReturnOcall(EnclaveCallType.fromByte(callTypeID), data)
-            CallInterfaceMessageType.EXCEPTION -> handleExceptionOcall(EnclaveCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.CALL -> handleCallOCall(HostCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.RETURN -> handleReturnOCall(EnclaveCallType.fromByte(callTypeID), data)
+            CallInterfaceMessageType.EXCEPTION -> handleExceptionOCall(EnclaveCallType.fromByte(callTypeID), data)
         }
     }
 
@@ -67,7 +67,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      * This method propagates the call to the appropriate host side call handler. If a return value is produced or an
      * exception occurs, a reply message is sent back to the enclave.
      */
-    private fun handleCallOcall(callType: HostCallType, parameterBuffer: ByteBuffer) {
+    private fun handleCallOCall(callType: HostCallType, parameterBuffer: ByteBuffer) {
         try {
             handleIncomingCall(callType, parameterBuffer)?.let {
                 /**
@@ -75,18 +75,18 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
                  * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.executeOutgoingCall]
                  * will return null to the caller on the enclave side.
                  */
-                NativeApi.sendEcall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+                NativeApi.sendECall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val serializedException = ThrowableSerialisation.serialise(throwable)
-            NativeApi.sendEcall(enclaveId, callType.toByte(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
+            NativeApi.sendECall(enclaveId, callType.toByte(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
         }
     }
 
     /**
      * Handle return messages originating from the enclave.
      */
-    private fun handleReturnOcall(callType: EnclaveCallType, returnBuffer: ByteBuffer) {
+    private fun handleReturnOCall(callType: EnclaveCallType, returnBuffer: ByteBuffer) {
         checkCallType(callType)
         stack.peek().returnBuffer = ByteBuffer.wrap(returnBuffer.getAllBytes())
     }
@@ -94,7 +94,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
     /**
      * Handle exception messages originating from the enclave.
      */
-    private fun handleExceptionOcall(callType: EnclaveCallType, exceptionBuffer: ByteBuffer) {
+    private fun handleExceptionOCall(callType: EnclaveCallType, exceptionBuffer: ByteBuffer) {
         checkCallType(callType)
         stack.peek().exceptionBuffer = ByteBuffer.wrap(exceptionBuffer.getAllBytes())
     }

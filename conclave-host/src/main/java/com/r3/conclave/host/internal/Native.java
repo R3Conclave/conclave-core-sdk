@@ -8,7 +8,7 @@ public class Native {
 
     public static native void destroyEnclave(long enclaveId);
 
-    public static native void jvmEcall(long enclaveId, byte callType, byte messageTypeID, byte[] data);
+    public static native void jvmECall(long enclaveId, byte callType, byte messageTypeID, byte[] data);
 
     /**
      * sgx_status_t sgx_init_quote(sgx_target_info_t *p_target_info, sgx_epid_group_id_t *p_gid)

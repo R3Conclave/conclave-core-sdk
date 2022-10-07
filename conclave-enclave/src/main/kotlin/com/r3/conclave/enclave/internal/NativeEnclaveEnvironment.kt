@@ -55,7 +55,7 @@ class NativeEnclaveEnvironment(
          */
         @JvmStatic
         fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
-            singletonHostInterface.handleEcall(callTypeID, nativeMessageType, dataBuffer)
+            singletonHostInterface.handleECall(callTypeID, nativeMessageType, dataBuffer)
         }
 
         private fun seedRandom() {

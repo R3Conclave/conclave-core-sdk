@@ -76,7 +76,7 @@ bool validateSealDataArgs
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
+JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOCall
         (JNIEnv *jniEnv, jclass, jbyte callTypeID, jbyte messageTypeID, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
     abortOnJniException(jniEnv);
@@ -342,7 +342,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_getKey
 }
 
 DLSYM_STATIC {
-    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOcall);
+    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOCall);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_createReport);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_isEnclaveSimulation);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_sealData);
