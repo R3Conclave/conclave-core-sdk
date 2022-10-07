@@ -25,7 +25,7 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
      * When a message arrives from the host, this stack is used to associate the return value with the corresponding call.
      */
     private val threadLocalStacks = ThreadLocal.withInitial { ArrayDeque<StackFrame>() }
-    private val stack = threadLocalStacks.get()
+    private val stack get() = threadLocalStacks.get()
 
     private fun checkCallType(type: HostCallType) = check(type == stack.last().callType) { "Call type mismatch" }
 
@@ -86,13 +86,14 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
      */
     private fun handleCallECall(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
         try {
-            handleIncomingCall(callType, parameterBuffer)?.let {
-                /**
-                 * If there was a non-null return value, send it back to the host.
-                 * If no value is received by the host, then [com.r3.conclave.host.internal.NativeHostEnclaveInterface.executeOutgoingCall]
-                 * will return null to the caller on the host side.
-                 */
-                Native.jvmOCall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+            val returnBuffer = handleIncomingCall(callType, parameterBuffer)
+            /**
+             * If there was a non-null return value, send it back to the host.
+             * If no value is received by the host, then [com.r3.conclave.host.internal.NativeHostEnclaveInterface.executeOutgoingCall]
+             * will return null to the caller on the host side.
+             */
+            if (returnBuffer != null) {
+                Native.jvmOCall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), returnBuffer.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable

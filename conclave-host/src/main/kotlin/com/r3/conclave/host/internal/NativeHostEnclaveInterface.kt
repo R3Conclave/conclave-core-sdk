@@ -20,7 +20,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      * When a message arrives from the enclave, this stack is used to associate the return value with the corresponding call.
      */
     private val threadLocalStacks = ThreadLocal.withInitial { ArrayDeque<StackFrame>() }
-    private val stack = threadLocalStacks.get()
+    private val stack get() = threadLocalStacks.get()
 
     private fun checkEnclaveID(id: Long) = check(id == this.enclaveId) { "Enclave ID mismatch" }
     private fun checkCallType(type: EnclaveCallType) = check(type == stack.last().callType) { "Call type mismatch" }
@@ -67,13 +67,14 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      */
     private fun handleCallOCall(callType: HostCallType, parameterBuffer: ByteBuffer) {
         try {
-            handleIncomingCall(callType, parameterBuffer)?.let {
-                /**
-                 * If there was a non-null return value, send it back to the enclave.
-                 * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.executeOutgoingCall]
-                 * will return null to the caller on the enclave side.
-                 */
-                NativeApi.sendECall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), it.getAllBytes(avoidCopying = true))
+            val returnBuffer = handleIncomingCall(callType, parameterBuffer)
+            /**
+             * If there was a non-null return value, send it back to the enclave.
+             * If no value is received by the enclave, then [com.r3.conclave.enclave.internal.NativeEnclaveHostInterface.executeOutgoingCall]
+             * will return null to the caller on the enclave side.
+             */
+            if (returnBuffer != null) {
+                NativeApi.sendECall(enclaveId, callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), returnBuffer.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
             val serializedException = ThrowableSerialisation.serialise(throwable)
