@@ -155,7 +155,7 @@ abstract class Enclave {
     /**
      * Create an enclave instance info object.
      */
-    private fun generateEnclaveInstanceInfo(): EnclaveInstanceInfo {
+    private fun generateEnclaveInstanceInfo(): EnclaveInstanceInfoImpl {
         val attestation = env.hostInterface.getAttestation()
         val attestationReportBody = attestation.reportBody
         val enclaveReportBody = getEnclaveInstanceInfoQuoteCallHandler.mostRecentQuote[quote][reportBody]
