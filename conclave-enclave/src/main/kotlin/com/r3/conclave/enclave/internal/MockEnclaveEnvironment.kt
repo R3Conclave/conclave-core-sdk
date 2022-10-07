@@ -1,7 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockCallInterfaceConnector
+import com.r3.conclave.common.internal.MockCallInterfaceConnector
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.KeyName.REPORT

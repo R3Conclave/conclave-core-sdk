@@ -1,6 +1,6 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.MockCallInterfaceConnector
+import com.r3.conclave.common.internal.MockCallInterfaceConnector
 import com.r3.conclave.common.internal.HostCallType
 import java.nio.ByteBuffer
 

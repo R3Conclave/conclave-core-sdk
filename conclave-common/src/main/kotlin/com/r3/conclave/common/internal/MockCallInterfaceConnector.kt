@@ -1,9 +1,5 @@
-package com.r3.conclave.common
+package com.r3.conclave.common.internal
 
-import com.r3.conclave.common.internal.CallInterface
-import com.r3.conclave.common.internal.EnclaveCallType
-import com.r3.conclave.common.internal.HostCallType
-import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer

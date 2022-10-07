@@ -1,7 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.MockCallInterfaceConnector
+import com.r3.conclave.common.internal.MockCallInterfaceConnector
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.utilities.internal.EnclaveContext
