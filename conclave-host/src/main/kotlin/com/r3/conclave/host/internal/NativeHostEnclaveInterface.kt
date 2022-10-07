@@ -3,7 +3,7 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
-import java.util.Stack
+import kotlin.collections.ArrayDeque
 
 typealias StackFrame = CallInterfaceStackFrame<EnclaveCallType>
 
@@ -19,31 +19,31 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      * Each thread has a lazily created stack which contains a frame for the currently active enclave call.
      * When a message arrives from the enclave, this stack is used to associate the return value with the corresponding call.
      */
-    private val threadLocalStacks = ThreadLocal<Stack<StackFrame>>()
-    private val stack: Stack<StackFrame>
+    private val threadLocalStacks = ThreadLocal<ArrayDeque<StackFrame>>()
+    private val stack: ArrayDeque<StackFrame>
         get() {
             if (threadLocalStacks.get() == null) {
-                threadLocalStacks.set(Stack<StackFrame>())
+                threadLocalStacks.set(ArrayDeque())
             }
             return threadLocalStacks.get()
         }
 
     private fun checkEnclaveID(id: Long) = check(id == this.enclaveId) { "Enclave ID mismatch" }
-    private fun checkCallType(type: EnclaveCallType) = check(type == stack.peek().callType) { "Call type mismatch" }
+    private fun checkCallType(type: EnclaveCallType) = check(type == stack.last().callType) { "Call type mismatch" }
 
     /**
      * Internal method for initiating an enclave call with specific arguments.
      * This should not be called directly, but instead by implementations in [HostEnclaveInterface].
      */
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
-        stack.push(StackFrame(callType, null, null))
+        stack.addLast(StackFrame(callType, null, null))
 
         NativeApi.sendECall(
                 enclaveId, callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
-        val stackFrame = stack.pop()
+        val stackFrame = stack.removeLast()
 
-        if (stack.empty()) {
+        if (stack.isEmpty()) {
             threadLocalStacks.remove()
         }
 
@@ -92,7 +92,7 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      */
     private fun handleReturnOCall(callType: EnclaveCallType, returnBuffer: ByteBuffer) {
         checkCallType(callType)
-        stack.peek().returnBuffer = ByteBuffer.wrap(returnBuffer.getAllBytes())
+        stack.last().returnBuffer = ByteBuffer.wrap(returnBuffer.getAllBytes())
     }
 
     /**
@@ -100,6 +100,6 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      */
     private fun handleExceptionOCall(callType: EnclaveCallType, exceptionBuffer: ByteBuffer) {
         checkCallType(callType)
-        stack.peek().exceptionBuffer = ByteBuffer.wrap(exceptionBuffer.getAllBytes())
+        stack.last().exceptionBuffer = ByteBuffer.wrap(exceptionBuffer.getAllBytes())
     }
 }
