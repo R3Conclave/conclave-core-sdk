@@ -149,6 +149,13 @@ abstract class Enclave {
 
     /** The serializable remote attestation object for this enclave instance. */
     protected val enclaveInstanceInfo: EnclaveInstanceInfo by lazy {
+        generateEnclaveInstanceInfo()
+    }
+
+    /**
+     * Create an enclave instance info object.
+     */
+    private fun generateEnclaveInstanceInfo(): EnclaveInstanceInfo {
         val attestation = env.hostInterface.getAttestation()
         val attestationReportBody = attestation.reportBody
         val enclaveReportBody = getEnclaveInstanceInfoQuoteCallHandler.mostRecentQuote[quote][reportBody]
@@ -166,7 +173,7 @@ abstract class Enclave {
             "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
         }
 
-        EnclaveInstanceInfoImpl(
+        return EnclaveInstanceInfoImpl(
                 signatureKey,
                 encryptionKeyPair.public as Curve25519PublicKey,
                 attestation
