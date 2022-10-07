@@ -42,7 +42,6 @@ object NativeLoader {
         }
 
         copyHostLibrariesToLibsPath(enclaveMode)
-
         System.load(libsPath.resolve("libjvm_host.so").toString())
         linkedEnclaveMode = enclaveMode
     }
