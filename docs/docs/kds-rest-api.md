@@ -2,8 +2,8 @@
 
 ## Introduction
 
-This page describes how applications can communicate with the Key Derivation Service (KDS). The KDS is a web server 
-which implements a REST API for deriving public and private keys.
+This page describes how applications can communicate with the Key Derivation Service (KDS). The KDS exposes an HTTP 
+REST API for deriving public and private keys.
 
 ## Endpoints
 The Key Derivation Service (KDS) supports two endpoints.
@@ -150,8 +150,15 @@ The envelope in the private key Mail is a byte array structured as below.
             (BE)    sized field             (BE)   sized field
 ```
 
-The API version field contains the API version used for the request. The master key type field contains the type ID 
-of the master key used for derivation (0, 1, and 2 for development, cluster, and Azure key vault, respectively). 
+The API version field contains the API version used for the request.
+
+The master key type field contains the type ID of the master key used for derivation. 
+
+| Type ID | Master Key Type | 
+|---------|-----------------|
+| 0       | Development     |
+| 1       | Cluster         |
+| 2       | Azure Key Vault |
 
 #### Request Example
 
@@ -235,5 +242,5 @@ the `kdsAttestationReport` field in the response.
 
 !!!Note
 
-    Java and Kotlin developers can use [`post office`](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/using-k-d-s.html)
+    Java and Kotlin developers can use the [`post office`](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/using-k-d-s.html)
     instead of the `/public` endpoint to retrieve the KDS public keys.
