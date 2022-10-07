@@ -63,8 +63,6 @@ class EnclaveHost private constructor(
      * @suppress
      */
     companion object {
-        private const val ENV_VAR_SGX_AESM_ADDR = "SGX_AESM_ADDR"
-
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
         private val jsonMapper = JsonMapper.builder().enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS).build()
