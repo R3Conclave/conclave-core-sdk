@@ -14,7 +14,7 @@ abstract class HostEnclaveInterface : CallInterface<EnclaveCallType, HostCallTyp
      * This is not currently used in mock mode.
      */
     fun initializeEnclave(enclaveClassName: String) {
-        executeOutgoingCall(EnclaveCallType.INITIALISE_ENCLAVE, ByteBuffer.wrap(enclaveClassName.toByteArray(StandardCharsets.UTF_8)))
+        executeOutgoingCall(EnclaveCallType.INITIALISE_ENCLAVE, ByteBuffer.wrap(enclaveClassName.toByteArray()))
     }
 
     /**
