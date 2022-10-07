@@ -22,7 +22,7 @@ The handshake consists of the following items:
 * An authenticated encryption of the sender's public key.
 * An authentication hash.
 
-Conclave uses the contents of the handshake to do an [Elliptic-curve Diffie-Hellman](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman#:~:text=Elliptic%2Dcurve%20Diffie%E2%80%93Hellman%20(,or%20to%20derive%20another%20key.)
+Conclave uses the contents of the handshake to do an [Elliptic-curve Diffie-Hellman](https://cryptobook.nakov.com/asymmetric-key-ciphers/ecdh-key-exchange)
 calculation and derive a unique [AES-GCM](https://www.cryptosys.net/pki/manpki/pki_aesgcmauthencryption.html) key
 using the [Noise protocol](https://noiseprotocol.org/noise.html) and the
 [SHA-256](https://www.simplilearn.com/tutorials/cyber-security-tutorial/sha-256-algorithm) algorithm.
@@ -78,12 +78,10 @@ messages to structure a conversation logically. Clients can also hold multiple c
 message headers. You can use message headers to implement non-data-processing tasks like usage tracking and 
 prioritization at the host's end. The Mail headers contain the following fields:
 
-1. A _topic_. You can use it to distinguish between different streams of Mail items from the same client. It's a 
+1. The_topic_. You can use it to distinguish between different streams of Mail items from the same client. It's a 
    string similar to an email subject. Topics are scoped per sender and are not global. Clients can send multiple 
-   streams of related Mail items using a different topic for each stream.
-   
-   To avoid replay attacks, you should never reuse a topic for an unrelated Mail item. Using a random UUID in a 
-   topic is good practice to prevent reuse.
+   streams of related Mail items using a different topic for each stream. To avoid replay attacks, you should never 
+   reuse a topic for an unrelated Mail item. Using a random UUID in a topic is good practice to prevent reuse.
 
 2. The _sequence number_. Every Mail item under a topic has a sequence number that starts from zero and increments 
    by one. The enclave rejects messages if the sequence number is not in order. This ensures that the enclave 
