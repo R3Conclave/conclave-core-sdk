@@ -43,6 +43,10 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
 
         val stackFrame = stack.pop()
 
+        if (stack.empty()) {
+            threadLocalStacks.remove()
+        }
+
         stackFrame.exceptionBuffer?.let {
             throw ThrowableSerialisation.deserialise(it)
         }
