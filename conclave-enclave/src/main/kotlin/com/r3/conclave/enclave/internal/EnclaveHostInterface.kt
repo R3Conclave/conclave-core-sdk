@@ -16,7 +16,7 @@ abstract class EnclaveHostInterface : CallInterface<HostCallType, EnclaveCallTyp
         val encodedSigningKey = signatureKey.encoded                    // 44 bytes
         val encodedEncryptionKey = encryptionKeyPair.public.encoded     // 32 bytes
         val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
-        val buffer = ByteBuffer.wrap(ByteArray(payloadSize)).apply {
+        val buffer = ByteBuffer.allocate(payloadSize).apply {
             put(encodedSigningKey)
             put(encodedEncryptionKey)
         }
