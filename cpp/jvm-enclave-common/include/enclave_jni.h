@@ -9,11 +9,11 @@ extern "C" {
 #endif
 /*
  * Class:     com_r3_conclave_enclave_internal_Native
- * Method:    jvmOCall
- * Signature: (BB[B)V
+ * Method:    jvmOcall
+ * Signature: ([B)V
  */
-JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOCall
-  (JNIEnv *, jclass, jbyte, jbyte, jbyteArray);
+JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
+  (JNIEnv *, jclass, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_enclave_internal_Native
