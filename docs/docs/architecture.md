@@ -42,8 +42,7 @@ attestation.
 
 **Cloud provider.** A cloud provider needs to support SGX for Conclave to be usable. They may operate their
 provisioning servers that take over from Intel's servers. You can find the instructions to use Conclave on Microsoft 
-Azure
-[here](machine-setup.md).
+Azure [here](machine-setup.md).
 
 **Auditor.** In a pure enclave-oriented model, the user is responsible for understanding what the enclave does before
 using it by reading the enclave's source code. In practice, the user may wish to outsource this auditing to someone 
@@ -80,7 +79,7 @@ Consider these questions on the working of Conclave:
 * What deployment modes are available on the journey from unit testing to production?
 * Can Conclave be deployed to the cloud?
 
-The following section answers the above questions.
+The following sections answers the above questions.
 
 ### Remote attestation
 
@@ -118,7 +117,7 @@ creator is trusted, but the host is not.
 When the client approves the set of constraints, it creates encrypted messages using the key in the 
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object. The 
 client establishes communication with the enclave by sending and receiving encrypted messages through the host using
-[Conclave Mail](mail.md)
+[Conclave Mail](mail.md).
 
 
 ### Deciding whether to trust an enclave
