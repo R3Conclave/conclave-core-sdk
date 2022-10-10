@@ -4,8 +4,8 @@
 
 ### API changes
 
-For security reasons, a client that sets the security level in the [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) to insecure will no longer be able to connect to `STALE` or `SECURE` enclaves.
-The behaviour remains the same for the security levels `STALE`, and `SECURE`.
+For security reasons, a client that sets the security level in the [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) to `INSECURE` will no longer be able to connect to `STALE` or `SECURE` enclaves.
+The behavior of the security levels `STALE`, and `SECURE` has not changed.
 
 ## 1.2 to 1.3
 
