@@ -9,5 +9,6 @@ application {
 
 dependencies {
     implementation "com.r3.conclave:conclave-web-client:$conclaveVersion"
+
     runtimeOnly "org.slf4j:slf4j-simple:$slf4jVersion"
 }
