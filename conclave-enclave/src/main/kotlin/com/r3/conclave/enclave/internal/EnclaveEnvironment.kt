@@ -43,6 +43,8 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
 
     abstract val enclaveMode: EnclaveMode
 
+    abstract val hostInterface: EnclaveHostInterface
+
     // Enclave properties from build system
     open val productID: Int = enclaveProperties.getProperty("productID").toInt()
     open val revocationLevel: Int = enclaveProperties.getProperty("revocationLevel").toInt()

@@ -1,39 +1,58 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.CpuFeature
-import com.r3.conclave.common.internal.handler.Handler
-import com.r3.conclave.common.internal.handler.HandlerConnected
+import com.r3.conclave.common.internal.CallInterfaceMessageType
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object NativeApi {
-    private val connectedOcallHandlers = ConcurrentHashMap<Long, HandlerConnected<*>>()
+    private val hostEnclaveInterfaces = ConcurrentHashMap<Long, NativeHostEnclaveInterface>()
 
+    /**
+     * Register an enclave call interface with the native API.
+     * Each call interface serves as the communication endpoint for one enclave.
+     * It serves as the initiator for calls to the enclave, and the handler for calls originating from the enclave.
+     *
+     * @param enclaveId The ID of the enclave to register the call interface with.
+     * @param hostEnclaveInterface An instance of the [HostEnclaveInterface] class to be used for communication with the specified enclave.
+     */
     @JvmStatic
-    fun registerOcallHandler(enclaveId: Long, handlerConnected: HandlerConnected<*>) {
-        val previous = connectedOcallHandlers.putIfAbsent(enclaveId, handlerConnected)
+    fun registerHostEnclaveInterface(enclaveId: Long, hostEnclaveInterface: NativeHostEnclaveInterface) {
+        val previous = hostEnclaveInterfaces.putIfAbsent(enclaveId, hostEnclaveInterface)
         if (previous != null) {
-            throw IllegalStateException("Attempt to re-register handler for enclave id $enclaveId")
+            throw IllegalStateException("Attempt to re-register call interface for enclave id $enclaveId")
         }
     }
 
     /**
-     * This is called by the native jvm_ocall function. The [ByteBuffer] it passes to this method is a direct one,
-     * wrapping some native memory region. This memory is freed after jvm_ocall returns. Therefore reference to the
-     * buffer must not to be kept around and any bytes that need to be used later must be copied. This is already the
-     * contract for [Handler.onReceive].
+     * This method is the entry point for messages delivered from the enclave to the host.
+     * This is part of the low-level communication mechanism used by native enclaves.
+     *
+     * @param enclaveId The ID of the enclave the message originated from.
+     * @param callTypeID The type of call which the message is part of, see [com.r3.conclave.common.internal.EnclaveCallType] and [com.r3.conclave.common.internal.HostCallType].
+     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.CallInterfaceMessageType].
+     * @param data A byte buffer containing message data.
      */
     @JvmStatic
     @Suppress("UNUSED")
-    fun enclaveToHost(enclaveId: Long, buffer: ByteBuffer) {
-        val ocallHandler = checkNotNull(connectedOcallHandlers[enclaveId]) { "Unknown enclave ID $enclaveId" }
-        ocallHandler.onReceive(buffer.asReadOnlyBuffer())
+    fun receiveOCall(enclaveId: Long, callTypeID: Byte, messageTypeID: Byte, data: ByteBuffer) {
+        val hostEnclaveInterface = checkNotNull(hostEnclaveInterfaces[enclaveId])
+        hostEnclaveInterface.handleOCall(enclaveId, callTypeID, CallInterfaceMessageType.fromByte(messageTypeID), data)
     }
 
+    /**
+     * Sends a message from the host to the enclave.
+     * This is part of the low-level communication mechanism used by native enclaves.
+     *
+     * @param enclaveId The ID of the enclave to send the message to.
+     * @param callTypeID The type of call which the message is part of, see [com.r3.conclave.common.internal.EnclaveCallType] and [com.r3.conclave.common.internal.HostCallType].
+     * @param messageTypeID The purpose of the message, see [com.r3.conclave.common.internal.CallInterfaceMessageType].
+     * @param data A byte buffer containing data to send to the enclave.
+     */
     @JvmStatic
-    fun hostToEnclave(enclaveId: Long, data: ByteArray) {
-        Native.jvmEcall(enclaveId, data)
+    fun sendECall(enclaveId: Long, callTypeID: Byte, messageTypeID: Byte, data: ByteArray) {
+        Native.jvmECall(enclaveId, callTypeID, messageTypeID, data)
     }
 
     /**

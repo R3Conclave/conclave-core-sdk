@@ -31,7 +31,7 @@
 },
 {
   "name":"com.r3.conclave.enclave.Enclave",
-  "methods":[{"name":"initialise","parameterTypes":["com.r3.conclave.enclave.internal.EnclaveEnvironment","com.r3.conclave.common.internal.handler.Sender"] }]
+  "methods":[{"name":"initialise","parameterTypes":["com.r3.conclave.enclave.internal.EnclaveEnvironment"] }]
 },
 {
   "name":"com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave",

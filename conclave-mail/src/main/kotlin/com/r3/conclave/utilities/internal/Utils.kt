@@ -115,6 +115,11 @@ fun ByteBuffer.getRemainingBytes(avoidCopying: Boolean = false): ByteArray {
     return getBytes(remaining())
 }
 
+fun ByteBuffer.getAllBytes(avoidCopying: Boolean = false): ByteArray {
+    val rewoundBuffer = this.duplicate().apply { rewind() }
+    return rewoundBuffer.getRemainingBytes(avoidCopying)
+}
+
 fun ByteBuffer.putIntLengthPrefixBytes(bytes: ByteArray): ByteBuffer {
     putInt(bytes.size)
     put(bytes)

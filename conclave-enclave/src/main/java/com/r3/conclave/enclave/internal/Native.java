@@ -5,10 +5,13 @@ package com.r3.conclave.enclave.internal;
  */
 public class Native {
     /**
-     * Makes an OCALL.
-     * @param data The chunk of data to be passed to the ocall.
+     * Makes an OCall.
+     * @param callTypeID When the host initiates a call, this contains the host call type. If the OCall is a return or
+     *                   an exception, then it is the type of the corresponding call.
+     * @param messageTypeID The message type (call/return/exception) of the message, encoded as a byte.
+     * @param data The chunk of data to be passed to the OCall.
      */
-    public static native void jvmOcall(byte[] data);
+    public static native void jvmOCall(byte callTypeID, byte messageTypeID, byte[] data);
 
     /**
      * Thin JNI wrapper around `sgx_create_report`.

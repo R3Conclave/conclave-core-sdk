@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.internal.MockCallInterfaceConnector
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.KeyName.REPORT
@@ -20,7 +21,8 @@ import kotlin.LazyThreadSafetyMode.NONE
 class MockEnclaveEnvironment(
     enclave: Enclave,
     mockConfiguration: MockConfiguration?,
-    kdsConfig: EnclaveKdsConfig?
+    kdsConfig: EnclaveKdsConfig?,
+    callInterfaceConnector: MockCallInterfaceConnector
 ) : EnclaveEnvironment(loadEnclaveProperties(enclave::class.java, true), kdsConfig) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -39,6 +41,8 @@ class MockEnclaveEnvironment(
             return false
         }
     }
+
+    override val hostInterface = MockEnclaveHostInterface(callInterfaceConnector)
 
     private val configuration = mockConfiguration ?: MockConfiguration()
 

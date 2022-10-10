@@ -1,27 +1,21 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.handler.Handler
-import com.r3.conclave.common.internal.handler.HandlerConnected
-import com.r3.conclave.common.internal.handler.LeafSender
-import com.r3.conclave.utilities.internal.getRemainingBytes
 import java.io.IOException
 import java.net.URL
-import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import kotlin.io.path.deleteIfExists
 
-class NativeEnclaveHandle<CONNECTION>(
+class NativeEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     enclaveFileUrl: URL,
     override val enclaveClassName: String,
-    handler: Handler<CONNECTION>
-) : EnclaveHandle<CONNECTION>, LeafSender() {
+) : EnclaveHandle {
     private val enclaveFile: Path
     private val enclaveId: Long
-    override val connection: CONNECTION = handler.connect(this)
+    override val enclaveInterface: HostEnclaveInterface
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
@@ -29,23 +23,14 @@ class NativeEnclaveHandle<CONNECTION>(
         enclaveFile = Files.createTempFile(enclaveClassName, "signed.so").toAbsolutePath()
         enclaveFileUrl.openStream().use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
         enclaveId = Native.createEnclave(enclaveFile.toString(), enclaveMode != EnclaveMode.RELEASE)
-        NativeApi.registerOcallHandler(enclaveId, HandlerConnected(handler, connection))
+        enclaveInterface = NativeHostEnclaveInterface(enclaveId)
+        NativeApi.registerHostEnclaveInterface(enclaveId, enclaveInterface)
     }
 
-    private var initialized = false
-    private fun maybeInit() {
+    override fun initialise() {
         synchronized(this) {
-            if (!initialized) {
-                // The first ECALL has to be the class name of the enclave to be instantiated.
-                NativeApi.hostToEnclave(enclaveId, enclaveClassName.toByteArray())
-                initialized = true
-            }
+            enclaveInterface.initializeEnclave(enclaveClassName)
         }
-    }
-
-    override fun sendSerialized(serializedBuffer: ByteBuffer) {
-        maybeInit()
-        NativeApi.hostToEnclave(enclaveId, serializedBuffer.getRemainingBytes(avoidCopying = true))
     }
 
     override fun destroy() {
@@ -62,6 +47,6 @@ class NativeEnclaveHandle<CONNECTION>(
     }
 
     private companion object {
-        private val logger = loggerFor<NativeEnclaveHandle<*>>()
+        private val logger = loggerFor<NativeEnclaveHandle>()
     }
 }
