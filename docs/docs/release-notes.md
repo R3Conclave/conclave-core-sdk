@@ -1,7 +1,7 @@
 Release notes
 =============
 
-### 1.3
+### 1.4
 
 1. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) are evaluated have been updated. From now on, if a client sets the security level
    to insecure, it will not be able to connect to `STALE` or `SECURE` enclaves.
