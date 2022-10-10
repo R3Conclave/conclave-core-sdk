@@ -21,7 +21,6 @@ class TemplateEnclaveTest {
                     is MailCommand.PostMail -> {
                         result = postOffice.decryptMail(command.encryptedBytes).bodyAsBytes
                     }
-                    is MailCommand.StoreSealedState -> throw Exception("No implementation yet")
                 }
             }
         }
