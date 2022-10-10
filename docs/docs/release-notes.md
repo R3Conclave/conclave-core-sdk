@@ -3,6 +3,11 @@ Release notes
 
 ### 1.3
 
+1. For security reasons, the way enclave constraints are evaluated have been updated. From now on, if a client sets the security level
+   to insecure, it will not be able to connect to `STALE` or `SECURE` enclaves. 
+
+### 1.3
+
 1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our blog post on why we made it open source and 
    what this means for you. You can find the source code at https://github.com/R3Conclave/conclave-core-sdk.
 2. The SDK artifacts are now available on Maven Central. There's no longer any need to have a local repo 

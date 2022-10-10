@@ -1,5 +1,12 @@
 # API changes
 
+## 1.3 to 1.4
+
+### API changes
+
+For security reasons, a client that sets the security level in the `EnclaveConstraint` to insecure will no longer be able to connect to `STALE` or `SECURE` enclaves.
+The behaviour remains the same for the security levels `STALE`, and `SECURE`.
+
 ## 1.2 to 1.3
 
 ### Maven Central
