@@ -70,7 +70,7 @@ abstract class Enclave {
 
         private fun getMailDecryptingStream(input: ByteBuffer): MailDecryptingStream {
             // Wrap the remaining bytes in a InputStream to avoid copying.
-            return MailDecryptingStream(input.inputStream())
+            return MailDecryptingStream(input.inputStream(), null)
         }
     }
 

@@ -5,6 +5,7 @@ import com.r3.conclave.host.MailCommand
 import com.r3.conclave.mail.PostOffice
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.lang.Exception
 
 class TemplateEnclaveTest {
     lateinit var result: ByteArray
@@ -20,6 +21,7 @@ class TemplateEnclaveTest {
                     is MailCommand.PostMail -> {
                         result = postOffice.decryptMail(command.encryptedBytes).bodyAsBytes
                     }
+                    is MailCommand.StoreSealedState -> throw Exception("No implementation yet")
                 }
             }
         }

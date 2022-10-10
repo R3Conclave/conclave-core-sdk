@@ -4,8 +4,9 @@ plugins {
     id "com.github.ben-manes.versions" version "0.39.0"
     id 'base'
     id 'idea'
-    id 'org.jetbrains.dokka' version '1.5.31-SNAPSHOT'
+    id 'com.r3.conclave.dokka' version '1.5.31-1.4-SNAPSHOT'
     id 'com.github.jk1.dependency-license-report' version '1.16'
+    id "com.dorongold.task-tree" version "2.1.0"
 }
 
 apply from: 'versions.gradle'
@@ -15,14 +16,24 @@ repositories {
     maven {
         url "https://plugins.gradle.org/m2/"
     }
-    maven {
-        url "file://opt/dokka/repository"
+
+    // Dokka artifacts
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = "https://software.r3.com/artifactory/conclave-maven"
+            }
+        }
+
+        filter {
+            includeModuleByRegex("com\\.r3\\.conclave\\.dokka", ".*")
+        }
     }
 }
 
 dependencies {
     // We use a custom build of Dokka so we have to use the snapshot version.
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.31-SNAPSHOT")
+    dokkaHtmlPlugin("com.r3.conclave.dokka:kotlin-as-java-plugin:1.5.31-1.4-SNAPSHOT")
 }
 
 String getConclaveRevision() {
@@ -193,9 +204,9 @@ tasks.withType(DokkaTask).configureEach {
             reportUndocumented.set(false)
             skipDeprecated.set(true)
             includeNonPublic.set(false)
-            pluginsMapConfiguration.put("org.jetbrains.dokka.base.DokkaBase",
-                        "{\"customAssets\":[\"${file("$projectDir/docs/assets/docs_logo.svg")}\", \"${file("$projectDir/docs/assets/arrow_down.svg")}\"], "
-                      + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
+            pluginsMapConfiguration.put("com.r3.conclave.dokka.base.DokkaBase",
+                    "{\"customAssets\":[\"${file("$projectDir/docs/assets/docs_logo.svg")}\", \"${file("$projectDir/docs/assets/arrow_down.svg")}\"], "
+                            + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
 
             for (publishedProject in publishedProjects) {
                 def project = project(publishedProject.projectPath)

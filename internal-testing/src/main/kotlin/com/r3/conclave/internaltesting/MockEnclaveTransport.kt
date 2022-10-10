@@ -75,7 +75,7 @@ class MockEnclaveTransport(
         val id = SHA256Hash.hash(client.clientPrivateKey.encoded).toString()
 
         override fun sendMail(encryptedMailBytes: ByteArray): ByteArray? {
-            return executeTaskOnHost { deliverMail(encryptedMailBytes, id) }
+            return executeTaskOnHost { deliverMail(encryptedMailBytes, id, null) }
         }
 
         override fun pollMail(): ByteArray? {
