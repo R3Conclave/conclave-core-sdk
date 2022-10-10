@@ -30,12 +30,16 @@ class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInter
      * This should not be called directly, but instead by implementations in [HostEnclaveInterface].
      */
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
-        stack.addLast(StackFrame(callType, null, null))
+        val stackFrame = StackFrame(callType, null, null)
+        stack.addLast(stackFrame)
 
         NativeApi.sendECall(
                 enclaveId, callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer.getAllBytes(avoidCopying = true))
 
-        val stackFrame = stack.removeLast()
+        /** If the stack frame is not the one we pushed earlier, something funky has happened! */
+        check(stackFrame === stack.removeLast()) {
+            "Wrong stack frame popped during enclave call, something isn't right!"
+        }
 
         if (stack.isEmpty()) {
             threadLocalStacks.remove()
