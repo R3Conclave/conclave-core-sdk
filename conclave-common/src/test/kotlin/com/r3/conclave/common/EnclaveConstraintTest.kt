@@ -4,6 +4,8 @@ import com.r3.conclave.common.EnclaveSecurityInfo.Summary.*
 import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Signature
@@ -263,7 +265,7 @@ class EnclaveConstraintTest {
     @Test
     fun `check against min security level`() {
         val staleEnclave = TestEnclaveInstanceInfo(summary = STALE)
-        listOf(STALE, INSECURE).forEach { minLevel ->
+        listOf(STALE).forEach { minLevel ->
             staleEnclave.checkAgainstConstraint {
                 acceptableCodeHashes.add(codeHash)
                 minSecurityLevel = minLevel
@@ -275,6 +277,54 @@ class EnclaveConstraintTest {
         ) {
             acceptableCodeHashes.add(codeHash)
             minSecurityLevel = SECURE
+        }
+    }
+
+    @Test
+    fun `check against security level - secure enclave`() {
+        val secureEnclave = TestEnclaveInstanceInfo(summary = SECURE)
+
+        listOf(STALE, SECURE).forEach { securityLevelRequiredByClient ->
+            val constraint = EnclaveConstraint.parse("SEC:$securityLevelRequiredByClient C:${secureEnclave.enclaveInfo.codeHash}")
+            assertDoesNotThrow { constraint.check(secureEnclave) }
+        }
+
+        assertThrows<InvalidEnclaveException> {
+            val securityLevelRequiredByClient = INSECURE
+            val constraint = EnclaveConstraint.parse("SEC:$securityLevelRequiredByClient C:${secureEnclave.enclaveInfo.codeHash}")
+            constraint.check(secureEnclave)
+        }
+    }
+
+    @Test
+    fun `check against security level - stale enclave`() {
+        val secureEnclave = TestEnclaveInstanceInfo(summary = STALE)
+
+        assertDoesNotThrow {
+            val securityLevelRequiredByClient = STALE
+            val constraint = EnclaveConstraint.parse("SEC:$securityLevelRequiredByClient C:${secureEnclave.enclaveInfo.codeHash}")
+            constraint.check(secureEnclave)
+        }
+
+        listOf(INSECURE, SECURE).forEach { securityLevelRequiredByClient ->
+            val constraint = EnclaveConstraint.parse("SEC:$securityLevelRequiredByClient C:${secureEnclave.enclaveInfo.codeHash}")
+            assertThrows<InvalidEnclaveException> { constraint.check(secureEnclave) }
+        }
+    }
+
+    @Test
+    fun `check against security level - insecure enclave`() {
+        val secureEnclave = TestEnclaveInstanceInfo(summary = INSECURE)
+
+        assertDoesNotThrow {
+            val securityLevelRequiredByClient = INSECURE
+            val constraint = EnclaveConstraint.parse("SEC:$securityLevelRequiredByClient C:${secureEnclave.enclaveInfo.codeHash}")
+            constraint.check(secureEnclave)
+        }
+
+        listOf(STALE, SECURE).forEach { securityLevelRequiredByClient ->
+            val constraint = EnclaveConstraint.parse("SEC:$securityLevelRequiredByClient C:${secureEnclave.enclaveInfo.codeHash}")
+            assertThrows<InvalidEnclaveException> { constraint.check(secureEnclave) }
         }
     }
 

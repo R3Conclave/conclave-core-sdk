@@ -76,7 +76,7 @@ bool validateSealDataArgs
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOcall
+JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_jvmOCall
         (JNIEnv *jniEnv, jclass, jbyte callTypeID, jbyte messageTypeID, jbyteArray data) {
     auto size = jniEnv->GetArrayLength(data);
     abortOnJniException(jniEnv);
@@ -273,14 +273,14 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
     // Lambda helper to validate parameters. Returns true in case something is invalid.
     auto validateParameter = [](const JniPtr<uint8_t>& jniPtr, int offset, int length) {
         return jniPtr.ptr == nullptr
-            || offset < 0 
+            || offset < 0
             || length <= 0
             || offset >= length
-            || (static_cast<uint64_t>(offset) + static_cast<uint64_t>(length)) > static_cast<uint64_t>(jniPtr.size()); 
+            || (static_cast<uint64_t>(offset) + static_cast<uint64_t>(length)) > static_cast<uint64_t>(jniPtr.size());
             };
 
     if (validateParameter(jpSealedBlob, sealedBlobOffset, sealedBlobLength)
-     || validateParameter(jpDataOut, dataOutOffset, dataOutLength) 
+     || validateParameter(jpDataOut, dataOutOffset, dataOutLength)
      || (static_cast<uint64_t>(authenticatedDataOutDataLen) + static_cast<uint64_t>(decryptDataLen)) > uiSealedBlobLength) {
         raiseException(jniEnv, getErrorMessage(SGX_ERROR_INVALID_PARAMETER));
         return;
@@ -291,8 +291,8 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
         std::vector<uint8_t> deData(decryptDataLen);
 
         auto res = sgx_unseal_data(reinterpret_cast<sgx_sealed_data_t*>(jpSealedBlob.ptr + sealedBlobOffset),
-                                   authenticatedDataOutDataLen ? &deAuthenticatedData[0] : nullptr, 
-                                   authenticatedDataOutDataLen ? &authenticatedDataOutDataLen : nullptr, 
+                                   authenticatedDataOutDataLen ? &deAuthenticatedData[0] : nullptr,
+                                   authenticatedDataOutDataLen ? &authenticatedDataOutDataLen : nullptr,
                                    &deData[0], &decryptDataLen);
         if (res != SGX_SUCCESS) {
             raiseException(jniEnv, getErrorMessage(res));
@@ -306,7 +306,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_unsealData
                 raiseException(jniEnv, getErrorMessage(SGX_ERROR_INVALID_PARAMETER));
                 return;
             }
-            memcpy_s(jpAuthenticatedDataOut.ptr + authenticatedDataOutOffset, 
+            memcpy_s(jpAuthenticatedDataOut.ptr + authenticatedDataOutOffset,
                      len,
                      &deAuthenticatedData[0], deAuthenticatedData.size());
             // to write back to the jvm
@@ -342,7 +342,7 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_enclave_internal_Native_getKey
 }
 
 DLSYM_STATIC {
-    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOcall);
+    DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_jvmOCall);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_createReport);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_isEnclaveSimulation);
     DLSYM_ADD(Java_com_r3_conclave_enclave_internal_Native_sealData);

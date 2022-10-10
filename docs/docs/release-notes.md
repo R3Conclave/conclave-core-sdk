@@ -1,6 +1,11 @@
 Release notes
 =============
 
+### 1.4
+
+1. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) are evaluated has been updated. From now on, if a client sets the security level
+   to `INSECURE`, it will not be able to connect to `STALE` or `SECURE` enclaves.
+
 ### 1.3
 
 1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our blog post on why we made it open source and 

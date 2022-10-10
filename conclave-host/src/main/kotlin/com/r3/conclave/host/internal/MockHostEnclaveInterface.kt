@@ -1,6 +1,6 @@
 package com.r3.conclave.host.internal
 
-import com.r3.conclave.common.MockCallInterfaceConnector
+import com.r3.conclave.common.internal.MockCallInterfaceConnector
 import com.r3.conclave.common.internal.EnclaveCallType
 import java.nio.ByteBuffer
 
@@ -16,7 +16,7 @@ class MockHostEnclaveInterface(private val connector: MockCallInterfaceConnector
         connector.setEnclaveHostInterface(this)
     }
 
-    override fun initiateOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+    override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         return connector.hostToEnclave(callType, parameterBuffer)
     }
 }

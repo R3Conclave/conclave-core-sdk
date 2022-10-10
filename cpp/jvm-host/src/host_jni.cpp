@@ -88,7 +88,7 @@ static void initialise_enclave(sgx_enclave_id_t enclave_id) {
     ecall_initialise_enclave(enclave_id, &ei, sizeof(ei));
 
     // We have patched the SGX SDK to automatically arbitrate threads and
-    // handle deadlocks when there are more host threads calling into the 
+    // handle deadlocks when there are more host threads calling into the
     // enclave than there are TCS slots. Enable this now
     sgx_configure_thread_blocking(enclave_id, ei.deadlock_timeout_seconds);
 }
@@ -99,7 +99,7 @@ jlong JNICALL Java_com_r3_conclave_host_internal_Native_createEnclave(JNIEnv *jn
                                                                       jboolean isDebug) {
 
     initialise_abort_handler();
-        
+
     JniString path(jniEnv, enclavePath);
 
     sgx_launch_token_t token = {0};
@@ -141,7 +141,7 @@ void JNICALL Java_com_r3_conclave_host_internal_Native_destroyEnclave(JNIEnv *jn
     r3::conclave::HostSharedData::instance().free(static_cast<sgx_enclave_id_t>(enclaveId));
 }
 
-void JNICALL Java_com_r3_conclave_host_internal_Native_jvmEcall(JNIEnv *jniEnv,
+void JNICALL Java_com_r3_conclave_host_internal_Native_jvmECall(JNIEnv *jniEnv,
                                                                 jclass,
                                                                 jlong enclaveId,
                                                                 jbyte callTypeID,
@@ -268,16 +268,16 @@ void jvm_ocall(char callTypeID, char messageTypeID, void* data, int dataLengthBy
     try {
         // Wrap the native bytes in a Java direct byte buffer to avoid unnecessary copying. This is safe to do since the
         // memory is not de-allocated until after this function returns in
-        // Java_com_r3_conclave_enclave_internal_Native_jvmOcall.
+        // Java_com_r3_conclave_enclave_internal_Native_jvmOCall.
         auto javaBuffer = jniEnv->NewDirectByteBuffer(data, dataLengthBytes);
         checkJniException(jniEnv);
         auto hostEnclaveApiClass = jniEnv->FindClass("com/r3/conclave/host/internal/NativeApi");
         checkJniException(jniEnv);
         // enclaveToHost does not hold onto the direct byte buffer. Any bytes that need to linger after it returns are
         // copied from it. This means it's safe to de-allocate the pointer after this function returns.
-        auto jvmOcallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "receiveOcall", "(JBBLjava/nio/ByteBuffer;)V");
+        auto jvmOCallMethodId = jniEnv->GetStaticMethodID(hostEnclaveApiClass, "receiveOCall", "(JBBLjava/nio/ByteBuffer;)V");
         checkJniException(jniEnv);
-        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOcallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
+        jniEnv->CallStaticObjectMethod(hostEnclaveApiClass, jvmOCallMethodId, EcallContext::getEnclaveId(), callTypeID, messageTypeID, javaBuffer);
         checkJniException(jniEnv);
     } catch (JNIException&) {
         // No-op: delegate handling to the host JVM
@@ -483,13 +483,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         jniEnv->SetObjectArrayElement(arr,5,jniEnv->NewStringUTF(collateral->tcb_info));
         jniEnv->SetObjectArrayElement(arr,6,jniEnv->NewStringUTF(collateral->qe_identity_issuer_chain));
         jniEnv->SetObjectArrayElement(arr,7,jniEnv->NewStringUTF(collateral->qe_identity));
-        
+
         quote3_error_t eval_result_free;
-        
+
         if (!quoting_lib->free_quote_verification_collateral(eval_result_free)) {
             raiseException(jniEnv, getQuotingErrorMessage(eval_result_free));
             return nullptr;
-        }           
+        }
         return arr;
     }
 }

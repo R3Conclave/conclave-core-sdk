@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <cstring>
 
 namespace r3::conclave::dcap {
 
@@ -56,6 +57,12 @@ namespace r3::conclave::dcap {
     }
 
     bool QuotingAPI::init(const std::string& path, QuotingAPI::Errors& errors) {
+        //  The users can use SGX_AESM_ADDR environment variable to select
+        //    whether some functions of the quoting library run "in-process" or "out-of-process.
+        //  Conclave uses the "in-process" approach, and the SGX_AESM_ADDR variable
+        //    needs to be unset. Note that the variable is unset only for the environment
+        //    of the current process, not in the overall application or other processes.
+        unsetenv("SGX_AESM_ADDR");
 
         auto const qpl = get_plugin_path(path);
 
@@ -63,6 +70,7 @@ namespace r3::conclave::dcap {
         urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
         pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);
         qe3_handle = try_dlopen( path, "libsgx_qe3_logic.so", errors);
+
         ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
 
         if (ql_handle != nullptr) {

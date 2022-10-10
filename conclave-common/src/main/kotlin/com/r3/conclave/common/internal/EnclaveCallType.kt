@@ -12,14 +12,12 @@ enum class EnclaveCallType {
     SET_KDS_PERSISTENCE_KEY,
     CALL_MESSAGE_HANDLER;
 
-    fun toByte(): Byte {
-        check(VALUES.size < Byte.MAX_VALUE)
-        return ordinal.toByte()
-    }
+    fun toByte(): Byte = ordinal.toByte()
 
     companion object {
         private val VALUES = EnclaveCallType.values()
 
+        @JvmStatic
         fun fromByte(i: Byte): EnclaveCallType {
             require(i < VALUES.size) { "$i does not correspond to a valid enclave call type." }
             return VALUES[i.toInt()]

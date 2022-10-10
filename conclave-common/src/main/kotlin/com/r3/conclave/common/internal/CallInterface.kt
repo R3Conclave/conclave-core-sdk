@@ -18,13 +18,13 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
     /**
      * Execute a call and maybe get a return buffer.
      */
-    abstract fun initiateOutgoingCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
+    abstract fun executeOutgoingCall(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer?
 
     /**
-     * Execute a call and get a return buffer. Throw an exception if no buffer is provided.
+     * Execute a call and get a return buffer. Throw an exception if no buffer is returned.
      */
-    fun initiateOutgoingCallAndCheckReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
-        return checkNotNull(initiateOutgoingCall(callType, parameterBuffer)) {
+    fun executeOutgoingCallWithReturn(callType: OUTGOING_CALL_TYPE, parameterBuffer: ByteBuffer = EMPTY_BYTE_BUFFER): ByteBuffer {
+        return checkNotNull(executeOutgoingCall(callType, parameterBuffer)) {
             "Missing return value from $callType call."
         }
     }
@@ -34,8 +34,9 @@ abstract class CallInterface<OUTGOING_CALL_TYPE, INCOMING_CALL_TYPE> {
      * If the call type already has a handler, throw an exception.
      */
     fun registerCallHandler(callType: INCOMING_CALL_TYPE, handler: CallHandler) {
-        check(!callHandlers.containsKey(callType)) { "Call handler already registered for $callType." }
-        callHandlers[callType] = handler
+        check(callHandlers.putIfAbsent(callType, handler) == null) {
+            "Call handler already registered for $callType."
+        }
     }
 
     /**
