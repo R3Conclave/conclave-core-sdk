@@ -29,6 +29,10 @@ The constraint lets you specify:
 5. The security level of the instance: `SECURE`, `STALE`, `INSECURE`
 6. The maximum age of the attestation in ISO-8601 duration format
 
+!!! note
+    Clients that set the security level to `INSECURE` can only connect to `INSECURE` enclaves. This prevents clients from
+    accessing enclaves running in production by mistake.
+
 If you specify a signing public key then you must also specify the product ID, otherwise if the organisation that
 created the enclave makes a second different kind of enclave in the future, a malicious host might connect you with the
 wrong one. If the input/output commands are similar then a confusion attack could be opened up. That's why you must
