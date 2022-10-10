@@ -69,8 +69,11 @@ class EnclaveConstraint {
 
     /**
      * Whether to accept debug/insecure enclaves, or enclaves running on hosts that have fallen
-     * behind on their security patches. By default stale machines (running old software/microcode) are accepted, to avoid
-     * outages in case of operator laxness, but you can tighten this if wanted.
+     * behind on their security patches. By default, stale machines running old software or microcode are accepted
+     * to avoid outages due to operator laxness. You can tighten this if you want to.
+     *
+     * N.B. Only insecure enclaves are accepted if the security level is set to insecure. This prevents clients from
+     * connecting to production enclaves by mistake.
      */
     var minSecurityLevel: EnclaveSecurityInfo.Summary = EnclaveSecurityInfo.Summary.STALE
 
