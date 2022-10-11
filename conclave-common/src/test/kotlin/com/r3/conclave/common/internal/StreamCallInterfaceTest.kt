@@ -88,16 +88,14 @@ class StreamCallInterfaceTest {
 
     @Test
     fun `host can call enclave`() {
-        val inputString = "Test string!"
-        val outputString: String?
-
         // Just echo the string back to the host side
         enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer { return parameterBuffer }
         })
 
+        val inputString = "Test string!"
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
-        outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
+        val outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
 
         assertThat(outputString).isEqualTo(inputString)
     }
@@ -121,9 +119,6 @@ class StreamCallInterfaceTest {
 
     @Test
     fun `enclave can call host inside the context of an enclave call`() {
-        val inputString = "This is an input string!"
-        var outputString: String? = null
-
         // Host handles call by echoing it
         hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer { return parameterBuffer }
@@ -136,8 +131,9 @@ class StreamCallInterfaceTest {
             }
         })
 
+        val inputString = "This is an input string!"
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
-        outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
+        val outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
 
         assertThat(outputString).isEqualTo(inputString)
     }
