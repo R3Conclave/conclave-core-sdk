@@ -108,7 +108,7 @@ class StreamCallInterfaceTest {
      * This test checks to see if this behaviour is intact. This helps to ensure that there are as few
      * differences between the stream and native interfaces as possible.
      */
-    //@Test
+    @Test
     fun `enclave may not call host outside the context of an enclave call`() {
         val exception = assertThrows<IllegalStateException> {
             enclaveHostInterface.executeOutgoingCall(HostCallType.GET_ATTESTATION)
