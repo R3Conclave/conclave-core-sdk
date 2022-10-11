@@ -2,10 +2,7 @@ package com.r3.conclave.common.internal
 
 import com.r3.conclave.utilities.internal.getRemainingString
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.InputStream
@@ -185,12 +182,38 @@ class StreamCallInterfaceTest {
         assertThat(outputString).isEqualTo(inputString)
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7])
+    fun `enclave and host can perform deeply recursive calls`(recursionDepth: Int) {
+        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                return when (val input = parameterBuffer.int) {
+                    0 -> null
+                    else -> hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(input - 1))
+                }
+            }
+        })
+
+        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                return when (val input = parameterBuffer.int) {
+                    0 -> null
+                    else -> enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(input - 1))
+                }
+            }
+        })
+
+        assertDoesNotThrow {
+            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+        }
+    }
+
     /**
      * This test implements a trivial recursive fibonacci sequence.
      * This tests recursion and cases where enclave/host calls contain multiple other enclave/host calls.
      */
     @ParameterizedTest
-    @ValueSource(ints = [0, 1, 2])
+    @ValueSource(ints = [0, 1, 2, 3, 4])
     fun `enclave and host can perform deeply recursive branching calls`(fibonacciIndex: Int) {
         configureInterfacesForFibonacci()
 
