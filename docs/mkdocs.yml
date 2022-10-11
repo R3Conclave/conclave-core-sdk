@@ -19,7 +19,7 @@ nav:
         - Writing your own enclave host: writing-your-own-enclave-host.md
         - Writing a long-lived client: writing-a-long-lived-client.md
     - Design topics:
-        - Conclave Mail: mail.md
+        - Communicating with an enclave using Mail: mail.md
         - Rapid testing and development with Mock Mode: mockmode.md
         - Maximising the security of your enclave: security.md
         - Persisting data with the Key Derivation Service: kds-detail.md
