@@ -6,6 +6,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.IllegalStateException
@@ -87,16 +89,17 @@ class StreamCallInterfaceTest {
     @Test
     fun `host can call enclave`() {
         val inputString = "Test string!"
-        var outputString: String? = null
-        enclaveHostInterface.registerCallHandler(EnclaveCallType.START_ENCLAVE, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                outputString = parameterBuffer.getRemainingString()
-                return null
-            }
+        val outputString: String?
+
+        // Just echo the string back to the host side
+        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer { return parameterBuffer }
         })
+
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
-        hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.START_ENCLAVE, inputBuffer)
-        assertThat(outputString).isEqualTo(outputString)
+        outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
+
+        assertThat(outputString).isEqualTo(inputString)
     }
 
     /**
@@ -111,8 +114,31 @@ class StreamCallInterfaceTest {
     @Test
     fun `enclave may not call host outside the context of an enclave call`() {
         val exception = assertThrows<IllegalStateException> {
-            enclaveHostInterface.executeOutgoingCall(HostCallType.GET_ATTESTATION)
+            enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER)
         }
         assertThat(exception).hasMessage("Outgoing host calls may not occur outside the context of an enclave call.")
+    }
+
+    @Test
+    fun `enclave can call host inside the context of an enclave call`() {
+        val inputString = "This is an input string!"
+        var outputString: String? = null
+
+        // Host handles call by echoing it
+        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer { return parameterBuffer }
+        })
+
+        // Enclave forwards call back to host
+        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                return enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, parameterBuffer)
+            }
+        })
+
+        val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
+        outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
+
+        assertThat(outputString).isEqualTo(inputString)
     }
 }
