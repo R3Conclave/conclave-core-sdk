@@ -67,9 +67,9 @@ uses the respected Noise protocol framework with AES-GCM and SHA-256.
 
 ### Authentication
 
-Conclave Mail enables a message to prove that it came from the owner of a particular key. If a key can identify a 
-user, you can use Conclave Mail's envelope to authenticate that user cryptographically. You can use this feature to 
-securely implement your application's login and authentication processes outside the enclave.
+Conclave Mail enables recipients to prove that a message came from the owner of a particular key. If a key can 
+identify a user, you can use Conclave Mail's envelope to authenticate that user cryptographically. You can use this 
+feature to securely implement your application's login and authentication processes outside the enclave.
 
 ### Message headers
 
@@ -78,17 +78,19 @@ messages to structure a conversation logically. Clients can also hold multiple c
 message headers. You can use message headers to implement non-data-processing tasks like usage tracking and 
 prioritization at the host's end. The Mail headers contain the following fields:
 
-1. The _topic_. You can use it to distinguish between different streams of Mail items from the same client. It's a 
-   string similar to an email subject. Topics are scoped per sender and are not global. Clients can send multiple 
-   streams of related Mail items using a different topic for each stream. To avoid replay attacks, you should never 
-   reuse a topic for an unrelated Mail item. Using a random UUID in a topic is good practice to prevent reuse.
+1. The _topic_. This is a string you can use to distinguish between different streams of Mail items from the same 
+   client. It resembles an email's subject line. Topics are scoped per sender and are not global. Clients
+   can send multiple streams of related Mail items using a different topic for each stream. To avoid replay attacks, 
+   you should never reuse a topic for an unrelated Mail item. Using a random UUID in a topic is good practice to 
+   prevent reuse.
 
-2. The _sequence number_. Every Mail item under a topic has a sequence number that starts from zero and increments 
-   by one. The enclave rejects messages if the sequence number is not in order. This ensures that the enclave 
+2. The _sequence number_. Every Mail item with a specific topic has a sequence number that starts from zero and 
+   increments by one with each Mail item. The enclave rejects messages if the sequence number is not in order. This 
+   ensures that the enclave 
    receives a stream of related Mail items in the correct order.
 
-3. The _envelope_. This is a slot that can hold any plain-text byte array. You can use it to hold app-specific data 
-   that should be authenticated but unencrypted.
+3. The _envelope_. This field can hold any plain-text byte array. You can use it to hold app-specific data that 
+   should be authenticated but unencrypted.
 
 The header fields should not contain secrets, as these are available to the host. It may seem odd to have unencrypted 
 data, but it's useful for the client, the host, and the enclave to collaborate for data storage and routing. Even when 
@@ -141,11 +143,12 @@ can send a "you won" or "you lost" message to every client.
 
 Conclave uses Conclave Mail to connect clients to enclaves because of the following reasons:
 
-1. Conclave Mail can work with a small [Trusted Computing Base (TCB)](https://en.wikipedia.org/wiki/Trusted_computing_base) 
-   when compared to HTTPS. A small TCB removes several common security problems at the origin.
+1. Compared to HTTPS, Conclave mail has a relatively small [Trusted Computing Base (TCB)](https://en.wikipedia.org/wiki/Trusted_computing_base).
+   The small TCB helps to harden enclaves against potential [zero-day](https://en.wikipedia.org/wiki/Zero-day_(computing))
+   exploits that may exist in dependency libraries.
 
-2. The certificate-based architecture of SSL/TLS doesn't gel with enclave-based computing. Conclave Mail uses the 
-   better-suited Noise protocol framework. The Noise protocol delivers most of the functionalities of Transport 
+2. The certificate-based architecture of SSL/TLS doesn't integrate cleanly with enclave-based computing. Conclave Mail 
+   uses the better-suited Noise protocol framework. The Noise protocol delivers most of the functionalities of Transport 
    Layer Security (TLS) in a cleaner, simpler, and modular manner.
 
    The TLS protocol is reliant on a certificate-based security architecture, which does not suit enclave-based 
@@ -160,7 +163,7 @@ Conclave uses Conclave Mail to connect clients to enclaves because of the follow
    [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object. The
    Noise protocol and Conclave doesn't restrict how you get the remote attestation. For example, you can
    send remote attestation to the client by returning it in another API, publishing it on a web server, and putting it 
-   into a distributed hash table, a network drive, or a message queue.
+   into a distributed hash table, network drive, or message queue.
 
    Following are the benefits of the Noise protocol over an HTTPS/REST architecture:
 
@@ -175,6 +178,6 @@ Conclave uses Conclave Mail to connect clients to enclaves because of the follow
 3. Conclave Mail's approach to enclave restarts and enclave upgrades is more suited than a classical architecture 
    that requires a database to ensure session persistence.
 
-4. The primary reason to use HTTPS/REST is the availability of tools and libraries. However, none of these 
-   tools or libraries support SGX remote attestation. You must modify or adjust these tools in complex ways,
-   invalidating most benefits.
+4. The primary reason to use HTTPS/REST is the availability of tools and libraries. To use these preexisting tools 
+   for remote attestation, you must modify them in unusual ways that they were not designed for, which introduces 
+   design complexities and reduces their usefulness.
