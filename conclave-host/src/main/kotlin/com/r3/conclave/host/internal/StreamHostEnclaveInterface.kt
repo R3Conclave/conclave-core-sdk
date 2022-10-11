@@ -7,6 +7,7 @@ import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * This class is a streaming implementation of the [HostEnclaveInterface].
@@ -49,7 +50,7 @@ class StreamHostEnclaveInterface(
     }
 
     /** Start the message receive loop thread. */
-    private val receiveLoopThread = Thread(messageReceiveLoop).apply { start() }
+    private val receiveLoopThread = Thread(messageReceiveLoop, "Host message receive loop").apply { start() }
 
     /** Stop the message receive loop thread. */
     fun stop() {
@@ -65,6 +66,9 @@ class StreamHostEnclaveInterface(
      */
     private inner class EnclaveCallContext {
         private val messageQueue = ArrayBlockingQueue<StreamCallInterfaceMessage>(4)
+        private var activeCalls = 0
+
+        fun hasActiveCalls(): Boolean = (activeCalls == 0)
 
         fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.add(message)
 
@@ -107,7 +111,7 @@ class StreamHostEnclaveInterface(
             }
         }
 
-        fun initiateCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+        private fun initiateCallInternal(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
             sendCallMessage(callType, parameterBuffer)
 
             /** Iterate, handling CALL messages until a message that is not a CALL arrives */
@@ -133,6 +137,16 @@ class StreamHostEnclaveInterface(
 
             return replyPayload?.let { ByteBuffer.wrap(replyPayload) }
         }
+
+        /** Here we keep track of the number of times [initiateCall] has been re-entered. */
+        fun initiateCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
+            activeCalls++
+            try {
+                return initiateCallInternal(callType, parameterBuffer)
+            } finally {
+                activeCalls--
+            }
+        }
     }
 
     /**
@@ -152,7 +166,9 @@ class StreamHostEnclaveInterface(
         try {
             return enclaveCallContext.initiateCall(callType, parameterBuffer)
         } finally {
-            enclaveCallContexts.remove(threadID)
+            if (!enclaveCallContext.hasActiveCalls()) {
+                enclaveCallContexts.remove(threadID)
+            }
         }
     }
 }

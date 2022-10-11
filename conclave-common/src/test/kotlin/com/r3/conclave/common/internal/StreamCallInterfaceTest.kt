@@ -86,6 +86,49 @@ class StreamCallInterfaceTest {
                 enclaveSocket.getOutputStream(), enclaveSocket.getInputStream(), 4) as CallInterface<HostCallType, EnclaveCallType>
     }
 
+    /** This method sets up the call interfaces to perform a recursive fibonacci computation */
+    private fun configureInterfacesForFibonacci() {
+        abstract class FibonacciCallHandler : CallHandler {
+            abstract fun callFibOnOther(index: Int): Int
+
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                val result = when (val index = parameterBuffer.int) {
+                    0 -> 0
+                    1 -> 1
+                    else -> callFibOnOther(index - 1) + callFibOnOther(index - 2)
+                }
+                return wrapIntInBuffer(result)
+            }
+        }
+
+        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : FibonacciCallHandler() {
+            override fun callFibOnOther(index: Int): Int {
+                return hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(index))!!.int
+            }
+        })
+
+        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : FibonacciCallHandler() {
+            override fun callFibOnOther(index: Int): Int {
+                return enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(index))!!.int
+            }
+        })
+    }
+
+    private fun referenceFibonacci(index: Int): Int {
+        return when (index) {
+            0 -> 0
+            1 -> 1
+            else -> referenceFibonacci(index - 1) + referenceFibonacci(index - 2)
+        }
+    }
+
+    private fun wrapIntInBuffer(value: Int): ByteBuffer {
+        return ByteBuffer.allocate(Int.SIZE_BYTES).apply {
+            putInt(value)
+            rewind()
+        }
+    }
+
     @Test
     fun `host can call enclave`() {
         // Just echo the string back to the host side
@@ -136,5 +179,16 @@ class StreamCallInterfaceTest {
         val outputString = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, inputBuffer)?.getRemainingString()
 
         assertThat(outputString).isEqualTo(inputString)
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [0, 1, 2])
+    fun `enclave and host can perform deeply recursive calls`(fibonacciIndex: Int) {
+        configureInterfacesForFibonacci()
+
+        val fibonacciResult = hostEnclaveInterface.executeOutgoingCall(
+                EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(fibonacciIndex))!!.int
+
+        assertThat(fibonacciResult).isEqualTo(referenceFibonacci(fibonacciIndex))
     }
 }

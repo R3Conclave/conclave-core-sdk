@@ -48,7 +48,7 @@ class StreamEnclaveHostInterface(
     }
 
     /** Start the message receive loop thread. */
-    private val receiveLoopThread = Thread(messageReceiveLoop).apply { start() }
+    private val receiveLoopThread = Thread(messageReceiveLoop, "Enclave message receive loop").apply { start() }
 
     /** Stop the message receive loop thread. */
     fun stop() {
@@ -93,14 +93,16 @@ class StreamEnclaveHostInterface(
             require(messageType == CallInterfaceMessageType.CALL)
 
             val callType = EnclaveCallType.fromByte(callMessage.callTypeID)
-            val parameterBuffer = checkNotNull(callMessage.payload) { "Received call message without parameter bytes." }
+            val parameterBytes = checkNotNull(callMessage.payload) { "Received call message without parameter bytes." }
 
-            try {
-                val returnBuffer = handleIncomingCall(callType, ByteBuffer.wrap(parameterBuffer))
-                sendReturnMessage(callType, returnBuffer)
+            val returnBuffer = try {
+                handleIncomingCall(callType, ByteBuffer.wrap(parameterBytes))
             } catch (t: Throwable) {
                 sendExceptionMessage(callType, ByteBuffer.wrap(ThrowableSerialisation.serialise(t)))
+                return
             }
+
+            sendReturnMessage(callType, returnBuffer)
         }
 
         fun initiateCall(callType: HostCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
@@ -133,8 +135,9 @@ class StreamEnclaveHostInterface(
         /** Handle the initial call */
         override fun run() {
             threadLocalCallContext.set(this)
-            handleCallMessage(messageQueue.remove())
+            handleCallMessage(messageQueue.take())
             threadLocalCallContext.remove()
+            enclaveCallContexts.remove(hostThreadID)
         }
     }
 
