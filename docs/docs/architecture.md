@@ -10,18 +10,19 @@ There are three main entities in any Conclave application.
 2. Hosts
 3. Clients
 
-**Enclaves** are protected regions of memory in which you can write the confidential part of an application. An 
-enclave resides inside a host program. However, a host or its owner cannot view or modify the code running in an 
-enclave.
+**Enclaves** are protected regions of memory in which you can write the confidential part of an application. 
+An enclaves runs inside its own JVM. Although enclaves reside in a host program, a host or its owner cannot view or 
+modify the code running in an enclave.
 
 **Hosts** are programs that load enclaves. They are untrusted and assumed to be malicious at all times. Hosts use a 
-standard JVM like HotSpot. The host JVM and the enclave run inside the same operating system process. Clients 
-communicate with enclaves through host programs. In some applications, hosts also assist with the application logic. 
+standard JVM like HotSpot. The host and the enclave run inside the same operating system process. Clients communicate
+with enclaves through the host. It is recommended to keep most of the application logic inside the host, with 
+the enclave containing only the confidential part of the logic.
 
-**Clients** are programs that send and receive encrypted messages through hosts to communicate with enclaves. In a 
-typical Conclave application, clients provide the user interface. Conclave doesn't mandate any particular network 
-protocol for communication between clients and hosts. However, the content of a message is defined using the
-[Conclave Mail API](api/-conclave%20-core/com.r3.conclave.mail/index.html).
+**Clients** are the remote applications that communicate with the enclave via the host, by sending and receiving
+encrypted messages. In a typical Conclave application, clients provide the user interface. Conclave doesn't mandate 
+any particular network protocol for communication between clients and hosts. However, the content of a message is 
+defined using the [Conclave Mail API](api/-conclave%20-core/com.r3.conclave.mail/index.html).
 
 Conclave's purpose is to enable clients to securely share data with an enclave, which will faithfully execute a 
 specified algorithm without revealing anything to the potentially malicious host on which it runs.
@@ -91,28 +92,26 @@ First, clients need to obtain an
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object. You 
 can download this object on-demand from the host, or it could be published somewhere. 
 
-The `EnclaveInstanceInfo` object encapsulates a remote attestation. The remote attestation includes the following 
-information:
+The [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object
+encapsulates a remote attestation. The remote attestation includes the following information:
 
 * The hash of the code inside the enclave.
 * The hash of the key of any party who has signed that code.
 * The security status of the machine on which the enclave is running.
 * A public key whose private counterpart is known only to the enclave.
 
-The remote attestation encapsulated within the `EnclaveInstanceInfo` object is signed by Intel. So the client can have 
-confidence about the enclave even though they obtain the `EnclaveInstanceInfo` from an untrusted host.
+The remote attestation encapsulated within the
+[`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object is
+signed by Intel. So the client can have confidence about the enclave even though they obtain the
+[`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) from an
+untrusted host.
 
 The client tests the
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) against a
-set of [constraints](constraints.md). Constraints are represented by an
+set of [_constraints_](constraints.md). Constraints are represented by an
 [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) object, which can 
 be read from or written to a domain-specific language suitable for embedding in config files, command line options, and 
 so on.
-
-A constraint may mandate a specific set of code hashes. For example, a constraint might whitelist an existing 
-version of an enclave and disallow any upgrades until the constraint is adjusted. Or, it may specify a set of allowed 
-signing keys, enabling enclave authors to release new versions whenever they want. In the second scenario, the enclave 
-creator is trusted, but the host is not.
 
 When the client approves the set of constraints, it creates encrypted messages using the key in the 
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object. The 
@@ -186,10 +185,10 @@ sequenceDiagram
 
 ### Conclave Mail
 
-Clients must securely communicate with enclaves without the host spying on the messages. Conclave uses
-[Conclave Mail](mail.md) to send and receive encrypted messages between a client and an enclave. Conclave Mail makes 
-communication between enclaves and clients easier, more secure, and more efficient when compared to classical 
-architectures like HTTPS. 
+Clients must securely communicate with enclaves without the host spying on the messages. Conclave uses Conclave Mail to
+send and receive encrypted messages between a client and an enclave. Conclave Mail makes communication between enclaves
+and clients easier, more secure, and more efficient when compared to classical architectures like HTTPS. Learn more 
+about Conclave Mail [here](mail.md).
 
 ### Testing and debugging
 
@@ -206,8 +205,7 @@ Conclave provides full unit testing support for enclaves. You can compile enclav
   and the host are regular function calls. You can step through using a debugger and enjoy a regular Java development
   experience. See [here](mockmode.md) for more information on using and configuring mock mode.
 
-The modes must match between how the enclave was compiled and how it's loaded. Conclave automatically handles this for
-you. You can read more about enclave modes [here](enclave-modes.md).
+You can read more about enclave modes [here](enclave-modes.md).
 
 #### Adding logs to enclaves
 
@@ -233,4 +231,4 @@ up-to-date source of SGX VMs.
 A Conclave host application includes the enclave bundled into the same JAR and the native libraries required for 
 working with the kernel driver and Intel infrastructure. So, you can deploy a Conclave application by using regular
 Java deployment procedures. For example, use Gradle's `assemble` plugin to create a tarball/zip of your application or
-create and copy a fat JAR to the server.
+create a fat jar using the [shadow plugin](https://imperceptiblethoughts.com/shadow/).
