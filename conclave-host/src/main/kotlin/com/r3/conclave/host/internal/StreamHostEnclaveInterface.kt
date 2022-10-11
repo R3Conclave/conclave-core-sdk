@@ -7,7 +7,6 @@ import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * This class is a streaming implementation of the [HostEnclaveInterface].
@@ -70,7 +69,7 @@ class StreamHostEnclaveInterface(
 
         fun hasActiveCalls(): Boolean = (activeCalls == 0)
 
-        fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.add(message)
+        fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
 
         fun sendMessage(callTypeID: Byte, messageTypeID: Byte, payload: ByteBuffer?) {
             val outgoingMessage = StreamCallInterfaceMessage(

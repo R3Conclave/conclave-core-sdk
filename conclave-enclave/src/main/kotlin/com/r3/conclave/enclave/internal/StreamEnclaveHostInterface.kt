@@ -62,7 +62,7 @@ class StreamEnclaveHostInterface(
     ): Runnable {
         private val messageQueue = ArrayBlockingQueue<StreamCallInterfaceMessage>(4)
 
-        fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.add(message)
+        fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
 
         fun sendMessage(callTypeID: Byte, messageTypeID: Byte, payload: ByteBuffer?) {
             val outgoingMessage = StreamCallInterfaceMessage(
