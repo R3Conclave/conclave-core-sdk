@@ -95,7 +95,11 @@ class StreamCallInterfaceTest {
                 val result = when (val index = parameterBuffer.int) {
                     0 -> 0
                     1 -> 1
-                    else -> callFibOnOther(index - 1) + callFibOnOther(index - 2)
+                    else -> {
+                        val a = callFibOnOther(index - 1)
+                        val b = callFibOnOther(index - 2)
+                        a + b
+                    }
                 }
                 return wrapIntInBuffer(result)
             }
@@ -181,9 +185,13 @@ class StreamCallInterfaceTest {
         assertThat(outputString).isEqualTo(inputString)
     }
 
+    /**
+     * This test implements a trivial recursive fibonacci sequence.
+     * This tests recursion and cases where enclave/host calls contain multiple other enclave/host calls.
+     */
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2])
-    fun `enclave and host can perform deeply recursive calls`(fibonacciIndex: Int) {
+    fun `enclave and host can perform deeply recursive branching calls`(fibonacciIndex: Int) {
         configureInterfacesForFibonacci()
 
         val fibonacciResult = hostEnclaveInterface.executeOutgoingCall(
