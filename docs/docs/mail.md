@@ -175,9 +175,6 @@ Conclave uses Conclave Mail to connect clients to enclaves because of the follow
      supporting M-to-1 inbound message collection.
 
 
-3. Conclave Mail's approach to enclave restarts and enclave upgrades is more suited than a classical architecture 
-   that requires a database to ensure session persistence.
-
-4. The primary reason to use HTTPS/REST is the availability of tools and libraries. To use these preexisting tools 
+3. The primary reason to use HTTPS/REST is the availability of tools and libraries. To use these preexisting tools 
    for remote attestation, you must modify them in unusual ways that they were not designed for, which introduces 
    design complexities and reduces their usefulness.
