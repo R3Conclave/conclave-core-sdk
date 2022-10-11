@@ -11,8 +11,8 @@ There are three main entities in any Conclave application.
 3. Clients
 
 **Enclaves** are protected regions of memory in which you can write the confidential part of an application. 
-An enclaves runs inside its own JVM. Although enclaves reside in a host program, a host or its owner cannot view or 
-modify the code running in an enclave.
+Although enclaves reside in a host program, a host or its owner cannot view or modify the code running in an enclave.
+An enclave runs inside its own JVM, separate from the host's JVM.
 
 **Hosts** are programs that load enclaves. They are untrusted and assumed to be malicious at all times. Hosts use a 
 standard JVM like HotSpot. The host and the enclave run inside the same operating system process. Clients communicate
