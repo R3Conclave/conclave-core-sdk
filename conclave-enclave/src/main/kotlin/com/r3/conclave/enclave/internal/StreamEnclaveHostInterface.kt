@@ -66,7 +66,7 @@ class StreamEnclaveHostInterface(
 
         fun sendMessage(callTypeID: Byte, messageTypeID: Byte, payload: ByteBuffer?) {
             val outgoingMessage = StreamCallInterfaceMessage(
-                    Thread.currentThread().id, callTypeID, messageTypeID, payload?.getAllBytes(avoidCopying = true))
+                    hostThreadID, callTypeID, messageTypeID, payload?.getAllBytes(avoidCopying = true))
 
             synchronized(outputStream) {
                 outgoingMessage.writeToStream(outputStream)
@@ -109,7 +109,7 @@ class StreamEnclaveHostInterface(
             /** Iterate, handling CALL messages until a message that is not a CALL arrives */
             var replyMessage: StreamCallInterfaceMessage
             while (true) {
-                replyMessage = messageQueue.remove()
+                replyMessage = messageQueue.take()
                 when (CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)) {
                     CallInterfaceMessageType.CALL -> handleCallMessage(replyMessage)
                     else -> break

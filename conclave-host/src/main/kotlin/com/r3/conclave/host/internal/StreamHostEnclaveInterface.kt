@@ -113,7 +113,7 @@ class StreamHostEnclaveInterface(
             /** Iterate, handling CALL messages until a message that is not a CALL arrives */
             var replyMessage: StreamCallInterfaceMessage
             while (true) {
-                replyMessage = messageQueue.remove()
+                replyMessage = messageQueue.take()
                 when (CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)) {
                     CallInterfaceMessageType.CALL -> handleCallMessage(replyMessage)
                     else -> break
