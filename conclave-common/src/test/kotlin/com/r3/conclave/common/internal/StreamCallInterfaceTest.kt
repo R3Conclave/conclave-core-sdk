@@ -5,13 +5,21 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
+import java.util.concurrent.Semaphore
 
+/**
+ * Test the stream call interface classes.
+ * It should be noted that the use of [EnclaveCallType] and [HostCallType] enum values in these tests are irrelevant.
+ * There is no enclave or host present for any of these tests and the enums are re-used solely for testing purposes.
+ */
 class StreamCallInterfaceTest {
     companion object {
         private const val SOCKET_PORT_NUMBER = 31893
@@ -37,25 +45,26 @@ class StreamCallInterfaceTest {
 
     /** Create a pair of sockets that are connected together. */
     private fun setupSockets() {
+        val serverSocketReady = Semaphore(0)
+
         val serverSocketThread = Thread {
             ServerSocket(SOCKET_PORT_NUMBER).use { serverSocket ->
+                serverSocketReady.release()
                 hostSocket = serverSocket.accept()
             }
-        }
-        serverSocketThread.start()
+        }.apply { start() }
 
-        var connectionAttempts = 0
-        var maybeEnclaveSocket: Socket? = null
-        while (connectionAttempts < 20) {
+        serverSocketReady.acquire()
+
+        for (retries in 0..10) {
             try {
-                maybeEnclaveSocket = Socket("127.0.0.1", SOCKET_PORT_NUMBER)
+                enclaveSocket = Socket("127.0.0.1", SOCKET_PORT_NUMBER)
+                break
             } catch (e: ConnectException) {
-                connectionAttempts++
-                Thread.sleep(1)
+                Thread.sleep(5)
             }
         }
 
-        enclaveSocket = checkNotNull(maybeEnclaveSocket) { "Failed to open enclave socket." }
         serverSocketThread.join()
     }
 
@@ -88,5 +97,22 @@ class StreamCallInterfaceTest {
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
         hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.START_ENCLAVE, inputBuffer)
         assertThat(outputString).isEqualTo(outputString)
+    }
+
+    /**
+     * In native mode, threads literally call the enclave from the host and return out of it. The enclave does not have
+     * any threads of its own.
+     * Because of this, the enclave cannot call the host without the host first calling the enclave. To simplify the
+     * implementation of the stream call interfaces, they have been written such that this remains the case
+     * (even though it need not necessarily be so).
+     * This test checks to see if this behaviour is intact. This helps to ensure that there are as few
+     * differences between the stream and native interfaces as possible.
+     */
+    //@Test
+    fun `enclave may not call host outside the context of an enclave call`() {
+        val exception = assertThrows<IllegalStateException> {
+            enclaveHostInterface.executeOutgoingCall(HostCallType.GET_ATTESTATION)
+        }
+        assertThat(exception).hasMessage("Outgoing host calls may not occur outside the context of an enclave call.")
     }
 }
