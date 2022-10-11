@@ -14,14 +14,14 @@ There are three main entities in any Conclave application.
 enclave resides inside a host program. However, a host or its owner cannot view or modify the code running in an 
 enclave.
 
-**Hosts** are programs that load enclaves. Hosts are untrusted and assumed to be malicious at all times. Hosts use a 
+**Hosts** are programs that load enclaves. They are untrusted and assumed to be malicious at all times. Hosts use a 
 standard JVM like HotSpot. The host JVM and the enclave run inside the same operating system process. Clients 
 communicate with enclaves through host programs. In some applications, hosts also assist with the application logic. 
 
 **Clients** are programs that send and receive encrypted messages through hosts to communicate with enclaves. In a 
 typical Conclave application, clients provide the user interface. Conclave doesn't mandate any particular network 
 protocol for communication between clients and hosts. However, the content of a message is defined using the
-[Conclave Mail](#Conclave-Mail) API.
+[Conclave Mail API](api/-conclave%20-core/com.r3.conclave.mail/index.html).
 
 Conclave's purpose is to enable clients to securely share data with an enclave, which will faithfully execute a 
 specified algorithm without revealing anything to the potentially malicious host on which it runs.
@@ -45,8 +45,8 @@ provisioning servers that take over from Intel's servers. You can find the instr
 Azure [here](machine-setup.md).
 
 **Auditor.** In a pure enclave-oriented model, the user is responsible for understanding what the enclave does before
-using it by reading the enclave's source code. In practice, the user may wish to outsource this auditing to someone 
-else.
+using it by reading the enclave's source code. In practice, the user may wish to outsource this to a 
+third-party auditor.
 
 ![Architecture Diagram](images/arch-diagram.png)
 
@@ -77,7 +77,7 @@ Consider these questions on the working of Conclave:
 * What is the flow of communication in a typical application?
 * How does data get from a client to an enclave without the host being able to spy on it?
 * What deployment modes are available on the journey from unit testing to production?
-* Can Conclave be deployed to the cloud?
+* Can you deploy Conclave to the cloud?
 
 The following sections answers the above questions.
 
@@ -106,7 +106,7 @@ The client tests the
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) against a
 set of [constraints](constraints.md). Constraints are represented by an
 [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) object, which can 
-be read from/written to a domain-specific language suitable for embedding in config files, command line options, and 
+be read from or written to a domain-specific language suitable for embedding in config files, command line options, and 
 so on.
 
 A constraint may mandate a specific set of code hashes. For example, a constraint might whitelist an existing 
@@ -211,13 +211,13 @@ you. You can read more about enclave modes [here](enclave-modes.md).
 
 #### Adding logs to enclaves
 
-To add logs to an enclave, you have a couple of options.
+To add logs to an enclave, you can use:
 
-1. You can use the [in-memory filesystem](persistence.md) to retain your logs in memory and then export them 
-   occasionally to a trusted client or another enclave.
+1. The [in-memory filesystem](persistence.md) to retain your logs in memory and then export them occasionally to a 
+   trusted client or another enclave.
 
-2. You can use the [persisted filesystem](persistence.md) to persist your logs. When you want to analyze the logs, you
-   need to send the logs from the enclave to a trusted client.
+2. The [persisted filesystem](persistence.md) to persist your logs. When you want to analyze the logs, you need to 
+   send the logs from the enclave to a trusted client.
 
 Alternatively, in sensitive applications, you can decide that nobody should receive the logs when in release mode. 
 
@@ -234,5 +234,3 @@ A Conclave host application includes the enclave bundled into the same JAR and t
 working with the kernel driver and Intel infrastructure. So, you can deploy a Conclave application by using regular
 Java deployment procedures. For example, use Gradle's `assemble` plugin to create a tarball/zip of your application or
 create and copy a fat JAR to the server.
-
-
