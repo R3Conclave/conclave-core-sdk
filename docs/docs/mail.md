@@ -150,19 +150,19 @@ Conclave uses Conclave Mail to connect clients to enclaves because of the follow
 2. The certificate-based architecture of SSL/TLS doesn't integrate cleanly with enclave-based computing. Conclave Mail 
    uses the better-suited Noise protocol framework. The Noise protocol delivers most of the functionalities of Transport 
    Layer Security (TLS) in a cleaner, simpler, and modular manner.
-   
-   The TLS protocol is reliant on a certificate-based security architecture, which does not suit enclave-based 
-   computing. Certificates don't make sense for enclaves because enclaves are all about *measurements* and *remote 
+
+   The TLS protocol is reliant on a certificate-based security architecture, which does not suit enclave-based
+   computing. Certificates don't make sense for enclaves because enclaves are all about *measurements* and *remote
    attestations*.
-   
-   If you use TLS, a client communicating with an enclave needs to extract a remote attestation from a 
-   pseudo-certificate. As Conclave Mail uses the Noise protocol, you can provide a byte array instead of a 
+
+   If you use TLS, a client communicating with an enclave needs to extract a remote attestation from a
+   pseudo-certificate. As Conclave Mail uses the Noise protocol, you can provide a byte array instead of a
    certificate as part of the handshake.
 
    In Conclave, the remote attestation data is represented as an
    [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html) object. The
    Noise protocol and Conclave doesn't restrict how you get the remote attestation. For example, you can
-   send remote attestation to the client by returning it in another API, publishing it on a web server, and putting it 
+   send remote attestation to the client by returning it in another API, publishing it on a web server, and putting it
    into a distributed hash table, network drive, or message queue.
 
    Following are the benefits of the Noise protocol over an HTTPS/REST architecture:
@@ -171,9 +171,13 @@ Conclave uses Conclave Mail to connect clients to enclaves because of the follow
    * Avoid hacks like pseudo-certificates.
    * Enable enclaves to talk to each other even if they can't be loaded simultaneously.
    * Move session management *and expiry* out of the enclave.
-   * Get other benefits like reusing MQ brokers, integrating with Corda flows, storing messages to databases, and 
-     supporting M-to-1 inbound message collection. 
+   * Get other benefits like reusing MQ brokers, integrating with Corda flows, storing messages to databases, and
+     supporting M-to-1 inbound message collection.
 
-3. The primary reason to use HTTPS/REST is the availability of tools and libraries. To use these preexisting tools 
-   for remote attestation, you must modify them in unusual ways that they were not designed for, which introduces 
+3. The primary reason to use HTTPS/REST is the availability of tools and libraries. To use these preexisting tools
+   for remote attestation, you must modify them in unusual ways that they were not designed for, which introduces
    design complexities and reduces their usefulness.
+   
+    
+
+
