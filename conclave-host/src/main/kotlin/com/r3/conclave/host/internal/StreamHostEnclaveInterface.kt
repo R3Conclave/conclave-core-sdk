@@ -67,7 +67,7 @@ class StreamHostEnclaveInterface(
         private val messageQueue = ArrayBlockingQueue<StreamCallInterfaceMessage>(4)
         private var activeCalls = 0
 
-        fun hasActiveCalls(): Boolean = (activeCalls == 0)
+        fun hasActiveCalls(): Boolean = (activeCalls > 0)
 
         fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
 
@@ -102,12 +102,14 @@ class StreamHostEnclaveInterface(
             val callType = HostCallType.fromByte(callMessage.callTypeID)
             val parameterBuffer = checkNotNull(callMessage.payload) { "Received call message without parameter bytes." }
 
-            try {
-                val returnBuffer = handleIncomingCall(callType, ByteBuffer.wrap(parameterBuffer))
-                sendReturnMessage(callType, returnBuffer)
+            val returnBuffer = try {
+                handleIncomingCall(callType, ByteBuffer.wrap(parameterBuffer))
             } catch (t: Throwable) {
                 sendExceptionMessage(callType, ByteBuffer.wrap(ThrowableSerialisation.serialise(t)))
+                return
             }
+
+            sendReturnMessage(callType, returnBuffer)
         }
 
         private fun initiateCallInternal(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
