@@ -16,8 +16,8 @@ import java.util.concurrent.Semaphore
 
 /**
  * Test the stream call interface classes.
- * It should be noted that the use of [EnclaveCallType] and [HostCallType] enum values in these tests are irrelevant.
- * There is no enclave or host present for any of these tests and the enums are re-used solely for testing purposes.
+ * It should be noted that the use of [EnclaveCallType] and [HostCallType] in these tests isn't important.
+ * There is no enclave or host present for any of these tests and the enums are re-used solely for convenience.
  */
 class StreamCallInterfaceTest {
     companion object {
@@ -35,12 +35,6 @@ class StreamCallInterfaceTest {
     fun setup() {
         setupSockets()
         setupInterfaces()
-    }
-
-    @AfterEach
-    fun teardown() {
-        hostSocket.close()
-        enclaveSocket.close()
     }
 
     /** Create a pair of sockets that are connected together. */
@@ -84,87 +78,97 @@ class StreamCallInterfaceTest {
                 enclaveSocket.getOutputStream(), enclaveSocket.getInputStream(), ENCLAVE_HOST_INTERFACE_THREADS) as CallInterface<HostCallType, EnclaveCallType>
     }
 
-    /** This method sets up the call interfaces to perform a recursive fibonacci computation */
-    private fun configureInterfacesForFibonacci() {
-        abstract class FibonacciCallHandler : CallHandler {
-            abstract fun callFibOnOther(index: Int): Int
-
+    /** Configure the enclave call interface for basic calls with an arbitrary task */
+    private fun configureEnclaveHostInterfaceAction(action: (ByteBuffer) -> ByteBuffer?) {
+        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                val result = when (val index = parameterBuffer.int) {
-                    0 -> 0
-                    1 -> 1
-                    else -> {
-                        val a = callFibOnOther(index - 1)
-                        val b = callFibOnOther(index - 2)
-                        a + b
-                    }
-                }
-                return wrapIntInBuffer(result)
+                return action(parameterBuffer)
             }
+        })
+    }
+
+    /** Configure the host call interface for basic calls with an arbitrary task */
+    private fun configureHostEnclaveInterfaceAction(action: (ByteBuffer) -> ByteBuffer?) {
+        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                return action(parameterBuffer)
+            }
+        })
+    }
+
+    /** This method sets up the call interfaces to perform a recursive fibonacci computation */
+    private fun configureInterfacesForRecursiveFibonacci() {
+        configureHostEnclaveInterfaceAction {
+            when (val index = it.int) {
+                0 -> 0
+                1 -> 1
+                else -> {
+                    val a = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, (index - 1).toByteBuffer())!!.int
+                    val b = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, (index - 2).toByteBuffer())!!.int
+                    a + b
+                }
+            }.toByteBuffer()
         }
 
-        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : FibonacciCallHandler() {
-            override fun callFibOnOther(index: Int): Int {
-                return hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(index))!!.int
-            }
-        })
-
-        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : FibonacciCallHandler() {
-            override fun callFibOnOther(index: Int): Int {
-                return enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(index))!!.int
-            }
-        })
+        configureEnclaveHostInterfaceAction {
+            when (val index = it.int) {
+                0 -> 0
+                1 -> 1
+                else -> {
+                    val a = enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, (index - 1).toByteBuffer())!!.int
+                    val b = enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, (index - 2).toByteBuffer())!!.int
+                    a + b
+                }
+            }.toByteBuffer()
+        }
     }
 
     /**
      * Configure the call interfaces for deep recursion.
      * This setup will recurse some number of times until reaching zero, then perform the provided action.
      */
-    fun configureInterfacesForDeepRecursion(terminatingAction: () -> ByteBuffer?) {
-        abstract class RecursionHandler : CallHandler {
-            abstract fun callOther(recursionDepth: Int): ByteBuffer?
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                return when (val input = parameterBuffer.int) {
-                    0 -> terminatingAction()
-                    else -> callOther(input - 1)
-                }
+    private fun configureInterfacesForDeepRecursion(terminatingAction: () -> ByteBuffer?) {
+        configureHostEnclaveInterfaceAction {
+            when (val recursionDepth = it.int) {
+                0 -> terminatingAction()
+                else -> hostEnclaveInterface.executeOutgoingCall(
+                        EnclaveCallType.CALL_MESSAGE_HANDLER,
+                        (recursionDepth - 1).toByteBuffer())
             }
         }
 
-        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : RecursionHandler() {
-            override fun callOther(recursionDepth: Int): ByteBuffer? {
-                return hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+        configureEnclaveHostInterfaceAction {
+            when (val recursionDepth = it.int) {
+                0 -> terminatingAction()
+                else -> enclaveHostInterface.executeOutgoingCall(
+                        HostCallType.CALL_MESSAGE_HANDLER,
+                        (recursionDepth - 1).toByteBuffer())
             }
-        })
-
-        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : RecursionHandler() {
-            override fun callOther(recursionDepth: Int): ByteBuffer? {
-                return enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
-            }
-        })
+        }
     }
 
     private fun referenceFibonacci(index: Int): Int {
-        return when (index) {
-            0 -> 0
-            1 -> 1
-            else -> referenceFibonacci(index - 1) + referenceFibonacci(index - 2)
+        if (index < 2) return index
+        val values = IntArray(index + 1)
+        values[0] = 0
+        values[1] = 1
+        for (i in 2 .. index) {
+            values[i] = values[i - 1] + values[i - 2]
         }
+        return values[index]
     }
 
-    private fun wrapIntInBuffer(value: Int): ByteBuffer {
-        return ByteBuffer.allocate(Int.SIZE_BYTES).apply {
-            putInt(value)
-            rewind()
-        }
+    private fun Int.toByteBuffer(): ByteBuffer {
+        val buffer = ByteBuffer.allocate(Int.SIZE_BYTES)
+        buffer.putInt(this)
+        buffer.rewind()
+        return buffer
     }
 
     @Test
     fun `host can call enclave`() {
-        // Just echo the string back to the host side
-        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer { return parameterBuffer }
-        })
+        // Just echo the buffer back to the host side
+        configureEnclaveHostInterfaceAction { it }
 
         val inputString = "Test string!"
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
@@ -192,17 +196,13 @@ class StreamCallInterfaceTest {
 
     @Test
     fun `enclave can call host inside the context of an enclave call`() {
-        // Host handles call by echoing it
-        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer { return parameterBuffer }
-        })
-
         // Enclave forwards call back to host
-        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                return enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, parameterBuffer)
-            }
-        })
+        configureEnclaveHostInterfaceAction {
+            enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, it)
+        }
+
+        // Host handles call by echoing it
+        configureHostEnclaveInterfaceAction { it }
 
         val inputString = "This is an input string!"
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
@@ -215,7 +215,7 @@ class StreamCallInterfaceTest {
     @ValueSource(ints = [0, 1, 2, 4, 8, 16, 32])
     fun `enclave and host can perform deeply recursive calls`(recursionDepth: Int) {
         configureInterfacesForDeepRecursion { null }
-        val returnValue = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+        val returnValue = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, recursionDepth.toByteBuffer())
         assertThat(returnValue).isNull()
     }
 
@@ -226,7 +226,7 @@ class StreamCallInterfaceTest {
         configureInterfacesForDeepRecursion { throw IllegalStateException(exceptionMessage) }
 
         val exception = assertThrows<IllegalStateException> {
-            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, recursionDepth.toByteBuffer())
         }
 
         assertThat(exception).hasMessage(exceptionMessage)
@@ -239,11 +239,100 @@ class StreamCallInterfaceTest {
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7])
     fun `enclave and host can perform deeply recursive branching calls`(fibonacciIndex: Int) {
-        configureInterfacesForFibonacci()
+        configureInterfacesForRecursiveFibonacci()
 
         val fibonacciResult = hostEnclaveInterface.executeOutgoingCall(
-                EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(fibonacciIndex))!!.int
+                EnclaveCallType.CALL_MESSAGE_HANDLER, fibonacciIndex.toByteBuffer())!!.int
 
         assertThat(fibonacciResult).isEqualTo(referenceFibonacci(fibonacciIndex))
+    }
+
+    /**
+     * This test implements a large number of concurrent calls.
+     * This tests that the synchronisation mechanisms deal properly with contention on the host side and that return
+     * values are sent back to the right caller when multiple callers are present.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = [2, 8, 256])
+    fun `enclave can service multiple concurrent calls`(concurrency: Int) {
+        // Sleep for the specified duration and send the duration back to the caller
+        configureEnclaveHostInterfaceAction {
+            val sleepFor = it.int
+            Thread.sleep(sleepFor.toLong())
+            sleepFor.toByteBuffer()
+        }
+
+        class SlowCountRunner(val input: Int) : Runnable {
+            var finalCount: Int? = null
+            var error: Throwable? = null
+
+            override fun run() {
+                try {
+                    finalCount = checkNotNull(hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, input.toByteBuffer())) {
+                        "No return value was received!"
+                    }.int
+                } catch (t: Throwable) {
+                    error = t
+                }
+            }
+        }
+
+        val slowCountRunners = ArrayList<SlowCountRunner>(concurrency).apply {
+            for (i in 0 until concurrency) {
+                add(SlowCountRunner((32..64).random()))
+            }
+        }
+
+        val threads = slowCountRunners.map { Thread(it) }
+
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        // Double check that calls were not mixed up
+        slowCountRunners.forEach {
+            assertThat(it.finalCount).isEqualTo(it.input)
+        }
+    }
+
+    /**
+     * This is a hammer test that implements a large number of concurrent recursive fibonacci calls.
+     * The purpose of this test is to stress the message delivery and synchronisation mechanisms by causing large
+     * numbers of messages to be delivered and received in multiple threads.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = [2, 8, 256])
+    fun `enclave can service multiple concurrent recursive calls`(concurrency: Int) {
+        configureInterfacesForRecursiveFibonacci()
+
+        class RecursiveFibonacciRunner(val input: Int) : Runnable {
+            var result: Int? = null
+            var error: Throwable? = null
+
+            override fun run() {
+                try {
+                    result = checkNotNull(hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, input.toByteBuffer())) {
+                        "No return value was received!"
+                    }.int
+                } catch (t: Throwable) {
+                    error = t
+                }
+            }
+        }
+
+        val fibonacciRunners = ArrayList<RecursiveFibonacciRunner>(concurrency).apply {
+            for (i in 0 until concurrency) {
+                add(RecursiveFibonacciRunner((8..12).random()))
+            }
+        }
+
+        val threads = fibonacciRunners.map { Thread(it) }
+
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        // Check for correct values
+        fibonacciRunners.forEach {
+            assertThat(it.result).isEqualTo(referenceFibonacci(it.input))
+        }
     }
 }
