@@ -134,19 +134,25 @@ class StreamEnclaveHostInterface(
 
         /** Handle the initial call */
         override fun run() {
-            threadLocalCallContext.set(this)
-            handleCallMessage(messageQueue.take())
-            threadLocalCallContext.remove()
-            enclaveCallContexts.remove(hostThreadID)
+            try {
+                threadLocalCallContext.set(this)
+                handleCallMessage(messageQueue.take())
+            } finally {
+                threadLocalCallContext.remove()
+                enclaveCallContexts.remove(hostThreadID)
+            }
         }
     }
 
-    /** This maps call contexts to their host side thread IDs */
+    /**
+     * This maps host thread IDs to enclave side call contexts.
+     * This map is used in the message receive loop to route messages to the appropriate call context.
+     */
     private val enclaveCallContexts = ConcurrentHashMap<Long, EnclaveCallContext>()
 
     /**
      * This contains the call context for the current thread.
-     * These are the same object instances that are contained in the call context map above.
+     * These are the same object instances that are contained in the map above.
      */
     private val threadLocalCallContext = ThreadLocal<EnclaveCallContext>()
 
