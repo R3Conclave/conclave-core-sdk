@@ -124,7 +124,7 @@ class StreamCallInterfaceTest {
             abstract fun callOther(recursionDepth: Int): ByteBuffer?
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
                 return when (val input = parameterBuffer.int) {
-                    0 -> null
+                    0 -> terminatingAction()
                     else -> callOther(input - 1)
                 }
             }
