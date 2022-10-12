@@ -63,9 +63,9 @@ Conclave Mail provides various features that are useful when building secure app
 
 ### Encryption
 
-The encryption key used by an enclave is private to that enclave. The enclave uses a random session key which 
-changes each time the enclave restarts. Enclaves can decrypt any message encrypted and delivered by older clients. 
-The format uses the respected Noise protocol framework with AES-GCM and SHA-256.
+Conclave Mail uses the respected Noise protocol framework with AES-GCM and SHA-256 for encryption. The encryption key 
+used by an enclave is private to that enclave. The enclave uses a random session key which changes each time the 
+enclave restarts.
 
 ### Authentication
 
