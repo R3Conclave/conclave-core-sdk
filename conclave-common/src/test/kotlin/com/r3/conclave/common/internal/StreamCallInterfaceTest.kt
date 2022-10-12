@@ -79,7 +79,7 @@ class StreamCallInterfaceTest {
     }
 
     /** Configure the enclave call interface for basic calls with an arbitrary task */
-    private fun configureEnclaveHostInterfaceAction(action: (ByteBuffer) -> ByteBuffer?) {
+    private fun configureEnclaveCallAction(action: (ByteBuffer) -> ByteBuffer?) {
         enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
                 return action(parameterBuffer)
@@ -88,7 +88,7 @@ class StreamCallInterfaceTest {
     }
 
     /** Configure the host call interface for basic calls with an arbitrary task */
-    private fun configureHostEnclaveInterfaceAction(action: (ByteBuffer) -> ByteBuffer?) {
+    private fun configureHostCallAction(action: (ByteBuffer) -> ByteBuffer?) {
         hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
                 return action(parameterBuffer)
@@ -98,7 +98,7 @@ class StreamCallInterfaceTest {
 
     /** This method sets up the call interfaces to perform a recursive fibonacci computation */
     private fun configureInterfacesForRecursiveFibonacci() {
-        configureHostEnclaveInterfaceAction {
+        configureHostCallAction {
             when (val index = it.int) {
                 0 -> 0
                 1 -> 1
@@ -110,7 +110,7 @@ class StreamCallInterfaceTest {
             }.toByteBuffer()
         }
 
-        configureEnclaveHostInterfaceAction {
+        configureEnclaveCallAction {
             when (val index = it.int) {
                 0 -> 0
                 1 -> 1
@@ -128,7 +128,7 @@ class StreamCallInterfaceTest {
      * This setup will recurse some number of times until reaching zero, then perform the provided action.
      */
     private fun configureInterfacesForDeepRecursion(terminatingAction: () -> ByteBuffer?) {
-        configureHostEnclaveInterfaceAction {
+        configureHostCallAction {
             when (val recursionDepth = it.int) {
                 0 -> terminatingAction()
                 else -> hostEnclaveInterface.executeOutgoingCall(
@@ -137,7 +137,7 @@ class StreamCallInterfaceTest {
             }
         }
 
-        configureEnclaveHostInterfaceAction {
+        configureEnclaveCallAction {
             when (val recursionDepth = it.int) {
                 0 -> terminatingAction()
                 else -> enclaveHostInterface.executeOutgoingCall(
@@ -168,7 +168,7 @@ class StreamCallInterfaceTest {
     @Test
     fun `host can call enclave`() {
         // Just echo the buffer back to the host side
-        configureEnclaveHostInterfaceAction { it }
+        configureEnclaveCallAction { it }
 
         val inputString = "Test string!"
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
@@ -197,12 +197,12 @@ class StreamCallInterfaceTest {
     @Test
     fun `enclave can call host inside the context of an enclave call`() {
         // Enclave forwards call back to host
-        configureEnclaveHostInterfaceAction {
+        configureEnclaveCallAction {
             enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, it)
         }
 
         // Host handles call by echoing it
-        configureHostEnclaveInterfaceAction { it }
+        configureHostCallAction { it }
 
         val inputString = "This is an input string!"
         val inputBuffer = ByteBuffer.wrap(inputString.toByteArray())
@@ -256,7 +256,7 @@ class StreamCallInterfaceTest {
     @ValueSource(ints = [2, 8, 256])
     fun `enclave can service multiple concurrent calls`(concurrency: Int) {
         // Sleep for the specified duration and send the duration back to the caller
-        configureEnclaveHostInterfaceAction {
+        configureEnclaveCallAction {
             val sleepFor = it.int
             Thread.sleep(sleepFor.toLong())
             sleepFor.toByteBuffer()
@@ -334,5 +334,39 @@ class StreamCallInterfaceTest {
         fibonacciRunners.forEach {
             assertThat(it.result).isEqualTo(referenceFibonacci(it.input))
         }
+    }
+
+    /**
+     * The stream call interface uses a thread pool on the enclave side.
+     * We sometimes rely on the thread ID for logic, so we need this to be consistent when re-entering the enclave.
+     */
+    @Test
+    fun `thread IDs are consistent when calls are re-entered`() {
+        val hostSideThreadIDs = ArrayList<Long>()
+        val enclaveSideThreadIDs = ArrayList<Long>()
+
+        configureHostCallAction {
+            hostSideThreadIDs.add(Thread.currentThread().id)
+            when (val recursionDepth = it.int) {
+                0 -> null
+                else -> hostEnclaveInterface.executeOutgoingCall(
+                        EnclaveCallType.CALL_MESSAGE_HANDLER, (recursionDepth - 1).toByteBuffer())
+            }
+        }
+
+        configureEnclaveCallAction {
+            enclaveSideThreadIDs.add(Thread.currentThread().id)
+            when (val recursionDepth = it.int) {
+                0 -> null
+                else -> enclaveHostInterface.executeOutgoingCall(
+                        HostCallType.CALL_MESSAGE_HANDLER, (recursionDepth - 1).toByteBuffer())
+            }
+        }
+
+        hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, 16.toByteBuffer())
+
+        // Check that all host side and all enclave side thread IDs are identical.
+        assertThat(setOf(hostSideThreadIDs)).hasSize(1)
+        assertThat(setOf(enclaveSideThreadIDs)).hasSize(1)
     }
 }
