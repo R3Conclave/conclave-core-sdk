@@ -22,6 +22,7 @@ import java.util.concurrent.Semaphore
 class StreamCallInterfaceTest {
     companion object {
         private const val SOCKET_PORT_NUMBER = 31893
+        private const val ENCLAVE_HOST_INTERFACE_THREADS = 8
     }
 
     private lateinit var hostEnclaveInterface: CallInterface<EnclaveCallType, HostCallType>
@@ -80,7 +81,7 @@ class StreamCallInterfaceTest {
         hostEnclaveInterface = hostEnclaveInterfaceConstructor.newInstance(
                 hostSocket.getOutputStream(), hostSocket.getInputStream()) as CallInterface<EnclaveCallType, HostCallType>
         enclaveHostInterface = enclaveHostInterfaceConstructor.newInstance(
-                enclaveSocket.getOutputStream(), enclaveSocket.getInputStream(), 4) as CallInterface<HostCallType, EnclaveCallType>
+                enclaveSocket.getOutputStream(), enclaveSocket.getInputStream(), ENCLAVE_HOST_INTERFACE_THREADS) as CallInterface<HostCallType, EnclaveCallType>
     }
 
     /** This method sets up the call interfaces to perform a recursive fibonacci computation */
@@ -236,8 +237,8 @@ class StreamCallInterfaceTest {
      * This tests recursion and cases where enclave/host calls contain multiple other enclave/host calls.
      */
     @ParameterizedTest
-    @ValueSource(ints = [0, 1, 2, 3, 4])
-    fun `enclave and host can perform branching deeply branching calls`(fibonacciIndex: Int) {
+    @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7])
+    fun `enclave and host can perform deeply recursive branching calls`(fibonacciIndex: Int) {
         configureInterfacesForFibonacci()
 
         val fibonacciResult = hostEnclaveInterface.executeOutgoingCall(
