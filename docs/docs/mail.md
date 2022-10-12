@@ -4,7 +4,7 @@ Conclave uses *Conclave Mail*, a communication mechanism that allows you to send
 can be decrypted only by enclaves that you trust. Conclave Mail ensures secure communication between a client and an 
 enclave.
 
-## How Conclave Mail works
+## Components of a Conclave Mail message
 
 Conclave Mail is essentially an authenticated byte array. A Mail message consists of five parts:
 
@@ -21,6 +21,8 @@ The handshake consists of the following components:
 * A random public key.
 * An authenticated encryption of the sender's public key.
 * An authentication hash.
+
+## How Conclave Mail works
 
 Conclave uses the contents of the handshake to do an [Elliptic-curve Diffie-Hellman](https://cryptobook.nakov.com/asymmetric-key-ciphers/ecdh-key-exchange)
 calculation and derive a unique [AES-GCM](https://www.cryptosys.net/pki/manpki/pki_aesgcmauthencryption.html) key
