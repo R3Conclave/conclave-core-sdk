@@ -336,7 +336,7 @@ for (publishedProject in publishedProjects) {
             // the compiler.
             relocate('kotlin', 'com.r3.conclave.shaded.kotlin')
             // Replace the output of the "jar" task with this one.
-            archiveClassifier = ''
+            archiveClassifier = 'fatJar'
         }
     }
 
