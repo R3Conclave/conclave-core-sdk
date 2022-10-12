@@ -6,7 +6,7 @@ enclave.
 
 ## How Conclave Mail works
 
-Conclave Mail is essentially an authenticated byte array. A Mail item consists of five parts:
+Conclave Mail is essentially an authenticated byte array. A Mail message consists of five parts:
 
 1. A protocol ID.
 2. A plain-text header.
@@ -14,9 +14,9 @@ Conclave Mail is essentially an authenticated byte array. A Mail item consists o
 4. The handshake.
 5. The encrypted body.
 
-The protocol ID, the unencrypted header, and the envelope form the *prologue* of a Mail item.
+The protocol ID, the unencrypted header, and the envelope form the *prologue* of a Mail message.
 
-The handshake consists of the following items:
+The handshake consists of the following components:
 
 * A random public key.
 * An authenticated encryption of the sender's public key.
@@ -37,7 +37,7 @@ Conclave Mail is [Curve25519](https://en.wikipedia.org/wiki/Curve25519).
 
 The client knows the target's public key either because the enclave puts its public key into the remote attestation, 
 represented by an [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html)
-object, or because the enclave obtained the key from an earlier Mail item. Two public keys are all that both 
+object, or because the enclave obtained the key from an earlier Mail message. Two public keys are all that both 
 parties need to compute the same AES key without any man-in-the-middle being able to calculate the same value.
 
 The sender may also have a long-term static public key that the target will recognize. Conclave appends an 
@@ -49,10 +49,10 @@ intermediate stages. This authentication hash allows the unencrypted headers to 
 the host will not be able to recalculate it.
 
 The initialization vector for each AES encryption is a counter. To avoid revealing any information, Conclave throws 
-an exception if the Mail item exceeds the limit of the counter.
+an exception if the Mail message exceeds the limit of the counter.
 
 The encrypted body consists of secure data that you need to transfer between a client and an enclave. Only the
-target enclave can decrypt the encrypted body of a Mail item. The encrypted body consists of a set of 64KB packets. 
+target enclave can decrypt the encrypted body of a Mail message. The encrypted body consists of a set of 64KB packets. 
 Each packet has its authentication tag.
 
 ## Features of Conclave Mail
@@ -61,9 +61,9 @@ Conclave Mail provides various features that are useful when building secure app
 
 ### Encryption
 
-The encryption key used by an enclave is private to that enclave. The encryption key is stable across system restarts 
-and enclave upgrades. So, enclaves can decrypt any message encrypted and delivered by older clients. The format
-uses the respected Noise protocol framework with AES-GCM and SHA-256.
+The encryption key used by an enclave is private to that enclave. The enclave uses a random session key which 
+changes each time the enclave restarts. Enclaves can decrypt any message encrypted and delivered by older clients. 
+The format uses the respected Noise protocol framework with AES-GCM and SHA-256.
 
 ### Authentication
 
@@ -78,16 +78,15 @@ messages to structure a conversation logically. Clients can also hold multiple c
 message headers. You can use message headers to implement non-data-processing tasks like usage tracking and 
 prioritization at the host's end. The Mail headers contain the following fields:
 
-1. The _topic_. This is a string you can use to distinguish between different streams of Mail items from the same 
+1. The _topic_. This is a string you can use to distinguish between different streams of Mail messages from the same 
    client. It resembles an email's subject line. Topics are scoped per sender and are not global. Clients
-   can send multiple streams of related Mail items using a different topic for each stream. To avoid replay attacks, 
-   you should never reuse a topic for an unrelated Mail item. Using a random UUID in a topic is good practice to 
+   can send multiple streams of related Mail messages using a different topic for each stream. To avoid replay attacks, 
+   you should never reuse a topic for an unrelated Mail message. Using a random UUID in a topic is good practice to 
    prevent reuse.
 
-2. The _sequence number_. Every Mail item with a specific topic has a sequence number that starts from zero and 
-   increments by one with each Mail item. The enclave rejects messages if the sequence number is not in order. This 
-   ensures that the enclave 
-   receives a stream of related Mail items in the correct order.
+2. The _sequence number_. Every Mail message with a specific topic has a sequence number that starts from zero and 
+   increments by one with each Mail message. The enclave rejects messages if the sequence number is not in order. This 
+   ensures that the enclave receives a stream of related Mail messages in the correct order.
 
 3. The _envelope_. This field can hold any plain-text byte array. You can use it to hold app-specific data that 
    should be authenticated but unencrypted.
@@ -100,7 +99,7 @@ fields contain the values set by the client because they're checked before
 [`receiveMail`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html) is invoked.
 
 In addition to the headers, there is also the _authenticated sender public key_. This is the public key of the client
-that sent the Mail item. It's encrypted so that the host cannot learn the client's identity.
+that sent the Mail message. It's encrypted so that the host cannot learn the client's identity.
 
 ### Framing
 
@@ -113,7 +112,7 @@ Conclave Mail is designed to block various attacks the host can mount on the enc
 
 ### Observation
 
-The body of a Mail item is encrypted with industry-standard AES-GCM. The host can't see what the client is sending 
+The body of a Mail message is encrypted with industry-standard AES-GCM. The host can't see what the client is sending 
 to the enclave.
 
 ### Tampering
@@ -124,18 +123,18 @@ the host modifies it.
 ### Reordering
 
 The Conclave runtime verifies that the sequence numbers under a topic always increment by one before passing a Mail 
-item to the enclave. This feature ensures that the host can't reorder messages or drop Mail items.
+message to the enclave. This feature ensures that the host can't reorder or drop Mail messages.
  
 ### Side-channel attacks
 
 A malicious host can infer crucial information if it knows the size or timing of a message.
 Conclave guards against these types of [side-channel attacks](security.md#side-channel-attacks) as follows.
 
-Conclave pads Mail items to a uniform size. This blocks any attempt to infer the contents of messages based on the 
+Conclave pads Mail messages to a uniform size. This blocks any attempt to infer the contents of messages based on the 
 precise length of a message. By default, Conclave Mail uses a moving average size to pad messages. However, you can 
 configure the size of your application's messages to a reasonable upper limit.
 
-To avoid the host guessing information from message timing, you can send empty Mail items even when you have nothing 
+To avoid the host guessing information from message timing, you can send empty Mail messages even when you have nothing 
 to say. For example, if an enclave is running an auction between users, and you wish to hide who won, the enclave 
 can send a "you won" or "you lost" message to every client.
 
@@ -175,12 +174,3 @@ Conclave uses Conclave Mail to connect clients to enclaves because of the follow
    * Avoid hacks like pseudo-certificates.
    * Enable enclaves to talk to each other even if they can't be loaded simultaneously.
    * Move session management *and expiry* out of the enclave.
-   * Get other benefits like reusing MQ brokers, integrating with Corda flows, storing messages to databases, and
-     supporting M-to-1 inbound message collection.
-
-
-
-   
-    
-
-
