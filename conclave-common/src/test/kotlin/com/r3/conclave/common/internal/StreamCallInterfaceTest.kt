@@ -115,6 +115,34 @@ class StreamCallInterfaceTest {
         })
     }
 
+    /**
+     * Configure the call interfaces for deep recursion.
+     * This setup will recurse some number of times until reaching zero, then perform the provided action.
+     */
+    fun configureInterfacesForDeepRecursion(terminatingAction: () -> ByteBuffer?) {
+        abstract class RecursionHandler : CallHandler {
+            abstract fun callOther(recursionDepth: Int): ByteBuffer?
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                return when (val input = parameterBuffer.int) {
+                    0 -> null
+                    else -> callOther(input - 1)
+                }
+            }
+        }
+
+        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : RecursionHandler() {
+            override fun callOther(recursionDepth: Int): ByteBuffer? {
+                return hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+            }
+        })
+
+        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : RecursionHandler() {
+            override fun callOther(recursionDepth: Int): ByteBuffer? {
+                return enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+            }
+        })
+    }
+
     private fun referenceFibonacci(index: Int): Int {
         return when (index) {
             0 -> 0
@@ -183,29 +211,24 @@ class StreamCallInterfaceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7])
+    @ValueSource(ints = [0, 1, 2, 4, 8, 16, 32])
     fun `enclave and host can perform deeply recursive calls`(recursionDepth: Int) {
-        hostEnclaveInterface.registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                return when (val input = parameterBuffer.int) {
-                    0 -> null
-                    else -> hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(input - 1))
-                }
-            }
-        })
+        configureInterfacesForDeepRecursion { null }
+        val returnValue = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
+        assertThat(returnValue).isNull()
+    }
 
-        enclaveHostInterface.registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                return when (val input = parameterBuffer.int) {
-                    0 -> null
-                    else -> enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(input - 1))
-                }
-            }
-        })
+    @ParameterizedTest
+    @ValueSource(ints = [0, 1, 2, 4, 8, 16, 32])
+    fun `exceptions propagate recursively out of the enclave`(recursionDepth: Int) {
+        val exceptionMessage = "End of the line!"
+        configureInterfacesForDeepRecursion { throw IllegalStateException(exceptionMessage) }
 
-        assertDoesNotThrow {
+        val exception = assertThrows<IllegalStateException> {
             hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, wrapIntInBuffer(recursionDepth))
         }
+
+        assertThat(exception).hasMessage(exceptionMessage)
     }
 
     /**
@@ -214,7 +237,7 @@ class StreamCallInterfaceTest {
      */
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2, 3, 4])
-    fun `enclave and host can perform deeply recursive branching calls`(fibonacciIndex: Int) {
+    fun `enclave and host can perform branching deeply branching calls`(fibonacciIndex: Int) {
         configureInterfacesForFibonacci()
 
         val fibonacciResult = hostEnclaveInterface.executeOutgoingCall(
