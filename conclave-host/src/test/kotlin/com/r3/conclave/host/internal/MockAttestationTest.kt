@@ -3,15 +3,14 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.EnclaveSecurityInfo
-import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.attestation.Attestation
+import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
 import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.enclave.Enclave
-import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.EnclaveHostMockTest
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.BeforeEach
@@ -19,14 +18,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.lang.Thread.sleep
 
-// TODO exact copies of these tests are used for DCAP in Simulation and Debug modes
-//  at integration-tests/general/tests/src/test/kotlin/com/r3/conclave/integrationtests/general/tests/AttestationTests.kt .
-//  We want to eventually get rid of this duplication.
-abstract class AttestationTest {
-    abstract val attestationParameters: AttestationParameters?
-    abstract val expectedEnclaveMode: EnclaveMode
-    abstract val expectedAttestationType: Class<out Attestation>
-    abstract val enclaveHost: EnclaveHost
+class MockAttestationTest {
+    private val enclaveHost: EnclaveHost = createMockHost(EnclaveInstanceInfoEnclave::class.java)
 
     class EnclaveInstanceInfoEnclave : Enclave() {
         override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray = enclaveInstanceInfo.serialize()
@@ -38,10 +31,10 @@ abstract class AttestationTest {
 
     @BeforeEach
     fun start() {
-        enclaveHost.start(attestationParameters, null, null) { }
-        assertThat(enclaveHost.enclaveMode).isEqualTo(expectedEnclaveMode)
+        enclaveHost.start(null, null, null) { }
+        assertThat(enclaveHost.enclaveMode).isEqualTo(EnclaveMode.MOCK)
         assertThat((enclaveHost.enclaveInstanceInfo as EnclaveInstanceInfoImpl).attestation).isInstanceOf(
-            expectedAttestationType
+            MockAttestation::class.java
         )
     }
 
@@ -49,6 +42,12 @@ abstract class AttestationTest {
     fun cleanUp() {
         enclaveHost.close()
     }
+
+    @Test
+    fun `mock is insecure`() {
+        assertThat(enclaveHost.enclaveInstanceInfo.securityInfo.summary).isEqualTo(EnclaveSecurityInfo.Summary.INSECURE)
+    }
+
     @Test
     fun `EnclaveInstanceInfo serialisation round-trip`() {
         val roundTrip = EnclaveInstanceInfo.deserialize(enclaveHost.enclaveInstanceInfo.serialize())
@@ -112,24 +111,4 @@ abstract class AttestationTest {
             assertThat(exception.message).isEqualTo("User report data must be 64 bytes long, but was 0 bytes instead.")
         }
     }
-}
-
-abstract class MockAttestationTest : AttestationTest() {
-    override val attestationParameters: AttestationParameters?
-        get() = null
-
-    override val expectedAttestationType: Class<out Attestation>
-        get() = MockAttestation::class.java
-
-    @AfterEach
-    fun `mock is always insecure`() {
-        assertThat(enclaveHost.enclaveInstanceInfo.securityInfo.summary).isEqualTo(EnclaveSecurityInfo.Summary.INSECURE)
-    }
-}
-
-class MockModeAttestationTest : MockAttestationTest() {
-    override val expectedEnclaveMode: EnclaveMode
-        get() = EnclaveMode.MOCK
-
-    override val enclaveHost: EnclaveHost = createMockHost(EnclaveInstanceInfoEnclave::class.java)
 }
