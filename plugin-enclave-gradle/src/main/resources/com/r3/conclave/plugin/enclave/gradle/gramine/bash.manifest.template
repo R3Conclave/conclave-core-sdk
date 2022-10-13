@@ -1,0 +1,26 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+loader.log_level = "{{ log_level }}"
+
+# TODO: remove this when in production
+loader.insecure__use_cmdline_argv = true
+
+# TODO: add DCAP attestation
+sgx.remote_attestation = false
+# sgx.ra_client_spid = ""
+
+# This sets an environment variables used by the dynamic loader
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/tmp", type = "tmpfs" },
+]
+
+sgx.enclave_size = "4G"
+
+sgx.thread_num = 64
+
+sgx.trusted_files = [
+  "file:{{ entrypoint }}",
+  "file:{{ gramine.runtimedir() }}/"
+]

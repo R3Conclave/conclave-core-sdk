@@ -8,7 +8,7 @@ import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
 import java.lang.reflect.InvocationTargetException
 
-class MockEnclaveHandle(
+open class MockEnclaveHandle(
         override val mockEnclave: Any,
         private val mockConfiguration: MockConfiguration?,
         private val kdsConfig: EnclaveKdsConfig?
