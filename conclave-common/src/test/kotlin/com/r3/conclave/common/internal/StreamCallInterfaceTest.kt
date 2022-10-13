@@ -84,8 +84,8 @@ class StreamCallInterfaceTest {
         val enclaveHostInterfaceConstructor = enclaveHostInterfaceClass.getDeclaredConstructor(
                 OutputStream::class.java, InputStream::class.java, Int::class.java)
 
-        hostEnclaveInterfaceStopMethod = hostEnclaveInterfaceClass.getDeclaredMethod("stop")
-        enclaveHostInterfaceStopMethod = enclaveHostInterfaceClass.getDeclaredMethod("awaitStop")
+        hostEnclaveInterfaceStopMethod = hostEnclaveInterfaceClass.getDeclaredMethod("close")
+        enclaveHostInterfaceStopMethod = enclaveHostInterfaceClass.getDeclaredMethod("close")
 
         val hostConstructThread = Thread {
             hostEnclaveInterface = hostEnclaveInterfaceConstructor.newInstance(

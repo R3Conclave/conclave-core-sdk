@@ -3,6 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
+import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -14,7 +15,7 @@ class StreamEnclaveHostInterface(
         private val toHost: OutputStream,
         private val fromHost: InputStream,
         maximumConcurrentCalls: Int
-) : EnclaveHostInterface() {
+) : EnclaveHostInterface(), Closeable {
     private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
     /** On startup, send the maximum number of concurrent calls to the host. */
@@ -61,7 +62,7 @@ class StreamEnclaveHostInterface(
      * The shutdown process starts on the host.
      * This function just blocks until the host sends a stop message and the message receive loop terminates.
      */
-    fun awaitStop() {
+    override fun close() {
         receiveLoopThread.join()
     }
 

@@ -3,6 +3,7 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.mail.internal.readInt
 import com.r3.conclave.utilities.internal.getAllBytes
+import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -20,7 +21,7 @@ import java.util.concurrent.Semaphore
 class StreamHostEnclaveInterface(
         private val toEnclave: OutputStream,
         private val fromEnclave: InputStream,
-) : HostEnclaveInterface() {
+) : HostEnclaveInterface(), Closeable {
     private var isRunning = true
 
     /** Receive the number of concurrent calls from the enclave. */
@@ -56,7 +57,7 @@ class StreamHostEnclaveInterface(
     }
 
     /** Shut down both the host and the enclave call interface. */
-    fun stop() {
+    override fun close() {
         /**
          * Prevent new calls from entering the interface. This has to be synchronized to avoid race condition between
          * the semaphore acquisition and the lockout check in [executeOutgoingCall].
