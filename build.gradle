@@ -299,6 +299,10 @@ for (publishedProject in publishedProjects) {
     if (publishedProject.shade) {
         project.pluginManager.apply('com.github.johnrengelman.shadow')
         project.shadowJar {
+            if(project.name != "conclave-web-host") {
+                mustRunAfter project.test, project.jar
+            }
+
             if (project.name == "conclave-mail" || project.name == "conclave-common") {
                 // Only conclave-mail and conclave-common need to have (some) of their dependencies shaded. These
                 // dependencies are compileOnly.
