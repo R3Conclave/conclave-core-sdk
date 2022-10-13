@@ -28,9 +28,9 @@ class StreamEnclaveHostInterface(
         /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                when (StreamCallInterfaceThreadCommand.fromByte(inputStream.read().toByte())) {
-                    StreamCallInterfaceThreadCommand.MESSAGE -> handleMessageCommand()
-                    StreamCallInterfaceThreadCommand.STOP -> handleStopCommand()
+                when (StreamCallInterfaceSignal.fromByte(inputStream.read().toByte())) {
+                    StreamCallInterfaceSignal.MESSAGE -> handleMessageCommand()
+                    StreamCallInterfaceSignal.STOP -> handleStopCommand()
                 }
             }
         }
@@ -68,7 +68,7 @@ class StreamEnclaveHostInterface(
     /** Send a message to the receiving thread in the enclave-host interface. */
     private fun sendMessageToHost(message: StreamCallInterfaceMessage) {
         synchronized(outputStream) {
-            outputStream.write(StreamCallInterfaceThreadCommand.MESSAGE.toByte().toInt())
+            outputStream.write(StreamCallInterfaceSignal.MESSAGE.toByte().toInt())
             message.writeToStream(outputStream)
         }
     }
@@ -76,7 +76,7 @@ class StreamEnclaveHostInterface(
     /** Send a stop command to the receiving thread in the enclave-host interface. */
     private fun sendStopCommandToHost() {
         synchronized(outputStream) {
-            outputStream.write(StreamCallInterfaceThreadCommand.STOP.toByte().toInt())
+            outputStream.write(StreamCallInterfaceSignal.STOP.toByte().toInt())
         }
     }
 
