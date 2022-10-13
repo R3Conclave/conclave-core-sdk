@@ -67,7 +67,7 @@ class StreamHostEnclaveInterface(
         }
 
         /** Wait for any pending calls to finish, this is released when a call context is retired. */
-        callGuardSemaphore.acquire(maxConcurrentCalls)
+        callGuardSemaphore.acquireUninterruptibly(maxConcurrentCalls)
 
         /** Stop enclave and host receive loops */
         sendStopSignalToEnclave()
@@ -198,7 +198,7 @@ class StreamHostEnclaveInterface(
         if (!enclaveCallContexts.containsKey(threadID)) {
             synchronized(callGuardSemaphore) {
                 check(isRunning) { "Call interface is not running." }
-                callGuardSemaphore.acquire()
+                callGuardSemaphore.acquireUninterruptibly()
             }
         }
 

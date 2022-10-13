@@ -60,7 +60,7 @@ class StreamCallInterfaceTest {
             }
         }.apply { start() }
 
-        serverSocketReady.acquire()
+        serverSocketReady.acquireUninterruptibly()
 
         for (retries in 0..10) {
             try {
@@ -208,7 +208,7 @@ class StreamCallInterfaceTest {
         val waitSemaphore = Semaphore(0)
 
         configureEnclaveCallAction {
-            waitSemaphore.acquire()
+            waitSemaphore.acquireUninterruptibly()
             null
         }
 
