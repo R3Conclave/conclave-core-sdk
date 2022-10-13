@@ -18,13 +18,13 @@ import java.util.concurrent.Semaphore
  *  - Handle the low-level details of the messaging protocol (streamed ecalls and ocalls).
  */
 class StreamHostEnclaveInterface(
-        private val outputStream: OutputStream,     // Messages going to the enclave
-        private val inputStream: InputStream,       // Messages arriving from the enclave
+        private val toEnclave: OutputStream,
+        private val fromEnclave: InputStream,
 ) : HostEnclaveInterface() {
     private var isRunning = true
 
     /** Receive the number of concurrent calls from the enclave. */
-    private val maxConcurrentCalls = inputStream.readInt()
+    private val maxConcurrentCalls = fromEnclave.readInt()
     private val callGuardSemaphore = Semaphore(maxConcurrentCalls)
 
     private val receiveLoop = object : Runnable {
@@ -33,7 +33,7 @@ class StreamHostEnclaveInterface(
         /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                when (StreamCallInterfaceSignal.fromByte(inputStream.read().toByte())) {
+                when (StreamCallInterfaceSignal.fromByte(fromEnclave.read().toByte())) {
                     StreamCallInterfaceSignal.MESSAGE -> handleMessageCommand()
                     StreamCallInterfaceSignal.STOP -> handleStopCommand()
                 }
@@ -42,7 +42,7 @@ class StreamHostEnclaveInterface(
 
         /** Send the received message to the appropriate call context. */
         private fun handleMessageCommand() {
-            val message = StreamCallInterfaceMessage.readFromStream(inputStream)
+            val message = StreamCallInterfaceMessage.readFromStream(fromEnclave)
             val callContext = checkNotNull(enclaveCallContexts[message.hostThreadID]) {
                 "Host call may not occur outside the context of an enclave call."
             }
@@ -79,16 +79,18 @@ class StreamHostEnclaveInterface(
 
     /** Send a message to the receiving thread in the enclave-host interface. */
     private fun sendMessageToEnclave(message: StreamCallInterfaceMessage) {
-        synchronized(outputStream) {
-            outputStream.write(StreamCallInterfaceSignal.MESSAGE.toByte().toInt())
-            message.writeToStream(outputStream)
+        synchronized(toEnclave) {
+            toEnclave.write(StreamCallInterfaceSignal.MESSAGE.toByte().toInt())
+            message.writeToStream(toEnclave)
+            toEnclave.flush()
         }
     }
 
     /** Send a stop command to the receiving thread in the enclave-host interface. */
     private fun sendStopSignalToEnclave() {
-        synchronized(outputStream) {
-            outputStream.write(StreamCallInterfaceSignal.STOP.toByte().toInt())
+        synchronized(toEnclave) {
+            toEnclave.write(StreamCallInterfaceSignal.STOP.toByte().toInt())
+            toEnclave.flush()
         }
     }
 
