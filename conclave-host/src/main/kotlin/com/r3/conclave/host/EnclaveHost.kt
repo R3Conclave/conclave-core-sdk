@@ -12,6 +12,8 @@ import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
+import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_JAR_NAME
+import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_MANIFEST_PATTERN
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
@@ -239,7 +241,11 @@ class EnclaveHost private constructor(
             manifest: URL,
             jar: URL
             ): EnclaveHost {
-            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
+            // Here we override the enclaveMode as only mock mode can work with Gramine
+            //  TODO: Remove this override and comments once Gramine works similarly to native modes
+            log.info("Gramine can't work in $enclaveMode mode yet, it is currently overridden to ${EnclaveMode.MOCK} mode")
+            val overriddenEnclaveMode = EnclaveMode.MOCK
+            val enclaveHandle = GramineEnclaveHandle(overriddenEnclaveMode, enclaveClassName, manifest, jar)
             return EnclaveHost(enclaveHandle)
         }
 
@@ -445,12 +451,6 @@ class EnclaveHost private constructor(
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
 
-            //  Gramine attestation does not work yet
-            //  TODO: Integrate attestation and refactor/remove this condition below
-            if (enclaveHandle is GramineEnclaveHandle) {
-                return
-            }
-
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 
@@ -544,8 +544,12 @@ class EnclaveHost private constructor(
      */
     @Synchronized
     fun updateAttestation() {
-        val attestation = getAttestation()
-        updateEnclaveInstanceInfo(attestation)
+        if (enclaveHandle is GramineEnclaveHandle) {
+            _enclaveInstanceInfo = GramineEnclaveHandle.getDummyGramineAttestation()
+        } else {
+            val attestation = getAttestation()
+            updateEnclaveInstanceInfo(attestation)
+        }
     }
 
     private fun getAttestation(): Attestation {
@@ -1131,20 +1135,19 @@ class EnclaveHost private constructor(
         private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             //  As an example, if the file "bash.template" is in the directory "com/r3/MyEnclave-simulation"
             //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
-            val gramineManifestPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
 
             classGraph.scan().use {
                 for (resource in it.allResources) {
-                    println("My resource: " + resource.url.path)
-                    val pathMatcher = gramineManifestPattern.matcher(resource.url.path)
+
+                    val pathMatcher = GRAMINE_MANIFEST_PATTERN.matcher(resource.url.path)
                     if (pathMatcher.matches()) {
                         val enclaveClassName = pathMatcher.group(1).replace('/', '.')
                         val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
                         val fileName = pathMatcher.group(3)
                         //  Here we assume that all the Gramine required files are at the same level of bash.manifest
                         val manifestDirectory = resource.path.removeSuffix(fileName)
-                        println("My resource: $manifestDirectory")
-                        val shadowJarResource = EnclaveHost::class.java.getResource("/" + manifestDirectory + "enclave-shadow.jar")
+
+                        val shadowJarResource = EnclaveHost::class.java.getResource("/$manifestDirectory$GRAMINE_ENCLAVE_JAR_NAME")
                         results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!)
                     }
                 }
