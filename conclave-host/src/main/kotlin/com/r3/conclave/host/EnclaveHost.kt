@@ -1055,7 +1055,9 @@ class EnclaveHost private constructor(
         fun findEnclave(enclaveClassName: String): ScanResult {
             val results = ArrayList<ScanResult>()
             EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
-            EnclaveMode.values().mapNotNullTo(results) { findGramineEnclave(enclaveClassName, it) }
+            findMockEnclave(enclaveClassName)?.let { results += it }
+            EnclaveMode.values()
+                .forEach { findGramineEnclave(enclaveClassName, it)?.let { result -> results += result } }
             return getSingleResult(results, enclaveClassName)
         }
 
