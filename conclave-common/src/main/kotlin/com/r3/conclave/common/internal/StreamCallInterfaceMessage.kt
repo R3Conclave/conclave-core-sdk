@@ -7,6 +7,11 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
 
+/**
+ * This class handles serialisation and de-serialisation of messages passed between the
+ * [com.r3.conclave.host.internal.StreamHostEnclaveInterface] and
+ * [com.r3.conclave.enclave.internal.StreamEnclaveHostInterface] classes.
+ */
 class StreamCallInterfaceMessage(
         val hostThreadID: Long,
         val callTypeID: Byte,
