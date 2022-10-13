@@ -19,7 +19,7 @@ import kotlin.io.path.div
 import kotlin.random.Random
 
 
-//  TODO: Refactor it to support multiple enclaves and without defaulting to Mock mode
+//  TODO: Refactor it to support multiple enclaves and without dummy attestation
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
@@ -59,7 +59,6 @@ class GramineEnclaveHandle(
                 this[SgxReportBody.reportData] =
                     SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
             }
-
             val timestamp = Instant.now()
 
             return EnclaveInstanceInfoImpl(signingKeyPair.public, encryptionPrivateKey.publicKey,
