@@ -40,7 +40,7 @@ class GramineEnclaveHandle(
         const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
         val GRAMINE_MANIFEST_PATTERN: Pattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
 
-        fun getDummyGramineAttestation(): EnclaveInstanceInfoImpl {
+        fun getDummyAttestation(): EnclaveInstanceInfoImpl {
             val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
             val encryptionPrivateKey = Curve25519PrivateKey.random()
             val measurement = SHA256Hash.wrap(Random.nextBytes(32))

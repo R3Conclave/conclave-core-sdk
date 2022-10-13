@@ -241,11 +241,7 @@ class EnclaveHost private constructor(
             manifest: URL,
             jar: URL
             ): EnclaveHost {
-            // Here we override the enclaveMode as only mock mode can work with Gramine
-            //  TODO: Remove this override and comments once Gramine works similarly to native modes
-            log.info("Gramine can't work in $enclaveMode mode yet, it is currently overridden to ${EnclaveMode.MOCK} mode")
-            val overriddenEnclaveMode = EnclaveMode.MOCK
-            val enclaveHandle = GramineEnclaveHandle(overriddenEnclaveMode, enclaveClassName, manifest, jar)
+            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
             return EnclaveHost(enclaveHandle)
         }
 
@@ -484,7 +480,7 @@ class EnclaveHost private constructor(
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
-        return if (enclaveMode != EnclaveMode.MOCK) {
+        return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineEnclaveHandle) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
@@ -545,7 +541,8 @@ class EnclaveHost private constructor(
     @Synchronized
     fun updateAttestation() {
         if (enclaveHandle is GramineEnclaveHandle) {
-            _enclaveInstanceInfo = GramineEnclaveHandle.getDummyGramineAttestation()
+            // TODO: Remove this branch condition and integrate Gramine attestation properly
+            _enclaveInstanceInfo = GramineEnclaveHandle.getDummyAttestation()
         } else {
             val attestation = getAttestation()
             updateEnclaveInstanceInfo(attestation)
