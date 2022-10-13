@@ -14,7 +14,6 @@ import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-
 open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "bash.manifest.template"

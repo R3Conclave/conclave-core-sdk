@@ -1,6 +1,9 @@
 package com.r3.conclave.host.internal
 
-import com.r3.conclave.common.*
+import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.OpaqueBytes
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.mail.Curve25519PrivateKey
@@ -12,7 +15,6 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import java.util.regex.Pattern
 import kotlin.io.path.div
 import kotlin.random.Random
 
@@ -31,14 +33,14 @@ class GramineEnclaveHandle(
     override val enclaveInterface = GramineHostEnclaveInterface(callInterfaceConnector)
 
     init {
-        val classNamePath = enclaveClassName.substringAfter("!.")//.replace(".", "/")
+        val classNamePath = enclaveClassName.substringAfter("!.")
         enclaveDirectory = Files.createTempDirectory("$classNamePath-gramine")
         copyGramineFilesToWorkingDirectory()
     }
 
     companion object {
         const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
-        val GRAMINE_MANIFEST_PATTERN: Pattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
+        const val GRAMINE_ENCLAVE_MANIFEST = "bash.manifest"
 
         fun getDummyAttestation(): EnclaveInstanceInfoImpl {
             val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
@@ -68,11 +70,10 @@ class GramineEnclaveHandle(
     }
 
     override fun initialise() {
-
         processGramineDirect = ProcessBuilder()
             .inheritIO()
             .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "bash", "-c", """echo "Gramine bash 'enclave' started" && sleep 10000 && echo "Slept enough"""")
+            .command("gramine-direct", "bash", "-c", """echo "Gramine bash 'enclave' started" && sleep 10000""")
             .start()
     }
 
@@ -92,6 +93,7 @@ class GramineEnclaveHandle(
     }
 
     private fun copyGramineFilesToWorkingDirectory() {
+        //  Here we copy files from inside the jar into a temporary folder
         val manifestName = File(manifestUrl.file).name
         val jarName = File(jarUrl.file).name
 
@@ -99,7 +101,7 @@ class GramineEnclaveHandle(
             Files.copy(it, enclaveDirectory / manifestName, REPLACE_EXISTING)
         }
 
-        manifestUrl.openStream().use {
+        jarUrl.openStream().use {
             Files.copy(it, enclaveDirectory / jarName, REPLACE_EXISTING)
         }
     }

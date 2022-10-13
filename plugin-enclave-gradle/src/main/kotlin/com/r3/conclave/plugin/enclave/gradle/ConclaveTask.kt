@@ -14,7 +14,6 @@ abstract class ConclaveTask : DefaultTask() {
 
     abstract fun action()
 
-
     // The intention for this class is to allow people to pass the necessary configuration when calling the commandLine function
     // workingDir: Set the working directory for the command. The defaults to the project directory
     // ignoreExitValue: If set to false, exceptions are raised if the command returns a value different from zero. Otherwise, please check the result.exitValue to check if the command was successful
