@@ -52,15 +52,14 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
     }
 
     private fun generateGramineDirectManifest(templateManifest: String) {
-
         val command = listOf(
             GRAMINE_MANIFEST_EXECUTABLE,
-            "-Dlog_level=${logType.get()}",
+            "-Dlog_level=${logType.get().type}",
             "-Darch_libdir=${archLibDirectory.get()}",
             "-Dentrypoint=${entryPoint.get()}",
             templateManifest, // Source file
             outputManifest.asFile.get().absolutePath
-        )   // Output file
-        commandLine(command)
+        )
+	commandLine(command)
     }
 }

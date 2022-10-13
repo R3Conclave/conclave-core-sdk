@@ -257,7 +257,6 @@ class EnclaveHost private constructor(
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
                     }
-
                     is EnclaveScanner.ScanResult.Native -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
@@ -478,6 +477,7 @@ class EnclaveHost private constructor(
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
+        // TODO: Improve the enclaveHandle !is GramineEnclaveHandle condition
         return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineEnclaveHandle) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
@@ -1080,7 +1080,6 @@ class EnclaveHost private constructor(
                 ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
         }
 
-
         private fun findMockEnclave(enclaveClassName: String): ScanResult.Mock? {
             return try {
                 Class.forName(enclaveClassName)
@@ -1124,7 +1123,7 @@ class EnclaveHost private constructor(
 
         /**
          * Performs a search for Gramine enclave files using ClassGraph. The search is performed by looking for 
-         * the manifest file in the build directory
+         * the manifest file and assuming that the other required files are also present there.
          */
         private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
@@ -1147,7 +1146,6 @@ class EnclaveHost private constructor(
                 }
             }
         }
-
 
         private fun getSingleResult(results: List<ScanResult>, className: String?): ScanResult {
             when (results.size) {
@@ -1180,7 +1178,6 @@ class EnclaveHost private constructor(
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
                 }
-
                 override fun toString(): String = "graal ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
 
@@ -1193,7 +1190,6 @@ class EnclaveHost private constructor(
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
                 }
-
                 override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
         }

@@ -501,8 +501,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputs.dir(gramineBuildDir)
                 task.buildDirectory.set(gramineBuildDir)
                 task.archLibDirectory.set("/lib/x86_64-linux-gnu")
-                task.entryPoint.set("/usr/local/lib/x86_64-linux-gnu/gramine/libsysdb.so")
-                task.logType.set(GramineLogType.ERROR)
+                // TODO: Once we have integrated Gramine properly, we should use the java executable path
+                task.entryPoint.set("/usr/bin/bash")
+                // TODO: Once we have integrated Gramine properly, we should set the logType to ERROR
+                task.logType.set(GramineLogType.ALL)
                 task.outputManifest.set(
                     Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
                 )

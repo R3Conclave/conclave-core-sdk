@@ -4,5 +4,6 @@ enum class GramineLogType(val type: String) {
     ERROR("error"),
     WARNING("warning"),
     DEBUG("debug"),
-    TRACE("trace")
+    TRACE("trace"),
+    ALL("all")
 }
