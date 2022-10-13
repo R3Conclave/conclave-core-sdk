@@ -13,7 +13,7 @@ class StreamCallInterfaceMessage(
         val messageTypeID: Byte,
         val payload: ByteArray?
 ) {
-    private val payloadSize get() = (payload?.size ?: 0) + 1
+    private val payloadSize get() = nullableSize(payload) { it.size }
 
     fun size() = HEADER_SIZE + payloadSize
 
@@ -33,11 +33,7 @@ class StreamCallInterfaceMessage(
 
         fun readFromStream(inputStream: InputStream): StreamCallInterfaceMessage {
             val bytesToRead = inputStream.readInt()
-            val bytes = ByteArray(bytesToRead)
-            val bytesRead = inputStream.read(bytes)
-
-            check(bytesRead == bytesToRead) { "Unexpected end of stream." }
-
+            val bytes = inputStream.readExactlyNBytes(bytesToRead)
             return fromBytes(bytes)
         }
     }
