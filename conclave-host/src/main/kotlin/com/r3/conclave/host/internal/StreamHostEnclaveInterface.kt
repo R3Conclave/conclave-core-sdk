@@ -55,15 +55,22 @@ class StreamHostEnclaveInterface(
         }
     }
 
-
-    /** Stop the message receive loop thread. */
+    /** Shut down both the host and the enclave call interface. */
     fun stop() {
-        // Prevent any more calls from entering and wait for existing ones to finish
-        synchronized(callGuardSemaphore) { isRunning = false }
+        /**
+         * Prevent new calls from entering the interface. This has to be synchronized to avoid race condition between
+         * the semaphore acquisition and the lockout check in [executeOutgoingCall].
+         */
+        synchronized(callGuardSemaphore) {
+            if (!isRunning) return
+            isRunning = false
+        }
+
+        /** Wait for any pending calls to finish, this is released when a call context is retired. */
         callGuardSemaphore.acquire(maxConcurrentCalls)
 
-        // Send a stop command to the other side
-        sendStopCommandToEnclave()
+        /** Stop enclave and host receive loops */
+        sendStopSignalToEnclave()
         receiveLoopThread.join()
     }
 
@@ -79,7 +86,7 @@ class StreamHostEnclaveInterface(
     }
 
     /** Send a stop command to the receiving thread in the enclave-host interface. */
-    private fun sendStopCommandToEnclave() {
+    private fun sendStopSignalToEnclave() {
         synchronized(outputStream) {
             outputStream.write(StreamCallInterfaceSignal.STOP.toByte().toInt())
         }

@@ -193,6 +193,46 @@ class StreamCallInterfaceTest {
     }
 
     @Test
+    fun `cannot call a stopped host enclave interface`() {
+        hostEnclaveInterfaceStopMethod.invoke(hostEnclaveInterface)
+
+        val exception = assertThrows<IllegalStateException> {
+            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER)
+        }
+
+        assertThat(exception).hasMessage("Call interface is not running.")
+    }
+
+    @Test
+    fun `host enclave interface stop waits for executing calls to return`() {
+        val waitSemaphore = Semaphore(0)
+
+        configureEnclaveCallAction {
+            waitSemaphore.acquire()
+            null
+        }
+
+        val callThread = Thread {
+            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER)
+        }.apply { start() }
+
+        val stopThread = Thread {
+            hostEnclaveInterfaceStopMethod.invoke(hostEnclaveInterface)
+        }.apply { start() }
+
+        assertThat(callThread.isAlive).isTrue
+        assertThat(stopThread.isAlive).isTrue
+
+        waitSemaphore.release() // Allow the enclave call to return
+
+        callThread.join(1000)
+        stopThread.join(1000)
+
+        assertThat(stopThread.isAlive).isFalse
+        assertThat(callThread.isAlive).isFalse
+    }
+
+    @Test
     fun `host can call enclave`() {
         // Just echo the buffer back to the host side
         configureEnclaveCallAction { it }

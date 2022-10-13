@@ -49,7 +49,7 @@ class StreamEnclaveHostInterface(
         /** The host has told us there will be no more messages, shut everything down. */
         private fun handleStopCommand() {
             callExecutor.shutdown()     // Finish processing any outstanding calls
-            sendStopCommandToHost()     // Let the host know there will be no more messages
+            sendStopSignalToHost()     // Let the host know there will be no more messages
             done = true                 // Terminate the loop
         }
     }
@@ -74,7 +74,7 @@ class StreamEnclaveHostInterface(
     }
 
     /** Send a stop command to the receiving thread in the enclave-host interface. */
-    private fun sendStopCommandToHost() {
+    private fun sendStopSignalToHost() {
         synchronized(outputStream) {
             outputStream.write(StreamCallInterfaceSignal.STOP.toByte().toInt())
         }
