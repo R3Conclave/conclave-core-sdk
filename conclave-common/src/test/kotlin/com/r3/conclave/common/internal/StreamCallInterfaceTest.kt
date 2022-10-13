@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.IllegalStateException
+import java.lang.reflect.Method
 import java.net.ConnectException
 import java.net.ServerSocket
 import java.net.Socket
@@ -28,6 +29,9 @@ class StreamCallInterfaceTest {
     private lateinit var hostEnclaveInterface: CallInterface<EnclaveCallType, HostCallType>
     private lateinit var enclaveHostInterface: CallInterface<HostCallType, EnclaveCallType>
 
+    private lateinit var hostEnclaveInterfaceStopMethod: Method
+    private lateinit var enclaveHostInterfaceStopMethod: Method
+
     private lateinit var hostSocket: Socket
     private lateinit var enclaveSocket: Socket
 
@@ -37,7 +41,15 @@ class StreamCallInterfaceTest {
         setupInterfaces()
     }
 
-    /** Create a pair of sockets that are connected together. */
+    @AfterEach
+    fun teardown() {
+        hostEnclaveInterfaceStopMethod.invoke(hostEnclaveInterface)
+        enclaveHostInterfaceStopMethod.invoke(enclaveHostInterface)
+        hostSocket.close()
+        enclaveSocket.close()
+    }
+
+    /** Set up the test sockets so that they are connected together. */
     private fun setupSockets() {
         val serverSocketReady = Semaphore(0)
 
@@ -72,10 +84,25 @@ class StreamCallInterfaceTest {
         val enclaveHostInterfaceConstructor = enclaveHostInterfaceClass.getDeclaredConstructor(
                 OutputStream::class.java, InputStream::class.java, Int::class.java)
 
-        hostEnclaveInterface = hostEnclaveInterfaceConstructor.newInstance(
-                hostSocket.getOutputStream(), hostSocket.getInputStream()) as CallInterface<EnclaveCallType, HostCallType>
+        hostEnclaveInterfaceStopMethod = hostEnclaveInterfaceClass.getDeclaredMethod("stop")
+        enclaveHostInterfaceStopMethod = enclaveHostInterfaceClass.getDeclaredMethod("awaitStop")
+
+        val hostConstructThread = Thread {
+            hostEnclaveInterface = hostEnclaveInterfaceConstructor.newInstance(
+                    hostSocket.getOutputStream(),
+                    hostSocket.getInputStream()
+            ) as CallInterface<EnclaveCallType, HostCallType>
+        }
+
+        hostConstructThread.start()
+
         enclaveHostInterface = enclaveHostInterfaceConstructor.newInstance(
-                enclaveSocket.getOutputStream(), enclaveSocket.getInputStream(), ENCLAVE_HOST_INTERFACE_THREADS) as CallInterface<HostCallType, EnclaveCallType>
+                enclaveSocket.getOutputStream(),
+                enclaveSocket.getInputStream(),
+                ENCLAVE_HOST_INTERFACE_THREADS
+        ) as CallInterface<HostCallType, EnclaveCallType>
+
+        hostConstructThread.join()
     }
 
     /** Configure the enclave call interface for basic calls with an arbitrary task */

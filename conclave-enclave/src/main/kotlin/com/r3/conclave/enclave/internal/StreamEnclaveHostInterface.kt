@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.io.InputStream
 import java.io.OutputStream
@@ -16,28 +17,27 @@ class StreamEnclaveHostInterface(
 ) : EnclaveHostInterface() {
     private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
-    /**
-     * Message receive loop runnable.
-     */
-    private val messageReceiveLoop = object : Runnable {
-        @Volatile
-        var done = false
+    /** On startup, send the maximum number of concurrent calls to the host. */
+    init {
+        outputStream.writeInt(maximumConcurrentCalls)
+    }
+
+    private val receiveLoop = object : Runnable {
+        private var done = false
 
         /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                val message = try {
-                    StreamCallInterfaceMessage.readFromStream(inputStream)
-                } catch (e: InterruptedException) {
-                    done = true
-                    break
+                when (StreamCallInterfaceThreadCommand.fromByte(inputStream.read().toByte())) {
+                    StreamCallInterfaceThreadCommand.MESSAGE -> handleMessageCommand()
+                    StreamCallInterfaceThreadCommand.STOP -> handleStopCommand()
                 }
-                deliverMessageToCallContext(message)
             }
         }
 
         /** Send the received message to the appropriate call context. */
-        private fun deliverMessageToCallContext(message: StreamCallInterfaceMessage) {
+        private fun handleMessageCommand() {
+            val message = StreamCallInterfaceMessage.readFromStream(inputStream)
             val callContext = enclaveCallContexts.computeIfAbsent(message.hostThreadID) {
                 val newCallContext = EnclaveCallContext(message.hostThreadID)
                 callExecutor.execute(newCallContext)
@@ -45,16 +45,39 @@ class StreamEnclaveHostInterface(
             }
             callContext.enqueMessage(message)
         }
+
+        /** The host has told us there will be no more messages, shut everything down. */
+        private fun handleStopCommand() {
+            callExecutor.shutdown()     // Finish processing any outstanding calls
+            sendStopCommandToHost()     // Let the host know there will be no more messages
+            done = true                 // Terminate the loop
+        }
     }
 
     /** Start the message receive loop thread. */
-    private val receiveLoopThread = Thread(messageReceiveLoop, "Enclave message receive loop").apply { start() }
+    private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop").apply { start() }
 
-    /** Stop the message receive loop thread. */
-    fun stop() {
-        messageReceiveLoop.done = true
-        receiveLoopThread.interrupt()
+    /**
+     * The shutdown process starts on the host.
+     * This function just blocks until the host sends a stop message and the message receive loop terminates.
+     */
+    fun awaitStop() {
         receiveLoopThread.join()
+    }
+
+    /** Send a message to the receiving thread in the enclave-host interface. */
+    private fun sendMessageToHost(message: StreamCallInterfaceMessage) {
+        synchronized(outputStream) {
+            outputStream.write(StreamCallInterfaceThreadCommand.MESSAGE.toByte().toInt())
+            message.writeToStream(outputStream)
+        }
+    }
+
+    /** Send a stop command to the receiving thread in the enclave-host interface. */
+    private fun sendStopCommandToHost() {
+        synchronized(outputStream) {
+            outputStream.write(StreamCallInterfaceThreadCommand.STOP.toByte().toInt())
+        }
     }
 
     private inner class EnclaveCallContext(
@@ -68,10 +91,7 @@ class StreamEnclaveHostInterface(
             val outgoingMessage = StreamCallInterfaceMessage(
                     hostThreadID, callTypeID, messageTypeID, payload?.getAllBytes(avoidCopying = true))
 
-            synchronized(outputStream) {
-                outgoingMessage.writeToStream(outputStream)
-                outputStream.flush()
-            }
+            sendMessageToHost(outgoingMessage)
         }
 
         fun sendCallMessage(callType: HostCallType, parameterBuffer: ByteBuffer?) {

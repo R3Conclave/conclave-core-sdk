@@ -1,12 +1,14 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.mail.internal.readInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Semaphore
 
 /**
  * This class is a streaming implementation of the [HostEnclaveInterface].
@@ -19,43 +21,68 @@ class StreamHostEnclaveInterface(
         private val outputStream: OutputStream,     // Messages going to the enclave
         private val inputStream: InputStream,       // Messages arriving from the enclave
 ) : HostEnclaveInterface() {
-    /**
-     * Message receive loop runnable.
-     */
-    private val messageReceiveLoop = object : Runnable {
-        @Volatile
-        var done = false
+    private var isRunning = true
+
+    /** Receive the number of concurrent calls from the enclave. */
+    private val maxConcurrentCalls = inputStream.readInt()
+    private val callGuardSemaphore = Semaphore(maxConcurrentCalls)
+
+    private val receiveLoop = object : Runnable {
+        private var done = false
 
         /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                val message = try {
-                    StreamCallInterfaceMessage.readFromStream(inputStream)
-                } catch (e: InterruptedException) {
-                    done = true
-                    break
+                when (StreamCallInterfaceThreadCommand.fromByte(inputStream.read().toByte())) {
+                    StreamCallInterfaceThreadCommand.MESSAGE -> handleMessageCommand()
+                    StreamCallInterfaceThreadCommand.STOP -> handleStopCommand()
                 }
-                deliverMessageToCallContext(message)
             }
         }
 
         /** Send the received message to the appropriate call context. */
-        private fun deliverMessageToCallContext(message: StreamCallInterfaceMessage) {
+        private fun handleMessageCommand() {
+            val message = StreamCallInterfaceMessage.readFromStream(inputStream)
             val callContext = checkNotNull(enclaveCallContexts[message.hostThreadID]) {
                 "Host call may not occur outside the context of an enclave call."
             }
             callContext.enqueMessage(message)
         }
+
+        /** The enclave has told us there will be no more messages, shut everything down */
+        private fun handleStopCommand() {
+            done = true
+        }
     }
 
-    /** Start the message receive loop thread. */
-    private val receiveLoopThread = Thread(messageReceiveLoop, "Host message receive loop").apply { start() }
 
     /** Stop the message receive loop thread. */
     fun stop() {
-        messageReceiveLoop.done = true
-        receiveLoopThread.interrupt()
+        // Prevent any more calls from entering and wait for existing ones to finish
+        synchronized(callGuardSemaphore) { isRunning = false }
+        callGuardSemaphore.acquire(maxConcurrentCalls)
+
+        // Send a stop command to the other side
+        sendStopCommandToEnclave()
         receiveLoopThread.join()
+    }
+
+    /** Start the message receive loop thread. */
+    private val receiveLoopThread = Thread(receiveLoop, "Host message receive loop").apply { start() }
+
+    /** Send a message to the receiving thread in the enclave-host interface. */
+    private fun sendMessageToEnclave(message: StreamCallInterfaceMessage) {
+        synchronized(outputStream) {
+            outputStream.write(StreamCallInterfaceThreadCommand.MESSAGE.toByte().toInt())
+            message.writeToStream(outputStream)
+        }
+    }
+
+    /** Send a stop command to the receiving thread in the enclave-host interface. */
+    private fun sendStopCommandToEnclave() {
+        synchronized(outputStream) {
+            outputStream.write(StreamCallInterfaceThreadCommand.STOP.toByte().toInt())
+        }
     }
 
     /**
@@ -75,10 +102,7 @@ class StreamHostEnclaveInterface(
             val outgoingMessage = StreamCallInterfaceMessage(
                     Thread.currentThread().id, callTypeID, messageTypeID, payload?.getAllBytes(avoidCopying = true))
 
-            synchronized(outputStream) {
-                outgoingMessage.writeToStream(outputStream)
-                outputStream.flush()
-            }
+            sendMessageToEnclave(outgoingMessage)
         }
 
         fun sendCallMessage(callType: EnclaveCallType, parameterBuffer: ByteBuffer?) {
@@ -163,12 +187,24 @@ class StreamHostEnclaveInterface(
      */
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         val threadID = Thread.currentThread().id
-        val enclaveCallContext = enclaveCallContexts.computeIfAbsent(threadID) { EnclaveCallContext() }
+
+        if (!enclaveCallContexts.containsKey(threadID)) {
+            synchronized(callGuardSemaphore) {
+                check(isRunning) { "Call interface is not running." }
+                callGuardSemaphore.acquire()
+            }
+        }
+
+        val enclaveCallContext = enclaveCallContexts.computeIfAbsent(threadID) {
+            EnclaveCallContext()
+        }
+
         try {
             return enclaveCallContext.initiateCall(callType, parameterBuffer)
         } finally {
             if (!enclaveCallContext.hasActiveCalls()) {
                 enclaveCallContexts.remove(threadID)
+                callGuardSemaphore.release()
             }
         }
     }
