@@ -1,14 +1,15 @@
-package com.r3.conclave.common.internal
+package com.r3.conclave.host.internal
 
+import com.r3.conclave.common.internal.CallHandler
+import com.r3.conclave.common.internal.EnclaveCallType
+import com.r3.conclave.common.internal.HostCallType
+import com.r3.conclave.enclave.internal.StreamEnclaveHostInterface
 import com.r3.conclave.utilities.internal.getRemainingString
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.io.InputStream
-import java.io.OutputStream
 import java.lang.IllegalStateException
-import java.lang.reflect.Method
 import java.net.ConnectException
 import java.net.ServerSocket
 import java.net.Socket
@@ -26,11 +27,8 @@ class StreamCallInterfaceTest {
         private const val ENCLAVE_HOST_INTERFACE_THREADS = 8
     }
 
-    private lateinit var hostEnclaveInterface: CallInterface<EnclaveCallType, HostCallType>
-    private lateinit var enclaveHostInterface: CallInterface<HostCallType, EnclaveCallType>
-
-    private lateinit var hostEnclaveInterfaceStopMethod: Method
-    private lateinit var enclaveHostInterfaceStopMethod: Method
+    private lateinit var hostEnclaveInterface: StreamHostEnclaveInterface
+    private lateinit var enclaveHostInterface: StreamEnclaveHostInterface
 
     private lateinit var hostSocket: Socket
     private lateinit var enclaveSocket: Socket
@@ -43,8 +41,8 @@ class StreamCallInterfaceTest {
 
     @AfterEach
     fun teardown() {
-        hostEnclaveInterfaceStopMethod.invoke(hostEnclaveInterface)
-        enclaveHostInterfaceStopMethod.invoke(enclaveHostInterface)
+        hostEnclaveInterface.close()
+        enclaveHostInterface.close()
         hostSocket.close()
         enclaveSocket.close()
     }
@@ -74,33 +72,22 @@ class StreamCallInterfaceTest {
         serverSocketThread.join()
     }
 
-    /** Use reflection to instantiate the call interfaces, as they are not part of the common package. */
+    /** Create the host and enclave interfaces. */
     private fun setupInterfaces() {
-        val hostEnclaveInterfaceClass = Class.forName("com.r3.conclave.host.internal.StreamHostEnclaveInterface")
-        val enclaveHostInterfaceClass = Class.forName("com.r3.conclave.enclave.internal.StreamEnclaveHostInterface")
-
-        val hostEnclaveInterfaceConstructor = hostEnclaveInterfaceClass.getDeclaredConstructor(
-                OutputStream::class.java, InputStream::class.java)
-        val enclaveHostInterfaceConstructor = enclaveHostInterfaceClass.getDeclaredConstructor(
-                OutputStream::class.java, InputStream::class.java, Int::class.java)
-
-        hostEnclaveInterfaceStopMethod = hostEnclaveInterfaceClass.getDeclaredMethod("close")
-        enclaveHostInterfaceStopMethod = enclaveHostInterfaceClass.getDeclaredMethod("close")
-
         val hostConstructThread = Thread {
-            hostEnclaveInterface = hostEnclaveInterfaceConstructor.newInstance(
+            hostEnclaveInterface = StreamHostEnclaveInterface(
                     hostSocket.getOutputStream(),
-                    hostSocket.getInputStream()
-            ) as CallInterface<EnclaveCallType, HostCallType>
+                    hostSocket.getInputStream(),
+            )
         }
 
         hostConstructThread.start()
 
-        enclaveHostInterface = enclaveHostInterfaceConstructor.newInstance(
+        enclaveHostInterface = StreamEnclaveHostInterface(
                 enclaveSocket.getOutputStream(),
                 enclaveSocket.getInputStream(),
                 ENCLAVE_HOST_INTERFACE_THREADS
-        ) as CallInterface<HostCallType, EnclaveCallType>
+        )
 
         hostConstructThread.join()
     }
@@ -194,7 +181,7 @@ class StreamCallInterfaceTest {
 
     @Test
     fun `cannot call a stopped host enclave interface`() {
-        hostEnclaveInterfaceStopMethod.invoke(hostEnclaveInterface)
+        hostEnclaveInterface.close()
 
         val exception = assertThrows<IllegalStateException> {
             hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER)
@@ -217,7 +204,7 @@ class StreamCallInterfaceTest {
         }.apply { start() }
 
         val stopThread = Thread {
-            hostEnclaveInterfaceStopMethod.invoke(hostEnclaveInterface)
+            hostEnclaveInterface.close()
         }.apply { start() }
 
         assertThat(callThread.isAlive).isTrue
