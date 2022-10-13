@@ -13,12 +13,13 @@ class StreamCallInterfaceMessage(
         val messageTypeID: Byte,
         val payload: ByteArray?
 ) {
-    private val headerSize = 8 + 1 + 1
     private val payloadSize get() = (payload?.size ?: 0) + 1
 
-    fun size() = headerSize + payloadSize
+    fun size() = HEADER_SIZE + payloadSize
 
     companion object {
+        private const val HEADER_SIZE = 8 + 1 + 1
+
         fun fromBytes(bytes: ByteArray): StreamCallInterfaceMessage {
             val buffer = ByteBuffer.wrap(bytes)
 
