@@ -193,8 +193,10 @@ class StreamCallInterfaceTest {
     @Test
     fun `host enclave interface stop waits for executing calls to return`() {
         val waitSemaphore = Semaphore(0)
+        val callInProgressSemaphore = Semaphore(0)
 
         configureEnclaveCallAction {
+            callInProgressSemaphore.release()
             waitSemaphore.acquireUninterruptibly()
             null
         }
@@ -204,6 +206,7 @@ class StreamCallInterfaceTest {
         }.apply { start() }
 
         val stopThread = Thread {
+            callInProgressSemaphore.acquireUninterruptibly()
             hostEnclaveInterface.close()
         }.apply { start() }
 
