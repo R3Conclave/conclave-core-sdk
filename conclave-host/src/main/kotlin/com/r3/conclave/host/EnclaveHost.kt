@@ -235,10 +235,11 @@ class EnclaveHost private constructor(
         @JvmStatic
         internal fun internalCreateGramine(
             enclaveMode: EnclaveMode,
-            enclaveManifest: URL,
             enclaveClassName: String,
-        ): EnclaveHost {
-            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveManifest, enclaveClassName)
+            manifest: URL,
+            jar: URL
+            ): EnclaveHost {
+            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
             return EnclaveHost(enclaveHandle)
         }
 
@@ -252,7 +253,7 @@ class EnclaveHost private constructor(
                     }
                     is EnclaveScanner.ScanResult.Gramine -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
-                        internalCreateGramine(result.enclaveMode, result.manifestUrl, result.enclaveClassName)
+                        internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
                     }
 
                     is EnclaveScanner.ScanResult.Native -> {
@@ -443,6 +444,13 @@ class EnclaveHost private constructor(
 
             // Initialise the enclave before fetching enclave instance info
             enclaveHandle.initialise()
+
+            //  Gramine attestation does not work yet
+            //  TODO: Integrate attestation and refactor/remove this condition below
+            if (enclaveHandle is GramineEnclaveHandle) {
+                return
+            }
+
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 
@@ -1063,12 +1071,13 @@ class EnclaveHost private constructor(
             //    we want to find the file "bash.manifest" under the directory "com/r3/MyEnclave-simulation"
 
             val filesLocation = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}"
-            val manifest = "$filesLocation/bash.manifest"
-            val urlManifest = EnclaveHost::class.java.getResource(manifest)
-            println("urlManifest: " + urlManifest.path)
-            println("filesLocation: $filesLocation")
+            val manifestUrl = EnclaveHost::class.java.getResource("$filesLocation/bash.manifest")
+            val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/enclave-shadow.jar")
 
-            return urlManifest?.let { ScanResult.Gramine(enclaveClassName, enclaveMode, urlManifest) }
+            return if (manifestUrl == null || jarUrl == null) {
+                null
+            } else
+                ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
         }
 
 
@@ -1122,16 +1131,21 @@ class EnclaveHost private constructor(
         private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             //  As an example, if the file "bash.template" is in the directory "com/r3/MyEnclave-simulation"
             //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
-            val gramineManifestPattern = Pattern.compile("""^(.+)/-(simulation|debug|release)(/bash\.template)$""")
+            val gramineManifestPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
 
             classGraph.scan().use {
                 for (resource in it.allResources) {
-                    println("My resource: " + resource.path)
-                    val pathMatcher = gramineManifestPattern.matcher(resource.path)
+                    println("My resource: " + resource.url.path)
+                    val pathMatcher = gramineManifestPattern.matcher(resource.url.path)
                     if (pathMatcher.matches()) {
                         val enclaveClassName = pathMatcher.group(1).replace('/', '.')
                         val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url)
+                        val fileName = pathMatcher.group(3)
+                        //  Here we assume that all the Gramine required files are at the same level of bash.manifest
+                        val manifestDirectory = resource.path.removeSuffix(fileName)
+                        println("My resource: $manifestDirectory")
+                        val shadowJarResource = EnclaveHost::class.java.getResource("/" + manifestDirectory + "enclave-shadow.jar")
+                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!)
                     }
                 }
             }
@@ -1169,15 +1183,17 @@ class EnclaveHost private constructor(
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
                 }
+
                 override fun toString(): String = "graal ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
 
             class Gramine(
                 val enclaveClassName: String,
                 val enclaveMode: EnclaveMode,
-                val manifestUrl: URL,
+                val manifest: URL,
+                val jar: URL,
             ) : ScanResult() {
-                override fun toString(): String = "gramine ${enclaveMode.name.lowercase()}  $enclaveClassName"
+                override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
         }
     }
