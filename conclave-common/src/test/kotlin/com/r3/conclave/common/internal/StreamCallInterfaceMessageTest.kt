@@ -15,25 +15,13 @@ class StreamCallInterfaceMessageTest {
     }
 
     @Test
-    fun `byte array conversion test`() {
-        val initialMessage = randomMessage()
-        val initialBytes = initialMessage.toBytes()
-        val deserialisedMessage = StreamCallInterfaceMessage.fromBytes(initialBytes)
-
-        assertEqual(initialMessage, deserialisedMessage)
-    }
-
-    @Test
     fun `stream read write test`() {
         val initialMessage = randomMessage()
-        val bufferSize = initialMessage.size() + 4
-
-        val outputStream = ByteArrayOutputStream(bufferSize)
+        val outputStream = ByteArrayOutputStream(1024)
 
         initialMessage.writeToStream(outputStream)
 
         val inputStream = ByteArrayInputStream(outputStream.toByteArray())
-
         val deserialisedMessage = StreamCallInterfaceMessage.readFromStream(inputStream)
 
         assertEqual(initialMessage, deserialisedMessage)

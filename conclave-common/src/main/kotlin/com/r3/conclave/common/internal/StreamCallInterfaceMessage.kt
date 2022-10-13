@@ -1,11 +1,13 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.mail.internal.readInt
-import com.r3.conclave.mail.internal.writeInt
-import com.r3.conclave.utilities.internal.*
+import com.r3.conclave.utilities.internal.nullableRead
+import com.r3.conclave.utilities.internal.nullableWrite
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.ByteBuffer
 
 /**
  * This class handles serialisation and de-serialisation of messages passed between the
@@ -18,43 +20,22 @@ class StreamCallInterfaceMessage(
         val messageTypeID: Byte,
         val payload: ByteArray?
 ) {
-    private val payloadSize get() = nullableSize(payload) { it.size }
-
-    fun size() = HEADER_SIZE + payloadSize
-
     companion object {
-        private const val HEADER_SIZE = 8 + 1 + 1
-
-        fun fromBytes(bytes: ByteArray): StreamCallInterfaceMessage {
-            val buffer = ByteBuffer.wrap(bytes)
-
-            val hostThreadID = buffer.long
-            val callTypeID = buffer.get()
-            val messageTypeID = buffer.get()
-            val messageBytes = buffer.getNullable { getRemainingBytes() }
-
-            return StreamCallInterfaceMessage(hostThreadID, callTypeID, messageTypeID, messageBytes)
-        }
-
         fun readFromStream(inputStream: InputStream): StreamCallInterfaceMessage {
-            val bytesToRead = inputStream.readInt()
-            val bytes = inputStream.readExactlyNBytes(bytesToRead)
-            return fromBytes(bytes)
+            val dis = DataInputStream(inputStream)
+            val hostThreadID = dis.readLong()
+            val callTypeID = dis.readByte()
+            val messageTypeID = dis.readByte()
+            val payload = dis.nullableRead { readIntLengthPrefixBytes() }
+            return StreamCallInterfaceMessage(hostThreadID, callTypeID, messageTypeID, payload)
         }
-    }
-
-    fun toBytes(): ByteArray {
-        return ByteBuffer.allocate(size()).apply {
-            putLong(hostThreadID)
-            put(callTypeID)
-            put(messageTypeID)
-            putNullable(payload) { put(payload) }
-        }.array()
     }
 
     fun writeToStream(outputStream: OutputStream) {
-        val array = this.toBytes()
-        outputStream.writeInt(array.size)
-        outputStream.write(array)
+        val dos = DataOutputStream(outputStream)
+        dos.writeLong(hostThreadID)
+        dos.writeByte(callTypeID.toInt())
+        dos.writeByte(messageTypeID.toInt())
+        dos.nullableWrite(payload) { writeIntLengthPrefixBytes(it) }
     }
 }

@@ -77,7 +77,7 @@ class StreamCallInterfaceTest {
         val hostConstructThread = Thread {
             hostEnclaveInterface = StreamHostEnclaveInterface(
                     hostSocket.getOutputStream(),
-                    hostSocket.getInputStream(),
+                    hostSocket.getInputStream()
             )
         }
 
