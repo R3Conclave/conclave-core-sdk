@@ -14,14 +14,18 @@ import java.util.concurrent.Executors
 class StreamEnclaveHostInterface(
         private val toHost: OutputStream,
         private val fromHost: InputStream,
-        maximumConcurrentCalls: Int
+        private val maximumConcurrentCalls: Int
 ) : EnclaveHostInterface(), Closeable {
-    private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
-    /** On startup, send the maximum number of concurrent calls to the host. */
-    init {
-        toHost.writeInt(maximumConcurrentCalls)
+    /** Represents the lifecycle of the interface. */
+    private enum class State {
+        READY,
+        RUNNING,
+        STOPPED
     }
+
+    private var state = State.READY
+    private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
     private val receiveLoop = object : Runnable {
         private var done = false
@@ -44,7 +48,7 @@ class StreamEnclaveHostInterface(
                 callExecutor.execute(newCallContext)
                 newCallContext
             }
-            callContext.enqueMessage(message)
+            callContext.enqueueMessage(message)
         }
 
         /** The host has told us there will be no more messages, shut everything down. */
@@ -56,17 +60,35 @@ class StreamEnclaveHostInterface(
     }
 
     /** Start the message receive loop thread. */
-    private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop").apply { start() }
+    private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop")
+
+    fun start() {
+        synchronized(state) {
+            if (state == State.RUNNING) return
+            check(state == State.READY) { "Call interface may not be started multiple times." }
+            receiveLoopThread.start()
+            toHost.writeInt(maximumConcurrentCalls)
+            state = State.RUNNING
+        }
+    }
 
     /**
      * The shutdown process starts on the host.
      * This function just blocks until the host sends a stop message and the message receive loop terminates.
      */
     override fun close() {
-        receiveLoopThread.join()
+        synchronized(state) {
+            if (state == State.STOPPED) return
+            check(state == State.RUNNING) { "Call interface is not running." }
+            receiveLoopThread.join()
+            state = State.STOPPED
+        }
     }
 
-    /** Send a message to the receiving thread in the enclave-host interface. */
+    /**
+     * Send a message to the receiving thread in the enclave-host interface.
+     * the synchronisation that occurs here is the primary bottleneck for this call interface implementation.
+     */
     private fun sendMessageToHost(message: StreamCallInterfaceMessage) {
         synchronized(toHost) {
             message.writeToStream(toHost)
@@ -79,7 +101,7 @@ class StreamEnclaveHostInterface(
     ): Runnable {
         private val messageQueue = ArrayBlockingQueue<StreamCallInterfaceMessage>(4)
 
-        fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
+        fun enqueueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
 
         fun sendMessage(messageType: StreamCallInterfaceMessageType, callTypeID: Byte, payload: ByteBuffer?) {
             val outgoingMessage = StreamCallInterfaceMessage(

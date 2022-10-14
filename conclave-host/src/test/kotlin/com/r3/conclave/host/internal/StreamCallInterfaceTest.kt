@@ -84,22 +84,17 @@ class StreamCallInterfaceTest {
 
     /** Create the host and enclave interfaces. */
     private fun setupInterfaces() {
-        val hostConstructThread = Thread {
-            hostEnclaveInterface = StreamHostEnclaveInterface(
-                    hostSocket.getOutputStream(),
-                    hostSocket.getInputStream()
-            )
-        }
-
-        hostConstructThread.start()
+        hostEnclaveInterface = StreamHostEnclaveInterface(
+                hostSocket.getOutputStream(),
+                hostSocket.getInputStream())
 
         enclaveHostInterface = StreamEnclaveHostInterface(
                 enclaveSocket.getOutputStream(),
                 enclaveSocket.getInputStream(),
-                ENCLAVE_HOST_INTERFACE_THREADS
-        )
+                ENCLAVE_HOST_INTERFACE_THREADS)
 
-        hostConstructThread.join()
+        Thread { enclaveHostInterface.start() }.apply { start(); join() }
+        Thread { hostEnclaveInterface.start() }.apply { start(); join() }
     }
 
     /** Configure the enclave call interface for basic calls with an arbitrary task */

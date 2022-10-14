@@ -22,11 +22,18 @@ class StreamHostEnclaveInterface(
         private val toEnclave: OutputStream,
         private val fromEnclave: InputStream,
 ) : HostEnclaveInterface(), Closeable {
-    private var isRunning = true
 
-    /** Receive the number of concurrent calls from the enclave. */
-    private val maxConcurrentCalls = fromEnclave.readInt()
-    private val callGuardSemaphore = Semaphore(maxConcurrentCalls)
+    /** Represents the lifecycle of the interface. */
+    private enum class State {
+        READY,
+        RUNNING,
+        STOPPED
+    }
+
+    private var state = State.READY
+
+    private var maxConcurrentCalls = 0
+    private val callGuardSemaphore = Semaphore(0)
 
     private val receiveLoop = object : Runnable {
         private var done = false
@@ -47,12 +54,26 @@ class StreamHostEnclaveInterface(
             val callContext = checkNotNull(enclaveCallContexts[message.hostThreadID]) {
                 "Host call may not occur outside the context of an enclave call."
             }
-            callContext.enqueMessage(message)
+            callContext.enqueueMessage(message)
         }
 
         /** The enclave has told us there will be no more messages, shut everything down */
         private fun handleStopMessage() {
             done = true
+        }
+    }
+
+    private val receiveLoopThread = Thread(receiveLoop, "Host message receive loop")
+
+    /** Start the message receive loop thread and allow calls to begin. */
+    fun start() {
+        synchronized(state) {
+            if (state == State.RUNNING) return
+            check(state == State.READY) { "Interface may not be started multiple times." }
+            receiveLoopThread.start()
+            maxConcurrentCalls = fromEnclave.readInt()
+            callGuardSemaphore.release(maxConcurrentCalls)
+            state = State.RUNNING
         }
     }
 
@@ -62,9 +83,10 @@ class StreamHostEnclaveInterface(
          * Prevent new calls from entering the interface. This has to be synchronized to avoid race condition between
          * the semaphore acquisition and the lockout check in [executeOutgoingCall].
          */
-        synchronized(callGuardSemaphore) {
-            if (!isRunning) return
-            isRunning = false
+        synchronized(state) {
+            if (state == State.STOPPED) return
+            check(state == State.RUNNING) { "Call interface is not running." }
+            state = State.STOPPED
         }
 
         /** Wait for any pending calls to finish, this is released when a call context is retired. */
@@ -74,9 +96,6 @@ class StreamHostEnclaveInterface(
         sendMessageToEnclave(StreamCallInterfaceMessage.STOP_MESSAGE)
         receiveLoopThread.join()
     }
-
-    /** Start the message receive loop thread. */
-    private val receiveLoopThread = Thread(receiveLoop, "Host message receive loop").apply { start() }
 
     /** Send a message to the receiving thread in the enclave-host interface. */
     private fun sendMessageToEnclave(message: StreamCallInterfaceMessage) {
@@ -97,7 +116,7 @@ class StreamHostEnclaveInterface(
 
         fun hasActiveCalls(): Boolean = (activeCalls > 0)
 
-        fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
+        fun enqueueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
 
         fun sendMessage(messageType: StreamCallInterfaceMessageType, callTypeID: Byte, payload: ByteBuffer?) {
             val outgoingMessage = StreamCallInterfaceMessage(
@@ -190,8 +209,8 @@ class StreamHostEnclaveInterface(
         val threadID = Thread.currentThread().id
 
         if (!enclaveCallContexts.containsKey(threadID)) {
-            synchronized(callGuardSemaphore) {
-                check(isRunning) { "Call interface is not running." }
+            synchronized(state) {
+                check(state == State.RUNNING) { "Call interface is not running." }
                 callGuardSemaphore.acquireUninterruptibly()
             }
         }
