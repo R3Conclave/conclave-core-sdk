@@ -93,8 +93,11 @@ class StreamCallInterfaceTest {
                 enclaveSocket.getInputStream(),
                 ENCLAVE_HOST_INTERFACE_THREADS)
 
-        Thread { enclaveHostInterface.start() }.apply { start(); join() }
-        Thread { hostEnclaveInterface.start() }.apply { start(); join() }
+        val eThread = Thread { enclaveHostInterface.start() }.apply { start() }
+        val hThread = Thread { hostEnclaveInterface.start() }.apply { start() }
+
+        eThread.join()
+        hThread.join()
     }
 
     /** Configure the enclave call interface for basic calls with an arbitrary task */

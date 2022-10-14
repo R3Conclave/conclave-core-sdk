@@ -66,8 +66,9 @@ class StreamEnclaveHostInterface(
         synchronized(state) {
             if (state == State.RUNNING) return
             check(state == State.READY) { "Call interface may not be started multiple times." }
-            receiveLoopThread.start()
             toHost.writeInt(maximumConcurrentCalls)
+            toHost.flush()
+            receiveLoopThread.start()
             state = State.RUNNING
         }
     }

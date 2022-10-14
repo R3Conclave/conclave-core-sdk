@@ -70,8 +70,8 @@ class StreamHostEnclaveInterface(
         synchronized(state) {
             if (state == State.RUNNING) return
             check(state == State.READY) { "Interface may not be started multiple times." }
-            receiveLoopThread.start()
             maxConcurrentCalls = fromEnclave.readInt()
+            receiveLoopThread.start()
             callGuardSemaphore.release(maxConcurrentCalls)
             state = State.RUNNING
         }
