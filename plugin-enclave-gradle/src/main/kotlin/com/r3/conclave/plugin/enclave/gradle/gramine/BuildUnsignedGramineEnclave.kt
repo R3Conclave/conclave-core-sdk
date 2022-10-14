@@ -28,9 +28,6 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
     val archLibDirectory: Property<String> = objects.property(String::class.java)
 
     @Input
-    val logType: Property<GramineLogType> = objects.property(GramineLogType::class.java)
-
-    @Input
     val buildDirectory: Property<String> = objects.property(String::class.java)
 
     @get:OutputFile
@@ -54,7 +51,6 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
     private fun generateGramineDirectManifest(templateManifest: String) {
         val command = listOf(
             GRAMINE_MANIFEST_EXECUTABLE,
-            "-Dlog_level=${logType.get().type}",
             "-Darch_libdir=${archLibDirectory.get()}",
             "-Dentrypoint=${entryPoint.get()}",
             templateManifest,

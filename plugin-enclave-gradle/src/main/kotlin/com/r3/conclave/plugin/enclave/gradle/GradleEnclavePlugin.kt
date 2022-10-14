@@ -4,7 +4,6 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.gramine.BuildUnsignedGramineEnclave
-import com.r3.conclave.plugin.enclave.gradle.gramine.GramineLogType
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -137,15 +136,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.archLibDirectory.set("/lib/x86_64-linux-gnu")
             // TODO: Once we have integrated Gramine properly, we should use the java executable path
             task.entryPoint.set("/usr/bin/bash")
-            // TODO: Once we have integrated Gramine properly, we should set the logType to ERROR
-            task.logType.set(GramineLogType.ALL)
             task.outputManifest.set(
                 Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
             )
         }
     }
 
-    private fun buildGramineEnclaveJar(
+    private fun signedEnclaveGramine(
         target: Project,
         enclaveClassNameTask: EnclaveClassName,
         shadowJarTask: ShadowJar,
@@ -154,15 +151,16 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     ): TaskProvider<Jar> {
         val typeLowerCase = type.name.lowercase()
 
-        val task = target.tasks.register("buildGramineEnclaveJar${type}", Jar::class.java) { task ->
-            task.group = CONCLAVE_GROUP
-            task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
-            task.archiveFileName.set("enclave-gramine-$typeLowerCase.jar")
-            task.archiveAppendix.set("jar")
-            task.archiveClassifier.set(typeLowerCase)
-            task.from(shadowJarTask.archiveFile, buildUnsignedGramineEnclaveTask.outputManifest)
-            task.doFirst(IntoGramineTask(enclaveClassNameTask, typeLowerCase))
-        }
+        val task =
+            target.tasks.register("signedEnclave${type}${RuntimeType.Gramine.name}Jar", Jar::class.java) { task ->
+                task.group = CONCLAVE_GROUP
+                task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
+                task.archiveFileName.set("enclave-gramine-$typeLowerCase.jar")
+                task.archiveAppendix.set("jar")
+                task.archiveClassifier.set(typeLowerCase)
+                task.from(shadowJarTask.archiveFile, buildUnsignedGramineEnclaveTask.outputManifest)
+                task.doFirst(IntoGramineTask(enclaveClassNameTask, typeLowerCase))
+            }
         return task
     }
 
@@ -299,7 +297,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // Gramine related tasks
             val buildUnsignedGramineEnclaveTask = buildUnsignedGramineEnclaveTask(target, type)
 
-            val buildGramineEnclaveJarTask = buildGramineEnclaveJar(
+            val signedEnclaveGramineJarTask = signedEnclaveGramine(
                 target,
                 enclaveClassNameTask,
                 shadowJarTask,
@@ -501,7 +499,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
                 when (runtimeType) {
                     RuntimeType.Gramine -> {
-                        target.artifacts.add(typeLowerCase, buildGramineEnclaveJarTask.get().archiveFile)
+                        target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
                     }
 
                     RuntimeType.GraalVM -> {
