@@ -233,7 +233,7 @@ class StreamCallInterfaceTest {
     }
 
     @Test
-    fun `host can call enclave`() {
+    fun `host interface can call enclave interface`() {
         // Just echo the buffer back to the host side
         configureEnclaveCallAction { it }
 
@@ -254,7 +254,7 @@ class StreamCallInterfaceTest {
      * differences between the stream and native interfaces as possible.
      */
     @Test
-    fun `enclave may not call host outside the context of an enclave call`() {
+    fun `enclave interface may not call host interface outside the context of an enclave call`() {
         val exception = assertThrows<IllegalStateException> {
             enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER)
         }
@@ -262,7 +262,7 @@ class StreamCallInterfaceTest {
     }
 
     @Test
-    fun `enclave can call host inside the context of an enclave call`() {
+    fun `enclave interface can call host interface inside the context of an enclave call`() {
         // Enclave forwards call back to host
         configureEnclaveCallAction {
             enclaveHostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, it)
@@ -309,15 +309,15 @@ class StreamCallInterfaceTest {
 
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2, 4, 8, 16, 32])
-    fun `enclave and host can perform deeply recursive calls`(recursionDepth: Int) {
-        configureInterfacesForDeepRecursion { null }
+    fun `interfaces can perform deeply recursive calls`(recursionDepth: Int) {
+        configureInterfacesForDeepRecursion { null }    // Don't return anything at the tail of the recursive call
         val returnValue = hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, recursionDepth.toByteBuffer())
         assertThat(returnValue).isNull()
     }
 
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2, 4, 8, 16, 32])
-    fun `exceptions propagate recursively out of the enclave`(recursionDepth: Int) {
+    fun `exceptions propagate recursively across interfaces`(recursionDepth: Int) {
         val exceptionMessage = "End of the line!"
         configureInterfacesForDeepRecursion { throw IllegalStateException(exceptionMessage) }
 
@@ -334,7 +334,7 @@ class StreamCallInterfaceTest {
      */
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7])
-    fun `enclave and host can perform deeply recursive branching calls`(fibonacciIndex: Int) {
+    fun `interfaces can perform deeply recursive branching calls`(fibonacciIndex: Int) {
         configureInterfacesForRecursiveFibonacci()
 
         val fibonacciResult = hostEnclaveInterface.executeOutgoingCall(
@@ -350,7 +350,7 @@ class StreamCallInterfaceTest {
      */
     @ParameterizedTest
     @ValueSource(ints = [2, 8, 256])
-    fun `enclave can service multiple concurrent calls`(concurrency: Int) {
+    fun `interface can service many concurrent calls`(concurrency: Int) {
         // Sleep for the specified duration and send the duration back to the caller
         configureEnclaveCallAction {
             val sleepFor = it.int
@@ -397,7 +397,7 @@ class StreamCallInterfaceTest {
      */
     @ParameterizedTest
     @ValueSource(ints = [2, 8, 256])
-    fun `enclave can service multiple concurrent recursive calls`(concurrency: Int) {
+    fun `interface can service many concurrent recursive calls`(concurrency: Int) {
         configureInterfacesForRecursiveFibonacci()
 
         class RecursiveFibonacciRunner(val input: Int) : Runnable {
@@ -417,7 +417,7 @@ class StreamCallInterfaceTest {
 
         val fibonacciRunners = ArrayList<RecursiveFibonacciRunner>(concurrency).apply {
             for (i in 0 until concurrency) {
-                add(RecursiveFibonacciRunner((8..12).random()))
+                add(RecursiveFibonacciRunner((6..10).random()))
             }
         }
 
