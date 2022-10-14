@@ -90,8 +90,6 @@ class StreamEnclaveHostInterface(
         }
     }
 
-    private val messageWriter = ThreadLocal.withInitial { StreamCallInterfaceMessageWriter(toHost) }
-
     /**
      * Send a message to the receiving thread on the host side interface.
      * Once received, these messages are routed to the appropriate call context in order to support concurrency.

@@ -103,8 +103,6 @@ class StreamHostEnclaveInterface(
         receiveLoopThread.join()
     }
 
-    private val messageWriter = ThreadLocal.withInitial { StreamCallInterfaceMessageWriter(toEnclave) }
-
     /**
      * Send a message to the receiving thread on the enclave side interface.
      * Once received, these messages are routed to the appropriate call context in order to support concurrency.
