@@ -257,7 +257,7 @@ class EnclaveHost private constructor(
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
                     }
-                    is EnclaveScanner.ScanResult.Native -> {
+                    is EnclaveScanner.ScanResult.GraalVM -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
                     }
@@ -1063,10 +1063,10 @@ class EnclaveHost private constructor(
             return getSingleResult(results, enclaveClassName)
         }
 
-        private fun findGraalVmEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Native? {
+        private fun findGraalVmEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.GraalVM? {
             val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
             val url = EnclaveHost::class.java.getResource(resourceName)
-            return url?.let { ScanResult.Native(enclaveClassName, enclaveMode, url) }
+            return url?.let { ScanResult.GraalVM(enclaveClassName, enclaveMode, url) }
         }
 
         private fun findGramineEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Gramine? {
@@ -1104,7 +1104,7 @@ class EnclaveHost private constructor(
                     if (pathMatcher.matches()) {
                         val enclaveClassName = pathMatcher.group(1).replace('/', '.')
                         val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        results += ScanResult.Native(enclaveClassName, enclaveMode, resource.url)
+                        results += ScanResult.GraalVM(enclaveClassName, enclaveMode, resource.url)
                     }
                 }
             }
@@ -1173,7 +1173,7 @@ class EnclaveHost private constructor(
                 override fun toString(): String = "mock $enclaveClassName"
             }
 
-            class Native(
+            class GraalVM(
                 val enclaveClassName: String,
                 val enclaveMode: EnclaveMode,
                 val soFileUrl: URL
