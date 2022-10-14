@@ -87,8 +87,10 @@ class StreamEnclaveHostInterface(
     }
 
     /**
-     * Send a message to the receiving thread in the enclave-host interface.
-     * the synchronisation that occurs here is the primary bottleneck for this call interface implementation.
+     * Send a message to the receiving thread on the host side interface.
+     * Once received, these messages are routed to the appropriate call context in order to support concurrency.
+     * The synchronisation that occurs in this method (and the corresponding message on the host side) is the primary
+     * bottleneck of this call interface implementation.
      */
     private fun sendMessageToHost(message: StreamCallInterfaceMessage) {
         synchronized(toHost) {

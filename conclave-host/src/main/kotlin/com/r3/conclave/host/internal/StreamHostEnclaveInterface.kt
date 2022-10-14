@@ -97,7 +97,12 @@ class StreamHostEnclaveInterface(
         receiveLoopThread.join()
     }
 
-    /** Send a message to the receiving thread in the enclave-host interface. */
+    /**
+     * Send a message to the receiving thread on the enclave side interface.
+     * Once received, these messages are routed to the appropriate call context in order to support concurrency.
+     * The synchronisation that occurs in this method (and the corresponding message on the enclave side) is the primary
+     * bottleneck of this call interface implementation.
+     */
     private fun sendMessageToEnclave(message: StreamCallInterfaceMessage) {
         synchronized(toEnclave) {
             message.writeToStream(toEnclave)
