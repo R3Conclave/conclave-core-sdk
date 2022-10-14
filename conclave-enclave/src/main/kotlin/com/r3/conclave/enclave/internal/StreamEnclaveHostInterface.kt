@@ -29,16 +29,16 @@ class StreamEnclaveHostInterface(
         /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                when (StreamCallInterfaceSignal.fromByte(fromHost.read().toByte())) {
-                    StreamCallInterfaceSignal.MESSAGE -> handleMessageCommand()
-                    StreamCallInterfaceSignal.STOP -> handleStopCommand()
+                val message = StreamCallInterfaceMessage.readFromStream(fromHost)
+                when (message.messageType) {
+                    StreamCallInterfaceMessageType.STOP -> handleStopMessage()
+                    else -> deliverMessageToCallContext(message)
                 }
             }
         }
 
         /** Send the received message to the appropriate call context. */
-        private fun handleMessageCommand() {
-            val message = StreamCallInterfaceMessage.readFromStream(fromHost)
+        private fun deliverMessageToCallContext(message: StreamCallInterfaceMessage) {
             val callContext = enclaveCallContexts.computeIfAbsent(message.hostThreadID) {
                 val newCallContext = EnclaveCallContext(message.hostThreadID)
                 callExecutor.execute(newCallContext)
@@ -48,10 +48,10 @@ class StreamEnclaveHostInterface(
         }
 
         /** The host has told us there will be no more messages, shut everything down. */
-        private fun handleStopCommand() {
-            callExecutor.shutdown()     // Finish processing any outstanding calls
-            sendStopSignalToHost()     // Let the host know there will be no more messages
-            done = true                 // Terminate the loop
+        private fun handleStopMessage() {
+            callExecutor.shutdown()
+            sendMessageToHost(StreamCallInterfaceMessage.STOP_MESSAGE)
+            done = true
         }
     }
 
@@ -69,16 +69,7 @@ class StreamEnclaveHostInterface(
     /** Send a message to the receiving thread in the enclave-host interface. */
     private fun sendMessageToHost(message: StreamCallInterfaceMessage) {
         synchronized(toHost) {
-            toHost.write(StreamCallInterfaceSignal.MESSAGE.toByte().toInt())
             message.writeToStream(toHost)
-            toHost.flush()
-        }
-    }
-
-    /** Send a stop command to the receiving thread in the enclave-host interface. */
-    private fun sendStopSignalToHost() {
-        synchronized(toHost) {
-            toHost.write(StreamCallInterfaceSignal.STOP.toByte().toInt())
             toHost.flush()
         }
     }
@@ -90,30 +81,30 @@ class StreamEnclaveHostInterface(
 
         fun enqueMessage(message: StreamCallInterfaceMessage) = messageQueue.put(message)
 
-        fun sendMessage(callTypeID: Byte, messageTypeID: Byte, payload: ByteBuffer?) {
+        fun sendMessage(messageType: StreamCallInterfaceMessageType, callTypeID: Byte, payload: ByteBuffer?) {
             val outgoingMessage = StreamCallInterfaceMessage(
-                    hostThreadID, callTypeID, messageTypeID, payload?.getAllBytes(avoidCopying = true))
+                    hostThreadID, messageType, callTypeID, payload?.getAllBytes(avoidCopying = true))
 
             sendMessageToHost(outgoingMessage)
         }
 
         fun sendCallMessage(callType: HostCallType, parameterBuffer: ByteBuffer?) {
             requireNotNull(parameterBuffer)
-            sendMessage(callType.toByte(), CallInterfaceMessageType.CALL.toByte(), parameterBuffer)
+            sendMessage(StreamCallInterfaceMessageType.CALL, callType.toByte(), parameterBuffer)
         }
 
         fun sendReturnMessage(callType: EnclaveCallType, returnBytes: ByteBuffer?) {
-            sendMessage(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), returnBytes)
+            sendMessage(StreamCallInterfaceMessageType.RETURN, callType.toByte(), returnBytes)
         }
 
         fun sendExceptionMessage(callType: EnclaveCallType, exceptionBuffer: ByteBuffer?) {
             requireNotNull(exceptionBuffer)
-            sendMessage(callType.toByte(), CallInterfaceMessageType.EXCEPTION.toByte(), exceptionBuffer)
+            sendMessage(StreamCallInterfaceMessageType.EXCEPTION, callType.toByte(), exceptionBuffer)
         }
 
         fun handleCallMessage(callMessage: StreamCallInterfaceMessage) {
-            val messageType = CallInterfaceMessageType.fromByte(callMessage.messageTypeID)
-            require(messageType == CallInterfaceMessageType.CALL)
+            val messageType = callMessage.messageType
+            require(messageType == StreamCallInterfaceMessageType.CALL)
 
             val callType = EnclaveCallType.fromByte(callMessage.callTypeID)
             val parameterBytes = checkNotNull(callMessage.payload) { "Received call message without parameter bytes." }
@@ -135,19 +126,19 @@ class StreamEnclaveHostInterface(
             var replyMessage: StreamCallInterfaceMessage
             while (true) {
                 replyMessage = messageQueue.take()
-                when (CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)) {
-                    CallInterfaceMessageType.CALL -> handleCallMessage(replyMessage)
+                when (replyMessage.messageType) {
+                    StreamCallInterfaceMessageType.CALL -> handleCallMessage(replyMessage)
                     else -> break
                 }
             }
 
-            val replyMessageType = CallInterfaceMessageType.fromByte(replyMessage.messageTypeID)
+            val replyMessageType = replyMessage.messageType
             val replyPayload = replyMessage.payload
 
             check(HostCallType.fromByte(replyMessage.callTypeID) == callType)
-            check(replyMessageType != CallInterfaceMessageType.CALL)
+            check(replyMessageType != StreamCallInterfaceMessageType.CALL)
 
-            if (replyMessageType == CallInterfaceMessageType.EXCEPTION) {
+            if (replyMessageType == StreamCallInterfaceMessageType.EXCEPTION) {
                 checkNotNull(replyPayload) { "Received exception message without parameter bytes." }
                 throw ThrowableSerialisation.deserialise(replyPayload)
             }
