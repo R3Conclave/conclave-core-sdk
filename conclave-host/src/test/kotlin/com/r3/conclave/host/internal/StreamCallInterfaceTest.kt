@@ -41,10 +41,20 @@ class StreamCallInterfaceTest {
 
     @AfterEach
     fun teardown() {
-        hostEnclaveInterface.close()
-        enclaveHostInterface.close()
+        stopInterfaces()
         hostSocket.close()
         enclaveSocket.close()
+    }
+
+    /** Stop both interfaces */
+    private fun stopInterfaces() {
+        val enclaveStopThread = Thread {
+            enclaveHostInterface.close()
+        }.apply { start() }
+
+        hostEnclaveInterface.close()
+
+        enclaveStopThread.join()
     }
 
     /** Set up the test sockets so that they are connected together. */
@@ -181,7 +191,7 @@ class StreamCallInterfaceTest {
 
     @Test
     fun `cannot call a stopped host enclave interface`() {
-        hostEnclaveInterface.close()
+        stopInterfaces()
 
         val exception = assertThrows<IllegalStateException> {
             hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER)
