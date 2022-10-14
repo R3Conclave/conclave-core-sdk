@@ -240,7 +240,7 @@ class EnclaveHost private constructor(
             enclaveClassName: String,
             manifest: URL,
             jar: URL
-            ): EnclaveHost {
+        ): EnclaveHost {
             val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
             return EnclaveHost(enclaveHandle)
         }
@@ -1031,7 +1031,7 @@ class EnclaveHost private constructor(
         fun findEnclave(): ScanResult {
             val classGraph = ClassGraph()
             val results = ArrayList<ScanResult>()
-            findNativeEnclaves(classGraph, results)
+            findGraamVmEnclaves(classGraph, results)
             findGramineEnclaves(classGraph, results)
             findMockEnclaves(classGraph, results)
             return getSingleResult(results, null)
@@ -1054,14 +1054,16 @@ class EnclaveHost private constructor(
          */
         fun findEnclave(enclaveClassName: String): ScanResult {
             val results = ArrayList<ScanResult>()
-            EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
             findMockEnclave(enclaveClassName)?.let { results += it }
             EnclaveMode.values()
-                .forEach { findGramineEnclave(enclaveClassName, it)?.let { result -> results += result } }
+                .forEach {
+                    findGramineEnclave(enclaveClassName, it)?.let { result -> results += result }
+                    findGraalVmEnclave(enclaveClassName, it)?.let { result -> results += result }
+                }
             return getSingleResult(results, enclaveClassName)
         }
 
-        private fun findNativeEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Native? {
+        private fun findGraalVmEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Native? {
             val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
             val url = EnclaveHost::class.java.getResource(resourceName)
             return url?.let { ScanResult.Native(enclaveClassName, enclaveMode, url) }
@@ -1076,8 +1078,9 @@ class EnclaveHost private constructor(
 
             return if (manifestUrl == null || jarUrl == null) {
                 null
-            } else
+            } else {
                 ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
+            }
         }
 
         private fun findMockEnclave(enclaveClassName: String): ScanResult.Mock? {
@@ -1092,7 +1095,7 @@ class EnclaveHost private constructor(
         /**
          * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
          */
-        private fun findNativeEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+        private fun findGraamVmEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
 
             classGraph.scan().use {
@@ -1128,10 +1131,10 @@ class EnclaveHost private constructor(
         private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
             //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
+            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
 
             classGraph.scan().use {
                 for (resource in it.allResources) {
-                    val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
                     val pathMatcher = manifestSearchPattern.matcher(resource.url.path)
 
                     if (pathMatcher.matches()) {
@@ -1178,7 +1181,7 @@ class EnclaveHost private constructor(
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
                 }
-                override fun toString(): String = "graal ${enclaveMode.name.lowercase()} $enclaveClassName"
+                override fun toString(): String = "graalvm ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
 
             class Gramine(

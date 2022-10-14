@@ -91,7 +91,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // of the enclave.
             // If language support is enabled then automatically add the required dependency.
             if (conclaveExtension.supportLanguages.get()
-                    .isNotEmpty() && conclaveExtension.runtime.get() == RuntimeType.Graal
+                    .isNotEmpty() && conclaveExtension.runtime.get() == RuntimeType.GraalVM
             ) {
                 // It might be possible that the conclave part of the version not match the current version, e.g. if
                 // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
@@ -270,7 +270,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         target.artifacts.add(taskHelper.typeLowerCase, buildGramineEnclaveJarTask.get().archiveFile)
                     }
 
-                    RuntimeType.Graal -> {
+                    RuntimeType.GraalVM -> {
                         target.artifacts.add(taskHelper.typeLowerCase, signedEnclaveJarTask.get().archiveFile)
                     }
                 }

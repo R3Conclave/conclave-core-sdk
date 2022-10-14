@@ -7,7 +7,6 @@ import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.mail.Curve25519PrivateKey
-import java.io.File
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
@@ -93,15 +92,13 @@ class GramineEnclaveHandle(
 
     private fun copyGramineFilesToWorkingDirectory() {
         //  Here we copy files from inside the jar into a temporary folder
-        val manifestName = File(manifestUrl.file).name
-        val jarName = File(jarUrl.file).name
 
         manifestUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / manifestName, REPLACE_EXISTING)
+            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_MANIFEST, REPLACE_EXISTING)
         }
 
         jarUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / jarName, REPLACE_EXISTING)
+            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
         }
     }
 
