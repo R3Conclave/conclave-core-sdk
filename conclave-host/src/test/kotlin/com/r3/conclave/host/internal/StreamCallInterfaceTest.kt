@@ -278,6 +278,35 @@ class StreamCallInterfaceTest {
         assertThat(outputString).isEqualTo(inputString)
     }
 
+    /** For this test to pass, two threads must be in the enclave simultaneously */
+    @Test
+    fun `interfaces can service concurrent calls`() {
+        val waitSemaphore = Semaphore(0)
+
+        // Allow us to acquire and release the semaphore in multiple threads
+        configureEnclaveCallAction {
+            when (it.int) {
+                0 -> waitSemaphore.acquireUninterruptibly()
+                else -> waitSemaphore.release()
+            }
+            null
+        }
+
+        val acquireThread = Thread {
+            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, 0.toByteBuffer())
+        }.apply { start() }
+
+        val releaseThread = Thread {
+            hostEnclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, 1.toByteBuffer())
+        }.apply { start() }
+
+        acquireThread.join(1000)
+        releaseThread.join(1000)
+
+        assertThat(acquireThread.isAlive).isFalse
+        assertThat(acquireThread.isAlive).isFalse
+    }
+
     @ParameterizedTest
     @ValueSource(ints = [0, 1, 2, 4, 8, 16, 32])
     fun `enclave and host can perform deeply recursive calls`(recursionDepth: Int) {
