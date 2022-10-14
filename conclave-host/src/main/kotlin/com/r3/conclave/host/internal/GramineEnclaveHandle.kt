@@ -79,6 +79,7 @@ class GramineEnclaveHandle(
         if (!::processGramineDirect.isInitialized) return
         processGramineDirect.destroy()
         processGramineDirect.waitFor(10L, TimeUnit.SECONDS)
+
         if (processGramineDirect.isAlive) {
             processGramineDirect.destroyForcibly()
         }

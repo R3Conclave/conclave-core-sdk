@@ -57,7 +57,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
             "-Dlog_level=${logType.get().type}",
             "-Darch_libdir=${archLibDirectory.get()}",
             "-Dentrypoint=${entryPoint.get()}",
-            templateManifest, // Source file
+            templateManifest,
             outputManifest.asFile.get().absolutePath
         )
 	commandLine(command)
