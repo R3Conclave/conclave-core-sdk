@@ -1,19 +1,15 @@
 package com.r3.conclave.common.internal
 
-import com.r3.conclave.utilities.internal.nullableRead
-import com.r3.conclave.utilities.internal.nullableWrite
-import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
-import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.io.InputStream
-import java.io.OutputStream
+import com.r3.conclave.utilities.internal.*
+import java.nio.ByteBuffer
 
 enum class StreamCallInterfaceMessageType {
     CALL,           // A message initiating a call
     RETURN,         // A return value from an enclave/host call
     EXCEPTION,      // An exception occurred on the other side while handling the call.
     STOP;           // No more messages, used to signal that workers should stop.
+
+    fun toByte() = ordinal.toByte()
 
     companion object {
         private val VALUES = values()
@@ -33,27 +29,28 @@ class StreamCallInterfaceMessage(
         val callTypeID: Byte,
         val payload: ByteArray?
 ) {
+    fun size() = 8 + 1 + 1 + nullableSize(payload) { it.intLengthPrefixSize }
+
     companion object {
         val STOP_MESSAGE = StreamCallInterfaceMessage(0, StreamCallInterfaceMessageType.STOP, 0, null)
 
-        fun readFromStream(inputStream: InputStream): StreamCallInterfaceMessage {
-            val dis = DataInputStream(inputStream)
-
-            val hostThreadID = dis.readLong()
-            val messageType = StreamCallInterfaceMessageType.fromByte(dis.readByte())
-            val callTypeID = dis.readByte()
-            val payload = dis.nullableRead { readIntLengthPrefixBytes() }
-
+        fun fromByteArray(bytes: ByteArray): StreamCallInterfaceMessage {
+            val buffer = ByteBuffer.wrap(bytes)
+            val hostThreadID = buffer.long
+            val messageType = StreamCallInterfaceMessageType.fromByte(buffer.get())
+            val callTypeID = buffer.get()
+            val payload = buffer.getNullable { getIntLengthPrefixBytes() }
             return StreamCallInterfaceMessage(hostThreadID, messageType, callTypeID, payload)
         }
     }
 
-    fun writeToStream(outputStream: OutputStream) {
-        val dos = DataOutputStream(outputStream)
-
-        dos.writeLong(hostThreadID)
-        dos.writeByte(messageType.ordinal)
-        dos.writeByte(callTypeID.toInt())
-        dos.nullableWrite(payload) { writeIntLengthPrefixBytes(it) }
+    fun toByteArray(): ByteArray {
+        return ByteBuffer.allocate(size()).apply {
+            putLong(hostThreadID)
+            put(messageType.toByte())
+            put(callTypeID)
+            putNullable(payload) { putIntLengthPrefixBytes(it) }
+            rewind()
+        }.array()
     }
 }

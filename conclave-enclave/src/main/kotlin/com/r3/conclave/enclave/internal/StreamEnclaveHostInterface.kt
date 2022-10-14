@@ -1,9 +1,12 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
+import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
+import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.io.Closeable
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -12,10 +15,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 class StreamEnclaveHostInterface(
-        private val toHost: OutputStream,
-        private val fromHost: InputStream,
+        toHostRaw: OutputStream,
+        fromHostRaw: InputStream,
         private val maximumConcurrentCalls: Int
 ) : EnclaveHostInterface(), Closeable {
+    private val toHost = DataOutputStream(toHostRaw)
+    private val fromHost = DataInputStream(fromHostRaw)
 
     /** Represents the lifecycle of the interface. */
     private enum class State {
@@ -33,7 +38,7 @@ class StreamEnclaveHostInterface(
         /** Receive messages in a loop and send them to the appropriate call context. */
         override fun run() {
             while (!done) {
-                val message = StreamCallInterfaceMessage.readFromStream(fromHost)
+                val message = receiveMessageFromHost()
                 when (message.messageType) {
                     StreamCallInterfaceMessageType.STOP -> handleStopMessage()
                     else -> deliverMessageToCallContext(message)
@@ -59,7 +64,6 @@ class StreamEnclaveHostInterface(
         }
     }
 
-    /** Start the message receive loop thread. */
     private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop")
 
     fun start() {
@@ -86,6 +90,8 @@ class StreamEnclaveHostInterface(
         }
     }
 
+    private val messageWriter = ThreadLocal.withInitial { StreamCallInterfaceMessageWriter(toHost) }
+
     /**
      * Send a message to the receiving thread on the host side interface.
      * Once received, these messages are routed to the appropriate call context in order to support concurrency.
@@ -93,14 +99,20 @@ class StreamEnclaveHostInterface(
      * bottleneck of this call interface implementation.
      */
     private fun sendMessageToHost(message: StreamCallInterfaceMessage) {
+        val messageBytes = message.toByteArray()
         synchronized(toHost) {
-            message.writeToStream(toHost)
+            toHost.writeIntLengthPrefixBytes(messageBytes)
             toHost.flush()
         }
     }
 
+    /** Blocks until a message is received from the host. */
+    private fun receiveMessageFromHost(): StreamCallInterfaceMessage {
+        return StreamCallInterfaceMessage.fromByteArray(fromHost.readIntLengthPrefixBytes())
+    }
+
     private inner class EnclaveCallContext(
-            private val hostThreadID: Long,
+            private val hostThreadID: Long
     ): Runnable {
         private val messageQueue = ArrayBlockingQueue<StreamCallInterfaceMessage>(4)
 

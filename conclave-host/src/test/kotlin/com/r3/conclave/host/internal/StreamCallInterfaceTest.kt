@@ -415,7 +415,7 @@ class StreamCallInterfaceTest {
 
         val fibonacciRunners = ArrayList<RecursiveFibonacciRunner>(concurrency).apply {
             for (i in 0 until concurrency) {
-                add(RecursiveFibonacciRunner((6..10).random()))
+                add(RecursiveFibonacciRunner((8..12).random()))
             }
         }
 
