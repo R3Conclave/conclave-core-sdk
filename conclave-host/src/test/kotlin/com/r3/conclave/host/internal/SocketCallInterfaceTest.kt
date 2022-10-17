@@ -9,9 +9,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.io.IOException
+import java.lang.Exception
 import java.lang.IllegalStateException
+import java.net.ConnectException
 import java.nio.ByteBuffer
+import java.util.concurrent.FutureTask
 import java.util.concurrent.Semaphore
 
 /**
@@ -30,38 +32,52 @@ class SocketCallInterfaceTest {
 
     @BeforeEach
     fun startInterfaces() {
-        hostEnclaveInterface = SocketHostEnclaveInterface(SOCKET_PORT_NUMBER)
-        enclaveHostInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS)
-
-        val eThread = Thread {
-            for (i in 0 until 10) {
+        val eFuture = FutureTask {
+            val eInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS)
+            var retries = 0
+            while (true) {
                 try {
-                    enclaveHostInterface.start()
+                    retries++
+                    eInterface.start()
                     break
-                } catch (error: IOException) {
+                } catch (e: ConnectException) {
+                    if (retries > 10) throw e
                     Thread.sleep(10)
                 }
             }
-        }.apply { start() }
+            eInterface
+        }
 
-        val hThread = Thread {
-            hostEnclaveInterface.start()
-        }.apply { start() }
+        val hFuture = FutureTask {
+            val hInterface = SocketHostEnclaveInterface(SOCKET_PORT_NUMBER)
+            hInterface.start()
+            hInterface
+        }
+
+        val eThread = Thread(eFuture).apply { start() }
+        val hThread = Thread(hFuture).apply { start() }
 
         eThread.join()
+        enclaveHostInterface = eFuture.get()
+
         hThread.join()
+        hostEnclaveInterface = hFuture.get()
     }
 
     /** Stop both interfaces */
     @AfterEach
     fun stopInterfaces() {
-        val enclaveStopThread = Thread {
-            enclaveHostInterface.close()
-        }.apply { start() }
+        val eFuture = FutureTask { enclaveHostInterface.close() }
+        val hFuture = FutureTask { hostEnclaveInterface.close() }
 
-        hostEnclaveInterface.close()
+        val eThread = Thread(eFuture).apply { start() }
+        val hThread = Thread(hFuture).apply { start() }
 
-        enclaveStopThread.join()
+        eThread.join()
+        eFuture.get()
+
+        hThread.join()
+        hFuture.get()
     }
 
     /** Configure the enclave call interface for basic calls with an arbitrary task */
