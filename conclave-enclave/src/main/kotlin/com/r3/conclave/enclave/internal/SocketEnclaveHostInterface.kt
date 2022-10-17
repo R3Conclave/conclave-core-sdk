@@ -13,6 +13,13 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
+/**
+ * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
+ * It has three jobs:
+ *  - Serve as the endpoint for calls to make to the host, see [com.r3.conclave.common.internal.CallInterface]
+ *  - Route calls from the host to the appropriate enclave side call handler, see [com.r3.conclave.common.internal.CallInterface]
+ *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
+ */
 class SocketEnclaveHostInterface(
         private val host: String,
         private val port: Int,
@@ -24,13 +31,13 @@ class SocketEnclaveHostInterface(
     private lateinit var fromHost: DataInputStream
 
     /** Represents the lifecycle of the interface. */
-    private enum class State {
-        READY,
-        RUNNING,
-        STOPPED
+    sealed class State {
+        object Ready : State()
+        object Running : State()
+        object Stopped : State()
     }
 
-    private var state = State.READY
+    private var stateManager = StateManager<State>(State.Ready)
     private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
     private val receiveLoop = object : Runnable {
@@ -68,9 +75,11 @@ class SocketEnclaveHostInterface(
     private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop")
 
     fun start() {
-        synchronized(state) {
-            if (state == State.RUNNING) return
-            check(state == State.READY) { "Call interface may not be started multiple times." }
+        synchronized(stateManager) {
+            if (stateManager.state == State.Running) return
+            stateManager.checkStateIs<State.Ready> {
+                "Call interface may not be started multiple times."
+            }
 
             /** Connect the socket and instantiate data input/output streams. */
             socket = Socket(host, port)
@@ -83,7 +92,7 @@ class SocketEnclaveHostInterface(
 
             /** Start the message receive thread. */
             receiveLoopThread.start()
-            state = State.RUNNING
+            stateManager.transitionStateFrom<State.Ready>(to = State.Running)
         }
     }
 
@@ -92,11 +101,13 @@ class SocketEnclaveHostInterface(
      * This function just blocks until the host sends a stop message and the message receive loop terminates.
      */
     override fun close() {
-        synchronized(state) {
-            if (state == State.STOPPED) return
-            check(state == State.RUNNING) { "Call interface is not running." }
+        synchronized(stateManager) {
+            if (stateManager.state == State.Stopped) return
+            stateManager.checkStateIs<State.Running> {
+                "Call interface is not running."
+            }
             receiveLoopThread.join()
-            state = State.STOPPED
+            stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
         }
     }
 
