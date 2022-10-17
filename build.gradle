@@ -203,9 +203,14 @@ tasks.withType(DokkaTask).configureEach {
             reportUndocumented.set(false)
             skipDeprecated.set(true)
             includeNonPublic.set(false)
-            pluginsMapConfiguration.put("org.jetbrains.dokka.base.DokkaBase",
-                    "{\"customAssets\":[\"${file("$projectDir/docs/assets/docs_logo.svg")}\", \"${file("$projectDir/docs/assets/arrow_down.svg")}\"], "
-                            + "\"footerMessage\": \"<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>\"}")
+            pluginsMapConfiguration.put("org.jetbrains.dokka.base.DokkaBase", """{
+                    "customAssets": [
+                        "${file("$projectDir/docs/assets/docs_logo.svg")}",
+                        "${file("$projectDir/docs/assets/arrow_down.svg")}"
+                    ],
+                    "footerMessage": "<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>"
+                }"""
+            )
 
             for (publishedProject in publishedProjects) {
                 def project = project(publishedProject.projectPath)
