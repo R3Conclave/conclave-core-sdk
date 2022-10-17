@@ -3,6 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
+import com.r3.conclave.plugin.enclave.gradle.gramine.BuildUnsignedGramineEnclave
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -10,6 +11,7 @@ import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
@@ -121,6 +123,59 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 shadowJarTask,
                 enclaveClassNameTask
         )
+    }
+
+    private fun buildUnsignedGramineEnclaveTask(target: Project, type: BuildType): BuildUnsignedGramineEnclave {
+        val gramineBuildDir = baseDirectory.resolve("gramine").toString()
+        return target.createTask("buildUnsignedGramineEnclave$type") { task ->
+            //  Note: at the moment this task can run even before "enclave:compileJava", because there are no
+            //    implicit dependencies yet.
+            //  TODO: Once we use Java code instead of the bash example, we should remove the above comment
+            task.outputs.dir(gramineBuildDir)
+            task.buildDirectory.set(gramineBuildDir)
+            task.archLibDirectory.set("/lib/x86_64-linux-gnu")
+            // TODO: Once we have integrated Gramine properly, we should use the java executable path
+            task.entryPoint.set("/usr/bin/bash")
+            task.outputManifest.set(
+                Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
+            )
+        }
+    }
+
+    private fun signedEnclaveGramine(
+        target: Project,
+        enclaveClassNameTask: EnclaveClassName,
+        shadowJarTask: ShadowJar,
+        type: BuildType,
+        buildUnsignedGramineEnclaveTask: BuildUnsignedGramineEnclave
+    ): TaskProvider<Jar> {
+        val typeLowerCase = type.name.lowercase()
+
+        val task =
+            target.tasks.register("signedEnclave${type}${RuntimeType.Gramine.name}Jar", Jar::class.java) { task ->
+                task.group = CONCLAVE_GROUP
+                task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
+                task.archiveFileName.set("enclave-gramine-$typeLowerCase.jar")
+                task.archiveAppendix.set("jar")
+                task.archiveClassifier.set(typeLowerCase)
+                task.from(shadowJarTask.archiveFile, buildUnsignedGramineEnclaveTask.outputManifest)
+                task.doFirst(IntoGramineTask(enclaveClassNameTask, typeLowerCase))
+            }
+        return task
+    }
+
+    inner class IntoGramineTask(
+        private val enclaveClassNameTask: EnclaveClassName,
+        private val typeLowerCase: String
+    ) : Action<Task> {
+        override fun execute(task: Task) {
+            //  Note that in Gramine we use the class name as a folder,
+            //     not as a part of a file, as it is done with Native tasks
+            val location = enclaveClassNameTask.outputEnclaveClassName.get().replace('.', '/') + "-${typeLowerCase}"
+            println("location $location")
+            val jarTask = task as Jar
+            jarTask.into(location)
+        }
     }
 
     fun signToolPath(): Path = getSgxTool("sgx_sign")
@@ -239,6 +294,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
             enclaveExtension.signingType.set(keyType)
 
+            // Gramine related tasks
+            val buildUnsignedGramineEnclaveTask = buildUnsignedGramineEnclaveTask(target, type)
+
+            val signedEnclaveGramineJarTask = signedEnclaveGramine(
+                target,
+                enclaveClassNameTask,
+                shadowJarTask,
+                type,
+                buildUnsignedGramineEnclaveTask
+            )
+
+            // GraalVM related tasks
             // Set the default signing material location as an absolute path because if the
             // user overrides it they will use a project relative (rather than build directory
             // relative) path name.
@@ -427,7 +494,19 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.doFirst(RenameSignedEnclaveJarTask())
             }
 
-            target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
+            target.afterEvaluate {
+                val runtimeType = conclaveExtension.runtime.get()
+
+                when (runtimeType) {
+                    RuntimeType.Gramine -> {
+                        target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
+                    }
+
+                    RuntimeType.GraalVM -> {
+                        target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
+                    }
+                }
+            }
         }
     }
 
