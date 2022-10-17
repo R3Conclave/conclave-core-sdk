@@ -9,7 +9,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.lang.Exception
 import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.nio.ByteBuffer
