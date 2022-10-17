@@ -111,7 +111,7 @@ for (cmakeBuildType in ["Debug", "Release"]) {
     }
 
     tasks.create(compileJvmEnclaveCommon, Exec) {
-        dependsOn(createCmakeBuild, compileJvmEdl)
+        dependsOn(createCmakeBuild, compileJvmEdl, generateEnclaveJniHeaders)
 
         workingDir(cmakeBuildDir)
 
