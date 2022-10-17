@@ -3,7 +3,7 @@ package com.r3.conclave.common.internal
 import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
 
-enum class StreamCallInterfaceMessageType {
+enum class SocketCallInterfaceMessageType {
     CALL,           // A message initiating a call
     RETURN,         // A return value from an enclave/host call
     EXCEPTION,      // An exception occurred on the other side while handling the call.
@@ -20,27 +20,27 @@ enum class StreamCallInterfaceMessageType {
 
 /**
  * This class handles serialisation and de-serialisation of messages passed between the
- * [com.r3.conclave.host.internal.StreamHostEnclaveInterface] and
- * [com.r3.conclave.enclave.internal.StreamEnclaveHostInterface] classes.
+ * [com.r3.conclave.host.internal.SocketHostEnclaveInterface] and
+ * [com.r3.conclave.enclave.internal.SocketEnclaveHostInterface] classes.
  */
-class StreamCallInterfaceMessage(
+class SocketCallInterfaceMessage(
         val hostThreadID: Long,
-        val messageType: StreamCallInterfaceMessageType,
+        val messageType: SocketCallInterfaceMessageType,
         val callTypeID: Byte,
         val payload: ByteArray?
 ) {
     fun size() = 8 + 1 + 1 + nullableSize(payload) { it.intLengthPrefixSize }
 
     companion object {
-        val STOP_MESSAGE = StreamCallInterfaceMessage(0, StreamCallInterfaceMessageType.STOP, 0, null)
+        val STOP_MESSAGE = SocketCallInterfaceMessage(0, SocketCallInterfaceMessageType.STOP, 0, null)
 
-        fun fromByteArray(bytes: ByteArray): StreamCallInterfaceMessage {
+        fun fromByteArray(bytes: ByteArray): SocketCallInterfaceMessage {
             val buffer = ByteBuffer.wrap(bytes)
             val hostThreadID = buffer.long
-            val messageType = StreamCallInterfaceMessageType.fromByte(buffer.get())
+            val messageType = SocketCallInterfaceMessageType.fromByte(buffer.get())
             val callTypeID = buffer.get()
             val payload = buffer.getNullable { getIntLengthPrefixBytes() }
-            return StreamCallInterfaceMessage(hostThreadID, messageType, callTypeID, payload)
+            return SocketCallInterfaceMessage(hostThreadID, messageType, callTypeID, payload)
         }
     }
 

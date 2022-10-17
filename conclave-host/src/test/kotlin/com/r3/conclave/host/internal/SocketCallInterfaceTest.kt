@@ -3,51 +3,58 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.HostCallType
-import com.r3.conclave.enclave.internal.StreamEnclaveHostInterface
+import com.r3.conclave.enclave.internal.SocketEnclaveHostInterface
 import com.r3.conclave.utilities.internal.getRemainingString
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.io.IOException
 import java.lang.IllegalStateException
-import java.net.ConnectException
-import java.net.ServerSocket
-import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.concurrent.Semaphore
 
 /**
- * Test the stream call interface classes.
+ * Test the socket call interface classes.
  * It should be noted that the use of [EnclaveCallType] and [HostCallType] in these tests isn't important.
  * There is no enclave or host present for any of these tests and the enums are re-used solely for convenience.
  */
-class StreamCallInterfaceTest {
+class SocketCallInterfaceTest {
     companion object {
         private const val SOCKET_PORT_NUMBER = 31893
         private const val ENCLAVE_HOST_INTERFACE_THREADS = 8
     }
 
-    private lateinit var hostEnclaveInterface: StreamHostEnclaveInterface
-    private lateinit var enclaveHostInterface: StreamEnclaveHostInterface
-
-    private lateinit var hostSocket: Socket
-    private lateinit var enclaveSocket: Socket
+    private lateinit var hostEnclaveInterface: SocketHostEnclaveInterface
+    private lateinit var enclaveHostInterface: SocketEnclaveHostInterface
 
     @BeforeEach
-    fun setup() {
-        setupSockets()
-        setupInterfaces()
-    }
+    fun startInterfaces() {
+        hostEnclaveInterface = SocketHostEnclaveInterface(SOCKET_PORT_NUMBER)
+        enclaveHostInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS)
 
-    @AfterEach
-    fun teardown() {
-        stopInterfaces()
-        hostSocket.close()
-        enclaveSocket.close()
+        val eThread = Thread {
+            for (i in 0 until 10) {
+                try {
+                    enclaveHostInterface.start()
+                    break
+                } catch (error: IOException) {
+                    Thread.sleep(10)
+                }
+            }
+        }.apply { start() }
+
+        val hThread = Thread {
+            hostEnclaveInterface.start()
+        }.apply { start() }
+
+        eThread.join()
+        hThread.join()
     }
 
     /** Stop both interfaces */
-    private fun stopInterfaces() {
+    @AfterEach
+    fun stopInterfaces() {
         val enclaveStopThread = Thread {
             enclaveHostInterface.close()
         }.apply { start() }
@@ -55,49 +62,6 @@ class StreamCallInterfaceTest {
         hostEnclaveInterface.close()
 
         enclaveStopThread.join()
-    }
-
-    /** Set up the test sockets so that they are connected together. */
-    private fun setupSockets() {
-        val serverSocketReady = Semaphore(0)
-
-        val serverSocketThread = Thread {
-            ServerSocket(SOCKET_PORT_NUMBER).use { serverSocket ->
-                serverSocketReady.release()
-                hostSocket = serverSocket.accept()
-            }
-        }.apply { start() }
-
-        serverSocketReady.acquireUninterruptibly()
-
-        for (retries in 0..10) {
-            try {
-                enclaveSocket = Socket("127.0.0.1", SOCKET_PORT_NUMBER)
-                break
-            } catch (e: ConnectException) {
-                Thread.sleep(5)
-            }
-        }
-
-        serverSocketThread.join()
-    }
-
-    /** Create the host and enclave interfaces. */
-    private fun setupInterfaces() {
-        hostEnclaveInterface = StreamHostEnclaveInterface(
-                hostSocket.getOutputStream(),
-                hostSocket.getInputStream())
-
-        enclaveHostInterface = StreamEnclaveHostInterface(
-                enclaveSocket.getOutputStream(),
-                enclaveSocket.getInputStream(),
-                ENCLAVE_HOST_INTERFACE_THREADS)
-
-        val eThread = Thread { enclaveHostInterface.start() }.apply { start() }
-        val hThread = Thread { hostEnclaveInterface.start() }.apply { start() }
-
-        eThread.join()
-        hThread.join()
     }
 
     /** Configure the enclave call interface for basic calls with an arbitrary task */
