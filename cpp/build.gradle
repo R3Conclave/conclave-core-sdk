@@ -1,5 +1,11 @@
 apply plugin: "base"
 
+task cleaGeneratedFiles {
+    delete 'jvm-enclave-common/include/enclave_jni.h'
+}
+
+tasks['clean'].dependsOn(cleaGeneratedFiles)
+
 task generateHostJniHeaders(type: Copy) {
     dependsOn ":conclave-host:compileJava"
     def buildDir = project(":conclave-host").buildDir
@@ -111,7 +117,7 @@ for (cmakeBuildType in ["Debug", "Release"]) {
     }
 
     tasks.create(compileJvmEnclaveCommon, Exec) {
-        dependsOn(createCmakeBuild, compileJvmEdl)
+        dependsOn(createCmakeBuild, compileJvmEdl, generateEnclaveJniHeaders)
 
         workingDir(cmakeBuildDir)
 
