@@ -77,22 +77,26 @@ class SocketEnclaveHostInterface(
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
-            stateManager.checkStateIs<State.Ready> {
+            stateManager.transitionStateFrom<State.Ready>(to = State.Running) {
                 "Call interface may not be started multiple times."
             }
 
-            /** Connect the socket and instantiate data input/output streams. */
-            socket = Socket(host, port)
-            toHost = DataOutputStream(socket.getOutputStream())
-            fromHost = DataInputStream(socket.getInputStream())
+            try {
+                /** Connect the socket and instantiate data input/output streams. */
+                socket = Socket(host, port)
+                toHost = DataOutputStream(socket.getOutputStream())
+                fromHost = DataInputStream(socket.getInputStream())
 
-            /** Send the maximum number of concurrent calls to the host. */
-            toHost.writeInt(maximumConcurrentCalls)
-            toHost.flush()
+                /** Send the maximum number of concurrent calls to the host. */
+                toHost.writeInt(maximumConcurrentCalls)
+                toHost.flush()
 
-            /** Start the message receive thread. */
-            receiveLoopThread.start()
-            stateManager.transitionStateFrom<State.Ready>(to = State.Running)
+                /** Start the message receive thread. */
+                receiveLoopThread.start()
+            } catch (e: Exception) {
+                stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
+                throw e
+            }
         }
     }
 
@@ -103,11 +107,10 @@ class SocketEnclaveHostInterface(
     override fun close() {
         synchronized(stateManager) {
             if (stateManager.state == State.Stopped) return
-            stateManager.checkStateIs<State.Running> {
+            stateManager.transitionStateFrom<State.Running>(to = State.Stopped) {
                 "Call interface is not running."
             }
             receiveLoopThread.join()
-            stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
         }
     }
 

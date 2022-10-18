@@ -28,13 +28,13 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
     private lateinit var fromEnclave: DataInputStream
 
     /** Represents the lifecycle of the interface. */
-    private enum class State {
-        READY,
-        RUNNING,
-        STOPPED
+    sealed class State {
+        object Ready : State()
+        object Running : State()
+        object Stopped : State()
     }
 
-    private var state = State.READY
+    private val stateManager = StateManager<State>(State.Ready)
 
     private var maxConcurrentCalls = 0
     private val callGuardSemaphore = Semaphore(0)
@@ -71,24 +71,30 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
 
     /** Start the message receive loop thread and allow calls to begin. */
     fun start() {
-        synchronized(state) {
-            if (state == State.RUNNING) return
-            check(state == State.READY) { "Interface may not be started multiple times." }
-
-            /** Start the socket and instantiate the data input/output streams. */
-            ServerSocket(port).use {
-                socket = it.accept()
-                toEnclave = DataOutputStream(socket.getOutputStream())
-                fromEnclave = DataInputStream(socket.getInputStream())
+        synchronized(stateManager) {
+            if (stateManager.state == State.Running) return
+            stateManager.transitionStateFrom<State.Ready>(to = State.Running) {
+                "Interface may not be started multiple times."
             }
 
-            /** Read maximum number of concurrent calls from the enclave. */
-            maxConcurrentCalls = fromEnclave.readInt()
+            try {
+                /** Start the socket and instantiate the data input/output streams. */
+                ServerSocket(port).use {
+                    socket = it.accept()
+                    toEnclave = DataOutputStream(socket.getOutputStream())
+                    fromEnclave = DataInputStream(socket.getInputStream())
+                }
 
-            /** Start the message receive thread and allow calls to enter. */
-            receiveLoopThread.start()
-            callGuardSemaphore.release(maxConcurrentCalls)
-            state = State.RUNNING
+                /** Read maximum number of concurrent calls from the enclave. */
+                maxConcurrentCalls = fromEnclave.readInt()
+
+                /** Start the message receive thread and allow calls to enter. */
+                receiveLoopThread.start()
+                callGuardSemaphore.release(maxConcurrentCalls)
+            } catch (e: Exception) {
+                stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
+                throw e
+            }
         }
     }
 
@@ -98,9 +104,11 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
          * Prevent new calls from entering the interface. This has to be synchronized to avoid race condition between
          * the semaphore acquisition and the lockout check in [executeOutgoingCall].
          */
-        synchronized(state) {
-            if (state == State.STOPPED) return
-            check(state == State.RUNNING) { "Call interface is not running." }
+        synchronized(stateManager) {
+            if (stateManager.state == State.Stopped) return
+            stateManager.transitionStateFrom<State.Running>(to = State.Stopped) {
+                "Call interface is not running."
+            }
 
             /** Wait for any pending calls to finish, this is released when a call context is retired. */
             callGuardSemaphore.acquireUninterruptibly(maxConcurrentCalls)
@@ -108,8 +116,6 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             /** Stop enclave and host receive loops */
             sendMessageToEnclave(SocketCallInterfaceMessage.STOP_MESSAGE)
             receiveLoopThread.join()
-
-            state = State.STOPPED
         }
     }
 
@@ -234,8 +240,8 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
         val threadID = Thread.currentThread().id
 
         if (!enclaveCallContexts.containsKey(threadID)) {
-            synchronized(state) {
-                check(state == State.RUNNING) { "Call interface is not running." }
+            synchronized(stateManager) {
+                stateManager.checkStateIs<State.Running> { "Call interface is not running." }
                 callGuardSemaphore.acquireUninterruptibly()
             }
         }
