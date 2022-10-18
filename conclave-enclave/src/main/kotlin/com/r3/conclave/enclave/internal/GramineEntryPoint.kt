@@ -6,7 +6,7 @@ class GramineEntryPoint {
         @JvmStatic
         fun main(args: Array<String>) {
             println("Gramine java 'enclave' started.")
-            Thread.sleep(1000)
+            Thread.sleep(10000)
         }
     }
 }
