@@ -58,7 +58,7 @@ class SocketEnclaveHostInterface(
         private fun deliverMessageToCallContext(message: SocketCallInterfaceMessage) {
             val callContext = enclaveCallContexts.computeIfAbsent(message.hostThreadID) {
                 val newCallContext = EnclaveCallContext(message.hostThreadID)
-                callExecutor.execute(newCallContext)
+                callExecutor.execute(newCallContext::handleInitialCall)
                 newCallContext
             }
             callContext.enqueueMessage(message)
@@ -130,9 +130,7 @@ class SocketEnclaveHostInterface(
         return SocketCallInterfaceMessage.fromByteArray(fromHost.readIntLengthPrefixBytes())
     }
 
-    private inner class EnclaveCallContext(
-            private val hostThreadID: Long
-    ): Runnable {
+    private inner class EnclaveCallContext(private val hostThreadID: Long) {
         private val messageQueue = ArrayBlockingQueue<SocketCallInterfaceMessage>(4)
 
         fun enqueueMessage(message: SocketCallInterfaceMessage) = messageQueue.put(message)
@@ -201,7 +199,7 @@ class SocketEnclaveHostInterface(
         }
 
         /** Handle the initial call */
-        override fun run() {
+        fun handleInitialCall() {
             try {
                 threadLocalCallContext.set(this)
                 handleCallMessage(messageQueue.take())
