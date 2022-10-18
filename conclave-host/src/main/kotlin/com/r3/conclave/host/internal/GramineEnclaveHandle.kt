@@ -20,7 +20,6 @@ import kotlin.random.Random
 
 //  TODO: Refactor it to support multiple enclaves and without dummy attestation
 class GramineEnclaveHandle(
-
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
     private val manifestUrl: URL,
