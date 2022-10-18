@@ -40,8 +40,9 @@ class GramineEnclaveHandle(
 
     companion object {
         val gramineJar = this::class.java.getResource("/GramineJar.jar")
-        const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
-        const val GRAMINE_ENCLAVE_MANIFEST = "bash.manifest"
+        //const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
+        const val GRAMINE_ENCLAVE_JAR_NAME = "gramine.jar"
+        const val GRAMINE_ENCLAVE_MANIFEST = "java.manifest"
 
         fun getDummyAttestation(): EnclaveInstanceInfoImpl {
             val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
@@ -73,7 +74,7 @@ class GramineEnclaveHandle(
         processGramineDirect = ProcessBuilder()
             .inheritIO()
             .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "java", "-jar", "$gramineJar")
+            .command("gramine-direct", "java", "-jar", "$GRAMINE_ENCLAVE_JAR_NAME")
             .start()
     }
 
