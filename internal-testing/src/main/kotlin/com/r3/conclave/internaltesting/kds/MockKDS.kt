@@ -11,10 +11,10 @@ import com.r3.conclave.mail.Curve25519PrivateKey
 import com.r3.conclave.utilities.internal.writeData
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixString
 import com.r3.conclave.utilities.internal.writeShortLengthPrefixBytes
-import io.ktor.application.*
-import io.ktor.request.*
-import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.server.application.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.extension.AfterEachCallback
