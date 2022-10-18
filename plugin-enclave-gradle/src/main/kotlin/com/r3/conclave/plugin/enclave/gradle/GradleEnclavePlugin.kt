@@ -135,7 +135,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.buildDirectory.set(gramineBuildDir)
             task.archLibDirectory.set("/lib/x86_64-linux-gnu")
             // TODO: Once we have integrated Gramine properly, we should use the java executable path
-            task.entryPoint.set("/usr/bin/bash")
+            task.entryPoint.set("/usr/lib/jvm/java-17-openjdk-amd64/bin/java")
             task.outputManifest.set(
                 Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
             )
