@@ -13,13 +13,12 @@ object Gramine {
     private lateinit var processGramineDirect: Process
 
     fun start() {
-        val gramineJar = Paths.get(this::class.java.getResource("/GramineJar.jar").toURI())
+        val gramineJar = this::class.java.getResourceAsStream("/GramineJar.jar")
         val gramineWorkingDirPath = Files.createTempDirectory("conclave-gramine-runtime")
         gramineWorkingDirPath.toFile().deleteOnExit()
         generateManifestFile(gramineWorkingDirPath)
 
         Files.copy(gramineJar, gramineWorkingDirPath, StandardCopyOption.REPLACE_EXISTING)
-
         processGramineDirect = ProcessBuilder()
             .inheritIO()
             .directory(gramineWorkingDirPath.toFile())
