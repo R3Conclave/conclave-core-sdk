@@ -16,8 +16,8 @@ import kotlin.io.path.absolutePathString
 
 open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
-        const val MANIFEST_TEMPLATE = "bash.manifest.template"
-        const val MANIFEST_DIRECT = "bash.manifest"
+        const val MANIFEST_TEMPLATE = "java.manifest.template"
+        const val MANIFEST_DIRECT = "java.manifest"
         const val GRAMINE_MANIFEST_EXECUTABLE = "gramine-manifest"
     }
 

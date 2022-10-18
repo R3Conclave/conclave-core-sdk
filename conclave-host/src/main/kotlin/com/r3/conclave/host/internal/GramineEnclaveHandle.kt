@@ -20,6 +20,7 @@ import kotlin.random.Random
 
 //  TODO: Refactor it to support multiple enclaves and without dummy attestation
 class GramineEnclaveHandle(
+
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
     private val manifestUrl: URL,
@@ -38,6 +39,7 @@ class GramineEnclaveHandle(
     }
 
     companion object {
+        val gramineJar = this::class.java.getResource("/GramineJar.jar")
         const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
         const val GRAMINE_ENCLAVE_MANIFEST = "bash.manifest"
 
@@ -71,7 +73,7 @@ class GramineEnclaveHandle(
         processGramineDirect = ProcessBuilder()
             .inheritIO()
             .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "bash", "-c", """echo "Gramine bash 'enclave' started" && sleep 10000""")
+            .command("gramine-direct", "java", "-jar", "$gramineJar")
             .start()
     }
 
@@ -98,7 +100,12 @@ class GramineEnclaveHandle(
             Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_MANIFEST, REPLACE_EXISTING)
         }
 
-        jarUrl.openStream().use {
+//        jarUrl.openStream().use {
+//            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
+//        }
+
+        //val gramineJar = this::class.java.getResource("/GramineJar.jar")
+        gramineJar.openStream().use {
             Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
         }
     }

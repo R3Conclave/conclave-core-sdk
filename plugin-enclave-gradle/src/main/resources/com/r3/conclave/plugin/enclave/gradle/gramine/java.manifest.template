@@ -1,0 +1,46 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+# TODO: Set this to "error" once Gramine has been integrated properly.
+loader.log_level = "all"
+
+# TODO: remove this when in production
+loader.insecure__use_cmdline_argv = true
+
+# This is needed to avoid an IOException triggered by Spring Boot.
+# Warning: check the implications of this flag, your software might be insecure
+sys.insecure__allow_eventfd = true
+
+sgx.remote_attestation = false
+#sgx.ra_client_spid = ""
+
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/lib:/usr/{{ arch_libdir }}"
+
+fs.mounts = [
+  { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
+  { uri = "file:{{ arch_libdir }}", path = "{{ arch_libdir }}" },
+  { uri = "file:/usr", path = "/usr" },
+  { uri = "file:/tmp", path = "/tmp" },
+  # This is to get access to Spring Boot generated jar file
+  { uri = "file:build/libs", path = "/spring-boot/build/libs" },
+]
+
+# If using 64G or greater enclave sizes, the JVM flag `-Xmx8G` can be omitted in gramine-sgx.
+sgx.enclave_size = "4G"
+
+# SGX needs minimum 64 threads for loading OpenJDK runtime.
+sgx.thread_num = 64
+
+sgx.trusted_files = [
+#  "file:{{ gramine.libos }}",
+  "file:{{ entrypoint }}",
+  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+  "file:/usr/lib/jvm/java-17-openjdk-amd64/lib/",
+  "file:/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+  "file:/usr/share/java/",
+# This is to mark the Spring Boot jar file as a trusted file
+  "file:build/libs/spring-boot-0.0.1-SNAPSHOT.jar",
+  "file:/usr/lib/jvm/java-17-openjdk-amd64/conf/security/java.security",
+]
