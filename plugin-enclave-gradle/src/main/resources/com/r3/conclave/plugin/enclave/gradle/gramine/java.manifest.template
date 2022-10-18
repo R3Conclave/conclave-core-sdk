@@ -21,8 +21,6 @@ fs.mounts = [
   { uri = "file:{{ arch_libdir }}", path = "{{ arch_libdir }}" },
   { uri = "file:/usr", path = "/usr" },
   { uri = "file:/tmp", path = "/tmp" },
-  # This is to get access to Spring Boot generated jar file
-  { uri = "file:build/libs", path = "/host/build/libs" },
 ]
 
 # If using 64G or greater enclave sizes, the JVM flag `-Xmx8G` can be omitted in gramine-sgx.
@@ -41,6 +39,5 @@ sgx.trusted_files = [
   "file:/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
   "file:/usr/share/java/",
 # This is to mark the Spring Boot jar file as a trusted file
-  "file:host/build/libs/host-simulation.jar",
   "file:/usr/lib/jvm/java-17-openjdk-amd64/conf/security/java.security",
 ]

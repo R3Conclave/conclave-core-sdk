@@ -40,7 +40,6 @@ class GramineEnclaveHandle(
 
     companion object {
         const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
-        //const val GRAMINE_ENCLAVE_JAR_NAME = "gramine.jar"
         const val GRAMINE_ENCLAVE_MANIFEST = "java.manifest"
 
         fun getDummyAttestation(): EnclaveInstanceInfoImpl {
@@ -73,7 +72,7 @@ class GramineEnclaveHandle(
         processGramineDirect = ProcessBuilder()
             .inheritIO()
             .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "java", "-jar", GRAMINE_ENCLAVE_JAR_NAME)
+            .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint")
             .start()
     }
 
@@ -86,11 +85,11 @@ class GramineEnclaveHandle(
             processGramineDirect.destroyForcibly()
         }
 
-//        try {
-//            enclaveDirectory.toFile().deleteRecursively()
-//        } catch (e: IOException) {
-//            logger.debug("Unable to delete temp directory $enclaveDirectory", e)
-//        }
+        try {
+            enclaveDirectory.toFile().deleteRecursively()
+        } catch (e: IOException) {
+            logger.debug("Unable to delete temp directory $enclaveDirectory", e)
+        }
     }
 
     private fun copyGramineFilesToWorkingDirectory() {
@@ -103,10 +102,6 @@ class GramineEnclaveHandle(
         jarUrl.openStream().use {
             Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
         }
-
-//        this::class.java.getResourceAsStream("/GramineJar.jar").use {
-//            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
-//        }
     }
 
     override val mockEnclave: Any get() {
