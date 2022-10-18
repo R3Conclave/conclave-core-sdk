@@ -86,11 +86,11 @@ class GramineEnclaveHandle(
             processGramineDirect.destroyForcibly()
         }
 
-        try {
-            enclaveDirectory.toFile().deleteRecursively()
-        } catch (e: IOException) {
-            logger.debug("Unable to delete temp directory $enclaveDirectory", e)
-        }
+//        try {
+//            enclaveDirectory.toFile().deleteRecursively()
+//        } catch (e: IOException) {
+//            logger.debug("Unable to delete temp directory $enclaveDirectory", e)
+//        }
     }
 
     private fun copyGramineFilesToWorkingDirectory() {
@@ -100,13 +100,13 @@ class GramineEnclaveHandle(
             Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_MANIFEST, REPLACE_EXISTING)
         }
 
-//        jarUrl.openStream().use {
-//            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
-//        }
-
-        this::class.java.getResourceAsStream("/GramineJar.jar").use {
+        jarUrl.openStream().use {
             Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
         }
+
+//        this::class.java.getResourceAsStream("/GramineJar.jar").use {
+//            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
+//        }
     }
 
     override val mockEnclave: Any get() {
