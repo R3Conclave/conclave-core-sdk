@@ -1,395 +1,243 @@
 [
-{
-  "name":"com.fasterxml.jackson.databind.deser.Deserializers[]"
-},
-{
-  "name":"com.fasterxml.jackson.databind.ext.Java7SupportImpl",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"com.fasterxml.jackson.databind.ser.Serializers[]"
-},
-{
-  "name":"com.oracle.labs.mlrg.olcut.config.Configurable",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"com.oracle.labs.mlrg.olcut.config.ConfigurationManager$6",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"com.oracle.labs.mlrg.olcut.config.Options",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"com.oracle.labs.mlrg.olcut.provenance.Provenancable",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"com.r3.conclave.enclave.Enclave",
-  "methods":[{"name":"initialise","parameterTypes":["com.r3.conclave.enclave.internal.EnclaveEnvironment"] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.utilities.internal.EnclaveContext$Companion",
-  "fields":[{"name":"instance"}]
-},
-{
-  "name":"com.sun.crypto.provider.AESCipher$General",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"com.sun.crypto.provider.SunJCE",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"com.sun.xml.internal.stream.XMLOutputFactoryImpl",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"java.io.Serializable",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"java.lang.Iterable",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"java.lang.Object",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"java.nio.Buffer",
-  "fields":[{"name":"address", "allowUnsafeAccess":true}]
-},
-{
-  "name":"java.security.MessageDigestSpi"
-},
-{
-  "name":"net.i2p.crypto.eddsa.KeyFactory",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.ConfigurableDataSource",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.DataSource",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.OutputFactory",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.SparseTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.Trainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.WeightedExamples",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.anomaly.libsvm.LibSVMAnomalyTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.anomaly.libsvm.SVMAnomalyType",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.classification.LabelFactory",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.classification.dtree.CARTClassificationTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.classification.dtree.impurity.GiniIndex",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.classification.dtree.impurity.LabelImpurity",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.classification.sgd.LabelObjective",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.classification.sgd.linear.LinearSGDTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.classification.sgd.linear.LogisticRegressionTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.classification.sgd.objectives.LogMulticlass",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.clustering.kmeans.KMeansTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.common.libsvm.LibSVMTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.common.libsvm.SVMType",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.common.tree.AbstractCARTTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.common.tree.DecisionTreeTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.datasource.IDXDataSource",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.math.StochasticGradientOptimiser",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.math.optimisers.AdaGrad",
-  "allDeclaredFields":true,
-  "allPublicFields":true,
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"org.tribuo.math.optimisers.LinearDecaySGD",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.math.optimisers.SGD",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.regression.rtree.CARTRegressionTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.regression.rtree.impurity.MeanSquaredError",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.regression.rtree.impurity.RegressorImpurity",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.regression.sgd.RegressionObjective",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.regression.sgd.linear.LinearSGDTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.regression.sgd.objectives.SquaredLoss",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.transform.TransformTrainer",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"org.tribuo.transform.TransformationMap",
-  "allDeclaredFields":true,
-  "allPublicFields":true
-},
-{
-  "name":"sun.misc.Unsafe",
-  "allDeclaredFields":true,
-  "methods":[
-    {"name":"arrayBaseOffset","parameterTypes":["java.lang.Class"] }, 
-    {"name":"arrayIndexScale","parameterTypes":["java.lang.Class"] }, 
-    {"name":"copyMemory","parameterTypes":["long","long","long"] }, 
-    {"name":"copyMemory","parameterTypes":["java.lang.Object","long","java.lang.Object","long","long"] }, 
-    {"name":"getBoolean","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"getByte","parameterTypes":["long"] }, 
-    {"name":"getByte","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"getDouble","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"getFloat","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"getInt","parameterTypes":["long"] }, 
-    {"name":"getInt","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"getLong","parameterTypes":["long"] }, 
-    {"name":"getLong","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"getObject","parameterTypes":["java.lang.Object","long"] }, 
-    {"name":"objectFieldOffset","parameterTypes":["java.lang.reflect.Field"] }, 
-    {"name":"putBoolean","parameterTypes":["java.lang.Object","long","boolean"] }, 
-    {"name":"putByte","parameterTypes":["long","byte"] }, 
-    {"name":"putByte","parameterTypes":["java.lang.Object","long","byte"] }, 
-    {"name":"putDouble","parameterTypes":["java.lang.Object","long","double"] }, 
-    {"name":"putFloat","parameterTypes":["java.lang.Object","long","float"] }, 
-    {"name":"putInt","parameterTypes":["long","int"] }, 
-    {"name":"putInt","parameterTypes":["java.lang.Object","long","int"] }, 
-    {"name":"putLong","parameterTypes":["long","long"] }, 
-    {"name":"putLong","parameterTypes":["java.lang.Object","long","long"] }, 
-    {"name":"putObject","parameterTypes":["java.lang.Object","long","java.lang.Object"] }
-  ]
-},
-{
-  "name":"sun.security.ec.SunEC",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.NativePRNG",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.SHA",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.SHA2$SHA256",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.SHA5$SHA512",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.Sun",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.rsa.SunRsaSign",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.ConfusionMatrixResponse",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.ConfusionMatrixResponse$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.DataStatsResponse",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.DataStatsResponse$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.EvaluationResponse",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.EvaluationResponse$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.ModelWrapper",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.ModelWrapper$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.ClusteringEvaluationResponse",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.ClusteringEvaluationResponse$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.CentroidsResponse",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.CentroidsResponse$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.RegressionEvaluationResponse",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.RegressionEvaluationResponse$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.AnomalyEvaluationResult",
-  "fields":[{"name":"Companion"}]
-},
-{
-  "name":"com.r3.conclave.integrationtests.tribuo.common.AnomalyEvaluationResult$Companion",
-  "methods":[{"name":"serializer","parameterTypes":[] }]
-},
-{
-  "name":"double[][]"
-},
-{
-  "name":"int",
-  "allDeclaredFields":true,
-  "allDeclaredClasses":true
-},
-{
-  "name":"java.lang.String",
-  "allDeclaredFields":true,
-  "allDeclaredClasses":true
-}
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.ConfusionMatrixResponse",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.ConfusionMatrixResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.DataStatsResponse",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.DataStatsResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.EvaluationResponse",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.EvaluationResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.ModelWrapper",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.ModelWrapper$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.ClusteringEvaluationResponse",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.ClusteringEvaluationResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.CentroidsResponse",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.CentroidsResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.RegressionEvaluationResponse",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.RegressionEvaluationResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.AnomalyEvaluationResult",
+    "fields":[{"name":"Companion"}]
+  },
+  {
+    "name":"com.r3.conclave.integrationtests.tribuo.common.AnomalyEvaluationResult$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.ConfigurableDataSource",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.DataSource",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.OutputFactory",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.SparseTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.Trainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.WeightedExamples",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.anomaly.libsvm.LibSVMAnomalyTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.anomaly.libsvm.SVMAnomalyType",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.classification.LabelFactory",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.classification.dtree.CARTClassificationTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.classification.dtree.impurity.GiniIndex",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.classification.dtree.impurity.LabelImpurity",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.classification.sgd.LabelObjective",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.classification.sgd.linear.LinearSGDTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.classification.sgd.linear.LogisticRegressionTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.classification.sgd.objectives.LogMulticlass",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.clustering.kmeans.KMeansTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.common.libsvm.LibSVMTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.common.libsvm.SVMType",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.common.tree.AbstractCARTTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.common.tree.DecisionTreeTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.datasource.IDXDataSource",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.math.StochasticGradientOptimiser",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.math.optimisers.AdaGrad",
+    "allDeclaredFields":true,
+    "allPublicFields":true,
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "name":"org.tribuo.math.optimisers.LinearDecaySGD",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.math.optimisers.SGD",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.regression.rtree.CARTRegressionTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.regression.rtree.impurity.MeanSquaredError",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.regression.rtree.impurity.RegressorImpurity",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.regression.sgd.RegressionObjective",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.regression.sgd.linear.LinearSGDTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.regression.sgd.objectives.SquaredLoss",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.transform.TransformTrainer",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  },
+  {
+    "name":"org.tribuo.transform.TransformationMap",
+    "allDeclaredFields":true,
+    "allPublicFields":true
+  }
 ]

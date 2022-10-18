@@ -12,6 +12,8 @@ import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
+import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_JAR_NAME
+import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_MANIFEST
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
@@ -229,6 +231,20 @@ class EnclaveHost private constructor(
             return EnclaveHost(enclaveHandle)
         }
 
+        // The internal modifier prevents this from appearing in the API docs, however because we shade Kotlin it will
+        // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
+        @JvmSynthetic
+        @JvmStatic
+        internal fun internalCreateGramine(
+            enclaveMode: EnclaveMode,
+            enclaveClassName: String,
+            manifest: URL,
+            jar: URL
+        ): EnclaveHost {
+            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
+            return EnclaveHost(enclaveHandle)
+        }
+
         private fun createEnclaveHost(result: EnclaveScanner.ScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
             try {
                 return when (result) {
@@ -237,7 +253,11 @@ class EnclaveHost private constructor(
                         val enclaveClass = Class.forName(result.enclaveClassName)
                         internalCreateMock(enclaveClass, mockConfiguration)
                     }
-                    is EnclaveScanner.ScanResult.Native -> {
+                    is EnclaveScanner.ScanResult.Gramine -> {
+                        checkPlatformEnclaveSupport(result.enclaveMode)
+                        internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
+                    }
+                    is EnclaveScanner.ScanResult.GraalVM -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
                     }
@@ -406,15 +426,6 @@ class EnclaveHost private constructor(
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
-        // For now, there is no enclave for Gramine instead the mock enclave is initialised.
-        // This is OK because no VM is started in Mock mode and this will allow us to integrate Gramine with Conclave
-        // iteratively without causing issues to the normal operation of Conclave.
-        // Start Gramine only if the environment variable is set
-        if (Gramine.isGramineEnabled()) {
-            check(enclaveHandle is MockEnclaveHandle) { "Gramine cannot be started in non-mock modes" }
-            Gramine.start()
-        }
-
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
         quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
@@ -466,7 +477,8 @@ class EnclaveHost private constructor(
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
-        return if (enclaveMode != EnclaveMode.MOCK) {
+        // TODO: Improve the enclaveHandle !is GramineEnclaveHandle condition
+        return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineEnclaveHandle) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
@@ -526,8 +538,13 @@ class EnclaveHost private constructor(
      */
     @Synchronized
     fun updateAttestation() {
-        val attestation = getAttestation()
-        updateEnclaveInstanceInfo(attestation)
+        if (enclaveHandle is GramineEnclaveHandle) {
+            // TODO: Remove this branch condition and integrate Gramine attestation properly
+            _enclaveInstanceInfo = GramineEnclaveHandle.getDummyAttestation()
+        } else {
+            val attestation = getAttestation()
+            updateEnclaveInstanceInfo(attestation)
+        }
     }
 
     private fun getAttestation(): Attestation {
@@ -705,9 +722,6 @@ class EnclaveHost private constructor(
 
     @Synchronized
     override fun close() {
-        if (Gramine.isGramineEnabled()) {
-            Gramine.stop()
-        }
         // Closing an unstarted or already closed EnclaveHost is allowed, because this makes it easier to use
         // Java try-with-resources and makes finally blocks more forgiving, e.g.
         //
@@ -1017,7 +1031,8 @@ class EnclaveHost private constructor(
         fun findEnclave(): ScanResult {
             val classGraph = ClassGraph()
             val results = ArrayList<ScanResult>()
-            findNativeEnclaves(classGraph, results)
+            findGraamVmEnclaves(classGraph, results)
+            findGramineEnclaves(classGraph, results)
             findMockEnclaves(classGraph, results)
             return getSingleResult(results, null)
         }
@@ -1039,15 +1054,33 @@ class EnclaveHost private constructor(
          */
         fun findEnclave(enclaveClassName: String): ScanResult {
             val results = ArrayList<ScanResult>()
-            EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
             findMockEnclave(enclaveClassName)?.let { results += it }
+            EnclaveMode.values()
+                .forEach {
+                    findGramineEnclave(enclaveClassName, it)?.let { result -> results += result }
+                    findGraalVmEnclave(enclaveClassName, it)?.let { result -> results += result }
+                }
             return getSingleResult(results, enclaveClassName)
         }
 
-        private fun findNativeEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Native? {
+        private fun findGraalVmEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.GraalVM? {
             val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
             val url = EnclaveHost::class.java.getResource(resourceName)
-            return url?.let { ScanResult.Native(enclaveClassName, enclaveMode, url) }
+            return url?.let { ScanResult.GraalVM(enclaveClassName, enclaveMode, url) }
+        }
+
+        private fun findGramineEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Gramine? {
+            //  As an example, if enclaveClassName is "com.r3.MyEnclave" and enclaveMode is "simulation",
+            //    we expect to find the manifest and the jar file under the directory "/com/r3/MyEnclave-simulation"
+            val filesLocation = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}"
+            val manifestUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_MANIFEST}")
+            val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_JAR_NAME}")
+
+            return if (manifestUrl == null || jarUrl == null) {
+                null
+            } else {
+                ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
+            }
         }
 
         private fun findMockEnclave(enclaveClassName: String): ScanResult.Mock? {
@@ -1062,7 +1095,7 @@ class EnclaveHost private constructor(
         /**
          * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
          */
-        private fun findNativeEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+        private fun findGraamVmEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
 
             classGraph.scan().use {
@@ -1071,7 +1104,7 @@ class EnclaveHost private constructor(
                     if (pathMatcher.matches()) {
                         val enclaveClassName = pathMatcher.group(1).replace('/', '.')
                         val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        results += ScanResult.Native(enclaveClassName, enclaveMode, resource.url)
+                        results += ScanResult.GraalVM(enclaveClassName, enclaveMode, resource.url)
                     }
                 }
             }
@@ -1086,6 +1119,32 @@ class EnclaveHost private constructor(
                 for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
                     if (!classInfo.isAbstract) {
                         results += ScanResult.Mock(classInfo.name)
+                    }
+                }
+            }
+        }
+
+        /**
+         * Performs a search for Gramine enclave files using ClassGraph. The search is performed by looking for 
+         * the manifest file and assuming that the other required files are also present there.
+         */
+        private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+            //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
+            //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
+            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
+
+            classGraph.scan().use {
+                for (resource in it.allResources) {
+                    val pathMatcher = manifestSearchPattern.matcher(resource.url.path)
+
+                    if (pathMatcher.matches()) {
+                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
+                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
+                        val fileName = pathMatcher.group(3)
+                        //  Here we assume that all the Gramine required files are at the same level of the manifest file
+                        val manifestDirectory = resource.path.removeSuffix("/$fileName")
+                        val shadowJarResource = EnclaveHost::class.java.getResource("/$manifestDirectory/$GRAMINE_ENCLAVE_JAR_NAME")
+                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!)
                     }
                 }
             }
@@ -1114,7 +1173,7 @@ class EnclaveHost private constructor(
                 override fun toString(): String = "mock $enclaveClassName"
             }
 
-            class Native(
+            class GraalVM(
                 val enclaveClassName: String,
                 val enclaveMode: EnclaveMode,
                 val soFileUrl: URL
@@ -1122,7 +1181,19 @@ class EnclaveHost private constructor(
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
                 }
-                override fun toString(): String = "${enclaveMode.name.lowercase()} $enclaveClassName"
+                override fun toString(): String = "graalvm ${enclaveMode.name.lowercase()} $enclaveClassName"
+            }
+
+            class Gramine(
+                val enclaveClassName: String,
+                val enclaveMode: EnclaveMode,
+                val manifest: URL,
+                val jar: URL,
+            ) : ScanResult() {
+                init {
+                    require(enclaveMode != EnclaveMode.MOCK)
+                }
+                override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
         }
     }

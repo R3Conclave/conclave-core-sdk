@@ -25,6 +25,10 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
+    val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.GraalVM)
+    val graalvm = RuntimeType.GraalVM
+    val gramine = RuntimeType.Gramine
+
     val kds: KDSExtension = objects.newInstance(KDSExtension::class.java)
 
     fun release(action: Action<EnclaveExtension>) {
