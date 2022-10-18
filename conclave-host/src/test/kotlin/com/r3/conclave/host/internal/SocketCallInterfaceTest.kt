@@ -32,12 +32,12 @@ class SocketCallInterfaceTest {
     @BeforeEach
     fun startInterfaces() {
         val eFuture = FutureTask {
-            val eInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS)
+            var eInterface: SocketEnclaveHostInterface
             var retries = 0
             while (true) {
                 try {
                     retries++
-                    eInterface.start()
+                    eInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS).apply { start() }
                     break
                 } catch (e: ConnectException) {
                     if (retries > 10) throw e

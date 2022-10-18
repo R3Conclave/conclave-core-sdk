@@ -73,25 +73,28 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
-            stateManager.checkStateIs<State.Ready> {
+            stateManager.transitionStateFrom<State.Ready>(to = State.Running) {
                 "Interface may not be started multiple times."
             }
 
-            /** Start the socket and instantiate the data input/output streams. */
-            ServerSocket(port).use {
-                socket = it.accept()
-                toEnclave = DataOutputStream(socket.getOutputStream())
-                fromEnclave = DataInputStream(socket.getInputStream())
+            try {
+                /** Start the socket and instantiate the data input/output streams. */
+                ServerSocket(port).use {
+                    socket = it.accept()
+                    toEnclave = DataOutputStream(socket.getOutputStream())
+                    fromEnclave = DataInputStream(socket.getInputStream())
+                }
+
+                /** Read maximum number of concurrent calls from the enclave. */
+                maxConcurrentCalls = fromEnclave.readInt()
+
+                /** Start the message receive thread and allow calls to enter. */
+                receiveLoopThread.start()
+                callGuardSemaphore.release(maxConcurrentCalls)
+            } catch (e: Exception) {
+                stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
+                throw e
             }
-
-            /** Read maximum number of concurrent calls from the enclave. */
-            maxConcurrentCalls = fromEnclave.readInt()
-
-            /** Start the message receive thread and allow calls to enter. */
-            receiveLoopThread.start()
-            callGuardSemaphore.release(maxConcurrentCalls)
-
-            stateManager.transitionStateFrom<State.Ready>(to = State.Running)
         }
     }
 
@@ -103,7 +106,7 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
          */
         synchronized(stateManager) {
             if (stateManager.state == State.Stopped) return
-            stateManager.checkStateIs<State.Running> {
+            stateManager.transitionStateFrom<State.Running>(to = State.Stopped) {
                 "Call interface is not running."
             }
 
@@ -113,8 +116,6 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             /** Stop enclave and host receive loops */
             sendMessageToEnclave(SocketCallInterfaceMessage.STOP_MESSAGE)
             receiveLoopThread.join()
-
-            stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
         }
     }
 
