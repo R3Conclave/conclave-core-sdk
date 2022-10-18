@@ -22,7 +22,7 @@ fs.mounts = [
   { uri = "file:/usr", path = "/usr" },
   { uri = "file:/tmp", path = "/tmp" },
   # This is to get access to Spring Boot generated jar file
-  { uri = "file:host/build/libs", path = "/host/build/libs" },
+  { uri = "file:build/libs", path = "/host/build/libs" },
 ]
 
 # If using 64G or greater enclave sizes, the JVM flag `-Xmx8G` can be omitted in gramine-sgx.
