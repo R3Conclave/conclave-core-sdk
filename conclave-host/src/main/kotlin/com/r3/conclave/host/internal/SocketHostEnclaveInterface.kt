@@ -152,8 +152,7 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             sendMessageToEnclave(outgoingMessage)
         }
 
-        fun sendCallMessage(callType: EnclaveCallType, parameterBuffer: ByteBuffer?) {
-            requireNotNull(parameterBuffer)
+        fun sendCallMessage(callType: EnclaveCallType, parameterBuffer: ByteBuffer) {
             sendMessage(SocketCallInterfaceMessageType.CALL, callType.toByte(), parameterBuffer)
         }
 
@@ -161,8 +160,7 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             sendMessage(SocketCallInterfaceMessageType.RETURN, callType.toByte(), returnBytes)
         }
 
-        fun sendExceptionMessage(callType: HostCallType, exceptionBuffer: ByteBuffer?) {
-            requireNotNull(exceptionBuffer)
+        fun sendExceptionMessage(callType: HostCallType, exceptionBuffer: ByteBuffer) {
             sendMessage(SocketCallInterfaceMessageType.EXCEPTION, callType.toByte(), exceptionBuffer)
         }
 

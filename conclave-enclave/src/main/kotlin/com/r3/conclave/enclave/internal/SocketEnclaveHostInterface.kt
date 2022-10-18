@@ -144,8 +144,7 @@ class SocketEnclaveHostInterface(
             sendMessageToHost(outgoingMessage)
         }
 
-        fun sendCallMessage(callType: HostCallType, parameterBuffer: ByteBuffer?) {
-            requireNotNull(parameterBuffer)
+        fun sendCallMessage(callType: HostCallType, parameterBuffer: ByteBuffer) {
             sendMessage(SocketCallInterfaceMessageType.CALL, callType.toByte(), parameterBuffer)
         }
 
@@ -153,8 +152,7 @@ class SocketEnclaveHostInterface(
             sendMessage(SocketCallInterfaceMessageType.RETURN, callType.toByte(), returnBytes)
         }
 
-        fun sendExceptionMessage(callType: EnclaveCallType, exceptionBuffer: ByteBuffer?) {
-            requireNotNull(exceptionBuffer)
+        fun sendExceptionMessage(callType: EnclaveCallType, exceptionBuffer: ByteBuffer) {
             sendMessage(SocketCallInterfaceMessageType.EXCEPTION, callType.toByte(), exceptionBuffer)
         }
 
