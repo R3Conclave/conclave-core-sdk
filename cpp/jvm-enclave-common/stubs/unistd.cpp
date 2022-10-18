@@ -16,11 +16,21 @@ STUB(pathconf);
 STUB(readlink);
 STUB(_exit);
 STUB(lchown);
-STUB(symlink);
 STUB(__xmknod);
-STUB(link);
 
 extern "C" {
+
+    // The enclave filesystem does not support symbolic links
+    int symlink(const char *path1, const char *path2) {
+        errno = EPERM;
+        return -1;
+    }
+
+    // The enclave filesystem does not support hard links
+    int link(const char *path1, const char *path2) {
+        errno = EPERM;
+        return -1;
+    }
 
     // These two symbols are defined as parameters to the linker when running native-image.
     // __ImageBase is a symbol that is at the address at the base of the image. __HeapSize is
