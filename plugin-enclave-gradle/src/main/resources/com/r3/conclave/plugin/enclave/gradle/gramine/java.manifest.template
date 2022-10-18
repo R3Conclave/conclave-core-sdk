@@ -1,7 +1,7 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 # TODO: Set this to "error" once Gramine has been integrated properly.
-loader.log_level = "all"
+loader.log_level = "error"
 
 # TODO: remove this when in production
 loader.insecure__use_cmdline_argv = true

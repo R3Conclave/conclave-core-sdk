@@ -1131,7 +1131,7 @@ class EnclaveHost private constructor(
         private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
             //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
-            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(bash\.manifest)$""")
+            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(java\.manifest)$""")
 
             classGraph.scan().use {
                 for (resource in it.allResources) {

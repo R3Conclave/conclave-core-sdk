@@ -39,7 +39,7 @@ class GramineEnclaveHandle(
 
     companion object {
         const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
-        const val GRAMINE_ENCLAVE_MANIFEST = "bash.manifest"
+        const val GRAMINE_ENCLAVE_MANIFEST = "java.manifest"
 
         fun getDummyAttestation(): EnclaveInstanceInfoImpl {
             val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
@@ -71,7 +71,7 @@ class GramineEnclaveHandle(
         processGramineDirect = ProcessBuilder()
             .inheritIO()
             .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "bash", "-c", """echo "Gramine bash 'enclave' started" && sleep 10000""")
+            .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint")
             .start()
     }
 
