@@ -29,3 +29,4 @@ sgx.trusted_files = [
   "file:{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/"
 ]
+
