@@ -21,8 +21,11 @@ import java.util.concurrent.Semaphore
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
-class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface(), Closeable {
+class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closeable {
+    private val serverSocket = ServerSocket(port)
     private lateinit var socket: Socket
+
+    val port get() = serverSocket.localPort
 
     private lateinit var toEnclave: DataOutputStream
     private lateinit var fromEnclave: DataInputStream
@@ -78,8 +81,11 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             }
 
             try {
-                /** Start the socket and instantiate the data input/output streams. */
-                ServerSocket(port).use {
+                /**
+                 * Wait for a connection from the enclave and instantiate the data input/output streams.
+                 * Close the server socket afterwards.
+                 */
+                serverSocket.use {
                     socket = it.accept()
                     toEnclave = DataOutputStream(socket.getOutputStream())
                     fromEnclave = DataInputStream(socket.getInputStream())
