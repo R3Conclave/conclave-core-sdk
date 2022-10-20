@@ -26,6 +26,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
     private lateinit var socket: Socket
 
     val port get() = serverSocket.localPort
+    val isRunning get() = (stateManager.state == State.Running)
 
     private lateinit var toEnclave: DataOutputStream
     private lateinit var fromEnclave: DataInputStream

@@ -72,34 +72,40 @@ class GramineEnclaveHandle(
         val interfaceStartTask = FutureTask { enclaveInterface.start() }
         val interfaceStartThread = Thread(interfaceStartTask).apply { start() }
 
-        /** Start the enclave process. */
-        processGramineDirect = ProcessBuilder()
-            .inheritIO()
-            .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", enclaveInterface.port.toString())
-            .start()
+        try {
+            /** Start the enclave process. */
+            processGramineDirect = ProcessBuilder()
+                .inheritIO()
+                .directory(enclaveDirectory.toFile())
+                .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", enclaveInterface.port.toString())
+                .start()
 
-        /** Wait for the local call interface start process to complete. */
-        interfaceStartThread.join()     // wait for start process to finish
-        interfaceStartTask.get()        // throw if start failed
+            /** Wait for the local call interface start process to complete. */
+            interfaceStartThread.join()     // wait for start process to finish
+            interfaceStartTask.get()        // throw if start failed
 
-        /** Send command to process to initialise the enclave. */
-        enclaveInterface.initializeEnclave(enclaveClassName)
+            /** Send command to process to initialise the enclave. */
+            enclaveInterface.initializeEnclave(enclaveClassName)
+        } catch (t: Throwable) {
+            this.destroy()
+            throw t
+        }
     }
 
     override fun destroy() {
-        if (!::processGramineDirect.isInitialized) return
 
-        /** Send stop command to enclave and close the call interface. */
-        //enclaveInterface.stopEnclave()    // TODO: No handler!
-        enclaveInterface.close()            // Should block until the 10-second wait in the enclave expires
+        /** Send stop command to enclave and close the call interface if it's running. */
+        if (enclaveInterface.isRunning) {
+            //enclaveInterface.stopEnclave()    // TODO: No handler!
+            enclaveInterface.close()            // Should block until the wait in the enclave expires
+        }
 
-        /** Wait for the gramine process to terminate. */
-        processGramineDirect.destroy()
-        processGramineDirect.waitFor(10L, TimeUnit.SECONDS)
-
-        if (processGramineDirect.isAlive) {
-            processGramineDirect.destroyForcibly()
+        /** Wait for the gramine process to terminate if it's running. If it doesn't, destroy it forcibly. */
+        if (::processGramineDirect.isInitialized) {
+            processGramineDirect.waitFor(10L, TimeUnit.SECONDS)
+            if (processGramineDirect.isAlive) {
+                processGramineDirect.destroyForcibly()
+            }
         }
 
         try {

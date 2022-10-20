@@ -41,16 +41,14 @@ class GramineEntryPoint {
             /** Register the enclave initialisation call handler. */
             hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
                 override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                    println("Cannot initialise enclave '${parameterBuffer.getRemainingString()}', operation not implemented!")
-                    throw Exception("Not yet implemented!")
+                    throw Exception("Cannot initialise enclave '${parameterBuffer.getRemainingString()}', operation not implemented!")
                 }
             })
 
-            /** TODO: Actual enclave stuff. */
-            Thread.sleep(10000)
-
-            /** Wait for the interface to terminate. */
-            hostInterface.close()
+            hostInterface.use {
+                /** TODO: Actual enclave stuff. */
+                Thread.sleep(10000)
+            }
         }
     }
 }
