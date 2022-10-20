@@ -25,9 +25,10 @@ class SocketEnclaveHostInterface(
         private val port: Int,
         private val maximumConcurrentCalls: Int
 ) : EnclaveHostInterface(), Closeable {
-    private lateinit var socket: Socket
-
+    private lateinit var toHostSocket: Socket
     private lateinit var toHost: DataOutputStream
+
+    private lateinit var fromHostSocket: Socket
     private lateinit var fromHost: DataInputStream
 
     /** Represents the lifecycle of the interface. */
@@ -82,11 +83,12 @@ class SocketEnclaveHostInterface(
             }
 
             try {
-                /** Connect the socket and instantiate data input/output streams. */
-                socket = Socket(host, port)
-                socket.tcpNoDelay = true
-                toHost = DataOutputStream(socket.getOutputStream())
-                fromHost = DataInputStream(socket.getInputStream())
+                /** Connect sockets and instantiate data input/output streams. */
+                fromHostSocket = Socket(host, port).apply { tcpNoDelay = true }
+                toHostSocket = Socket(host, port).apply { tcpNoDelay = true }
+
+                toHost = DataOutputStream(toHostSocket.getOutputStream())
+                fromHost = DataInputStream(fromHostSocket.getInputStream())
 
                 /** Send the maximum number of concurrent calls to the host. */
                 toHost.writeInt(maximumConcurrentCalls)
@@ -112,6 +114,8 @@ class SocketEnclaveHostInterface(
                 "Call interface is not running."
             }
             receiveLoopThread.join()
+            toHostSocket.close()
+            fromHostSocket.close()
         }
     }
 

@@ -23,12 +23,13 @@ import java.util.concurrent.Semaphore
  */
 class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closeable {
     private val serverSocket = ServerSocket(port)
-    private lateinit var socket: Socket
 
     val port get() = serverSocket.localPort
-    val isRunning get() = (stateManager.state == State.Running)
 
+    private lateinit var toEnclaveSocket: Socket
     private lateinit var toEnclave: DataOutputStream
+
+    private lateinit var fromEnclaveSocket: Socket
     private lateinit var fromEnclave: DataInputStream
 
     /** Represents the lifecycle of the interface. */
@@ -39,6 +40,8 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
     }
 
     private val stateManager = StateManager<State>(State.Ready)
+
+    val isRunning get() = (stateManager.state == State.Running)
 
     private var maxConcurrentCalls = 0
     private val callGuardSemaphore = Semaphore(0)
@@ -82,16 +85,14 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
             }
 
             try {
-                /**
-                 * Wait for a connection from the enclave and instantiate the data input/output streams.
-                 * Close the server socket afterwards.
-                 */
+                /** Wait for input and output sockets, then close the server socket. */
                 serverSocket.use {
-                    socket = it.accept()
-                    socket.tcpNoDelay = true
-                    toEnclave = DataOutputStream(socket.getOutputStream())
-                    fromEnclave = DataInputStream(socket.getInputStream())
+                    toEnclaveSocket = it.accept().apply { tcpNoDelay = true }
+                    fromEnclaveSocket = it.accept().apply { tcpNoDelay = true }
                 }
+
+                toEnclave = DataOutputStream(toEnclaveSocket.getOutputStream())
+                fromEnclave = DataInputStream(fromEnclaveSocket.getInputStream())
 
                 /** Read maximum number of concurrent calls from the enclave. */
                 maxConcurrentCalls = fromEnclave.readInt()
@@ -124,6 +125,9 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
             /** Stop enclave and host receive loops */
             sendMessageToEnclave(SocketCallInterfaceMessage.STOP_MESSAGE)
             receiveLoopThread.join()
+
+            toEnclaveSocket.close()
+            fromEnclaveSocket.close()
         }
     }
 
