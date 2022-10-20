@@ -7,7 +7,10 @@ import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.mail.Curve25519PrivateKey
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.IOException
+import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -68,11 +71,30 @@ class GramineEnclaveHandle(
     }
 
     override fun initialise() {
-        processGramineDirect = ProcessBuilder()
-            .inheritIO()
-            .directory(enclaveDirectory.toFile())
-            .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint")
-            .start()
+        ServerSocket(0).use { serverSocket ->
+            processGramineDirect = ProcessBuilder()
+                    .inheritIO()
+                    .directory(enclaveDirectory.toFile())
+                    .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", serverSocket.localPort.toString())
+                    .start()
+
+            serverSocket.accept().use {
+                val toEnclave = DataOutputStream(it.getOutputStream())
+                val fromEnclave = DataInputStream(it.getInputStream())
+
+                for (intToEnclave in 0 until 10) {
+                    toEnclave.writeInt(intToEnclave)
+                    println("Sent $intToEnclave to enclave.")
+
+                    val intFromEnclave = fromEnclave.readInt()
+                    println("Got $intFromEnclave from enclave.")
+
+                    check(intFromEnclave == intToEnclave + 1)
+                }
+
+                toEnclave.writeInt(-1)
+            }
+        }
     }
 
     override fun destroy() {
