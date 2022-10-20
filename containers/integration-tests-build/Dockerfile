@@ -1,7 +1,7 @@
 # N.B.: Ensure the container base image exists
 ARG container_base_image
 
-FROM $container_base_image as conclave-build-integration-tests
+FROM $container_base_image as integration-tests-build
 
 ARG commit_id
 LABEL commit_id=${commit_id}

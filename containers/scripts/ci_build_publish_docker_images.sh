@@ -71,9 +71,9 @@ buildContainerConclaveBuild() {
   popd
 }
 
-# Builds conclave-build-integration-tests docker image (N.B.: Must be built after the conclave-build.)
+# Builds integration-tests-build docker image (N.B.: Must be built after the conclave-build.)
 buildContainerIntegrationTestsBuild() {
-  pushd "${code_host_dir}/containers/conclave-build-integration-tests/"
+  pushd "${code_host_dir}/containers/integration-tests-build"
   docker build -t $container_image_integration_tests_build --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id .
   popd
 }
