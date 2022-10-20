@@ -84,6 +84,7 @@ class SocketEnclaveHostInterface(
             try {
                 /** Connect the socket and instantiate data input/output streams. */
                 socket = Socket(host, port)
+                socket.tcpNoDelay = true
                 toHost = DataOutputStream(socket.getOutputStream())
                 fromHost = DataInputStream(socket.getInputStream())
 

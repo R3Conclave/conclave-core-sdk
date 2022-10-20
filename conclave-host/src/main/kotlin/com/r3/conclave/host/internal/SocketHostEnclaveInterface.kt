@@ -87,6 +87,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
                  */
                 serverSocket.use {
                     socket = it.accept()
+                    socket.tcpNoDelay = true
                     toEnclave = DataOutputStream(socket.getOutputStream())
                     fromEnclave = DataInputStream(socket.getInputStream())
                 }
