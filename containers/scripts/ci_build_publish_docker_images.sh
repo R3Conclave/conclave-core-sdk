@@ -72,9 +72,9 @@ buildContainerConclaveBuild() {
 }
 
 # Builds conclave-build-integration-tests docker image (N.B.: Must be built after the conclave-build.)
-buildContainerConclaveBuildIntegrationTests() {
+buildContainerIntegrationTestsBuild() {
   pushd "${code_host_dir}/containers/conclave-build-integration-tests/"
-  docker build -t $container_image_conclave_build_integration_tests --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_integration_tests_build --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id .
   popd
 }
 
@@ -122,6 +122,6 @@ if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD
   buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build buildContainerConclaveBuild
 fi
 if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD_INTEGRATION_TESTS:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD_INTEGRATION_TESTS}" == "1" ]; then
-  buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build_integration_tests buildContainerConclaveBuildIntegrationTests
+  buildAndPublishContainerIfItDoesNotExist $container_image_integration_tests_build buildContainerIntegrationTestsBuild
 fi
 buildAndPublishContainerIfItDoesNotExist $container_image_sdk_build buildContainerSDKBuild
