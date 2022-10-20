@@ -36,6 +36,7 @@ container_image_repo=conclave-docker-dev.software.r3.com/com.r3.conclave
 # Docker container images
 container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag
 container_image_conclave_build=$container_image_repo/conclave-build:$docker_image_tag
+container_image_conclave_build_integration_tests=$container_image_repo/conclave-build-integration-tests:$docker_image_tag
 container_image_sdk_build=$container_image_repo/sdk-build:$docker_image_tag
 
 mkdir -p $HOME/.gradle

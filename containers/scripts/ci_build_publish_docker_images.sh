@@ -71,6 +71,13 @@ buildContainerConclaveBuild() {
   popd
 }
 
+# Builds conclave-build-integration-tests docker image (N.B.: Must be built after the conclave-build.)
+buildContainerConclaveBuildIntegrationTests() {
+  pushd "${code_host_dir}/containers/conclave-build-integration-tests/"
+  docker build -t $container_image_conclave_build_integration_tests --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id .
+  popd
+}
+
 # Builds AESMD docker image
 buildContainerAESMD() {
   pushd "${code_host_dir}/containers/aesmd/src/docker"
@@ -113,5 +120,8 @@ if [ -z "${DOCKER_IMAGE_AESMD_BUILD:-}" ] || [ "${DOCKER_IMAGE_AESMD_BUILD}" == 
 fi
 if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD}" == "1" ]; then
   buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build buildContainerConclaveBuild
+fi
+if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD_INTEGRATION_TESTS:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD_INTEGRATION_TESTS}" == "1" ]; then
+  buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build_integration_tests buildContainerConclaveBuildIntegrationTests
 fi
 buildAndPublishContainerIfItDoesNotExist $container_image_sdk_build buildContainerSDKBuild

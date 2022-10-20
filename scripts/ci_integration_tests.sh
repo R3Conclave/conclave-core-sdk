@@ -15,7 +15,7 @@ if [ $enclaveMode != "Simulation" ]; then
     startAESMContainer
 fi
 
-runDocker $container_image_conclave_build "cd integration-tests && ./gradlew -PenclaveMode=$enclaveMode test -s -i"
+runDocker conclave-build-integration-tests "cd integration-tests && ./gradlew -PenclaveMode=$enclaveMode test -s -i"
 
 if [ $enclaveMode != "Simulation" ]; then
     # Teardown AESM container
