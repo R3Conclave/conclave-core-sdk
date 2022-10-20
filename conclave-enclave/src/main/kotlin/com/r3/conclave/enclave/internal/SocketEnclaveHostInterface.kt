@@ -78,6 +78,8 @@ class SocketEnclaveHostInterface(
 
     private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop")
 
+    fun awaitTermination() = receiveLoopThread.join()
+
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
