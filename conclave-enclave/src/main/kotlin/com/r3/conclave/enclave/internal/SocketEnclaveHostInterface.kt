@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -25,6 +26,8 @@ class SocketEnclaveHostInterface(
         private val port: Int,
         private val maximumConcurrentCalls: Int
 ) : EnclaveHostInterface(), Closeable {
+    var sanitiseExceptions = false
+
     private lateinit var toHostSocket: Socket
     private lateinit var toHost: DataOutputStream
 
@@ -172,7 +175,8 @@ class SocketEnclaveHostInterface(
             val returnBuffer = try {
                 handleIncomingCall(callType, ByteBuffer.wrap(parameterBytes))
             } catch (t: Throwable) {
-                sendExceptionMessage(callType, ByteBuffer.wrap(ThrowableSerialisation.serialise(t)))
+                val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(t) else t
+                sendExceptionMessage(callType, ByteBuffer.wrap(ThrowableSerialisation.serialise(maybeSanitisedThrowable)))
                 return
             }
 
