@@ -3,9 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.utilities.internal.getRemainingString
-import java.lang.IllegalStateException
 import java.lang.NumberFormatException
-import java.net.ConnectException
 import java.nio.ByteBuffer
 import kotlin.system.exitProcess
 
