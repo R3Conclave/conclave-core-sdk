@@ -30,7 +30,15 @@ class PythonEnclaveAdapter : Enclave() {
         }
     }
 
+    // We use the same single thread for all access to the Python interpreter. You would think that
+    // threadSafe = false already does that for us but that's not the case. SharedInterpreter has an odd
+    // requirement that only the _same_ thread can access it. threadSafe = false will only guarantee that at most
+    // one thread will enter into the enclave, but this could be different threads over time. newSingleThreadExecutor()
+    // gives us that control. And since we're now handling the thread safety of the enclave, it's OK to override
+    // threadSafe = true and remove the redundant overhead.
     private val singletonThread = Executors.newSingleThreadExecutor()
+
+    override val threadSafe: Boolean get() = true
 
     private lateinit var pythonInterpreter: SharedInterpreter
 
@@ -135,8 +143,6 @@ except NameError:
             throw ClassCastException("Invalid return type from receive_enclave_mail(mail) (${returnValue.javaClass.name})")
         }
     }
-
-    override val threadSafe: Boolean get() = true
 
     internal fun <T> interpreter(block: SharedInterpreter.() -> T): T {
         return singletonThread.submit(Callable { block(pythonInterpreter) }).getOrThrow()
