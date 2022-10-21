@@ -55,8 +55,7 @@ class SocketEnclaveHostInterface(
                 /** Connect sockets and instantiate handler threads. */
                 for (i in 0 until maximumConcurrentCalls) {
                     val socket = Socket(host, port).apply { tcpNoDelay = true }
-                    val callWorker = EnclaveCallContext(socket)
-                    callExecutor.execute { callWorker.handlerLoop() }
+                    callExecutor.execute { EnclaveCallContext(socket).handlerLoop() }
                 }
             } catch (e: Exception) {
                 stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
@@ -138,13 +137,10 @@ class SocketEnclaveHostInterface(
             sendCallMessage(callType, parameterBuffer)
 
             /** Iterate, handling CALL messages until a message that is not a CALL arrives */
-            var replyMessage: SocketCallInterfaceMessage
-            while (true) {
-                replyMessage = checkNotNull(receiveMessage()) { "Unexpected termination message." }
-                when (replyMessage.messageType) {
-                    SocketCallInterfaceMessageType.CALL -> handleCallMessage(replyMessage)
-                    else -> break
-                }
+            var replyMessage = receiveMessage()
+            while (replyMessage.messageType == SocketCallInterfaceMessageType.CALL) {
+                handleCallMessage(replyMessage)
+                replyMessage = receiveMessage()
             }
 
             val replyMessageType = replyMessage.messageType
@@ -161,7 +157,10 @@ class SocketEnclaveHostInterface(
             return replyPayload?.let { ByteBuffer.wrap(replyPayload) }
         }
 
-        /** Handle the initial call */
+        /**
+         * Handle an initial call.
+         * "Initial" calls are calls that are received by the main loop below.
+         */
         fun handleInitialCall(message: SocketCallInterfaceMessage) {
             check(message.messageType == SocketCallInterfaceMessageType.CALL)
             check(threadLocalCallContext.get() == null)
@@ -173,6 +172,7 @@ class SocketEnclaveHostInterface(
             }
         }
 
+        /** Handle calls from the host until told by the host to stop. */
         fun handlerLoop() {
             socket.use {
                 var message = receiveMessage()
@@ -186,7 +186,7 @@ class SocketEnclaveHostInterface(
 
     /**
      * This contains the call context for the current thread.
-     * It is used to link outgoing calls to the appropriate call context.
+     * It is used to link outgoing calls to the appropriate call worker.
      */
     private val threadLocalCallContext = ThreadLocal<EnclaveCallContext>()
 

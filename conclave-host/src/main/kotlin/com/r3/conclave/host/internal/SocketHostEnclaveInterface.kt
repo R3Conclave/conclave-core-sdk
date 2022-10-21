@@ -24,6 +24,7 @@ import java.util.concurrent.Semaphore
 class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closeable {
     private val serverSocket = ServerSocket(port, 100)
 
+    /** Get the port bound by the server socket. */
     val port get() = serverSocket.localPort
 
     private lateinit var callContextPool: ArrayBlockingQueue<EnclaveCallContext>
@@ -42,7 +43,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
     private var maxConcurrentCalls = 0
     private val callGuardSemaphore = Semaphore(0)
 
-    /** Start the message receive loop thread and allow calls to begin. */
+    /** Start the call interface and allow calls to begin. */
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
@@ -77,22 +78,22 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
         }
     }
 
-    /** Shut down both the host and the enclave call interface. */
+    /**
+     * Execute a graceful shutdown of both the host and enclave interfaces.
+     * This will wait for any running calls to complete before returning.
+     */
     override fun close() {
-        /**
-         * Prevent new calls from entering the interface. This has to be synchronized to avoid race condition between
-         * the semaphore acquisition and the lockout check in [executeOutgoingCall].
-         */
         synchronized(stateManager) {
+            /** Prevent new calls from entering the interface. */
             if (stateManager.state == State.Stopped) return
             stateManager.transitionStateFrom<State.Running>(to = State.Stopped) {
                 "Call interface is not running."
             }
 
-            /** Wait for any pending calls to finish, this is released when a call context is retired. */
+            /** Wait for any pending calls to finish, this is released when a call completes. */
             callGuardSemaphore.acquireUninterruptibly(maxConcurrentCalls)
 
-            /** Close all the sockets in the socket pool. */
+            /** Empty the call context pool and close all the call contexts. */
             for (i in 0 until maxConcurrentCalls) {
                 callContextPool.take().close()
             }
@@ -185,9 +186,9 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
             }
         }
 
-        /** Send a stop message to the enclave worker thread corresponding to this context. */
+        /** Send a stop message to the enclave side worker thread corresponding to this context. */
         fun close() {
-            check(!hasActiveCalls())
+            check(!hasActiveCalls()) { "Cannot close a call interface with active calls." }
             toEnclave.writeIntLengthPrefixBytes(SocketCallInterfaceMessage.STOP_MESSAGE.toByteArray())
             socket.close()
         }
@@ -195,8 +196,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
 
     /**
      * Thread local enclave call contexts.
-     * We don't use [ThreadLocal] here because the call context for an arbitrary call has to be
-     * reachable from the message receive thread.
+     * These are used to relate re-entering calls to an existing call context (if there is one).
      */
     private val threadLocalCallContext = ThreadLocal<EnclaveCallContext>()
 
