@@ -3,12 +3,10 @@
 //
 #include "vm_enclave_layer.h"
 
-STUB(socket);
-
 extern "C" {
 
     int socketpair(int domain, int type, int protocol, int sv[2]) {
-	return socketpair_impl(domain, type, protocol, sv);
+	    return socketpair_impl(domain, type, protocol, sv);
     }
 
     int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
