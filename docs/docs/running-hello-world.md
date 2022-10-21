@@ -14,19 +14,23 @@ If you get stuck at any step, please [talk to us on Discord](https://discord.gg/
 
 ## Prerequisites
 
-* You need JDK 17, which you can download [here](https://www.oracle.com/java/technologies/downloads/).
+* You need JDK 17, which you can download [here](https://www.oracle.com/java/technologies/downloads/). For this 
+  sample app, other JDK versions won't work for all modes.
 
 ## Compile the sample application
 
 To get the sample application and compile it:
 
 1. Open a command line interface.
-2. Clone the conclave-tutorials repository and navigate to the hello world sample.
+2. Clone the conclave-tutorials repository.
 ```bash
 git clone https://github.com/R3Conclave/conclave-tutorials.git
+```
+3. Go to the hello-world directory.
+```bash
 cd conclave-tutorials/hello-world
 ```
-3. Generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks.
+4. Generate a fat JAR for the host and client using the `:bootJar` and `:shadowJar` tasks.
 
 === "Linux/macOS"
 
@@ -107,9 +111,12 @@ Now you can [run the client](#run-the-client).
 To run the client:
 
 1. Open another command line interface.
-2. Go to the hello-world directory and run the client.
+2. Go to the hello-world directory.
 ```bash
 cd conclave-tutorials/hello-world
+```
+3. Run the client.
+```bash
 java -jar client/build/libs/client.jar "S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE" reverse-me
 ```
 In the above command, the parameters in quotes are the [constraints](constraints.md), and 'reverse-me' is the
