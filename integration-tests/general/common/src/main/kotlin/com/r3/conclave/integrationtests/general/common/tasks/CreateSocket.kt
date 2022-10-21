@@ -8,7 +8,7 @@ import java.net.ServerSocket
 
 @Serializable
 class CreateSocket : EnclaveTestAction<Unit>() {
-    
+
     override fun run(context: EnclaveContext, isMail: Boolean) {
         val server = ServerSocket(9999)
         val socket = server.accept()

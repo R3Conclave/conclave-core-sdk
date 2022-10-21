@@ -6,7 +6,7 @@
 extern "C" {
 
     int socketpair(int domain, int type, int protocol, int sv[2]) {
-	    return socketpair_impl(domain, type, protocol, sv);
+        return socketpair_impl(domain, type, protocol, sv);
     }
 
     int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
@@ -101,7 +101,7 @@ extern "C" {
 
     int socket(int domain, int type, int protocol) {
         enclave_trace("socket\n");
-        errno = ENOACCES;
+        errno = EACCES;
         return -1;        
     }
 }
