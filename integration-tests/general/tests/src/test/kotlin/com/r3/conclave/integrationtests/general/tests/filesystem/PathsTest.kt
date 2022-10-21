@@ -23,7 +23,10 @@ class PathsTest : FileSystemEnclaveTest() {
     @ParameterizedTest
     @CsvSource(
         "/paths.data, /paths.datalink",
-        "/tmp/paths.data, /tmp/paths.datalink"
+        "/tmp/paths.data, /tmp/paths.datalink",
+        "/paths.data, /tmp/paths.datalink",
+        "/tmp/paths.data, /paths.datalink"
+
     )
     fun symlink(path: String, symlinkPath: String) {
         val fileData = byteArrayOf(1, 2, 3)
@@ -35,7 +38,9 @@ class PathsTest : FileSystemEnclaveTest() {
     @ParameterizedTest
     @CsvSource(
         "/paths.data, /paths.datalink",
-        "/tmp/paths.data, /tmp/paths.datalink"
+        "/tmp/paths.data, /tmp/paths.datalink",
+        "/paths.data, /tmp/paths.datalink",
+        "/tmp/paths.data, /paths.datalink"
     )
     fun link(path: String, symlinkPath: String) {
         val fileData = byteArrayOf(1, 2, 3)
