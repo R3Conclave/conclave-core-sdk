@@ -368,14 +368,14 @@ extern "C" {
         errno = EACCES;
         return -1;
     }
-    
+
     ssize_t readlinkat(int dirfd, const char *pathname,
                        char *buf, size_t bufsiz) {
         enclave_trace("readlinkat\n");
         errno = EBADF;
         return -1;
     }
-            
+
     int lchown(const char *pathname, uid_t owner, gid_t group) {  
         enclave_trace("lchown\n");
         errno = EPERM;
