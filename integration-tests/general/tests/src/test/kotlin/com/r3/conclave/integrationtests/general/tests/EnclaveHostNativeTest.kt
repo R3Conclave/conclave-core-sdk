@@ -1,14 +1,14 @@
 package com.r3.conclave.integrationtests.general.tests
 
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.common.toByteArray
 import com.r3.conclave.integrationtests.general.common.toInt
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
-import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.net.SocketException
 
 class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
     @Test
@@ -87,10 +87,10 @@ class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
 
     @Test
     fun `create socket fails`() {
-        Assertions.assertThatThrownBy {
+        assertThatThrownBy {
             callEnclave(CreateSocket())
         }
-            .isInstanceOf(com.r3.conclave.common.EnclaveException::class.java)
-            .hasCauseExactlyInstanceOf(java.net.SocketException::class.java)
+            .isInstanceOf(EnclaveException::class.java)
+            .hasCauseExactlyInstanceOf(SocketException::class.java)
     }
 }

@@ -164,7 +164,7 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
             callEnclave(CreateSymlink(symlinkPath, filePath))
         }
             .isInstanceOf(RuntimeException::class.java)
-            .hasCauseExactlyInstanceOf(java.nio.file.FileSystemException::class.java)
+            .hasCauseExactlyInstanceOf(FileSystemException::class.java)
     }
 
     fun createHardlink(symlinkPath: String, filePath: String) {
@@ -172,6 +172,6 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
             callEnclave(CreateSymlink(symlinkPath, filePath))
         }
             .isInstanceOf(RuntimeException::class.java)
-            .hasCauseExactlyInstanceOf(java.nio.file.FileSystemException::class.java)
+            .hasCauseExactlyInstanceOf(FileSystemException::class.java)
     }
 }
