@@ -1,22 +1,15 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.SHA512Hash
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.attestation.MockAttestation
-import com.r3.conclave.mail.Curve25519PrivateKey
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import java.time.Instant
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.div
-import kotlin.random.Random
 
 
 //  TODO: Refactor it to support multiple enclaves and without dummy attestation
@@ -69,10 +62,9 @@ class GramineEnclaveHandle(
 
     override fun destroy() {
 
-        /** Send stop command to enclave and close the call interface if it's running. */
+        /** Close the call interface if it's running. */
         if (enclaveInterface.isRunning) {
-            //enclaveInterface.stopEnclave()    // TODO: No handler!
-            enclaveInterface.close()            // Should block until the wait in the enclave expires
+            enclaveInterface.close()
         }
 
         /** Wait for the gramine process to terminate if it's running. If it doesn't, destroy it forcibly. */
@@ -83,6 +75,7 @@ class GramineEnclaveHandle(
             }
         }
 
+        /** Clean up temporary files. */
         try {
             enclaveDirectory.toFile().deleteRecursively()
         } catch (e: IOException) {
