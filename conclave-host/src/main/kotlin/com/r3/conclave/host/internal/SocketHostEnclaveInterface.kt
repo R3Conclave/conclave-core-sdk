@@ -2,7 +2,6 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.mail.internal.readInt
-import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -13,7 +12,6 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Semaphore
 
 /**
@@ -28,7 +26,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
 
     val port get() = serverSocket.localPort
 
-    private lateinit var socketPool: ArrayBlockingQueue<Socket>
+    private lateinit var callContextPool: ArrayBlockingQueue<EnclaveCallContext>
 
     /** Represents the lifecycle of the interface. */
     sealed class State {
@@ -55,17 +53,22 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
             try {
                 /** Wait for IO sockets, then close the server socket. */
                 serverSocket.use {
+
+                    /** Get the threading level from the enclave. */
                     it.accept().use { initialSocket ->
                         maxConcurrentCalls = initialSocket.getInputStream().readInt()
                     }
-                    socketPool = ArrayBlockingQueue(maxConcurrentCalls + 1)
+
+                    /** Set up a pool of re-usable call contexts, each with their own socket. */
+                    callContextPool = ArrayBlockingQueue(maxConcurrentCalls + 1)
                     for (i in 0 until maxConcurrentCalls) {
                         val socket = it.accept().apply { tcpNoDelay = true }
-                        socketPool.put(socket)
+                        val callContext = EnclaveCallContext(socket)
+                        callContextPool.put(callContext)
                     }
                 }
 
-                /** Start the message receive thread and allow calls to enter. */
+                /** Allow calls to enter the interface. */
                 callGuardSemaphore.release(maxConcurrentCalls)
             } catch (e: Exception) {
                 stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
@@ -91,10 +94,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
 
             /** Close all the sockets in the socket pool. */
             for (i in 0 until maxConcurrentCalls) {
-                socketPool.take().use {
-                    DataOutputStream(it.getOutputStream()).writeIntLengthPrefixBytes(
-                            SocketCallInterfaceMessage.STOP_MESSAGE.toByteArray())
-                }
+                callContextPool.take().close()
             }
         }
     }
@@ -184,6 +184,13 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
                 activeCalls--
             }
         }
+
+        /** Send a stop message to the enclave worker thread corresponding to this context. */
+        fun close() {
+            check(!hasActiveCalls())
+            toEnclave.writeIntLengthPrefixBytes(SocketCallInterfaceMessage.STOP_MESSAGE.toByteArray())
+            socket.close()
+        }
     }
 
     /**
@@ -191,33 +198,34 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
      * We don't use [ThreadLocal] here because the call context for an arbitrary call has to be
      * reachable from the message receive thread.
      */
-    private val enclaveCallContexts = ConcurrentHashMap<Long, EnclaveCallContext>()
+    private val threadLocalCallContext = ThreadLocal<EnclaveCallContext>()
 
     /**
      * Internal method for initiating an enclave call with specific arguments.
      * This should not be called directly, but instead by implementations in [HostEnclaveInterface].
      */
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
-        val threadID = Thread.currentThread().id
-
-        if (!enclaveCallContexts.containsKey(threadID)) {
-            synchronized(stateManager) {
-                stateManager.checkStateIs<State.Running> { "Call interface is not running." }
-                callGuardSemaphore.acquireUninterruptibly()
-            }
+        synchronized(stateManager) {
+            stateManager.checkStateIs<State.Running> { "Call interface is not running." }
         }
 
-        val enclaveCallContext = enclaveCallContexts.computeIfAbsent(threadID) {
-            EnclaveCallContext(socketPool.take())
+        val callContext = when(val existingCallContext = threadLocalCallContext.get()) {
+            null -> {
+                callGuardSemaphore.acquireUninterruptibly()
+                val context = callContextPool.take()
+                threadLocalCallContext.set(context)
+                context
+            }
+            else -> existingCallContext
         }
 
         return try {
-            enclaveCallContext.initiateCall(callType, parameterBuffer)
+            callContext.initiateCall(callType, parameterBuffer)
         } finally {
-            if (!enclaveCallContext.hasActiveCalls()) {
-                socketPool.put(enclaveCallContext.socket)
-                enclaveCallContexts.remove(threadID)
-                callGuardSemaphore.release()
+            if (!callContext.hasActiveCalls()) {
+                threadLocalCallContext.remove()
+                callContextPool.put(callContext)        // Return to context pool.
+                callGuardSemaphore.release()            // Free a slot for a new call to enter.
             }
         }
     }

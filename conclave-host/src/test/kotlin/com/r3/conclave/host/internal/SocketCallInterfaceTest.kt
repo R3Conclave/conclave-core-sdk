@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore
 class SocketCallInterfaceTest {
     companion object {
         private const val SOCKET_PORT_NUMBER = 31893
-        private const val ENCLAVE_HOST_INTERFACE_THREADS = 16
+        private const val ENCLAVE_HOST_INTERFACE_THREADS = 8
     }
 
     private lateinit var hostEnclaveInterface: SocketHostEnclaveInterface
@@ -326,7 +326,7 @@ class SocketCallInterfaceTest {
      * values are sent back to the right caller when multiple callers are present.
      */
     @ParameterizedTest
-    @ValueSource(ints = [2, 16, 512])
+    @ValueSource(ints = [2, 8, 256])
     fun `interface can service many concurrent calls`(concurrency: Int) {
         // Sleep for the specified duration and send the duration back to the caller
         configureEnclaveCallAction {
@@ -373,7 +373,7 @@ class SocketCallInterfaceTest {
      * numbers of messages to be delivered and received in multiple threads.
      */
     @ParameterizedTest
-    @ValueSource(ints = [2, 16, 512])
+    @ValueSource(ints = [2, 8, 256])
     fun `interface can service many concurrent recursive calls`(concurrency: Int) {
         configureInterfacesForRecursiveFibonacci()
 
