@@ -24,29 +24,26 @@ enum class SocketCallInterfaceMessageType {
  * [com.r3.conclave.enclave.internal.SocketEnclaveHostInterface] classes.
  */
 class SocketCallInterfaceMessage(
-        val hostThreadID: Long,
         val messageType: SocketCallInterfaceMessageType,
         val callTypeID: Byte,
         val payload: ByteArray?
 ) {
-    fun size() = 8 + 1 + 1 + nullableSize(payload) { it.intLengthPrefixSize }
+    fun size() = 1 + 1 + nullableSize(payload) { it.intLengthPrefixSize }
 
     companion object {
-        val STOP_MESSAGE = SocketCallInterfaceMessage(0, SocketCallInterfaceMessageType.STOP, 0, null)
+        val STOP_MESSAGE = SocketCallInterfaceMessage(SocketCallInterfaceMessageType.STOP, 0, null)
 
         fun fromByteArray(bytes: ByteArray): SocketCallInterfaceMessage {
             val buffer = ByteBuffer.wrap(bytes)
-            val hostThreadID = buffer.long
             val messageType = SocketCallInterfaceMessageType.fromByte(buffer.get())
             val callTypeID = buffer.get()
             val payload = buffer.getNullable { getIntLengthPrefixBytes() }
-            return SocketCallInterfaceMessage(hostThreadID, messageType, callTypeID, payload)
+            return SocketCallInterfaceMessage(messageType, callTypeID, payload)
         }
     }
 
     fun toByteArray(): ByteArray {
         return ByteBuffer.allocate(size()).apply {
-            putLong(hostThreadID)
             put(messageType.toByte())
             put(callTypeID)
             putNullable(payload) { putIntLengthPrefixBytes(it) }

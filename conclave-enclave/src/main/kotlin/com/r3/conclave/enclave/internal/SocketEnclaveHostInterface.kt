@@ -2,6 +2,7 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
+import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -10,9 +11,8 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
@@ -28,12 +28,6 @@ class SocketEnclaveHostInterface(
 ) : EnclaveHostInterface(), Closeable {
     var sanitiseExceptions = false
 
-    private lateinit var toHostSocket: Socket
-    private lateinit var toHost: DataOutputStream
-
-    private lateinit var fromHostSocket: Socket
-    private lateinit var fromHost: DataInputStream
-
     /** Represents the lifecycle of the interface. */
     sealed class State {
         object Ready : State()
@@ -44,42 +38,6 @@ class SocketEnclaveHostInterface(
     private var stateManager = StateManager<State>(State.Ready)
     private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
-    private val receiveLoop = object : Runnable {
-        private var done = false
-
-        /** Receive messages in a loop and send them to the appropriate call context. */
-        override fun run() {
-            while (!done) {
-                val message = receiveMessageFromHost()
-                when (message.messageType) {
-                    SocketCallInterfaceMessageType.STOP -> handleStopMessage()
-                    else -> deliverMessageToCallContext(message)
-                }
-            }
-        }
-
-        /** Send the received message to the appropriate call context. */
-        private fun deliverMessageToCallContext(message: SocketCallInterfaceMessage) {
-            val callContext = enclaveCallContexts.computeIfAbsent(message.hostThreadID) {
-                val newCallContext = EnclaveCallContext(message.hostThreadID)
-                callExecutor.execute(newCallContext::handleInitialCall)
-                newCallContext
-            }
-            callContext.enqueueMessage(message)
-        }
-
-        /** The host has told us there will be no more messages, shut everything down. */
-        private fun handleStopMessage() {
-            callExecutor.shutdown()
-            sendMessageToHost(SocketCallInterfaceMessage.STOP_MESSAGE)
-            done = true
-        }
-    }
-
-    private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop")
-
-    fun awaitTermination() = receiveLoopThread.join()
-
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
@@ -88,19 +46,18 @@ class SocketEnclaveHostInterface(
             }
 
             try {
-                /** Connect sockets and instantiate data input/output streams. */
-                fromHostSocket = Socket(host, port).apply { tcpNoDelay = true }
-                toHostSocket = Socket(host, port).apply { tcpNoDelay = true }
-
-                toHost = DataOutputStream(toHostSocket.getOutputStream())
-                fromHost = DataInputStream(fromHostSocket.getInputStream())
-
                 /** Send the maximum number of concurrent calls to the host. */
-                toHost.writeInt(maximumConcurrentCalls)
-                toHost.flush()
+                Socket(host, port).use {
+                    it.tcpNoDelay = true
+                    it.getOutputStream().writeInt(maximumConcurrentCalls)
+                }
 
-                /** Start the message receive thread. */
-                receiveLoopThread.start()
+                /** Connect sockets and instantiate handler threads. */
+                for (i in 0 until maximumConcurrentCalls) {
+                    val socket = Socket(host, port).apply { tcpNoDelay = true }
+                    val callWorker = EnclaveCallContext(socket)
+                    callExecutor.execute { callWorker.handlerLoop() }
+                }
             } catch (e: Exception) {
                 stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
                 throw e
@@ -118,41 +75,33 @@ class SocketEnclaveHostInterface(
             stateManager.transitionStateFrom<State.Running>(to = State.Stopped) {
                 "Call interface is not running."
             }
-            receiveLoopThread.join()
-            toHostSocket.close()
-            fromHostSocket.close()
+            callExecutor.shutdown()
         }
     }
 
-    /**
-     * Send a message to the receiving thread on the host side interface.
-     * Once received, these messages are routed to the appropriate call context in order to support concurrency.
-     * The synchronisation that occurs in this method (and the corresponding message on the host side) is the primary
-     * bottleneck of this call interface implementation.
-     */
-    private fun sendMessageToHost(message: SocketCallInterfaceMessage) {
-        val messageBytes = message.toByteArray()
-        synchronized(toHost) {
-            toHost.writeIntLengthPrefixBytes(messageBytes)
-            toHost.flush()
+    fun awaitTermination() {
+        var done = false
+        while(!done) {
+            try {
+                done = callExecutor.awaitTermination(10, TimeUnit.SECONDS)
+            } catch (e: InterruptedException) {
+                continue
+            }
         }
     }
 
-    /** Blocks until a message is received from the host. */
-    private fun receiveMessageFromHost(): SocketCallInterfaceMessage {
-        return SocketCallInterfaceMessage.fromByteArray(fromHost.readIntLengthPrefixBytes())
-    }
+    private inner class EnclaveCallContext(private val socket: Socket) {
+        private val toHost = DataOutputStream(socket.getOutputStream())
+        private val fromHost = DataInputStream(socket.getInputStream())
 
-    private inner class EnclaveCallContext(private val hostThreadID: Long) {
-        private val messageQueue = ArrayBlockingQueue<SocketCallInterfaceMessage>(4)
-
-        fun enqueueMessage(message: SocketCallInterfaceMessage) = messageQueue.put(message)
+        fun receiveMessage(): SocketCallInterfaceMessage {
+            val messageBytes = fromHost.readIntLengthPrefixBytes()
+            return SocketCallInterfaceMessage.fromByteArray(messageBytes)
+        }
 
         fun sendMessage(messageType: SocketCallInterfaceMessageType, callTypeID: Byte, payload: ByteBuffer?) {
-            val outgoingMessage = SocketCallInterfaceMessage(
-                    hostThreadID, messageType, callTypeID, payload?.getAllBytes(avoidCopying = true))
-
-            sendMessageToHost(outgoingMessage)
+            val message = SocketCallInterfaceMessage(messageType, callTypeID, payload?.getAllBytes(avoidCopying = true))
+            toHost.writeIntLengthPrefixBytes(message.toByteArray())
         }
 
         fun sendCallMessage(callType: HostCallType, parameterBuffer: ByteBuffer) {
@@ -191,7 +140,7 @@ class SocketEnclaveHostInterface(
             /** Iterate, handling CALL messages until a message that is not a CALL arrives */
             var replyMessage: SocketCallInterfaceMessage
             while (true) {
-                replyMessage = messageQueue.take()
+                replyMessage = checkNotNull(receiveMessage()) { "Unexpected termination message." }
                 when (replyMessage.messageType) {
                     SocketCallInterfaceMessageType.CALL -> handleCallMessage(replyMessage)
                     else -> break
@@ -213,26 +162,31 @@ class SocketEnclaveHostInterface(
         }
 
         /** Handle the initial call */
-        fun handleInitialCall() {
+        fun handleInitialCall(message: SocketCallInterfaceMessage) {
+            check(message.messageType == SocketCallInterfaceMessageType.CALL)
+            check(threadLocalCallContext.get() == null)
             try {
                 threadLocalCallContext.set(this)
-                handleCallMessage(messageQueue.take())
+                handleCallMessage(message)
             } finally {
                 threadLocalCallContext.remove()
-                enclaveCallContexts.remove(hostThreadID)
+            }
+        }
+
+        fun handlerLoop() {
+            socket.use {
+                var message = receiveMessage()
+                while (message.messageType != SocketCallInterfaceMessageType.STOP) {
+                    handleInitialCall(message)
+                    message = receiveMessage()
+                }
             }
         }
     }
 
     /**
-     * This maps host thread IDs to enclave side call contexts.
-     * This map is used in the message receive loop to route messages to the appropriate call context.
-     */
-    private val enclaveCallContexts = ConcurrentHashMap<Long, EnclaveCallContext>()
-
-    /**
      * This contains the call context for the current thread.
-     * These are the same object instances that are contained in the map above.
+     * It is used to link outgoing calls to the appropriate call context.
      */
     private val threadLocalCallContext = ThreadLocal<EnclaveCallContext>()
 
