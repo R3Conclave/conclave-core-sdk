@@ -20,4 +20,27 @@ class PathsTest : FileSystemEnclaveTest() {
         callEnclave(PathsGet(path))
         deleteFile(path, nioApi)
     }
+    @ParameterizedTest
+    @CsvSource(
+        "/paths.data, /paths.datalink",
+        "/tmp/paths.data, /tmp/paths.datalink"
+    )
+    fun symlink(path: String, symlinkPath: String) {
+        val fileData = byteArrayOf(1, 2, 3)
+        filesWrite(path, fileData)
+
+        createSymlink(symlinkPath, path)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/paths.data, /paths.datalink",
+        "/tmp/paths.data, /tmp/paths.datalink"
+    )
+    fun link(path: String, symlinkPath: String) {
+        val fileData = byteArrayOf(1, 2, 3)
+        filesWrite(path, fileData)
+
+        createHardlink(symlinkPath, path)
+    }
 }

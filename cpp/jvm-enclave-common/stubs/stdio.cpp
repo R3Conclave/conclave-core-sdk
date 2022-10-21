@@ -4,10 +4,6 @@
 #include "vm_enclave_layer.h"
 #include "file_manager.h"
 
-//////////////////////////////////////////////////////////////////////////////
-// Stub functions to satisfy the linker
-STUB(fgets);
-
 extern "C" {
 
     FILE *stdin = nullptr;
@@ -154,4 +150,9 @@ extern "C" {
         }
         return res;   
     }    
+
+    char *fgets(char *s, int size, FILE *stream) {
+        enclave_trace("fgets\n");
+        return NULL;
+    }
 }

@@ -66,6 +66,27 @@ class DeleteFile(private val path: String, private val nioApi: Boolean) : FileSy
 }
 
 @Serializable
+class CreateSymlink(private val filePath: String, private val symlinkPath: String) : FileSystemAction<Unit>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) {
+        val file = File(filePath)
+        val symLink = File(symlinkPath)
+        Files.createSymbolicLink(symLink.toPath(), file.toPath())
+    }
+
+    override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
+}
+
+@Serializable
+class CreateHardlink(private val filePath: String, private val symlinkPath: String) : FileSystemAction<Unit>() {
+    override fun run(context: EnclaveContext, isMail: Boolean) {
+        val file = File(filePath)
+        val symLink = File(symlinkPath)
+        Files.createLink(symLink.toPath(), file.toPath())
+    }
+
+    override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
+}
+@Serializable
 class RenameFile(private val oldPath: String, private val newPath: String) : FileSystemAction<Boolean>() {
     override fun run(context: EnclaveContext, isMail: Boolean): Boolean {
         return File(oldPath).renameTo(File(newPath))
