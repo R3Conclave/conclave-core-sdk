@@ -6,7 +6,7 @@ class delegates the calls it receives into a user specified Python script. The P
 re-implementing all the underlying enclave and Mail code.
 
 This attempt is currently a PoC, and so is the Python API. Only mock mode works, and it hasn't yet been wired up to 
-the plugin. Have a look at tests to see how to create and run the enclave. The tests can be run in the usual way:
+the plugin. Have a look at the tests to see how to create and run the enclave. The tests can be run in the usual way:
 
 ```shell
 ./gradlew python-enclave-adapter:test
@@ -21,7 +21,7 @@ The API uses duck typing and the enclave will look for the following optional gl
 * `receive_from_untrusted_host(bytes)` - executed by `receiveFromUntrustedHost`. The Java byte array is converted to 
   Python bytes. If there’s no return value then it is treated as null, otherwise the return value is expected to be 
   bytes.
-* `receive_enclave_mail(mail)` - executed by `receiveMai`l. The Java `EnclaveMail` object is converted to a simpler 
+* `receive_enclave_mail(mail)` - executed by `receiveMail`. The Java `EnclaveMail` object is converted to a simpler 
   Python version which is just a class holding the body, envelope and authenticated sender. The topic and sequence 
   number are ignored for now. The authenticated sender is represented by its encoded binary form in bytes. This 
   function is also much simpler than `receiveMail` in that the response can simply be returned from the function and 
