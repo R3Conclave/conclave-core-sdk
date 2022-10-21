@@ -27,13 +27,11 @@ class GramineEnclaveHandle(
     private val jarUrl: URL
 ) : EnclaveHandle {
     private lateinit var processGramineDirect: Process
-    private val enclaveDirectory: Path
+    private val enclaveDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
 
     override val enclaveInterface = SocketHostEnclaveInterface()
 
     init {
-        val classNamePath = enclaveClassName.substringAfter("!.")
-        enclaveDirectory = Files.createTempDirectory("$classNamePath-gramine")
         copyGramineFilesToWorkingDirectory()
     }
 
