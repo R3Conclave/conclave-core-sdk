@@ -7,7 +7,9 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import java.io.IOException
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.NoSuchFileException
+import java.nio.file.FileSystemException
 import java.util.concurrent.atomic.AtomicInteger
+
 
 // TODO The file system tests should test for both persisting and in-memory scenerios.
 abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
