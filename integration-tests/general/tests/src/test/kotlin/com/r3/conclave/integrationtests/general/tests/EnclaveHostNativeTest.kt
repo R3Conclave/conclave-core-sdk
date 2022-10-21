@@ -87,7 +87,6 @@ class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
 
     @Test
     fun `create socket fails`() {
-        Assertions.setMaxStackTraceElementsDisplayed(1000)
         Assertions.assertThatThrownBy {
             callEnclave(CreateSocket())
         }
