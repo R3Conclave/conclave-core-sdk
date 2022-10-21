@@ -59,10 +59,13 @@ class PythonEnclaveAdapterTest {
 
     @Test
     fun `on_enclave_startup() is optional`() {
-        loadEnclave("""
-            def on_enclave_shutdown():
-                pass
-        """.trimIndent())
+        // on_enclave_startup() is executed, or rather the attempt is made, when the enclave is started.
+        assertThatNoException().isThrownBy {
+            loadEnclave("""
+                def on_enclave_shutdown():
+                    pass
+            """.trimIndent())
+        }
     }
 
     @Test
@@ -84,6 +87,9 @@ class PythonEnclaveAdapterTest {
             def on_enclave_startup():
                 pass
         """.trimIndent())
+        assertThatNoException().isThrownBy {
+            enclaveHost.close()
+        }
     }
 
     @Test
