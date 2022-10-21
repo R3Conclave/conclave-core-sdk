@@ -1,7 +1,6 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.*
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
@@ -12,7 +11,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.io.path.div
 
 
-//  TODO: Refactor it to support multiple enclaves and without dummy attestation
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
@@ -22,6 +20,7 @@ class GramineEnclaveHandle(
     private lateinit var processGramineDirect: Process
     private val enclaveDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
 
+    /** Create a socket host interface, let the system allocate the port. */
     override val enclaveInterface = SocketHostEnclaveInterface()
 
     init {
@@ -41,7 +40,7 @@ class GramineEnclaveHandle(
         val interfaceStartThread = Thread(interfaceStartTask).apply { start() }
 
         try {
-            /** Start the enclave process. */
+            /** Start the enclave process, passing the port that the call interface is listening on. */
             processGramineDirect = ProcessBuilder()
                 .inheritIO()
                 .directory(enclaveDirectory.toFile())
@@ -52,7 +51,7 @@ class GramineEnclaveHandle(
             interfaceStartThread.join()     // wait for start process to finish
             interfaceStartTask.get()        // throw if start failed
 
-            /** Send command to process to initialise the enclave. */
+            /** Initialise the enclave. */
             enclaveInterface.initializeEnclave(enclaveClassName)
         } catch (t: Throwable) {
             this.destroy()
