@@ -41,7 +41,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
 
     private val stateManager = StateManager<State>(State.Ready)
 
-    val isRunning get() = (stateManager.state == State.Running)
+    val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
 
     private var maxConcurrentCalls = 0
     private val callGuardSemaphore = Semaphore(0)
