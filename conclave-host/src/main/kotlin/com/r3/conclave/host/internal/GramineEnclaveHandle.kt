@@ -39,29 +39,6 @@ class GramineEnclaveHandle(
         const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
         const val GRAMINE_ENCLAVE_MANIFEST = "java.manifest"
 
-        fun getDummyAttestation(): EnclaveInstanceInfoImpl {
-            val signingKeyPair = SignatureSchemeEdDSA().generateKeyPair()
-            val encryptionPrivateKey = Curve25519PrivateKey.random()
-            val measurement = SHA256Hash.wrap(Random.nextBytes(32))
-            val cpuSvn = OpaqueBytes(Random.nextBytes(16))
-            val mrsigner = SHA256Hash.wrap(Random.nextBytes(32))
-            val isvProdId = 1
-            val isvSvn = 1
-            val reportBody = Cursor.allocate(SgxReportBody).apply {
-                this[SgxReportBody.cpuSvn] = cpuSvn.buffer()
-                this[SgxReportBody.mrenclave] = measurement.buffer()
-                this[SgxReportBody.mrsigner] = mrsigner.buffer()
-                this[SgxReportBody.isvProdId] = isvProdId
-                this[SgxReportBody.isvSvn] = isvSvn
-                this[SgxReportBody.reportData] =
-                    SHA512Hash.hash(signingKeyPair.public.encoded + encryptionPrivateKey.publicKey.encoded).buffer()
-            }
-            val timestamp = Instant.now()
-
-            return EnclaveInstanceInfoImpl(signingKeyPair.public, encryptionPrivateKey.publicKey,
-                MockAttestation(timestamp, reportBody.asReadOnly(), false))
-        }
-
         private val logger = loggerFor<GramineEnclaveHandle>()
     }
 
