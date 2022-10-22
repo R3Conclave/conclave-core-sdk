@@ -11,10 +11,10 @@ The behavior of the security levels `STALE`, and `SECURE` has not changed.
 
 ### Maven Central
 
-With the open sourcing of the SDK, artifacts are no longer distributed in a zip file and are instead available on 
+With the [open sourcing](https://github.com/R3Conclave/conclave-core-sdk) of the SDK, artifacts are no longer distributed in a zip file and are instead available on 
 [Maven Central](https://search.maven.org/). For existing projects, the local maven repo directory is no longer needed. 
 This can be deleted along with the `conclaveRepo` property in your gradle.properties file. Make sure `mavenCentral()` 
-is added as a repository in your build.gradle:
+is added as a repository in your `build.gradle`:
 
 ```groovy
 subprojects {
@@ -42,9 +42,9 @@ supported but deprecated and will be removed in a future version.
 `IOException`. This can occur if the mail to be delivered was encrypted using a KDS key and the host is unable to 
 retrieve it from the KDS.
 
-Though technically not an API change, the docs for [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office)
-and [`EnclavePostOffice`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave-post-office) have been fixed to state that 
-they are _not_ thread-safe.
+Though technically not an API change, the docs for [`PostOffice`](api/-conclave%20-core/com.r3.conclave.mail/-post-office/index.html)
+and [`EnclavePostOffice`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave-post-office/index.html) have been 
+fixed to state that they are _not_ thread-safe.
 
 ### Conclave Init
 
@@ -228,7 +228,7 @@ if (mode == "mock") {
 ## Beta 4 to 1.0
 Between beta 4 and 1.0 the API for creating mail has changed. `MutableMail` has been replaced by `PostOffice` which is a
 factory for creating encrypted mail. There's no longer any need to manually increment the sequence number as that's done
-for you. Instead make sure to only have one instance per sender key and topic. This allows the enclave to check for
+for you. Instead, make sure to only have one instance per sender key and topic. This allows the enclave to check for
 dropped or reordered mail. `Mail.decrypt` and `EnclaveInstanceInfo.decryptMail` have been replaced by `PostOffice.decryptMail`.
 Decrypt any response mail using the same post office instance that created the request.
 

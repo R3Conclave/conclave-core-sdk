@@ -1,6 +1,6 @@
 # The Conclave web host
 
-By default, Conclave projects use a built in host module that manages your enclave instance and provides a simple 
+By default, Conclave projects use a built-in host module that manages your enclave instance and provides a simple 
 REST API to facilitate communication. The web host is sufficient for simple projects, but more complex projects may 
 require additional functionality not implemented by the web host. In these cases a custom host can be implemented, 
 see [writing your own host](writing-your-own-enclave-host.md) for more information.

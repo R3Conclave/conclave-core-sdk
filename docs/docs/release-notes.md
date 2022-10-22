@@ -1,18 +1,22 @@
-Release notes
-=============
+# Release notes
 
-### 1.4
+## 1.4
 
-1. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) are evaluated has been updated. From now on, if a client sets the security level
-   to `INSECURE`, it will not be able to connect to `STALE` or `SECURE` enclaves.
+1. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html)
+   are evaluated has changed slightly. From now on, if a client sets the security level to `INSECURE`, it will pass 
+   for `STALE` or `SECURE` enclaves. This is to prevent the client from accidently communicating with a production 
+   enclave during development or testing.
 
-### 1.3
+## 1.3
 
-1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our blog post on why we made it open source and 
-   what this means for you. You can find the source code at https://github.com/R3Conclave/conclave-core-sdk.
-2. The SDK artifacts are now available on Maven Central. There's no longer any need to have a local repo 
-   directory in your Conclave project. See the [API changes page](api-changes.md#maven-central) for more details.  
-3. The Core SDK powers our new Conclave Cloud platform. Head over to https://conclave.cloud to learn more. 
+1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our
+   [blog post](https://www.conclave.net/blog/announcing-conclave-sdk-1-3-and-open-source) on why we did this and what it
+   means for you. You can find the source code for the SDK [here](https://github.com/R3Conclave/conclave-core-sdk).
+2. The SDK artifacts are now available on [Maven Central](https://search.maven.org/search?q=conclave). There's no
+   longer any need to have a local repo directory in your Conclave project. See the
+   [API changes page](api-changes.md#maven-central) for more details.
+3. The Core SDK powers our new Conclave Cloud platform. Head over to [conclave.cloud](https://conclave.cloud) to learn 
+   more.
 4. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports production
    workloads. The REST API docs can be found [here](kds-rest-api.md).
 5. :jigsaw: **New feature!** Support for stable enclave encryption keys with Mail by using the KDS. This enables use 
@@ -36,11 +40,11 @@ Release notes
     [`Enclave.createAttestationQuote`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
 14. We have added Intel advisory IDs to DCAP-based attestation reports. These provide more information on any 
-    platform vilnerabilites that may be present on the system.
+    platform vulnerabilites that may be present on the system.
 
 Please read the list of [known issues](known-issues.md).
 
-### 1.2.1
+## 1.2.1
 
 This is a small release with some minor improvements:
 
@@ -48,7 +52,7 @@ This is a small release with some minor improvements:
 2. The CorDapp sample has been updated to use Corda v4.8.5, which is patched against the "Log4Shell" vulnerability.
 3. Better error message by the plugin if no enclave class is found.
 
-### 1.2
+## 1.2
 
 !!! important
     There have been some breaking changes in 1.2. Be sure to read the [API changes page](api-changes.md) on how to

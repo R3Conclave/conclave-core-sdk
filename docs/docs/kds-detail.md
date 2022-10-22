@@ -1,4 +1,5 @@
-# A Detailed Look at Persisting Data with the Key Derivation Service
+# A Detailed look at persisting data with the Key Derivation Service (KDS)
+
 Enclaves provide protection for data whilst it is stored in the hardware
 encrypted memory provided by Intel SGX. This means that all the time sensitive
 data is being processed by an enclave, the privacy and integrity of the data is
@@ -27,7 +28,8 @@ which provide support for common Confidential Computing use cases. Both will be
 discussed in this document. But first we need to understand a bit about how
 encryption keys are obtained and used in Conclave.
 
-# CPU keys for 'sealing' data
+## CPU keys for 'sealing' data
+
 In order for an enclave to be able to encrypt data that is to be persisted on an
 untrusted data store, the enclave needs to have access to an encryption key with
 at least the following properties:
@@ -67,7 +69,8 @@ erased at any point.
 
 So how do we solve this with Conclave?
 
-# Key Derivation Service - Providing stable keys to enclaves
+## Providing stable keys to enclaves
+
 Let's take a look at the encryption key requirements again:
 
 * The key must be unique to a particular enclave configuration, configurable by
@@ -93,7 +96,8 @@ access the key for a particular configuration.
 When configuring your enclave for persistence you can specify whether to use the
 Conclave KDS to obtain a key instead of using the sealing key.
 
-# How does it work?
+## How does it work?
+
 The KDS has access to a [master key](#what-is-the-master-key) which is used as a
 seed for all keys that are requested from the KDS. In order to protect the
 master key and the key derivation process, the KDS is itself implemented inside
@@ -110,9 +114,9 @@ specification'.
 
 A key specification consists of the following fields:
 
-| Field | Description |
-| ----- | ----------- |
-| Master Key Type | The type of [master key](#what-is-the-master-key) to derive the key from. |
+| Field                 | Description                                                                           |
+|-----------------------|---------------------------------------------------------------------------------------|
+| Master Key Type       | The type of [master key](#what-is-the-master-key) to derive the key from.             |
 | Key Policy Constraint | The conditions under which the KDS will allow an enclave to access the requested key. |
 
 The developer provides a key specification within the code of the enclave that
@@ -154,7 +158,8 @@ solution can be made entirely decentralised simply by enabling the master key to
 itself be held in a decentralised fashion, which is work planned for a future
 release.
 
-# Deriving keys from the key specification
+## Deriving keys from the key specification
+
 The KDS generates the key for the enclave by deriving it from the master key
 using an HMAC Key Derivation Function (HKDF) passing the key specification as
 parameters to the function.
@@ -179,7 +184,8 @@ takes the master key material and derives it using each of the parameters in the
 key specification to create a key unique to that specification. The resulting
 key is then sent securely back to the Conclave enclave.
 
-# Validation of Key Requests
+## Validation of Key Requests
+
 The KDS will only send a key to an enclave if the enclave passes validation
 checks that prove it is entitled access to the key. How is that validation
 achieved?
@@ -205,7 +211,8 @@ an `EnclaveConstraint` object using the key policy constraint in the key
 specification and checks the `EnclaveInstanceInfo` against that constraint. If
 the constraint check passes then the enclave is allowed access to the key.
 
-# Secure transfer of the key
+## Secure transfer of the key
+
 The key is securely transferred to the enclave by encrypting the key using the
 enclave's public key which is defined as part of the attested enclave's
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). This guarantees that only the recipient enclave can
@@ -239,11 +246,11 @@ specification.
 
 The master key type can be selected from the table below:
 
-| Master key type | Description |
-| ----- | ---------------|
-| `MasterKeyType.DEVELOPMENT` | A master key that can be used for developing enclaves in mock, simulation or debug mode. This master key must not be used to derive enclave keys in production enclaves. |
-| `MasterKeyType.CLUSTER` | A master key that can be used for enclaves running in release mode. This master key can be used to derive enclave keys in production enclaves. The master key exists across a cluster of KDS nodes to increase availability and reduce the chance of it being lost. |
-| `MasterKeyType.AZURE_HSM` | A master key backed by a FIPS compliant azure HSM. This master key can be used to derive enclave keys in production enclaves, and is suitable for applications where strong availability requirements or regulatory compliance requirements are necessary. |
+| Master key type              | Description                                                                                                                                                                                                                                                         |
+|------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MasterKeyType.DEVELOPMENT`  | A master key that can be used for developing enclaves in mock, simulation or debug mode. This master key must not be used to derive enclave keys in production enclaves.                                                                                            |
+| `MasterKeyType.CLUSTER`      | A master key that can be used for enclaves running in release mode. This master key can be used to derive enclave keys in production enclaves. The master key exists across a cluster of KDS nodes to increase availability and reduce the chance of it being lost. |
+| `MasterKeyType.AZURE_HSM`    | A master key backed by a FIPS compliant azure HSM. This master key can be used to derive enclave keys in production enclaves, and is suitable for applications where strong availability requirements or regulatory compliance requirements are necessary.          |
 
 !!!Important
     Initially the KDS will be provided as a public preview to Conclave customers
@@ -254,7 +261,8 @@ The master key type can be selected from the table below:
     Release mode.
 
 
-# Migrating data from a previous version of an enclave
+## Migrating data from a previous version of an enclave
+
 Ideally, keys will be tied to an exact version of an enclave. This provides the
 smallest opportunity for any vulnerability to be exploited - if a vulnerability
 is discovered in a particular version of the platform or enclave, the data is
@@ -289,4 +297,3 @@ migrate it to the new key by re-encrypting it.
 The above migration process does not yet happen automatically using the Conclave
 SDK, but is likely to be introduced in a future version. Please talk to us if
 you would like more information about this.
-
