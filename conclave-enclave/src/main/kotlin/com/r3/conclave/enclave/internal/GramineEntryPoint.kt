@@ -23,12 +23,19 @@ object GramineEntryPoint {
             exitProcess(EXIT_ERR)
         }
 
-        return try {
-            args[0].toUInt().toInt()
+        val port = try {
+            args[0].toInt()
         } catch (e: NumberFormatException) {
-            System.err.println("Expected port number, but got '${args[0]}'.")
+            System.err.println("${args[0]} is not a valid port number.")
             exitProcess(EXIT_ERR)
         }
+
+        if (port > 65535 || port < 0) {
+            System.err.println("$port is not a valid port number. Value must be between 0 and 65535.")
+            exitProcess(EXIT_ERR)
+        }
+
+        return port.toInt()
     }
 
     private fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
