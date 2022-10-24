@@ -1,16 +1,7 @@
 ## The DCAP protocol
 
-There are two protocols for establishing what code runs in an enclave: EPID and DCAP. EPID is an older
-protocol designed for consumer applications and includes some sophisticated privacy features. For servers
-where the IP address doesn't need to be hidden (because it's public in DNS, to begin with), these features
-aren't helpful, and thus there is DCAP (_Data Center Attestation Primitives_). DCAP requires more modern hardware
-but is otherwise simpler and more robust. You may also see DCAP referred to as "ECDSA attestation".
-
-!!!Important
-
-    Intel does not provide EPID attestation support on any Xeon Scalable processors including the Ice Lake Xeon CPUs 
-    and any future generations. Please ensure you are using DCAP attestation on these platforms.
-
+Conclave only supports the modern DCAP attestation protocol, the old EPID attestation protocol is not supported anymore.
+You may also see DCAP referred to as "ECDSA attestation".
 
 In DCAP, repeated attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed
 machine obtains a machine certificate from Intel via the cache, which may then be persisted to disk. All this is

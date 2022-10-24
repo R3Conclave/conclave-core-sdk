@@ -29,6 +29,10 @@ sealed class AttestationParameters {
      * This parameter is not used if the enclave is in simulation mode (as no attestation is done in simulation) and null
      * can be provided.
      */
+    @Deprecated(
+        "EPID attestation support is deprecated and it will be removed in an upcoming release," +
+                " use DCAP attestation instead"
+    )
     data class EPID(val spid: OpaqueBytes, val attestationKey: String) : AttestationParameters() {
         init {
             require(spid.size == 16) { "EPID service provider IDs are always 16 bytes" }
