@@ -35,7 +35,7 @@ object GramineEntryPoint {
             exitProcess(EXIT_ERR)
         }
 
-        return port.toInt()
+        return port
     }
 
     private fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
