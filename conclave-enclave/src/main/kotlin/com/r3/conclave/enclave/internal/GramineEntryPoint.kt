@@ -31,7 +31,7 @@ object GramineEntryPoint {
         }
     }
 
-    fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
+    private fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
         val enclaveClass = Class.forName(enclaveClassName)
         val env = GramineEnclaveEnvironment(enclaveClass, hostInterface)
         val enclave = enclaveClass.asSubclass(Enclave::class.java)
