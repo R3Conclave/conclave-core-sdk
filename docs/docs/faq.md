@@ -135,7 +135,7 @@ please [talk to us on discord](https://discord.gg/zpHKkMZ8Sw).
 
 ### Will using Conclave require any agreements with Intel?
 
-No. Modern chips support a feature called flexible launch control that
+No. Modern chips support a feature called "flexible launch control" that
 allows the owner of the hardware to decide which enclaves can be loaded. For example, if you deploy to Microsoft
 Azure, no agreement or interaction with Intel is needed, as Azure allows any self-signed enclave.
 
@@ -231,6 +231,12 @@ Please see [side channel attacks](security.md#side-channel-attacks).
 ### What Java versions are supported?
 
 Conclave requires at least Java 8 to build and run an enclave application. Java 17 (LTS) is recommended.
+
+### At which points in time is a connection with Intel needed?
+
+You don't need a connection with Intel. As an example: when using Microsoft Azure, 
+the cloud provider runs caching proxies in-cloud, and Conclave 
+uses them automatically.
 
 ### Can I print debug output to the console from my enclave?
 

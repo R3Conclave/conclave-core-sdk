@@ -1,6 +1,6 @@
 ## The DCAP protocol
 
-Conclave only supports the modern DCAP attestation protocol, the old EPID attestation protocol is not supported anymore.
+Conclave only supports the most recent DCAP attestation protocol; the old EPID attestation protocol is not supported anymore.
 You may also see DCAP referred to as "ECDSA attestation".
 
 In DCAP, repeated attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed
