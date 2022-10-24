@@ -66,7 +66,7 @@ dependencies {
 ```
 7. Check that the host and client run without any issues:
 ```bash
-./gradlew :host:run
+./gradlew :host:bootRun
 ./gradlew :client:run
 ```
 
