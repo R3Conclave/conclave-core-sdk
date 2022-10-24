@@ -13,9 +13,6 @@ object GramineEntryPoint {
     private const val USAGE_STRING = "usage: GramineEntryPoint <port>"
     private const val EXIT_ERR = -1
 
-    // TODO: Determine this properly!
-    private const val MAX_CONCURRENCY = 8
-
     /** The host passes the port on the command line. */
     private fun getPortFromArgs(args: Array<String>): Int {
         if (args.isEmpty()) {
@@ -54,7 +51,7 @@ object GramineEntryPoint {
     @JvmStatic
     fun main(args: Array<String>) {
         val port = getPortFromArgs(args)
-        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port, MAX_CONCURRENCY)
+        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port)
 
         /** Register the enclave initialisation call handler. */
         hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {

@@ -21,7 +21,7 @@ import java.util.concurrent.Semaphore
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
-class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closeable {
+class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: Int) : HostEnclaveInterface(), Closeable {
     private val serverSocket = ServerSocket(port)
 
     val port get() = serverSocket.localPort
@@ -43,8 +43,7 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
 
     val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
 
-    private var maxConcurrentCalls = 0
-    private val callGuardSemaphore = Semaphore(0)
+    private val callGuardSemaphore = Semaphore(maxConcurrentCalls)
 
     private val receiveLoop = object : Runnable {
         private var done = false
@@ -100,8 +99,9 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
                 toEnclave = DataOutputStream(toEnclaveSocket.getOutputStream())
                 fromEnclave = DataInputStream(fromEnclaveSocket.getInputStream())
 
-                /** Read maximum number of concurrent calls from the enclave. */
-                maxConcurrentCalls = fromEnclave.readInt()
+                /** Send the maximum number of concurrent calls to the enclave. */
+                toEnclave.writeInt(maxConcurrentCalls)
+                toEnclave.flush()
 
                 /** Start the message receive thread and allow calls to enter. */
                 receiveLoopThread.start()

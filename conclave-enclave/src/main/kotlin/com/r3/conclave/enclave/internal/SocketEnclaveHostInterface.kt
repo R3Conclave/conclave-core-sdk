@@ -10,9 +10,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 
 /**
  * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
@@ -23,8 +21,7 @@ import java.util.concurrent.Executors
  */
 class SocketEnclaveHostInterface(
         private val host: String,
-        private val port: Int,
-        private val maximumConcurrentCalls: Int
+        private val port: Int
 ) : EnclaveHostInterface(), Closeable {
     var sanitiseExceptions = false
 
@@ -42,7 +39,8 @@ class SocketEnclaveHostInterface(
     }
 
     private var stateManager = StateManager<State>(State.Ready)
-    private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
+
+    private lateinit var callExecutor: ExecutorService
 
     private val receiveLoop = object : Runnable {
         private var done = false
@@ -101,9 +99,9 @@ class SocketEnclaveHostInterface(
                 toHost = DataOutputStream(toHostSocket.getOutputStream())
                 fromHost = DataInputStream(fromHostSocket.getInputStream())
 
-                /** Send the maximum number of concurrent calls to the host. */
-                toHost.writeInt(maximumConcurrentCalls)
-                toHost.flush()
+                /** Read the maximum number of concurrent calls from the host. */
+                val maximumConcurrentCalls = fromHost.readInt()
+                callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
                 /** Start the message receive thread. */
                 receiveLoopThread.start()
