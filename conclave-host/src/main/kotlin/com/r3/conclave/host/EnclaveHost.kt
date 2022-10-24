@@ -1130,10 +1130,10 @@ class EnclaveHost private constructor(
 
             classGraph.scan().use {
                 for (resource in it.allResources) {
-                    val pathMatcher = manifestSearchPattern.matcher(resource.url.path)
+                    val pathMatcher = manifestSearchPattern.matcher(resource.path)
 
                     if (pathMatcher.matches()) {
-                        val enclaveClassName = pathMatcher.group(1).replace('/', '.').substringAfter("!.")
+                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
                         val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
                         val fileName = pathMatcher.group(3)
                         //  Here we assume that all the Gramine required files are at the same level of the manifest file
