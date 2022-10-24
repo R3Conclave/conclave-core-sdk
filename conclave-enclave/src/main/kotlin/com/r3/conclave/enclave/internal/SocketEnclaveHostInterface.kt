@@ -88,7 +88,13 @@ class SocketEnclaveHostInterface(
             }
 
             try {
-                /** Connect sockets and instantiate data input/output streams. */
+                /**
+                 * Connect sockets and instantiate data input/output streams.
+                 * We need two sockets here because when running inside a Gramine context, there is some extra
+                 * synchronisation which prevents reading and writing from a socket simultaneously and this can cause
+                 * deadlocks between the receive loop thread and the sending thread. It also improves performance a bit!
+                 * Also set tcpNoDelay to true as latency is more important than throughput in this case.
+                 */
                 fromHostSocket = Socket(host, port).apply { tcpNoDelay = true }
                 toHostSocket = Socket(host, port).apply { tcpNoDelay = true }
 

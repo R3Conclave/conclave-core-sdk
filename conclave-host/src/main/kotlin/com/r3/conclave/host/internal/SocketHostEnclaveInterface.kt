@@ -85,7 +85,13 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
             }
 
             try {
-                /** Wait for input and output sockets, then close the server socket. */
+                /**
+                 * Wait for input and output sockets, then close the server socket.
+                 * We need two sockets here because when running inside a Gramine context, there is some extra
+                 * synchronisation which prevents reading and writing from a socket simultaneously and this can cause
+                 * deadlocks between the receive loop thread and the sending thread. It also improves performance a bit!
+                 * Also set tcpNoDelay to true as latency is more important than throughput in this case.
+                 */
                 serverSocket.use {
                     toEnclaveSocket = it.accept().apply { tcpNoDelay = true }
                     fromEnclaveSocket = it.accept().apply { tcpNoDelay = true }
