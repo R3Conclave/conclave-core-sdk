@@ -253,7 +253,7 @@ uses them automatically.
 
 If you use older hardware with the EPID attestation protocol, the `aesmd` daemon and the host program will connect to
 Intel's servers when an enclave is loaded. This connection happens as part of the startup sequence.
-See [machine setup](machine-setup.md) to learn about proxy configuration.
+See [non-cloud deployment](non-cloud-deployment.md#limited-network-connectivity) to learn about proxy configuration.
 
 ### Can I print debug output to the console from my enclave?
 

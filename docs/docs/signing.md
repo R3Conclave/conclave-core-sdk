@@ -23,8 +23,9 @@ Using signatures to link binaries into a single upgrade path is the same techniq
 permissions and stored data from old to new apps.
 
 Signing is also used to authorise which enclaves can start. By default Intel chips won't start an enclave unless it's 
-signed by an Intel key, but this behaviour can be changed and on Azure (see ["Deploying to Azure"](azure.md)) enclaves
-can be self-signed. If you want to use older hardware getting whitelisted by Intel is free and can be done quickly. 
+signed by an Intel key, but this behaviour can be changed and on Azure (see ["Deploying to Azure"](machine-setup.md)),
+enclaves can be self-signed. If you want to use older hardware, getting it whitelisted by Intel is free and can be done 
+quickly. 
 It's a similar process to getting an SSL certificate but using different tools.
 
 On Xeon E CPUs with Intel FLC support in the chipset, and a recent enough kernel driver, the owner can add their 
