@@ -21,7 +21,7 @@ dependencies {
     runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
 }
 
-bootJar {
+springBoot {
     // Use the provided main method for the web host.
     mainClass.set("com.r3.conclave.host.web.EnclaveWebHost")
 

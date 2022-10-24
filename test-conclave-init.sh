@@ -39,7 +39,7 @@ sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.g
 echo Run Java project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
-./gradlew :host:run & _PID=$!
+./gradlew :host:bootRun & _PID=$!
 sleep 5
 ./gradlew :client:run \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
@@ -73,7 +73,7 @@ sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.g
 echo Run Kotlin project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
-./gradlew :host:run & _PID=$!
+./gradlew :host:bootRun & _PID=$!
 sleep 5
 ./gradlew :client:run \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
