@@ -74,13 +74,13 @@ extern "C" {
     // Stub functions to satisfy the linker    
     int __xstat(int, const char*, struct stat*) {
         enclave_trace("__xstat\n");
-	errno = EACCES;
+	    errno = ENOSYS;
         return -1;
     }
 
     int __fxstat(int, int, struct stat*) {
         enclave_trace("__fxstat\n");
-	errno = EACCES;
+	    errno = ENOSYS;
         return -1;
     }
 
@@ -99,25 +99,25 @@ extern "C" {
 
     int fstat(int fd, struct stat *statbuf) {
         enclave_trace("fstat\n");
-        errno = EACCES;
+        errno = ENOSYS;
         return -1;
     }
 
     int stat(const char *pathname, struct stat *statbuf) {
         enclave_trace("stat\n");
-        errno = EACCES;
+        errno = ENOSYS;
         return -1;
     }
 
     int lstat(const char *pathname, struct stat *statbuf) {
         enclave_trace("lstat\n");
-        errno = EACCES;
+        errno = ENOSYS;
         return -1;
     }
 
     int statvfs64 (const char *file, struct statvfs64 *buf) {
         enclave_trace("statvfs64\n");
-        errno = EACCES;
+        errno = ENOSYS;
         return -1;
     }    
 }

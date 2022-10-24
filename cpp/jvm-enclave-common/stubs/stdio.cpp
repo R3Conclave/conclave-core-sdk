@@ -153,6 +153,6 @@ extern "C" {
 
     char *fgets(char *s, int size, FILE *stream) {
         enclave_trace("fgets\n");
-        return NULL;
+        return nullptr;
     }
 }

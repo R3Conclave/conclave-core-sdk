@@ -7,7 +7,7 @@ extern "C" {
 
     int ioctl(int fd, unsigned long request, ...) {
         enclave_trace("ioctl\n");
-        errno = EBADF;
+        errno = ENOSYS;
         return -1;
     }
 }
