@@ -24,7 +24,9 @@ dependencies {
 springBoot {
     // Use the provided main method for the web host.
     mainClass.set("com.r3.conclave.host.web.EnclaveWebHost")
+}
 
+bootJar {
     // Include the enclave mode in the filename for clarity.
     archiveClassifier.set(mode)
 }
