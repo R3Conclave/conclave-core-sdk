@@ -7,7 +7,9 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import java.io.IOException
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.NoSuchFileException
+import java.nio.file.FileSystemException
 import java.util.concurrent.atomic.AtomicInteger
+
 
 // TODO The file system tests should test for both persisting and in-memory scenerios.
 abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
@@ -15,7 +17,8 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
     constructor() : this(FILESYSTEM_ENCLAVE_CLASS_NAME)
 
     companion object {
-        const val FILESYSTEM_ENCLAVE_CLASS_NAME = "com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave"
+        const val FILESYSTEM_ENCLAVE_CLASS_NAME =
+            "com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave"
     }
 
     val uid = AtomicInteger()
@@ -156,5 +159,21 @@ abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
             .isInstanceOf(RuntimeException::class.java)
             .hasCauseExactlyInstanceOf(exception)
             .cause.hasMessageContaining(path)
+    }
+
+    fun createSymlink(symlinkPath: String, filePath: String) {
+        assertThatThrownBy {
+            callEnclave(CreateSymlink(symlinkPath, filePath))
+        }
+            .isInstanceOf(RuntimeException::class.java)
+            .hasCauseExactlyInstanceOf(FileSystemException::class.java)
+    }
+
+    fun createHardlink(symlinkPath: String, filePath: String) {
+        assertThatThrownBy {
+            callEnclave(CreateSymlink(symlinkPath, filePath))
+        }
+            .isInstanceOf(RuntimeException::class.java)
+            .hasCauseExactlyInstanceOf(FileSystemException::class.java)
     }
 }

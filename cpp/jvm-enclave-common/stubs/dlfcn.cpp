@@ -10,35 +10,35 @@
 
 using namespace std;
 
-//////////////////////////////////////////////////////////////////////////////
-// Stub functions to satisfy the linker
-STUB(dlclose);
-
 extern "C" {
 
-void *dlopen(const char *filename, int flags) {
-    enclave_trace("dlopen\n");
-    return nullptr;
-}
+    void *dlopen(const char *filename, int flags) {
+        enclave_trace("dlopen\n");
+        return nullptr;
+    }
 
-void *dlmopen(const char *filename, int flags) {
-    enclave_trace("dlmopen\n");
-    return nullptr;
-}
+    void *dlmopen(const char *filename, int flags) {
+        enclave_trace("dlmopen\n");
+        return nullptr;
+    }
 
-char *dlerror(){
-    enclave_trace("dlerror\n");
-    return nullptr;
-}
+    char *dlerror(){
+        enclave_trace("dlerror\n");
+        return nullptr;
+    }
 
-int dlinfo(void *handle, int request, void *info) {
-    enclave_trace("dlinfo\n");
-    return -1;
-}
+    int dlinfo(void *handle, int request, void *info) {
+        enclave_trace("dlinfo\n");
+        return -1;
+    }
 
-int dladdr(void* addr, Dl_info* info) {
-    enclave_trace("dladdr\n");
-    return 0;
-}
+    int dladdr(void* addr, Dl_info* info) {
+        enclave_trace("dladdr\n");
+        return 0;
+    }
 
+    int dlclose(void *handle) {
+        enclave_trace("dlclose\n");
+        return -1;
+    }
 }
