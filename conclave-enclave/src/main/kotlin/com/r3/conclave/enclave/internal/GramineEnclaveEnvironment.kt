@@ -5,6 +5,10 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
 
+/**
+ * This class currently implements something like mock attestation (see [MockEnclaveEnvironment]).
+ * TODO: (CON-1178) Implement proper attestation
+ */
 class GramineEnclaveEnvironment(
         enclaveClass: Class<*>,
         override val hostInterface: SocketEnclaveHostInterface
@@ -17,6 +21,7 @@ class GramineEnclaveEnvironment(
         }
     }
 
+    // TODO: (CON-1178) Implement proper attestation
     override val enclaveMode = EnclaveMode.SIMULATION
 
     private val tcbLevel = 1
@@ -37,6 +42,7 @@ class GramineEnclaveEnvironment(
         digest("SHA-256") { update(enclaveClass.name.toByteArray()) }.copyOf(16)
     }
 
+    // TODO: (CON-1178) Implement proper attestation
     override fun createReport(
             targetInfo: ByteCursor<SgxTargetInfo>?,
             reportData: ByteCursor<SgxReportData>?
@@ -64,6 +70,7 @@ class GramineEnclaveEnvironment(
         return EnclaveUtils.unsealData(aesSealingKey, sealedBlob)
     }
 
+    // TODO: (CON-1178) Implement proper attestation
     override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {
         val keyPolicy = keyRequest[SgxKeyRequest.keyPolicy]
         // TODO This is temporary: https://github.com/intel/linux-sgx/issues/578
