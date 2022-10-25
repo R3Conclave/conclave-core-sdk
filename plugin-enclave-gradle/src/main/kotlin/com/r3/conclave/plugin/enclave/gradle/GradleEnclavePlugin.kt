@@ -16,6 +16,7 @@ import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
+import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -76,11 +77,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "If you're unsure what this error message means, please consult the conclave documentation.")
             }
             // Check the passed runtime type is valid.
-            val validRuntimeTypes = RuntimeType.values().map { it.name.lowercase() }
-            if (conclaveExtension.runtime.get() !in validRuntimeTypes) {
+            try {
+                RuntimeType.valueOf(conclaveExtension.runtime.get())
+            } catch (e: IllegalArgumentException) {
                 throw GradleException(
                         "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
-                        "Valid runtime types are: $validRuntimeTypes.")
+                        "Valid runtime types are: ${RuntimeType.values().map { it.name }}.")
             }
         }
 
@@ -503,7 +505,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             target.afterEvaluate {
                 try {
-                    when (RuntimeType.valueOf(conclaveExtension.runtime.get().lowercase())) {
+                    when (RuntimeType.valueOf(conclaveExtension.runtime.get())) {
                         RuntimeType.Gramine -> {
                             target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
                         }
