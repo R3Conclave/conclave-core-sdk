@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eou pipefail
+set -eoux pipefail
 
 # This script requires a local build of the SDK at build/repo, which can be produced by running
 # ./gradlew publishAllPublicationsToBuildRepository.
@@ -40,7 +40,7 @@ echo Run Java project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
 host_output_file="host_output.log"
-./gradlew :host:bootRun & > $host_output_file
+./gradlew :host:bootRun > $host_output_file &
 _PID=$!
 
 sleep 5
