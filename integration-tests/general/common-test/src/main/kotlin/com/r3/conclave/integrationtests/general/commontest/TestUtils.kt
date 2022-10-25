@@ -14,7 +14,7 @@ object TestUtils {
     private fun getHardwareAttestationParams(): AttestationParameters {
         return if (Path.of("/dev/sgx_enclave").exists() || Path.of("/dev/sgx/enclave").exists()) {
             AttestationParameters.DCAP()
-        } else -> {
+        } else {
             throw UnsupportedOperationException(
                 "SGX does not appear to be available on this machine. Check kernel drivers."
             )
