@@ -6,10 +6,11 @@ import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
 
 /**
- * This class currently implements something like mock attestation (see [MockEnclaveEnvironment]).
- * TODO: (CON-1178) Implement proper attestation
+ * This class is the enclave environment intended for use with gramine-direct.
+ * TODO: Currently the behaviour here is lifted directly from [MockEnclaveEnvironment].
+ *       This will eventually need to behave the same way as native simulation mode does.
  */
-class GramineEnclaveEnvironment(
+class GramineDirectEnclaveEnvironment(
         enclaveClass: Class<*>,
         override val hostInterface: SocketEnclaveHostInterface
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
@@ -21,7 +22,7 @@ class GramineEnclaveEnvironment(
         }
     }
 
-    // TODO: (CON-1178) Implement proper attestation
+    // TODO: (CON-1194) Handle enclave mode properly
     override val enclaveMode = EnclaveMode.SIMULATION
 
     private val tcbLevel = 1
@@ -30,10 +31,12 @@ class GramineEnclaveEnvironment(
         versionToCpuSvn(tcbLevel)
     }
 
+    // TODO: (CON-1194) mrenclave value based on enclave jar content
     private val mrenclave: ByteArray by lazy {
         digest("SHA-256") { update(enclaveClass.name.toByteArray()) }
     }
 
+    // TODO: (CON-1194) mrsigner value that matches what gramine-sgx would produce
     private val mrsigner: ByteArray by lazy {
         ByteArray(32)
     }
@@ -42,7 +45,6 @@ class GramineEnclaveEnvironment(
         digest("SHA-256") { update(enclaveClass.name.toByteArray()) }.copyOf(16)
     }
 
-    // TODO: (CON-1178) Implement proper attestation
     override fun createReport(
             targetInfo: ByteCursor<SgxTargetInfo>?,
             reportData: ByteCursor<SgxReportData>?
@@ -70,7 +72,6 @@ class GramineEnclaveEnvironment(
         return EnclaveUtils.unsealData(aesSealingKey, sealedBlob)
     }
 
-    // TODO: (CON-1178) Implement proper attestation
     override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {
         val keyPolicy = keyRequest[SgxKeyRequest.keyPolicy]
         // TODO This is temporary: https://github.com/intel/linux-sgx/issues/578

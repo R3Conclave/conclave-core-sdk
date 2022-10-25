@@ -51,7 +51,10 @@ class GramineEnclaveHandle(
         val interfaceStartThread = Thread(interfaceStartTask).apply { start() }
 
         try {
-            /** Start the enclave process, passing the port that the call interface is listening on. */
+            /**
+             * Start the enclave process, passing the port that the call interface is listening on.
+             * TODO: Implement a *secure* method for passing port to the enclave.
+             */
             processGramineDirect = ProcessBuilder()
                 .inheritIO()
                 .directory(enclaveDirectory.toFile())

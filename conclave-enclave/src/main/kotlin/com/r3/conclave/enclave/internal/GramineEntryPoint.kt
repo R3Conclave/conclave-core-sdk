@@ -37,7 +37,7 @@ object GramineEntryPoint {
 
     private fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
         val enclaveClass = Class.forName(enclaveClassName)
-        val env = GramineEnclaveEnvironment(enclaveClass, hostInterface)
+        val env = GramineDirectEnclaveEnvironment(enclaveClass, hostInterface)
         val enclave = enclaveClass.asSubclass(Enclave::class.java)
                 .getDeclaredConstructor()
                 .apply { isAccessible = true }
