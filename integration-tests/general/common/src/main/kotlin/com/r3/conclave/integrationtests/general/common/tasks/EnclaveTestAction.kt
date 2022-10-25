@@ -118,12 +118,15 @@ private val protoBuf = ProtoBuf {
             subclass(SqlQuery::class, SqlQuery.serializer())
             subclass(ExecuteSql::class, ExecuteSql.serializer())
             subclass(RenameFile::class, RenameFile.serializer())
+            subclass(CreateSymlink::class, CreateSymlink.serializer())
+            subclass(CreateHardlink::class, CreateHardlink.serializer())
             subclass(MovePath::class, MovePath.serializer())
             subclass(WalkPath::class, WalkPath.serializer())
             subclass(ReadAndWriteFilesToDefaultFileSystem::class, ReadAndWriteFilesToDefaultFileSystem.serializer())
             subclass(WalkAndDelete::class, WalkAndDelete.serializer())
             subclass(ListFilesNTimes::class, ListFilesNTimes.serializer())
             subclass(CreateAttestationQuoteAction::class, CreateAttestationQuoteAction.serializer())
+            subclass(CreateSocket::class, CreateSocket.serializer())
         }
     }
 }

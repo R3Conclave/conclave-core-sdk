@@ -3,6 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
+import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.plugin.enclave.gradle.gramine.BuildUnsignedGramineEnclave
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
@@ -20,7 +21,6 @@ import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
@@ -195,9 +195,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val path = baseDirectory / "sgx-tools" / name
         if (!path.exists()) {
             path.parent.createDirectories()
-            javaClass.getResourceAsStream("/sgx-tools/$name")!!.use {
-                Files.copy(it, path, REPLACE_EXISTING)
-            }
+            javaClass.copyResource("/sgx-tools/$name", path)
             path.setPosixFilePermissions(path.getPosixFilePermissions() + OWNER_EXECUTE)
         }
         return path

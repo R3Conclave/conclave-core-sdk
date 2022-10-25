@@ -10,12 +10,7 @@
 STUB(getegid);
 STUB(geteuid);
 STUB(getgid);
-STUB(gethostname);
-STUB(lseek);
-STUB(pathconf);
-STUB(readlink);
 STUB(_exit);
-STUB(lchown);
 STUB(__xmknod);
 
 extern "C" {
@@ -336,5 +331,54 @@ extern "C" {
         const int res = fchmod_impl(fd, mode, err);
         errno = err;
         return res;
+    }
+
+    int gethostname(char *name, size_t len) {
+        enclave_trace("gethostname\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    int sethostname(const char *name, size_t len) {
+        enclave_trace("sethostname\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    off_t lseek(int fd, off_t offset, int whence) {
+        enclave_trace("lseek\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    long fpathconf(int fd, int name) {
+        enclave_trace("fpathconf\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    long pathconf(const char *path, int name) {
+        enclave_trace("pathconf\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    ssize_t readlink(const char *pathname, char *buf, size_t bufsiz) {
+        enclave_trace("readlink\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    ssize_t readlinkat(int dirfd, const char *pathname,
+                       char *buf, size_t bufsiz) {
+        enclave_trace("readlinkat\n");
+        errno = ENOSYS;
+        return -1;
+    }
+
+    int lchown(const char *pathname, uid_t owner, gid_t group) {  
+        enclave_trace("lchown\n");
+        errno = ENOSYS;
+        return -1;
     }
 }

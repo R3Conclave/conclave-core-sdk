@@ -3,10 +3,11 @@
 //
 #include "vm_enclave_layer.h"
 
-//////////////////////////////////////////////////////////////////////////////
-// Stub functions to satisfy the linker
-STUB(ioctl);
-
 extern "C" {
 
+    int ioctl(int fd, unsigned long request, ...) {
+        enclave_trace("ioctl\n");
+        errno = ENOSYS;
+        return -1;
+    }
 }
