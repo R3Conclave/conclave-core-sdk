@@ -18,7 +18,7 @@ go wrong. In SGX the TCB is very small relative to comparable systems. It consis
   * The Conclave JVM and message routing code.
 
 Other components you might expect to be a part of the TCB aren't, for instance the operating system isn't, nor is the
-the BIOS nor the `aesmd` daemon that handles interaction with Intel's remote attestation assessment servers. 
+the BIOS. 
 Only small parts of the SGX infrastructure and code that runs inside enclaves needs to be operating correctly. 
 
 Intel systems also have a chip called the 'management engine' (ME). Although some SGX apps use capabilities from this chip,

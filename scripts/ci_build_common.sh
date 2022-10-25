@@ -34,7 +34,6 @@ popd
 container_image_repo=conclave-docker-dev.software.r3.com/com.r3.conclave
 
 # Docker container images
-container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag
 container_image_conclave_build=$container_image_repo/conclave-build:$docker_image_tag
 container_image_integration_tests_build=$container_image_repo/integration-tests-build:$docker_image_tag
 container_image_sdk_build=$container_image_repo/sdk-build:$docker_image_tag
@@ -50,11 +49,11 @@ mkdir -p $HOME/.container
 # still run the devenv on a non-SGX host or a Mac without it breaking.
 sgx_hardware_flags=()
 if [ -e /dev/isgx ]; then
-    sgx_hardware_flags=("--device=/dev/isgx" "-v" "/var/run/aesmd:/var/run/aesmd")
+    sgx_hardware_flags=("--device=/dev/isgx")
 elif [ -e /dev/sgx_enclave ]; then  # DCAP
-    sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/var/run/aesmd:/var/run/aesmd")
+    sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision")
 elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
-    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/var/run/aesmd:/var/run/aesmd")
+    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision")
 fi
 
 docker_group_add=()

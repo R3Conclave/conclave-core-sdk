@@ -5,15 +5,10 @@ Conclave recommends users to [deploy applications in Azure VMs](machine-setup.md
 
 However, you can also deploy your enclaves on-premise.
 
-If your hardware supports EPID attestation instead of DCAP, you need to get access to the
-[Intel Attestation Service (IAS)](ias.md).
-
 To configure the host:
 
 1. Install the SGX kernel driver (not required for Linux kernel versions later than 5.11).
 2. Install the Intel platform services software.
-3. Follow the instructions at the [IAS website](https://api.portal.trustedservices.intel.com/EPID-attestation) to get
-   access to the IAS servers using a whitelisted SSL key.
 
 !!!Note
    
@@ -73,9 +68,6 @@ Alternatively, you can [compile the system software](https://github.com/intel/li
 yourself.
 The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).
 
-A daemon `aesmd` helps to implement SGX remote attestation and machine provisioning. This daemon comes as part of the 
-SGX platform services software and is set up during installation.
-
 A quick summary:
 
 1. Download and run the driver installer binary (all distros).
@@ -84,31 +76,8 @@ A quick summary:
     * For Ubuntu 20 LTS: `echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intelsgx.list`
     * Add the Intel package signing key: `wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -`
     * Run `apt-get update`
-    * Run `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-epid libsgx-quote-ex`
+    * Run `apt-get install libssl-dev libcurl4-openssl-dev libprotobuf-dev libsgx-urts libsgx-launch libsgx-quote-ex`
 3. For non-Ubuntu users, use the SDK installer (which also installs the platform services software).
-
-These steps will start the `aesm_service`.
-
-
-## Limited network connectivity
-
-The enclave host machine needs to contact Intel's attestation servers to prove to third parties that it's a genuine, 
-unrevoked CPU running with the latest secure configuration. So, if the machine has limited connectivity, you must use 
-an outbound HTTP[S] proxy server.
-
-You need to set up your proxy settings in the `/etc/aesmd.conf` file inside the `aesmd` service.
-
-The program that uses Conclave will also need to make web requests to https://api.trustedservices.intel.com. So you
-need to [provide Java with HTTP proxy settings](https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html)
-as well.
-
-## Using containers
-
-If your hardware supports EPID instead of DCAP, you must pass at least these flags when creating the Docker container:
-
-`--device=/dev/isgx -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket`
-
-Failure to do this will result in an `SGX_ERROR_NO_DEVICE` error when creating an enclave.
 
 ## Renewing machine security
 
