@@ -39,10 +39,26 @@ sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.g
 echo Run Java project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
-./gradlew :host:bootRun & _PID=$!
+host_output_file="host_output.log"
+./gradlew :host:bootRun & > $host_output_file
+_PID=$!
+
 sleep 5
 ./gradlew :client:run \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
+
+# Ensure the logs from the host are working (CON-1193)
+# Log output to the screen for debugging purposes
+cat $host_output_file
+# To check if the logs are working, strings from different lines will be checked
+# The number of lines that were found in the logs will be stored in the variable
+numberOfExpectedMatchingLines=3
+numberOfLinesFoundInLogs=$(grep -c "Remote attestation for enclave\|Tomcat started on port(s):\|Started EnclaveWebHost.Companion in" $host_output_file)
+rm host_output.log
+if [ "$numberOfLinesFoundInLogs" != "$numberOfExpectedMatchingLines" ]; then
+  echo "The logs might not be working properly. Number of matching lines found: $numberOfLinesFoundInLogs. Expected number of matching lines: $numberOfExpectedMatchingLines"
+  exit 1
+fi
 
 # kill the host
 kill -9 $_PID
@@ -73,7 +89,9 @@ sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.g
 echo Run Kotlin project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
-./gradlew :host:bootRun & _PID=$!
+./gradlew :host:bootRun &
+ _PID=$!
+
 sleep 5
 ./gradlew :client:run \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
