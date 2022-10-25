@@ -5,6 +5,7 @@ subprojects {
     apply plugin: 'java'
 
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+    ext.runtimeType = findProperty("runtimeType")?.toString()?.toLowerCase() ?: "graalvm"
 
     repositories {
         maven {

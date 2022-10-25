@@ -75,6 +75,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "Please set the 'revocationLevel' property in the build configuration for your enclave.\n" +
                         "If you're unsure what this error message means, please consult the conclave documentation.")
             }
+            // Check the passed runtime type is valid.
+            val validRuntimeTypes = RuntimeType.values().map { it.name.lowercase() }
+            if (conclaveExtension.runtime.get() !in validRuntimeTypes) {
+                throw GradleException(
+                        "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
+                        "Valid runtime types are: $validRuntimeTypes.")
+            }
         }
 
         val enclaveClassNameTask = target.createTask<EnclaveClassName>("enclaveClassName") { task ->
@@ -495,16 +502,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             target.afterEvaluate {
-                val runtimeType = conclaveExtension.runtime.get()
-
-                when (runtimeType) {
-                    RuntimeType.Gramine -> {
-                        target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
+                try {
+                    when (RuntimeType.valueOf(conclaveExtension.runtime.get().lowercase())) {
+                        RuntimeType.Gramine -> {
+                            target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
+                        }
+                        RuntimeType.GraalVM -> {
+                            target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
+                        }
                     }
-
-                    RuntimeType.GraalVM -> {
-                        target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
-                    }
+                } catch (e: Exception) {
+                    /** Do nothing. Error condition is handled in [apply]. */
                 }
             }
         }

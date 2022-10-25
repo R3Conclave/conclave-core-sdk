@@ -13,6 +13,7 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
+    runtime = findProperty("runtimeType")
     enablePersistentMap = true
     persistentFileSystemSize = "32m"
     inMemoryFileSystemSize = "32m"
