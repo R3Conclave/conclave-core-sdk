@@ -11,7 +11,7 @@ and host are all just regular function calls. You can expect very short build ti
 and enjoy the regular Java development experience.
 
 !!!tip
-    To debug your host application in mock mode from IntelliJ, find the `:host:run` task in the gradle menu, add the `-PenclaveMode=mock` argument to the run configuration, and then run the task in debug mode.
+    To debug your host application in mock mode from IntelliJ, find the `:host:bootRun` task in the gradle menu, add the `-PenclaveMode=mock` argument to the run configuration, and then run the task in debug mode.
 
 ## Using mock mode
 

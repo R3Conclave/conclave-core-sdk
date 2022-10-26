@@ -1130,7 +1130,7 @@ class EnclaveHost private constructor(
 
             classGraph.scan().use {
                 for (resource in it.allResources) {
-                    val pathMatcher = manifestSearchPattern.matcher(resource.url.path)
+                    val pathMatcher = manifestSearchPattern.matcher(resource.path)
 
                     if (pathMatcher.matches()) {
                         val enclaveClassName = pathMatcher.group(1).replace('/', '.').substringAfter("!.")

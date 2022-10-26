@@ -9,64 +9,65 @@ import java.lang.NumberFormatException
 import java.nio.ByteBuffer
 import kotlin.system.exitProcess
 
-class GramineEntryPoint {
+object GramineEntryPoint {
+    private const val USAGE_STRING = "usage: GramineEntryPoint <port>"
+    private const val EXIT_ERR = -1
 
-    companion object {
-        private const val USAGE_STRING = "usage: GramineEntryPoint <port>"
-        private const val EXIT_ERR = -1
-
-        // TODO: Determine this properly!
-        private const val MAX_CONCURRENCY = 8
-
-        /** The host passes the port on the command line. */
-        private fun getPortFromArgs(args: Array<String>): Int {
-            if (args.isEmpty()) {
-                System.err.println(USAGE_STRING)
-                exitProcess(EXIT_ERR)
-            }
-
-            return try {
-                args[0].toUInt().toInt()
-            } catch (e: NumberFormatException) {
-                System.err.println("Expected port number, but got '${args[0]}'.")
-                exitProcess(EXIT_ERR)
-            }
+    /** The host passes the port on the command line. */
+    private fun getPortFromArgs(args: Array<String>): Int {
+        if (args.isEmpty()) {
+            System.err.println(USAGE_STRING)
+            exitProcess(EXIT_ERR)
         }
 
-        fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
-            val enclaveClass = Class.forName(enclaveClassName)
-            val env = GramineEnclaveEnvironment(enclaveClass, hostInterface)
-            val enclave = enclaveClass.asSubclass(Enclave::class.java)
-                    .getDeclaredConstructor()
-                    .apply { isAccessible = true }
-                    .newInstance()
-            val initialiseMethod = Enclave::class.java.getDeclaredMethod(
-                    "initialise", EnclaveEnvironment::class.java).apply { isAccessible = true }
-            env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
-            initialiseMethod.invoke(enclave, env)
+        val port = try {
+            args[0].toInt()
+        } catch (e: NumberFormatException) {
+            System.err.println("${args[0]} is not a valid port number.")
+            exitProcess(EXIT_ERR)
         }
 
-        @JvmStatic
-        fun main(args: Array<String>) {
-            val port = getPortFromArgs(args)
-            val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port, MAX_CONCURRENCY)
+        if (port > 65535 || port < 0) {
+            System.err.println("$port is not a valid port number. Value must be between 0 and 65535.")
+            exitProcess(EXIT_ERR)
+        }
 
-            /** Register the enclave initialisation call handler. */
-            hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
-                override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                    initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface)
-                    return null
-                }
-            })
+        return port
+    }
 
-            /**
-             * Start the interface and await termination.
-             * TODO: Re-use the main thread (here) for the interface receive loop
-             */
-            hostInterface.use {
-                it.start()
-                it.awaitTermination()
+    private fun initialiseEnclave(enclaveClassName: String, hostInterface: SocketEnclaveHostInterface) {
+        val enclaveClass = Class.forName(enclaveClassName)
+        val env = GramineDirectEnclaveEnvironment(enclaveClass, hostInterface)
+        val enclave = enclaveClass.asSubclass(Enclave::class.java)
+                .getDeclaredConstructor()
+                .apply { isAccessible = true }
+                .newInstance()
+        val initialiseMethod = Enclave::class.java.getDeclaredMethod(
+                "initialise", EnclaveEnvironment::class.java).apply { isAccessible = true }
+        env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
+        initialiseMethod.invoke(enclave, env)
+    }
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val port = getPortFromArgs(args)
+        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port)
+
+        /** Register the enclave initialisation call handler. */
+        hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface)
+                return null
             }
+        })
+
+        /**
+         * Start the interface and await termination.
+         * TODO: Re-use the main thread (here) for the interface receive loop
+         */
+        hostInterface.use {
+            it.start()
+            it.awaitTermination()
         }
     }
 }

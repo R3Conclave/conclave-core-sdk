@@ -29,7 +29,7 @@ dependencies {
 
 ## Conclave configuration options
 
-The enclave's runtime environment is configured within the `conclave` section in the enclave `build.gradle`. 
+The enclave's runtime environment is configured within the `conclave` section in the enclave `build.gradle`.
 The complete set of options with their default values is shown below. Items marked 'Mandatory' do not have
 a default value and must be specified in your configuration. Items that have default values can be omitted
 from your configuration.
@@ -64,30 +64,30 @@ conclave {
 Each option is described below:
 
 ### productID
-_Default: None. You must provide a value_ 
+_Default: None. You must provide a value_
 
 The product ID is an arbitrary number that can be used to distinguish between different enclaves produced by the same
-organisation (which may for internal reasons wish to use a single signing key). This value should not change once you have 
+organisation (which may for internal reasons wish to use a single signing key). This value should not change once you have
 picked it.
 
 ### revocationLevel
-_Default: None. You must provide a value_ 
+_Default: None. You must provide a value_
 
 The revocation level should be incremented whenever a weakness or vulnerability in the enclave code is discovered
 and fixed. Doing this will enable clients to avoid connecting to old, compromised enclaves. The client can set an
-[`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum 
+[`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) that specifies the required minimum
 revocation level when loading an enclave.
 
-The revocation level in an enclave affects the keys that are generated for 'sealing' data in an enclave. 
+The revocation level in an enclave affects the keys that are generated for 'sealing' data in an enclave.
 Because enclaves can generate encryption keys private to themselves, encryption and authentication can be used to stop
 the host editing the data. Data encrypted in this way is called **sealed data**. Sealed data can be re-requested from
-the operating system and decrypted inside the enclave. 
+the operating system and decrypted inside the enclave.
 
 Whenever the revocation level is raised for an enclave, the data that is sealed by the new version cannot be unsealed
-and read by enclaves with a lower revocation level. This is not true in the opposite direction though: enclaves can 
+and read by enclaves with a lower revocation level. This is not true in the opposite direction though: enclaves can
 unseal data that was encrypted by an enclave with a lower revocation level.
 
-This directly affects enclaves that are using [mail as storage](mail.md#using_mail_for_storage). When a new enclave
+This directly affects enclaves that use [Conclave Mail](mail.md) as storage. When a new enclave
 is deployed with a higher revocation level, and the host contains persisted data sealed with a previous version of
 the enclave, the newer enclave is able to process the stored mail. If a malicious host decides to drop in an older
 version of the enclave, potentially to exploit a discovered vulnerability in the enclave, then this older enclave
@@ -106,11 +106,11 @@ _Default:_ `256m`
 This setting defines the maximum size the heap is allowed to grow to in the runtime environment inside the enclave.
 
 You might be familiar with the JVM option `-Xmx` which allows you to set the maximum heap size of a JVM based
-application. Most of the time in a normal JVM application you can just leave this setting alone and let the JVM 
+application. Most of the time in a normal JVM application you can just leave this setting alone and let the JVM
 decide the heap size. However, the option is there in case you need to increase beyond the default maximum, or if you
 want to configure your application to use less memory to co-exist with other applications.
 
-The `maxHeapSize` setting provides the same control over heap memory as the JVM provides, but for the runtime 
+The `maxHeapSize` setting provides the same control over heap memory as the JVM provides, but for the runtime
 environment in the enclave.
 
 Why is there a separate heap for enclaves? This requires a bit of explanation:
@@ -126,26 +126,26 @@ In this case you want to increase the heap size.
 
 What happens if you want to specify a heap size that is greater than the EPC provided on your SGX system? Well, this
 is not a problem as SGX allows EPC memory to be 'paged'. This means that when you want some EPC memory but none is
-available, SGX will take an existing portion of memory, encrypt it inside the enclave then move it to conventional, 
+available, SGX will take an existing portion of memory, encrypt it inside the enclave then move it to conventional,
 non-EPC memory to make space for the new block. When the enclave needs to access the original memory, it juggles
 other pages to make space in EPC to move the block back from conventional memory and decrypt it.
 
-The downside to this 'paging' is that it has a performance impact. Therefore, if performance is important then 
-it is recommended to keep your enclave memory usage as small as possible, preferably less than the size of the EPC 
+The downside to this 'paging' is that it has a performance impact. Therefore, if performance is important then
+it is recommended to keep your enclave memory usage as small as possible, preferably less than the size of the EPC
 on your SGX system to reduce the amount of paging that occurs.
 
-This is something to consider when looking at sizing your SGX capable system. For example, your enclave may run 
-without any problems on a system with 128Mb of EPC but it may run much faster and with less CPU load on a system 
+This is something to consider when looking at sizing your SGX capable system. For example, your enclave may run
+without any problems on a system with 128Mb of EPC but it may run much faster and with less CPU load on a system
 with 256Mb or more EPC.
 
 !!! tip
-    The size is specified in bytes, but you can put a `k`, `m` or `g` after the value to specify it in kilobytes, 
+    The size is specified in bytes, but you can put a `k`, `m` or `g` after the value to specify it in kilobytes,
     megabytes or gigabytes respectively.
 
 ### maxThreads
 _Default:_ `10`
 
-This is an advanced setting that defines the maximum number of threads that can be active inside an enclave 
+This is an advanced setting that defines the maximum number of threads that can be active inside an enclave
 simultaneously. If you're interested, you can read [this detailed technical description](threads.md), otherwise you
 can safely leave this at the default value. Changing this value does not affect the maximum number
 of threads that you can simultaneously call into a Conclave enclave but affect the number of threads that you
@@ -176,7 +176,7 @@ sufficient for most applications. Only change this setting if you are seeing err
 overflowing.
 
 The stack is used internally by the JVM to hold information about the current function; the chain of functions
-that called the current function (the 'call stack'); temporary variables and other contextual information. 
+that called the current function (the 'call stack'); temporary variables and other contextual information.
 Stack can be consumed in different ways, but the default value provided for `maxStackSize` ensures you will
 likely never see an exhausted stack unless you accidentally generate an infinite recursion via a function calling
 itself.
@@ -187,7 +187,7 @@ stack is used. When a value is provided for `maxStackSize` the in-enclave stack 
 thread that runs inside the enclave.
 
 !!! tip
-    As with `maxHeapSize`, the size is specified in bytes but you can put a `k`, `m` or `g` after the value to 
+    As with `maxHeapSize`, the size is specified in bytes but you can put a `k`, `m` or `g` after the value to
     specify it in kilobytes, megabytes or gigabytes respectively.
 
 ### inMemoryFileSystemSize
@@ -205,7 +205,7 @@ it will represent the mount point of the in-memory filesystem. Everything that y
 will be lost if the enclave restarts.
 
 When enabled alone, the mount point will be `/` and all files and directories will be considered
-part of the in-memory filesystem. 
+part of the in-memory filesystem.
 
 !!! warning
     The lower limit for the in-memory filesystem's size is 97792 bytes and the upper limit is the value of the `maxHeapSize`.
@@ -225,7 +225,7 @@ after a restart of your enclaves. This is represented as a single encrypted file
 your enclave will load/save/read/write all files and directories into that file.
 
 The enclave host must provide a file where the encrypted file system will be persisted. If using the
-[web host](conclave-web-host.md) then the `--filesystem.file` flag must be specified. If using a custom host then it 
+[web host](conclave-web-host.md) then the `--filesystem.file` flag must be specified. If using a custom host then it
 must be passed into [`EnclaveHost.start`](api/-conclave%20-core/com.r3.conclave.host/-enclave-host/start.html).
 
 !!! note
@@ -264,11 +264,11 @@ _Default:_ `""`
 
 A comma separated list of languages to support using the polyglot context capability provided by GraalVM.
 
-This allows for code in the supported languages to be parsed and invoked by the enclave giving the ability 
+This allows for code in the supported languages to be parsed and invoked by the enclave giving the ability
 to deploy dynamic code, or to develop part of your enclave logic in a different language.
 
 The current version of conclave supports JavaScript and Python. The values for this setting can either be the
-default empty string, `"js"`, or `"python"` indicating the enclave should provide support for JavaScript or Python 
+default empty string, `"js"`, or `"python"` indicating the enclave should provide support for JavaScript or Python
 polyglot contexts, respectively.
 
 See [this page on running JavaScript/Python in your enclave](javascript-python.md) for details on how to use this setting.
@@ -287,7 +287,7 @@ on these settings.
 _Default:_ empty list
 
 A list of reflection configuration files as specified in the
-[Reflection](https://www.graalvm.org/reference-manual/native-image/Reflection/#manual-configuration) section
+[reflection](https://www.graalvm.org/22.0/reference-manual/native-image/Reflection/#manual-configuration) section
 of Graal's reference manual.
 
 This allows for code which rely on reflection to specify which classes, methods, fields and their properties
@@ -297,7 +297,7 @@ The path should be absolute or relative to the root of the enclave module.
 
 !!!warning
     Due to a [known issue](known-issues.md), reflection configuration files must be specified using relative paths when
-    building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than the
+    building on Windows and macOS platforms. Additionally, on Windows, paths must use forward slashes rather than the
     usual backslashes.
 
 ### serializationConfigurationFiles
@@ -316,161 +316,58 @@ The path should be absolute or relative to the root of the enclave module.
     when building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than
     the usual backslashes.
 
-## Assisted Configuration of Native Image Builds
+## Assisted configuration of Native Image builds
 
-One way of generating the reflection and serialization configuration files is by using
-[native-image-agent](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#assisted-configuration-of-native-image-builds).
-The agent will track usage of dynamic features and generate the configuration files when run
-against a regular Java VM.
+You can generate the reflection and serialization configuration files by using the
+[native-image-agent](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#assisted-configuration-of-native-image-builds)
+and by running your project in mock mode. The agent will track the use of dynamic features and generate the
+configuration files.
 
-To ensure all the necessary classes/resources are included in the configuration files you should ensure
-all enclave code paths are executed, for example by writing extensive tests and running them in `mock` mode.
+To make sure that you include all the essential classes and resources in the configuration files, you should execute
+all the execution paths of the enclave code. You can do that by running extensive tests in mock mode. If you are not
+running the agent with tests, you can run the host as an executable JAR and trigger as much enclave logic as
+possible by sending requests from the host and the client. To create this executable Jar, you can use the [Shadow
+Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow).
 
-When placed under `enclave/src/main/resources/META-INF/native-image` the configuration files will be picked up
-by Gradle when building the `enclave` in `simulation`, `debug` or `release` modes.
+After generating the files, you can place the configuration files in `enclave/src/main/resources/META-INF/native-image`.
+Native Image uses these files when you build the enclave in `simulation`, `debug`, or `release` mode.
 
-Running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause Gradle, JUnit
-or host classes to be present in the configuration files. To avoid this you can configure
-[filters](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#agent-advanced-usage)
-to ensure host code is excluded or you can run the host as an executable JAR and trigger enclave logic
-by running it normally, like you would if you were to deploy it, for example, by sending requests from the
-host and/or client triggering as much of the enclave logic as possible.
-You can use the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow)
-to create an executable JAR which contains all the host's and enclave's dependencies.
+Please note that running the host through Gradle and/or JUnit tests while the agent is enabled will likely cause
+Gradle, JUnit, or host's classes to be present in the configuration files.
+To avoid this and ensure that only enclave-related classes and resources are included, you can configure
+[filters](https://www.graalvm.org/22.0/reference-manual/native-image/Agent/#agent-advanced-usage).
 
-It is possible the generated configuration files aren't always correct, meaning you may need to adjust filters
-and/or edit and maintain them throughout the development process. We recommend keeping these files
-version controlled to make maintenance easier.
+You might need to adjust the generated configuration files and the filters a few times and edit them throughout the
+development process.
 
-Conclave ships with a Linux version of [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.2.0),
-which contains the native image agent. Because of this, the config files must be generated in a linux environment, which
-will require you to set up either a VM or a container. This can be avoided by downloading a version of GraalVM for your
-system.
+### Generate configuration files using an executable JAR
 
-### Example using Conclave's (Linux) GraalVM
-
-1. Configure the [application](https://docs.gradle.org/6.6.1/userguide/application_plugin.html)
-    plugin on the `host`'s `build.gradle`:
-
-    ```groovy
-    plugins {
-        id 'application'
-    }
-
-    def graalVMDir = tasks.getByPath(":enclave:untarGraalVM").outputs.files.first()
-    def configurationDir = project(":enclave").projectDir.toPath().resolve("src/main/resources/META-INF/native-image")
-    def filterFile = configurationDir.resolve("filter.json")
-    application {
-        run.dependsOn(":enclave:untarGraalVM")
-        if (project.hasProperty("generateConfigFiles") && properties.get("enclaveMode").toString().toLowerCase() == "mock" != null) {
-            applicationDefaultJvmArgs = [
-                    "-agentpath:$graalVMDir/lib/libnative-image-agent.so=config-output-dir=$configurationDir," +
-                    "caller-filter-file=$filterFile"
-            ]
-        }
-    }
-    ```
-
-    Conclave's GraalVM path is obtained from the `untarGraalVM` task of the `enclave` project.
-    The `filter.json` and the configuration files generated by `native-image-agent` will be placed on the `enclave`'s resource directory.
-    The Gradle properties `generateConfigFiles` and `enclaveMode` are used to control when the files should be generated.
-
-2. Create the `enclave/src/main/resources/META-INF/native-image/filter.json` excluding classes expected to be captured by `native-image-agent`
-    which are not part of the `enclave` code:
+1. Create a `filter.json` file with the following code:
 
     ```json
     {
-      "rules": [
-        {"excludeClasses": "nonapi.**"},
-        {"excludeClasses": "com.r3.conclave.host.**"}
-      ]
+        "rules": [
+            {"excludeClasses": "nonapi.**"},
+            {"excludeClasses": "com.r3.conclave.host.**"}
+        ]
     }
     ```
 
-3. Run the host:
+2. Place the `filter.json` file in the following directory:
 
-    === "Linux"
-        Simply run the following commands:
-        ```bash
-        ./gradlew -PgenerateConfigFiles -PenclaveMode=mock host:run
-        ```
+    `path/to/enclave/src/main/resources/META-INF/native-image/`
 
-    === "macOS"
-        !!! note
-            On macOS, you will need an installation of docker desktop or these instructions will not work!
-            Run the following commands to create a linux execution environment and open a shell:
 
-        ```
-        ./gradlew enclave:setupLinuxExecEnvironment
-        docker run -it --rm -p 9999:9999 -v ${HOME}:/home/${USER} -w /home/${USER} conclave-build /bin/bash
-        ```
-        The shell will place you at the root of your macos home directory. From here you can navigate to your project
-        directory and build/run the project as you would in a native linux environment:
-        ```bash
-        cd <project-directory>
-        ./gradlew -PgenerateConfigFiles -PenclaveMode=mock host:run
-        ```
-        !!! info
-            Depending on the files/ports that your project needs access to, the docker commands shown here may or may
-            not be suitable for you. For more information on these commands and how they can be adapted to suit your own
-            project, see the [Running hello world](running-hello-world.md#appendix-summary-of-docker-command-options) tutorial.
-    === "Windows"
-        !!! note
-            On Windows, you will need an installation of docker desktop or these instructions will not work!
-            Run the following commands in Windows powershell to create a linux execution environment and open a shell:
+3. Download [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-22.0.0.2) for your operating system
+   and [install](https://www.graalvm.org/22.0/docs/getting-started/) it.
 
-        ```
-        .\gradlew.bat enclave:setupLinuxExecEnvironment
-        docker run -it --rm -p 9999:9999 -v ${HOME}:/home/${env:UserName} -w /home/${env:UserName} conclave-build /bin/bash
-        ```
-        The shell will place you at the root of your Windows user directory. From here you can navigate to your project
-        directory and build/run the project as you would in a native linux environment:
-        ```bash
-        cd <project-directory>
-        ./gradlew -PgenerateConfigFiles -PenclaveMode=mock host:run
-        ```
-        !!! info
-            Depending on the files/ports that your project needs access to, the docker commands shown here may or may
-            not be suitable for you. For more information on these commands and how they can be adapted to suit your own
-            project, see the [Running hello world](running-hello-world.md#appendix-summary-of-docker-command-options)tutorial.
-        !!! note
-            Alternatively, for a more streamlined development experience, you may also be able to use Ubuntu 20.04 via
-            the [Windows subsystem for linux](https://docs.microsoft.com/en-us/windows/wsl/install), though this method
-            has not been extensively tested.
-
-    !!! tip
-        This process works best when the JDK used to generate the configuration files is the same version that will
-        subsequently be used to create the enclave's native image.
-
-    !!! info
-        For more information on running conclave targets on platforms other than linux, consult
-        [Enclave Modes](enclave-modes.md#system-requirements).
-
-6. Trigger `enclave` logic by running `client` requests:
-    ```
-    ./gradlew client:run
-    ```
-
-### Example using the executable JAR
-
-1.  To avoid the need to set up a linux environment using a VM or container, download
-    [GraalVM](https://github.com/graalvm/graalvm-ce-builds/releases/tag/vm-21.2.0) for your operating system and
-    [install](https://www.graalvm.org/docs/getting-started/) it. Once you setup your GraalVM, ensure `native-image` is
-    installed:
-
+4. Install the `native image`:
     ```bash
     $JAVA_HOME/bin/gu install native-image
     ```
 
-    Also enable [native-image-agent](https://www.graalvm.org/reference-manual/native-image/BuildConfiguration/#assisted-configuration-of-native-image-builds)
-    on the command line of the GraalVM `java` command:
-
-    ```bash
-    $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/ ...
-    ```
-
-1.  Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow)
-    to the `plugins` section of the `host`'s `build.gradle`:
+5. Add the [Shadow Gradle plugin](https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow) to the
+   `plugins` section of the `host`'s `build.gradle` file:
 
     ```groovy
     plugins {
@@ -478,22 +375,29 @@ system.
     }
     ```
 
-1.  Generate the shadow jar:
+6. Add the `EnclaveWebHost` main class to the `host`'s `build.gradle` file, *after* the plugins section:
+
+    ```groovy
+    project.mainClassName = "com.r3.conclave.host.web.EnclaveWebHost"
+    ```
+
+7. Generate the shadow jar:
 
     ```bash
     ./gradlew -PenclaveMode=mock host:shadowJar
     ```
+    This command creates an executable *shadow* JAR which contains all the dependencies of the host and the enclave. You
+    can find the shadow jar in the default location `host/build/libs/host-all.jar`.
 
-    Default location should be `host/build/libs/host-all.jar`.
-
-1.  Run the host with the agent enabled to generate the configuration files:
+8. Run the host with the agent enabled to generate the configuration files:
 
     ```bash
     $JAVA_HOME/bin/java -agentlib:native-image-agent=config-output-dir=/path/to/enclave/src/main/resources/META-INF/native-image/,caller-filter-file=/path/to/enclave/src/main/resources/META-INF/native-image/filter.json -jar /path/to/host/build/libs/host-all.jar
     ```
 
-1.  Trigger `enclave` logic by sending `client` requests.
-
+9. Trigger the execution of the `enclave` logic by sending a `client` request.
     ```bash
     ./gradlew client:run
     ```
+Now you should have generated your configuration files in ```/path/to/enclave/src/main/resources/META-INF/native-image```.
+Native Image will pick up these files when you build the enclave in simulation, debug, or release mode.

@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -28,9 +29,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // up a Linux environment (currently using Docker) in which the commands will be executed.
         if (!OperatingSystem.current().isLinux) {
             val conclaveBuildDir = Files.createDirectories(temporaryDir.toPath() / "conclave-build")
-            LinuxExec::class.java.getResourceAsStream("/conclave-build/Dockerfile")!!.use {
-                Files.copy(it, conclaveBuildDir / "Dockerfile", REPLACE_EXISTING)
-            }
+            LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
             try {
                 commandLine(

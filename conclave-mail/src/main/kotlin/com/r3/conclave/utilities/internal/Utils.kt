@@ -4,9 +4,14 @@ import java.io.*
 import java.nio.Buffer
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Future
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
 
@@ -239,6 +244,14 @@ inline fun <K, V> DataOutputStream.writeMap(map: Map<K, V>, block: DataOutputStr
 /** Reads this stream completely into a byte array and then closes it. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 
+fun Class<*>.copyResource(name: String, file: Path) {
+    val stream = getResourceAsStream(name)
+    requireNotNull(stream) { "Resource $name not found" }
+    return stream.use {
+        Files.copy(it, file, StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
 val CertPath.x509Certs: List<X509Certificate>
     get() {
         check(type == "X.509") { "Not an X.509 cert path: $type" }
@@ -250,3 +263,11 @@ val CertPath.rootX509Cert: X509Certificate
     get() {
         return x509Certs.last()
     }
+
+fun <V> Future<V>.getOrThrow(): V {
+    try {
+        return get()
+    } catch (e: ExecutionException) {
+        throw e.cause ?: e
+    }
+}

@@ -23,8 +23,7 @@ import java.util.concurrent.TimeUnit
  */
 class SocketEnclaveHostInterface(
         private val host: String,
-        private val port: Int,
-        private val maximumConcurrentCalls: Int
+        private val port: Int
 ) : EnclaveHostInterface(), Closeable {
     var sanitiseExceptions = false
 
@@ -36,7 +35,8 @@ class SocketEnclaveHostInterface(
     }
 
     private var stateManager = StateManager<State>(State.Ready)
-    private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
+
+    private lateinit var callExecutor: ExecutorService
 
     fun start() {
         synchronized(stateManager) {

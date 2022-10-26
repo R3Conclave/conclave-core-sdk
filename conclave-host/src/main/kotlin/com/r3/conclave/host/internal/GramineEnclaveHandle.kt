@@ -1,8 +1,9 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.*
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.InputStreamReader
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,7 +13,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.io.path.div
 
 
-//  TODO: Refactor it to support multiple enclaves and without dummy attestation
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
@@ -22,10 +22,20 @@ class GramineEnclaveHandle(
     private lateinit var processGramineDirect: Process
     private val enclaveDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
 
-    override val enclaveInterface = SocketHostEnclaveInterface()
+    override val enclaveInterface: SocketHostEnclaveInterface
 
     init {
         copyGramineFilesToWorkingDirectory()
+
+        /**
+         * Not all threads in the enclave are necessarily the result of conclave calls.
+         * To minimise the likelihood of deadlocks, we don't allow conclave to use all available threads.
+         */
+        val maxConcurrentCalls = getEnclaveThreadCountFromManifest() / 2
+        check(maxConcurrentCalls > 0)
+
+        /** Create a socket host interface, let the system allocate the port. */
+        enclaveInterface = SocketHostEnclaveInterface(0, maxConcurrentCalls)
     }
 
     companion object {
@@ -41,7 +51,10 @@ class GramineEnclaveHandle(
         val interfaceStartThread = Thread(interfaceStartTask).apply { start() }
 
         try {
-            /** Start the enclave process. */
+            /**
+             * Start the enclave process, passing the port that the call interface is listening on.
+             * TODO: Implement a *secure* method for passing port to the enclave.
+             */
             processGramineDirect = ProcessBuilder()
                 .inheritIO()
                 .directory(enclaveDirectory.toFile())
@@ -52,7 +65,7 @@ class GramineEnclaveHandle(
             interfaceStartThread.join()     // wait for start process to finish
             interfaceStartTask.get()        // throw if start failed
 
-            /** Send command to process to initialise the enclave. */
+            /** Initialise the enclave. */
             enclaveInterface.initializeEnclave(enclaveClassName)
         } catch (t: Throwable) {
             this.destroy()
@@ -92,6 +105,34 @@ class GramineEnclaveHandle(
 
         jarUrl.openStream().use {
             Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
+        }
+    }
+
+    /**
+     * Retrieves the thread count number by parsing the manifest.
+     * This is bit hacky but will do for now.
+     * TODO: Implement a proper method for providing build-time enclave meta-data to the host before enclave startup
+     */
+    private fun getEnclaveThreadCountFromManifest(): Int {
+        var inCorrectSection = false
+
+        InputStreamReader(manifestUrl.openStream()).use {
+            for (line in it.readLines()) {
+                val tokens = line.trim().split("=").map { token -> token.trim() }
+
+                if (tokens.size == 1) {
+                    inCorrectSection = (tokens[0] == "[sgx]")
+                    continue
+                }
+
+                if (inCorrectSection && tokens.size >= 2) {
+                    if (tokens[0] == "thread_num") {
+                        return tokens[1].toInt()
+                    }
+                }
+            }
+
+            throw IllegalStateException("sgx.thread_num missing from manifest, unable to proceed.")
         }
     }
 

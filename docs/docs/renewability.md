@@ -18,7 +18,7 @@ go wrong. In SGX the TCB is very small relative to comparable systems. It consis
   * The Conclave JVM and message routing code.
 
 Other components you might expect to be a part of the TCB aren't, for instance the operating system isn't, nor is the
-the BIOS nor the `aesmd` daemon that handles interaction with Intel's remote attestation assessment servers. 
+the BIOS. 
 Only small parts of the SGX infrastructure and code that runs inside enclaves needs to be operating correctly. 
 
 Intel systems also have a chip called the 'management engine' (ME). Although some SGX apps use capabilities from this chip,
@@ -60,7 +60,7 @@ Recovery must be a one way door: *new* enclaves should be able to read *old* dat
 to read *new* data.
 
 The current state of the TCB is identified by the SGX CPU Security Version Number (CPUSVN). This is
-an array of bytes that is used to uniquely identify the security state of the the CPU platform, including the CPU SGX
+an array of bytes that is used to uniquely identify the security state of the CPU platform, including the CPU SGX
 microcode revision. Whenever a TCB recovery takes place, the CPUSVN will change. This means that whenever a TCB recovery
 occurs, the CPUSVN changes and all data that is sealed after the recovery will use a new key. 
 
@@ -119,7 +119,7 @@ unexpectedly breaking on the day of the security announcements.
 
 ## CPU Security Version Number
 The current security revision of an Intel SGX platform is identified by the CPU Security Version Number (CPUSVN). This is
-an array of bytes that is used to uniquely identify the security state of the the CPU platform, including the CPU SGX
+an array of bytes that is used to uniquely identify the security state of the CPU platform, including the CPU SGX
 microcode version. Whenever a TCB recovery takes place, the CPUSVN will change.
 
 The CPUSVN is used (along with other parameters) to derive the keys used to seal data that is sent outside the enclave.

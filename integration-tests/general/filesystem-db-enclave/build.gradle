@@ -19,6 +19,7 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
+    runtime = runtimeType
     inMemoryFileSystemSize = "0"
     persistentFileSystemSize = "64m"
     reflectionConfigurationFiles.from("reflect-config.json")
