@@ -406,8 +406,8 @@ class EnclaveHostMockTest {
     class PrivateCtorEnclave private constructor() : Enclave()
 
     @ParameterizedTest
-    @ValueSource(strings = ["PostOffice.create()", "EnclaveInstanceInfo.createPostOffice()"])
-    fun `cannot create PostOffice directly when inside enclave`(source: String) {
+    @ValueSource(strings = ["PostOffice.create()"])
+    fun `can create PostOffice directly when inside enclave`(source: String) {
         class CreatePostOfficeEnclave : Enclave() {
             override fun receiveFromUntrustedHost(bytes: ByteArray): ByteArray? {
                 when (String(bytes)) {
@@ -423,12 +423,7 @@ class EnclaveHostMockTest {
         // Outside of the enclave is fine, before and after
         host.enclaveInstanceInfo.createPostOffice()
 
-        // But not while inside
-        assertThatIllegalStateException()
-            .isThrownBy { host.callEnclave(source.toByteArray()) }
-            .withMessage("Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave.")
-
-        host.enclaveInstanceInfo.createPostOffice()
+        host.callEnclave(source.toByteArray())
     }
 
     @Test

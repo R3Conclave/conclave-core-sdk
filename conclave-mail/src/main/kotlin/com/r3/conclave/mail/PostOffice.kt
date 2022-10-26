@@ -3,7 +3,6 @@ package com.r3.conclave.mail
 import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.postoffice.AbstractPostOffice
 import com.r3.conclave.mail.internal.privateCurve25519KeyToPublic
-import com.r3.conclave.utilities.internal.EnclaveContext
 import java.io.IOException
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -189,9 +188,6 @@ abstract class PostOffice(
             "At this time only Conclave originated Curve25519 private keys may be used."
         }
         checkTopic(topic)
-        check(!EnclaveContext.isInsideEnclave()) {
-            "Use one of the Enclave.postOffice() methods for getting a PostOffice instance when inside an enclave."
-        }
     }
 
     private var sequenceNumber: Long = 0
@@ -334,4 +330,22 @@ object Mail {
     fun getUnauthenticatedHeader(encryptedEnclaveMail: ByteArray): EnclaveMailHeader {
         return MailDecryptingStream(encryptedEnclaveMail).header
     }
+}
+
+class SharedPostOffice(
+    senderPrivateKey: PrivateKey,
+    private var message: ByteArray?,
+    private var recipientKey: PublicKey?,
+    topic: String
+) : PostOffice(senderPrivateKey, topic) {
+
+    override val destinationPublicKey: PublicKey
+        get() {
+            return if (message != null)
+                MailDecryptingStream(message!!.inputStream()).decryptMail(senderPrivateKey).authenticatedSender
+            else
+                recipientKey!!
+        }
+    override val keyDerivation: ByteArray?
+        get() = null
 }
