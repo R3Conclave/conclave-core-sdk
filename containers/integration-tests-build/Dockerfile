@@ -8,6 +8,7 @@ LABEL commit_id=${commit_id}
 
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     wget \
+    curl \
     software-properties-common
 
 # Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
