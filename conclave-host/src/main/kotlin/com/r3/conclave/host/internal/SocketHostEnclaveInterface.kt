@@ -1,7 +1,6 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -56,7 +55,7 @@ class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: 
 
                     /** Send the maximum number of concurrent calls to the enclave. */
                     it.accept().use { initialSocket ->
-                        initialSocket.getOutputStream().writeInt(maxConcurrentCalls)
+                        DataOutputStream(initialSocket.getOutputStream()).writeInt(maxConcurrentCalls)
                     }
 
                     /** Set up a pool of re-usable call contexts, each with their own socket. */

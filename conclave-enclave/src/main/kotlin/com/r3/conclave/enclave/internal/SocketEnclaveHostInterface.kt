@@ -2,7 +2,6 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
-import com.r3.conclave.mail.internal.readInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -51,7 +50,7 @@ class SocketEnclaveHostInterface(
             try {
                 /** Receive the maximum number of concurrent calls from the host and set up the call executor service. */
                 Socket(host, port).use { initialSocket ->
-                    maximumConcurrentCalls = initialSocket.getInputStream().readInt()
+                    maximumConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
                     callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
                 }
 
