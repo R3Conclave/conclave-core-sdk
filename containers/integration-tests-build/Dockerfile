@@ -21,8 +21,8 @@ RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/2
 # Install gramine for the in-kernel SGX driver
 RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
 RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | tee /etc/apt/sources.list.d/gramine.list
-RUN apt update
-RUN apt install gramine
+RUN apt-get update
+RUN apt-get install gramine
 
 # Disable interactive dialogue
 # Otherwise, a message that requires user input might appear during the installation
