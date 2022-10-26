@@ -22,7 +22,7 @@ import java.util.concurrent.Semaphore
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
 class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: Int) : HostEnclaveInterface(), Closeable {
-    private val serverSocket = ServerSocket(port, 100)
+    private val serverSocket = ServerSocket(port)
 
     /** Get the port bound by the server socket. */
     val port get() = serverSocket.localPort
