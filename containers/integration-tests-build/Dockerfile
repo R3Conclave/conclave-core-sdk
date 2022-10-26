@@ -21,6 +21,5 @@ RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/2
 # Otherwise, a message that requires user input might appear during the installation
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
         az-dcap-client \
-        libsgx-epid \
         libsgx-quote-ex \
         libsgx-dcap-ql
