@@ -2,6 +2,7 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
@@ -64,22 +65,6 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
             CallInterfaceMessageType.CALL -> handleCallECall(EnclaveCallType.fromByte(callTypeID), data)
             CallInterfaceMessageType.RETURN -> handleReturnECall(HostCallType.fromByte(callTypeID), data)
             CallInterfaceMessageType.EXCEPTION -> handleExceptionECall(HostCallType.fromByte(callTypeID), data)
-        }
-    }
-
-    /**
-     * In release mode we want exceptions propagated out of the enclave to be sanitised
-     * to reduce the likelihood of secrets being leaked from the enclave.
-     */
-    private fun sanitiseThrowable(throwable: Throwable): Throwable {
-        return when (throwable) {
-            is EnclaveStartException -> throwable
-            // Release enclaves still need to notify the host if they were unable to decrypt mail, but there's
-            // no need to include the message or stack trace in case any secrets can be inferred from them.
-            is MailDecryptionException -> MailDecryptionException()
-            else -> {
-                RuntimeException("Release enclave threw an exception which was swallowed to avoid leaking any secrets")
-            }
         }
     }
 

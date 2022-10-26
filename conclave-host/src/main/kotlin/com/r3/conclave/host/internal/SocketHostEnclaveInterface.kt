@@ -21,10 +21,15 @@ import java.util.concurrent.Semaphore
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
-class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface(), Closeable {
-    private lateinit var socket: Socket
+class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: Int) : HostEnclaveInterface(), Closeable {
+    private val serverSocket = ServerSocket(port)
 
+    val port get() = serverSocket.localPort
+
+    private lateinit var toEnclaveSocket: Socket
     private lateinit var toEnclave: DataOutputStream
+
+    private lateinit var fromEnclaveSocket: Socket
     private lateinit var fromEnclave: DataInputStream
 
     /** Represents the lifecycle of the interface. */
@@ -36,8 +41,9 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
 
     private val stateManager = StateManager<State>(State.Ready)
 
-    private var maxConcurrentCalls = 0
-    private val callGuardSemaphore = Semaphore(0)
+    val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
+
+    private val callGuardSemaphore = Semaphore(maxConcurrentCalls)
 
     private val receiveLoop = object : Runnable {
         private var done = false
@@ -78,15 +84,24 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             }
 
             try {
-                /** Start the socket and instantiate the data input/output streams. */
-                ServerSocket(port).use {
-                    socket = it.accept()
-                    toEnclave = DataOutputStream(socket.getOutputStream())
-                    fromEnclave = DataInputStream(socket.getInputStream())
+                /**
+                 * Wait for input and output sockets, then close the server socket.
+                 * We need two sockets here because when running inside a Gramine context, there is some extra
+                 * synchronisation which prevents reading and writing from a socket simultaneously and this can cause
+                 * deadlocks between the receive loop thread and the sending thread. It also improves performance a bit!
+                 * Also set tcpNoDelay to true as latency is more important than throughput in this case.
+                 */
+                serverSocket.use {
+                    toEnclaveSocket = it.accept().apply { tcpNoDelay = true }
+                    fromEnclaveSocket = it.accept().apply { tcpNoDelay = true }
                 }
 
-                /** Read maximum number of concurrent calls from the enclave. */
-                maxConcurrentCalls = fromEnclave.readInt()
+                toEnclave = DataOutputStream(toEnclaveSocket.getOutputStream())
+                fromEnclave = DataInputStream(fromEnclaveSocket.getInputStream())
+
+                /** Send the maximum number of concurrent calls to the enclave. */
+                toEnclave.writeInt(maxConcurrentCalls)
+                toEnclave.flush()
 
                 /** Start the message receive thread and allow calls to enter. */
                 receiveLoopThread.start()
@@ -116,6 +131,9 @@ class SocketHostEnclaveInterface(private val port: Int) : HostEnclaveInterface()
             /** Stop enclave and host receive loops */
             sendMessageToEnclave(SocketCallInterfaceMessage.STOP_MESSAGE)
             receiveLoopThread.join()
+
+            toEnclaveSocket.close()
+            fromEnclaveSocket.close()
         }
     }
 

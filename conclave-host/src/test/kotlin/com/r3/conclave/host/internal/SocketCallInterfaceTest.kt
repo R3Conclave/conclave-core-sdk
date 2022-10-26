@@ -37,7 +37,7 @@ class SocketCallInterfaceTest {
             while (true) {
                 try {
                     retries++
-                    eInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS).apply { start() }
+                    eInterface = SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER).apply { start() }
                     break
                 } catch (e: ConnectException) {
                     if (retries > 10) throw e
@@ -48,7 +48,7 @@ class SocketCallInterfaceTest {
         }
 
         val hFuture = FutureTask {
-            val hInterface = SocketHostEnclaveInterface(SOCKET_PORT_NUMBER)
+            val hInterface = SocketHostEnclaveInterface(SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS)
             hInterface.start()
             hInterface
         }
@@ -394,7 +394,7 @@ class SocketCallInterfaceTest {
 
         val fibonacciRunners = ArrayList<RecursiveFibonacciRunner>(concurrency).apply {
             for (i in 0 until concurrency) {
-                add(RecursiveFibonacciRunner((8..12).random()))
+                add(RecursiveFibonacciRunner((12..16).random()))
             }
         }
 

@@ -17,6 +17,7 @@ import org.gradle.api.tasks.bundling.ZipEntryCompression.DEFLATED
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
+import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -74,6 +75,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         "Enclave revocation level not specified! " +
                         "Please set the 'revocationLevel' property in the build configuration for your enclave.\n" +
                         "If you're unsure what this error message means, please consult the conclave documentation.")
+            }
+            // Check the passed runtime type is valid.
+            try {
+                RuntimeType.fromString(conclaveExtension.runtime.get())
+            } catch (e: IllegalArgumentException) {
+                throw GradleException(
+                        "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
+                        "Valid runtime types are: ${RuntimeType.values().map { it.name }}.")
             }
         }
 
@@ -493,16 +502,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             target.afterEvaluate {
-                val runtimeType = conclaveExtension.runtime.get()
-
-                when (runtimeType) {
-                    RuntimeType.Gramine -> {
-                        target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
+                try {
+                    when (RuntimeType.fromString(conclaveExtension.runtime.get())) {
+                        RuntimeType.Gramine -> {
+                            target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
+                        }
+                        RuntimeType.GraalVM -> {
+                            target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
+                        }
                     }
-
-                    RuntimeType.GraalVM -> {
-                        target.artifacts.add(typeLowerCase, signedEnclaveJarTask.get().archiveFile)
-                    }
+                } catch (e: Exception) {
+                    /** Do nothing. Error condition is handled in [apply]. */
                 }
             }
         }

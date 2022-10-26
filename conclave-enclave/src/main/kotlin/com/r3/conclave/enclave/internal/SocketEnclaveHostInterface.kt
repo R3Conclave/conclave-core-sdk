@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -9,9 +10,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 
 /**
  * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
@@ -22,12 +21,14 @@ import java.util.concurrent.Executors
  */
 class SocketEnclaveHostInterface(
         private val host: String,
-        private val port: Int,
-        private val maximumConcurrentCalls: Int
+        private val port: Int
 ) : EnclaveHostInterface(), Closeable {
-    private lateinit var socket: Socket
+    var sanitiseExceptions = false
 
+    private lateinit var toHostSocket: Socket
     private lateinit var toHost: DataOutputStream
+
+    private lateinit var fromHostSocket: Socket
     private lateinit var fromHost: DataInputStream
 
     /** Represents the lifecycle of the interface. */
@@ -38,7 +39,8 @@ class SocketEnclaveHostInterface(
     }
 
     private var stateManager = StateManager<State>(State.Ready)
-    private val callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
+
+    private lateinit var callExecutor: ExecutorService
 
     private val receiveLoop = object : Runnable {
         private var done = false
@@ -74,6 +76,8 @@ class SocketEnclaveHostInterface(
 
     private val receiveLoopThread = Thread(receiveLoop, "Enclave message receive loop")
 
+    fun awaitTermination() = receiveLoopThread.join()
+
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
@@ -82,14 +86,22 @@ class SocketEnclaveHostInterface(
             }
 
             try {
-                /** Connect the socket and instantiate data input/output streams. */
-                socket = Socket(host, port)
-                toHost = DataOutputStream(socket.getOutputStream())
-                fromHost = DataInputStream(socket.getInputStream())
+                /**
+                 * Connect sockets and instantiate data input/output streams.
+                 * We need two sockets here because when running inside a Gramine context, there is some extra
+                 * synchronisation which prevents reading and writing from a socket simultaneously and this can cause
+                 * deadlocks between the receive loop thread and the sending thread. It also improves performance a bit!
+                 * Also set tcpNoDelay to true as latency is more important than throughput in this case.
+                 */
+                fromHostSocket = Socket(host, port).apply { tcpNoDelay = true }
+                toHostSocket = Socket(host, port).apply { tcpNoDelay = true }
 
-                /** Send the maximum number of concurrent calls to the host. */
-                toHost.writeInt(maximumConcurrentCalls)
-                toHost.flush()
+                toHost = DataOutputStream(toHostSocket.getOutputStream())
+                fromHost = DataInputStream(fromHostSocket.getInputStream())
+
+                /** Read the maximum number of concurrent calls from the host. */
+                val maximumConcurrentCalls = fromHost.readInt()
+                callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
                 /** Start the message receive thread. */
                 receiveLoopThread.start()
@@ -111,6 +123,8 @@ class SocketEnclaveHostInterface(
                 "Call interface is not running."
             }
             receiveLoopThread.join()
+            toHostSocket.close()
+            fromHostSocket.close()
         }
     }
 
@@ -167,7 +181,8 @@ class SocketEnclaveHostInterface(
             val returnBuffer = try {
                 handleIncomingCall(callType, ByteBuffer.wrap(parameterBytes))
             } catch (t: Throwable) {
-                sendExceptionMessage(callType, ByteBuffer.wrap(ThrowableSerialisation.serialise(t)))
+                val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(t) else t
+                sendExceptionMessage(callType, ByteBuffer.wrap(ThrowableSerialisation.serialise(maybeSanitisedThrowable)))
                 return
             }
 
