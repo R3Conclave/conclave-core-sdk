@@ -1,7 +1,7 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.mail.internal.readInt
+import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -21,7 +21,7 @@ import java.util.concurrent.Semaphore
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
-class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closeable {
+class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: Int) : HostEnclaveInterface(), Closeable {
     private val serverSocket = ServerSocket(port, 100)
 
     /** Get the port bound by the server socket. */
@@ -40,7 +40,6 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
 
     val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
 
-    private var maxConcurrentCalls = 0
     private val callGuardSemaphore = Semaphore(0)
 
     /** Start the call interface and allow calls to begin. */
@@ -55,9 +54,9 @@ class SocketHostEnclaveInterface(port: Int = 0) : HostEnclaveInterface(), Closea
                 /** Wait for IO sockets, then close the server socket. */
                 serverSocket.use {
 
-                    /** Get the threading level from the enclave. */
+                    /** Send the maximum number of concurrent calls to the enclave. */
                     it.accept().use { initialSocket ->
-                        maxConcurrentCalls = initialSocket.getInputStream().readInt()
+                        initialSocket.getOutputStream().writeInt(maxConcurrentCalls)
                     }
 
                     /** Set up a pool of re-usable call contexts, each with their own socket. */
