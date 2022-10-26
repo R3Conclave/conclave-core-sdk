@@ -10,7 +10,7 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
-    runtime = findProperty("runtimeType")
+    runtime = runtimeType
 
     simulation {
         signingType = privateKey
