@@ -78,7 +78,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
             // Check the passed runtime type is valid.
             try {
-                RuntimeType.valueOf(conclaveExtension.runtime.get())
+                RuntimeType.fromString(conclaveExtension.runtime.get())
             } catch (e: IllegalArgumentException) {
                 throw GradleException(
                         "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
@@ -503,7 +503,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             target.afterEvaluate {
                 try {
-                    when (RuntimeType.valueOf(conclaveExtension.runtime.get())) {
+                    when (RuntimeType.fromString(conclaveExtension.runtime.get())) {
                         RuntimeType.Gramine -> {
                             target.artifacts.add(typeLowerCase, signedEnclaveGramineJarTask.get().archiveFile)
                         }
