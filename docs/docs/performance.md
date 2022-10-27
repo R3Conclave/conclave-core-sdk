@@ -12,7 +12,7 @@ the performance difference and how they vary between variety of benchmarks taken
 The configuration used to perform the benchmarks were:
 1) Warmup iteration: 10 
 2) Number of iteration for each benchmark: 100
-3) Azure machine series: Standard DC4s v3 (4 vcpus, 32 GiB memory)
+3) Azure machine series: Standard DC4s v3 (4 vcpus - Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz, 32 GiB memory)
 4) Operating system: Ubuntu 20.04.5 LTS 
 5) Conclave version: 1.4
 
