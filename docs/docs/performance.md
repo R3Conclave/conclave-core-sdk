@@ -13,7 +13,7 @@ The configuration used to perform the benchmarks were:
 1) Warmup iteration: 10 
 2) Number of iteration for each benchmark: 100
 3) Azure machine series: Standard DC4s v3 (4 vcpus, 32 GiB memory)
-4) Operating systems: Ubuntu 20.04.5 LTS 
+4) Operating system: Ubuntu 20.04.5 LTS 
 5) Conclave version: 1.4
 
 !!! note
