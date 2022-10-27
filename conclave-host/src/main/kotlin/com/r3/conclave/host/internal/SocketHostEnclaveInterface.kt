@@ -58,7 +58,10 @@ class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: 
                         DataOutputStream(initialSocket.getOutputStream()).writeInt(maxConcurrentCalls)
                     }
 
-                    /** Set up a pool of re-usable call contexts, each with their own socket. */
+                    /**
+                     * Set up a pool of re-usable call contexts, each with their own socket.
+                     * TODO: Create connections lazily as they are required, rather than greedily at startup
+                     */
                     callContextPool = ArrayBlockingQueue(maxConcurrentCalls + 1)
                     for (i in 0 until maxConcurrentCalls) {
                         val socket = it.accept().apply { tcpNoDelay = true }

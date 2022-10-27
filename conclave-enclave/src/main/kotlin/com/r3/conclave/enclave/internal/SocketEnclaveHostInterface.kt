@@ -54,7 +54,10 @@ class SocketEnclaveHostInterface(
                     callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
                 }
 
-                /** Connect sockets and instantiate handler threads. */
+                /**
+                 * Connect sockets and instantiate handler threads.
+                 * TODO: Create connections lazily as they are required, rather than greedily at startup
+                 */
                 for (i in 0 until maximumConcurrentCalls) {
                     val socket = Socket(host, port).apply { tcpNoDelay = true }
                     callExecutor.execute { EnclaveCallContext(socket).handlerLoop() }
