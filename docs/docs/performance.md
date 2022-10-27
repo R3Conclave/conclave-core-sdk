@@ -45,4 +45,5 @@ The configuration used to perform the benchmarks were:
 
 Higher scores are better. As you can see, the performance hit overall of 
 using an enclave is highly dependent on what exactly the code is doing 
-(primarily, memory access patterns).
+(primarily, memory access patterns). The score delta shows the difference in percentage between the 
+same benchmark with SGX turned on and off. As expected there is a performance hit when SGX is used.
