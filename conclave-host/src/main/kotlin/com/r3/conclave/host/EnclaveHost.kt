@@ -14,6 +14,7 @@ import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_JAR_NAME
 import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_MANIFEST
+import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_METADATA_NAME
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
@@ -239,9 +240,10 @@ class EnclaveHost private constructor(
             enclaveMode: EnclaveMode,
             enclaveClassName: String,
             manifest: URL,
-            jar: URL
+            jar: URL,
+            metadataFile: URL
         ): EnclaveHost {
-            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
+            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar, metadataFile)
             return EnclaveHost(enclaveHandle)
         }
 
@@ -255,7 +257,7 @@ class EnclaveHost private constructor(
                     }
                     is EnclaveScanner.ScanResult.Gramine -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
-                        internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
+                        internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar, result.metadataFile)
                     }
                     is EnclaveScanner.ScanResult.GraalVM -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
@@ -1070,11 +1072,12 @@ class EnclaveHost private constructor(
             val filesLocation = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}"
             val manifestUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_MANIFEST}")
             val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_JAR_NAME}")
+            val metadataUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_METADATA_NAME}")
 
-            return if (manifestUrl == null || jarUrl == null) {
+            return if (manifestUrl == null || jarUrl == null || metadataUrl == null) {
                 null
             } else {
-                ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
+                ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl, metadataUrl)
             }
         }
 
@@ -1139,7 +1142,8 @@ class EnclaveHost private constructor(
                         //  Here we assume that all the Gramine required files are at the same level of the manifest file
                         val manifestDirectory = resource.path.removeSuffix("/$fileName")
                         val shadowJarResource = EnclaveHost::class.java.getResource("/$manifestDirectory/$GRAMINE_ENCLAVE_JAR_NAME")
-                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!)
+                        val enclaveMetadataResource = EnclaveHost::class.java.getResource("/$manifestDirectory/$GRAMINE_ENCLAVE_METADATA_NAME")
+                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!, enclaveMetadataResource!!)
                     }
                 }
             }
@@ -1184,6 +1188,7 @@ class EnclaveHost private constructor(
                 val enclaveMode: EnclaveMode,
                 val manifest: URL,
                 val jar: URL,
+                val metadataFile: URL
             ) : ScanResult() {
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
