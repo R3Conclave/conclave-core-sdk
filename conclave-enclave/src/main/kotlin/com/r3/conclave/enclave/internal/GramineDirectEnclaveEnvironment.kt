@@ -3,7 +3,10 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
+import java.io.File
 import java.nio.ByteBuffer
+import java.nio.file.Path
+import java.security.MessageDigest
 
 /**
  * This class is the enclave environment intended for use with gramine-direct.
@@ -31,9 +34,24 @@ class GramineDirectEnclaveEnvironment(
         versionToCpuSvn(tcbLevel)
     }
 
-    // TODO: (CON-1194) mrenclave value based on enclave jar content
+    /** Generate simulated mrenclave value by hashing the enclave fat-jar */
     private val mrenclave: ByteArray by lazy {
-        digest("SHA-256") { update(enclaveClass.name.toByteArray()) }
+        val jarPath = enclaveClass.protectionDomain.codeSource.location.toURI().path
+
+        val buffer = ByteArray(4096)
+        var bytesRead: Int
+
+        val digest = MessageDigest.getInstance("SHA-256")
+
+        File(jarPath).inputStream().use {
+            bytesRead = it.read(buffer)
+            while (bytesRead >= 0) {
+                digest.update(buffer, 0, bytesRead)
+                bytesRead = it.read(buffer)
+            }
+        }
+
+        digest.digest()
     }
 
     // TODO: (CON-1194) mrsigner value that matches what gramine-sgx would produce
