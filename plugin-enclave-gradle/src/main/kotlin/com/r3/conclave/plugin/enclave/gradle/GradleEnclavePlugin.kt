@@ -137,9 +137,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     private fun buildUnsignedGramineEnclaveTask(target: Project, type: BuildType): BuildUnsignedGramineEnclave {
         val gramineBuildDir = baseDirectory.resolve("gramine").toString()
         return target.createTask("buildUnsignedGramineEnclave$type") { task ->
-            //  Note: at the moment this task can run even before "enclave:compileJava", because there are no
-            //    implicit dependencies yet.
-            //  TODO: Once we use Java code instead of the bash example, we should remove the above comment
             task.outputs.dir(gramineBuildDir)
             task.buildDirectory.set(gramineBuildDir)
             task.archLibDirectory.set("/lib/x86_64-linux-gnu")
