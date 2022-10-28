@@ -184,6 +184,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val location = enclaveClassNameTask.outputEnclaveClassName.get().replace('.', '/') + "-${typeLowerCase}"
             val jarTask = task as Jar
             jarTask.into(location)
+            // TODO: Figure out how to avoid this rename
             jarTask.rename(shadowJarTask.archiveFile.get().asFile.name, "enclave-shadow.jar")
         }
     }
