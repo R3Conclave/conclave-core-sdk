@@ -14,7 +14,7 @@ The configuration used to perform the benchmarks were:
 2) Number of iteration for each benchmark: 100
 3) Azure machine series: Standard DC4s v3 (4 vcpus - Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz, 32 GiB memory)
 4) Operating system: Ubuntu 20.04.5 LTS 
-5) Conclave version: 1.4
+5) Conclave version: 1.3
 
 !!! note
 	The "empty" benchmark is measuring the overhead of entering and exiting the enclave, without doing any
