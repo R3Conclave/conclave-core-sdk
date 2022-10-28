@@ -10,8 +10,11 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
+import java.time.Duration
+import java.time.temporal.TemporalUnit
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 /**
@@ -83,15 +86,8 @@ class SocketEnclaveHostInterface(
         }
     }
 
-    fun awaitTermination() {
-        var done = false
-        while(!done) {
-            try {
-                done = callExecutor.awaitTermination(10, TimeUnit.SECONDS)
-            } catch (e: InterruptedException) {
-                continue
-            }
-        }
+    fun awaitTermination(seconds: Long) {
+        callExecutor.awaitTermination(seconds, TimeUnit.SECONDS)
     }
 
     private inner class EnclaveCallContext(private val socket: Socket) {
