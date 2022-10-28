@@ -9,8 +9,10 @@ loader.insecure__use_cmdline_argv = true
 sgx.remote_attestation = false
 # sgx.ra_client_spid = ""
 
+
 # This sets an environment variables used by the dynamic loader
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:/usr/local/lib/python3.8/dist-packages/jep:/usr/local/lib"
+
 fs.mounts = [
   # TODO: Narrow down /usr/bin usage to only the executable we will need to run, i.e. java
   { path = "/usr/bin",              uri = "file:/usr/bin" },
@@ -18,6 +20,8 @@ fs.mounts = [
   { path = "{{ arch_libdir }}",     uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",              uri = "file:/usr/lib" },
+  { path = "/usr/local/lib",        uri = "file:/usr/local/lib" },
+  { path = "/usr",        uri = "file:/usr" },
   { path = "/tmp",                  type = "tmpfs" },
 ]
 
