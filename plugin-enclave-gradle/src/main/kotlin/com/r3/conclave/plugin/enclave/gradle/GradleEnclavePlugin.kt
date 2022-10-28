@@ -168,12 +168,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.archiveAppendix.set("jar")
                 task.archiveClassifier.set(typeLowerCase)
                 task.from(shadowJarTask.archiveFile, buildUnsignedGramineEnclaveTask.outputManifest)
-                task.doFirst(IntoGramineTask(enclaveClassNameTask, typeLowerCase))
+                task.doFirst(IntoGramineTask(shadowJarTask, enclaveClassNameTask, typeLowerCase))
             }
         return task
     }
 
     inner class IntoGramineTask(
+        private val shadowJarTask: ShadowJar,
         private val enclaveClassNameTask: EnclaveClassName,
         private val typeLowerCase: String
     ) : Action<Task> {
@@ -181,9 +182,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             //  Note that in Gramine we use the class name as a folder,
             //     not as a part of a file, as it is done with Native tasks
             val location = enclaveClassNameTask.outputEnclaveClassName.get().replace('.', '/') + "-${typeLowerCase}"
-            println("location $location")
             val jarTask = task as Jar
             jarTask.into(location)
+            jarTask.rename(shadowJarTask.archiveFile.get().asFile.name, "enclave-shadow.jar")
         }
     }
 
