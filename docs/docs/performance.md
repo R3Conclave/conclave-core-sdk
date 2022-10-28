@@ -24,24 +24,24 @@ The configuration used to perform the benchmarks were:
 
 | Benchmark    | SGX   | Score (ops/s) | Score Delta (%) | Error (ops/s)  | Error (%) |
 |--------------|-------|---------------|-----------------|----------------|-----------|
-| empty        | 	Off	| 24892554.58	| N.A.            | ±7868.489      | ±0.03     |
-| empty        | 	On	| 23388.662	    | -99.91          | ±846.568	   | ±3.62     |
-| binary_trees | 	Off	| 1508.331		| N.A.            | ±1.312	       | ±0.09     |  
-| binary_trees | 	On	| 669.865	    | -55.59          | ±8.807	       | ±1.31     |
-| fannkuch     | 	Off	| 5.092		    | N.A.            | ±0.008	       | ±0.16     |
-| fannkuch     | 	On	| 4.588	        | -9.90           | ±0.005	       | ±0.11     |
-| fasta        | 	Off	| 3.516	        | N.A.            | ±0.003	       | ±0.09     |
-| fasta        | 	On	| 2.847	        | -19.03          | ±0.002	       | ±0.07     |
-| himeno       | 	Off	| 0.398	        | N.A.            | ±0.001	       | ±0.25     |
-| himeno       | 	On	| 0.264	        | -33.67          | ±0.003	       | ±1.14     |
-| mandelbrot   | 	Off	| 5.039	        | N.A.            | ±0.001	       | ±0.02     |
-| mandelbrot   | 	On	| 4.525	        | -10.20          | ±0.001	       | ±0.02     |
-| nbody        | 	Off	| 1.384	        | N.A.            | ±0.002	       | ±0.14     |
-| nbody        | 	On	| 1.412	        | 2.02	          | ±0.001	       | ±0.07     |
-| pidigits     | 	Off	| 19.434	    | N.A.            | ±0.011	       | ±0.06     |
-| pidigits     | 	On	| 14.981	    | -22.91	      | ±0.026	       | ±0.17     |
-| spectral_norm| 	Off	| 12.843		| N.A.            | ±0.004	       | ±0.03     |
-| spectral_norm| 	On	| 9.688	        | -24.57	      | ±0.004	       | ±0.04     |
+| empty        | 	Off	| 24908588.801	| N.A             | ±42949.048     | ±0.17     |
+| empty        | 	On	|    15659.463  | -99.94          | ± 1247.194	   | ±7.96     |
+| binary_trees | 	Off	|     1495.911	| N.A             | ±    8.387     | ±0.56     |  
+| binary_trees | 	On	|      675.869  | -54.82          | ±   10.270     | ±1.52     |
+| fannkuch     | 	Off	|        5.103  | N.A             | ±    0.011     | ±0.22     |
+| fannkuch     | 	On	|        4.600  | -9.86           | ±    0.003     | ±0.07     |
+| fasta        | 	Off	|        3.536  | N.A             | ±    0.003     | ±0.08     |
+| fasta        | 	On	|        2.855  | -19.26          | ±    0.002     | ±0.07     |
+| himeno       | 	Off	|        0.394  | N.A             | ±    0.002     | ±0.51     |
+| himeno       | 	On	|        0.266  | -3.49%          | ±    0.003     | ±1.13     |
+| mandelbrot   | 	Off	|        5.045  | N.A             | ±    0.007     | ±0.14     |
+| mandelbrot   | 	On	|        4.523  | -10.35          | ±    0.003     | ±0.07     |
+| nbody        | 	Off	|        1.385  | N.A             | ±    0.002     | ±0.14     |
+| nbody        | 	On	|        1.411  | 1.88            | ±    0.002     | ±0.14     |
+| pidigits     | 	Off	|       19.449  | N.A             | ±    0.035     | ±0.18     |
+| pidigits     | 	On	|       14.950  | -23.13	      | ±    0.050     | ±0.33     |
+| spectral_norm| 	Off	|       12.818	| N.A             | ±    0.019     | ±0.15     |
+| spectral_norm| 	On	|        9.677  | -24.50	      | ±    0.009     | ±0.09     |
 
 Higher scores are better. As you can see, the performance hit overall of 
 using an enclave is highly dependent on what exactly the code is doing 
