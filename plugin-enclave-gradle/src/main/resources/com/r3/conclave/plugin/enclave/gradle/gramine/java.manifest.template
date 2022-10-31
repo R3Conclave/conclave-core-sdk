@@ -4,14 +4,17 @@ loader.log_level = "error"
 
 # TODO: remove this when in production
 loader.insecure__use_cmdline_argv = true
+loader.insecure__use_host_env = true
 
 # TODO: add DCAP attestation
 sgx.remote_attestation = false
 # sgx.ra_client_spid = ""
 
-
+fs.root.uri="/home/marco/conclave-python"
 # This sets an environment variables used by the dynamic loader
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:/usr/local/lib/python3.8/dist-packages/jep:/usr/local/lib"
+loader.env.LD_LIBRARY_PATH = "/lib/:{{ arch_libdir }}/:/usr{{ arch_libdir }}/:/usr/lib/:/usr/local/lib/:/usr/include/python3.8/"
+loader.env.LD_PRELOAD = "/usr/lib/x86_64-linux-gnu/libpython3.8.so"
+loader.env.PYTHONPATH = "/usr/lib/python3.8/:/usr/lib/python3.8/lib/python3.8/site-packages/:/usr/local/lib/python3.8/dist-packages/"
 
 fs.mounts = [
   # TODO: Narrow down /usr/bin usage to only the executable we will need to run, i.e. java
@@ -20,8 +23,10 @@ fs.mounts = [
   { path = "{{ arch_libdir }}",     uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",              uri = "file:/usr/lib" },
+  { path = "/home/marco",           uri = "file:/home/marco" },
+  { path = "/",                     uri = "file:/home/marco/conclave-python" },
   { path = "/usr/local/lib",        uri = "file:/usr/local/lib" },
-  { path = "/usr",        uri = "file:/usr" },
+  { path = "/usr",                  uri = "file:/usr" },
   { path = "/tmp",                  type = "tmpfs" },
 ]
 
