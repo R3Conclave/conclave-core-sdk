@@ -164,7 +164,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val task =
             target.tasks.register("signedEnclave${type}${RuntimeType.Gramine.name}Jar", Jar::class.java) { task ->
                 task.group = CONCLAVE_GROUP
-                task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
+                task.description = "Compile a ${type}-mode enclave that can be loaded by SGX."
                 task.archiveFileName.set("enclave-gramine-$typeLowerCase.jar")
                 task.archiveAppendix.set("jar")
                 task.archiveClassifier.set(typeLowerCase)
