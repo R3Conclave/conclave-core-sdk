@@ -43,12 +43,13 @@ class SocketEnclaveHostInterface(
 
     private var maximumConcurrentCalls = 0
 
+    /** Tracks the number of running threads, used for graceful shutdown. */
+    private val shutdownSemaphore = Semaphore(0)
+
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
-            stateManager.transitionStateFrom<State.Ready>(to = State.Running) {
-                "Call interface may not be started multiple times."
-            }
+            stateManager.transitionStateFrom<State.Ready>(to = State.Running)
 
             try {
                 /** Receive the maximum number of concurrent calls from the host and set up the call executor service. */
@@ -86,8 +87,10 @@ class SocketEnclaveHostInterface(
         }
     }
 
-    fun awaitTermination(seconds: Long) {
-        callExecutor.awaitTermination(seconds, TimeUnit.SECONDS)
+    /** Blocks until all call context worker threads have stopped. */
+    fun awaitTermination() {
+        stateManager.checkStateIs<State.Running>()
+        shutdownSemaphore.acquire(maximumConcurrentCalls)
     }
 
     private inner class EnclaveCallContext(private val socket: Socket) {
@@ -175,12 +178,16 @@ class SocketEnclaveHostInterface(
 
         /** Handle calls from the host until told by the host to stop. */
         fun handlerLoop() {
-            socket.use {
-                var message = receiveMessage()
-                while (message.messageType != SocketCallInterfaceMessageType.STOP) {
-                    handleInitialCall(message)
-                    message = receiveMessage()
+            try {
+                socket.use {
+                    var message = receiveMessage()
+                    while (message.messageType != SocketCallInterfaceMessageType.STOP) {
+                        handleInitialCall(message)
+                        message = receiveMessage()
+                    }
                 }
+            } finally {
+                shutdownSemaphore.release()
             }
         }
     }

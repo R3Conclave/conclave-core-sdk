@@ -67,7 +67,7 @@ object GramineEntryPoint {
          */
         hostInterface.use {
             it.start()
-            it.awaitTermination(Long.MAX_VALUE)
+            it.awaitTermination()
         }
     }
 }
