@@ -89,6 +89,7 @@ class SocketEnclaveHostInterface(
 
     /** Blocks until all call context worker threads have stopped. */
     fun awaitTermination() {
+        if (stateManager.state == State.Stopped) return
         stateManager.checkStateIs<State.Running>()
         shutdownSemaphore.acquire(maximumConcurrentCalls)
     }
