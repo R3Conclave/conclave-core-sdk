@@ -24,7 +24,6 @@ fs.mounts = [
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",              uri = "file:/usr/lib" },
   { path = "/home/marco",           uri = "file:/home/marco" },
-  { path = "/",                     uri = "file:/home/marco/conclave-python" },
   { path = "/usr/local/lib",        uri = "file:/usr/local/lib" },
   { path = "/usr",                  uri = "file:/usr" },
   { path = "/tmp",                  type = "tmpfs" },
