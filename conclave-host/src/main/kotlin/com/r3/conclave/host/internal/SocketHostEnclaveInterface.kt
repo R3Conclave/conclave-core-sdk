@@ -37,8 +37,6 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
 
     val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
 
-    private val callGuardSemaphore = Semaphore(0)
-
     /**
      * Set up the server socket, binding the specified port.
      * If no specific port is requested, let the system allocate one.
@@ -82,9 +80,6 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
                         callContextPool.put(callContext)
                     }
                 }
-
-                /** Allow calls to enter the interface. */
-                callGuardSemaphore.release(maxConcurrentCalls)
             } catch (e: Exception) {
                 stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
                 throw e
@@ -103,9 +98,6 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
             stateManager.transitionStateFrom<State.Running>(to = State.Stopped) {
                 "Call interface is not running."
             }
-
-            /** Wait for any pending calls to finish, this is released when a call completes. */
-            callGuardSemaphore.acquireUninterruptibly(maxConcurrentCalls)
 
             /** Empty the call context pool and close all the call contexts. */
             for (i in 0 until maxConcurrentCalls) {
@@ -220,12 +212,11 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
      */
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         synchronized(stateManager) {
-            stateManager.checkStateIs<State.Running>()
+            stateManager.checkStateIs<State.Running> { "Call interface is not running." }
         }
 
         val callContext = when(val existingCallContext = threadLocalCallContext.get()) {
             null -> {
-                callGuardSemaphore.acquireUninterruptibly()
                 val context = callContextPool.take()
                 threadLocalCallContext.set(context)
                 context
@@ -239,7 +230,6 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
             if (!callContext.hasActiveCalls()) {
                 threadLocalCallContext.remove()
                 callContextPool.put(callContext)        // Return to context pool.
-                callGuardSemaphore.release()            // Free a slot for a new call to enter.
             }
         }
     }
