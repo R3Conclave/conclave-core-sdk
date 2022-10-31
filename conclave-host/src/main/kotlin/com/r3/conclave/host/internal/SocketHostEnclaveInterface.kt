@@ -20,11 +20,8 @@ import java.util.concurrent.Semaphore
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
-class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: Int) : HostEnclaveInterface(), Closeable {
-    private val serverSocket = ServerSocket(port)
-
-    /** Get the port bound by the server socket. */
-    val port get() = serverSocket.localPort
+class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEnclaveInterface(), Closeable {
+    private lateinit var serverSocket: ServerSocket
 
     private lateinit var callContextPool: ArrayBlockingQueue<EnclaveCallContext>
 
@@ -40,6 +37,15 @@ class SocketHostEnclaveInterface(port: Int = 0, private val maxConcurrentCalls: 
     val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
 
     private val callGuardSemaphore = Semaphore(0)
+
+    /**
+     * Set up the server socket, binding the specified port.
+     * If no specific port is requested, let the system allocate one.
+     */
+    fun bindPort(port: Int = 0): Int {
+        serverSocket = ServerSocket(port)
+        return serverSocket.localPort
+    }
 
     /** Start the call interface and allow calls to begin. */
     fun start() {

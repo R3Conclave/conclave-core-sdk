@@ -34,8 +34,8 @@ class GramineEnclaveHandle(
         val maxConcurrentCalls = getEnclaveThreadCountFromManifest() / 2
         check(maxConcurrentCalls > 0)
 
-        /** Create a socket host interface, let the system allocate the port. */
-        enclaveInterface = SocketHostEnclaveInterface(0, maxConcurrentCalls)
+        /** Create a socket host interface. */
+        enclaveInterface = SocketHostEnclaveInterface(maxConcurrentCalls)
     }
 
     companion object {
@@ -46,11 +46,10 @@ class GramineEnclaveHandle(
     }
 
     override fun initialise() {
-        /** Start the local call interface. */
-        val interfaceStartTask = FutureTask { enclaveInterface.start() }
-        val interfaceStartThread = Thread(interfaceStartTask).apply { start() }
-
         try {
+            /** Bind a port for the interface to use. */
+            val port = enclaveInterface.bindPort()
+
             /**
              * Start the enclave process, passing the port that the call interface is listening on.
              * TODO: Implement a *secure* method for passing port to the enclave.
@@ -58,12 +57,11 @@ class GramineEnclaveHandle(
             processGramineDirect = ProcessBuilder()
                 .inheritIO()
                 .directory(enclaveDirectory.toFile())
-                .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", enclaveInterface.port.toString())
+                .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString())
                 .start()
 
             /** Wait for the local call interface start process to complete. */
-            interfaceStartThread.join()     // wait for start process to finish
-            interfaceStartTask.get()        // throw if start failed
+            enclaveInterface.start()
 
             /** Initialise the enclave. */
             enclaveInterface.initializeEnclave(enclaveClassName)
