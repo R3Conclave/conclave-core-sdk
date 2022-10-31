@@ -69,7 +69,5 @@ object GramineEntryPoint {
             it.start()
             it.awaitTermination(Long.MAX_VALUE)
         }
-
-        System.err.println("\nHost interface terminated!\n")
     }
 }
