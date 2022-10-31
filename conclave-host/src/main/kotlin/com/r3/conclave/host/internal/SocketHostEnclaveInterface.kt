@@ -27,12 +27,13 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
 
     /** Represents the lifecycle of the interface. */
     sealed class State {
+        object Created : State()
         object Ready : State()
         object Running : State()
         object Stopped : State()
     }
 
-    private val stateManager = StateManager<State>(State.Ready)
+    private val stateManager = StateManager<State>(State.Created)
 
     val isRunning get() = synchronized(stateManager) { stateManager.state == State.Running }
 
@@ -43,17 +44,23 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
      * If no specific port is requested, let the system allocate one.
      */
     fun bindPort(port: Int = 0): Int {
-        serverSocket = ServerSocket(port)
-        return serverSocket.localPort
+        synchronized(stateManager) {
+            stateManager.transitionStateFrom<State.Created>(to = State.Ready)
+            return try {
+                serverSocket = ServerSocket(port)
+                serverSocket.localPort
+            } catch (e: Exception) {
+                stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
+                throw e
+            }
+        }
     }
 
     /** Start the call interface and allow calls to begin. */
     fun start() {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
-            stateManager.transitionStateFrom<State.Ready>(to = State.Running) {
-                "Interface may not be started multiple times."
-            }
+            stateManager.transitionStateFrom<State.Ready>(to = State.Running)
 
             try {
                 /** Wait for IO sockets, then close the server socket. */
@@ -213,7 +220,7 @@ class SocketHostEnclaveInterface(private val maxConcurrentCalls: Int) : HostEncl
      */
     override fun executeOutgoingCall(callType: EnclaveCallType, parameterBuffer: ByteBuffer): ByteBuffer? {
         synchronized(stateManager) {
-            stateManager.checkStateIs<State.Running> { "Call interface is not running." }
+            stateManager.checkStateIs<State.Running>()
         }
 
         val callContext = when(val existingCallContext = threadLocalCallContext.get()) {
