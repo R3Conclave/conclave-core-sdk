@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.plugin.enclave.gradle.div
 import com.r3.conclave.utilities.internal.copyResource
@@ -30,8 +31,6 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
         const val GRAMINE_MANIFEST_EXECUTABLE = "gramine-manifest"
     }
 
-    private val isSimulation = true
-
     @Input
     val entryPoint: Property<String> = objects.property(String::class.java)
 
@@ -43,6 +42,9 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
     @Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
+
+    @Input
+    val buildType: Property<BuildType> = objects.property(BuildType::class.java)
 
     @InputFile
     val inputKey: RegularFileProperty = objects.fileProperty()
@@ -88,6 +90,8 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
      * This file contains data that the host needs to know in order to load the enclave.
      */
     private fun generateGramineEnclaveMetadata() {
+        val isSimulation = buildType.get() == BuildType.Simulation
+
         /**
          * We don't use the java Properties class here for two reasons:
          * - It doesn't guarantee consistent order.

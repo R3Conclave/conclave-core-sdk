@@ -152,6 +152,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.entryPoint.set("/usr/lib/jvm/java-17-openjdk-amd64/bin/java")
             task.maxThreads.set(conclaveExtension.maxThreads.get())
             task.inputKey.set(signingKey)
+            task.buildType.set(type)
             task.outputManifest.set(
                 Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
             )
