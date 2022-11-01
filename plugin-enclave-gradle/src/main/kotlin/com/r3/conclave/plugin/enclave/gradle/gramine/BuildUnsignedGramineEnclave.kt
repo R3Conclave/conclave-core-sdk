@@ -3,16 +3,28 @@ package com.r3.conclave.plugin.enclave.gradle.gramine
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.plugin.enclave.gradle.div
 import com.r3.conclave.utilities.internal.copyResource
+import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.toHexString
+import org.bouncycastle.openssl.PEMKeyPair
+import org.bouncycastle.openssl.PEMParser
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
+import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker.`object`
+import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.security.KeyPair
+import java.security.PrivateKey
+import java.security.interfaces.RSAPrivateKey
 import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
+
 
 open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
@@ -33,6 +45,9 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
     @Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
+
+    @InputFile
+    val inputKey: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
     val outputManifest: RegularFileProperty = objects.fileProperty()
@@ -81,8 +96,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
          */
         val properties = TreeMap<String, String>().apply {
             put("maxThreads", "${maxThreads.get()}")
-            // TODO: Signing key measurement
-            put("signingKeyMeasurement", "TODO")
+            put("signingKeyMeasurement", computeSigningKeyMeasurement(inputKey.asFile.get()))
         }
 
         outputGramineEnclaveMetadata.asFile.get().writer().use { outputStream ->
@@ -90,5 +104,29 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
                 outputStream.write("${entry.key}=${entry.value}\n")
             }
         }
+    }
+
+    /**
+     * Compute an SGX-like signing key measurement of the specified key.
+     * Output is a lower case hexadecimal string.
+     */
+    private fun computeSigningKeyMeasurement(keyFile: File): String {
+        System.err.println(keyFile)
+
+        val rsaPrivateKey = keyFile.reader().use {
+            val pemParser = PEMParser(it)
+            val keyConverter = JcaPEMKeyConverter().setProvider("BC")
+            val pemObject = pemParser.readObject()
+            val kp: KeyPair = keyConverter.getKeyPair(pemObject as PEMKeyPair)
+            kp.private as RSAPrivateKey
+        }
+
+        val digest = digest("SHA-256") {
+            update(rsaPrivateKey.modulus.toByteArray())
+        }
+
+        check(digest.size == 32)
+
+        return digest.toHexString().lowercase()
     }
 }

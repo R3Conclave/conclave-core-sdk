@@ -8,7 +8,9 @@ import com.r3.conclave.plugin.enclave.gradle.gramine.BuildUnsignedGramineEnclave
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
@@ -134,15 +136,22 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         )
     }
 
-    private fun buildUnsignedGramineEnclaveTask(target: Project, type: BuildType, ext: ConclaveExtension): BuildUnsignedGramineEnclave {
+    private fun buildUnsignedGramineEnclaveTask(
+            target: Project,
+            type: BuildType,
+            conclaveExtension: ConclaveExtension,
+            signingKey: Provider<RegularFile?>
+    ): BuildUnsignedGramineEnclave {
         val gramineBuildDir = baseDirectory.resolve("gramine").toString()
+
         return target.createTask("buildUnsignedGramineEnclave$type") { task ->
             task.outputs.dir(gramineBuildDir)
             task.buildDirectory.set(gramineBuildDir)
             task.archLibDirectory.set("/lib/x86_64-linux-gnu")
             // TODO: Once we have integrated Gramine properly, we should use the java executable path
             task.entryPoint.set("/usr/lib/jvm/java-17-openjdk-amd64/bin/java")
-            task.maxThreads.set(ext.maxThreads.get())
+            task.maxThreads.set(conclaveExtension.maxThreads.get())
+            task.inputKey.set(signingKey)
             task.outputManifest.set(
                 Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
             )
@@ -293,6 +302,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 else -> throw IllegalStateException()
             }
 
+            val signingKey = enclaveExtension.signingType.flatMap {
+                when (it) {
+                    SigningType.DummyKey -> createDummyKeyTask.outputKey
+                    SigningType.PrivateKey -> enclaveExtension.signingKey
+                    else -> target.provider { null }
+                }
+            }
+
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
             // Simulation and debug default to using a dummy key. Release defaults to external key
@@ -303,7 +320,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
-            val buildUnsignedGramineEnclaveTask = buildUnsignedGramineEnclaveTask(target, type, conclaveExtension)
+            val buildUnsignedGramineEnclaveTask = buildUnsignedGramineEnclaveTask(target, type, conclaveExtension, signingKey)
 
             val signedEnclaveGramineJarTask = signedEnclaveGramine(
                 target,
@@ -377,13 +394,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     )
                     task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                    task.inputKey.set(enclaveExtension.signingType.flatMap {
-                        when (it) {
-                            SigningType.DummyKey -> createDummyKeyTask.outputKey
-                            SigningType.PrivateKey -> enclaveExtension.signingKey
-                            else -> target.provider { null }
-                        }
-                    })
+                    task.inputKey.set(signingKey)
                     task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
                 }
 
