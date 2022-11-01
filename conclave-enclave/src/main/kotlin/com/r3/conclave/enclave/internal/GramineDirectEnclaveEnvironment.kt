@@ -15,7 +15,8 @@ import java.security.MessageDigest
  */
 class GramineDirectEnclaveEnvironment(
         enclaveClass: Class<*>,
-        override val hostInterface: SocketEnclaveHostInterface
+        override val hostInterface: SocketEnclaveHostInterface,
+        private val mrsigner: ByteArray
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -52,11 +53,6 @@ class GramineDirectEnclaveEnvironment(
         }
 
         digest.digest()
-    }
-
-    // TODO: (CON-1194) mrsigner value that matches what gramine-sgx would produce
-    private val mrsigner: ByteArray by lazy {
-        ByteArray(32)
     }
 
     private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {

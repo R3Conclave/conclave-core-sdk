@@ -34,6 +34,8 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
         const val GRAMINE_MANIFEST_EXECUTABLE = "gramine-manifest"
     }
 
+    private val isSimulation = true
+
     @Input
     val entryPoint: Property<String> = objects.property(String::class.java)
 
@@ -87,6 +89,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
     /**
      * Generate metadata for use in simulation mode.
      * The metadata file is a properties file which is packaged along with the manifest.
+     * This file contains data that the host needs to know in order to load the enclave.
      */
     private fun generateGramineEnclaveMetadata() {
         /**
@@ -95,8 +98,13 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
          * - It prints the date and time at the top of the file.
          */
         val properties = TreeMap<String, String>().apply {
-            put("maxThreads", "${maxThreads.get()}")
-            put("signingKeyMeasurement", computeSigningKeyMeasurement(inputKey.asFile.get()))
+            put("isSimulation", isSimulation.toString())
+            put("maxThreads", maxThreads.get().toString())
+
+            /** The signing key measurement should not be included in modes other than simulation. */
+            if (isSimulation) {
+                put("signingKeyMeasurement", computeSigningKeyMeasurement(inputKey.asFile.get()))
+            }
         }
 
         outputGramineEnclaveMetadata.asFile.get().writer().use { outputStream ->
@@ -108,7 +116,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
     /**
      * Compute an SGX-like signing key measurement of the specified key.
-     * Output is a lower case hexadecimal string.
+     * Output is the SHA-256 hash of the signing key modulus encoded as a base64 string.
      */
     private fun computeSigningKeyMeasurement(keyFile: File): String {
         val rsaPrivateKey = keyFile.reader().use {
@@ -125,6 +133,6 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
         check(digest.size == 32)
 
-        return digest.toHexString().lowercase()
+        return Base64.getEncoder().encodeToString(digest)
     }
 }
