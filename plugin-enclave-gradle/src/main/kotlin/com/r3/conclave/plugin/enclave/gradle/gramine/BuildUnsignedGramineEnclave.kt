@@ -124,27 +124,24 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
             keyPair.public as RSAPublicKey
         }
 
-        val modulusBytes2sComp = key.modulus.toByteArray()
+        val modulusBytes = key.modulus.toByteArray()
 
         /**
          * Check the key length by checking the modulus.
          * Modulus is 385 bytes rather than 384 (3072 / 8) due to two's complement.
          */
-        check(modulusBytes2sComp.size == 385) { "Signing key must be a 3072 bit RSA key." }
+        check(modulusBytes.size == 385) { "Signing key must be a 3072 bit RSA key." }
 
         /**
          * The modulus bytes are a big-endian representation.
          * Here we do a quick sanity check to ensure that the MSB (which would contain the sign bit) really is zero.
          */
-        check(modulusBytes2sComp[0] == 0.toByte())
-
-        /** Throw away the empty MSB. */
-        val modulusBytes = modulusBytes2sComp.copyOfRange(1, 385)
+        check(modulusBytes[0] == 0.toByte())
 
         /** Reverse the bytes (currently big endian, need little endian), then compute the measurement. */
         return digest("SHA-256") {
             modulusBytes.reverse()
-            update(modulusBytes)
+            update(modulusBytes, 0, 384)    // Ignore the 385th byte.
         }
     }
 }
