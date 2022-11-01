@@ -4,7 +4,6 @@ import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.plugin.enclave.gradle.div
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
-import com.r3.conclave.utilities.internal.toHexString
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
@@ -14,13 +13,10 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker.`object`
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.KeyPair
-import java.security.PrivateKey
-import java.security.interfaces.RSAPrivateKey
+import java.security.interfaces.RSAPublicKey
 import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
@@ -103,7 +99,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
             /** The signing key measurement should not be included in modes other than simulation. */
             if (isSimulation) {
-                put("signingKeyMeasurement", computeSigningKeyMeasurement(inputKey.asFile.get()))
+                put("signingKeyMeasurement", Base64.getEncoder().encodeToString(computeMrsigner(inputKey.asFile.get())))
             }
         }
 
@@ -114,25 +110,41 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
         }
     }
 
-    /**
-     * Compute an SGX-like signing key measurement of the specified key.
-     * Output is the SHA-256 hash of the signing key modulus encoded as a base64 string.
-     */
-    private fun computeSigningKeyMeasurement(keyFile: File): String {
-        val rsaPrivateKey = keyFile.reader().use {
+    /** Compute the mrsigner value from a provided .pem file containing a 3072 bit RSA key. */
+    private fun computeMrsigner(keyFile: File): ByteArray {
+        /**
+         * Doesn't actually matter if we use the public or private key here.
+         * We only care about the modulus (which is the same for either).
+         */
+        val key = keyFile.reader().use {
             val pemParser = PEMParser(it)
             val keyConverter = JcaPEMKeyConverter()
             val pemObject = pemParser.readObject()
-            val kp: KeyPair = keyConverter.getKeyPair(pemObject as PEMKeyPair)
-            kp.private as RSAPrivateKey
+            val keyPair = keyConverter.getKeyPair(pemObject as PEMKeyPair)
+            keyPair.public as RSAPublicKey
         }
 
-        val digest = digest("SHA-256") {
-            update(rsaPrivateKey.modulus.toByteArray())
+        val modulusBytes2sComp = key.modulus.toByteArray()
+
+        /**
+         * Check the key length by checking the modulus.
+         * Modulus is 385 bytes rather than 384 (3072 / 8) due to two's complement.
+         */
+        check(modulusBytes2sComp.size == 385) { "Signing key must be a 3072 bit RSA key." }
+
+        /**
+         * The modulus bytes are a big-endian representation.
+         * Here we do a quick sanity check to ensure that the MSB (which would contain the sign bit) really is zero.
+         */
+        check(modulusBytes2sComp[0] == 0.toByte())
+
+        /** Throw away the empty MSB. */
+        val modulusBytes = modulusBytes2sComp.copyOfRange(1, 385)
+
+        /** Reverse the bytes (currently big endian, need little endian), then compute the measurement. */
+        return digest("SHA-256") {
+            modulusBytes.reverse()
+            update(modulusBytes)
         }
-
-        check(digest.size == 32)
-
-        return Base64.getEncoder().encodeToString(digest)
     }
 }
