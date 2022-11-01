@@ -115,7 +115,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
         val rsaPrivateKey = keyFile.reader().use {
             val pemParser = PEMParser(it)
-            val keyConverter = JcaPEMKeyConverter().setProvider("BC")
+            val keyConverter = JcaPEMKeyConverter()
             val pemObject = pemParser.readObject()
             val kp: KeyPair = keyConverter.getKeyPair(pemObject as PEMKeyPair)
             kp.private as RSAPrivateKey
