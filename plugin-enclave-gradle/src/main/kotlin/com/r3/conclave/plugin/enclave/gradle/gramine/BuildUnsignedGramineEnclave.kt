@@ -111,8 +111,6 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
      * Output is a lower case hexadecimal string.
      */
     private fun computeSigningKeyMeasurement(keyFile: File): String {
-        System.err.println(keyFile)
-
         val rsaPrivateKey = keyFile.reader().use {
             val pemParser = PEMParser(it)
             val keyConverter = JcaPEMKeyConverter()
