@@ -5,6 +5,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.plugin.enclave.gradle.gramine.BuildUnsignedGramineEnclave
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineEnclaveMetadata
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -136,11 +137,28 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         )
     }
 
-    private fun buildUnsignedGramineEnclaveTask(
+    private fun generateGramineEnclaveMetadataTask(
             target: Project,
             type: BuildType,
             conclaveExtension: ConclaveExtension,
             signingKey: Provider<RegularFile?>
+    ): GenerateGramineEnclaveMetadata {
+        val gramineBuildDir = baseDirectory.resolve("gramine").toString()
+
+        return target.createTask("generateGramineEnclaveMetadata$type") { task ->
+            task.buildType.set(type)
+            task.maxThreads.set(conclaveExtension.maxThreads.get())
+            task.signingKey.set(signingKey)
+            task.outputGramineEnclaveMetadata.set(
+                Paths.get(gramineBuildDir).resolve(GenerateGramineEnclaveMetadata.METADATA_FILE_NAME).toFile()
+            )
+        }
+    }
+
+    private fun buildUnsignedGramineEnclaveTask(
+            target: Project,
+            type: BuildType,
+            conclaveExtension: ConclaveExtension
     ): BuildUnsignedGramineEnclave {
         val gramineBuildDir = baseDirectory.resolve("gramine").toString()
 
@@ -151,23 +169,19 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // TODO: Once we have integrated Gramine properly, we should use the java executable path
             task.entryPoint.set("/usr/lib/jvm/java-17-openjdk-amd64/bin/java")
             task.maxThreads.set(conclaveExtension.maxThreads.get())
-            task.inputKey.set(signingKey)
-            task.buildType.set(type)
             task.outputManifest.set(
                 Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
-            )
-            task.outputGramineEnclaveMetadata.set(
-                Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.METADATA_DIRECT).toFile()
             )
         }
     }
 
     private fun signedEnclaveGramine(
-        target: Project,
-        enclaveClassNameTask: EnclaveClassName,
-        shadowJarTask: ShadowJar,
-        type: BuildType,
-        buildUnsignedGramineEnclaveTask: BuildUnsignedGramineEnclave
+            target: Project,
+            enclaveClassNameTask: EnclaveClassName,
+            shadowJarTask: ShadowJar,
+            type: BuildType,
+            generateGramineEnclaveMetadataTask: GenerateGramineEnclaveMetadata,
+            buildUnsignedGramineEnclaveTask: BuildUnsignedGramineEnclave
     ): TaskProvider<Jar> {
         val typeLowerCase = type.name.lowercase()
 
@@ -178,7 +192,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.archiveFileName.set("enclave-gramine-$typeLowerCase.jar")
                 task.archiveAppendix.set("jar")
                 task.archiveClassifier.set(typeLowerCase)
-                task.from(shadowJarTask.archiveFile, buildUnsignedGramineEnclaveTask.outputManifest, buildUnsignedGramineEnclaveTask.outputGramineEnclaveMetadata)
+                task.from(
+                    shadowJarTask.archiveFile,
+                    buildUnsignedGramineEnclaveTask.outputManifest,
+                    generateGramineEnclaveMetadataTask.outputGramineEnclaveMetadata
+                )
                 task.doFirst(IntoGramineTask(shadowJarTask, enclaveClassNameTask, typeLowerCase))
             }
         return task
@@ -323,13 +341,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
-            val buildUnsignedGramineEnclaveTask = buildUnsignedGramineEnclaveTask(target, type, conclaveExtension, signingKey)
+            val generateGramineEnclaveMetadataTask = generateGramineEnclaveMetadataTask(target, type, conclaveExtension, signingKey)
+            val buildUnsignedGramineEnclaveTask = buildUnsignedGramineEnclaveTask(target, type, conclaveExtension)
 
             val signedEnclaveGramineJarTask = signedEnclaveGramine(
                 target,
                 enclaveClassNameTask,
                 shadowJarTask,
                 type,
+                generateGramineEnclaveMetadataTask,
                 buildUnsignedGramineEnclaveTask
             )
 
