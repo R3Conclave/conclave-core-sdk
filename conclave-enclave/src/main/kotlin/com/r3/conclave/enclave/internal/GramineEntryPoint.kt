@@ -69,7 +69,12 @@ object GramineEntryPoint {
         return port
     }
 
-    /** Load enclave metadata from the enclave properties file. */
+    /**
+     * Load enclave metadata properties file.
+     * This file contains properties required to load the enclave, such as the signing key measurement, threading level,
+     * and whether to use gramine-sgx or gramine-direct.
+     * For more information, see [com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineEnclaveMetadata].
+     */
     private fun loadEnclaveMetadata() {
         val properties = Paths.get(ENCLAVE_METADATA_FILE).toFile().reader().use { reader ->
             Properties().apply { load(reader) }

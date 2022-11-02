@@ -18,8 +18,13 @@ import java.util.*
 import javax.inject.Inject
 
 /**
- * This task generates a properties file containing metadata used by the host to launch a gramine enclave.
- * It is also used in simulation mode to pass a mock mrsigner value to the enclave.
+ * In native mode, enclave metadata is bundled into the enclave .so file by the intel SGX SDK. The Intel SDK then uses
+ * this data when loading the enclave. This allows our code to be mostly agnostic of the enclave mode. With Gramine
+ * though, there is no concept of a "simulation" mode, so we have to implement some of this logic ourselves.
+ * This task produces a properties file which serves as our mechanism for passing build-time information for the host to
+ * use at runtime.
+ * It should be noted that this file is distinct from the enclave properties file in that it is available to the host
+ * *before* the enclave is loaded.
  */
 open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
