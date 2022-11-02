@@ -5,9 +5,9 @@ import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
-import java.io.File
 import java.lang.NumberFormatException
 import java.nio.ByteBuffer
+import java.nio.file.Paths
 import java.util.*
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
@@ -23,8 +23,8 @@ object GramineEntryPoint {
 
     /** Load enclave metadata from the enclave properties file. */
     private fun loadEnclaveMetadata() {
-        val properties = File(ENCLAVE_METADATA_FILE).reader().use {
-            Properties().apply { load(it) }
+        val properties = Paths.get(ENCLAVE_METADATA_FILE).toFile().reader().use { reader ->
+            Properties().apply { load(reader) }
         }
 
         val isSimulationString = checkNotNull(properties["isSimulation"]).toString()
