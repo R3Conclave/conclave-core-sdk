@@ -26,11 +26,11 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
         const val METADATA_FILE_NAME = "enclave-metadata.properties"
     }
 
-    @Input
+    @get:Input
     val buildType: Property<BuildType> = objects.property(BuildType::class.java)
-    @Input
+    @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
-    @InputFile
+    @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
