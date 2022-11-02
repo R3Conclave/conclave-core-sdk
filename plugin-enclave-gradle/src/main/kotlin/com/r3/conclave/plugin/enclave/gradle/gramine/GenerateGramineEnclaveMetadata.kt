@@ -53,8 +53,11 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
             put("isSimulation", isSimulation.toString())
             put("maxThreads", maxThreads.get().toString())
 
-            /** The signing key measurement should not be included in modes other than simulation. */
-            // TODO: CON-1163 you will probably need to remove this for mock attestation in debug/release mode!
+            /**
+             * The signing key measurement should not be included in modes other than simulation.
+             * It should be noted that no actual signing takes place in simulation mode!
+             * TODO: CON-1163 you will probably need to remove this for mock attestation in debug/release mode!
+             */
             if (isSimulation) {
                 val mrsigner = computeSigningKeyMeasurement(signingKey.asFile.get())
                 put("signingKeyMeasurement", Base64.getEncoder().encodeToString(mrsigner))
