@@ -21,27 +21,29 @@ object GramineEntryPoint {
     private var isSimulation by Delegates.notNull<Boolean>()
     private lateinit var signingKeyMeasurement: ByteArray
 
-    /** Load enclave metadata from the enclave properties file. */
-    private fun loadEnclaveMetadata() {
-        val properties = Paths.get(ENCLAVE_METADATA_FILE).toFile().reader().use { reader ->
-            Properties().apply { load(reader) }
-        }
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val port = getPortFromArgs(args)
+        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port)
 
-        val isSimulationString = checkNotNull(properties["isSimulation"]).toString()
-        check(isSimulationString == "true" || isSimulationString == "false")
-        isSimulation = isSimulationString == "true"
+        /** Load the enclave metadata properties file */
+        loadEnclaveMetadata()
 
-        /** The signing key measurement is only part of the metadata in simulation mode. */
-        val signingKeyMeasurementStr = properties["signingKeyMeasurement"]?.toString()
-        if (isSimulation) {
-            signingKeyMeasurement = Base64.getDecoder().decode(signingKeyMeasurementStr)
-            check(signingKeyMeasurement.size == 32)
-        } else {
-            /**
-             * The signing key measurement must *not* be present in non simulation modes!
-             * Run a quick sanity check here to confirm.
-             */
-            check(signingKeyMeasurementStr == null)
+        /** Register the enclave initialisation call handler. */
+        hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
+            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface)
+                return null
+            }
+        })
+
+        /**
+         * Start the interface and await termination.
+         * TODO: Re-use the main thread (here) for the interface receive loop
+         */
+        hostInterface.use {
+            it.start()
+            it.awaitTermination()
         }
     }
 
@@ -67,12 +69,27 @@ object GramineEntryPoint {
         return port
     }
 
-    private fun createEnclaveEnvironment(enclaveClass: Class<*>, hostInterface: SocketEnclaveHostInterface): EnclaveEnvironment {
-        return if (isSimulation) {
-            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement)
+    /** Load enclave metadata from the enclave properties file. */
+    private fun loadEnclaveMetadata() {
+        val properties = Paths.get(ENCLAVE_METADATA_FILE).toFile().reader().use { reader ->
+            Properties().apply { load(reader) }
+        }
+
+        val isSimulationString = checkNotNull(properties["isSimulation"]).toString()
+        check(isSimulationString == "true" || isSimulationString == "false")
+        isSimulation = isSimulationString == "true"
+
+        /** The signing key measurement is only part of the metadata in simulation mode. */
+        val signingKeyMeasurementStr = properties["signingKeyMeasurement"]?.toString()
+        if (isSimulation) {
+            signingKeyMeasurement = Base64.getDecoder().decode(signingKeyMeasurementStr)
+            check(signingKeyMeasurement.size == 32)
         } else {
-            System.err.println("Gramine SGX is not yet implemented.")
-            exitProcess(EXIT_ERR)
+            /**
+             * The signing key measurement must *not* be present in non simulation modes!
+             * Run a quick sanity check here to confirm.
+             */
+            check(signingKeyMeasurementStr == null)
         }
     }
 
@@ -89,29 +106,12 @@ object GramineEntryPoint {
         initialiseMethod.invoke(enclave, env)
     }
 
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val port = getPortFromArgs(args)
-        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port)
-
-        /** Load the enclave metadata properties file */
-        loadEnclaveMetadata()
-
-        /** Register the enclave initialisation call handler. */
-        hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
-            override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface)
-                return null
-            }
-        })
-
-        /**
-         * Start the interface and await termination.
-         * TODO: Re-use the main thread (here) for the interface receive loop
-         */
-        hostInterface.use {
-            it.start()
-            it.awaitTermination()
+    private fun createEnclaveEnvironment(enclaveClass: Class<*>, hostInterface: SocketEnclaveHostInterface): EnclaveEnvironment {
+        return if (isSimulation) {
+            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement)
+        } else {
+            System.err.println("Gramine SGX is not yet implemented.")
+            exitProcess(EXIT_ERR)
         }
     }
 }
