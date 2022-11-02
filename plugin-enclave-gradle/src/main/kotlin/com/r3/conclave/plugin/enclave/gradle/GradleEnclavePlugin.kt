@@ -143,14 +143,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             conclaveExtension: ConclaveExtension,
             signingKey: Provider<RegularFile?>
     ): GenerateGramineEnclaveMetadata {
-        val gramineBuildDir = baseDirectory.resolve("gramine").toString()
-
         return target.createTask("generateGramineEnclaveMetadata$type") { task ->
             task.buildType.set(type)
             task.maxThreads.set(conclaveExtension.maxThreads.get())
             task.signingKey.set(signingKey)
             task.outputGramineEnclaveMetadata.set(
-                Paths.get(gramineBuildDir).resolve(GenerateGramineEnclaveMetadata.METADATA_FILE_NAME).toFile()
+                gramineBuildDirectory.resolve(GenerateGramineEnclaveMetadata.METADATA_FILE_NAME).toFile()
             )
         }
     }
@@ -160,17 +158,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             type: BuildType,
             conclaveExtension: ConclaveExtension
     ): BuildUnsignedGramineEnclave {
-        val gramineBuildDir = baseDirectory.resolve("gramine").toString()
-
         return target.createTask("buildUnsignedGramineEnclave$type") { task ->
-            task.outputs.dir(gramineBuildDir)
-            task.buildDirectory.set(gramineBuildDir)
+            task.outputs.dir(gramineBuildDirectory)
+            task.buildDirectory.set(gramineBuildDirectory.toString())
             task.archLibDirectory.set("/lib/x86_64-linux-gnu")
             // TODO: Once we have integrated Gramine properly, we should use the java executable path
             task.entryPoint.set("/usr/lib/jvm/java-17-openjdk-amd64/bin/java")
             task.maxThreads.set(conclaveExtension.maxThreads.get())
             task.outputManifest.set(
-                Paths.get(gramineBuildDir).resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
+                gramineBuildDirectory.resolve(BuildUnsignedGramineEnclave.MANIFEST_DIRECT).toFile()
             )
         }
     }
@@ -233,6 +229,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
+    private val gramineBuildDirectory: Path by lazy { baseDirectory.resolve("gramine") }
 
     /**
      * Get the main source set for a given project
