@@ -5,7 +5,6 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import java.io.File
 import java.nio.ByteBuffer
-import java.nio.file.Path
 import java.security.MessageDigest
 
 /**
