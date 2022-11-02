@@ -10,13 +10,15 @@ object AttestationServiceFactory {
      * EPID and DCAP can only be used if the enclave is release or debug, and mock is only used if the enclave is
      * simulation or mock. In the later case any attestation parameters provided are ignored.
      */
-     fun getService(enclaveMode: EnclaveMode, attestationParameters: AttestationParameters?): AttestationService {
-        return when (enclaveMode) {
-            EnclaveMode.RELEASE -> getHardwareService(isRelease = true, enclaveMode, attestationParameters)
-            EnclaveMode.DEBUG -> getHardwareService(isRelease = false, enclaveMode, attestationParameters)
-            EnclaveMode.SIMULATION -> MockAttestationService(isSimulation = true)
-            EnclaveMode.MOCK -> MockAttestationService(isSimulation = false)
-        }
+     fun getService(enclaveMode: EnclaveMode, attestationParameters: AttestationParameters?, isGramine: Boolean): AttestationService {
+        return if (isGramine) MockAttestationService(isSimulation = true)
+        else
+            when (enclaveMode) {
+                EnclaveMode.RELEASE -> getHardwareService(isRelease = true, enclaveMode, attestationParameters)
+                EnclaveMode.DEBUG -> getHardwareService(isRelease = false, enclaveMode, attestationParameters)
+                EnclaveMode.SIMULATION -> MockAttestationService(isSimulation = true)
+                EnclaveMode.MOCK -> MockAttestationService(isSimulation = false)
+            }
     }
 
     private fun getHardwareService(isRelease: Boolean, enclaveMode: EnclaveMode, attestationParameters: AttestationParameters?): HardwareAttestationService {

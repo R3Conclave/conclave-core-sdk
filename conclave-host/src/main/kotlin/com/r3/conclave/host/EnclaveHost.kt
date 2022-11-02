@@ -12,8 +12,11 @@ import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
-import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_JAR_NAME
-import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_MANIFEST
+import com.r3.conclave.host.internal.GramineDirectEnclaveHandle.Companion.GRAMINE_DIRECT_MANIFEST
+import com.r3.conclave.host.internal.GramineEnclaveConfig.ENCLAVE_JAR_NAME
+import com.r3.conclave.host.internal.GramineSGXEnclaveHandle.Companion.GRAMINE_SGX_MANIFEST
+import com.r3.conclave.host.internal.GramineSGXEnclaveHandle.Companion.GRAMINE_SGX_TOKEN
+import com.r3.conclave.host.internal.GramineSGXEnclaveHandle.Companion.GRAMINE_SIG
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
@@ -235,17 +238,36 @@ class EnclaveHost private constructor(
         // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
         @JvmSynthetic
         @JvmStatic
-        internal fun internalCreateGramine(
+        internal fun internalCreateDirectGramine(
             enclaveMode: EnclaveMode,
             enclaveClassName: String,
             manifest: URL,
-            jar: URL
+            enclaveJar: URL
         ): EnclaveHost {
-            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
+            val enclaveHandle = GramineDirectEnclaveHandle(enclaveMode, enclaveClassName, manifest, enclaveJar)
             return EnclaveHost(enclaveHandle)
         }
 
-        private fun createEnclaveHost(result: EnclaveScanner.ScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
+        // The internal modifier prevents this from appearing in the API docs, however because we shade Kotlin it will
+        // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
+        @JvmSynthetic
+        @JvmStatic
+        internal fun internalCreateSGXGramine(
+            enclaveMode: EnclaveMode,
+            enclaveClassName: String,
+            sgxManifest: URL,
+            sgxToken: URL,
+            sigFile: URL,
+            enclaveJar: URL
+        ): EnclaveHost {
+            val enclaveHandle = GramineSGXEnclaveHandle(enclaveMode, enclaveClassName, sgxManifest, sgxToken, sigFile, enclaveJar)
+            return EnclaveHost(enclaveHandle)
+        }
+
+        private fun createEnclaveHost(
+            result: EnclaveScanner.ScanResult,
+            mockConfiguration: MockConfiguration?
+        ): EnclaveHost {
             try {
                 return when (result) {
                     is EnclaveScanner.ScanResult.Mock -> {
@@ -253,10 +275,33 @@ class EnclaveHost private constructor(
                         val enclaveClass = Class.forName(result.enclaveClassName)
                         internalCreateMock(enclaveClass, mockConfiguration)
                     }
-                    is EnclaveScanner.ScanResult.Gramine -> {
-                        checkPlatformEnclaveSupport(result.enclaveMode)
-                        internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
+
+                    is EnclaveScanner.ScanResult.GramineDirect -> {
+                        check(result.enclaveMode == EnclaveMode.SIMULATION) {
+                            "Gramine Direct is available only in simulation mode"
+                        }
+                        internalCreateDirectGramine(
+                            result.enclaveMode,
+                            result.enclaveClassName,
+                            result.manifest,
+                            result.enclaveJar
+                        )
                     }
+
+                    is EnclaveScanner.ScanResult.GramineSGX -> {
+                        check(result.enclaveMode == EnclaveMode.DEBUG || result.enclaveMode == EnclaveMode.RELEASE) {
+                            "Gramine SGX is available only in debug or release mode"
+                        }
+                        internalCreateSGXGramine(
+                            result.enclaveMode,
+                            result.enclaveClassName,
+                            result.sgxManifest,
+                            result.sgxToken,
+                            result.sigFile,
+                            result.enclaveJar
+                        )
+                    }
+
                     is EnclaveScanner.ScanResult.GraalVM -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
                         internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
@@ -427,8 +472,8 @@ class EnclaveHost private constructor(
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
-        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
-        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
+        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle is GramineSGXEnclaveHandle)
+        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle !is GramineSGXEnclaveHandle})
 
         try {
             this.commandsCallback = commandsCallback
@@ -478,7 +523,7 @@ class EnclaveHost private constructor(
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
         // TODO: Improve the enclaveHandle !is GramineEnclaveHandle condition
-        return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineEnclaveHandle) {
+        return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineDirectEnclaveHandle && enclaveHandle !is GramineSGXEnclaveHandle) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
@@ -1027,7 +1072,8 @@ class EnclaveHost private constructor(
             val classGraph = ClassGraph()
             val results = ArrayList<ScanResult>()
             findGraamVmEnclaves(classGraph, results)
-            findGramineEnclaves(classGraph, results)
+            findGramineDirectEnclaves(classGraph, results)
+            findSGXGramineEnclaves(classGraph, results)
             findMockEnclaves(classGraph, results)
             return getSingleResult(results, null)
         }
@@ -1052,7 +1098,8 @@ class EnclaveHost private constructor(
             findMockEnclave(enclaveClassName)?.let { results += it }
             EnclaveMode.values()
                 .forEach {
-                    findGramineEnclave(enclaveClassName, it)?.let { result -> results += result }
+                    findGramineSGXEnclave(enclaveClassName, it)?.let { result -> results += result }
+                    findGramineDirectEnclave(enclaveClassName, it)?.let { result -> results += result }
                     findGraalVmEnclave(enclaveClassName, it)?.let { result -> results += result }
                 }
             return getSingleResult(results, enclaveClassName)
@@ -1064,17 +1111,33 @@ class EnclaveHost private constructor(
             return url?.let { ScanResult.GraalVM(enclaveClassName, enclaveMode, url) }
         }
 
-        private fun findGramineEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Gramine? {
+        private fun findGramineDirectEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.GramineDirect? {
             //  As an example, if enclaveClassName is "com.r3.MyEnclave" and enclaveMode is "simulation",
             //    we expect to find the manifest and the jar file under the directory "/com/r3/MyEnclave-simulation"
             val filesLocation = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}"
-            val manifestUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_MANIFEST}")
-            val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_JAR_NAME}")
+            val manifestUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_DIRECT_MANIFEST}")
+            val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/${ENCLAVE_JAR_NAME}")
 
             return if (manifestUrl == null || jarUrl == null) {
                 null
             } else {
-                ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
+                ScanResult.GramineDirect(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
+            }
+        }
+
+        private fun findGramineSGXEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.GramineSGX? {
+            //  As an example, if enclaveClassName is "com.r3.MyEnclave" and enclaveMode is "release",
+            //    we expect to find the manifest and the jar file under the directory "/com/r3/MyEnclave-release"
+            val filesLocation = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}"
+            val sgxManifestUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_SGX_MANIFEST}")
+            val sgxTokenUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_SGX_TOKEN}")
+            val sigFileUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_SIG}")
+            val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/${ENCLAVE_JAR_NAME}")
+
+            return if (sgxManifestUrl == null || sgxTokenUrl == null || jarUrl == null) {
+                null
+            } else {
+                ScanResult.GramineSGX(enclaveClassName, enclaveMode, sgxManifestUrl, sgxTokenUrl, sigFileUrl, jarUrl)
             }
         }
 
@@ -1123,23 +1186,51 @@ class EnclaveHost private constructor(
          * Performs a search for Gramine enclave files using ClassGraph. The search is performed by looking for 
          * the manifest file and assuming that the other required files are also present there.
          */
-        private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+        private fun findGramineDirectEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
             //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
-            //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
-            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(java\.manifest)$""")
+            //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation"
+            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation)/($GRAMINE_DIRECT_MANIFEST)$""")
 
             classGraph.scan().use {
-                for (resource in it.allResources) {
-                    val pathMatcher = manifestSearchPattern.matcher(resource.path)
+                for (directManifestResource in it.allResources) {
+                    val pathMatcher = manifestSearchPattern.matcher(directManifestResource.path)
 
                     if (pathMatcher.matches()) {
                         val enclaveClassName = pathMatcher.group(1).replace('/', '.')
                         val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
                         val fileName = pathMatcher.group(3)
                         //  Here we assume that all the Gramine required files are at the same level of the manifest file
-                        val manifestDirectory = resource.path.removeSuffix("/$fileName")
-                        val shadowJarResource = EnclaveHost::class.java.getResource("/$manifestDirectory/$GRAMINE_ENCLAVE_JAR_NAME")
-                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!)
+                        val manifestDirectory = directManifestResource.path.removeSuffix("/$fileName")
+                        val shadowJarResource = EnclaveHost::class.java.getResource("/$manifestDirectory/$ENCLAVE_JAR_NAME")
+                        results += ScanResult.GramineDirect(enclaveClassName, enclaveMode, directManifestResource.url, shadowJarResource!!)
+                    }
+                }
+            }
+        }
+
+        /**
+         * Performs a search for Gramine enclave files using ClassGraph. The search is performed by looking for
+         * the SGX manifest file and assuming that the other required files are also present there.
+         */
+        private fun findSGXGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
+            //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
+            //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "debug"
+            val manifestSearchPattern = Pattern.compile("""^(.+)-(debug|release)/($GRAMINE_SGX_MANIFEST)$""")
+
+            classGraph.scan().use {
+                for (sgxManifestResource in it.allResources) {
+                    val pathMatcher = manifestSearchPattern.matcher(sgxManifestResource.path)
+
+                    if (pathMatcher.matches()) {
+                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
+                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
+                        val fileName = pathMatcher.group(3)
+                        //  Here we assume that all the Gramine required files are at the same level of the manifest file
+                        val sgxManifestDirectory = sgxManifestResource.path.removeSuffix("/$fileName")
+                        val sgxToken = EnclaveHost::class.java.getResource("/$sgxManifestDirectory/$GRAMINE_SGX_TOKEN")
+                        val sigFile = EnclaveHost::class.java.getResource("/$sgxManifestDirectory/$GRAMINE_SIG")
+                        val enclaveJarResource = EnclaveHost::class.java.getResource("/$sgxManifestDirectory/$ENCLAVE_JAR_NAME")
+                        results += ScanResult.GramineSGX(enclaveClassName, enclaveMode, sgxManifestResource.url, sgxToken!!, sigFile!!, enclaveJarResource!!)
                     }
                 }
             }
@@ -1179,17 +1270,32 @@ class EnclaveHost private constructor(
                 override fun toString(): String = "graalvm ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
 
-            class Gramine(
+            class GramineDirect(
                 val enclaveClassName: String,
                 val enclaveMode: EnclaveMode,
                 val manifest: URL,
-                val jar: URL,
+                val enclaveJar: URL,
             ) : ScanResult() {
                 init {
                     require(enclaveMode != EnclaveMode.MOCK)
                 }
-                override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
+                override fun toString(): String = "gramine direct ${enclaveMode.name.lowercase()} $enclaveClassName"
             }
+
+            class GramineSGX(
+                val enclaveClassName: String,
+                val enclaveMode: EnclaveMode,
+                val sgxManifest: URL,
+                val sgxToken: URL,
+                val sigFile: URL,
+                val enclaveJar: URL,
+            ) : ScanResult() {
+                init {
+                    require(enclaveMode != EnclaveMode.MOCK)
+                }
+                override fun toString(): String = "gramine sgx ${enclaveMode.name.lowercase()} $enclaveClassName"
+            }
+
         }
     }
 }

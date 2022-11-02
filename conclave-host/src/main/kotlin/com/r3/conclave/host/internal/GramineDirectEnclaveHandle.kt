@@ -1,19 +1,19 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
-import java.io.BufferedReader
+import com.r3.conclave.host.internal.GramineEnclaveConfig.ENCLAVE_JAR_NAME
+import com.r3.conclave.host.internal.GramineEnclaveConfig.GRAMINE_EXECUTABLE
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.div
 
 
-class GramineEnclaveHandle(
+class GramineDirectEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
     private val manifestUrl: URL,
@@ -39,10 +39,8 @@ class GramineEnclaveHandle(
     }
 
     companion object {
-        const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
-        const val GRAMINE_ENCLAVE_MANIFEST = "java.manifest"
-
-        private val logger = loggerFor<GramineEnclaveHandle>()
+        const val GRAMINE_DIRECT_MANIFEST = "$GRAMINE_EXECUTABLE.manifest"
+        private val logger = loggerFor<GramineDirectEnclaveHandle>()
     }
 
     override fun initialise() {
@@ -57,7 +55,7 @@ class GramineEnclaveHandle(
             processGramineDirect = ProcessBuilder()
                 .inheritIO()
                 .directory(enclaveDirectory.toFile())
-                .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString())
+                .command("gramine-direct", GRAMINE_EXECUTABLE, "-cp", ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString())
                 .start()
 
             /** Wait for the local call interface start process to complete. */
@@ -98,11 +96,11 @@ class GramineEnclaveHandle(
         //  Here we copy files from inside the jar into a temporary folder
 
         manifestUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_MANIFEST, REPLACE_EXISTING)
+            Files.copy(it, enclaveDirectory / GRAMINE_DIRECT_MANIFEST, REPLACE_EXISTING)
         }
 
         jarUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
+            Files.copy(it, enclaveDirectory / ENCLAVE_JAR_NAME, REPLACE_EXISTING)
         }
     }
 

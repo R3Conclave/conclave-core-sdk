@@ -2,23 +2,25 @@ loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 loader.log_level = "error"
 
-# TODO: remove this when in production
+# TODO: remove this when in production https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
 
-# TODO: add DCAP attestation
-sgx.remote_attestation = false
+# TODO: Enable DCAP attestation
+# sgx.remote_attestation = dcap
 # sgx.ra_client_spid = ""
+
+sgx.remote_attestation = false
 
 # This sets an environment variables used by the dynamic loader
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib"
 fs.mounts = [
-  # TODO: Narrow down /usr/bin usage to only the executable we will need to run, i.e. java
-  { path = "/usr/bin",              uri = "file:/usr/bin" },
-  { path = "/lib",                  uri = "file:{{ gramine.runtimedir() }}" },
-  { path = "{{ arch_libdir }}",     uri = "file:{{ arch_libdir }}" },
-  { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
-  { path = "/usr/lib",              uri = "file:/usr/lib" },
-  { path = "/tmp",                  type = "tmpfs" },
+    # TODO: Narrow down /usr/bin usage to only the executable we will need to run, i.e. java
+    { path = "/usr/bin",              uri = "file:/usr/bin" },
+    { path = "/lib",                  uri = "file:{{ gramine.runtimedir() }}" },
+    { path = "{{ arch_libdir }}",     uri = "file:{{ arch_libdir }}" },
+    { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
+    { path = "/usr/lib",              uri = "file:/usr/lib" },
+    { path = "/tmp",                  type = "tmpfs" },
 ]
 
 sgx.enclave_size = "4G"
@@ -26,7 +28,13 @@ sgx.enclave_size = "4G"
 sgx.thread_num = 64
 
 sgx.trusted_files = [
-  "file:{{ entrypoint }}",
-  "file:{{ gramine.runtimedir() }}/"
+    "file:{{ gramine.libos }}",
+    "file:{{ entrypoint }}",
+    "file:{{ gramine.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
+    "file:/usr/lib/jvm/java-17-openjdk-amd64/lib/",
+    "file:/usr/lib/jvm/java-17-openjdk-amd64/conf/security/java.security",
+    "file:enclave-shadow.jar"
 ]
 

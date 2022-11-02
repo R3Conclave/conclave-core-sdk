@@ -13,7 +13,7 @@ import java.nio.file.Paths
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class BuildGramineDirectEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "java.manifest.template"
         const val MANIFEST_DIRECT = "java.manifest"
@@ -39,7 +39,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
     private fun copyTemplateManifestToBuildDirectory(): Path {
         val outputManifestTemplateFile = Paths.get(buildDirectory.get()) / MANIFEST_TEMPLATE
-        BuildUnsignedGramineEnclave::class.java.copyResource(MANIFEST_TEMPLATE, outputManifestTemplateFile)
+        BuildGramineDirectEnclave::class.java.copyResource(MANIFEST_TEMPLATE, outputManifestTemplateFile)
         return outputManifestTemplateFile
     }
 
