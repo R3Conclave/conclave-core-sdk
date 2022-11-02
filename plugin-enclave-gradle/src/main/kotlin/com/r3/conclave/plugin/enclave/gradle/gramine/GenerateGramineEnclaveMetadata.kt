@@ -25,6 +25,8 @@ import javax.inject.Inject
  * use at runtime.
  * It should be noted that this file is distinct from the enclave properties file in that it is available to the host
  * *before* the enclave is loaded.
+ *
+ * TODO: Investigate using environment variables in the Manifest to pass this metadata instead.
  */
 open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
