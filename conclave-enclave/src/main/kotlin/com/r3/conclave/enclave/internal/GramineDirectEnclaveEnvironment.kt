@@ -5,6 +5,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import java.io.File
 import java.nio.ByteBuffer
+import java.security.DigestInputStream
 import java.security.MessageDigest
 
 /**
@@ -36,14 +37,12 @@ class GramineDirectEnclaveEnvironment(
 
     /** Generate simulated mrenclave value by hashing the enclave fat-jar */
     private val mrenclave: ByteArray by lazy {
-        val jarPath = enclaveClass.protectionDomain.codeSource.location.toURI().path
+        val digest = MessageDigest.getInstance("SHA-256")
 
         val buffer = ByteArray(4096)
         var bytesRead: Int
 
-        val digest = MessageDigest.getInstance("SHA-256")
-
-        File(jarPath).inputStream().use {
+        enclaveClass.protectionDomain.codeSource.location.openStream().use {
             bytesRead = it.read(buffer)
             while (bytesRead >= 0) {
                 digest.update(buffer, 0, bytesRead)
