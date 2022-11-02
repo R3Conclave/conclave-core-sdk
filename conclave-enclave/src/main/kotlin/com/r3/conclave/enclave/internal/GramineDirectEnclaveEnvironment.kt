@@ -3,9 +3,7 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
-import java.io.File
 import java.nio.ByteBuffer
-import java.security.DigestInputStream
 import java.security.MessageDigest
 
 /**
