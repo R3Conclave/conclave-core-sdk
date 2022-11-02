@@ -18,7 +18,7 @@ import java.util.*
 import javax.inject.Inject
 
 /**
- * In native mode, enclave metadata is bundled into the enclave .so file by the intel SGX SDK. The Intel SDK then uses
+ * In native mode, enclave metadata is bundled into the enclave .so file by the Intel SGX SDK. The Intel SDK then uses
  * this data when loading the enclave. This allows our code to be mostly agnostic of the enclave mode. With Gramine
  * though, there is no concept of a "simulation" mode, so we have to implement some of this logic ourselves.
  * This task produces a properties file which serves as our mechanism for passing build-time information for the host to
