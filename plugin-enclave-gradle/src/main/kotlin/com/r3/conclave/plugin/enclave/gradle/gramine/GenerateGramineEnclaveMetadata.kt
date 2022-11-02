@@ -77,24 +77,23 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
             keyPair.public as RSAPublicKey
         }
 
-        val modulusBytes = key.modulus.toByteArray()
+        /**
+         * BigInteger.toByteArray() returns a big-endian representation of the modulus. But we need a
+         * little-endian representation, so we reverse the bytes here.
+         */
+        val modulusBytes = key.modulus.toByteArray().apply { reverse() }
 
         /**
          * Check the key length by checking the modulus.
-         * Modulus is 385 bytes rather than 384 (3072 / 8) due to two's complement.
+         * Due to two's complement, the modulus representation is 385 bytes long rather than 384 (3072 / 8).
          */
         check(modulusBytes.size == 385) { "Signing key must be a 3072 bit RSA key." }
 
-        /**
-         * The modulus bytes are a big-endian representation.
-         * Here we do a quick sanity check to ensure that the MSB (which would contain the sign bit) really is zero.
-         */
-        check(modulusBytes[0] == 0.toByte())
+        /** Do a quick sanity check to ensure that the most significant byte (two's complement sign) is zero. */
+        check(modulusBytes.last() == 0.toByte())
 
-        /** Reverse the bytes (currently big endian, need little endian), then compute the measurement. */
         return digest("SHA-256") {
-            modulusBytes.reverse()
-            update(modulusBytes, 0, 384)    // Ignore the 385th byte.
+            update(modulusBytes, 0, 384)    // Ignore the empty sign byte.
         }
     }
 }
