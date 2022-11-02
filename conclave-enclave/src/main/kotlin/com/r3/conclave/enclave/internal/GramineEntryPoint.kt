@@ -9,7 +9,6 @@ import java.lang.NumberFormatException
 import java.nio.ByteBuffer
 import java.nio.file.Paths
 import java.util.*
-import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
 object GramineEntryPoint {
@@ -18,8 +17,8 @@ object GramineEntryPoint {
     private const val EXIT_ERR = -1
 
     /** Enclave metadata variables */
-    private var isSimulation by Delegates.notNull<Boolean>()
-    private lateinit var signingKeyMeasurement: ByteArray
+    private var isSimulation: Boolean? = null
+    private var signingKeyMeasurement: ByteArray? = null
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -86,9 +85,9 @@ object GramineEntryPoint {
 
         /** The signing key measurement is only part of the metadata in simulation mode. */
         val signingKeyMeasurementStr = properties["signingKeyMeasurement"]?.toString()
-        if (isSimulation) {
+        if (isSimulation!!) {
             signingKeyMeasurement = Base64.getDecoder().decode(signingKeyMeasurementStr)
-            check(signingKeyMeasurement.size == 32)
+            check(signingKeyMeasurement!!.size == 32)
         } else {
             /**
              * The signing key measurement must *not* be present in non simulation modes!
@@ -112,8 +111,8 @@ object GramineEntryPoint {
     }
 
     private fun createEnclaveEnvironment(enclaveClass: Class<*>, hostInterface: SocketEnclaveHostInterface): EnclaveEnvironment {
-        return if (isSimulation) {
-            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement)
+        return if (isSimulation!!) {
+            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement!!)
         } else {
             System.err.println("Gramine SGX is not yet implemented.")
             exitProcess(EXIT_ERR)
