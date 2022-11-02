@@ -39,7 +39,7 @@ class GramineDirectEnclaveEnvironment(
     private val mrenclave: ByteArray by lazy {
         val digest = MessageDigest.getInstance("SHA-256")
 
-        val buffer = ByteArray(4096)
+        val buffer = ByteArray(65536)
         var bytesRead: Int
 
         enclaveClass.protectionDomain.codeSource.location.openStream().use {
