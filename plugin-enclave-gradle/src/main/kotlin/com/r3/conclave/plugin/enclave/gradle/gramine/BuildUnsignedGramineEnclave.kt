@@ -48,10 +48,11 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
 
     private fun generateGramineDirectManifest(templateManifest: String) {
         /**
-         * It's possible for Gramine to launch threads internally that conclave won't know about!
+         * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
          * Because of this, we need to add some safety margin.
          */
         val gramineThreadCount = maxThreads.get() * 2
+
         val command = listOf(
             GRAMINE_MANIFEST_EXECUTABLE,
             "-Darch_libdir=${archLibDirectory.get()}",
@@ -60,6 +61,7 @@ open class BuildUnsignedGramineEnclave @Inject constructor(objects: ObjectFactor
             templateManifest,
             outputManifest.asFile.get().absolutePath
         )
+
         commandLine(command)
     }
 }
