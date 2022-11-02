@@ -8,8 +8,6 @@ import java.security.MessageDigest
 
 /**
  * This class is the enclave environment intended for use with gramine-direct.
- * TODO: Currently the behaviour here is lifted directly from [MockEnclaveEnvironment].
- *       This will eventually need to behave the same way as native simulation mode does.
  */
 class GramineDirectEnclaveEnvironment(
         enclaveClass: Class<*>,
