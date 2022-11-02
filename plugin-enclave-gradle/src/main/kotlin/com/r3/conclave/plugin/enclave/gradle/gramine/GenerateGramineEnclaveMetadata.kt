@@ -56,9 +56,9 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
             }
         }
 
-        outputGramineEnclaveMetadata.asFile.get().writer().use { outputStream ->
+        outputGramineEnclaveMetadata.asFile.get().writer().use { writer ->
             for (entry in properties.entries) {
-                outputStream.write("${entry.key}=${entry.value}\n")
+                writer.write("${entry.key}=${entry.value}\n")
             }
         }
     }
