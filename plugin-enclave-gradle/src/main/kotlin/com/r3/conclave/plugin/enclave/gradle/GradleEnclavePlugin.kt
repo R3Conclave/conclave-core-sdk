@@ -84,6 +84,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         } else {
             // Default runtime type is GraalVM.
             runtimeType = runtimeTypeOrNull ?: GraalVM
+            target.logger.info("Using $runtimeType runtime")
             null
         }
 
