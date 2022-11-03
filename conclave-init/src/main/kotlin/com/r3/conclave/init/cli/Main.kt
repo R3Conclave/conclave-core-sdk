@@ -28,6 +28,7 @@ fun main(args: Array<String>) {
     headerHeading = "%n",
     synopsisHeading = "%nUsage:%n",
     optionListHeading = "%n",
+    versionProvider = ConclaveInitCli.ManifestVersionProvider::class,
 )
 class ConclaveInitCli : Callable<Int> {
     @CommandLine.Option(
@@ -58,13 +59,16 @@ class ConclaveInitCli : Callable<Int> {
     )
     lateinit var target: Path
 
-
     @CommandLine.Option(
         names = ["-l", "--language"],
         description = ["The desired language for your new project. Allowed values: \${COMPLETION-CANDIDATES}.\n" +
                 "Default: \${DEFAULT-VALUE}"],
     )
     val language: Language = Language.JAVA
+
+    internal class ManifestVersionProvider : CommandLine.IVersionProvider {
+        override fun getVersion(): Array<String> = arrayOf("Conclave Init " + getConclaveVersion())
+    }
 
     override fun call(): Int {
         checkTargetDoesNotExist()
@@ -92,12 +96,15 @@ class ConclaveInitCli : Callable<Int> {
             Output directory: ${target.absolutePathString()}
         """.trimIndent()
 
-    private fun getConclaveVersion(): String {
-        return ConclaveInitCli::class.java.classLoader.resources("META-INF/MANIFEST.MF")
-            .map { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Release-Version") }
-            .filter(Objects::nonNull)
-            .findFirst()
-            .get()
+
+    companion object {
+        fun getConclaveVersion(): String {
+            return ConclaveInitCli::class.java.classLoader.resources("META-INF/MANIFEST.MF")
+                .map { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Release-Version") }
+                .filter(Objects::nonNull)
+                .findFirst()
+                .get()
+        }
     }
 }
 
