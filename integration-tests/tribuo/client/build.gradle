@@ -18,6 +18,5 @@ dependencies {
 
 test {
     maxHeapSize "4g"
-    systemProperty 'enclaveMode', enclaveMode
     systemProperty 'dataDir', projectDir.toPath().resolve("data").toAbsolutePath().toString()
 }

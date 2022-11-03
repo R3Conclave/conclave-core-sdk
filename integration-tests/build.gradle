@@ -5,7 +5,7 @@ subprojects {
     apply plugin: 'java'
 
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
-    ext.runtimeType = findProperty("runtimeType")?.toString() ?: "GraalVM"
+    ext.runtimeType = findProperty("runtimeType")?.toString()?.toLowerCase() ?: "graalvm"
 
     repositories {
         maven {
@@ -24,8 +24,10 @@ subprojects {
 
     tasks.withType(Test) {
         useJUnitPlatform()
+        systemProperty "enclaveMode", enclaveMode
+        systemProperty "runtimeType", runtimeType
         // TODO: Remove this once gramine reaches feature parity
-        if (runtimeType == "Gramine") {
+        if (runtimeType == "gramine") {
             failFast = false
         }
     }

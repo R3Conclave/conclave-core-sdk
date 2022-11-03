@@ -3,9 +3,11 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.nio.file.Path
 import kotlin.io.path.deleteExisting
 
+@EnabledIfSystemProperty(named = "runtimeType", matches = "graalvm")
 class GenerateReflectionConfigTest : AbstractPluginTaskTest("generateReflectionConfig", modeDependent = false) {
     private val reflectConfigPath get() = "$projectDir/build/conclave/reflectconfig"
 

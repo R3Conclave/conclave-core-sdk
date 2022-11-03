@@ -1,10 +1,12 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
+@EnabledIfSystemProperty(named = "runtimeType", matches = "graalvm")
 class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraalEnclave", modeDependent = true) {
     @Test
     fun `incremental builds`() {

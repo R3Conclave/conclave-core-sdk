@@ -12,8 +12,7 @@ import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
-import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_JAR_NAME
-import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_MANIFEST
+import com.r3.conclave.host.internal.EnclaveScanner.ScanResult
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
@@ -25,7 +24,6 @@ import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
-import io.github.classgraph.ClassGraph
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -37,7 +35,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
-import java.util.regex.Pattern
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -124,7 +121,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(EnclaveScanner.findEnclave(enclaveClassName), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner().findEnclave(enclaveClassName), mockConfiguration)
         }
 
         /**
@@ -144,7 +141,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(EnclaveScanner.findEnclave(), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner().findEnclave(), mockConfiguration)
         }
 
         /**
@@ -203,12 +200,20 @@ class EnclaveHost private constructor(
         // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
         @JvmSynthetic
         @JvmStatic
-        internal fun internalCreateNative(
-            enclaveMode: EnclaveMode,
-            enclaveFileUrl: URL,
-            enclaveClassName: String,
-        ): EnclaveHost {
-            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName)
+        internal fun internalCreateNonMock(scanResult: ScanResult): EnclaveHost {
+            val enclaveHandle = when (scanResult) {
+                is ScanResult.GraalVM -> NativeEnclaveHandle(
+                    scanResult.enclaveMode,
+                    scanResult.enclaveClassName,
+                    scanResult.soFileUrl
+                )
+                is ScanResult.Gramine -> GramineEnclaveHandle(
+                    scanResult.enclaveMode,
+                    scanResult.enclaveClassName,
+                    scanResult.zipFileUrl
+                )
+                is ScanResult.Mock -> throw IllegalArgumentException()
+            }
             return EnclaveHost(enclaveHandle)
         }
 
@@ -231,35 +236,17 @@ class EnclaveHost private constructor(
             return EnclaveHost(enclaveHandle)
         }
 
-        // The internal modifier prevents this from appearing in the API docs, however because we shade Kotlin it will
-        // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
-        @JvmSynthetic
-        @JvmStatic
-        internal fun internalCreateGramine(
-            enclaveMode: EnclaveMode,
-            enclaveClassName: String,
-            manifest: URL,
-            jar: URL
-        ): EnclaveHost {
-            val enclaveHandle = GramineEnclaveHandle(enclaveMode, enclaveClassName, manifest, jar)
-            return EnclaveHost(enclaveHandle)
-        }
-
-        private fun createEnclaveHost(result: EnclaveScanner.ScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
+        private fun createEnclaveHost(result: ScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
             try {
                 return when (result) {
-                    is EnclaveScanner.ScanResult.Mock -> {
+                    is ScanResult.Mock -> {
                         // Here we do not call checkPlatformEnclaveSupport as mock mode is supported on any platform
                         val enclaveClass = Class.forName(result.enclaveClassName)
                         internalCreateMock(enclaveClass, mockConfiguration)
                     }
-                    is EnclaveScanner.ScanResult.Gramine -> {
+                    else -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
-                        internalCreateGramine(result.enclaveMode, result.enclaveClassName, result.manifest, result.jar)
-                    }
-                    is EnclaveScanner.ScanResult.GraalVM -> {
-                        checkPlatformEnclaveSupport(result.enclaveMode)
-                        internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
+                        internalCreateNonMock(result)
                     }
                 }
             } catch (e: EnclaveLoadException) {
@@ -812,17 +799,17 @@ class EnclaveHost private constructor(
         // private key).
         private val seenKdsKeySpecs = ConcurrentHashMap.newKeySet<KDSKeySpec>()
 
-        override fun handleCall(input: ByteBuffer): ByteBuffer? {
-            val type = callTypeValues[input.get().toInt()]
-            val threadID = input.getLong()
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val type = callTypeValues[parameterBuffer.get().toInt()]
+            val threadID = parameterBuffer.getLong()
             val transaction = threadIDToTransaction.getValue(threadID)
             val callStateManager = transaction.stateManager
             val intoEnclaveState = callStateManager.checkStateIs<IntoEnclave>()
             when (type) {
-                MAIL -> onMail(transaction, input)
-                UNTRUSTED_HOST -> onUntrustedHost(intoEnclaveState, threadID, input)
-                CALL_RETURN -> onCallReturn(callStateManager, input)
-                SEALED_STATE -> onSealedState(transaction, input)
+                MAIL -> onMail(transaction, parameterBuffer)
+                UNTRUSTED_HOST -> onUntrustedHost(intoEnclaveState, threadID, parameterBuffer)
+                CALL_RETURN -> onCallReturn(callStateManager, parameterBuffer)
+                SEALED_STATE -> onSealedState(transaction, parameterBuffer)
             }
             return null
         }
@@ -945,12 +932,12 @@ class EnclaveHost private constructor(
                 body(threadID)
             } catch (t: Throwable) {
                 throw when (t) {
+                    // No need to wrap an Enclave exception inside another Enclave exception
+                    is EnclaveException -> t
                     // Unchecked exceptions propagate as is.
                     is RuntimeException, is Error -> t
                     // MailDecryptionException needs to propagate as is for deliverMail.
                     is MailDecryptionException -> t
-                    // No need to wrap an Enclave exception inside another Enclave exception
-                    is EnclaveException -> t
                     else -> EnclaveException(null, t)
                 }
             } finally {
@@ -998,199 +985,6 @@ class EnclaveHost private constructor(
         object New : HostState()
         object Started : HostState()
         object Closed : HostState()
-    }
-
-    /**
-     * The following singleton contains the necessary functions to search for enclave classes
-     **/
-    private object EnclaveScanner {
-
-        /**
-         * Performs a search for an enclave by performing a classpath and module scan. There are two places where an enclave
-         * can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath and search for a file name that matches the pattern
-         * ^.*(simulation|debug|release)\.signed\.so$.
-         *
-         * For mock enclaves, the function searches for classes that extend com.r3.conclave.enclave.Enclave.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         *
-         * @return Pair with the class name and URL (if not a mock enclave) of the enclave found.
-         */
-        fun findEnclave(): ScanResult {
-            val classGraph = ClassGraph()
-            val results = ArrayList<ScanResult>()
-            findGraamVmEnclaves(classGraph, results)
-            findGramineEnclaves(classGraph, results)
-            findMockEnclaves(classGraph, results)
-            return getSingleResult(results, null)
-        }
-
-        /**
-         * Searches for an enclave. There are two places where an enclave can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class named 'className' in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
-         * For example, it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
-         *
-         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         */
-        fun findEnclave(enclaveClassName: String): ScanResult {
-            val results = ArrayList<ScanResult>()
-            findMockEnclave(enclaveClassName)?.let { results += it }
-            EnclaveMode.values()
-                .forEach {
-                    findGramineEnclave(enclaveClassName, it)?.let { result -> results += result }
-                    findGraalVmEnclave(enclaveClassName, it)?.let { result -> results += result }
-                }
-            return getSingleResult(results, enclaveClassName)
-        }
-
-        private fun findGraalVmEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.GraalVM? {
-            val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
-            val url = EnclaveHost::class.java.getResource(resourceName)
-            return url?.let { ScanResult.GraalVM(enclaveClassName, enclaveMode, url) }
-        }
-
-        private fun findGramineEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): ScanResult.Gramine? {
-            //  As an example, if enclaveClassName is "com.r3.MyEnclave" and enclaveMode is "simulation",
-            //    we expect to find the manifest and the jar file under the directory "/com/r3/MyEnclave-simulation"
-            val filesLocation = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}"
-            val manifestUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_MANIFEST}")
-            val jarUrl = EnclaveHost::class.java.getResource("$filesLocation/${GRAMINE_ENCLAVE_JAR_NAME}")
-
-            return if (manifestUrl == null || jarUrl == null) {
-                null
-            } else {
-                ScanResult.Gramine(enclaveClassName, enclaveMode, manifestUrl, jarUrl)
-            }
-        }
-
-        private fun findMockEnclave(enclaveClassName: String): ScanResult.Mock? {
-            return try {
-                Class.forName(enclaveClassName)
-                ScanResult.Mock(enclaveClassName)
-            } catch (e: ClassNotFoundException) {
-                null
-            }
-        }
-
-        /**
-         * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
-         */
-        private fun findGraamVmEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
-            val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
-
-            classGraph.scan().use {
-                for (resource in it.allResources) {
-                    val pathMatcher = nativeSoFilePattern.matcher(resource.path)
-                    if (pathMatcher.matches()) {
-                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
-                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        results += ScanResult.GraalVM(enclaveClassName, enclaveMode, resource.url)
-                    }
-                }
-            }
-        }
-
-        /**
-         * Performs a search for mock enclave files using ClassGraph. The search is performed by looking for classes that
-         * extend com.r3.conclave.enclave.Enclave.
-         */
-        private fun findMockEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
-            classGraph.enableClassInfo().scan().use {
-                for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
-                    if (!classInfo.isAbstract) {
-                        results += ScanResult.Mock(classInfo.name)
-                    }
-                }
-            }
-        }
-
-        /**
-         * Performs a search for Gramine enclave files using ClassGraph. The search is performed by looking for 
-         * the manifest file and assuming that the other required files are also present there.
-         */
-        private fun findGramineEnclaves(classGraph: ClassGraph, results: MutableList<ScanResult>) {
-            //  As an example, if we find the manifest file is in the directory "com/r3/MyEnclave-simulation"
-            //    the resulting enclaveClassName will be "MyEnclave", enclaveMode will be "simulation" and
-            val manifestSearchPattern = Pattern.compile("""^(.+)-(simulation|debug|release)/(java\.manifest)$""")
-
-            classGraph.scan().use {
-                for (resource in it.allResources) {
-                    val pathMatcher = manifestSearchPattern.matcher(resource.path)
-
-                    if (pathMatcher.matches()) {
-                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
-                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        val fileName = pathMatcher.group(3)
-                        //  Here we assume that all the Gramine required files are at the same level of the manifest file
-                        val manifestDirectory = resource.path.removeSuffix("/$fileName")
-                        val shadowJarResource = EnclaveHost::class.java.getResource("/$manifestDirectory/$GRAMINE_ENCLAVE_JAR_NAME")
-                        results += ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url, shadowJarResource!!)
-                    }
-                }
-            }
-        }
-
-        private fun getSingleResult(results: List<ScanResult>, className: String?): ScanResult {
-            when (results.size) {
-                1 -> return results[0]
-                0 -> {
-                    val beginning = if (className != null) "Enclave $className does not exist" else "No enclaves found"
-                    throw IllegalArgumentException(
-                        """$beginning on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
-                            |    runtimeOnly project(path: ":enclave project", configuration: mode)
-                            |
-                            |    where:
-                            |      mode is either "release", "debug", "simulation" or "mock"
-                            """.trimMargin()
-                    )
-                }
-                else -> throw IllegalStateException("Multiple enclaves were found: $results")
-            }
-        }
-
-        sealed class ScanResult {
-            class Mock(val enclaveClassName: String) : ScanResult() {
-                override fun toString(): String = "mock $enclaveClassName"
-            }
-
-            class GraalVM(
-                val enclaveClassName: String,
-                val enclaveMode: EnclaveMode,
-                val soFileUrl: URL
-            ) : ScanResult() {
-                init {
-                    require(enclaveMode != EnclaveMode.MOCK)
-                }
-                override fun toString(): String = "graalvm ${enclaveMode.name.lowercase()} $enclaveClassName"
-            }
-
-            class Gramine(
-                val enclaveClassName: String,
-                val enclaveMode: EnclaveMode,
-                val manifest: URL,
-                val jar: URL,
-            ) : ScanResult() {
-                init {
-                    require(enclaveMode != EnclaveMode.MOCK)
-                }
-                override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
-            }
-        }
     }
 }
 

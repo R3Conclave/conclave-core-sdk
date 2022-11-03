@@ -3,21 +3,12 @@ plugins {
 }
 
 dependencies {
-    // The test will act as the host and client.
-
     testImplementation "com.r3.conclave:conclave-client:$conclave_version"
     testImplementation "com.r3.conclave:conclave-host:$conclave_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
-    testRuntimeOnly project(path: ":kotlin-enclave:enclave", configuration: "simulation")
+    testRuntimeOnly project(path: ":python-enclave:enclave", configuration: enclaveMode)
     testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
-}
-
-test {
-    testLogging {
-        outputs.upToDateWhen { false }
-        showStandardStreams = true
-    }
 }

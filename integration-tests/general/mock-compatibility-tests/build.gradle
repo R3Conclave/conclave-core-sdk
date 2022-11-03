@@ -18,10 +18,5 @@ dependencies {
     // onto the classpath and thus available in the non-mock modes as well.
     testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave-same-signer", configuration: enclaveMode)
-}
-
-test {
-    doFirst {
-        systemProperty "enclaveMode", enclaveMode
-    }
+    testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 }

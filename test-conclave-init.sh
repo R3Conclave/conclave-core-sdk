@@ -34,17 +34,17 @@ echo Run Java project unit tests
 sed -i "s/repositories {/repositories {\nmaven { url = 'https:\/\/software.r3.com\/artifactory\/conclave-maven' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/..\/repo' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.gradle
-./gradlew test
+./gradlew test -s
 
 echo Run Java project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
 host_output_file="host_output.log"
-./gradlew :host:bootRun > $host_output_file &
+./gradlew :host:bootRun -s > $host_output_file &
 _PID=$!
 
 sleep 5
-./gradlew :client:run \
+./gradlew :client:run -s \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
 
 # Ensure the logs from the host are working (CON-1193)
@@ -84,16 +84,16 @@ echo Run Kotlin project unit tests
 sed -i "s/repositories {/repositories {\nmaven { url = 'https:\/\/software.r3.com\/artifactory\/conclave-maven' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/..\/repo' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.gradle
-./gradlew test
+./gradlew test -s
 
 echo Run Kotlin project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
-./gradlew :host:bootRun &
+./gradlew :host:bootRun -s &
  _PID=$!
 
 sleep 5
-./gradlew :client:run \
+./gradlew :client:run -s \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
 
 # kill the host
