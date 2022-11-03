@@ -174,7 +174,7 @@ image, and `docker rmi` to delete the image. Then rerun `devenv_shell.sh` to re-
 ## Python support (WIP)
 
 There is a **WIP** Python API which is available on the master branch. You will need to [build the SDK](#building-the-sdk) 
-if you wish to experiment with it. Please [let us know](#community) how you found it.
+if you wish to experiment with it. Please [let us know](#community) how you got on.
 
 The [enclave Java API](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/index.html) 
 has been ported to the following global functions:
@@ -182,14 +182,14 @@ has been ported to the following global functions:
 * `on_enclave_startup()` - equivalent to [`onStartup`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/on-startup.html)
 * `on_enclave_shutdown()` - equivalent to [`onShutdown`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/on-shutdown.html)
 * `receive_from_untrusted_host(bytes)` - equivalent to [`receiveFromUntrustedHost`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-from-untrusted-host.html).
-  The Java byte array is converted to Python bytes. If there’s no return value then it is treated as null, otherwise 
-  the return value is expected to be bytes.
+  The Java byte array is converted to Python [`bytes`](https://docs.python.org/3/library/stdtypes.html#bytes-objects).
+  If there’s no return value then it is treated as null, otherwise the return value is expected to be `bytes`.
 * `receive_enclave_mail(mail)` - equivalent to [`receiveMail`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/receive-mail.html).
-  The Java `EnclaveMail` object is converted to a simpler Python equivalent which is just a class holding the body, 
-  envelope and authenticated sender. The topic and sequence number are ignored for now. The authenticated sender is 
-  represented by its encoded binary form in bytes. This function is also much simpler than `receiveMail in that the 
-  response can simply be returned from the function and it will encrypted as a response mail back to the sender key 
-  and posted.
+  The Java [`EnclaveMail`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/index.html)
+  object is converted to a simpler Python equivalent which is just a class holding the body, envelope and 
+  authenticated sender. The topic and sequence number are ignored for now. The authenticated sender is represented 
+  by its encoded binary form in `bytes`. This function is also much simpler than `receiveMail` in that the response can 
+  simply be returned from the function and it will encrypted as a response mail back to the sender key and posted.
 
 These functions need to be defined in a single Python file and are all optional. Not defining them is equivalent to 
 not overriding the equivalent method from `Enclave`. The Python script must exist in the enclave Gradle module under 
@@ -198,8 +198,8 @@ Java or Kotlin project. The Python enclave module needs to be part of a Gradle m
 host module taking a dependency to the enclave module. You can take the [hello world code](https://github.com/R3Conclave/conclave-tutorials/tree/master/hello-world)
 and modify the `enclave` module accordingly. 
 
-The Python script has access to an `enclave_sign(data)` global function, which allows the given data bytes to be 
-signed by the enclave's private signing key. This is equivalent to [`signer()`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/signer.html).
+The Python script only has access to an `enclave_sign(data)` global function, which allows the given data `bytes` to be 
+signed by the enclave's private signing key. This is equivalent to [`signer()`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/signer.html)
 in the Java API.
 
 ### How it works

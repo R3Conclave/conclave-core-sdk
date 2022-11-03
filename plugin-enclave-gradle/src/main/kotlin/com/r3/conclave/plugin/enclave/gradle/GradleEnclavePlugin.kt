@@ -499,14 +499,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.archiveAppendix.set(typeLowerCase)
 
                 val (bundleName, bundleOutput) = when (runtimeType) {
-                    GraalVM -> Pair(
-                        // GraalVM as a runtime type maps to an Intel SDK bundle because that is its output - an so
-                        // file to be loaded by the Intel SDK.
-                        PluginUtils.GRAALVM_BUNDLE_NAME,
-                        // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
-                        // to use to sign the enclave and invokes the correct task accordingly.
-                        buildSignedEnclaveTask.outputSignedEnclave
-                    )
+                    // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
+                    // to use to sign the enclave and invokes the correct task accordingly.
+                    GraalVM -> Pair(PluginUtils.GRAALVM_BUNDLE_NAME, buildSignedEnclaveTask.outputSignedEnclave)
                     Gramine -> Pair(PluginUtils.GRAMINE_BUNDLE_NAME, gramineZipBundle.get().archiveFile)
                 }
 

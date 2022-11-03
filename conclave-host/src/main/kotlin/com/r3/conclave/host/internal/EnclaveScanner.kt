@@ -12,17 +12,17 @@ import java.util.regex.Pattern
  * A scanner of enclaves. By default the class path is scanned, but this can be changed by overriding
  * [createClassGraph] and returning an appropriately configured [ClassGraph] object.
  *
- * There are two ways an enclave is scanned for depending on whether they are mock or non-mock.
+ * There are two ways an enclave is scanned for, depending on whether they are mock or non-mock.
  *
- * For mock enclaves, the enclave class is scanned for, similar to how [Class.forName] works. All non-abstract classes
+ * For mock enclaves, the enclave class is scanned, similar to how [Class.forName] works. All non-abstract classes
  * extending [com.r3.conclave.enclave.Enclave] are picked up.
  *
- * For non-mock enclaves, "enclave bundles" are scanned for. These are files with a specific path pattern which
- * indicate what type of enclave they are, namely either GraalVM or Gramine, and what mode they are in. GraalVM
- * enclaves are indicated by ending in [GRAALVM_BUNDLE_NAME], whilst Gramine enclaves end in [GRAMINE_BUNDLE_NAME].
- * These bundles are processed by [NativeEnclaveHandle] and [GramineEnclaveHandle], respectively. All enclave
- * bundles reside under a specific root path, [ENCLAVE_BUNDLES_PATH], to reduce the scan space, with the enclave
- * class name forming the next element in the path.
+ * For non-mock enclaves, "enclave bundles" are scanned. These are files with a specific path pattern which indicate
+ * what type of enclave they are, namely either GraalVM or Gramine, and what mode they are in. GraalVM enclaves are
+ * indicated by ending in [GRAALVM_BUNDLE_NAME], whilst Gramine enclaves end in [GRAMINE_BUNDLE_NAME]. These bundles
+ * are processed by [NativeEnclaveHandle] and [GramineEnclaveHandle], respectively. All enclave bundles reside under
+ * a specific root path, [ENCLAVE_BUNDLES_PATH], to reduce the scan space, with the enclave class name forming the
+ * next element in the path.
  *
  * The result of the scan is represented by [ScanResult].
  */
