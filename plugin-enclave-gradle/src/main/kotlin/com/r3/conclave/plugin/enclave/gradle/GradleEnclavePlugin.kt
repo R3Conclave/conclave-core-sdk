@@ -5,8 +5,8 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
-import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GraalVM
-import com.r3.conclave.plugin.enclave.gradle.RuntimeType.Gramine
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
@@ -48,6 +48,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
     }
 
+    private enum class RuntimeType {
+        GRAMINE,
+        GRAALVM;
+    }
+
     private var pythonSourcePath: Path? = null
     private lateinit var runtimeType: RuntimeType
 
@@ -65,25 +70,25 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         // Check the passed runtime type is valid.
         val runtimeTypeOrNull = try {
-            conclaveExtension.runtime.orNull?.let(RuntimeType::valueOf)
+            conclaveExtension.runtime.orNull?.let { RuntimeType.valueOf(it.uppercase()) }
         } catch (e: IllegalArgumentException) {
             throw GradleException(
                 "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
-                        "Valid runtime types are: ${RuntimeType.values()}.")
+                        "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
         }
 
         val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
         pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") {
-            if (runtimeTypeOrNull == GraalVM) {
+            if (runtimeTypeOrNull == GRAALVM) {
                 // The user has explicitly specified GraalVM whilst also intending to have Python code.
                 throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
             }
-            runtimeType = Gramine
+            runtimeType = GRAMINE
             target.logger.info("Enclave project detected as Python")
             sourcePaths[0]
         } else {
             // Default runtime type is GraalVM.
-            runtimeType = runtimeTypeOrNull ?: GraalVM
+            runtimeType = runtimeTypeOrNull ?: GRAALVM
             target.logger.info("Using $runtimeType runtime")
             null
         }
@@ -94,7 +99,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
             // If language support is enabled then automatically add the required dependency.
-            if (runtimeType == GraalVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
+            if (runtimeType == GRAALVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // It might be possible that the conclave part of the version not match the current version, e.g. if
                 // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
                 target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:$CONCLAVE_GRAALVM_VERSION")
@@ -502,8 +507,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 val (bundleName, bundleOutput) = when (runtimeType) {
                     // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                     // to use to sign the enclave and invokes the correct task accordingly.
-                    GraalVM -> Pair(PluginUtils.GRAALVM_BUNDLE_NAME, buildSignedEnclaveTask.outputSignedEnclave)
-                    Gramine -> Pair(PluginUtils.GRAMINE_BUNDLE_NAME, gramineZipBundle.get().archiveFile)
+                    GRAALVM -> Pair(PluginUtils.GRAALVM_BUNDLE_NAME, buildSignedEnclaveTask.outputSignedEnclave)
+                    GRAMINE -> Pair(PluginUtils.GRAMINE_BUNDLE_NAME, gramineZipBundle.get().archiveFile)
                 }
 
                 task.from(bundleOutput)
