@@ -53,7 +53,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         GRAALVM;
     }
 
-    private var pythonSourcePath: Path? = null
+    private val pythonSourcePath: Path? by lazy {
+        val sourcePaths = Files.list(layout.projectDirectory.asFile.toPath() / "src" / "main").use { it.collect(toList()) }
+        if (sourcePaths.size == 1 && sourcePaths[0].name == "python") sourcePaths[0] else null
+    }
     private lateinit var runtimeType: RuntimeType
 
     override fun apply(target: Project) {
@@ -81,20 +84,16 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
                             "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
             }
-
-            val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
-            pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") {
+            if (pythonSourcePath != null) {
                 if (runtimeTypeOrNull == GRAALVM) {
                     // The user has explicitly specified GraalVM whilst also intending to have Python code.
                     throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
                 }
                 runtimeType = GRAMINE
                 target.logger.info("Enclave project detected as Python")
-                sourcePaths[0]
             } else {
                 // Default runtime type is GraalVM.
                 runtimeType = runtimeTypeOrNull ?: GRAALVM
-                null
             }
 
             target.logger.info("Using ${runtimeType.name.lowercase()} runtime")
