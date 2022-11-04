@@ -10,18 +10,18 @@ sgx.remote_attestation = false
 # sgx.ra_client_spid = ""
 
 # This sets an environment variables used by the dynamic loader
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_lib_dir }}:/usr{{ arch_lib_dir }}:/usr/lib:{{ jep_path }}/jep"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
 loader.env.LD_PRELOAD = "{{ ld_preload }}"
-loader.env.PYTHONPATH = "{{ jep_path }}"
+loader.env.PYTHONPATH = "{{ python_packages_path }}"
 
 fs.mounts = [
-  { path = "/lib",                   uri = "file:{{ gramine.runtimedir() }}" },
-  { path = "{{ arch_lib_dir }}",     uri = "file:{{ arch_lib_dir }}" },
-  { path = "{{ java_home }}",        uri = "file:{{ java_home }}" },
-  { path = "{{ jep_path }}",         uri = "file:{{ jep_path }}" },
-  { path = "/usr{{ arch_lib_dir }}", uri = "file:/usr{{ arch_lib_dir }}" },
-  { path = "/usr/lib",               uri = "file:/usr/lib" },
-  { path = "/tmp",                   type = "tmpfs" },
+  { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
+  { path = "{{ java_home }}",            uri = "file:{{ java_home }}" },
+  { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" },
+  { path = "/usr{{ arch_libdir }}",      uri = "file:/usr{{ arch_libdir }}" },
+  { path = "/usr/lib",                   uri = "file:/usr/lib" },
+  { path = "/tmp",                       type = "tmpfs" },
 ]
 
 sgx.enclave_size = "4G"

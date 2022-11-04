@@ -171,7 +171,7 @@ system). If your container gets messed up you can blow it away by stopping it an
 image, and `docker rmi` to delete the image. Then rerun `devenv_shell.sh` to re-download things fresh.
 
 
-## Python support (WIP)
+## Python support (work in progress)
 
 There is a **WIP** Python API which is available on the master branch. You will need to [build the SDK](#building-the-sdk) 
 if you wish to experiment with it. Please [let us know](#community) how you got on.
@@ -212,10 +212,14 @@ good compatibility with existing Python libraries.
 
 ### Limitations
 
-Currently only simulation mode works. Mock mode should also work, but there's no way interact with the Jep 
-interpreter without using reflection. Also it assumes you have all the necessary tools installed locally, such as 
-Python, pip and Gramine, and most likely it will only work on the same machine that it was built on. We plan to 
-address all these issues!
+As work in progress, there are plently of issues and features missing, which we plan to address. Some of which are:
+
+* Only simulation mode works. Mock mode should also work, but there's no way to interact with the Jep interpreter 
+  without using reflection.
+* All the necessary tool, such as Python, pip and Gramine, must be installed locally
+* Most likely the enclave will only work on the same machine that it was built on.
+* Only a single Python file is supported
+
 
 ## Exploring the codebase
 

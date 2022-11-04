@@ -28,7 +28,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
 
     // We're using a string here so that we can do our own error checking in the plugin code
     val runtime: Property<String> = objects.property(String::class.java)
-    // Constants for the two types we support. Allows the user to not have to use string quotes.
+    // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.
     val graalvm = "graalvm"
     val gramine = "gramine"
 

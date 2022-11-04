@@ -29,7 +29,10 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
         val ldPreload = executePython("from sysconfig import get_config_var; " +
                 "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
         )
-        val jepPath = commandWithOutput("pip3", "show", "jep")
+        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
+        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
+        // incorrect then we'll need to come up with a better solution.
+        val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
             .splitToSequence("\n")
             .single { it.startsWith("Location: ") }
             .substringAfter("Location: ")
@@ -38,9 +41,9 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
             listOf(
                 "gramine-manifest",
                 "-Djava_home=${System.getProperty("java.home")}",
-                "-Darch_lib_dir=/lib/$architecture",
+                "-Darch_libdir=/lib/$architecture",
                 "-Dld_preload=$ldPreload",
-                "-Djep_path=$jepPath",
+                "-Dpython_packages_path=$pythonPackagesPath",
                 manifestTemplateFile.absolutePathString(),
                 manifestFile.asFile.get().absolutePath
             )
