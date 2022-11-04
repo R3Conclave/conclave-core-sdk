@@ -68,36 +68,37 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
-        // Check the passed runtime type is valid.
-        val runtimeTypeOrNull = try {
-            conclaveExtension.runtime.orNull?.let { RuntimeType.valueOf(it.uppercase()) }
-        } catch (e: IllegalArgumentException) {
-            throw GradleException(
-                "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
-                        "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
-        }
-
-        val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
-        pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") {
-            if (runtimeTypeOrNull == GRAALVM) {
-                // The user has explicitly specified GraalVM whilst also intending to have Python code.
-                throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
-            }
-            runtimeType = GRAMINE
-            target.logger.info("Enclave project detected as Python")
-            sourcePaths[0]
-        } else {
-            // Default runtime type is GraalVM.
-            runtimeType = runtimeTypeOrNull ?: GRAALVM
-            target.logger.info("Using $runtimeType runtime")
-            null
-        }
-
-        // TODO Does this afterEvaluate really need to exist, or can the block be executed without it?
         target.afterEvaluate {
             // This is called before the build tasks are executed but after the build.gradle file
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
+
+            // Check the passed runtime type is valid.
+            val runtimeTypeOrNull = try {
+                conclaveExtension.runtime.orNull?.let { RuntimeType.valueOf(it.uppercase()) }
+            } catch (e: IllegalArgumentException) {
+                throw GradleException(
+                    "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
+                            "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
+            }
+
+            val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
+            pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") {
+                if (runtimeTypeOrNull == GRAALVM) {
+                    // The user has explicitly specified GraalVM whilst also intending to have Python code.
+                    throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
+                }
+                runtimeType = GRAMINE
+                target.logger.info("Enclave project detected as Python")
+                sourcePaths[0]
+            } else {
+                // Default runtime type is GraalVM.
+                runtimeType = runtimeTypeOrNull ?: GRAALVM
+                null
+            }
+
+            target.logger.info("Using ${runtimeType.name.lowercase()} runtime")
+
             // If language support is enabled then automatically add the required dependency.
             if (runtimeType == GRAALVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // It might be possible that the conclave part of the version not match the current version, e.g. if
@@ -503,18 +504,16 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
                 task.archiveBaseName.set("enclave-bundle")
                 task.archiveAppendix.set(typeLowerCase)
-
-                val (bundleName, bundleOutput) = when (runtimeType) {
-                    // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
-                    // to use to sign the enclave and invokes the correct task accordingly.
-                    GRAALVM -> Pair(PluginUtils.GRAALVM_BUNDLE_NAME, buildSignedEnclaveTask.outputSignedEnclave)
-                    GRAMINE -> Pair(PluginUtils.GRAMINE_BUNDLE_NAME, gramineZipBundle.get().archiveFile)
-                }
-
-                task.from(bundleOutput)
-                task.rename { "$typeLowerCase-$bundleName" }
                 task.onEnclaveClassName { enclaveClassName ->
                     task.into("$ENCLAVE_BUNDLES_PATH/$enclaveClassName")
+                    val (bundleName, bundleOutput) = when (runtimeType) {
+                        // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
+                        // to use to sign the enclave and invokes the correct task accordingly.
+                        GRAALVM -> Pair(PluginUtils.GRAALVM_BUNDLE_NAME, buildSignedEnclaveTask.outputSignedEnclave)
+                        GRAMINE -> Pair(PluginUtils.GRAMINE_BUNDLE_NAME, gramineZipBundle.get().archiveFile)
+                    }
+                    task.from(bundleOutput)
+                    task.rename { "$typeLowerCase-$bundleName" }
                 }
             }
 
@@ -573,11 +572,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
         if (pythonSourcePath == null) {
             dependsOn(enclaveClassNameTask)
-            doFirst(OnEnclaveClassNameAction(enclaveClassNameTask, block))
+            first {
+                block(enclaveClassNameTask.outputEnclaveClassName.get())
+            }
         } else {
             // This is a bit of a hack, but if the enclave is in Python then we're using the
             // PythonEnclaveAdapter class.
-            block("com.r3.conclave.python.PythonEnclaveAdapter")
+            first {
+                block("com.r3.conclave.python.PythonEnclaveAdapter")
+            }
         }
     }
 
@@ -588,15 +591,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
     private class ActionWrapper(private val block: () -> Unit) : Action<Task> {
         override fun execute(t: Task) = block()
-    }
-
-    private class OnEnclaveClassNameAction(
-        private val enclaveClassNameTask: EnclaveClassName,
-        private val block: (String) -> Unit
-    ) : Action<Task> {
-        override fun execute(t: Task) {
-            block(enclaveClassNameTask.outputEnclaveClassName.get())
-        }
     }
 
     private inline fun <reified T : Task> Project.createTask(name: String, vararg constructorArgs: Any?, configure: (T) -> Unit): T {

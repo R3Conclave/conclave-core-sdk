@@ -11,6 +11,7 @@ import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
+import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.CreateAttestationQuoteAction
@@ -21,6 +22,12 @@ import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
 
 class AttestationTests : AbstractEnclaveActionTest() {
+    @Test
+    fun `DCAP is being used`() {
+        val enclaveInstanceInfo = enclaveHost().enclaveInstanceInfo as EnclaveInstanceInfoImpl
+        assertThat(enclaveInstanceInfo.attestation).isInstanceOf(DcapAttestation::class.java)
+    }
+
     @Test
     fun `enclave info`() {
         // TODO consider using Java/Kotlin code to read ELF file - https://github.com/fornwall/jelf/
