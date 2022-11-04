@@ -61,13 +61,13 @@ interface EnclaveInstanceInfo {
      * Returns a new [PostOffice] instance for encrypting mail to this target enclave on the given topic.
      *
      * Each mail created by this post office will be authenticated with the given private key, and will act as the client's
-     * authenticated identity to the enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is
-     * required per client (a new one can be created using [Curve25519PrivateKey.random]).
+     * authenticated identity to the enclave (see [EnclaveMail.getAuthenticatedSender]). Typically only one sender
+     * key is required per client (a new one can be created using [com.r3.conclave.mail.Curve25519PrivateKey.random]).
      *
      * It's very important that related mail are created from the same post office instance, i.e. having the same topic and
      * sender key. This is so the post office can apply an increasing sequence number to each mail, which the target
      * enclave will use to make sure they are received in order and that none have been dropped (see
-     * [EnclaveMailHeader.sequenceNumber]).
+     * [EnclaveMailHeader.getSequenceNumber]).
      *
      * For a different stream of mail create another post office with a different topic.
      */
@@ -78,12 +78,12 @@ interface EnclaveInstanceInfo {
      *
      * A new sender private key will be used (which can be retrieved with [PostOffice.senderPrivateKey]), and each mail
      * created by this post office will be authenticated with it and act as the client's authenticated identity to the
-     * enclave (see [EnclaveMail.authenticatedSender]). Typically only one sender key is required per client.
+     * enclave (see [EnclaveMail.getAuthenticatedSender]). Typically only one sender key is required per client.
      *
      * It's very important that related mail are created from the same post office instance, i.e. having the same topic and
      * sender key. This is so the post office can apply an increasing sequence number to each mail, which the target
      * enclave will use to make sure they are received in order and that none have been dropped (see
-     * [EnclaveMailHeader.sequenceNumber]).
+     * [EnclaveMailHeader.getSequenceNumber]).
      *
      * For a different stream of mail create another post office with a different topic.
      */

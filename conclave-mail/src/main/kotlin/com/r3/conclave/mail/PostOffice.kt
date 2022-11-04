@@ -100,12 +100,12 @@ interface EnclaveMail : EnclaveMailHeader {
  * A post office is an object for creating a stream of related mail encrypted to a [destinationPublicKey].
  *
  * Related mail form an ordered list on the same [topic]. This ordering is defined by the sequence number field in each
- * mail header (see [EnclaveMailHeader.sequenceNumber]) and it's important the ordering is preserved for the receiving
- * enclave.
+ * mail header (see [EnclaveMailHeader.getSequenceNumber]) and it's important the ordering is preserved for the
+ * receiving enclave.
  *
  * A post office also requires a [senderPrivateKey], which is used to authenticate each mail and is received by the
- * recipient as an authenticated public key (see [EnclaveMail.authenticatedSender]). This can be used by the recipient
- * for user authentication but is also required if they want to reply back.
+ * recipient as an authenticated public key (see [EnclaveMail.getAuthenticatedSender]). This can be used by the
+ * recipient for user authentication but is also required if they want to reply back.
  *
  * The sender key can either be a short-term eptherimal key which is used only once and then discarded (e.g. when the client
  * process exits) or it can be a long-term identity key. If the later then it's important to keep track of the current
@@ -130,7 +130,7 @@ interface EnclaveMail : EnclaveMailHeader {
  * needs to be done as mail is automatically decrypted.
  *
  * When inside an enclave instances can only be created using one of the [com.r3.conclave.enclave.Enclave.postOffice] methods, and cannot be
- * created using [PostOffice.create] or [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice]. This is to ensure the enclave's
+ * created using [create] or [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice]. This is to ensure the enclave's
  * private key is correctly applied as the sender.
  *
  * [PostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
