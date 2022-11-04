@@ -47,7 +47,6 @@ class GramineEnclaveHandle(
 
         /**
          * Start the enclave process, passing the port that the call interface is listening on.
-         * TODO: Implement a *secure* method for passing port to the enclave.
          */
         val command = mutableListOf(
             "gramine-direct",
@@ -63,7 +62,9 @@ class GramineEnclaveHandle(
             .command(command)
             .start()
 
-        // Avoid leaving an orphan child process
+        // The user should be calling EnclaveHost.close(), but in case they forget, or for some other reason the
+        // enclave process hasn't terminated, make sure as a last resort to kill it when the host terminates. This is
+        // harmless if the process is already destroyed.
         Runtime.getRuntime().addShutdownHook(Thread(processGramineDirect::destroyForcibly))
 
         /** Wait for the local call interface start process to complete. */

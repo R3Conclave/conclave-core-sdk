@@ -12,7 +12,9 @@ import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
@@ -53,11 +55,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         GRAALVM;
     }
 
-    private val pythonSourcePath: Path? by lazy {
-        val sourcePaths = Files.list(layout.projectDirectory.asFile.toPath() / "src" / "main").use { it.collect(toList()) }
-        if (sourcePaths.size == 1 && sourcePaths[0].name == "python") sourcePaths[0] else null
-    }
-    private lateinit var runtimeType: RuntimeType
+    private var pythonSourcePath: Path? = null
+    private lateinit var runtimeType: Provider<RuntimeType>
 
     override fun apply(target: Project) {
         checkGradleVersionCompatibility(target)
@@ -71,35 +70,37 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val conclaveExtension = target.extensions.create("conclave", ConclaveExtension::class.java)
 
-        target.afterEvaluate {
-            // This is called before the build tasks are executed but after the build.gradle file
-            // has been parsed. This gives us an opportunity to perform actions based on the user configuration
-            // of the enclave.
+        val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
+        pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") sourcePaths[0] else null
 
-            // Check the passed runtime type is valid.
-            val runtimeTypeOrNull = try {
-                conclaveExtension.runtime.orNull?.let { RuntimeType.valueOf(it.uppercase()) }
+        // Parse the runtime string into the enum and then make sure it's consistent with whether this project is
+        // Python or not.
+        runtimeType = conclaveExtension.runtime.map { string ->
+            val enum = try {
+                RuntimeType.valueOf(string.uppercase())
             } catch (e: IllegalArgumentException) {
                 throw GradleException(
                     "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
                             "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
             }
             if (pythonSourcePath != null) {
-                if (runtimeTypeOrNull == GRAALVM) {
+                if (enum == GRAALVM) {
                     // The user has explicitly specified GraalVM whilst also intending to have Python code.
                     throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
                 }
-                runtimeType = GRAMINE
-                target.logger.info("Enclave project detected as Python")
+                GRAMINE  // Python projects must always use Gramine
             } else {
-                // Default runtime type is GraalVM.
-                runtimeType = runtimeTypeOrNull ?: GRAALVM
+                enum
             }
+        }.orElse(GRAALVM)
 
-            target.logger.info("Using ${runtimeType.name.lowercase()} runtime")
+        target.afterEvaluate {
+            // This is called before the build tasks are executed but after the build.gradle file
+            // has been parsed. This gives us an opportunity to perform actions based on the user configuration
+            // of the enclave.
 
             // If language support is enabled then automatically add the required dependency.
-            if (runtimeType == GRAALVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
+            if (runtimeType.get() == GRAALVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
                 // It might be possible that the conclave part of the version not match the current version, e.g. if
                 // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
                 target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:$CONCLAVE_GRAALVM_VERSION")
@@ -503,16 +504,29 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
                 task.archiveBaseName.set("enclave-bundle")
                 task.archiveAppendix.set(typeLowerCase)
-                task.onEnclaveClassName { enclaveClassName ->
-                    task.into("$ENCLAVE_BUNDLES_PATH/$enclaveClassName")
-                    val (bundleName, bundleOutput) = when (runtimeType) {
+
+                val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
+                    when (it) {
                         // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
-                        GRAALVM -> Pair(PluginUtils.GRAALVM_BUNDLE_NAME, buildSignedEnclaveTask.outputSignedEnclave)
-                        GRAMINE -> Pair(PluginUtils.GRAMINE_BUNDLE_NAME, gramineZipBundle.get().archiveFile)
+                        GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
+                        GRAMINE -> gramineZipBundle.get().archiveFile
+                        else -> throw IllegalArgumentException()
                     }
-                    task.from(bundleOutput)
-                    task.rename { "$typeLowerCase-$bundleName" }
+                }
+                task.from(bundleOutput)
+
+                task.rename {
+                    val bundleName = when (runtimeType.get()) {
+                        GRAALVM -> PluginUtils.GRAALVM_BUNDLE_NAME
+                        GRAMINE -> PluginUtils.GRAMINE_BUNDLE_NAME
+                        else -> throw IllegalArgumentException()
+                    }
+                    "$typeLowerCase-$bundleName"
+                }
+
+                task.onEnclaveClassName { enclaveClassName ->
+                    task.into("$ENCLAVE_BUNDLES_PATH/$enclaveClassName")
                 }
             }
 

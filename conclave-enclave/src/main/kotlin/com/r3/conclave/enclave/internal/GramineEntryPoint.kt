@@ -78,7 +78,7 @@ object GramineEntryPoint {
         val port = getPortFromArgs(args)
         val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port)
         // TODO The enclave should expect the python script to exist at a pre-defined location in the Gramine
-        //  filesystem.
+        //  filesystem, and it should be part of the manifest to ensure it's the same script from build time.
         val pythonScript = args.getOrNull(1)?.let { Paths.get(it) }
 
         /** Register the enclave initialisation call handler. */
