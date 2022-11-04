@@ -2,7 +2,9 @@ package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
+import com.r3.conclave.common.internal.SgxEnclaveMetadata
 import com.r3.conclave.common.internal.SgxEnclaveMetadata.enclaveCss
 import com.r3.conclave.common.internal.SgxMetadataCssBody.enclaveHash
 import com.r3.conclave.common.internal.SgxMetadataCssKey.modulus
@@ -10,8 +12,10 @@ import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
 import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReportBody.reportData
+import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.DcapAttestation
+import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.CreateAttestationQuoteAction
@@ -20,12 +24,21 @@ import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveAction
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
 class AttestationTests : AbstractEnclaveActionTest() {
     @Test
-    fun `DCAP is being used`() {
+    @EnabledIfSystemProperty(named = "enclaveMode", matches = "debug")
+    fun `debug mode uses DCAP`() {
         val enclaveInstanceInfo = enclaveHost().enclaveInstanceInfo as EnclaveInstanceInfoImpl
         assertThat(enclaveInstanceInfo.attestation).isInstanceOf(DcapAttestation::class.java)
+    }
+
+    @Test
+    @EnabledIfSystemProperty(named = "enclaveMode", matches = "simulation")
+    fun `simulation mode uses mock`() {
+        val enclaveInstanceInfo = enclaveHost().enclaveInstanceInfo as EnclaveInstanceInfoImpl
+        assertThat(enclaveInstanceInfo.attestation).isInstanceOf(MockAttestation::class.java)
     }
 
     @Test
