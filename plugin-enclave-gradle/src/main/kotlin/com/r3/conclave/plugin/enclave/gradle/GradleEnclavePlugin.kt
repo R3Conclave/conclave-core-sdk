@@ -73,26 +73,31 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
         pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") sourcePaths[0] else null
 
+
         // Parse the runtime string into the enum and then make sure it's consistent with whether this project is
         // Python or not.
-        runtimeType = conclaveExtension.runtime.map { string ->
-            val enum = try {
-                RuntimeType.valueOf(string.uppercase())
-            } catch (e: IllegalArgumentException) {
-                throw GradleException(
-                    "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
-                            "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
-            }
-            if (pythonSourcePath != null) {
-                if (enum == GRAALVM) {
-                    // The user has explicitly specified GraalVM whilst also intending to have Python code.
-                    throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
+        runtimeType = conclaveExtension.runtime
+            // Provider.map is not called if the upstream value is not set (i.e. null), but we want execute for null,
+            // so we supply a token string for null
+            .convention(" null ")
+            .map { string ->
+                val enum = try {
+                    if (string == " null ") null else RuntimeType.valueOf(string.uppercase())
+                } catch (e: IllegalArgumentException) {
+                    throw GradleException(
+                        "'${conclaveExtension.runtime.get()}' is not a valid enclave runtime type.\n" +
+                                "Valid runtime types are: ${RuntimeType.values().joinToString { it.name.lowercase() }}.")
                 }
-                GRAMINE  // Python projects must always use Gramine
-            } else {
-                enum
+                if (pythonSourcePath != null) {
+                    if (enum == GRAALVM) {
+                        // The user has explicitly specified GraalVM whilst also intending to have Python code.
+                        throw GradleException("Python enclave with GraalVM not supported. Use 'gramine' instead.")
+                    }
+                    GRAMINE  // Python projects must always use Gramine
+                } else {
+                    enum ?: GRAALVM
+                }
             }
-        }.orElse(GRAALVM)
 
         target.afterEvaluate {
             // This is called before the build tasks are executed but after the build.gradle file
