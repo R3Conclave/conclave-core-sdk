@@ -41,7 +41,7 @@ import kotlin.concurrent.withLock
  * Subclass this inside your enclave to provide an entry point. The outside world
  * communicates with the enclave via two mechanisms:
  *
- * 1. Local connections from the host. But remember the host is malicious in the SGX-threat model, so anything
+ * 1. Local connections from the host. But remember the host is malicious in the SGX threat model, so anything
  * received from the host cannot be completely trusted. Override and implement [receiveFromUntrustedHost] to receive
  * the byte arrays sent via [com.r3.conclave.host.EnclaveHost.callEnclave].
  *
