@@ -61,20 +61,6 @@ class DefaultEnclaveTests : AbstractEnclaveActionTest() {
     }
 
     @Test
-    fun `destroy in OCALL`() {
-        val echo = EchoWithCallback(byteArrayOf())
-        var called = false
-        assertThatThrownBy {
-            callEnclave(echo) {
-                called = true
-                enclaveHost().close()
-                null
-            }
-        }
-        assertTrue(called, "Ocall must be called")
-    }
-
-    @Test
     fun `large ECALL and OCALL`() {
         val largePayload = Random.nextBytes(1024 * 1024)
         val response = callEnclave(Echo(largePayload))
