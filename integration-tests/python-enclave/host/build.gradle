@@ -3,9 +3,7 @@ plugins {
 }
 
 dependencies {
-    testImplementation "com.r3.conclave:conclave-client:$conclave_version"
-    testImplementation "com.r3.conclave:conclave-host:$conclave_version"
-
+    testImplementation project(":general:common-test")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 

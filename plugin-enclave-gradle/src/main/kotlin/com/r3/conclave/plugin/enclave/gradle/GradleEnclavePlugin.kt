@@ -73,7 +73,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val sourcePaths = Files.list(target.projectDir.toPath() / "src" / "main").use { it.collect(toList()) }
         pythonSourcePath = if (sourcePaths.size == 1 && sourcePaths[0].name == "python") sourcePaths[0] else null
 
-
         // Parse the runtime string into the enum and then make sure it's consistent with whether this project is
         // Python or not.
         runtimeType = conclaveExtension.runtime
@@ -138,7 +137,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             "generateEnclaveProperties",
             conclaveExtension
         ) {
-            it.enclavePropertiesFile.set(baseDirectory.resolve("enclave.properties").toFile())
+            it.enclavePropertiesFile.set(baseDirectory.resolve(PluginUtils.ENCLAVE_PROPERTIES).toFile())
         }
 
         val enclaveFatJarTask = if (pythonSourcePath == null) {
@@ -161,7 +160,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         enclaveFatJarTask.from(generateEnclavePropertiesTask.enclavePropertiesFile) { copySpec ->
             enclaveFatJarTask.onEnclaveClassName { enclaveClassName ->
                 copySpec.into(enclaveClassName.substringBeforeLast('.').replace('.', '/'))
-                copySpec.rename { "enclave.properties" }
+                copySpec.rename { PluginUtils.ENCLAVE_PROPERTIES }
             }
         }
 

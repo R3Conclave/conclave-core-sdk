@@ -21,22 +21,23 @@ import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.CreateAttestationQuoteAction
 import com.r3.conclave.integrationtests.general.common.tasks.GetEnclaveInstanceInfo
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.debugOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
 class AttestationTests : AbstractEnclaveActionTest() {
     @Test
-    @EnabledIfSystemProperty(named = "enclaveMode", matches = "debug")
     fun `debug mode uses DCAP`() {
+        debugOnlyTest()
         val enclaveInstanceInfo = enclaveHost().enclaveInstanceInfo as EnclaveInstanceInfoImpl
         assertThat(enclaveInstanceInfo.attestation).isInstanceOf(DcapAttestation::class.java)
     }
 
     @Test
-    @EnabledIfSystemProperty(named = "enclaveMode", matches = "simulation")
     fun `simulation mode uses mock`() {
+        simulationOnlyTest()
         val enclaveInstanceInfo = enclaveHost().enclaveInstanceInfo as EnclaveInstanceInfoImpl
         assertThat(enclaveInstanceInfo.attestation).isInstanceOf(MockAttestation::class.java)
     }

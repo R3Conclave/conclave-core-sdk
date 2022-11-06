@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    testImplementation project(":general:common-test")
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testImplementation "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jackson_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"

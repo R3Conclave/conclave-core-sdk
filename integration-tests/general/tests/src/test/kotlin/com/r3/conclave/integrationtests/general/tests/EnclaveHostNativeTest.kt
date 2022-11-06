@@ -6,9 +6,9 @@ import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.common.toByteArray
 import com.r3.conclave.integrationtests.general.common.toInt
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.net.SocketException
 
 class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
@@ -86,9 +86,9 @@ class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
         }
     }
 
-    @EnabledIfSystemProperty(named = "runtimeTytpe", matches = "graalvm")
     @Test
     fun `create socket doesn't crash the host in graalvm`() {
+        graalvmOnlyTest()
         assertThatThrownBy {
             callEnclave(CreateSocket(9999))
         }

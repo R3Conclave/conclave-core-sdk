@@ -3,14 +3,22 @@ package com.r3.conclave.integrationtests.python.enclave
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand.PostMail
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
-@EnabledIfSystemProperty(named = "runtimeType", matches = "gramine")
 class PythonEnclaveTest {
+    companion object {
+        @JvmStatic
+        @BeforeAll
+        fun check() {
+            gramineOnlyTest()
+        }
+    }
+
     private lateinit var enclaveHost: EnclaveHost
 
     private val postedMail = ArrayList<PostMail>()

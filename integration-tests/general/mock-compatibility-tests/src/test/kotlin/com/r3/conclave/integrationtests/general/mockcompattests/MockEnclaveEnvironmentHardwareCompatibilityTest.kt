@@ -11,21 +11,21 @@ import com.r3.conclave.host.internal.EnclaveScanner
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
 import com.r3.conclave.host.internal.InternalsKt.createNonMockHost
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.debugOnlyTest
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import kotlin.random.Random
 
 /**
  * Tests to make sure secret keys produced by [MockEnclaveEnvironment.getSecretKey] behave similarly to ones produced
  * in hardware mode.
  */
-@EnabledIfSystemProperty(named = "enclaveMode", matches = "debug")
 class MockEnclaveEnvironmentHardwareCompatibilityTest {
     companion object {
         // A list of all the SecretKeySpecs that we want to test for, created by a cartesian product of the various
@@ -61,6 +61,12 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
             // Create keys with no key ID and with a random one.
             setOf(BlankField(SgxKeyRequest::keyId), KeyIdField(OpaqueBytes(Random.nextBytes(SgxKeyId.INSTANCE.size))))
         ).map(::SecretKeySpec)
+
+        @JvmStatic
+        @BeforeAll
+        fun check() {
+            debugOnlyTest()
+        }
     }
 
     private val nonMockEnclaves = HashMap<EnclaveSpec, EnclaveHost>()

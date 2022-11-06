@@ -1,13 +1,21 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
-@EnabledIfSystemProperty(named = "runtimeType", matches = "graalvm")
 class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraalEnclave", modeDependent = true) {
+    companion object {
+        @JvmStatic
+        @BeforeAll
+        fun check() {
+            graalvmOnlyTest()
+        }
+    }
+
     @Test
     fun `incremental builds`() {
         // First fresh run and then make sure the second run is up-to-date.
