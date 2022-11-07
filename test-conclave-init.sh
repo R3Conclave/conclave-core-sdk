@@ -5,6 +5,8 @@ set -eoux pipefail
 # This script requires a local build of the SDK at build/repo, which can be produced by running
 # ./gradlew publishAllPublicationsToBuildRepository.
 
+CONCLAVE_SDK_VERSION=$(./gradlew -q properties | grep -w "conclave_version" | awk '{print $2}')
+
 echo
 echo Testing Conclave Init
 echo
@@ -12,6 +14,12 @@ echo
 pushd build
 
 conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar')
+
+conclaveInitVersion=$("$JAVA_HOME"/bin/java -jar "$conclaveInitJar" -V | awk '{print $3}')
+if [ "$conclaveInitVersion" != "$CONCLAVE_SDK_VERSION" ]; then
+  echo "Conclave SDK version does not match the one in the Conclave Init."
+  exit 1
+fi
 
 echo Create Java project
 
