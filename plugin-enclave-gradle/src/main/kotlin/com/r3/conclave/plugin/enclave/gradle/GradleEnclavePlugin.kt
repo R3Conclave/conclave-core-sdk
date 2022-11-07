@@ -615,4 +615,3 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         configure(task)
         return task
     }
-}

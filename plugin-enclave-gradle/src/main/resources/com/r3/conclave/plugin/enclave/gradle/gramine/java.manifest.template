@@ -2,12 +2,14 @@ loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
 loader.log_level = "error"
 
-# TODO: remove this when in production
+# TODO: remove this when in production https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
 
-# TODO: add DCAP attestation
-sgx.remote_attestation = false
+# TODO: Enable DCAP attestation
+# sgx.remote_attestation = dcap
 # sgx.ra_client_spid = ""
+
+sgx.remote_attestation = false
 
 # This sets an environment variables used by the dynamic loader
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
@@ -29,7 +31,13 @@ sgx.enclave_size = "4G"
 sgx.thread_num = 64
 
 sgx.trusted_files = [
-  "file:{{ java_home }}/bin/java",
-  "file:{{ gramine.runtimedir() }}/"
+    "file:{{ gramine.libos }}",
+    "file:{{ java_home }}/bin/java",
+    "file:{{ gramine.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
+    "file:/usr/lib/jvm/java-17-openjdk-amd64/lib/",
+    "file:/usr/lib/jvm/java-17-openjdk-amd64/conf/security/java.security",
+    "file:enclave-shadow.jar"
 ]
 
