@@ -1068,7 +1068,8 @@ Received: $attestationReportBody"""
 
     /**
      * Invoked when a mail has been delivered by the host (via [com.r3.conclave.host.EnclaveHost.deliverMail]),
-     * successfully decrypted and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
+     * successfully decrypted and authenticated (so the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
+     * property is reliable).
      *
      * Default implementation throws [UnsupportedOperationException] so you should not
      * perform a supercall.

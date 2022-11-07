@@ -100,8 +100,8 @@ interface EnclaveMail : EnclaveMailHeader {
  * A post office is an object for creating a stream of related mail encrypted to a [destinationPublicKey].
  *
  * Related mail form an ordered list on the same [topic]. This ordering is defined by the sequence number field in each
- * mail header (see [EnclaveMailHeader.getSequenceNumber]) and it's important the ordering is preserved for the
- * receiving enclave.
+ * mail header (see [EnclaveMailHeader.getSequenceNumber](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail-header/get-sequence-number.html)
+ * and it's important the ordering is preserved for the receiving enclave.
  *
  * A post office also requires a [senderPrivateKey], which is used to authenticate each mail and is received by the
  * recipient as an authenticated public key (see [EnclaveMail.getAuthenticatedSender]). This can be used by the
@@ -139,9 +139,9 @@ interface EnclaveMail : EnclaveMailHeader {
  */
 abstract class PostOffice(
     /**
-     * The sender private key used to authenticate mail and create the [EnclaveMail.authenticatedSender] field.
+     * The sender private key used to authenticate mail and create the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html) field.
      *
-     * @see [EnclaveMail.authenticatedSender]
+     * @see [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
      */
     public final override val senderPrivateKey: PrivateKey,
     /**
@@ -159,7 +159,7 @@ abstract class PostOffice(
          * Create a new post office instance for encrypting mail to the given recipient. Each mail will be authenticated
          * with the given private key and will have the given topic.
          *
-         * A new random sender key can be created using [Curve25519PrivateKey.random].
+         * A new random sender key can be created using [Curve25519PrivateKey.random](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-curve25519-private-key/random.html).
          *
          * Do not use this for mail targeted at an enclave. Instead use [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice], or if
          * inside an enclave, [com.r3.conclave.enclave.Enclave.postOffice].
@@ -286,7 +286,8 @@ abstract class PostOffice(
 
     /**
      * Decodes and decrypts the mail with [senderPrivateKey] and verifies that the authenticated sender
-     * ([EnclaveMail.authenticatedSender]) matches the [destinationPublicKey].
+     * ([EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
+     * matches the [destinationPublicKey].
      *
      * @param encryptedEnclaveMail The encrypted mail bytes, produced by the sender's [encryptMail].
      *
