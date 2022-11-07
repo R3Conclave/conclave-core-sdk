@@ -287,7 +287,7 @@ abstract class PostOffice(
     /**
      * Decodes and decrypts the mail with [senderPrivateKey] and verifies that the authenticated sender
      * ([EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
-     * matches the [destinationPublicKey].
+     * matches the [destinationPublicKey]).
      *
      * @param encryptedEnclaveMail The encrypted mail bytes, produced by the sender's [encryptMail].
      *
