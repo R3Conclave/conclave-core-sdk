@@ -1,9 +1,10 @@
-package com.r3.conclave.host.internal
+package com.r3.conclave.host.internal.gramine
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
+import com.r3.conclave.common.internal.PluginUtils
+import com.r3.conclave.host.internal.EnclaveHandle
+import com.r3.conclave.host.internal.SocketHostEnclaveInterface
+import com.r3.conclave.host.internal.loggerFor
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
@@ -15,14 +16,15 @@ import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.reader
 
-class GramineEnclaveHandle(
+
+class GramineSGXEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
     private val zipFileUrl: URL
 ) : EnclaveHandle {
     private lateinit var processGramineDirect: Process
 
-    private val workingDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
+    private val workingDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine-sgx")
 
     override val enclaveInterface: SocketHostEnclaveInterface
 
@@ -41,6 +43,28 @@ class GramineEnclaveHandle(
         enclaveInterface = SocketHostEnclaveInterface(maxConcurrentCalls)
     }
 
+    companion object {
+        private val logger = loggerFor<GramineSGXEnclaveHandle>()
+    }
+
+    private fun unzipIntoWorkingDir() {
+        ZipInputStream(zipFileUrl.openStream()).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                val path = workingDirectory.resolve(entry.name)
+                if (entry.isDirectory) {
+                    path.createDirectories()
+                } else {
+                    Files.copy(zip, path)
+                }
+            }
+        }
+        require((workingDirectory / PluginUtils.GRAMINE_SGX_MANIFEST).exists()) { "Missing gramine manifest" }
+        require((workingDirectory / PluginUtils.GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
+        require((workingDirectory / PluginUtils.GRAMINE_SIG).exists()) { "Missing sig file" }
+        require((workingDirectory / PluginUtils.GRAMINE_SGX_TOKEN).exists()) { "Missing SGX Token" }
+    }
+
     override fun initialise() {
         /** Bind a port for the interface to use. */
         val port = enclaveInterface.bindPort()
@@ -50,11 +74,15 @@ class GramineEnclaveHandle(
          * TODO: Implement a *secure* method for passing port to the enclave.
          */
         val command = mutableListOf(
-            "gramine-direct",
-            "java", "-cp", GRAMINE_ENCLAVE_JAR, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString()
+            "gramine-sgx",
+            "java",
+            "-cp",
+            PluginUtils.GRAMINE_ENCLAVE_JAR,
+            "com.r3.conclave.enclave.internal.GramineEntryPoint",
+            port.toString()
         )
-        if ((workingDirectory / PYTHON_FILE).exists()) {
-            command += PYTHON_FILE
+        if ((workingDirectory / PluginUtils.PYTHON_FILE).exists()) {
+            command += PluginUtils.PYTHON_FILE
         }
 
         processGramineDirect = ProcessBuilder()
@@ -76,6 +104,7 @@ class GramineEnclaveHandle(
     }
 
     override fun destroy() {
+
         /** Close the call interface if it's running. */
         if (enclaveInterface.isRunning) {
             enclaveInterface.close()
@@ -84,7 +113,9 @@ class GramineEnclaveHandle(
         /** Wait for the gramine process to terminate if it's running. If it doesn't, destroy it forcibly. */
         if (::processGramineDirect.isInitialized) {
             processGramineDirect.waitFor(10L, TimeUnit.SECONDS)
-            processGramineDirect.destroyForcibly()
+            if (processGramineDirect.isAlive) {
+                processGramineDirect.destroyForcibly()
+            }
         }
 
         /** Clean up temporary files. */
@@ -95,22 +126,6 @@ class GramineEnclaveHandle(
         }
     }
 
-    private fun unzipIntoWorkingDir() {
-        ZipInputStream(zipFileUrl.openStream()).use { zip ->
-            while (true) {
-                val entry = zip.nextEntry ?: break
-                val path = workingDirectory.resolve(entry.name)
-                if (entry.isDirectory) {
-                    path.createDirectories()
-                } else {
-                    Files.copy(zip, path)
-                }
-            }
-        }
-        require((workingDirectory / GRAMINE_MANIFEST).exists()) { "Missing gramine manifest" }
-        require((workingDirectory / GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
-    }
-
     /**
      * Retrieves the thread count number by parsing the manifest.
      * This is bit hacky but will do for now.
@@ -119,7 +134,7 @@ class GramineEnclaveHandle(
     private fun getEnclaveThreadCountFromManifest(): Int {
         var inCorrectSection = false
 
-        (workingDirectory / GRAMINE_MANIFEST).reader().use {
+        (workingDirectory / PluginUtils.GRAMINE_SGX_MANIFEST).reader().use {
             for (line in it.readLines()) {
                 val tokens = line.trim().split("=").map { token -> token.trim() }
 
@@ -139,11 +154,8 @@ class GramineEnclaveHandle(
         }
     }
 
-    override val mockEnclave: Any get() {
-        throw IllegalStateException("The enclave instance can only be accessed in mock mode.")
-    }
-
-    private companion object {
-        private val logger = loggerFor<GramineEnclaveHandle>()
-    }
+    override val mockEnclave: Any
+        get() {
+            throw IllegalStateException("The enclave instance can only be accessed in mock mode.")
+        }
 }

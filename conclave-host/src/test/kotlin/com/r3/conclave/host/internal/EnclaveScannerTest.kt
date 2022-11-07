@@ -58,7 +58,7 @@ class EnclaveScannerTest {
         if (type == "graalvm.so") {
             assertThat(result).isInstanceOf(ScanResult.GraalVM::class.java)
         } else {
-            assertThat(result).isInstanceOf(ScanResult.Gramine::class.java)
+            assertThat(result).isInstanceOf(ScanResult.GramineDirect::class.java)
         }
         assertThat(result.enclaveClassName).isEqualTo("com.foo.bar.Enclave")
         assertThat(result.enclaveMode).isEqualTo(EnclaveMode.valueOf(mode.uppercase()))

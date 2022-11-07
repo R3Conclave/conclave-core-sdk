@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.file.RegularFileProperty
@@ -8,9 +9,9 @@ import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class GenerateGramineDirectManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
-        const val MANIFEST_TEMPLATE = "java.manifest.template"
+        const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
     }
 
     @get:OutputFile

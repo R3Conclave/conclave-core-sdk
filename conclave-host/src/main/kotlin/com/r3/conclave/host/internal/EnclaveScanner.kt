@@ -2,8 +2,9 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_DIRECT_BUNDLE_NAME
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_BUNDLE_NAME
 import io.github.classgraph.ClassGraph
 import java.net.URL
 import java.util.regex.Pattern
@@ -20,7 +21,7 @@ import java.util.regex.Pattern
  * For non-mock enclaves, "enclave bundles" are scanned. These are files with a specific path pattern which indicate
  * what type of enclave they are, namely either GraalVM or Gramine, and what mode they are in. GraalVM enclaves are
  * indicated by ending in [GRAALVM_BUNDLE_NAME], whilst Gramine enclaves end in [GRAMINE_BUNDLE_NAME]. These bundles
- * are processed by [NativeEnclaveHandle] and [GramineEnclaveHandle], respectively. All enclave bundles reside under
+ * are processed by [NativeEnclaveHandle] and [GramineDirectEnclaveHandle], respectively. All enclave bundles reside under
  * a specific root path, [ENCLAVE_BUNDLES_PATH], to reduce the scan space, with the enclave class name forming the
  * next element in the path.
  *
@@ -74,7 +75,7 @@ open class EnclaveScanner {
 
     private fun ClassGraph.findNonMockEnclaves(results: MutableList<ScanResult>) {
         val pathPattern = Pattern.compile(
-            """^$ENCLAVE_BUNDLES_PATH/([^/]+)/(simulation|debug|release)-($GRAALVM_BUNDLE_NAME|$GRAMINE_BUNDLE_NAME)$"""
+            """^$ENCLAVE_BUNDLES_PATH/([^/]+)/(simulation|debug|release)-($GRAALVM_BUNDLE_NAME|$GRAMINE_DIRECT_BUNDLE_NAME|$GRAMINE_SGX_BUNDLE_NAME)$"""
         )
 
         scan().use {
@@ -83,10 +84,13 @@ open class EnclaveScanner {
                 if (!matcher.matches()) continue
                 val enclaveClassName = matcher.group(1)
                 val enclaveMode = EnclaveMode.valueOf(matcher.group(2).uppercase())
-                results += if (matcher.group(3) == GRAALVM_BUNDLE_NAME) {
-                    ScanResult.GraalVM(enclaveClassName, enclaveMode, resource.url)
-                } else {
-                    ScanResult.Gramine(enclaveClassName, enclaveMode, resource.url)
+                results += when (matcher.group(3)) {
+                    GRAALVM_BUNDLE_NAME -> ScanResult.GraalVM(enclaveClassName, enclaveMode, resource.url)
+                    GRAMINE_DIRECT_BUNDLE_NAME -> ScanResult.GramineDirect(enclaveClassName, enclaveMode, resource.url)
+                    GRAMINE_SGX_BUNDLE_NAME -> ScanResult.GramineSGX(enclaveClassName, enclaveMode, resource.url)
+                    else -> {
+                        throw IllegalArgumentException("Developer error: Wrong enclave identifier found, couldn't establish enclave type")
+                    }
                 }
             }
         }
@@ -116,6 +120,7 @@ open class EnclaveScanner {
                         """.trimMargin()
                 )
             }
+
             else -> throw IllegalStateException("Multiple enclaves were found: $results")
         }
     }
@@ -139,10 +144,11 @@ open class EnclaveScanner {
             init {
                 require(enclaveMode != EnclaveMode.MOCK)
             }
+
             override fun toString(): String = "graalvm ${enclaveMode.name.lowercase()} $enclaveClassName"
         }
 
-        class Gramine(
+        class GramineDirect(
             override val enclaveClassName: String,
             override val enclaveMode: EnclaveMode,
             val zipFileUrl: URL
@@ -150,7 +156,21 @@ open class EnclaveScanner {
             init {
                 require(enclaveMode != EnclaveMode.MOCK)
             }
+
             override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
         }
+
+        class GramineSGX(
+            override val enclaveClassName: String,
+            override val enclaveMode: EnclaveMode,
+            val zipFileUrl: URL
+        ) : ScanResult() {
+            init {
+                require(enclaveMode != EnclaveMode.MOCK)
+            }
+
+            override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
+        }
+
     }
 }

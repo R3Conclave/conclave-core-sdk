@@ -38,6 +38,6 @@ sgx.trusted_files = [
     "file:/usr/{{ arch_libdir }}/",
     "file:/usr/lib/jvm/java-17-openjdk-amd64/lib/",
     "file:/usr/lib/jvm/java-17-openjdk-amd64/conf/security/java.security",
-    "file:enclave-shadow.jar"
+    "file:enclave.jar"
 ]
 

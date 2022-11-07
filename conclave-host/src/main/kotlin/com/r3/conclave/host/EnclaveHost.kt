@@ -12,20 +12,20 @@ import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
-import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_JAR_NAME
-import com.r3.conclave.host.internal.GramineEnclaveHandle.Companion.GRAMINE_ENCLAVE_MANIFEST
+import com.r3.conclave.host.internal.EnclaveScanner.ScanResult
 import com.r3.conclave.host.internal.attestation.AttestationService
 import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
+import com.r3.conclave.host.internal.gramine.GramineDirectEnclaveHandle
+import com.r3.conclave.host.internal.gramine.GramineSGXEnclaveHandle
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
 import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
-import io.github.classgraph.ClassGraph
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -37,7 +37,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
-import java.util.regex.Pattern
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -124,7 +123,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(EnclaveScanner.findEnclave(enclaveClassName), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner().findEnclave(enclaveClassName), mockConfiguration)
         }
 
         /**
@@ -144,7 +143,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(EnclaveScanner.findEnclave(), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner().findEnclave(), mockConfiguration)
         }
 
         /**
@@ -210,11 +209,17 @@ class EnclaveHost private constructor(
                     scanResult.enclaveClassName,
                     scanResult.soFileUrl
                 )
-                is ScanResult.Gramine -> GramineEnclaveHandle(
+                is ScanResult.GramineDirect -> GramineDirectEnclaveHandle(
                     scanResult.enclaveMode,
                     scanResult.enclaveClassName,
                     scanResult.zipFileUrl
                 )
+                is ScanResult.GramineSGX -> GramineSGXEnclaveHandle(
+                    scanResult.enclaveMode,
+                    scanResult.enclaveClassName,
+                    scanResult.zipFileUrl
+                )
+
                 is ScanResult.Mock -> throw IllegalArgumentException()
             }
             return EnclaveHost(enclaveHandle)
@@ -417,8 +422,8 @@ class EnclaveHost private constructor(
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
-        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle is GramineSGXEnclaveHandle)
-        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle !is GramineSGXEnclaveHandle})
+        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
+        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle !is GramineSGXEnclaveHandle })
 
         try {
             this.commandsCallback = commandsCallback
@@ -468,12 +473,17 @@ class EnclaveHost private constructor(
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
         // TODO: Improve the enclaveHandle !is GramineEnclaveHandle condition
-        return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineDirectEnclaveHandle && enclaveHandle !is GramineSGXEnclaveHandle) {
+        return if (isFileSystemSupported()) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
             null
         }
+    }
+
+    private fun isFileSystemSupported(): Boolean {
+        //  This filesystem implementation is only supported in SIMULATION, DEBUG, RELEASE mode in Graal VM only
+       return enclaveMode != EnclaveMode.MOCK && enclaveHandle is NativeEnclaveHandle
     }
 
     private fun executeKdsPrivateKeyRequest(

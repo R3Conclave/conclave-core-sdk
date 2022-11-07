@@ -9,7 +9,7 @@ import org.gradle.process.ExecResult
 import java.io.File
 import javax.inject.Inject
 
-open class BuildGramineSGXEnclave @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
         const val GRAMINE_SGX_SIGN_EXECUTABLE = "gramine-sgx-sign"
         const val GRAMINE_GET_TOKEN_EXECUTABLE = "gramine-sgx-get-token"
@@ -36,6 +36,7 @@ open class BuildGramineSGXEnclave @Inject constructor(objects: ObjectFactory) : 
         val outputSGXManifestPath = outputSGXManifest.asFile.get().parentFile.absolutePath
         val enclaveShadowJarDestination = "${outputSGXManifestPath}/$enclaveShadowJarName"
         checkNotNull(inputEnclaveJar.get().asFile.copyTo(File(enclaveShadowJarDestination), overwrite = true)) { "Enclave shadow jar not copied correctly" }
+
         check(signDirectManifest(manifestPath).exitValue == 0) { "Could not sign the manifest" }
         check(sgxGetToken().exitValue == 0) { "Could not get the token for the SGX manifest" }
     }
