@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    testImplementation project(":general:common-test")
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testImplementation "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jackson_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
@@ -13,12 +14,9 @@ dependencies {
 }
 
 test {
-    doFirst {
-        systemProperty "enclaveMode", enclaveMode
-        // Tell the tests where Gradle's current module cache is.
-        // We need the tests to share this module cache to prevent the
-        // Gradle Test-Kit from downloading its own copy of Kotlin etc.
-        systemProperty "test.gradle.user.home", project.gradle.gradleUserHomeDir
-        systemProperty "gradle.version", project.gradle.gradleVersion
-    }
+    // Tell the tests where Gradle's current module cache is.
+    // We need the tests to share this module cache to prevent the
+    // Gradle Test-Kit from downloading its own copy of Kotlin etc.
+    systemProperty "test.gradle.user.home", project.gradle.gradleUserHomeDir
+    systemProperty "gradle.version", project.gradle.gradleVersion
 }

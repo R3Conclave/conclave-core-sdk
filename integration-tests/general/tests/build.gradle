@@ -25,8 +25,5 @@ dependencies {
 }
 
 test {
-    doFirst {
-        systemProperty "enclaveMode", enclaveMode
-        systemProperty "kdsJar", configurations.kds.asPath
-    }
+    systemProperty "kdsJar", configurations.kds.asPath
 }

@@ -28,7 +28,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // of a Linux system or container. The action checks to see if the Host OS is Linux and if not sets
         // up a Linux environment (currently using Docker) in which the commands will be executed.
         if (!OperatingSystem.current().isLinux) {
-            val conclaveBuildDir = Files.createDirectories(temporaryDir.toPath() / "conclave-build")
+            val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
             try {

@@ -7,12 +7,12 @@ import com.r3.conclave.host.EnclaveHost
 import java.net.URL
 
 /**
- * [EnclaveHost.internalCreateNative] is internal and so isn't visible to the rest of the codebase. This exists as a
+ * [EnclaveHost.internalCreateNonMock] is internal and so isn't visible to the rest of the codebase. This exists as a
  * public wrapper so that the rest of the codebase has access to it.
  */
 @Suppress("unused")  // Used in integration tests
-fun createNativeHost(enclaveMode: EnclaveMode, enclaveFileUrl: URL, enclaveClassName: String): EnclaveHost {
-    return EnclaveHost.internalCreateNative(enclaveMode, enclaveFileUrl, enclaveClassName)
+fun createNonMockHost(scanResult: EnclaveScanner.ScanResult): EnclaveHost {
+    return EnclaveHost.internalCreateNonMock(scanResult)
 }
 
 /**

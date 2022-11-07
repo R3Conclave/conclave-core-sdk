@@ -10,8 +10,8 @@ import kotlin.io.path.deleteIfExists
 
 class NativeEnclaveHandle(
     override val enclaveMode: EnclaveMode,
-    enclaveFileUrl: URL,
     override val enclaveClassName: String,
+    enclaveFileUrl: URL,
 ) : EnclaveHandle {
     private val enclaveFile: Path
     private val enclaveId: Long

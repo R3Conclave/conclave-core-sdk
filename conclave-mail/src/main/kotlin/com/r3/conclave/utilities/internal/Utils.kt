@@ -12,6 +12,7 @@ import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import kotlin.io.path.createDirectories
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
 
@@ -247,6 +248,7 @@ fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 fun Class<*>.copyResource(name: String, file: Path) {
     val stream = getResourceAsStream(name)
     requireNotNull(stream) { "Resource $name not found" }
+    file.parent?.createDirectories()
     return stream.use {
         Files.copy(it, file, StandardCopyOption.REPLACE_EXISTING)
     }

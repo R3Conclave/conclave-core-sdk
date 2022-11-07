@@ -24,6 +24,7 @@ java {
 conclave {
     productID = 1
     revocationLevel = 0
+    runtime = findProperty("runtimeType").toString()  // This is provided by AbstractPluginTaskTest
     // These numbers need to stay in this format as they are used
     //   to test that a minimal change to them causes a rebuild of the enclave
     maxHeapSize = "268435456"
