@@ -78,7 +78,7 @@ interface EnclaveInstanceInfo {
      *
      * A new sender private key will be used (which can be retrieved with [PostOffice.senderPrivateKey]), and each mail
      * created by this post office will be authenticated with it and act as the client's authenticated identity to the
-     * enclave (see [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html).
+     * enclave (see [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)).
      * Typically only one sender key is required per client.
      *
      * It's very important that related mail are created from the same post office instance, i.e. having the same topic and

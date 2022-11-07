@@ -100,12 +100,12 @@ interface EnclaveMail : EnclaveMailHeader {
  * A post office is an object for creating a stream of related mail encrypted to a [destinationPublicKey].
  *
  * Related mail form an ordered list on the same [topic]. This ordering is defined by the sequence number field in each
- * mail header (see [EnclaveMailHeader.getSequenceNumber](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail-header/get-sequence-number.html)
+ * mail header (see [EnclaveMailHeader.getSequenceNumber](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail-header/get-sequence-number.html))
  * and it's important the ordering is preserved for the receiving enclave.
  *
  * A post office also requires a [senderPrivateKey], which is used to authenticate each mail and is received by the
- * recipient as an authenticated public key (see [EnclaveMail.getAuthenticatedSender]). This can be used by the
- * recipient for user authentication but is also required if they want to reply back.
+ * recipient as an authenticated public key (see [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)).
+ * This can be used by the recipient for user authentication but is also required if they want to reply back.
  *
  * The sender key can either be a short-term eptherimal key which is used only once and then discarded (e.g. when the client
  * process exits) or it can be a long-term identity key. If the later then it's important to keep track of the current
@@ -118,8 +118,8 @@ interface EnclaveMail : EnclaveMailHeader {
  * enclave. This means it can detect dropped or reordered messages and thus the ordering is preserved.
  *
  * However for this to work, the same post office instance must be used for the same sender key and topic pair. This
- * means there can only be one [PostOffice] instance per (destination, sender, topic) triple. It's up the user to make
- * sure this is the case.
+ * means there can only be one [PostOffice] instance per (destination, sender, topic) triple. It's up to the user to
+ * make sure this is the case.
  *
  * To make it make it more difficult for an adversary to guess the contents of the mail just by observing their sizes,
  * the post office pads the mail to a minimum size. By default it uses a moving average of the previous mail created.
