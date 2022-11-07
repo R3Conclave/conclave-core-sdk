@@ -11,6 +11,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.*
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
@@ -50,7 +51,8 @@ abstract class AbstractPluginTaskTest(private val taskName: String, private val 
     }
 
     companion object {
-        val enclaveMode = System.getProperty("enclaveMode").toLowerCase().capitalize()
+        val enclaveMode = System.getProperty("enclaveMode").lowercase().replaceFirstChar(Char::titlecase)
+        private val runtimeType = System.getProperty("runtimeType")
         private val testGradleUserHome = System.getProperty("test.gradle.user.home")
         private val gradleVersion = System.getProperty("gradle.version")
 
@@ -63,7 +65,15 @@ abstract class AbstractPluginTaskTest(private val taskName: String, private val 
                 .withGradleVersion(gradleVersion)
                 .withDebug(false)
                 .withProjectDir(projectDirectory.toFile())
-                .withArguments(task, "--no-build-cache", "--stacktrace", "--info", "--gradle-user-home", testGradleUserHome)
+                .withArguments(
+                    task,
+                    "-PruntimeType=$runtimeType",
+                    "--no-build-cache",
+                    "--stacktrace",
+                    "--info",
+                    "--gradle-user-home",
+                    testGradleUserHome
+                )
                 .forwardOutput()
         }
 

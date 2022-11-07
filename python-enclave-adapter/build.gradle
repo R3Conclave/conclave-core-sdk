@@ -1,0 +1,21 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.github.johnrengelman.shadow'
+}
+
+dependencies {
+    implementation project(":conclave-enclave")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "black.ninia:jep:$jep_version"
+
+    runtimeOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+
+    testImplementation project(":internal-testing")
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+test {
+    // Allow the tests to capture the output of the python enclave
+    systemProperty("disableStdRedirect", "true")
+}

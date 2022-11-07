@@ -7,9 +7,8 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.internal.EnclaveHostService
 import com.r3.conclave.host.internal.createMockHost
-import java.util.*
+import com.r3.conclave.utilities.internal.getOrThrow
 import java.util.concurrent.Callable
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import kotlin.reflect.KClass
 
@@ -59,16 +58,10 @@ class MockEnclaveTransport(
     }
 
     private fun <T> executeTaskOnHost(task: EnclaveHostService.() -> T): T {
-        val future = executor.submit(Callable {
+        return executor.submit(Callable {
             val enclaveHostService = synchronized(this) { enclaveHostService }
             task(enclaveHostService)
-        })
-
-        try {
-            return future.get()
-        } catch (e: ExecutionException) {
-            throw e.cause ?: e
-        }
+        }).getOrThrow()
     }
 
     inner class ClientConnection(client: EnclaveClient) : EnclaveTransport.ClientConnection {

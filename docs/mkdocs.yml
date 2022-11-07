@@ -19,7 +19,7 @@ nav:
         - Writing your own enclave host: writing-your-own-enclave-host.md
         - Writing a long-lived client: writing-a-long-lived-client.md
     - Design topics:
-        - Communicating with an enclave using Mail: mail.md
+        - Conclave Mail: mail.md
         - Rapid testing and development with Mock Mode: mockmode.md
         - Maximising the security of your enclave: security.md
         - Persisting data with the Key Derivation Service: kds-detail.md
@@ -33,6 +33,7 @@ nav:
         - Performance: performance.md
         - Conclave Init: conclave-init.md
         - Conclave web host: conclave-web-host.md
+        - DCAP: dcap.md
         - IDE Configuration: ide-configuration.md
     - API:
         - JavaDocs: api/index.html
@@ -43,10 +44,8 @@ nav:
   - Release notes: release-notes.md
   - Operations:
     - Server deployment:
-      - Machine setup:
-         - Overview: machine-setup.md
-         - Cloud Deployment: azure.md
-         - Self-Hosting: ias.md
+        - Azure deployment: machine-setup.md
+        - Non-cloud deployment: non-cloud-deployment.md
     - Upgrades:
       - Enclave signing: signing.md
       - Renewability: renewability.md

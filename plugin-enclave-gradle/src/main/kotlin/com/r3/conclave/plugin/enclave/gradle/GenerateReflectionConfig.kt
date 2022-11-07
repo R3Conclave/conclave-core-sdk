@@ -48,10 +48,10 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
         }
     }
 
-    @Input
+    @get:Input
     val enclaveClass: Property<String> = objects.property(String::class.javaObjectType)
 
-    @OutputFile
+    @get:OutputFile
     val reflectionConfig: RegularFileProperty = objects.fileProperty()
 
     override fun action() {

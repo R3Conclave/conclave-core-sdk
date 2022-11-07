@@ -1,13 +1,15 @@
 package com.r3.conclave.integrationtests.general.tests
 
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.common.toByteArray
 import com.r3.conclave.integrationtests.general.common.toInt
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.net.SocketException
 
 class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
     @Test
@@ -82,5 +84,15 @@ class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
         assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
             enclaveHost().mockEnclave
         }
+    }
+
+    @Test
+    fun `create socket doesn't crash the host in graalvm`() {
+        graalvmOnlyTest()
+        assertThatThrownBy {
+            callEnclave(CreateSocket(9999))
+        }
+            .isInstanceOf(EnclaveException::class.java)
+            .hasCauseExactlyInstanceOf(SocketException::class.java)
     }
 }

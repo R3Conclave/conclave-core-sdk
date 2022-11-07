@@ -135,22 +135,9 @@ please [talk to us on discord](https://discord.gg/zpHKkMZ8Sw).
 
 ### Will using Conclave require any agreements with Intel?
 
-Not if you use the latest generation of hardware. Modern chips support a feature called flexible launch control that
+No. Modern chips support a feature called "flexible launch control" that
 allows the owner of the hardware to decide which enclaves can be loaded. For example, if you deploy to Microsoft
 Azure, no agreement or interaction with Intel is needed, as Azure allows any self-signed enclave.
-
-To go live on older hardware that uses the EPID attestation protocol, you'll need:
-
-1. A "service provider ID" that grants access to the [Intel attestation servers](ias.md). This is free.
-2. To sign a (very simple, one page) agreement that you won't sign malware.
-Intel will whitelist your signing key and the release mode then becomes available. This is also free.
-
-!!! Note 
-
-    Conclave's design ensures that enclave clients don't need to interact with Intel. The host interacts with Intel and
-    publishes a serialized [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html)
-    object to the clients. The Conclave client libraries embed the necessary certificates to verify Intel's signature over
-    this data, and the integrity of the object is checked automatically when it's deserialized.
 
 ### How are upgrades performed when patches are released?
 
@@ -247,13 +234,9 @@ Conclave requires at least Java 8 to build and run an enclave application. Java 
 
 ### At which points in time is a connection with Intel needed?
 
-You don't need a connection with Intel if you use the latest hardware with DCAP attestation. For example, no direct
-connection to Intel is required on Microsoft Azure. The cloud provider runs caching proxies in-cloud, and Conclave 
+You don't need a connection with Intel. As an example: when using Microsoft Azure, 
+the cloud provider runs caching proxies in-cloud, and Conclave 
 uses them automatically.
-
-If you use older hardware with the EPID attestation protocol, the `aesmd` daemon and the host program will connect to
-Intel's servers when an enclave is loaded. This connection happens as part of the startup sequence.
-See [machine setup](machine-setup.md) to learn about proxy configuration.
 
 ### Can I print debug output to the console from my enclave?
 

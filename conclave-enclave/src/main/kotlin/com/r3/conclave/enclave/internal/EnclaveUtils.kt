@@ -1,5 +1,7 @@
 package com.r3.conclave.enclave.internal
 
+import com.r3.conclave.common.EnclaveStartException
+import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getBytes
 import com.r3.conclave.utilities.internal.putIntLengthPrefixBytes
 import java.nio.ByteBuffer
@@ -15,6 +17,22 @@ object EnclaveUtils {
     private const val TAG_SIZE_BITS = TAG_SIZE_BYTES * 8
 
     private val secureRandom = SecureRandom()
+
+    /**
+     * In release mode we want exceptions propagated out of the enclave to be sanitised
+     * to reduce the likelihood of secrets being leaked from the enclave.
+     */
+    fun sanitiseThrowable(throwable: Throwable): Throwable {
+        return when (throwable) {
+            is EnclaveStartException -> throwable
+            // Release enclaves still need to notify the host if they were unable to decrypt mail, but there's
+            // no need to include the message or stack trace in case any secrets can be inferred from them.
+            is MailDecryptionException -> MailDecryptionException()
+            else -> {
+                RuntimeException("Release enclave threw an exception which was swallowed to avoid leaking any secrets")
+            }
+        }
+    }
 
     /**
      * Encrypt and authenticate the given [PlaintextAndEnvelope] using AES-GCM with the given AES key. The resulting

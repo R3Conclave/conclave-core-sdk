@@ -1,11 +1,7 @@
 plugins {
-    id 'application'
-    id 'org.springframework.boot' version '2.6.1'
-}
-
-// Use the provided main method for the web host.
-application {
-    mainClass.set("com.r3.conclave.host.web.EnclaveWebHost")
+    id 'java'
+    id 'org.springframework.boot' version '2.7.4'
+    id "io.spring.dependency-management" version "1.1.0"
 }
 
 // Define a Gradle flag "enclaveMode" which controls which enclave mode to use when building the host. The default is
@@ -19,8 +15,15 @@ tasks.register("prepareForSigning") {
 }
 
 dependencies {
+    // Change this to your preferred logging framework
+    runtimeOnly 'ch.qos.logback:logback-classic'
     runtimeOnly project(path: ":enclave", configuration: mode)
     runtimeOnly "com.r3.conclave:conclave-web-host:$conclaveVersion"
+}
+
+springBoot {
+    // Use the provided main method for the web host.
+    mainClass.set("com.r3.conclave.host.web.EnclaveWebHost")
 }
 
 bootJar {

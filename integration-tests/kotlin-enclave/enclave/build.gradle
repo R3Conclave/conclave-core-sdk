@@ -10,4 +10,5 @@ dependencies {
 conclave {
     productID = 100
     revocationLevel = 2
+    runtime = runtimeType
 }

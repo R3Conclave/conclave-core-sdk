@@ -2,34 +2,26 @@
 
 ## Prerequisites
 
-This tutorial assumes you have read and understood [Writing your first enclave](writing-hello-world.md).
+Complete the following tutorials.
+
+* [Running your first enclave](running-hello-world.md).
+* [Writing your first enclave](writing-hello-world.md).
+* [Writing your own enclave host](writing-your-own-enclave-host.md).
 
 ## Introduction
 
-The introductory hello-world sample (see [Running your first enclave](running-hello-world.md)
-and [Writing your first enclave](writing-hello-world.md)) implements a scenario where each run is independent, so the
-client does not need to maintain any state between runs: it can generate a new one-time key each time and there is no
-need to track a multi-step protocol.
+Each run is independent in the [hello-world](running-hello-world.md) tutorial and the
+[writing your first enclave](writing-hello-world.md) tutorial. In such cases, the client doesn't need to maintain 
+any state between runs.
 
-Most real-world scenarios are more complex than this. In particular, the interaction between a client and
-enclave may unfold over an extended period of time, meaning the client needs to be able to resume successfully after a
-restart.
-
-Conclave Mail uses the client's key as a form of identity and the enclave uses this to track the clients that
-communicate with it. For example, if the enclave were hosting an auction, a client may want to use the same identity
-when submitting multiple bids on the same lot.
+However, in most real-world applications, the client and the enclave interact over an extended period. To support such
+applications, the client has to maintain its state and resume it successfully after a restart.
 
 ## Add state to your client
 
-[`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) provides a helpful
-[`save`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/save.html) method which will serialize the necessary 
-state to bytes and which can then
-be used at a later point to restore the client using the `EnclaveClient` constructor that takes in a byte array.
-
-For example, the Client's state could be written to the file before the client terminates.
-
-!!! warning
-    The bytes contain the client's private key, so if using a file, it **must** be stored securely or encrypted.
+[`EnclaveClient`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/index.html) provides a
+[`save`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/save.html) method to serialize the state to 
+a byte array. You can call the `EnclaveClient` constructor with this byte array to restore the client.
 
 ```java 
 enclaveClient = new EnclaveClient(Files.readAllBytes(stateFile));
@@ -44,11 +36,11 @@ if (providedConstraint != null && loadedConstraint != providedConstraint) {
     );
 }
     
-// TODO client interacts with enclave.
+// Code where the client interacts with the enclave.
 
 Files.write(stateFile, enclaveClient.save())
 ```
 
-Notice how an [enclave constraint](constraints.md) is not required when loading the state from the file.
-In general, we assume that the constraint will not change for a long-lived client. The constraint can always be
-updated using [`EnclaveClient.setEnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.client/-enclave-client/set-enclave-constraint.html).
+!!!Warning
+
+    If you are using a file to store the bytes, you must store it securely as it contains the client's private key.

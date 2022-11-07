@@ -5,6 +5,7 @@ subprojects {
     apply plugin: 'java'
 
     ext.enclaveMode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+    ext.runtimeType = findProperty("runtimeType")?.toString()?.toLowerCase() ?: "graalvm"
 
     repositories {
         maven {
@@ -23,5 +24,15 @@ subprojects {
 
     tasks.withType(Test) {
         useJUnitPlatform()
+        systemProperty "enclaveMode", enclaveMode
+        systemProperty "runtimeType", runtimeType
+        systemProperty "org.slf4j.simpleLogger.logFile", "System.out"
+        // 10 mins should be plenty time to run a single integration test. If not re-write the test! We want timely
+        // feedback if a test is hanging.
+        systemProperty "junit.jupiter.execution.timeout.default", "10 m"
+        // TODO: Remove this once gramine reaches feature parity
+        if (runtimeType == "gramine") {
+            failFast = false
+        }
     }
 }

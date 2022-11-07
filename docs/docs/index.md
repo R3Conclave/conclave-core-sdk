@@ -21,12 +21,14 @@ With Conclave, you can build:
 ## What is Conclave?
 
 Conclave is a software development kit for the rapid development of privacy-first applications using hardware-based Trusted Execution Environments (TEEs) known as [enclaves](enclaves.md).
-Conclave makes [Confidential Computing](enclaves.md) using Intel® Security Guard Extension (SGX) more accessible for developers.
+Conclave makes [Confidential Computing](enclaves.md) using Intel® Security Guard Extension (SGX) more accessible for 
+developers. Take a look at the source code on [this GitHub repository](https://github.com/R3Conclave/conclave-core-sdk).
 
 ### Advantages of Conclave
 
 - **Developer-friendly:** You don't have to be a cryptography expert to use Conclave. A high-level, intuitive API helps you write secure applications on any operating system.
 - **Code in many languages:** Write your code in Java, Kotlin, or any other JVM (Java Virtual Machine) language. You can also use Javascript and basic Python to write your application.
+- **Open Source:**: You can [verify the source code](https://github.com/R3Conclave/conclave-core-sdk) and remove Conclave from your trust model.
 - **Focus on business logic:** Interact with secure enclaves easily using an intuitive API. **Conclave Mail** takes care of the end-to-end encrypted messaging.
 - **Everything in one platform:** The Core SDK tightly integrates with a
   [complementary cloud offering](https://www.conclave.net/conclave-cloud/).

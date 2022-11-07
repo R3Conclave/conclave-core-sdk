@@ -109,9 +109,10 @@ RUN mkdir -p $NEXUS_IQ_HOME
 RUN wget -O $NEXUS_IQ_HOME/nexus-iq-cli.jar https://download.sonatype.com/clm/scanner/nexus-iq-cli-1.131.0-01.jar
 RUN echo "f9159984056cee4576f34fcfa6f33ccab42b070e  $NEXUS_IQ_HOME/nexus-iq-cli.jar" | shasum -c -
 
-# Some incantation that's necessary to get rid of some Python errors that appear when building docs.
-# https://stackoverflow.com/a/59596814/2248578
-RUN pip3 install wheel
+RUN pip3 install jep
+
+# Add jep to the library path
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/python3.8/dist-packages/jep"
 
 # Without setting the locale to UTF-8 some python3 modules just refuse to work.
 ENV LC_ALL              C.UTF-8

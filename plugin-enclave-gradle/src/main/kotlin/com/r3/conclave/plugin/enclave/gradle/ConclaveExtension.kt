@@ -1,6 +1,7 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -25,9 +26,11 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
-    val runtime: Property<RuntimeType> = objects.property(RuntimeType::class.java).convention(RuntimeType.GraalVM)
-    val graalvm = RuntimeType.GraalVM
-    val gramine = RuntimeType.Gramine
+    // We're using a string here so that we can do our own error checking in the plugin code
+    val runtime: Property<String> = objects.property(String::class.java)
+    // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.
+    val graalvm = "graalvm"
+    val gramine = "gramine"
 
     val kds: KDSExtension = objects.newInstance(KDSExtension::class.java)
 
