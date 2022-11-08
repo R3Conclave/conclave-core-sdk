@@ -32,7 +32,6 @@ fun main(args: Array<String>) {
     versionProvider = ConclaveInitCli.ManifestVersionProvider::class,
 )
 class ConclaveInitCli : Callable<Int> {
-
     @CommandLine.Option(
         names = ["-p", "--package"],
         required = true,
