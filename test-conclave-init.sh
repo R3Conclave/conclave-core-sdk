@@ -13,7 +13,8 @@ echo
 
 pushd build
 
-conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar' | tail -n 1)
+# Find the latest created Conclave Init .jar file. %T@ prints file's last modification time in seconds since Jan. 1, 1970, 00:00 GMT which is used for sorting.
+conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar' -printf "%T@  %p\n" | sort -n | tail -n 1 | awk '{print $2}')
 
 conclaveInitVersion=$("$JAVA_HOME"/bin/java -jar "$conclaveInitJar" -V | awk '{print $3}')
 if [ "$conclaveInitVersion" != "$CONCLAVE_SDK_VERSION" ]; then
