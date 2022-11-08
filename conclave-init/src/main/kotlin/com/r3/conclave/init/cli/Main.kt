@@ -8,8 +8,8 @@ import com.r3.conclave.init.template.JavaPackage
 import picocli.CommandLine
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import java.util.concurrent.Callable
+import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
@@ -28,9 +28,11 @@ fun main(args: Array<String>) {
     headerHeading = "%n",
     synopsisHeading = "%nUsage:%n",
     optionListHeading = "%n",
+    // Version Provider is required by picocli when using dynamically loaded version
     versionProvider = ConclaveInitCli.ManifestVersionProvider::class,
 )
 class ConclaveInitCli : Callable<Int> {
+
     @CommandLine.Option(
         names = ["-p", "--package"],
         required = true,
@@ -67,13 +69,13 @@ class ConclaveInitCli : Callable<Int> {
     val language: Language = Language.JAVA
 
     internal class ManifestVersionProvider : CommandLine.IVersionProvider {
-        override fun getVersion(): Array<String> = arrayOf("Conclave Init " + getConclaveVersion())
+        override fun getVersion(): Array<String> = arrayOf("Conclave Init $CONCLAVE_SDK_VERSION")
     }
 
     override fun call(): Int {
         checkTargetDoesNotExist()
         projectSummary().printBlock()
-        ConclaveInit.createProject(getConclaveVersion(), language, basePackage, enclaveClass, target)
+        ConclaveInit.createProject(CONCLAVE_SDK_VERSION, language, basePackage, enclaveClass, target)
         return 0
     }
 
@@ -96,14 +98,14 @@ class ConclaveInitCli : Callable<Int> {
             Output directory: ${target.absolutePathString()}
         """.trimIndent()
 
-
     companion object {
-        fun getConclaveVersion(): String {
-            return ConclaveInitCli::class.java.classLoader.resources("META-INF/MANIFEST.MF")
-                .map { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Release-Version") }
-                .filter(Objects::nonNull)
-                .findFirst()
-                .get()
+        private val CONCLAVE_SDK_VERSION = run {
+            ConclaveInitCli::class.java.classLoader
+                .getResources(MANIFEST_NAME)
+                .asSequence()
+                .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Release-Version") }
+                .firstOrNull()
+                ?: throw IllegalStateException("Could not find Conclave-Release-Version in plugin's manifest")
         }
     }
 }
