@@ -13,7 +13,7 @@ echo
 
 pushd build
 
-conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar')
+conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar' | tail -n 1)
 
 conclaveInitVersion=$("$JAVA_HOME"/bin/java -jar "$conclaveInitJar" -V | awk '{print $3}')
 if [ "$conclaveInitVersion" != "$CONCLAVE_SDK_VERSION" ]; then
