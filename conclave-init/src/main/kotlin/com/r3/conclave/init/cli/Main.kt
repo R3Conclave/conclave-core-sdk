@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
     headerHeading = "%n",
     synopsisHeading = "%nUsage:%n",
     optionListHeading = "%n",
-    // Version Provider is required by picocli when using dynamically loaded version
+    // versionProvider is required by picocli when using dynamically loaded version
     versionProvider = ConclaveInitCli.ManifestVersionProvider::class,
 )
 class ConclaveInitCli : Callable<Int> {
