@@ -160,7 +160,7 @@ abstract class PostOffice(
          * Create a new post office instance for encrypting mail to the given recipient. Each mail will be authenticated
          * with the given private key and will have the given topic.
          *
-         * A new random sender key can be created using [Curve25519PrivateKey.random](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-curve25519-private-key/random.html)).
+         * A new random sender key can be created using [Curve25519PrivateKey.random](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-curve25519-private-key/random.html).
          *
          * Do not use this for mail targeted at an enclave. Instead use [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice], or if
          * inside an enclave, [com.r3.conclave.enclave.Enclave.postOffice].
