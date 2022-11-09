@@ -156,7 +156,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         enclaveFatJarTask.isPreserveFileTimestamps = false
         enclaveFatJarTask.isReproducibleFileOrder = true
         enclaveFatJarTask.isZip64 = true
-        enclaveFatJarTask.archiveBaseName.set("enclave-fat")
+        enclaveFatJarTask.archiveAppendix.set("fat")
         enclaveFatJarTask.from(generateEnclavePropertiesTask.enclavePropertiesFile) { copySpec ->
             enclaveFatJarTask.onEnclaveClassName { enclaveClassName ->
                 copySpec.into(enclaveClassName.substringBeforeLast('.').replace('.', '/'))
@@ -215,8 +215,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.from(generateGramineManifestTask.manifestFile) { copySpec ->
                 copySpec.rename { PluginUtils.GRAMINE_MANIFEST }
             }
-            task.archiveBaseName.set("gramine-bundle")
-            task.archiveAppendix.set(type.name.lowercase())
+            task.archiveAppendix.set("gramine-bundle")
+            task.archiveClassifier.set(type.name.lowercase())
         }
     }
 
