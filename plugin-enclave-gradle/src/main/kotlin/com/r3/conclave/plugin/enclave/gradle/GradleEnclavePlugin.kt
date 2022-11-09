@@ -427,8 +427,8 @@ class GradleEnclavePlugin @Inject constructor(private val projectLayout: Project
             task.from(generateGramineManifestTask.manifestFile) { copySpec ->
                 copySpec.rename { PluginUtils.GRAMINE_MANIFEST }
             }
-            task.archiveBaseName.set("gramine-bundle")
-            task.archiveAppendix.set(type.name.lowercase())
+            task.archiveAppendix.set("gramine-bundle")
+            task.archiveClassifier.set(type.name.lowercase())
         }
 
         return gramineZipBundle

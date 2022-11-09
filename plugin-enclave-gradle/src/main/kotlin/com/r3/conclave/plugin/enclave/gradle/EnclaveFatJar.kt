@@ -23,7 +23,7 @@ open class EnclaveFatJar @Inject constructor(objects: ObjectFactory) : Jar() {
         isPreserveFileTimestamps = false
         isReproducibleFileOrder = true
         isZip64 = true
-        archiveBaseName.set("enclave-fat")
+        archiveAppendix.set("fat")
     }
 
     @get:InputFile
@@ -39,16 +39,16 @@ open class EnclaveFatJar @Inject constructor(objects: ObjectFactory) : Jar() {
      * In [copy] we need to be able to create a child copy spec so that we can copy the enclave properties file into
      * the specific location based on the enclave's class name. This can't be done during the execution phase,
      * otherwise you the following error: "You cannot add child specs at execution time. Consider configuring this
-     * task during configuration time or using a separate task to do the configuration." [ConfigureEnclaveFatJar] is
+     * task during configuration time or using a separate task to do the configuration." [EnclaveFatJarConfigure] is
      * that separate task.
      */
-    internal fun delayedConfiguration(): ConfigureEnclaveFatJar {
-        val configureTask = project.tasks.create("configure_$name", ConfigureEnclaveFatJar::class.java, this)
+    internal fun delayedConfiguration(): EnclaveFatJarConfigure {
+        val configureTask = project.tasks.create("configure_$name", EnclaveFatJarConfigure::class.java, this)
         dependsOn(configureTask)
         return configureTask
     }
 
-    open class ConfigureEnclaveFatJar @Inject constructor(
+    open class EnclaveFatJarConfigure @Inject constructor(
         objects: ObjectFactory,
         private val target: EnclaveFatJar
     ) : DefaultTask() {

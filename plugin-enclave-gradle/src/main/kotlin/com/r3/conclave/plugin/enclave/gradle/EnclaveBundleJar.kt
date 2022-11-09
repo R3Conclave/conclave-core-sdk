@@ -14,8 +14,8 @@ open class EnclaveBundleJar @Inject constructor(objects: ObjectFactory, type: Bu
     init {
         group = ConclaveTask.CONCLAVE_GROUP
         description = "Create Conclave bundle for $type mode"
-        archiveBaseName.set("enclave-bundle")
-        archiveAppendix.set(type.name.lowercase())
+        archiveAppendix.set("bundle")
+        archiveClassifier.set(type.name.lowercase())
     }
 
     @get:InputFile
