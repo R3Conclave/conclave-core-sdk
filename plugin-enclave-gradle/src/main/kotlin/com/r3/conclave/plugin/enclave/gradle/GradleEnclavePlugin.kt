@@ -217,7 +217,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
             task.archiveAppendix.set("gramine-bundle")
             task.archiveClassifier.set(type.name.lowercase())
-
         }
     }
 
