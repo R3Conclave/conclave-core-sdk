@@ -139,7 +139,7 @@ interface EnclaveMail : EnclaveMailHeader {
  */
 abstract class PostOffice(
     /**
-     * The sender private key used to authenticate mail and create the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html))
+     * The sender private key used to authenticate mail and create the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
      * field.
      *
      * @see [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
