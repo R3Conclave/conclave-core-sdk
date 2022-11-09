@@ -1,6 +1,7 @@
-package com.r3.conclave.plugin.enclave.gradle
+package com.r3.conclave.plugin.enclave.gradle.graalvm
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.r3.conclave.plugin.enclave.gradle.div
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir

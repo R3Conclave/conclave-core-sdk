@@ -1,11 +1,11 @@
-package com.r3.conclave.plugin.enclave.gradle
+package com.r3.conclave.plugin.enclave.gradle.graalvm
 
+import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
-import java.nio.file.Files
 import javax.inject.Inject
 
 open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
@@ -49,13 +49,13 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
     }
 
     @get:Input
-    val enclaveClass: Property<String> = objects.property(String::class.javaObjectType)
+    val enclaveClassName: Property<String> = objects.property(String::class.java)
 
     @get:OutputFile
     val reflectionConfig: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val content = generateContent(DEFAULT_CLASSES + enclaveClass.get())
-        Files.write(reflectionConfig.get().asFile.toPath(), content.toByteArray())
+        val content = generateContent(DEFAULT_CLASSES + enclaveClassName.get())
+        reflectionConfig.get().asFile.writeText(content)
     }
 }

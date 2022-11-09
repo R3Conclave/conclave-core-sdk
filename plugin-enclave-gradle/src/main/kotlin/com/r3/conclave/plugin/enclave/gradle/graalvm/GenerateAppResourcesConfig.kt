@@ -1,5 +1,6 @@
-package com.r3.conclave.plugin.enclave.gradle
+package com.r3.conclave.plugin.enclave.gradle.graalvm
 
+import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import io.github.classgraph.ClassGraph
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory

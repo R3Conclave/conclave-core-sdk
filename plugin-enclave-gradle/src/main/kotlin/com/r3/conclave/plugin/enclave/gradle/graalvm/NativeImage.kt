@@ -1,8 +1,10 @@
-package com.r3.conclave.plugin.enclave.gradle
+package com.r3.conclave.plugin.enclave.gradle.graalvm
 
+import com.r3.conclave.plugin.enclave.gradle.*
 import io.github.classgraph.ClassGraph
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -55,11 +57,11 @@ reflection. Default: None
 */
 
 open class NativeImage @Inject constructor(
-        objects: ObjectFactory,
-        private val plugin: GradleEnclavePlugin,
-        private val buildType: BuildType,
-        private val linkerScript: Path,
-        private val linuxExec: LinuxExec) : ConclaveTask() {
+    objects: ObjectFactory,
+    private val plugin: GradleEnclavePlugin,
+    private val buildType: BuildType,
+    private val linuxExec: LinuxExec
+) : ConclaveTask() {
     companion object {
         /**
          * Portion of the enclave's maximum heap size available to SubstrateVM,
@@ -70,7 +72,7 @@ open class NativeImage @Inject constructor(
     }
 
     @get:InputDirectory
-    val nativeImagePath: RegularFileProperty = objects.fileProperty()
+    val nativeImagePath: DirectoryProperty = objects.directoryProperty()
 
     @get:InputFile
     val jarFile: RegularFileProperty = objects.fileProperty()
@@ -388,7 +390,7 @@ open class NativeImage @Inject constructor(
         )
     }
 
-    private fun linkerScriptOption(): String {
+    private fun linkerScriptOption(linkerScript: Path): String {
         return "-H:NativeLinkerOption=-Wl,--version-script=$linkerScript"
     }
 
@@ -421,6 +423,7 @@ open class NativeImage @Inject constructor(
     }
 
     override fun action() {
+        val linkerScript = temporaryDir.resolve("Enclave.lds").toPath()
         GenerateLinkerScript.writeToFile(linkerScript)
 
         var nativeImageFile = File(nativeImagePath.get().asFile.absolutePath + "/jre/bin/native-image")
@@ -448,7 +451,7 @@ open class NativeImage @Inject constructor(
             + "-H:NativeLinkerOption=-Wl,--no-whole-archive"
             + librariesOptions()
             + sgxLibrariesOptions()
-            + linkerScriptOption()
+            + linkerScriptOption(linkerScript)
             + reflectConfigurationOption()
             + includeResourcesOption(appResourcesConfig.get().asFile)
             + serializationConfigurationOption()

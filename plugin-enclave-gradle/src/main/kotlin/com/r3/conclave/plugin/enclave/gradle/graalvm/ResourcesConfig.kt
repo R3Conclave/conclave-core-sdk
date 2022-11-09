@@ -1,4 +1,4 @@
-package com.r3.conclave.plugin.enclave.gradle
+package com.r3.conclave.plugin.enclave.gradle.graalvm
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.io.File

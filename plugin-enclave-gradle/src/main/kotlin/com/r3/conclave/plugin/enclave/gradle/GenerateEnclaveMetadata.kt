@@ -34,8 +34,8 @@ open class GenerateEnclaveMetadata @Inject constructor(
         } else {
             commandLine(
                 plugin.signToolPath().absolutePathString(), "dump",
-                "-enclave", inputSignedEnclave.asFile.get(),
-                "-dumpfile", metadataFile
+                "-enclave", inputSignedEnclave.asFile.get().absolutePath,
+                "-dumpfile", metadataFile.absolutePathString()
             )
         }
 

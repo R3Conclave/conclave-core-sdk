@@ -55,12 +55,12 @@ open class AddEnclaveSignature @Inject constructor(
             }
         } else {
             commandLine(plugin.signToolPath().absolutePathString(), "catsig",
-                "-key", inputMrsignerPublicKey.asFile.get(),
-                "-enclave", inputEnclave.asFile.get(),
-                "-out", outputSignedEnclave.asFile.get(),
-                "-config", inputEnclaveConfig.asFile.get(),
-                "-sig", inputMrsignerSignature.asFile.get(),
-                "-unsigned", inputSigningMaterial.asFile.get()
+                "-key", inputMrsignerPublicKey.asFile.get().absolutePath,
+                "-enclave", inputEnclave.asFile.get().absolutePath,
+                "-out", outputSignedEnclave.asFile.get().absolutePath,
+                "-config", inputEnclaveConfig.asFile.get().absolutePath,
+                "-sig", inputMrsignerSignature.asFile.get().absolutePath,
+                "-unsigned", inputSigningMaterial.asFile.get().absolutePath
             )
         }
     }

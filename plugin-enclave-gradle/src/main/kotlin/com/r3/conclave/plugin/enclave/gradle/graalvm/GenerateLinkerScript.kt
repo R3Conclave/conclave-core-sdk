@@ -1,4 +1,4 @@
-package com.r3.conclave.plugin.enclave.gradle
+package com.r3.conclave.plugin.enclave.gradle.graalvm
 
 import java.nio.file.Files
 import java.nio.file.Path

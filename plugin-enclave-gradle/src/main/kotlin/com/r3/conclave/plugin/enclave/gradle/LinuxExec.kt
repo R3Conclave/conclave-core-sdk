@@ -12,6 +12,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
+import kotlin.io.path.absolutePathString
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:Input
@@ -29,7 +30,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // up a Linux environment (currently using Docker) in which the commands will be executed.
         if (!OperatingSystem.current().isLinux) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
-            LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
+            javaClass.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
             try {
                 commandLine(
@@ -37,7 +38,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "build",
                     "--tag", tag.get(),
                     "--tag", tagLatest.get(),
-                    conclaveBuildDir
+                    conclaveBuildDir.absolutePathString()
                 )
             } catch (e: Exception) {
                 throw GradleException(
