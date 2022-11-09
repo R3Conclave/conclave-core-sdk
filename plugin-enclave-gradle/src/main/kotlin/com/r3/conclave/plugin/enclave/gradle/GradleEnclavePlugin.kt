@@ -506,7 +506,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val enclaveBundleJarTask = target.createTask<Jar>("enclaveBundle${type}Jar") { task ->
                 task.group = CONCLAVE_GROUP
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
-                task.archiveAppendix.set("enclave-bundle")
+                task.archiveAppendix.set("-bundle")
                 task.archiveClassifier.set(typeLowerCase)
 
                 val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
