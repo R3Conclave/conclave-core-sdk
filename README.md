@@ -187,8 +187,9 @@ has been ported to the following global functions:
   The Java [`EnclaveMail`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/index.html)
   object is converted to a simpler Python equivalent which is just a class holding the body, envelope and 
   authenticated sender. The topic and sequence number are ignored for now. The authenticated sender is represented 
-  by its encoded binary form in `bytes`. This function is also much simpler than `receiveMail` in that the response can 
-  simply be returned from the function and it will encrypted as a response mail back to the sender key and posted.
+  by its encoded binary form in `bytes`. The return value (if there is one) is treated as a response and is 
+  encrypted as Mail back to the sender. A single `bytes` value is treated as the reponse body, whilst a tuple of 
+  `bytes` is treated as the body and envelope.
 
 These functions need to be defined in a single Python file and are all optional. Not defining them is equivalent to 
 not overriding the equivalent method from `Enclave`. The Python script must exist in the enclave Gradle module under 
