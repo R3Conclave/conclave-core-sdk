@@ -173,8 +173,7 @@ image, and `docker rmi` to delete the image. Then rerun `devenv_shell.sh` to re-
 
 ## Python support (work in progress)
 
-There is a **WIP** Python API which is available on the master branch. You will need to [build the SDK](#building-the-sdk) 
-if you wish to experiment with it. Please [let us know](#community) how you got on.
+There is a **work in progress** Python API which is available on the master build of the SDK (1.4-SNAPSHOT). 
 
 The [enclave Java API](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/index.html) 
 has been ported to the following global functions:
@@ -188,19 +187,23 @@ has been ported to the following global functions:
   The Java [`EnclaveMail`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/index.html)
   object is converted to a simpler Python equivalent which is just a class holding the body, envelope and 
   authenticated sender. The topic and sequence number are ignored for now. The authenticated sender is represented 
-  by its encoded binary form in `bytes`. This function is also much simpler than `receiveMail` in that the response can 
-  simply be returned from the function and it will encrypted as a response mail back to the sender key and posted.
+  by its encoded binary form in `bytes`. The return value (if there is one) is treated as a response and is 
+  encrypted as Mail back to the sender. A single `bytes` value is treated as the reponse body, whilst a tuple of 
+  `bytes` is treated as the body and envelope.
 
 These functions need to be defined in a single Python file and are all optional. Not defining them is equivalent to 
 not overriding the equivalent method from `Enclave`. The Python script must exist in the enclave Gradle module under 
 `src/main/python`. Only one Python script is supported at this time. Otherwise, everything else is the same as a 
 Java or Kotlin project. The Python enclave module needs to be part of a Gradle multi-module project with the 
-host module taking a dependency to the enclave module. You can take the [hello world code](https://github.com/R3Conclave/conclave-tutorials/tree/master/hello-world)
-and modify the `enclave` module accordingly. 
+host module taking a dependency to the enclave module.
 
-The Python script only has access to an `enclave_sign(data)` global function, which allows the given data `bytes` to be 
+The Python script also has access to an `enclave_sign(data)` global function, which allows the given data `bytes` to be 
 signed by the enclave's private signing key. This is equivalent to [`signer()`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/signer.html)
 in the Java API.
+
+The easiest way to use and test the API is to modify the latest [hello world](https://github.com/R3Conclave/conclave-tutorials/tree/master/hello-world)
+and replace the Java enclave with a Python one. If you need any help then please do [reach out](#community) we'll be
+happy to help.If you also have feedback on the API then we'd love to hear it.
 
 ### How it works
 
