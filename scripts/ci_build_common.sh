@@ -120,6 +120,7 @@ docker_opts=(\
 function runDocker() {
     container_image=$1
     docker run \
+        ${3:-} \
         ${docker_opts[@]+"${docker_opts[@]}"} \
         ${container_image} \
         bash -c "$2"

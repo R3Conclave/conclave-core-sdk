@@ -1,33 +1,39 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_METADATA
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.util.zip.ZipInputStream
+import kotlin.io.path.createDirectories
 import kotlin.io.path.div
-
+import kotlin.io.path.exists
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
-    private val manifestUrl: URL,
-    private val jarUrl: URL,
-    private val metadataUrl: URL
+    private val zipFileUrl: URL
 ) : EnclaveHandle {
     private lateinit var processGramineDirect: Process
-    private val enclaveDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
+
+    private val workingDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
 
     override val enclaveInterface: SocketHostEnclaveInterface
 
     init {
-        copyGramineFilesToWorkingDirectory()
+        require(enclaveMode != EnclaveMode.MOCK)
+        unzipIntoWorkingDir()
 
         /** Load gramine enclave metadata. */
-        val maxConcurrentCalls = metadataUrl.openStream().use { inputStream ->
+        val metadataFile = workingDirectory / GRAMINE_ENCLAVE_METADATA
+        val maxConcurrentCalls = metadataFile.toFile().inputStream().use { inputStream ->
             val metadataProperties = Properties().apply { load(inputStream) }
             metadataProperties["maxThreads"]!!.toString().toInt()
         }
@@ -36,42 +42,43 @@ class GramineEnclaveHandle(
         enclaveInterface = SocketHostEnclaveInterface(maxConcurrentCalls)
     }
 
-    companion object {
-        const val GRAMINE_ENCLAVE_JAR_NAME = "enclave-shadow.jar"
-        const val GRAMINE_ENCLAVE_MANIFEST = "java.manifest"
-        const val GRAMINE_ENCLAVE_METADATA_NAME = "enclave-metadata.properties"
-
-        private val logger = loggerFor<GramineEnclaveHandle>()
-    }
-
     override fun initialise() {
-        try {
-            /** Bind a port for the interface to use. */
-            val port = enclaveInterface.bindPort()
+        /** Bind a port for the interface to use. */
+        val port = enclaveInterface.bindPort()
 
-            /**
-             * Start the enclave process, passing the port that the call interface is listening on.
-             * TODO: Implement a *secure* method for passing port to the enclave.
-             */
-            processGramineDirect = ProcessBuilder()
-                .inheritIO()
-                .directory(enclaveDirectory.toFile())
-                .command("gramine-direct", "java", "-cp", GRAMINE_ENCLAVE_JAR_NAME, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString())
-                .start()
+        /**
+         * Start the enclave process, passing the port that the call interface is listening on.
+         * TODO: Implement a *secure* method for passing port to the enclave.
+         */
+        val command = mutableListOf(
+            "gramine-direct",
+            "java", "-cp", GRAMINE_ENCLAVE_JAR, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString()
+        )
 
-            /** Wait for the local call interface start process to complete. */
-            enclaveInterface.start()
-
-            /** Initialise the enclave. */
-            enclaveInterface.initializeEnclave(enclaveClassName)
-        } catch (t: Throwable) {
-            this.destroy()
-            throw t
+        // TODO: Use enclave metadata to pass this.
+        if ((workingDirectory / PYTHON_FILE).exists()) {
+            command += PYTHON_FILE
         }
+
+        processGramineDirect = ProcessBuilder()
+            .inheritIO()
+            .directory(workingDirectory.toFile())
+            .command(command)
+            .start()
+
+        // The user should be calling EnclaveHost.close(), but in case they forget, or for some other reason the
+        // enclave process hasn't terminated, make sure as a last resort to kill it when the host terminates. This is
+        // harmless if the process is already destroyed.
+        Runtime.getRuntime().addShutdownHook(Thread(processGramineDirect::destroyForcibly))
+
+        /** Wait for the local call interface start process to complete. */
+        enclaveInterface.start()
+
+        /** Initialise the enclave. */
+        enclaveInterface.initializeEnclave(enclaveClassName)
     }
 
     override fun destroy() {
-
         /** Close the call interface if it's running. */
         if (enclaveInterface.isRunning) {
             enclaveInterface.close()
@@ -80,36 +87,38 @@ class GramineEnclaveHandle(
         /** Wait for the gramine process to terminate if it's running. If it doesn't, destroy it forcibly. */
         if (::processGramineDirect.isInitialized) {
             processGramineDirect.waitFor(10L, TimeUnit.SECONDS)
-            if (processGramineDirect.isAlive) {
-                processGramineDirect.destroyForcibly()
-            }
+            processGramineDirect.destroyForcibly()
         }
 
         /** Clean up temporary files. */
         try {
-            enclaveDirectory.toFile().deleteRecursively()
+            workingDirectory.toFile().deleteRecursively()
         } catch (e: IOException) {
-            logger.debug("Unable to delete temp directory $enclaveDirectory", e)
+            logger.debug("Unable to delete temp directory $workingDirectory", e)
         }
     }
 
-    private fun copyGramineFilesToWorkingDirectory() {
-        //  Here we copy files from inside the jar into a temporary folder
-
-        manifestUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_MANIFEST, REPLACE_EXISTING)
+    private fun unzipIntoWorkingDir() {
+        ZipInputStream(zipFileUrl.openStream()).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                val path = workingDirectory.resolve(entry.name)
+                if (entry.isDirectory) {
+                    path.createDirectories()
+                } else {
+                    Files.copy(zip, path)
+                }
+            }
         }
-
-        jarUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_JAR_NAME, REPLACE_EXISTING)
-        }
-
-        metadataUrl.openStream().use {
-            Files.copy(it, enclaveDirectory / GRAMINE_ENCLAVE_METADATA_NAME, REPLACE_EXISTING)
-        }
+        require((workingDirectory / GRAMINE_MANIFEST).exists()) { "Missing gramine manifest" }
+        require((workingDirectory / GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
     }
 
     override val mockEnclave: Any get() {
         throw IllegalStateException("The enclave instance can only be accessed in mock mode.")
+    }
+
+    private companion object {
+        private val logger = loggerFor<GramineEnclaveHandle>()
     }
 }

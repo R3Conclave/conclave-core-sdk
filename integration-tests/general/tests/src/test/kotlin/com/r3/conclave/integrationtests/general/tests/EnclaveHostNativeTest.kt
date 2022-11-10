@@ -6,6 +6,7 @@ import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.common.toByteArray
 import com.r3.conclave.integrationtests.general.common.toInt
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.net.SocketException
@@ -86,9 +87,10 @@ class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
     }
 
     @Test
-    fun `create socket fails`() {
+    fun `create socket doesn't crash the host in graalvm`() {
+        graalvmOnlyTest()
         assertThatThrownBy {
-            callEnclave(CreateSocket())
+            callEnclave(CreateSocket(9999))
         }
             .isInstanceOf(EnclaveException::class.java)
             .hasCauseExactlyInstanceOf(SocketException::class.java)

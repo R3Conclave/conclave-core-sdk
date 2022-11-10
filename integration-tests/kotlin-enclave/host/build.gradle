@@ -12,6 +12,7 @@ dependencies {
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
     testRuntimeOnly project(path: ":kotlin-enclave:enclave", configuration: "simulation")
+    testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 }
 
 test {

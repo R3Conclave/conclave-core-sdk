@@ -28,7 +28,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
         // Load enclave properties or optionally get defaults, throw an error if this was unsuccessful
         @JvmStatic
         protected fun loadEnclaveProperties(enclaveClass: Class<*>, allowDefaults: Boolean): Properties {
-            val propertyStream = enclaveClass.getResourceAsStream("enclave.properties")
+            val propertyStream = enclaveClass.getResourceAsStream(PluginUtils.ENCLAVE_PROPERTIES)
             val properties = Properties()
             propertyStream?.use {
                 properties.load(it)

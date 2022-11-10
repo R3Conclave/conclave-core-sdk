@@ -64,6 +64,7 @@ processResources {
     dependsOn(":cpp:compileJvmEnclaveCommon$cmakeBuildType")
     dependsOn(":cpp:compileJvmEdl$cmakeBuildType")
     dependsOn("generateCAPCache")
+    dependsOn(":python-enclave-adapter:shadowJar")
 
     def cppProject = project(":cpp")
     String cppBuildDir = "${cppProject.buildDir}/$cmakeBuildType"
@@ -148,6 +149,12 @@ processResources {
     // GraalVM CAP cache
     into("graalvm-cap-cache") {
         from(generateCAPCache)
+    }
+
+    into("python-support") {
+        from(tasks.findByPath(":python-enclave-adapter:shadowJar")) {
+            rename { "enclave-adapter.jar" }
+        }
     }
 }
 

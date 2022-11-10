@@ -39,7 +39,7 @@ Conclave Mail is [Curve25519](https://en.wikipedia.org/wiki/Curve25519).
 
 The client knows the target's public key either because the enclave puts its public key into the remote attestation, 
 represented by an [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html)
-object, or because the enclave obtained the key from an earlier Mail message. Two public keys are all that both 
+object, or because the client obtained the key from an earlier Mail message. Two public keys are all that both 
 parties need to compute the same AES key without any man-in-the-middle being able to calculate the same value.
 
 The sender may also have a long-term static public key that the target will recognize. Conclave appends an 

@@ -7,12 +7,11 @@ import kotlinx.serialization.builtins.serializer
 import java.net.ServerSocket
 
 @Serializable
-class CreateSocket : EnclaveTestAction<Unit>() {
-
+class CreateSocket(private val port: Int) : EnclaveTestAction<Unit>() {
     override fun run(context: EnclaveContext, isMail: Boolean) {
-        val server = ServerSocket(9999)
-        val socket = server.accept()
+        ServerSocket(port)
     }
 
     override fun resultSerializer(): KSerializer<Unit> = Unit.serializer()
 }
+

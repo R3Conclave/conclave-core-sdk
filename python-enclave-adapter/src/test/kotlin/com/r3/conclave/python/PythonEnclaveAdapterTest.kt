@@ -321,7 +321,7 @@ class PythonEnclaveAdapterTest {
     private fun loadEnclave(script: String) {
         val scriptFile = tempDir / "test-enclave.py"
         scriptFile.writeText(script)
-        mockEnclave.pythonScriptPath = scriptFile
+        mockEnclave.userPythonScript = scriptFile
         enclaveHost.start(null, null, null) { commands ->
             postedMail += commands.filterIsInstance<MailCommand.PostMail>()
         }

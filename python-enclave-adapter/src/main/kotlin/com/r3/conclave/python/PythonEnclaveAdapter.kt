@@ -6,7 +6,6 @@ import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.getOrThrow
 import jep.JepConfig
 import jep.JepException
-import jep.MainInterpreter
 import jep.SharedInterpreter
 import java.nio.file.Files
 import java.nio.file.Path
@@ -20,7 +19,7 @@ class PythonEnclaveAdapter : Enclave() {
 
         init {
             enclaveScripthPath.toFile().deleteOnExit()
-            Companion::class.java.copyResource("enclave.py", enclaveScripthPath)
+            Companion::class.java.copyResource("enclave-api.py", enclaveScripthPath)
             if (!java.lang.Boolean.getBoolean("disableStdRedirect")) {
                 SharedInterpreter.setConfig(JepConfig().apply {
                     redirectStdErr(System.err)
@@ -43,10 +42,10 @@ class PythonEnclaveAdapter : Enclave() {
     private lateinit var pythonInterpreter: SharedInterpreter
 
     // Ability to specify the script path is for unit testing.
-    internal var pythonScriptPath: Path? = null
+    var userPythonScript: Path? = null
 
     override fun onStartup() {
-        val script = pythonScriptPath ?: run {
+        val script = userPythonScript ?: run {
             // TODO When integrated with Gramine the python script path will probably be a known hardcoded path in
             //  Docker image that our Gradle plugin creates.
             throw UnsupportedOperationException("Gramine integration not supported yet")
@@ -148,7 +147,7 @@ except NameError:
         return singletonThread.submit(Callable { block(pythonInterpreter) }).getOrThrow()
     }
 
-    @Suppress("unused")  // Used by enclave.py
+    @Suppress("unused")  // Used by enclave-api.py
     fun pythonSign(data: ByteArray): ByteArray {
         return with(signer()) {
             update(data)

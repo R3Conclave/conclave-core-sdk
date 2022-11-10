@@ -40,13 +40,13 @@ import kotlin.concurrent.withLock
  * Subclass this inside your enclave to provide an entry point. The outside world
  * communicates with the enclave via two mechanisms:
  *
- * 1. Local connections from the host. But remember the host is malicious in the SGX
- *    threat model, so anything received from the host cannot be completely trusted.
- *    Override and implement [receiveFromUntrustedHost] to receive the byte arrays sent via
- *    [com.r3.conclave.host.EnclaveHost.callEnclave].
- * 2. [EnclaveMail], an encrypted, authenticated and padded asynchronous messaging
- *    scheme. Clients that obtain a [EnclaveInstanceInfo] from the host can create
- *    mails and send it to the host for delivery. Override and implement [receiveMail] to receive mail via the host.
+ * 1. Local connections from the host. But remember the host is malicious in the SGX threat model, so anything
+ * received from the host cannot be completely trusted. Override and implement [receiveFromUntrustedHost] to receive
+ * the byte arrays sent via [com.r3.conclave.host.EnclaveHost.callEnclave].
+ *
+ * 2. [EnclaveMail], an encrypted, authenticated, and padded asynchronous messaging scheme. Clients that obtain an
+ * [EnclaveInstanceInfo] from the host can create mails and send it to the host for delivery. Override and implement
+ * [receiveMail] to receive mail via the host.
  *
  * Enclaves can sign things with a key that appears in the [EnclaveInstanceInfo].
  * This can be useful when the enclave is being used to create a proof of correct
@@ -1003,7 +1003,8 @@ abstract class Enclave {
 
     /**
      * Invoked when a mail has been delivered by the host (via [com.r3.conclave.host.EnclaveHost.deliverMail]),
-     * successfully decrypted and authenticated (so the [EnclaveMail.authenticatedSender] property is reliable).
+     * successfully decrypted and authenticated (so the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
+     * property is reliable).
      *
      * Default implementation throws [UnsupportedOperationException] so you should not
      * perform a supercall.

@@ -5,13 +5,22 @@ set -eoux pipefail
 # This script requires a local build of the SDK at build/repo, which can be produced by running
 # ./gradlew publishAllPublicationsToBuildRepository.
 
+CONCLAVE_SDK_VERSION=$(./gradlew -q properties | grep -w "conclave_version" | awk '{print $2}')
+
 echo
 echo Testing Conclave Init
 echo
 
 pushd build
 
-conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar')
+# Find the latest created Conclave Init .jar file. %T@ prints file's last modification time in seconds since Jan. 1, 1970, 00:00 GMT which is used for sorting.
+conclaveInitJar=$(find repo/com/r3/conclave/conclave-init/ -name 'conclave-init-*jar' -not -name 'conclave-init-*javadoc.jar' -not -name 'conclave-init-*-sources.jar' -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
+
+conclaveInitVersion=$("$JAVA_HOME"/bin/java -jar "$conclaveInitJar" -V | awk '{print $3}')
+if [ "$conclaveInitVersion" != "$CONCLAVE_SDK_VERSION" ]; then
+  echo "Conclave SDK version does not match the one in the Conclave Init."
+  exit 1
+fi
 
 echo Create Java project
 
@@ -34,17 +43,17 @@ echo Run Java project unit tests
 sed -i "s/repositories {/repositories {\nmaven { url = 'https:\/\/software.r3.com\/artifactory\/conclave-maven' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/..\/repo' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.gradle
-./gradlew test
+./gradlew test -s
 
 echo Run Java project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
 host_output_file="host_output.log"
-./gradlew :host:bootRun > $host_output_file &
+./gradlew :host:bootRun -s > $host_output_file &
 _PID=$!
 
 sleep 5
-./gradlew :client:run \
+./gradlew :client:run -s \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
 
 # Ensure the logs from the host are working (CON-1193)
@@ -84,16 +93,16 @@ echo Run Kotlin project unit tests
 sed -i "s/repositories {/repositories {\nmaven { url = 'https:\/\/software.r3.com\/artifactory\/conclave-maven' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/..\/repo' }/" build.gradle
 sed -i "s/repositories {/repositories {\nmaven { url = '..\/repo' }/" settings.gradle
-./gradlew test
+./gradlew test -s
 
 echo Run Kotlin project host and client
 
 # NOTE: this command is only run in mock mode, so that the signer can be provided below.
-./gradlew :host:bootRun &
+./gradlew :host:bootRun -s &
  _PID=$!
 
 sleep 5
-./gradlew :client:run \
+./gradlew :client:run -s \
   --args="'S:0000000000000000000000000000000000000000000000000000000000000000 PROD:1 SEC:INSECURE'"
 
 # kill the host

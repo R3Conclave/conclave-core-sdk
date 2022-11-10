@@ -11,7 +11,7 @@ open class GenerateAppResourcesConfig @Inject constructor(objects: ObjectFactory
     @get:InputFile
     val jarFile: RegularFileProperty = objects.fileProperty()
 
-    @OutputFile
+    @get:OutputFile
     val appResourcesConfigFile: RegularFileProperty = objects.fileProperty()
 
     override fun action() {

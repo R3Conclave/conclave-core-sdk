@@ -1,6 +1,6 @@
 //
 //
-// Example usage: ./gradlew --init-script scripts/macos-init.gradle sdkRepo
+// Example usage: ./gradlew --init-script scripts/macos-init.gradle publishAllPublicationsToBuildRepository
 //
 // The build artifacts are in /tmp/conclave-build, not in module's build directory.
 // TODO Incorporate this into build.gradle via a property or parameter and also have it copy the artifacts into their
