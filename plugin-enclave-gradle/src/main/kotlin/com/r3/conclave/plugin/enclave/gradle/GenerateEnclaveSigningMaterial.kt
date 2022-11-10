@@ -7,7 +7,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.os.OperatingSystem
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -39,28 +38,19 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
 
     override fun action() {
         val dockerOutputSigningFile: File?
-        if (!OperatingSystem.current().isLinux) {
-            // The signing material file may not live in a directory accessible by docker on non-linux
-            // systems. Prepare the file so docker can access it if necessary.
-            dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
+        // The signing material file may not live in a directory accessible by docker.
+        // Prepare the file so docker can access it if necessary.
+        dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
 
-            linuxExec.exec(
-                listOf<String> (
-                    plugin.signToolPath().absolutePathString(), "gendata",
-                    "-enclave", inputEnclave.asFile.get().absolutePath,
-                    "-out", dockerOutputSigningFile.absolutePath,
-                    "-config", inputEnclaveConfig.asFile.get().absolutePath
-                )
-            )
-        } else {
-            dockerOutputSigningFile = null
-            commandLine(
+        linuxExec.exec(
+            listOf<String>(
                 plugin.signToolPath().absolutePathString(), "gendata",
-                "-enclave", inputEnclave.asFile.get(),
-                "-out", outputSigningMaterial.asFile.get(),
-                "-config", inputEnclaveConfig.asFile.get()
+                "-enclave", inputEnclave.asFile.get().absolutePath,
+                "-out", dockerOutputSigningFile.absolutePath,
+                "-config", inputEnclaveConfig.asFile.get().absolutePath
             )
-        }
+        )
+
         try {
             postProcess(dockerOutputSigningFile)
         } finally {
