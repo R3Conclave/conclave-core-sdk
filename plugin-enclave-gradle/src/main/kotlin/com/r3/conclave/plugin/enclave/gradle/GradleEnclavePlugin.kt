@@ -9,7 +9,6 @@ import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRA
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
 import com.r3.conclave.utilities.internal.copyResource
-import com.r3.conclave.plugin.enclave.gradle.gramine.BuildUnsignedGramineEnclave
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineEnclaveMetadata
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
