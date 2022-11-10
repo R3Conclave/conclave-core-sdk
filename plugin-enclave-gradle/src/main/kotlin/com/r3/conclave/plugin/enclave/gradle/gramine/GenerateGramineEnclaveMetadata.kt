@@ -11,6 +11,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import java.io.File
 import java.security.interfaces.RSAPublicKey
@@ -39,6 +40,9 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
     val maxThreads: Property<Int> = objects.property(Int::class.java)
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
+    @Optional
+    @get:Input
+    val pythonEnclaveFile: Property<String> = objects.property(String::class.java)
 
     @get:OutputFile
     val outputGramineEnclaveMetadata: RegularFileProperty = objects.fileProperty()
@@ -63,6 +67,10 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
             if (isSimulation) {
                 val mrsigner = computeSigningKeyMeasurement(signingKey.asFile.get())
                 put("signingKeyMeasurement", Base64.getEncoder().encodeToString(mrsigner))
+            }
+
+            if (pythonEnclaveFile.isPresent) {
+                put("pythonEnclaveScript", pythonEnclaveFile.get())
             }
         }
 

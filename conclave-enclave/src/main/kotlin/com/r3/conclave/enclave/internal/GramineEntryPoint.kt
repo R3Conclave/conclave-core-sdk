@@ -21,6 +21,7 @@ object GramineEntryPoint {
     /** Enclave metadata variables */
     private var isSimulation: Boolean? = null
     private var signingKeyMeasurement: ByteArray? = null
+    private var pythonEnclaveScript: Path? = null
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -30,14 +31,10 @@ object GramineEntryPoint {
         /** Load the enclave metadata properties file */
         loadEnclaveMetadata()
 
-        // TODO The enclave should expect the python script to exist at a pre-defined location in the Gramine
-        //  filesystem, and it should be part of the manifest to ensure it's the same script from build time.
-        val pythonScript = args.getOrNull(1)?.let { Paths.get(it) }
-
         /** Register the enclave initialisation call handler. */
         hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface, pythonScript)
+                initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface)
                 return null
             }
         })
@@ -101,23 +98,27 @@ object GramineEntryPoint {
              */
             check(signingKeyMeasurementStr == null)
         }
+
+        /** Set the python enclave path script if present in the metadata file. */
+        pythonEnclaveScript = properties["pythonEnclaveScript"]?.let {
+            Paths.get(it.toString())
+        }
     }
 
     private fun initialiseEnclave(
         enclaveClassName: String,
-        hostInterface: SocketEnclaveHostInterface,
-        pythonScript: Path?
+        hostInterface: SocketEnclaveHostInterface
     ) {
         val enclaveClass = Class.forName(enclaveClassName)
         val enclave = enclaveClass.asSubclass(Enclave::class.java)
                 .getDeclaredConstructor()
                 .apply { isAccessible = true }
                 .newInstance()
-        if (pythonScript != null) {
+        if (pythonEnclaveScript != null) {
             require(enclave.javaClass.name == "com.r3.conclave.python.PythonEnclaveAdapter")
             enclave.javaClass
                     .getAccessibleMethod("setUserPythonScript", Path::class.java)
-                    .execute(enclave, pythonScript)
+                    .execute(enclave, pythonEnclaveScript!!)
         }
         val env = createEnclaveEnvironment(enclaveClass, hostInterface)
         hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)

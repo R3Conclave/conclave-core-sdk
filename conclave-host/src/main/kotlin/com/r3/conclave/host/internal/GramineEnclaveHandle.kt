@@ -3,7 +3,6 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_METADATA
 import java.io.IOException
 import java.net.URL
@@ -54,11 +53,6 @@ class GramineEnclaveHandle(
             "gramine-direct",
             "java", "-cp", GRAMINE_ENCLAVE_JAR, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString()
         )
-
-        // TODO: Use enclave metadata to pass this.
-        if ((workingDirectory / PYTHON_FILE).exists()) {
-            command += PYTHON_FILE
-        }
 
         processGramineDirect = ProcessBuilder()
             .inheritIO()

@@ -4,6 +4,7 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
@@ -191,6 +192,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.buildType.set(type)
             task.maxThreads.set(conclaveExtension.maxThreads.get())
             task.signingKey.set(signingKey)
+            if (pythonSourcePath != null) {
+                task.pythonEnclaveFile.set(PYTHON_FILE)
+            }
             task.outputGramineEnclaveMetadata.set(
                 gramineBuildDirectory.resolve(GenerateGramineEnclaveMetadata.METADATA_FILE_NAME).toFile()
             )
