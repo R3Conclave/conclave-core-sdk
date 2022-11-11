@@ -224,7 +224,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             })
             task.inputEnclaveJar.set(enclaveFatJarTask.archiveFile)
-            task.inputPythonSourcePath.set(pythonSourcePath?.toFile())
+            if (pythonSourcePath != null) {
+                val pythonFiles = target.fileTree(pythonSourcePath).files
+                if (pythonFiles.size == 1) {
+                    task.inputPythonSourcePath.set(pythonFiles.first()!!)
+                } else {
+                    throw GradleException(
+                        "Only a single Python script is supported, but ${pythonFiles.size} were " +
+                                "found in $pythonSourcePath"
+                    )
+                }
+
+            }
             task.inputDirectManifest.set(generateGramineManifestTask.manifestFile)
             task.outputSGXManifest.set(Paths.get(outputSgxManifestPath).toFile())
             task.outputToken.set(Paths.get(outputTokenPath).toFile())
