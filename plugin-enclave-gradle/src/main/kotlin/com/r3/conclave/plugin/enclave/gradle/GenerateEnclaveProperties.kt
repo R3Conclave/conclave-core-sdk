@@ -2,17 +2,34 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.kds.MasterKeyType
+import com.r3.conclave.plugin.enclave.gradle.extension.ConclaveExtension
+import com.r3.conclave.plugin.enclave.gradle.extension.KeySpecExtension
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import java.util.*
 import javax.inject.Inject
 
 open class GenerateEnclaveProperties @Inject constructor(
     objects: ObjectFactory,
-    private val conclave: ConclaveExtension
+    private val conclaveExtension: ConclaveExtension
 ) : ConclaveTask() {
+    @get:Input
+    val productID: Property<Int> = objects.intProperty()
+    @get:Input
+    val revocationLevel: Property<Int> = objects.intProperty()
+    @get:Input
+    val enablePersistentMap: Property<Boolean> = objects.booleanProperty()
+    @get:Input
+    val maxPersistentMapSize: Property<String> = objects.stringProperty()
+    @get:Input
+    val inMemoryFileSystemSize: Property<String> = objects.stringProperty()
+    @get:Input
+    val persistentFileSystemSize: Property<String> = objects.stringProperty()
+
     @get:OutputFile
     val enclavePropertiesFile: RegularFileProperty = objects.fileProperty()
 
@@ -24,23 +41,17 @@ open class GenerateEnclaveProperties @Inject constructor(
         )
     }
 
-    private fun kdsEnabled(): Boolean {
-        // If any of the kds parameters are specified, assume that the user wants to use the KDS
-        // TODO Find a better way of detecting "kds {...}" in the users build.gradle
-        return conclave.kds.isPresent
-    }
-
     private fun applyKDSConfig(properties: SortedMap<String, String>) {
         // If any of the kds parameters are specified, assume that the user wants to use the KDS
         // TODO Find a better way of detecting "kds {...}" in the users build.gradle
-        val kdsEnabled = kdsEnabled()
+        val kdsEnabled = conclaveExtension.kds.isPresent
         properties["kds.configurationPresent"] = kdsEnabled.toString()
         if (!kdsEnabled) {
             return
         }
 
-        if (conclave.kds.kdsEnclaveConstraint.isPresent) {
-            val kdsEnclaveConstraintString = conclave.kds.kdsEnclaveConstraint.get().toString()
+        if (conclaveExtension.kds.kdsEnclaveConstraint.isPresent) {
+            val kdsEnclaveConstraintString = conclaveExtension.kds.kdsEnclaveConstraint.get().toString()
             try {
                 EnclaveConstraint.parse(kdsEnclaveConstraintString)
             } catch (e: Exception) {
@@ -53,12 +64,12 @@ open class GenerateEnclaveProperties @Inject constructor(
 
         val persistenceKeySpecPropertyName = "kds.persistenceKeySpec.configurationPresent"
 
-        if (conclave.kds.keySpec.isPresent) {
+        if (conclaveExtension.kds.keySpec.isPresent) {
             logger.warn("kds.keySpec has been replaced by kds.persistenceKeySpec and it is now deprecated")
-            applyKDSConfigPersistenceKeySpec(properties, conclave.kds.keySpec)
+            applyKDSConfigPersistenceKeySpec(properties, conclaveExtension.kds.keySpec)
             properties[persistenceKeySpecPropertyName] = "true"
-        } else if (conclave.kds.persistenceKeySpec.isPresent) {
-            applyKDSConfigPersistenceKeySpec(properties, conclave.kds.persistenceKeySpec)
+        } else if (conclaveExtension.kds.persistenceKeySpec.isPresent) {
+            applyKDSConfigPersistenceKeySpec(properties, conclaveExtension.kds.persistenceKeySpec)
             properties[persistenceKeySpecPropertyName] = "true"
         } else {
             properties[persistenceKeySpecPropertyName] = "false"
@@ -107,17 +118,18 @@ open class GenerateEnclaveProperties @Inject constructor(
     }
 
     override fun action() {
+        println("Inputs:")
+        inputs.properties.forEach { println(it) }
+        println()
+
         val properties = TreeMap<String, String>()
 
-        properties["productID"] = conclave.productID.get().toString()
-        properties["revocationLevel"] = conclave.revocationLevel.get().toString()
-        properties["enablePersistentMap"] = conclave.enablePersistentMap.get().toString()
-        properties["maxPersistentMapSize"] =
-            GenerateEnclaveConfig.getSizeBytes(conclave.maxPersistentMapSize.get()).toString()
-        properties["inMemoryFileSystemSize"] =
-            GenerateEnclaveConfig.getSizeBytes(conclave.inMemoryFileSystemSize.get()).toString()
-        properties["persistentFileSystemSize"] =
-            GenerateEnclaveConfig.getSizeBytes(conclave.persistentFileSystemSize.get()).toString()
+        properties["productID"] = productID.get().toString()
+        properties["revocationLevel"] = revocationLevel.get().toString()
+        properties["enablePersistentMap"] = enablePersistentMap.get().toString()
+        properties["maxPersistentMapSize"] = maxPersistentMapSize.get().toSizeBytes().toString()
+        properties["inMemoryFileSystemSize"] = inMemoryFileSystemSize.get().toSizeBytes().toString()
+        properties["persistentFileSystemSize"] = persistentFileSystemSize.get().toSizeBytes().toString()
 
         applyKDSConfig(properties)
 

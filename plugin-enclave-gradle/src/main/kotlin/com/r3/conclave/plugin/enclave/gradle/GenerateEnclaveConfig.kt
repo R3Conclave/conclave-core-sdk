@@ -11,29 +11,18 @@ import javax.inject.Inject
 
 open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, private val buildType: BuildType) : ConclaveTask() {
     @get:Input
-    val productID: Property<Int> = objects.property(Int::class.java)
+    val productID: Property<Int> = objects.intProperty()
     @get:Input
-    val revocationLevel: Property<Int> = objects.property(Int::class.java)
+    val revocationLevel: Property<Int> = objects.intProperty()
     @get:Input
-    val maxStackSize: Property<String> = objects.property(String::class.java)
+    val maxStackSize: Property<String> = objects.stringProperty()
     @get:Input
-    val maxHeapSize: Property<String> = objects.property(String::class.java)
+    val maxHeapSize: Property<String> = objects.stringProperty()
     @get:Input
-    val tcsNum: Property<Int> = objects.property(Int::class.java)
+    val tcsNum: Property<Int> = objects.intProperty()
 
     @get:OutputFile
     val outputConfigFile: RegularFileProperty = objects.fileProperty()
-
-    companion object {
-        fun getSizeBytes(value: String) : Long {
-            return when {
-                value.endsWith("G", ignoreCase = true) -> value.dropLast(1).toLong() shl 30
-                value.endsWith("M", ignoreCase = true) -> value.dropLast(1).toLong() shl 20
-                value.endsWith("K", ignoreCase = true) -> value.dropLast(1).toLong() shl 10
-                else -> value.toLong()
-            }
-        }
-    }
 
     override fun action() {
         val productID = productID.get()
@@ -46,8 +35,8 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
             throw InvalidUserDataException("Revocation level is invalid")
         }
 
-        val maxStackSizeBytes = getSizeBytes(maxStackSize.get())
-        val maxHeapSizeBytes = getSizeBytes(maxHeapSize.get())
+        val maxStackSizeBytes = maxStackSize.get().toSizeBytes()
+        val maxHeapSizeBytes = maxHeapSize.get().toSizeBytes()
 
         val disableDebug = if (buildType == BuildType.Release) 1 else 0
 

@@ -4,10 +4,8 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnly
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
-class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraalEnclave", modeDependent = true) {
+class BuildUnsignedGraalEnclaveTest : AbstractModeTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -16,24 +14,24 @@ class BuildUnsignedGraalEnclaveTest : AbstractPluginTaskTest("buildUnsignedGraal
         }
     }
 
+    override val baseTaskName: String get() = "buildUnsignedGraalEnclave"
+    override val outputFileName: String get() = "enclave.so"
+    /**
+     * Native image doesn't produce stable binaries.
+     */
+    override val isReproducible: Boolean get() = false
+
     @Test
     fun `incremental builds`() {
-        // First fresh run and then make sure the second run is up-to-date.
-        assertTaskRunIsIncremental()
-
-        replaceAndRewriteBuildFile(
-            projectDir!!,
-            """maxHeapSize = "268435456"""",
-            """maxHeapSize = "268435457""""
-        )
-        // Then check that the build runs again with the new build.gradle changes and then is up-to-date again.
-        assertTaskRunIsIncremental()
+        assertTaskIsIncremental {
+            updateBuildFile("productID = 11", "productID = 12")
+        }
 
         // Finally, update the native image config files and make sure they trigger a new build before reaching
         // up-to-date status.
         for (fileName in listOf("reflectionconfig.json", "serializationconfig.json")) {
             val file = Path.of("$projectDir/$fileName")
-            file.writeText(file.readText().replace("Class0", "AnotherClass0"))
+            file.searchAndReplace("Class0", "AnotherClass0")
             assertTaskRunIsIncremental()
         }
     }

@@ -14,7 +14,7 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
     @get:Input
     val inputClassPath: Property<FileCollection> = objects.property(FileCollection::class.java)
 
-    private val _outputEnclaveClassName = objects.property(String::class.java)
+    private val _outputEnclaveClassName = objects.stringProperty()
     @get:Internal
     val outputEnclaveClassName: Provider<String> get() = _outputEnclaveClassName
 

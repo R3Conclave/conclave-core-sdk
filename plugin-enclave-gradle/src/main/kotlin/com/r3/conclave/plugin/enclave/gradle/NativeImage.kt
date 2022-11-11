@@ -88,22 +88,22 @@ open class NativeImage @Inject constructor(
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     @get:Input
-    val maxStackSize: Property<String> = objects.property(String::class.java)
+    val maxStackSize: Property<String> = objects.stringProperty()
 
     @get:Input
-    val maxHeapSize: Property<String> = objects.property(String::class.java)
+    val maxHeapSize: Property<String> = objects.stringProperty()
 
     @get:Input
-    val supportLanguages: Property<String> = objects.property(String::class.java)
+    val supportLanguages: Property<String> = objects.stringProperty()
 
     @get:Input
-    val deadlockTimeout: Property<Int> = objects.property(Int::class.java)
+    val deadlockTimeout: Property<Int> = objects.intProperty()
 
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
     private fun defaultOptions(): List<String> {
-        val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
+        val maxHeapSizeBytes = maxHeapSize.get().toSizeBytes()
         return listOf(
             "--no-fallback",
             "--no-server",
@@ -156,7 +156,7 @@ open class NativeImage @Inject constructor(
         // yellow zone size = 32K
         // red zone size = 8K
         val zoneSize = (32 * 1024) + (8 * 1024)
-        val stackSize = GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
+        val stackSize = maxStackSize.get().toSizeBytes()
         if (stackSize <= zoneSize) {
             // Invalid stack size
             throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack " +
@@ -380,9 +380,9 @@ open class NativeImage @Inject constructor(
                 "-H:NativeLinkerOption=-Wl,-pie,-eenclave_entry",
                 "-H:NativeLinkerOption=-Wl,--export-dynamic",
                 "-H:NativeLinkerOption=-Wl,--defsym,__ImageBase=0,--defsym,__HeapSize=" +
-                            GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get()) / 4096,
+                            maxHeapSize.get().toSizeBytes() / 4096,
                 "-H:NativeLinkerOption=-Wl,--defsym,__StackSize=" +
-                            GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()) / 4096,
+                            maxStackSize.get().toSizeBytes() / 4096,
                 "-H:NativeLinkerOption=-Wl,--defsym,__DeadlockTimeout=" + deadlockTimeout.get(),
                 "-H:NativeLinkerOption=-Wl,--gc-sections"
         )

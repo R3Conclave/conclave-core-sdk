@@ -15,13 +15,13 @@ import javax.inject.Inject
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:Input
-    val baseDirectory: Property<String> = objects.property(String::class.java)
+    val baseDirectory: Property<String> = objects.stringProperty()
 
     @get:Input
-    val tag: Property<String> = objects.property(String::class.java)
+    val tag: Property<String> = objects.stringProperty()
 
     @get:Input
-    val tagLatest: Property<String> = objects.property(String::class.java)
+    val tagLatest: Property<String> = objects.stringProperty()
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context

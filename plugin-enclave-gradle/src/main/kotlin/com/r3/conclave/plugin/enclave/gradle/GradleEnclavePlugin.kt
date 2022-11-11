@@ -7,6 +7,7 @@ import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
+import com.r3.conclave.plugin.enclave.gradle.extension.ConclaveExtension
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
@@ -136,8 +137,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val generateEnclavePropertiesTask = target.createTask<GenerateEnclaveProperties>(
             "generateEnclaveProperties",
             conclaveExtension
-        ) {
-            it.enclavePropertiesFile.set(baseDirectory.resolve(PluginUtils.ENCLAVE_PROPERTIES).toFile())
+        ) { task ->
+            task.productID.set(conclaveExtension.productID)
+            task.revocationLevel.set(conclaveExtension.revocationLevel)
+            task.enablePersistentMap.set(conclaveExtension.enablePersistentMap)
+            task.maxPersistentMapSize.set(conclaveExtension.maxPersistentMapSize)
+            task.inMemoryFileSystemSize.set(conclaveExtension.inMemoryFileSystemSize)
+            task.persistentFileSystemSize.set(conclaveExtension.persistentFileSystemSize)
+            task.enclavePropertiesFile.set(baseDirectory.resolve(PluginUtils.ENCLAVE_PROPERTIES).toFile())
         }
 
         val enclaveFatJarTask = if (pythonSourcePath == null) {
@@ -334,7 +341,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             }
 
-            val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
+            val enclaveModeDir = baseDirectory.resolve(typeLowerCase)
 
             // Simulation and debug default to using a dummy key. Release defaults to external key
             val keyType = when (type) {
@@ -360,8 +367,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // relative) path name.
             enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
 
-            val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
-
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>(
                 "buildUnsignedGraalEnclave$type",
                 this,
@@ -386,7 +391,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                 task.supportLanguages.set(conclaveExtension.supportLanguages)
                 task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
-                task.outputEnclave.set(unsignedEnclaveFile)
+                task.outputEnclave.set(enclaveModeDir.resolve("enclave.so").toFile())
             }
 
             val buildUnsignedEnclaveTask =
@@ -402,7 +407,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                     task.maxStackSize.set(conclaveExtension.maxStackSize)
                     task.tcsNum.set(conclaveExtension.maxThreads)
-                    task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
+                    task.outputConfigFile.set(enclaveModeDir.resolve("enclave.xml").toFile())
                 }
 
             val signEnclaveWithKeyTask = target.createTask<SignEnclave>(
@@ -419,7 +424,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                     task.inputKey.set(signingKey)
-                    task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
+                    task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
                 }
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(
@@ -472,7 +477,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         }
                         it
                     })
-                    task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
+                    task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
                 }
 
             val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>(

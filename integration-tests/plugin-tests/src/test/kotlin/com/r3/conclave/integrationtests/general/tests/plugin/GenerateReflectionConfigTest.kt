@@ -1,14 +1,13 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
-import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.nio.file.Path
-import kotlin.io.path.deleteExisting
 
-class GenerateReflectionConfigTest : AbstractPluginTaskTest("generateReflectionConfig", modeDependent = false) {
+class GenerateReflectionConfigTest : AbstractConclaveTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -17,19 +16,20 @@ class GenerateReflectionConfigTest : AbstractPluginTaskTest("generateReflectionC
         }
     }
 
-    private val reflectConfigPath get() = "$projectDir/build/conclave/reflectconfig"
+    override val taskName: String get() = "generateReflectionConfig"
+    override val outputFileName: String get() = "reflectconfig"
 
     @Test
-    fun `incremental build`() {
-        assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(Path.of(reflectConfigPath)).content().contains("com.test.enclave.TestEnclave")
-        assertThat(runTask().outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+    fun `task re-runs on enclave class name change`() {
+        assertTaskIsIncremental {
+            assertThat(reflectionConfig().map { it["name"].textValue() }).contains("com.test.enclave.TestEnclave")
+            val enclaveCode = projectDir.resolve("src/main/kotlin/com/test/enclave/EnclaveTest.kt")
+            enclaveCode.searchAndReplace("TestEnclave", "TestEnclave2")
+        }
+        assertThat(reflectionConfig().map { it["name"].textValue() })
+            .contains("com.test.enclave.TestEnclave2")
+            .doesNotContain("com.test.enclave.TestEnclave")
     }
 
-    @Test
-    fun `deleting output forces task to re-run`() {
-        assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
-        Path.of(reflectConfigPath).deleteExisting()
-        assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
-    }
+    private fun reflectionConfig(): JsonNode = ObjectMapper().readTree(outputFile.toFile())
 }
