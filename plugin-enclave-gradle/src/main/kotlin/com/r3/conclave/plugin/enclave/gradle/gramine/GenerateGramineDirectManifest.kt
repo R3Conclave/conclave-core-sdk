@@ -1,17 +1,23 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class GenerateGramineDirectManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
-        const val MANIFEST_TEMPLATE = "java.manifest.template"
+        const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
     }
+
+    @get:Input
+    val inputSGXDebugFlag: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:OutputFile
     val manifestFile: RegularFileProperty = objects.fileProperty()
@@ -43,6 +49,7 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
                 "-Djava_home=${System.getProperty("java.home")}",
                 "-Darch_libdir=/lib/$architecture",
                 "-Dld_preload=$ldPreload",
+                "-Dsgx_debug=${inputSGXDebugFlag.get().toString().lowercase()}",
                 "-Dpython_packages_path=$pythonPackagesPath",
                 manifestTemplateFile.absolutePathString(),
                 manifestFile.asFile.get().absolutePath

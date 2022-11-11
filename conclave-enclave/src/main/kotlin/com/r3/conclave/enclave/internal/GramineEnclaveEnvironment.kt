@@ -6,13 +6,14 @@ import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
 
 /**
- * This class is the enclave environment intended for use with gramine-direct.
+ * This class is the enclave environment intended for use with gramine-direct or gramine-sgx.
  * TODO: Currently the behaviour here is lifted directly from [MockEnclaveEnvironment].
  *       This will eventually need to behave the same way as native simulation mode does.
  */
-class GramineDirectEnclaveEnvironment(
+class GramineEnclaveEnvironment(
         enclaveClass: Class<*>,
-        override val hostInterface: SocketEnclaveHostInterface
+        override val hostInterface: SocketEnclaveHostInterface,
+        override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -21,9 +22,6 @@ class GramineDirectEnclaveEnvironment(
             }.copyOf(SgxCpuSvn.size)
         }
     }
-
-    // TODO: (CON-1194) Handle enclave mode properly
-    override val enclaveMode = EnclaveMode.SIMULATION
 
     private val tcbLevel = 1
 

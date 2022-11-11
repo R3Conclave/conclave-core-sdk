@@ -2,17 +2,17 @@ loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
 loader.log_level = "error"
 
-# TODO: remove this when in production
+# TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
 
-# TODO: add DCAP attestation
-sgx.remote_attestation = false
-# sgx.ra_client_spid = ""
+# TODO: Enable DCAP attestation
+sgx.remote_attestation = "none"
 
 # This sets an environment variables used by the dynamic loader
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
 loader.env.LD_PRELOAD = "{{ ld_preload }}"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
+loader.env.SGX_DEBUG = "{{ sgx_debug }}"
 
 fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
@@ -24,12 +24,19 @@ fs.mounts = [
   { path = "/tmp",                       type = "tmpfs" },
 ]
 
+sgx.debug = {{ sgx_debug }}
+
 sgx.enclave_size = "4G"
 
 sgx.thread_num = 64
 
 sgx.trusted_files = [
-  "file:{{ java_home }}/bin/java",
-  "file:{{ gramine.runtimedir() }}/"
+    "file:{{ gramine.libos }}",
+    "file:{{ gramine.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
+    "file:{{ java_home }}/",
+    "file:{{ ld_preload }}",
+    "file:enclave.jar"
 ]
 

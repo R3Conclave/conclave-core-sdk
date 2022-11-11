@@ -5,4 +5,14 @@ plugins {
 conclave {
     productID = 100
     revocationLevel = 2
+
+    debug {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
+
+    release {
+        signingType = privateKey
+        signingKey = file("../signing/sample_private_key.pem")
+    }
 }

@@ -3,11 +3,15 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
+import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -41,20 +45,21 @@ object GramineEntryPoint {
     private fun initialiseEnclave(
         enclaveClassName: String,
         hostInterface: SocketEnclaveHostInterface,
-        pythonScript: Path?
+        pythonScript: Path?,
+        enclaveMode: EnclaveMode
     ) {
         val enclaveClass = Class.forName(enclaveClassName)
         val enclave = enclaveClass.asSubclass(Enclave::class.java)
-                .getDeclaredConstructor()
-                .apply { isAccessible = true }
-                .newInstance()
+            .getDeclaredConstructor()
+            .apply { isAccessible = true }
+            .newInstance()
         if (pythonScript != null) {
             require(enclave.javaClass.name == "com.r3.conclave.python.PythonEnclaveAdapter")
             enclave.javaClass
                 .getAccessibleMethod("setUserPythonScript", Path::class.java)
                 .execute(enclave, pythonScript)
         }
-        val env = GramineDirectEnclaveEnvironment(enclaveClass, hostInterface)
+        val env = GramineEnclaveEnvironment(enclaveClass, hostInterface, enclaveMode)
         env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
         Enclave::class.java
             .getAccessibleMethod("initialise", EnclaveEnvironment::class.java)
@@ -73,6 +78,24 @@ object GramineEntryPoint {
         }
     }
 
+    private fun determineEnclaveMode(): EnclaveMode {
+        return if (File(GRAMINE_MANIFEST).exists()) {
+            EnclaveMode.SIMULATION;
+        } else {
+            val sgxManifest = Paths.get(GRAMINE_SGX_MANIFEST)
+            require(Files.exists(sgxManifest)) { "Could not determine the enclave mode from the manifest files" }
+
+            val debugString = System.getenv("SGX_DEBUG")
+            checkNotNull(debugString) { "Debug mode not found in the manifest." }
+
+            if (debugString.toBoolean()) {
+                EnclaveMode.DEBUG
+            } else {
+                EnclaveMode.RELEASE
+            }
+        }
+    }
+
     @JvmStatic
     fun main(args: Array<String>) {
         val port = getPortFromArgs(args)
@@ -84,7 +107,12 @@ object GramineEntryPoint {
         /** Register the enclave initialisation call handler. */
         hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
             override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-                initialiseEnclave(parameterBuffer.getRemainingString(), hostInterface, pythonScript)
+                initialiseEnclave(
+                    parameterBuffer.getRemainingString(),
+                    hostInterface,
+                    pythonScript,
+                    determineEnclaveMode()
+                )
                 return null
             }
         })
