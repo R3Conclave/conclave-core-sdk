@@ -157,7 +157,7 @@ class GramineEnclaveHandle(
     private fun getEnclaveThreadCountFromManifest(): Int {
         var inCorrectSection = false
 
-        (workingDirectory / GRAMINE_MANIFEST).reader().use {
+        (enclaveManifestPath).reader().use {
             for (line in it.readLines()) {
                 val tokens = line.trim().split("=").map { token -> token.trim() }
 
