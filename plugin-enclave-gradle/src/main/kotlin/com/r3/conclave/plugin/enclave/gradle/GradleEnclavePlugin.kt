@@ -208,7 +208,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     ): GenerateGramineManifest {
         return target.createTask("generateGramineManifest$type") { task ->
             task.maxThreads.set(conclaveExtension.maxThreads)
-            task.manifestFile.set((baseDirectory / "gramine" / PluginUtils.GRAMINE_MANIFEST).toFile())
+            task.manifestFile.set((gramineBuildDirectory / PluginUtils.GRAMINE_MANIFEST).toFile())
         }
     }
 
