@@ -53,17 +53,19 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
                 enclaveDestinationJarFile,
                 overwrite = true
             )
-        ) { "Enclave jar file not copied correctly while building the Gramine SGX manifest" }
+        ) { "Enclave jar file not copied correctly while builgetEnclaveThreadCountFromManifestding the Gramine SGX manifest" }
         val enclaveDestinationPythonFileName = "${outputSGXManifestPath}/$PYTHON_FILE"
         val enclaveDestinationPythonFile = File(enclaveDestinationPythonFileName)
 
         if (inputPythonSourcePath.isPresent) {
-            inputPythonSourcePath.get().asFile.copyTo(
-                enclaveDestinationPythonFile,
-                overwrite = true
-            )
+            checkNotNull(
+                inputPythonSourcePath.get().asFile.copyTo(
+                    enclaveDestinationPythonFile,
+                    overwrite = true
+                )
+            ) { "Python script not copied correctly while building the Gramine SGX manifest" }
         } else {
-            File.createTempFile("dummy", "dummy") .copyTo(
+            File.createTempFile("dummy", "dummy").copyTo(
                 enclaveDestinationPythonFile,
                 overwrite = true
             )

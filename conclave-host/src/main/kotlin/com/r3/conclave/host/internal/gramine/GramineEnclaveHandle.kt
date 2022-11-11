@@ -157,12 +157,26 @@ class GramineEnclaveHandle(
      * TODO: Implement a proper method for providing build-time enclave meta-data to the host before enclave startup
      */
     private fun getEnclaveThreadCountFromManifest(): Int {
-        val result = Toml.parse(enclaveManifestPath)
-        val sgxTableSection = result.getTable("sgx")
-        checkNotNull(sgxTableSection) { "Could not find the sgx section in the manifest." }
-        val numThreads = sgxTableSection.getLong("thread_num")
-        checkNotNull(numThreads) { "sgx.thread_num missing from manifest, unable to proceed." }
-        return numThreads.toInt()
+        var inCorrectSection = false
+
+        (workingDirectory / GRAMINE_MANIFEST).reader().use {
+            for (line in it.readLines()) {
+                val tokens = line.trim().split("=").map { token -> token.trim() }
+
+                if (tokens.size == 1) {
+                    inCorrectSection = (tokens[0] == "[sgx]")
+                    continue
+                }
+
+                if (inCorrectSection && tokens.size >= 2) {
+                    if (tokens[0] == "thread_num") {
+                        return tokens[1].toInt()
+                    }
+                }
+            }
+
+            throw IllegalStateException("sgx.thread_num missing from manifest, unable to proceed.")
+        }
     }
 
     override val mockEnclave: Any

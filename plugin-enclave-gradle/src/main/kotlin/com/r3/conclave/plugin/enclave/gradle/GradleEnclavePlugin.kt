@@ -234,7 +234,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                                 "found in $pythonSourcePath"
                     )
                 }
-
             }
             task.inputDirectManifest.set(generateGramineManifestTask.manifestFile)
             task.outputSGXManifest.set(Paths.get(outputSgxManifestPath).toFile())
