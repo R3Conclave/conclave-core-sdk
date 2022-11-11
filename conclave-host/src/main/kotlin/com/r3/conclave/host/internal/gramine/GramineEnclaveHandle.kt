@@ -10,8 +10,6 @@ import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
 import com.r3.conclave.host.internal.loggerFor
-import org.tomlj.Toml
-import java.io.File
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
