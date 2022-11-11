@@ -11,6 +11,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import kotlin.io.path.inputStream
 import kotlin.system.exitProcess
 
 object GramineEntryPoint {
@@ -78,8 +79,8 @@ object GramineEntryPoint {
      * For more information, see [com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineEnclaveMetadata].
      */
     private fun loadEnclaveMetadata() {
-        val properties = Paths.get(ENCLAVE_METADATA_FILE).toFile().reader().use { reader ->
-            Properties().apply { load(reader) }
+        val properties = Paths.get(ENCLAVE_METADATA_FILE).inputStream().use { inputStream ->
+            Properties().apply { load(inputStream) }
         }
 
         val isSimulationString = checkNotNull(properties["isSimulation"]).toString()
