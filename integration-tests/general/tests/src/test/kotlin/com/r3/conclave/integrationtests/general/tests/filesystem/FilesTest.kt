@@ -224,7 +224,7 @@ class FilesTest : FileSystemEnclaveTest() {
         val corruptedEnclaveResource =
             this::class.java.getResource("/com.r3.conclave.integrationtests.general.tests/corrupted_enclave_disk.gz")
         GZIPInputStream(Path.of(corruptedEnclaveResource!!.toURI()).inputStream()).use { input ->
-            val enclaveFileSystemFile = getFileSystemFilePath(FILESYSTEM_ENCLAVE_CLASS_NAME)
+            val enclaveFileSystemFile = getFileSystemFilePath(PERSISTING_ENCLAVE)
             Files.copy(input, enclaveFileSystemFile!!)
         }
     }

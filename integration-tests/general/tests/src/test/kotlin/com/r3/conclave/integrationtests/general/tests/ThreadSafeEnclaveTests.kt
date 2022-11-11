@@ -16,7 +16,7 @@ import java.util.stream.IntStream
 import kotlin.concurrent.withLock
 import kotlin.streams.toList
 
-class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave") {
+class ThreadSafeEnclaveTests : AbstractEnclaveActionTest(THREAD_SAFE_ENCLAVE) {
     @Test
     fun `concurrent calls into the enclave`() {
         val n = 1000

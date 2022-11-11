@@ -9,9 +9,11 @@ import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveAction
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junitpioneer.jupiter.cartesian.CartesianTest
+import org.junitpioneer.jupiter.cartesian.CartesianTest.Values
 import java.net.SocketException
 
-class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
+class EnclaveHostTest : AbstractEnclaveActionTest() {
     @Test
     fun `simple stateful enclave`() {
         val lookup = mapOf(
@@ -70,6 +72,18 @@ class EnclaveHostNativeTest : AbstractEnclaveActionTest() {
             response.toByteArray()
         }
         assertThat(called).isEqualTo(50)
+    }
+
+    @CartesianTest
+    fun `close() in callback not allowed`(@Values(booleans = [false, true]) threadSafeEnclave: Boolean) {
+        val echo = EchoWithCallback(byteArrayOf())
+        val enclaveHost = enclaveHost(if (threadSafeEnclave) THREAD_SAFE_ENCLAVE else NON_THREAD_SAFE_ENCLAVE)
+        assertThatIllegalStateException().isThrownBy {
+            callEnclave(enclaveHost, echo) {
+                enclaveHost.close()
+                null
+            }
+        }.withMessage("Enclave cannot be shutdown in a callback")
     }
 
     @Test

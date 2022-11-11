@@ -7,7 +7,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class DatabaseEnclaveTest : FileSystemEnclaveTest("com.r3.conclave.integrationtests.filesystem.db.enclave.DatabaseEnclave") {
+class DatabaseEnclaveTest : FileSystemEnclaveTest(DATABASE_ENCLAVE) {
     @ParameterizedTest
     @CsvSource(
         "false, false",
