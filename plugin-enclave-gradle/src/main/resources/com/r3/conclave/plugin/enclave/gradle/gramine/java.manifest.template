@@ -26,7 +26,7 @@ fs.mounts = [
 
 sgx.enclave_size = "4G"
 
-sgx.thread_num = {{ maxThreads }}
+sgx.thread_num = {{ max_threads }}
 
 sgx.trusted_files = [
   "file:{{ java_home }}/bin/java",

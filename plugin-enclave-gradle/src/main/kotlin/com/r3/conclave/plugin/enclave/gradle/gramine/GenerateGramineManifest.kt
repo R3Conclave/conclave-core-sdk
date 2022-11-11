@@ -55,7 +55,7 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
                 "-Darch_libdir=/lib/$architecture",
                 "-Dld_preload=$ldPreload",
                 "-Dpython_packages_path=$pythonPackagesPath",
-                "-DmaxThreads=$gramineMaxThreads",
+                "-Dmax_threads=$gramineMaxThreads",
                 manifestTemplateFile.absolutePathString(),
                 manifestFile.asFile.get().absolutePath
             )
