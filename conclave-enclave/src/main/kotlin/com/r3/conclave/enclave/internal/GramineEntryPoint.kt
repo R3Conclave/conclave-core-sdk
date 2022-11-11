@@ -6,13 +6,13 @@ import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
-import com.r3.conclave.utilities.internal.toHexString
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.nio.file.Path
 import kotlin.system.exitProcess
 import java.lang.Boolean.parseBoolean
+import java.nio.file.Paths
 import java.util.*
 
 object GramineEntryPoint {
@@ -83,7 +83,7 @@ object GramineEntryPoint {
             require(enclave.javaClass.name == "com.r3.conclave.python.PythonEnclaveAdapter")
             enclave.javaClass
                     .getAccessibleMethod("setUserPythonScript", Path::class.java)
-                    .execute(enclave, PYTHON_FILE)
+                    .execute(enclave, Paths.get(PYTHON_FILE))
         }
         val env = createEnclaveEnvironment(enclaveClass, hostInterface)
         hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
