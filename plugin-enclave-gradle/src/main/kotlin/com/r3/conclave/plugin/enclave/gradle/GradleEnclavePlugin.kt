@@ -4,13 +4,11 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
-import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
 import com.r3.conclave.utilities.internal.copyResource
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineEnclaveMetadata
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -182,31 +180,16 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createEnclaveArtifacts(target, conclaveExtension, enclaveFatJarTask)
     }
 
-    private fun createGenerateGramineEnclaveMetadataTask(
+    private fun createGenerateGramineManifestTask(
             target: Project,
             type: BuildType,
             conclaveExtension: ConclaveExtension,
             signingKey: Provider<RegularFile?>
-    ): GenerateGramineEnclaveMetadata {
-        return target.createTask("generateGramineEnclaveMetadata$type") { task ->
-            task.buildType.set(type)
-            task.maxThreads.set(conclaveExtension.maxThreads.get())
-            task.signingKey.set(signingKey)
-            if (pythonSourcePath != null) {
-                task.pythonEnclaveFile.set(PYTHON_FILE)
-            }
-            task.outputGramineEnclaveMetadata.set(
-                gramineBuildDirectory.resolve(GenerateGramineEnclaveMetadata.METADATA_FILE_NAME).toFile()
-            )
-        }
-    }
-
-    private fun createGenerateGramineManifestTask(
-            target: Project,
-            type: BuildType,
-            conclaveExtension: ConclaveExtension
     ): GenerateGramineManifest {
         return target.createTask("generateGramineManifest$type") { task ->
+            task.buildType.set(type)
+            task.pythonEnclave.set(pythonSourcePath != null)
+            task.signingKey.set(signingKey)
             task.maxThreads.set(conclaveExtension.maxThreads)
             task.manifestFile.set((gramineBuildDirectory / PluginUtils.GRAMINE_MANIFEST).toFile())
         }
@@ -216,8 +199,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target: Project,
         enclaveFatJar: Jar,
         type: BuildType,
-        generateGramineManifestTask: GenerateGramineManifest,
-        generateGramineEnclaveMetadataTask: GenerateGramineEnclaveMetadata
+        generateGramineManifestTask: GenerateGramineManifest
     ): TaskProvider<Zip> {
         return target.tasks.register("gramine${type}BundleZip", Zip::class.java) { task ->
             // No need to do any compression here, we're only using zip as a container. The compression will be done
@@ -241,9 +223,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
             task.from(generateGramineManifestTask.manifestFile) { copySpec ->
                 copySpec.rename { PluginUtils.GRAMINE_MANIFEST }
-            }
-            task.from(generateGramineEnclaveMetadataTask.outputGramineEnclaveMetadata) { copySpec ->
-                copySpec.rename { PluginUtils.GRAMINE_ENCLAVE_METADATA }
             }
             task.archiveAppendix.set("gramine-bundle")
             task.archiveClassifier.set(type.name.lowercase())
@@ -366,15 +345,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
-            val generateGramineEnclaveMetadataTask = createGenerateGramineEnclaveMetadataTask(target, type, conclaveExtension, signingKey)
-            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, conclaveExtension)
+            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, conclaveExtension, signingKey)
 
             val gramineZipBundle = createGramineZipBundle(
                 target,
                 enclaveFatJarTask,
                 type,
-                generateGramineManifestTask,
-                generateGramineEnclaveMetadataTask
+                generateGramineManifestTask
             )
 
             // GraalVM related tasks

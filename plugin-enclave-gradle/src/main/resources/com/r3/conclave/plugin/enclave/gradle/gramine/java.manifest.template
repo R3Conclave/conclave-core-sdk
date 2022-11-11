@@ -14,6 +14,20 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/
 loader.env.LD_PRELOAD = "{{ ld_preload }}"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
 
+# Signal to the enclave entry point that we
+loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
+
+# Is this a simulation enclave?
+loader.env.CONCLAVE_IS_SIMULATION_ENCLAVE = "{{ is_simulation_enclave }}"
+
+# In simulation mode, we need to provide the signing key measurement
+{% if is_simulation_enclave == "true" %}
+  loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
+{% endif %}
+
+# Number of call interface worker threads, this needs to be less than gramine_max_threads
+loader.env.CONCLAVE_MAX_THREADS = "{{ conclave_max_threads }}"
+
 fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
@@ -26,7 +40,7 @@ fs.mounts = [
 
 sgx.enclave_size = "4G"
 
-sgx.thread_num = {{ max_threads }}
+sgx.thread_num = {{ gramine_max_threads }}
 
 sgx.trusted_files = [
   "file:{{ java_home }}/bin/java",

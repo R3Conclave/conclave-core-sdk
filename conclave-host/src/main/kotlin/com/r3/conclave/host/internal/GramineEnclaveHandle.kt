@@ -3,12 +3,10 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_METADATA
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 import kotlin.io.path.createDirectories
@@ -30,15 +28,8 @@ class GramineEnclaveHandle(
         require(enclaveMode != EnclaveMode.MOCK)
         unzipIntoWorkingDir()
 
-        /** Load gramine enclave metadata. */
-        val metadataFile = workingDirectory / GRAMINE_ENCLAVE_METADATA
-        val maxConcurrentCalls = metadataFile.toFile().inputStream().use { inputStream ->
-            val metadataProperties = Properties().apply { load(inputStream) }
-            metadataProperties["maxThreads"]!!.toString().toInt()
-        }
-
         /** Create a socket host interface. */
-        enclaveInterface = SocketHostEnclaveInterface(maxConcurrentCalls)
+        enclaveInterface = SocketHostEnclaveInterface()
     }
 
     override fun initialise() {

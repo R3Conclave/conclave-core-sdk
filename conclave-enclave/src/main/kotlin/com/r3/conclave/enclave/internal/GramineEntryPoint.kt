@@ -3,34 +3,32 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
+import com.r3.conclave.utilities.internal.toHexString
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.*
-import kotlin.io.path.inputStream
 import kotlin.system.exitProcess
+import java.lang.Boolean.parseBoolean
+import java.util.*
 
 object GramineEntryPoint {
     private const val USAGE_STRING = "usage: GramineEntryPoint <port>"
-    private const val ENCLAVE_METADATA_FILE = "enclave-metadata.properties"
     private const val EXIT_ERR = -1
 
-    /** Enclave metadata variables */
-    private var isSimulation: Boolean? = null
-    private var signingKeyMeasurement: ByteArray? = null
-    private var pythonEnclaveScript: Path? = null
+    /** Enclave metadata, retrieved from the manifest. */
+    private val isSimulation = parseBoolean(System.getenv("CONCLAVE_IS_SIMULATION_ENCLAVE")!!)
+    private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
+    private val signingKeyMeasurement = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { Base64.getDecoder().decode(it) }
+    private val conclaveMaxThreads = System.getenv("CONCLAVE_MAX_THREADS")!!.toInt()
 
     @JvmStatic
     fun main(args: Array<String>) {
         val port = getPortFromArgs(args)
-        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port)
-
-        /** Load the enclave metadata properties file */
-        loadEnclaveMetadata()
+        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port, conclaveMaxThreads)
 
         /** Register the enclave initialisation call handler. */
         hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
@@ -72,40 +70,6 @@ object GramineEntryPoint {
         return port
     }
 
-    /**
-     * Load enclave metadata properties file.
-     * This file contains properties required to load the enclave, such as the signing key measurement, threading level,
-     * and whether to use gramine-sgx or gramine-direct.
-     * For more information, see [com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineEnclaveMetadata].
-     */
-    private fun loadEnclaveMetadata() {
-        val properties = Paths.get(ENCLAVE_METADATA_FILE).inputStream().use { inputStream ->
-            Properties().apply { load(inputStream) }
-        }
-
-        val isSimulationString = checkNotNull(properties["isSimulation"]).toString()
-        check(isSimulationString == "true" || isSimulationString == "false")
-        isSimulation = isSimulationString == "true"
-
-        /** The signing key measurement is only part of the metadata in simulation mode. */
-        val signingKeyMeasurementStr = properties["signingKeyMeasurement"]?.toString()
-        if (isSimulation!!) {
-            signingKeyMeasurement = Base64.getDecoder().decode(signingKeyMeasurementStr)
-            check(signingKeyMeasurement!!.size == 32)
-        } else {
-            /**
-             * The signing key measurement must *not* be present in non simulation modes!
-             * Run a quick sanity check here to confirm.
-             */
-            check(signingKeyMeasurementStr == null)
-        }
-
-        /** Set the python enclave path script if present in the metadata file. */
-        pythonEnclaveScript = properties["pythonEnclaveScript"]?.let {
-            Paths.get(it.toString())
-        }
-    }
-
     private fun initialiseEnclave(
         enclaveClassName: String,
         hostInterface: SocketEnclaveHostInterface
@@ -115,11 +79,11 @@ object GramineEntryPoint {
                 .getDeclaredConstructor()
                 .apply { isAccessible = true }
                 .newInstance()
-        if (pythonEnclaveScript != null) {
+        if (isPythonEnclave) {
             require(enclave.javaClass.name == "com.r3.conclave.python.PythonEnclaveAdapter")
             enclave.javaClass
                     .getAccessibleMethod("setUserPythonScript", Path::class.java)
-                    .execute(enclave, pythonEnclaveScript!!)
+                    .execute(enclave, PYTHON_FILE)
         }
         val env = createEnclaveEnvironment(enclaveClass, hostInterface)
         hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
@@ -129,7 +93,7 @@ object GramineEntryPoint {
     }
 
     private fun createEnclaveEnvironment(enclaveClass: Class<*>, hostInterface: SocketEnclaveHostInterface): EnclaveEnvironment {
-        return if (isSimulation!!) {
+        return if (isSimulation) {
             GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement!!)
         } else {
             System.err.println("Gramine SGX is not yet implemented.")
