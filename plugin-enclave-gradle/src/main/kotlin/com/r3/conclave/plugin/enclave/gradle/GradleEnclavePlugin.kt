@@ -224,6 +224,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             })
             task.inputEnclaveJar.set(enclaveFatJarTask.archiveFile)
+            task.inputPythonSourcePath.set(pythonSourcePath?.toFile())
             task.inputDirectManifest.set(generateGramineManifestTask.manifestFile)
             task.outputSGXManifest.set(Paths.get(outputSgxManifestPath).toFile())
             task.outputToken.set(Paths.get(outputTokenPath).toFile())

@@ -86,7 +86,7 @@ object GramineEntryPoint {
             require(Files.exists(sgxManifest)) { "Could not determine the enclave mode from the manifest files" }
 
             val debugString = System.getenv("SGX_DEBUG")
-            checkNotNull(debugString) { "Debug mode not found in the manifest." }
+            checkNotNull(debugString) { "Debug mode not found in the manifest" }
 
             if (debugString.toBoolean()) {
                 EnclaveMode.DEBUG

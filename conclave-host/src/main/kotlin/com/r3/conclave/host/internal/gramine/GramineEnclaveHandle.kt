@@ -11,6 +11,7 @@ import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
 import com.r3.conclave.host.internal.loggerFor
 import org.tomlj.Toml
+import java.io.File
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
@@ -78,7 +79,7 @@ class GramineEnclaveHandle(
             port.toString()
         )
 
-        if ((workingDirectory / PYTHON_FILE).exists()) {
+        if ((workingDirectory / PYTHON_FILE).exists() && ((workingDirectory / PYTHON_FILE).toFile().length() != 0L)) {
             command += PYTHON_FILE
         }
 

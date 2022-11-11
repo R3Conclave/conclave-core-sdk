@@ -1,6 +1,7 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
 loader.log_level = "error"
+# loader.pal_internal_mem_size = "256M"
 
 # TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
@@ -19,6 +20,7 @@ fs.mounts = [
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
   { path = "{{ java_home }}",            uri = "file:{{ java_home }}" },
   { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" },
+  { path = "{{ python_lib_path }}",      uri = "file:{{ python_lib_path }}" },
   { path = "/usr{{ arch_libdir }}",      uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",                   uri = "file:/usr/lib" },
   { path = "/tmp",                       type = "tmpfs" },
@@ -37,6 +39,9 @@ sgx.trusted_files = [
     "file:/usr/{{ arch_libdir }}/",
     "file:{{ java_home }}/",
     "file:{{ ld_preload }}",
-    "file:enclave.jar"
+    "file:{{ python_packages_path }}/",
+    "file:{{ python_lib_path }}/",
+    "file:enclave.jar",
+    "file:enclave.py"
 ]
 

@@ -35,6 +35,8 @@ open class GenerateGramineDirectManifest @Inject constructor(objects: ObjectFact
         val ldPreload = executePython("from sysconfig import get_config_var; " +
                 "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
         )
+
+        val pythonLib = executePython("import sys; import os; print(min([el + '/' for el in sys.path[1:] if os.path.isdir(el) and el.startswith(\"/usr/lib/python\")], key=len ))")
         // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
         // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
         // incorrect then we'll need to come up with a better solution.
@@ -51,6 +53,7 @@ open class GenerateGramineDirectManifest @Inject constructor(objects: ObjectFact
                 "-Dld_preload=$ldPreload",
                 "-Dsgx_debug=${inputSGXDebugFlag.get().toString().lowercase()}",
                 "-Dpython_packages_path=$pythonPackagesPath",
+                "-Dpython_lib_path=$pythonLib",
                 manifestTemplateFile.absolutePathString(),
                 manifestFile.asFile.get().absolutePath
             )

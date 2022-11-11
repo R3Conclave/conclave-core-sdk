@@ -1,10 +1,12 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.process.ExecResult
 import java.io.File
@@ -24,6 +26,10 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
 
     @get:InputFile
     val inputEnclaveJar: RegularFileProperty = objects.fileProperty()
+
+    @get:InputFile
+    @Optional
+    val inputPythonSourcePath: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
     val outputSGXManifest: RegularFileProperty = objects.fileProperty()
@@ -46,7 +52,20 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
                 overwrite = true
             )
         ) { "Enclave jar file not copied correctly while building the Gramine SGX manifest" }
+        val enclaveDestinationPythonFileName = "${outputSGXManifestPath}/$PYTHON_FILE"
+        val enclaveDestinationPythonFile = File(enclaveDestinationPythonFileName)
 
+        if (inputPythonSourcePath.isPresent) {
+            inputPythonSourcePath.get().asFile.copyTo(
+                enclaveDestinationPythonFile,
+                overwrite = true
+            )
+        } else {
+            File.createTempFile("dummy", "dummy") .copyTo(
+                enclaveDestinationPythonFile,
+                overwrite = true
+            )
+        }
         check(signDirectManifest(manifestPath, privateKeyPath).exitValue == 0) { "Could not sign the manifest" }
         check(sgxGetToken().exitValue == 0) { "Could not get the token for the SGX manifest" }
     }
