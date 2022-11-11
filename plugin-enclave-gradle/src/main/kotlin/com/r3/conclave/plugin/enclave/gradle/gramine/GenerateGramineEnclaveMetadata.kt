@@ -65,7 +65,7 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
              * TODO: CON-1163 you will probably need to remove this for mock attestation in debug/release mode!
              */
             if (isSimulation) {
-                val mrsigner = computeSigningKeyMeasurement(signingKey.asFile.get())
+                val mrsigner = computeSigningKeyMeasurement()
                 put("signingKeyMeasurement", Base64.getEncoder().encodeToString(mrsigner))
             }
 
@@ -81,13 +81,16 @@ open class GenerateGramineEnclaveMetadata @Inject constructor(objects: ObjectFac
         }
     }
 
-    /** Compute the mrsigner value from a provided .pem file containing a 3072 bit RSA key. */
-    private fun computeSigningKeyMeasurement(keyFile: File): ByteArray {
+    /**
+     * Compute the mrsigner value from a provided .pem file containing a 3072 bit RSA key.
+     * This function precisely matches the behaviour of the SGX signing key measurement algorithm.
+     */
+    private fun computeSigningKeyMeasurement(): ByteArray {
         /**
          * Doesn't actually matter if we use the public or private key here.
          * We only care about the modulus (which is the same for either).
          */
-        val key = keyFile.reader().use {
+        val key = signingKey.asFile.get().reader().use {
             val pemParser = PEMParser(it)
             val keyConverter = JcaPEMKeyConverter()
             val pemObject = pemParser.readObject()
