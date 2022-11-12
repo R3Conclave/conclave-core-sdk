@@ -1,7 +1,7 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
 loader.log_level = "error"
-loader.pal_internal_mem_size = "128M"
+loader.pal_internal_mem_size = "256M"
 
 # TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
@@ -27,7 +27,7 @@ fs.mounts = [
 
 sgx.debug = {{ sgx_debug }}
 
-sgx.enclave_size = "4G"
+sgx.enclave_size = "8G"
 
 sgx.thread_num = 64
 
