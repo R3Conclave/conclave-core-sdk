@@ -20,7 +20,6 @@ fs.mounts = [
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
   { path = "{{ java_home }}",            uri = "file:{{ java_home }}" },
   { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" },
-  { path = "{{ python_lib_path }}",      uri = "file:{{ python_lib_path }}" },
   { path = "/usr{{ arch_libdir }}",      uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",                   uri = "file:/usr/lib" },
   { path = "/tmp",                       type = "tmpfs" },
@@ -40,7 +39,9 @@ sgx.trusted_files = [
     "file:{{ java_home }}/",
     "file:{{ ld_preload }}",
     "file:{{ python_packages_path }}/",
-    "file:{{ python_lib_path }}/",
+    "file:{{ python.stdlib }}/",
+    "file:{{ python.distlib }}/",
+    "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
     "file:enclave.jar",
     "file:enclave.py"
 ]
