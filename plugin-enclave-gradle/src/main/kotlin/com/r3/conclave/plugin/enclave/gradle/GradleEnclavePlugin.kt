@@ -410,7 +410,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.outputConfigFile.set(enclaveModeDir.resolve("enclave.xml").toFile())
                 }
 
-            val signEnclaveWithKeyTask = target.createTask<SignEnclave>(
+            val signEnclaveWithKeyTask = target.createTask<SignEnclaveWithKey>(
                     "signEnclaveWithKey$type",
                     this,
                     enclaveExtension,

@@ -10,7 +10,7 @@ import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class SignEnclave @Inject constructor(
+open class SignEnclaveWithKey @Inject constructor(
     objects: ObjectFactory,
     private val plugin: GradleEnclavePlugin,
     private val enclaveModeExtension: EnclaveModeExtension,
