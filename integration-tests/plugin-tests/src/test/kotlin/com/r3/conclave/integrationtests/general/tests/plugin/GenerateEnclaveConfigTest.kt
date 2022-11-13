@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
     override val baseTaskName: String get() = "generateEnclaveConfig"
-    override val outputFileName: String get() = "enclave.xml"
+    override val outputName: String get() = "enclave.xml"
 
     @Test
     fun productID() {
@@ -54,5 +54,5 @@ class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
         assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("15")
     }
 
-    private fun enxlaveConfig(): JsonNode = XmlMapper().readTree(outputFile.toFile())
+    private fun enxlaveConfig(): JsonNode = XmlMapper().readTree(output.toFile())
 }

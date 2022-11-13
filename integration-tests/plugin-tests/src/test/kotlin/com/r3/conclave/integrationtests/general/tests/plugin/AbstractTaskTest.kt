@@ -16,7 +16,7 @@ import kotlin.io.path.*
 
 abstract class AbstractTaskTest {
     abstract val taskName: String
-    abstract val outputFile: Path
+    abstract val output: Path
     /**
      * If the task's output isn't stable then override with false, and explain why.
      */
@@ -48,14 +48,19 @@ abstract class AbstractTaskTest {
     @Test
     fun `deleting output forces task to re-run`() {
         val originalContent = assertTaskIsIncremental {
-            assertThat(outputFile).exists()
-            val originalContent = outputFile.readBytes()
-            outputFile.deleteExisting()
-            originalContent
+            assertThat(output).exists()
+            if (isReproducible && output.isRegularFile()) {
+                val originalContent = output.readBytes()
+                output.deleteExisting()
+                originalContent
+            } else {
+                output.toFile().deleteRecursively()
+                null
+            }
         }
-        assertThat(outputFile).exists()
-        if (isReproducible) {
-            assertThat(outputFile).hasBinaryContent(originalContent)
+        assertThat(output).exists()
+        if (originalContent != null) {
+            assertThat(output).hasBinaryContent(originalContent)
         }
     }
 

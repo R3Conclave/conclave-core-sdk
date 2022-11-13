@@ -11,12 +11,12 @@ import kotlin.io.path.div
 
 class ShadowJarTest : AbstractTaskTest() {
     override val taskName: String get() = "shadowJar"
-    override val outputFile: Path get() = buildDir / "libs" / "$projectName-fat-all.jar"
+    override val output: Path get() = buildDir / "libs" / "$projectName-fat-all.jar"
 
     @Test
     fun `contents of jar`() {
         runTask()
-        JarFile(outputFile.toFile()).use { jar ->
+        JarFile(output.toFile()).use { jar ->
             assertThat(jar.entries().toList().map { it.name }).contains(
                 "com/test/enclave/TestEnclave.class",
                 "com/test/enclave/enclave.properties"
@@ -69,7 +69,7 @@ class ShadowJarTest : AbstractTaskTest() {
     // TODO KDS
 
     private fun enclaveProperties(): Properties {
-        return JarFile(outputFile.toFile()).use { jar ->
+        return JarFile(output.toFile()).use { jar ->
             jar.getInputStream(jar.getJarEntry("com/test/enclave/enclave.properties")).use {
                 Properties().apply { load(it) }
             }

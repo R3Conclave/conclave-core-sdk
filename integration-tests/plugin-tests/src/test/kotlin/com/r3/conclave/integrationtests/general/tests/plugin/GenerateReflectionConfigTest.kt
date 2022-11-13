@@ -17,7 +17,7 @@ class GenerateReflectionConfigTest : AbstractConclaveTaskTest() {
     }
 
     override val taskName: String get() = "generateReflectionConfig"
-    override val outputFileName: String get() = "reflectconfig"
+    override val outputName: String get() = "reflectconfig"
 
     @Test
     fun `task re-runs on enclave class name change`() {
@@ -31,5 +31,5 @@ class GenerateReflectionConfigTest : AbstractConclaveTaskTest() {
             .doesNotContain("com.test.enclave.TestEnclave")
     }
 
-    private fun reflectionConfig(): JsonNode = ObjectMapper().readTree(outputFile.toFile())
+    private fun reflectionConfig(): JsonNode = ObjectMapper().readTree(output.toFile())
 }

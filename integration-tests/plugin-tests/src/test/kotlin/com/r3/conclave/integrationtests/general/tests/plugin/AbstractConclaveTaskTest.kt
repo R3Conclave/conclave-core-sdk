@@ -4,9 +4,9 @@ import java.nio.file.Path
 import kotlin.io.path.div
 
 abstract class AbstractConclaveTaskTest : AbstractTaskTest() {
-    abstract val outputFileName: String
+    abstract val outputName: String
 
-    override val outputFile: Path get() = conclaveBuildDir / outputFileName
+    override val output: Path get() = conclaveBuildDir / outputName
 
     val conclaveBuildDir: Path get() = buildDir / "conclave"
 }

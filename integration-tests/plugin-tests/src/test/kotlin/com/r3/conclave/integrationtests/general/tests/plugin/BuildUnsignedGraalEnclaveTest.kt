@@ -15,7 +15,7 @@ class BuildUnsignedGraalEnclaveTest : AbstractModeTaskTest() {
     }
 
     override val baseTaskName: String get() = "buildUnsignedGraalEnclave"
-    override val outputFileName: String get() = "enclave.so"
+    override val outputName: String get() = "enclave.so"
     /**
      * Native image doesn't produce stable binaries.
      */

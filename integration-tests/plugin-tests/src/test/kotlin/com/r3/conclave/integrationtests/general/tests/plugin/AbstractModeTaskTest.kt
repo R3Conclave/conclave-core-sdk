@@ -8,5 +8,5 @@ abstract class AbstractModeTaskTest : AbstractConclaveTaskTest() {
 
     override val taskName: String get() = "$baseTaskName$enclaveMode"
 
-    override val outputFile: Path get() = conclaveBuildDir / enclaveMode.lowercase() / outputFileName
+    override val output: Path get() = conclaveBuildDir / enclaveMode.lowercase() / outputName
 }
