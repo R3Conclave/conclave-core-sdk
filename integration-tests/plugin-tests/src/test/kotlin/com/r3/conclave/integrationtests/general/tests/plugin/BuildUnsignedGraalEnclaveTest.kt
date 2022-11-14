@@ -2,13 +2,8 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import kotlin.io.path.copyTo
 
-// We want this test to run first so that it can create an enclave.so file for other tests to use. We do this to
-// avoid those tests rebuilding the enclave and incurring the lengthly build time of GraalVM enclaves.
-@Order(0)
 class BuildUnsignedGraalEnclaveTest : AbstractModeTaskTest() {
     companion object {
         @JvmStatic
@@ -28,10 +23,6 @@ class BuildUnsignedGraalEnclaveTest : AbstractModeTaskTest() {
     @Test
     fun `incremental builds`() {
         assertTaskIsIncremental {
-            // Copy the enclave.so so that other tests can use it as input without having to rebuild the enclave.
-            // This isn't at all ideal but the alternative is slow tests (or worse, missing tests). We intentionally
-            // copy at this point to make sure the enclave matches the build.gradle config.
-            output.copyTo(unsignedGraalEnclaveFile)
             updateBuildFile("productID = 11", "productID = 12")
         }
     }

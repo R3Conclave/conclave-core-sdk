@@ -19,5 +19,4 @@ test {
     // Gradle Test-Kit from downloading its own copy of Kotlin etc.
     systemProperty "test.gradle.user.home", project.gradle.gradleUserHomeDir
     systemProperty "gradle.version", project.gradle.gradleVersion
-    systemProperty "plugin-tests.enclave.output", "$temporaryDir/enclave-output"
 }
