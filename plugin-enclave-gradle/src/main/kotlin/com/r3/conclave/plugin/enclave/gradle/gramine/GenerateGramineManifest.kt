@@ -60,8 +60,8 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
          * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
          * Because of this, we need to add some safety margin.
          */
-        val conclaveMaxThreads = maxThreads.get()
-        val gramineMaxThreads = conclaveMaxThreads + 8
+        val enclaveWorkerThreads = maxThreads.get()
+        val gramineMaxThreads = enclaveWorkerThreads + 8
 
         commandLine(
             listOf(
@@ -73,7 +73,7 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
                 "-Dis_python_enclave=${pythonEnclave.get()}",
                 "-Dis_simulation_enclave=${buildType.get() == BuildType.Simulation}",
                 "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
-                "-Dconclave_max_threads=$conclaveMaxThreads",
+                "-Denclave_worker_threads=$enclaveWorkerThreads",
                 "-Dgramine_max_threads=$gramineMaxThreads",
                 manifestTemplateFile.absolutePathString(),
                 manifestFile.asFile.get().absolutePath

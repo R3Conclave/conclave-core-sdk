@@ -26,7 +26,7 @@ loader.env.CONCLAVE_IS_SIMULATION_ENCLAVE = "{{ is_simulation_enclave }}"
 {% endif %}
 
 # Number of call interface worker threads, this needs to be less than gramine_max_threads
-loader.env.CONCLAVE_MAX_THREADS = "{{ conclave_max_threads }}"
+loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
 
 fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },

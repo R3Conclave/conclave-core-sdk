@@ -23,12 +23,12 @@ object GramineEntryPoint {
     private val isSimulation = parseBoolean(System.getenv("CONCLAVE_IS_SIMULATION_ENCLAVE")!!)
     private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
     private val signingKeyMeasurement = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { parseHex(it) }
-    private val conclaveMaxThreads = System.getenv("CONCLAVE_MAX_THREADS")!!.toInt()
+    private val conclaveWorkerThreads = System.getenv("CONCLAVE_ENCLAVE_WORKER_THREADS")!!.toInt()
 
     @JvmStatic
     fun main(args: Array<String>) {
         val port = getPortFromArgs(args)
-        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port, conclaveMaxThreads)
+        val hostInterface = SocketEnclaveHostInterface("127.0.0.1", port, conclaveWorkerThreads)
 
         /** Register the enclave initialisation call handler. */
         hostInterface.registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
