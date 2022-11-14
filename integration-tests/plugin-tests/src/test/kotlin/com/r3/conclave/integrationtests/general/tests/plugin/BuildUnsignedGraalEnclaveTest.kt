@@ -4,7 +4,6 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnly
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import java.nio.file.Path
 import kotlin.io.path.copyTo
 
 // We want this test to run first so that it can create an enclave.so file for other tests to use. We do this to
@@ -34,14 +33,6 @@ class BuildUnsignedGraalEnclaveTest : AbstractModeTaskTest() {
             // copy at this point to make sure the enclave matches the build.gradle config.
             output.copyTo(unsignedGraalEnclaveFile)
             updateBuildFile("productID = 11", "productID = 12")
-        }
-
-        // Finally, update the native image config files and make sure they trigger a new build before reaching
-        // up-to-date status.
-        for (fileName in listOf("reflectionconfig.json", "serializationconfig.json")) {
-            val file = Path.of("$projectDir/$fileName")
-            file.searchAndReplace("Class0", "AnotherClass0")
-            assertTaskRunIsIncremental()
         }
     }
 }

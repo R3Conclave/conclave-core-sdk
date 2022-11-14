@@ -1,5 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import org.junit.jupiter.api.BeforeEach
 import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
@@ -18,12 +20,19 @@ abstract class AbstractModeTaskTest : AbstractConclaveTaskTest() {
      * Copy a prebuilt unsigned enclave into the project's build directory so that the task under test doesn't need
      * to rebuild a new GraalVM enclave, which is a lengthy process.
      */
+    open val usePrebuiltUnsignedGraalEnclave: Boolean get() = false
+
+    @BeforeEach
     fun copyPrebuiltUnsignedGraalEnclave() {
+        if (!usePrebuiltUnsignedGraalEnclave) return
+        graalvmOnlyTest()
         check(unsignedGraalEnclaveFile.exists()) {
             "A prebuilt unsigned enclave doesn't exist. Perhaps BuildUnsignedGraalEnclaveTest has failed?"
         }
+        val target = enclaveModeBuildDir / "enclave.so"
+        println("Copying pre-built unsigned enclave.so from $unsignedGraalEnclaveFile to $target ...")
         enclaveModeBuildDir.createDirectories()
-        unsignedGraalEnclaveFile.copyTo(enclaveModeBuildDir / "enclave.so")
+        unsignedGraalEnclaveFile.copyTo(target)
     }
 
     companion object {
