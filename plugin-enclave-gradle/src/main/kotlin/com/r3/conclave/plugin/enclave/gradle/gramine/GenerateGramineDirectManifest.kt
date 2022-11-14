@@ -80,7 +80,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 "-Dsgx_debug=${inputSGXDebugFlag.get().toString().lowercase()}",
                 "-Dpython_packages_path=$pythonPackagesPath",
                 "-Dis_python_enclave=${pythonEnclave.get()}",
-                "-Dis_simulation_enclave=${buildType == BuildType.Simulation}",
+                "-Denclave_mode=${buildType.name.uppercase()}",
                 "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
                 "-Denclave_worker_threads=$enclaveWorkerThreadCount",
                 "-Dgramine_max_threads=$gramineMaxThreads",

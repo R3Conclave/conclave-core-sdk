@@ -1,7 +1,7 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
 loader.log_level = "error"
-loader.pal_internal_mem_size = "256M"
+# loader.pal_internal_mem_size = "256M"
 
 # TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
@@ -19,10 +19,10 @@ loader.env.SGX_DEBUG = "{{ sgx_debug }}"
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 
 # Is this a simulation enclave?
-loader.env.CONCLAVE_IS_SIMULATION_ENCLAVE = "{{ is_simulation_enclave }}"
+loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
 
 # In simulation mode, we need to provide the signing key measurement
-{% if is_simulation_enclave == "true" %}
+{% if enclave_mode == "SIMULATION" %}
   loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
 {% endif %}
 
@@ -56,7 +56,9 @@ sgx.trusted_files = [
     "file:{{ python.stdlib }}/",
     "file:{{ python.distlib }}/",
     "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
-    "file:enclave.jar",
-    "file:enclave.py"
+{% if is_python_enclave == "true" %}
+    "file:enclave.py",
+{% endif %}
+    "file:enclave.jar"
 ]
 

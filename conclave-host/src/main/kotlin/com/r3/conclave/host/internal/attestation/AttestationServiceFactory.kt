@@ -17,6 +17,7 @@ object AttestationServiceFactory {
         attestationParameters: AttestationParameters?,
         enclaveHandle: EnclaveHandle
     ): AttestationService {
+        // TODO: Fix attestation in Gramine: https://r3-cev.atlassian.net/browse/CON-1178
         return if (enclaveHandle is GramineEnclaveHandle) MockAttestationService(isSimulation = true)
         else
             when (enclaveMode) {

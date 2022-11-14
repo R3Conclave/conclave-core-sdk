@@ -3,10 +3,13 @@ package com.r3.conclave.enclave.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
 import com.r3.conclave.utilities.internal.parseHex
+import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
@@ -20,10 +23,12 @@ object GramineEntryPoint {
     private const val EXIT_ERR = -1
 
     /** Enclave metadata, retrieved from the manifest. */
-    private val isSimulation = parseBoolean(System.getenv("CONCLAVE_IS_SIMULATION_ENCLAVE")!!)
+    private val enclaveMode = EnclaveMode.valueOf(System.getenv("CONCLAVE_ENCLAVE_MODE")!!.uppercase())
     private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
+    private val isSgxDebug = parseBoolean(System.getenv("SGX_DEBUG"))
     private val signingKeyMeasurement = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { parseHex(it) }
     private val conclaveWorkerThreads = System.getenv("CONCLAVE_ENCLAVE_WORKER_THREADS")!!.toInt()
+    private val commonErrorMessage = "Manifest not present when initialising the enclave in $enclaveMode mode"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -85,19 +90,33 @@ object GramineEntryPoint {
                     .getAccessibleMethod("setUserPythonScript", Path::class.java)
                     .execute(enclave, Paths.get(PYTHON_FILE))
         }
-        val env = createEnclaveEnvironment(enclaveClass, hostInterface)
+        validateEnclaveMode()
+        val env = GramineEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement!!, enclaveMode)
         hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
         Enclave::class.java
             .getAccessibleMethod("initialise", EnclaveEnvironment::class.java)
             .execute(enclave, env)
     }
 
-    private fun createEnclaveEnvironment(enclaveClass: Class<*>, hostInterface: SocketEnclaveHostInterface): EnclaveEnvironment {
-        return if (isSimulation) {
-            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement!!)
-        } else {
-            System.err.println("Gramine SGX is not yet implemented.")
-            exitProcess(EXIT_ERR)
+    private fun validateEnclaveMode() {
+        when (enclaveMode) {
+            EnclaveMode.SIMULATION -> {
+                require(File(GRAMINE_MANIFEST).exists()) { "Gramine Direct $commonErrorMessage" }
+            }
+
+            EnclaveMode.DEBUG -> {
+                require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX $commonErrorMessage" }
+                require(isSgxDebug) { "Gramine SGX debug flag not enabled in $enclaveMode mode" }
+            }
+
+            EnclaveMode.RELEASE -> {
+                require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX $commonErrorMessage" }
+                require(!isSgxDebug) { "Gramine SGX debug flag not disabled in $enclaveMode mode" }
+            }
+
+            EnclaveMode.MOCK -> {
+                throw IllegalArgumentException("Developer error: MOCK mode not supported in Gramine")
+            }
         }
     }
 

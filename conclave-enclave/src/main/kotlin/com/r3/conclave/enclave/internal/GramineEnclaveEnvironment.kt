@@ -9,10 +9,11 @@ import java.security.MessageDigest
 /**
  * This class is the enclave environment intended for use with gramine-direct.
  */
-class GramineDirectEnclaveEnvironment(
+class GramineEnclaveEnvironment(
         enclaveClass: Class<*>,
         override val hostInterface: SocketEnclaveHostInterface,
-        private val mrsigner: ByteArray
+        private val mrsigner: ByteArray,
+        override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -21,9 +22,6 @@ class GramineDirectEnclaveEnvironment(
             }.copyOf(SgxCpuSvn.size)
         }
     }
-
-    // TODO: (CON-1194) Handle enclave mode properly
-    override val enclaveMode = EnclaveMode.SIMULATION
 
     private val tcbLevel = 1
 

@@ -1,10 +1,8 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
-import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
-import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
@@ -64,11 +62,6 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
                     overwrite = true
                 )
             ) { "Python script not copied correctly while building the Gramine SGX manifest" }
-        } else {
-            File.createTempFile("dummy", "dummy").copyTo(
-                enclaveDestinationPythonFile,
-                overwrite = true
-            )
         }
         check(signDirectManifest(manifestPath, privateKeyPath).exitValue == 0) { "Could not sign the manifest" }
         check(sgxGetToken().exitValue == 0) { "Could not get the token for the SGX manifest" }
