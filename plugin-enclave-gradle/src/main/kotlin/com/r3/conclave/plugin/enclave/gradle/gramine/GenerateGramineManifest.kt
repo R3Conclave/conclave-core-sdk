@@ -18,13 +18,14 @@ import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class GenerateGramineManifest @Inject constructor(
+        objects: ObjectFactory,
+        private val buildType: BuildType
+) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "java.manifest.template"
     }
 
-    @get:Input
-    val buildType: Property<BuildType> = objects.property(BuildType::class.java)
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
     @get:InputFile
@@ -71,7 +72,7 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
                 "-Dld_preload=$ldPreload",
                 "-Dpython_packages_path=$pythonPackagesPath",
                 "-Dis_python_enclave=${pythonEnclave.get()}",
-                "-Dis_simulation_enclave=${buildType.get() == BuildType.Simulation}",
+                "-Dis_simulation_enclave=${buildType == BuildType.Simulation}",
                 "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
                 "-Denclave_worker_threads=$enclaveWorkerThreadCount",
                 "-Dgramine_max_threads=$gramineMaxThreads",

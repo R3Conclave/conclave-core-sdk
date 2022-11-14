@@ -186,8 +186,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             conclaveExtension: ConclaveExtension,
             signingKey: Provider<RegularFile?>
     ): GenerateGramineManifest {
-        return target.createTask("generateGramineManifest$type") { task ->
-            task.buildType.set(type)
+        return target.createTask("generateGramineManifest$type", type) { task ->
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
             task.maxThreads.set(conclaveExtension.maxThreads)
