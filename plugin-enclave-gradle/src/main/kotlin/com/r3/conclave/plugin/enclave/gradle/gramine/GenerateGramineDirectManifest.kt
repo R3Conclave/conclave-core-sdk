@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.utilities.internal.copyResource
@@ -18,9 +19,9 @@ import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class GenerateGramineManifest @Inject constructor(
-        objects: ObjectFactory,
-        private val buildType: BuildType
+open class GenerateGramineDirectManifest @Inject constructor(
+    objects: ObjectFactory,
+    private val buildType: BuildType
 ) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
@@ -51,8 +52,9 @@ open class GenerateGramineManifest @Inject constructor(
         //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181
 
         val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
-        val ldPreload = executePython("from sysconfig import get_config_var; " +
-                "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+        val ldPreload = executePython(
+            "from sysconfig import get_config_var; " +
+                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
         )
         // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
         // dir within it. We assume this is the packages dir for other modules as well. If this assumption is

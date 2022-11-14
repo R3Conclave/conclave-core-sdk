@@ -4,10 +4,17 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineDirectManifest
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineSGXManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
@@ -185,7 +192,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             type: BuildType,
             conclaveExtension: ConclaveExtension,
             signingKey: Provider<RegularFile?>
-    ): GenerateGramineManifest {
+    ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type) { task ->
             task.inputSGXDebugFlag.set(
                 when (type) {
@@ -305,7 +312,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val pythonFiles = target.fileTree(pythonSourcePath).files
         if (pythonFiles.size == 1) {
             from(pythonFiles.first()) { copySpec ->
-                copySpec.rename { PluginUtils.PYTHON_FILE }
+                copySpec.rename { PYTHON_FILE }
             }
         } else {
             throw GradleException(
@@ -634,7 +641,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
                         GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
-                        GRAMINE -> gramineZipBundle.get().archiveFile
+                        GRAMINE -> if (type == BuildType.Simulation) {
+                            gramineZipBundle.get().archiveFile
+                        } else {
+                            gramineSGXZipBundle.get().archiveFile
+                        }
                         else -> throw IllegalArgumentException()
                     }
                 }

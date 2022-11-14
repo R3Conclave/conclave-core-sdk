@@ -476,7 +476,7 @@ class EnclaveHost private constructor(
     }
 
     private fun isFileSystemSupported(): Boolean {
-        //  This filesystem implementation is only supported in SIMULATION, DEBUG, RELEASE mode in Graal VM only
+        //  This filesystem implementation is only supported in SIMULATION, DEBUG, RELEASE mode in Graal VM mode only
        return enclaveMode != EnclaveMode.MOCK && enclaveHandle is NativeEnclaveHandle
     }
 
