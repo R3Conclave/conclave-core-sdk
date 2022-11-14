@@ -4,16 +4,15 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 
 /**
- * This class is the enclave environment intended for use with gramine-direct or gramine-sgx.
- * TODO: Currently the behaviour here is lifted directly from [MockEnclaveEnvironment].
- *       This will eventually need to behave the same way as native simulation mode does.
+ * This class is the enclave environment intended for use with gramine-direct.
  */
-class GramineEnclaveEnvironment(
+class GramineDirectEnclaveEnvironment(
         enclaveClass: Class<*>,
         override val hostInterface: SocketEnclaveHostInterface,
-        override val enclaveMode: EnclaveMode
+        private val mrsigner: ByteArray
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -23,20 +22,31 @@ class GramineEnclaveEnvironment(
         }
     }
 
+    // TODO: (CON-1194) Handle enclave mode properly
+    override val enclaveMode = EnclaveMode.SIMULATION
+
     private val tcbLevel = 1
 
     private val currentCpuSvn: ByteArray by lazy {
         versionToCpuSvn(tcbLevel)
     }
 
-    // TODO: (CON-1194) mrenclave value based on enclave jar content
+    /** Generate simulated mrenclave value by hashing the enclave fat-jar */
     private val mrenclave: ByteArray by lazy {
-        digest("SHA-256") { update(enclaveClass.name.toByteArray()) }
-    }
+        val digest = MessageDigest.getInstance("SHA-256")
 
-    // TODO: (CON-1194) mrsigner value that matches what gramine-sgx would produce
-    private val mrsigner: ByteArray by lazy {
-        ByteArray(32)
+        val buffer = ByteArray(65536)
+        var bytesRead: Int
+
+        enclaveClass.protectionDomain.codeSource.location.openStream().use {
+            bytesRead = it.read(buffer)
+            while (bytesRead >= 0) {
+                digest.update(buffer, 0, bytesRead)
+                bytesRead = it.read(buffer)
+            }
+        }
+
+        digest.digest()
     }
 
     private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {

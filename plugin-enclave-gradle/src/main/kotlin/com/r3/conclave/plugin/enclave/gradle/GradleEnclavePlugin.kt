@@ -4,18 +4,10 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
-import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineDirectManifest
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineSGXManifest
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
@@ -188,8 +180,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createEnclaveArtifacts(target, conclaveExtension, enclaveFatJarTask)
     }
 
-    private fun createGenerateGramineManifestTask(target: Project, type: BuildType): GenerateGramineDirectManifest {
-        return target.createTask("generateGramineManifest$type") { task ->
+    private fun createGenerateGramineManifestTask(
+            target: Project,
+            type: BuildType,
+            conclaveExtension: ConclaveExtension,
+            signingKey: Provider<RegularFile?>
+    ): GenerateGramineManifest {
+        return target.createTask("generateGramineManifest$type", type) { task ->
             task.inputSGXDebugFlag.set(
                 when (type) {
                     BuildType.Simulation -> true
@@ -198,7 +195,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     else -> true
                 }
             )
-            task.manifestFile.set((baseDirectory / "gramine" / GRAMINE_MANIFEST).toFile())
+            task.pythonEnclave.set(pythonSourcePath != null)
+            task.signingKey.set(signingKey)
+            task.maxThreads.set(conclaveExtension.maxThreads)
+            task.manifestFile.set((gramineBuildDirectory / PluginUtils.GRAMINE_MANIFEST).toFile())
         }
     }
 
@@ -241,6 +241,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.outputSig.set(Paths.get(outputSig).toFile())
         }
     }
+
 
     private fun createGramineZipBundle(
         target: Project,
@@ -328,6 +329,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
+    private val gramineBuildDirectory: Path by lazy { baseDirectory.resolve("gramine") }
 
     /**
      * Get the main source set for a given project
@@ -411,6 +413,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 else -> throw IllegalStateException()
             }
 
+            val signingKey = enclaveExtension.signingType.flatMap {
+                when (it) {
+                    SigningType.DummyKey -> createDummyKeyTask.outputKey
+                    SigningType.PrivateKey -> enclaveExtension.signingKey
+                    else -> target.provider { null }
+                }
+            }
+
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
             // Simulation and debug default to using a dummy key. Release defaults to external key
@@ -421,7 +431,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
-            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type)
+            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, conclaveExtension, signingKey)
 
             val gramineZipBundle = createGramineZipBundle(
                 target,
@@ -624,12 +634,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
                         GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
-                        GRAMINE -> if (type == BuildType.Simulation) {
-                            gramineZipBundle.get().archiveFile
-                        } else {
-                            gramineSGXZipBundle.get().archiveFile
-                        }
-
+                        GRAMINE -> gramineZipBundle.get().archiveFile
                         else -> throw IllegalArgumentException()
                     }
                 }
@@ -637,8 +642,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
                 task.rename {
                     val bundleName = when (runtimeType.get()) {
-                        GRAALVM -> GRAALVM_BUNDLE_NAME
-                        GRAMINE -> GRAMINE_BUNDLE_NAME
+                        GRAALVM -> PluginUtils.GRAALVM_BUNDLE_NAME
+                        GRAMINE -> PluginUtils.GRAMINE_BUNDLE_NAME
                         else -> throw IllegalArgumentException()
                     }
                     "$typeLowerCase-$bundleName"

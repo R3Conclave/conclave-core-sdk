@@ -2,6 +2,7 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
+import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import javax.xml.crypto.Data
 
 /**
  * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
@@ -26,7 +28,8 @@ import java.util.concurrent.TimeUnit
  */
 class SocketEnclaveHostInterface(
         private val host: String,
-        private val port: Int
+        private val port: Int,
+        private val maximumConcurrentCalls: Int
 ) : EnclaveHostInterface(), Closeable {
     var sanitiseExceptions = false
 
@@ -41,8 +44,6 @@ class SocketEnclaveHostInterface(
 
     private lateinit var callExecutor: ExecutorService
 
-    private var maximumConcurrentCalls = 0
-
     /** Tracks the number of running threads, used for graceful shutdown. */
     private val shutdownSemaphore = Semaphore(0)
 
@@ -52,11 +53,12 @@ class SocketEnclaveHostInterface(
             stateManager.transitionStateFrom<State.Ready>(to = State.Running)
 
             try {
-                /** Receive the maximum number of concurrent calls from the host and set up the call executor service. */
+                /** Send the maximum number of concurrent calls to the host. */
                 Socket(host, port).use { initialSocket ->
-                    maximumConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
-                    callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
+                    DataOutputStream(initialSocket.getOutputStream()).writeInt(maximumConcurrentCalls)
                 }
+
+                callExecutor = Executors.newFixedThreadPool(maximumConcurrentCalls)
 
                 /**
                  * Connect sockets and instantiate handler threads.

@@ -15,6 +15,20 @@ loader.env.LD_PRELOAD = "{{ ld_preload }}"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
 loader.env.SGX_DEBUG = "{{ sgx_debug }}"
 
+# Is this enclave implemented in python?
+loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
+
+# Is this a simulation enclave?
+loader.env.CONCLAVE_IS_SIMULATION_ENCLAVE = "{{ is_simulation_enclave }}"
+
+# In simulation mode, we need to provide the signing key measurement
+{% if is_simulation_enclave == "true" %}
+  loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
+{% endif %}
+
+# Number of call interface worker threads, this needs to be less than gramine_max_threads
+loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
+
 fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
@@ -29,7 +43,7 @@ sgx.debug = {{ sgx_debug }}
 
 sgx.enclave_size = "8G"
 
-sgx.thread_num = 64
+sgx.thread_num = {{ gramine_max_threads }}
 
 sgx.trusted_files = [
     "file:{{ gramine.libos }}",
