@@ -132,6 +132,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target.createTask<EnclaveClassName>("enclaveClassName") { task ->
             task.dependsOn(target.tasks.withType(JavaCompile::class.java))
             task.inputClassPath.set(getMainSourceSet(target).runtimeClasspath)
+            task.enclaveClassNameFile.set(baseDirectory.resolve("enclave-class-name.txt").toFile())
         }
 
         val generateEnclavePropertiesTask = target.createTask<GenerateEnclaveProperties>(
@@ -275,8 +276,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val generateReflectionConfigTask =
             target.createTask<GenerateReflectionConfig>("generateReflectionConfig") { task ->
                 val enclaveClassNameTask = target.tasks.withType(EnclaveClassName::class.java).single()
-                task.dependsOn(enclaveClassNameTask)
-                task.enclaveClass.set(enclaveClassNameTask.outputEnclaveClassName)
+                task.enclaveClass.set(enclaveClassNameTask.enclaveClassName())
                 task.reflectionConfig.set(baseDirectory.resolve("reflectconfig").toFile())
             }
 
@@ -606,7 +606,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         if (pythonSourcePath == null) {
             dependsOn(enclaveClassNameTask)
             first {
-                block(enclaveClassNameTask.outputEnclaveClassName.get())
+                block(enclaveClassNameTask.enclaveClassName().get())
             }
         } else {
             // This is a bit of a hack, but if the enclave is in Python then we're using the

@@ -46,7 +46,7 @@ abstract class AbstractTaskTest {
     }
 
     @Test
-    fun `deleting output forces task to re-run`() {
+    fun `check task is incremental and that deleting the output forces a re-run`() {
         val originalContent = assertTaskIsIncremental {
             assertThat(output).exists()
             if (isReproducible && output.isRegularFile()) {
