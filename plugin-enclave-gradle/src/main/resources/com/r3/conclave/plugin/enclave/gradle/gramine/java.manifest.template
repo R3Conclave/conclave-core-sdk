@@ -1,10 +1,14 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
+{% if enclave_mode == "RELEASE" %}
+loader.log_level = "none"
+{% else %}
 loader.log_level = "error"
+{% endif %}
 
 # This is needed to read large SGX manifests when running Python enclaves.
 {% if is_python_enclave == "true" %}
-   loader.pal_internal_mem_size = "64M"
+   loader.pal_internal_mem_size = "256M"
 {% endif %}
 
 # TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
