@@ -4,6 +4,7 @@ import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
+import com.r3.conclave.utilities.internal.toHexString
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
@@ -14,7 +15,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import java.security.interfaces.RSAPublicKey
-import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
@@ -72,7 +72,7 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
                 "-Dpython_packages_path=$pythonPackagesPath",
                 "-Dis_python_enclave=${pythonEnclave.get()}",
                 "-Dis_simulation_enclave=${buildType.get() == BuildType.Simulation}",
-                "-Dsimulation_mrsigner=${String(Base64.getEncoder().encode(computeSigningKeyMeasurement()))}",
+                "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
                 "-Dconclave_max_threads=$conclaveMaxThreads",
                 "-Dgramine_max_threads=$gramineMaxThreads",
                 manifestTemplateFile.absolutePathString(),

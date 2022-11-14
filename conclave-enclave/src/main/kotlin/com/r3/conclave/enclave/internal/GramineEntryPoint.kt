@@ -6,6 +6,7 @@ import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
+import com.r3.conclave.utilities.internal.parseHex
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
@@ -13,7 +14,6 @@ import java.nio.file.Path
 import kotlin.system.exitProcess
 import java.lang.Boolean.parseBoolean
 import java.nio.file.Paths
-import java.util.*
 
 object GramineEntryPoint {
     private const val USAGE_STRING = "usage: GramineEntryPoint <port>"
@@ -22,7 +22,7 @@ object GramineEntryPoint {
     /** Enclave metadata, retrieved from the manifest. */
     private val isSimulation = parseBoolean(System.getenv("CONCLAVE_IS_SIMULATION_ENCLAVE")!!)
     private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
-    private val signingKeyMeasurement = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { Base64.getDecoder().decode(it) }
+    private val signingKeyMeasurement = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { parseHex(it) }
     private val conclaveMaxThreads = System.getenv("CONCLAVE_MAX_THREADS")!!.toInt()
 
     @JvmStatic
