@@ -2,18 +2,17 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import io.github.classgraph.ClassGraph
 import org.gradle.api.GradleException
-import org.gradle.api.file.FileCollection
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
 
 open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-    @get:Input
-    val inputClassPath: Property<FileCollection> = objects.property(FileCollection::class.java)
+    @get:InputFiles
+    val classPath: ConfigurableFileCollection = objects.fileCollection()
 
     // Gradle uses inputs and outputs to determine if a task needs to run again (aka incremental builds). If a task
     // doesn't declare an output then it has no way of determining this and will report the warning:
@@ -33,9 +32,9 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
     fun enclaveClassName(): Provider<String> = enclaveClassNameFile.map { it.asFile.readText().trimEnd() }
 
     override fun action() {
-        logger.info("Scanning for enclave class: ${inputClassPath.get().asPath}")
+        logger.info("Scanning for enclave class: ${classPath.asPath}")
         val enclaveClassName = ClassGraph()
-                .overrideClasspath(inputClassPath.get().asPath)
+                .overrideClasspath(classPath.asPath)
                 .enableClassInfo()
                 .scan()
                 .use { result ->

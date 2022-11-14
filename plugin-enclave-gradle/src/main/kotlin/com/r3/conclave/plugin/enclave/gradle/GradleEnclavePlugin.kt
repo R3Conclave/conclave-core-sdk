@@ -131,7 +131,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         target.createTask<EnclaveClassName>("enclaveClassName") { task ->
             task.dependsOn(target.tasks.withType(JavaCompile::class.java))
-            task.inputClassPath.set(getMainSourceSet(target).runtimeClasspath)
+            task.classPath.setFrom(getMainSourceSet(target).runtimeClasspath)
             task.enclaveClassNameFile.set(baseDirectory.resolve("enclave-class-name.txt").toFile())
         }
 
