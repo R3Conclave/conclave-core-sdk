@@ -14,7 +14,7 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/
 loader.env.LD_PRELOAD = "{{ ld_preload }}"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
 
-# Signal to the enclave entry point that we
+# Is this enclave implemented in python?
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 
 # Is this a simulation enclave?
