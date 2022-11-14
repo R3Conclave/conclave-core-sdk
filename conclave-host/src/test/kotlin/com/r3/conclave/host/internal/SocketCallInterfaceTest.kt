@@ -31,10 +31,10 @@ class SocketCallInterfaceTest {
 
     @BeforeEach
     fun startInterfaces() {
-        hostEnclaveInterface = SocketHostEnclaveInterface(ENCLAVE_HOST_INTERFACE_THREADS)
+        hostEnclaveInterface = SocketHostEnclaveInterface()
 
         val eFuture = FutureTask {
-            SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER).apply { start() }
+            SocketEnclaveHostInterface("127.0.0.1", SOCKET_PORT_NUMBER, ENCLAVE_HOST_INTERFACE_THREADS).apply { start() }
         }
 
         hostEnclaveInterface.bindPort(SOCKET_PORT_NUMBER)
