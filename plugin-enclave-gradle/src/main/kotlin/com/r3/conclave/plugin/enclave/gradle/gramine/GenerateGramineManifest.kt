@@ -28,8 +28,10 @@ open class GenerateGramineManifest @Inject constructor(
 
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
+
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
+
     @get:Input
     val pythonEnclave: Property<Boolean> = objects.property(Boolean::class.java)
 
