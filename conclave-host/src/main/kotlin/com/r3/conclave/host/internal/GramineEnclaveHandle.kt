@@ -3,7 +3,6 @@ package com.r3.conclave.host.internal
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
@@ -13,7 +12,6 @@ import java.util.zip.ZipInputStream
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 import kotlin.io.path.exists
-import kotlin.io.path.reader
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
@@ -30,15 +28,8 @@ class GramineEnclaveHandle(
         require(enclaveMode != EnclaveMode.MOCK)
         unzipIntoWorkingDir()
 
-        /**
-         * Not all threads in the enclave are necessarily the result of conclave calls.
-         * To minimise the likelihood of deadlocks, we don't allow conclave to use all available threads.
-         */
-        val maxConcurrentCalls = getEnclaveThreadCountFromManifest() / 2
-        check(maxConcurrentCalls > 0)
-
         /** Create a socket host interface. */
-        enclaveInterface = SocketHostEnclaveInterface(maxConcurrentCalls)
+        enclaveInterface = SocketHostEnclaveInterface()
     }
 
     override fun initialise() {
@@ -53,9 +44,6 @@ class GramineEnclaveHandle(
             "gramine-direct",
             "java", "-cp", GRAMINE_ENCLAVE_JAR, "com.r3.conclave.enclave.internal.GramineEntryPoint", port.toString()
         )
-        if ((workingDirectory / PYTHON_FILE).exists()) {
-            command += PYTHON_FILE
-        }
 
         processGramineDirect = ProcessBuilder()
             .inheritIO()
@@ -109,34 +97,6 @@ class GramineEnclaveHandle(
         }
         require((workingDirectory / GRAMINE_MANIFEST).exists()) { "Missing gramine manifest" }
         require((workingDirectory / GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
-    }
-
-    /**
-     * Retrieves the thread count number by parsing the manifest.
-     * This is bit hacky but will do for now.
-     * TODO: Implement a proper method for providing build-time enclave meta-data to the host before enclave startup
-     */
-    private fun getEnclaveThreadCountFromManifest(): Int {
-        var inCorrectSection = false
-
-        (workingDirectory / GRAMINE_MANIFEST).reader().use {
-            for (line in it.readLines()) {
-                val tokens = line.trim().split("=").map { token -> token.trim() }
-
-                if (tokens.size == 1) {
-                    inCorrectSection = (tokens[0] == "[sgx]")
-                    continue
-                }
-
-                if (inCorrectSection && tokens.size >= 2) {
-                    if (tokens[0] == "thread_num") {
-                        return tokens[1].toInt()
-                    }
-                }
-            }
-
-            throw IllegalStateException("sgx.thread_num missing from manifest, unable to proceed.")
-        }
     }
 
     override val mockEnclave: Any get() {

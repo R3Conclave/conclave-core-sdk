@@ -180,9 +180,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createEnclaveArtifacts(target, conclaveExtension, enclaveFatJarTask)
     }
 
-    private fun createGenerateGramineManifestTask(target: Project, type: BuildType): GenerateGramineManifest {
-        return target.createTask("generateGramineManifest$type") { task ->
-            task.manifestFile.set((baseDirectory / "gramine" / PluginUtils.GRAMINE_MANIFEST).toFile())
+    private fun createGenerateGramineManifestTask(
+            target: Project,
+            type: BuildType,
+            conclaveExtension: ConclaveExtension,
+            signingKey: Provider<RegularFile?>
+    ): GenerateGramineManifest {
+        return target.createTask("generateGramineManifest$type", type) { task ->
+            task.pythonEnclave.set(pythonSourcePath != null)
+            task.signingKey.set(signingKey)
+            task.maxThreads.set(conclaveExtension.maxThreads)
+            task.manifestFile.set((gramineBuildDirectory / PluginUtils.GRAMINE_MANIFEST).toFile())
         }
     }
 
@@ -234,6 +242,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
+    private val gramineBuildDirectory: Path by lazy { baseDirectory.resolve("gramine") }
 
     /**
      * Get the main source set for a given project
@@ -317,6 +326,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 else -> throw IllegalStateException()
             }
 
+            val signingKey = enclaveExtension.signingType.flatMap {
+                when (it) {
+                    SigningType.DummyKey -> createDummyKeyTask.outputKey
+                    SigningType.PrivateKey -> enclaveExtension.signingKey
+                    else -> target.provider { null }
+                }
+            }
+
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
             // Simulation and debug default to using a dummy key. Release defaults to external key
@@ -327,7 +344,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
-            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type)
+            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, conclaveExtension, signingKey)
 
             val gramineZipBundle = createGramineZipBundle(
                 target,
@@ -401,13 +418,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     )
                     task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                    task.inputKey.set(enclaveExtension.signingType.flatMap {
-                        when (it) {
-                            SigningType.DummyKey -> createDummyKeyTask.outputKey
-                            SigningType.PrivateKey -> enclaveExtension.signingKey
-                            else -> target.provider { null }
-                        }
-                    })
+                    task.inputKey.set(signingKey)
                     task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
                 }
 
