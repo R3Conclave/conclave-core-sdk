@@ -131,7 +131,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         target.createTask<EnclaveClassName>("enclaveClassName") { task ->
             task.dependsOn(target.tasks.withType(JavaCompile::class.java))
-            task.classPath.setFrom(getMainSourceSet(target).runtimeClasspath)
+            task.classPath.setFrom(getMainSourceSet(target).output)
             task.enclaveClassNameFile.set(baseDirectory.resolve("enclave-class-name.txt").toFile())
         }
 
@@ -198,7 +198,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
             task.maxThreads.set(conclaveExtension.maxThreads)
-            task.manifestFile.set((gramineBuildDirectory / PluginUtils.GRAMINE_MANIFEST).toFile())
+            task.manifestFile.set((baseDirectory / type.name.lowercase() / PluginUtils.GRAMINE_MANIFEST).toFile())
         }
     }
 
