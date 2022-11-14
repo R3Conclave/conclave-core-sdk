@@ -7,6 +7,5 @@ object PluginUtils {
     const val ENCLAVE_PROPERTIES = "enclave.properties"
     const val GRAMINE_ENCLAVE_JAR = "enclave.jar"
     const val GRAMINE_MANIFEST = "java.manifest"
-    const val GRAMINE_ENCLAVE_METADATA = "enclave-metadata.properties"
     const val PYTHON_FILE = "enclave.py"
 }
