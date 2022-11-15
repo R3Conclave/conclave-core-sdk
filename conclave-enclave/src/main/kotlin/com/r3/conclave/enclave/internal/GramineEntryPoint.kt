@@ -1,6 +1,8 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
@@ -26,7 +28,7 @@ object GramineEntryPoint {
     private val enclaveMode = EnclaveMode.valueOf(System.getenv("CONCLAVE_ENCLAVE_MODE")!!.uppercase())
     private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
     private val isSgxDebug = parseBoolean(System.getenv("SGX_DEBUG"))
-    private val simulationMrSigner = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { parseHex(it) }
+    private val simulationMrSigner = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { SHA256Hash.wrap(parseHex(it)) }
     private val conclaveWorkerThreads = System.getenv("CONCLAVE_ENCLAVE_WORKER_THREADS")!!.toInt()
     private val commonErrorMessage = "Manifest not present when initialising the enclave in $enclaveMode mode"
 
