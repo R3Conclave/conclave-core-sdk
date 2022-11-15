@@ -194,7 +194,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             signingKey: Provider<RegularFile?>
     ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type) { task ->
-            task.inputSGXDebugFlag.set(
+            task.sgxDebugFlag.set(
                 when (type) {
                     BuildType.Simulation -> true
                     BuildType.Debug -> true

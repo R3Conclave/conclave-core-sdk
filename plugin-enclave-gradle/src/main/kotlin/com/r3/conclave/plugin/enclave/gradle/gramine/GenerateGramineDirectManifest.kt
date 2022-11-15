@@ -28,7 +28,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
     }
 
     @get:Input
-    val inputSGXDebugFlag: Property<Boolean> = objects.property(Boolean::class.java)
+    val sgxDebugFlag: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
@@ -78,7 +78,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 "-Djava_home=${System.getProperty("java.home")}",
                 "-Darch_libdir=/lib/$architecture",
                 "-Dld_preload=$ldPreload",
-                "-Dsgx_debug=${inputSGXDebugFlag.get().toString().lowercase()}",
+                "-Dsgx_debug=${sgxDebugFlag.get().toString().lowercase()}",
                 "-Dpython_packages_path=$pythonPackagesPath",
                 "-Dis_python_enclave=${pythonEnclave.get()}",
                 "-Denclave_mode=${buildType.name.uppercase()}",
