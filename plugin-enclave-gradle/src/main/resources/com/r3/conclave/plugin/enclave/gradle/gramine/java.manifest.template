@@ -45,9 +45,9 @@ fs.mounts = [
 ]
 
 {% if enclave_mode == "RELEASE" %}
-sgx.debug = "false"
+sgx.debug = false
 {% else %}
-sgx.debug = "true"
+sgx.debug = true
 {% endif %}
 
 sgx.enclave_size = "{{ enclave_size }}"
