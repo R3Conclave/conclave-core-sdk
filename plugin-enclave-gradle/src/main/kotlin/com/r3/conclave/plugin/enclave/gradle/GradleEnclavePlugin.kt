@@ -194,14 +194,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             signingKey: Provider<RegularFile?>
     ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type) { task ->
-            task.sgxDebugFlag.set(
-                when (type) {
-                    BuildType.Simulation -> true
-                    BuildType.Debug -> true
-                    BuildType.Release -> false
-                    else -> true
-                }
-            )
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
             task.maxThreads.set(conclaveExtension.maxThreads)

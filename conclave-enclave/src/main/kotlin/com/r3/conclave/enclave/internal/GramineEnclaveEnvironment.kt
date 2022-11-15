@@ -24,6 +24,10 @@ class GramineEnclaveEnvironment(
         }
     }
 
+    init {
+        require(enclaveMode != EnclaveMode.MOCK) { "Gramine can't run in MOCK mode" }
+    }
+
     private val tcbLevel = 1
 
     private val currentCpuSvn: ByteArray by lazy {

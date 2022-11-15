@@ -21,7 +21,6 @@ sgx.remote_attestation = "none"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
 loader.env.LD_PRELOAD = "{{ ld_preload }}"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
-loader.env.SGX_DEBUG = "{{ sgx_debug }}"
 
 # Is this enclave implemented in python?
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
@@ -45,7 +44,11 @@ fs.mounts = [
   { path = "/tmp",                       type = "tmpfs" },
 ]
 
-sgx.debug = {{ sgx_debug }}
+{% if enclave_mode == "RELEASE" %}
+sgx.debug = "false"
+{% else %}
+sgx.debug = "true"
+{% endif %}
 
 {% if is_python_enclave == "true" %}
    sgx.enclave_size = "8G"

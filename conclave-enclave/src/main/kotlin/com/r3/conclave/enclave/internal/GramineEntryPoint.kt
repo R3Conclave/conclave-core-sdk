@@ -2,7 +2,6 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.internal.CallHandler
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
@@ -12,13 +11,13 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.getRemainingString
 import com.r3.conclave.utilities.internal.parseHex
 import java.io.File
+import java.lang.Boolean.parseBoolean
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.nio.ByteBuffer
 import java.nio.file.Path
-import kotlin.system.exitProcess
-import java.lang.Boolean.parseBoolean
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 object GramineEntryPoint {
     private const val USAGE_STRING = "usage: GramineEntryPoint <port>"
@@ -27,7 +26,6 @@ object GramineEntryPoint {
     /** Enclave metadata, retrieved from the manifest. */
     private val enclaveMode = EnclaveMode.valueOf(System.getenv("CONCLAVE_ENCLAVE_MODE")!!.uppercase())
     private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
-    private val isSgxDebug = parseBoolean(System.getenv("SGX_DEBUG"))
     private val simulationMrSigner = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { SHA256Hash.wrap(parseHex(it)) }
     private val conclaveWorkerThreads = System.getenv("CONCLAVE_ENCLAVE_WORKER_THREADS")!!.toInt()
 
@@ -109,12 +107,10 @@ object GramineEntryPoint {
 
             EnclaveMode.DEBUG -> {
                 require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX ${commonErrorMessage()}" }
-                require(isSgxDebug) { "Gramine SGX debug flag not enabled in $enclaveMode mode" }
             }
 
             EnclaveMode.RELEASE -> {
                 require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX ${commonErrorMessage()}" }
-                require(!isSgxDebug) { "Gramine SGX debug flag not disabled in $enclaveMode mode" }
             }
 
             EnclaveMode.MOCK -> {
