@@ -118,7 +118,7 @@ object GramineEntryPoint {
             }
 
             EnclaveMode.MOCK -> {
-                throw IllegalArgumentException("Developer error: MOCK mode not supported in Gramine")
+                throw IllegalArgumentException("MOCK mode not supported in Gramine")
             }
         }
     }
