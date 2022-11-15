@@ -30,7 +30,8 @@ loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
 
 # In simulation mode, we need to provide the signing key measurement
-{% if enclave_mode == "SIMULATION" %}
+//  TODO: remove the DEBUG and RELEASE conditions here below when we integrate attestation in Gramine
+{% if enclave_mode == "SIMULATION" || enclave_mode == "DEBUG" || enclave_mode == "RELEASE" %}
   loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
 {% endif %}
 
