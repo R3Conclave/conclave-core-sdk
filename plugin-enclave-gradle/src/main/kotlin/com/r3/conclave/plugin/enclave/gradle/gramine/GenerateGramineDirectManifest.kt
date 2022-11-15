@@ -25,6 +25,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
 ) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
+        const val PYTHON_ENCLAVE_SIZE = "8G"
+        const val JAVA_ENCLAVE_SIZE = "4G"
     }
 
     @get:Input
@@ -81,6 +83,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
                 "-Denclave_worker_threads=$enclaveWorkerThreadCount",
                 "-Dgramine_max_threads=$gramineMaxThreads",
+                "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
                 manifestTemplateFile.absolutePathString(),
                 manifestFile.asFile.get().absolutePath
             )

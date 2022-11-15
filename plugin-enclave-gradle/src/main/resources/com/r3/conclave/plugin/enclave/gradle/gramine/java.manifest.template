@@ -50,11 +50,7 @@ sgx.debug = "false"
 sgx.debug = "true"
 {% endif %}
 
-{% if is_python_enclave == "true" %}
-   sgx.enclave_size = "8G"
-{% else %}
-   sgx.enclave_size = "4G"
-{% endif %}
+sgx.enclave_size = {{ enclave_size }}
 
 sgx.thread_num = {{ gramine_max_threads }}
 
