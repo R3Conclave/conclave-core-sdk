@@ -30,7 +30,8 @@ object GramineEntryPoint {
     private val isSgxDebug = parseBoolean(System.getenv("SGX_DEBUG"))
     private val simulationMrSigner = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { SHA256Hash.wrap(parseHex(it)) }
     private val conclaveWorkerThreads = System.getenv("CONCLAVE_ENCLAVE_WORKER_THREADS")!!.toInt()
-    private val commonErrorMessage = "Manifest not present when initialising the enclave in $enclaveMode mode"
+
+    private fun commonErrorMessage() = "Manifest not present when initialising the enclave in $enclaveMode mode"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -103,16 +104,16 @@ object GramineEntryPoint {
     private fun validateEnclaveMode() {
         when (enclaveMode) {
             EnclaveMode.SIMULATION -> {
-                require(File(GRAMINE_MANIFEST).exists()) { "Gramine Direct $commonErrorMessage" }
+                require(File(GRAMINE_MANIFEST).exists()) { "Gramine Direct ${commonErrorMessage()}" }
             }
 
             EnclaveMode.DEBUG -> {
-                require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX $commonErrorMessage" }
+                require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX ${commonErrorMessage()}" }
                 require(isSgxDebug) { "Gramine SGX debug flag not enabled in $enclaveMode mode" }
             }
 
             EnclaveMode.RELEASE -> {
-                require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX $commonErrorMessage" }
+                require(File(GRAMINE_SGX_MANIFEST).exists()) { "Gramine SGX ${commonErrorMessage()}" }
                 require(!isSgxDebug) { "Gramine SGX debug flag not disabled in $enclaveMode mode" }
             }
 
