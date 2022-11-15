@@ -5,7 +5,7 @@ plugins {
 conclave {
     productID = 100
     revocationLevel = 2
-    maxThreads = 20
+    maxThreads = 32
 
     debug {
         signingType = privateKey
