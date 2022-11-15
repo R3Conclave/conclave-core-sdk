@@ -15,7 +15,6 @@ conclave {
     }
 
     release {
-        signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingType = dummyKey
     }
 }
