@@ -111,14 +111,13 @@ class GramineEnclaveHandle(
     }
 
     private fun getManifestFromUnzippedBundle(): Path {
+        require((workingDirectory / GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
 
         return if (enclaveMode == EnclaveMode.SIMULATION) {
             require((workingDirectory / GRAMINE_MANIFEST).exists()) { "Missing Gramine manifest" }
-            require((workingDirectory / GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
             workingDirectory / GRAMINE_MANIFEST
         } else {
             require((workingDirectory / GRAMINE_SGX_MANIFEST).exists()) { "Missing SGX Gramine manifest" }
-            require((workingDirectory / GRAMINE_ENCLAVE_JAR).exists()) { "Missing enclave jar" }
             require((workingDirectory / GRAMINE_SIG).exists()) { "Missing SIG file" }
             require((workingDirectory / GRAMINE_SGX_TOKEN).exists()) { "Missing SGX Token" }
             workingDirectory / GRAMINE_SGX_MANIFEST
