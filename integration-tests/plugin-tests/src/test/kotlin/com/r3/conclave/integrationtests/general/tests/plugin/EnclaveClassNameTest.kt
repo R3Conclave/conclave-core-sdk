@@ -3,8 +3,10 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
+@Disabled("EnclaveClassName isn't incremental yet")
 class EnclaveClassNameTest : AbstractConclaveTaskTest() {
     override val taskName: String get() = "enclaveClassName"
     override val outputName: String get() = "enclave-class-name.txt"

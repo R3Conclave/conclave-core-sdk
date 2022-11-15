@@ -22,6 +22,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.bundling.ZipEntryCompression.STORED
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
 import java.nio.file.Files
@@ -129,10 +130,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         target.createTask<EnclaveClassName>("enclaveClassName") { task ->
-            val runtimeClasspath = target.configurations.getByName("runtimeClasspath")
-            task.dependsOn(runtimeClasspath)
-            task.classPath.setFrom(runtimeClasspath)
-            task.enclaveClassNameFile.set(baseDirectory.resolve("enclave-class-name.txt").toFile())
+            task.dependsOn(target.tasks.withType(JavaCompile::class.java))
+            task.inputClassPath.set(getMainSourceSet(target).runtimeClasspath)
         }
 
         val generateEnclavePropertiesTask = target.createTask<GenerateEnclaveProperties>(
@@ -276,7 +275,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val generateReflectionConfigTask =
             target.createTask<GenerateReflectionConfig>("generateReflectionConfig") { task ->
                 val enclaveClassNameTask = target.tasks.withType(EnclaveClassName::class.java).single()
-                task.enclaveClass.set(enclaveClassNameTask.enclaveClassName())
+                task.dependsOn(enclaveClassNameTask)
+                task.enclaveClass.set(enclaveClassNameTask.outputEnclaveClassName)
                 task.reflectionConfig.set(baseDirectory.resolve("reflectconfig").toFile())
             }
 
@@ -606,7 +606,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         if (pythonSourcePath == null) {
             dependsOn(enclaveClassNameTask)
             first {
-                block(enclaveClassNameTask.enclaveClassName().get())
+                block(enclaveClassNameTask.outputEnclaveClassName.get())
             }
         } else {
             // This is a bit of a hack, but if the enclave is in Python then we're using the
