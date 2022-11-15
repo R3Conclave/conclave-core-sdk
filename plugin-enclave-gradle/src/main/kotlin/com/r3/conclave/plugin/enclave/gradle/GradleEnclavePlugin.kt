@@ -22,7 +22,6 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.bundling.ZipEntryCompression.STORED
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
 import java.nio.file.Files
@@ -130,8 +129,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         target.createTask<EnclaveClassName>("enclaveClassName") { task ->
-            task.dependsOn(target.tasks.withType(JavaCompile::class.java))
-            task.classPath.setFrom(getMainSourceSet(target).output)
+            val runtimeClasspath = target.configurations.getByName("runtimeClasspath")
+            task.dependsOn(runtimeClasspath)
+            task.classPath.setFrom(runtimeClasspath)
             task.enclaveClassNameFile.set(baseDirectory.resolve("enclave-class-name.txt").toFile())
         }
 
