@@ -30,7 +30,7 @@ loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
 
 # In simulation mode, we need to provide the signing key measurement
 # TODO: readd the SIMULATION related check below once we have introduced attestation in Gramine
-# {% if enclave_mode == "SIMULATION" }
+# {% if enclave_mode == "SIMULATION" %}
 loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
 # {% endif %}
 
