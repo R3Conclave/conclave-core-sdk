@@ -64,9 +64,12 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
                 )
             ) { "Python script not copied correctly while building the Gramine SGX manifest" }
         }
-        check(signDirectManifest(manifestPath, privateKeyPath).exitValue == 0) { "Could not sign the manifest" }
 
-        if (sgxGetToken().exitValue == 0) {
+        if (signDirectManifest(manifestPath, privateKeyPath).exitValue != 0) {
+            throw GradleException("Could not sign the manifest")
+        }
+
+        if (sgxGetToken().exitValue != 0) {
             throw GradleException("Could not get the token for the SGX manifest")
         }
     }
