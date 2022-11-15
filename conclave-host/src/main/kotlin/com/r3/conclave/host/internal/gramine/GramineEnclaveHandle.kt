@@ -10,6 +10,7 @@ import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
 import com.r3.conclave.host.internal.loggerFor
 import java.io.IOException
+import java.lang.IllegalArgumentException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -26,12 +27,15 @@ class GramineEnclaveHandle(
 ) : EnclaveHandle {
 
     companion object {
-        private val ENCLAVE_MODE_EXECUTABLES = mapOf(
-            EnclaveMode.SIMULATION to "gramine-direct",
-            EnclaveMode.DEBUG to "gramine-sgx",
-            EnclaveMode.RELEASE to "gramine-sgx"
-        )
         private val logger = loggerFor<GramineEnclaveHandle>()
+
+        private fun getGramineExecutable(enclaveMode: EnclaveMode) =
+            when (enclaveMode) {
+                EnclaveMode.SIMULATION -> "gramine-direct"
+                EnclaveMode.DEBUG -> "gramine-sgx"
+                EnclaveMode.RELEASE -> "gramine-sgx"
+                EnclaveMode.MOCK -> throw IllegalArgumentException("MOCK mode is not supported in Gramine")
+            }
     }
 
     private lateinit var gramineProcess: Process
@@ -59,7 +63,7 @@ class GramineEnclaveHandle(
          * Start the enclave process, passing the port that the call interface is listening on.
          * TODO: Implement a *secure* method for passing port to the enclave.
          */
-        val command = mutableListOf(ENCLAVE_MODE_EXECUTABLES[enclaveMode]!!)
+        val command = mutableListOf(getGramineExecutable(enclaveMode))
         command += listOf(
             "java",
             "-cp",
