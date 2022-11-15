@@ -111,7 +111,6 @@ class GramineEnclaveHandle(
     }
 
     private fun getManifestFromUnzippedBundle(): Path {
-        check(enclaveMode != EnclaveMode.MOCK)
 
         return if (enclaveMode == EnclaveMode.SIMULATION) {
             require((workingDirectory / GRAMINE_MANIFEST).exists()) { "Missing Gramine manifest" }
