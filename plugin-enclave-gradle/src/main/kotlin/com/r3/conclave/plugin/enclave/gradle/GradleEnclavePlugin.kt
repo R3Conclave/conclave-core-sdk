@@ -223,18 +223,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val outputTokenPath = directManifestPath.replace("manifest", "token")
             val outputSig = directManifestPath.replace("manifest", "sig")
 
-            task.inputPrivateKey.set(enclaveExtension.signingType.flatMap {
+            task.privateKey.set(enclaveExtension.signingType.flatMap {
                 when (it) {
                     SigningType.DummyKey -> createDummyKeyTask.outputKey
                     SigningType.PrivateKey -> enclaveExtension.signingKey
                     else -> target.provider { null }
                 }
             })
-            task.inputEnclaveJar.set(enclaveFatJarTask.archiveFile)
+            task.enclaveJar.set(enclaveFatJarTask.archiveFile)
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
                 if (pythonFiles.size == 1) {
-                    task.inputPythonSourcePath.set(pythonFiles.first()!!)
+                    task.pythonSourcePath.set(pythonFiles.first()!!)
                 } else {
                     throw GradleException(
                         "Only a single Python script is supported, but ${pythonFiles.size} were " +
@@ -242,10 +242,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     )
                 }
             }
-            task.inputDirectManifest.set(generateGramineManifestTask.manifestFile)
-            task.outputSGXManifest.set(Paths.get(outputSgxManifestPath).toFile())
-            task.outputToken.set(Paths.get(outputTokenPath).toFile())
-            task.outputSig.set(Paths.get(outputSig).toFile())
+            task.directManifest.set(generateGramineManifestTask.manifestFile)
+            task.sgxManifest.set(Paths.get(outputSgxManifestPath).toFile())
+            task.sgxToken.set(Paths.get(outputTokenPath).toFile())
+            task.sgxSig.set(Paths.get(outputSig).toFile())
         }
     }
 
@@ -294,13 +294,13 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.from(enclaveFatJar.archiveFile) { copySpec ->
                 copySpec.rename { GRAMINE_ENCLAVE_JAR }
             }
-            task.from(generateGramineManifestTask.outputSGXManifest) { copySpec ->
+            task.from(generateGramineManifestTask.sgxManifest) { copySpec ->
                 copySpec.rename { GRAMINE_SGX_MANIFEST }
             }
-            task.from(generateGramineManifestTask.outputSig) { copySpec ->
+            task.from(generateGramineManifestTask.sgxSig) { copySpec ->
                 copySpec.rename { GRAMINE_SIG }
             }
-            task.from(generateGramineManifestTask.outputToken) { copySpec ->
+            task.from(generateGramineManifestTask.sgxToken) { copySpec ->
                 copySpec.rename { GRAMINE_SGX_TOKEN }
             }
             task.archiveAppendix.set("gramine-sgx-bundle")

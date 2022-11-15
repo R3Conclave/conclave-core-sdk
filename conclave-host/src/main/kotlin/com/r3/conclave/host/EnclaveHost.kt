@@ -416,6 +416,8 @@ class EnclaveHost private constructor(
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
+
+        // TODO: Fix the condition once Gramine attestation has been integrated
         quotingService =
             EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle is NativeEnclaveHandle })
 
@@ -466,7 +468,6 @@ class EnclaveHost private constructor(
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
-        // TODO: Improve the enclaveHandle !is GramineEnclaveHandle condition
         return if (isFileSystemSupported()) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
@@ -477,7 +478,8 @@ class EnclaveHost private constructor(
 
     private fun isFileSystemSupported(): Boolean {
         //  This filesystem implementation is only supported in SIMULATION, DEBUG, RELEASE mode in Graal VM mode only
-       return enclaveMode != EnclaveMode.MOCK && enclaveHandle is NativeEnclaveHandle
+        // TODO: Fix this once we have filesystem supported in Gramine
+        return enclaveMode != EnclaveMode.MOCK && enclaveHandle is NativeEnclaveHandle
     }
 
     private fun executeKdsPrivateKeyRequest(

@@ -3,6 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle.gramine
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
@@ -19,35 +20,35 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
     }
 
     @get:InputFile
-    val inputPrivateKey: RegularFileProperty = objects.fileProperty()
+    val privateKey: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
-    val inputDirectManifest: RegularFileProperty = objects.fileProperty()
+    val directManifest: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
-    val inputEnclaveJar: RegularFileProperty = objects.fileProperty()
+    val enclaveJar: RegularFileProperty = objects.fileProperty()
 
     @get:InputFile
     @Optional
-    val inputPythonSourcePath: RegularFileProperty = objects.fileProperty()
+    val pythonSourcePath: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
-    val outputSGXManifest: RegularFileProperty = objects.fileProperty()
+    val sgxManifest: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
-    val outputToken: RegularFileProperty = objects.fileProperty()
+    val sgxToken: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
-    val outputSig: RegularFileProperty = objects.fileProperty()
+    val sgxSig: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val manifestPath = inputDirectManifest.get().asFile.absolutePath
-        val privateKeyPath = inputPrivateKey.get().asFile.absolutePath
-        val outputSGXManifestPath = outputSGXManifest.asFile.get().parentFile.absolutePath
+        val manifestPath = directManifest.get().asFile.absolutePath
+        val privateKeyPath = privateKey.get().asFile.absolutePath
+        val outputSGXManifestPath = sgxManifest.asFile.get().parentFile.absolutePath
         val enclaveDestinationJarName = "${outputSGXManifestPath}/$GRAMINE_ENCLAVE_JAR"
         val enclaveDestinationJarFile = File(enclaveDestinationJarName)
         checkNotNull(
-            inputEnclaveJar.get().asFile.copyTo(
+            enclaveJar.get().asFile.copyTo(
                 enclaveDestinationJarFile,
                 overwrite = true
             )
@@ -55,16 +56,19 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         val enclaveDestinationPythonFileName = "${outputSGXManifestPath}/$PYTHON_FILE"
         val enclaveDestinationPythonFile = File(enclaveDestinationPythonFileName)
 
-        if (inputPythonSourcePath.isPresent) {
+        if (pythonSourcePath.isPresent) {
             checkNotNull(
-                inputPythonSourcePath.get().asFile.copyTo(
+                pythonSourcePath.get().asFile.copyTo(
                     enclaveDestinationPythonFile,
                     overwrite = true
                 )
             ) { "Python script not copied correctly while building the Gramine SGX manifest" }
         }
         check(signDirectManifest(manifestPath, privateKeyPath).exitValue == 0) { "Could not sign the manifest" }
-        check(sgxGetToken().exitValue == 0) { "Could not get the token for the SGX manifest" }
+
+        if (sgxGetToken().exitValue == 0) {
+            throw GradleException("Could not get the token for the SGX manifest")
+        }
     }
 
     private fun signDirectManifest(directManifest: String, privateKey: String): ExecResult {
@@ -72,17 +76,17 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
             GRAMINE_SGX_SIGN_EXECUTABLE,
             "--manifest=$directManifest",
             "--key=$privateKey",
-            "--output=${outputSGXManifest.asFile.get().absolutePath}"
+            "--output=${sgxManifest.asFile.get().absolutePath}"
         )
-        val enclaveJarBuildDir = outputSGXManifest.asFile.get().parentFile.absolutePath
+        val enclaveJarBuildDir = sgxManifest.asFile.get().parentFile.absolutePath
         return commandLine(command, commandLineConfig = CommandLineConfig(workingDir = enclaveJarBuildDir))
     }
 
     private fun sgxGetToken(): ExecResult {
         val command = listOf(
             GRAMINE_GET_TOKEN_EXECUTABLE,
-            "--sig=${outputSig.get().asFile.absolutePath}",
-            "--output=${outputToken.asFile.get().absolutePath}"
+            "--sig=${sgxSig.get().asFile.absolutePath}",
+            "--output=${sgxToken.asFile.get().absolutePath}"
         )
         return commandLine(command)
     }
