@@ -10,10 +10,10 @@ import java.security.MessageDigest
  * This class is the enclave environment intended for use with gramine-direct.
  */
 class GramineEnclaveEnvironment(
-        enclaveClass: Class<*>,
-        override val hostInterface: SocketEnclaveHostInterface,
-        private val mrsigner: ByteArray,
-        override val enclaveMode: EnclaveMode
+    enclaveClass: Class<*>,
+    override val hostInterface: SocketEnclaveHostInterface,
+    private val simulationMrSigner: ByteArray?,
+    override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -62,7 +62,7 @@ class GramineEnclaveEnvironment(
         }
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
-        body[SgxReportBody.mrsigner] = ByteBuffer.wrap(mrsigner)
+        body[SgxReportBody.mrsigner] = ByteBuffer.wrap(simulationMrSigner)
         body[SgxReportBody.isvProdId] = productID
         // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
         body[SgxReportBody.isvSvn] = revocationLevel + 1
@@ -88,7 +88,7 @@ class GramineEnclaveEnvironment(
         val keyName = keyRequest[SgxKeyRequest.keyName].read()
         if (keyName == KeyName.REPORT) {
             return digest("SHA-256") {
-                update(mrsigner)
+                update(simulationMrSigner)
                 update(mrenclave)
                 update(keyRequest[SgxKeyRequest.keyId].buffer)
             }.copyOf(16)
@@ -110,7 +110,7 @@ class GramineEnclaveEnvironment(
                 update(mrenclave)
             }
             if (keyPolicy.isSet(KeyPolicy.MRSIGNER)) {
-                update(mrsigner)
+                update(simulationMrSigner)
             }
             update(ByteBuffer.allocate(2).putShort(productID.toShort()).array())  // Product Id is an unsigned short.
             update(keyRequest[SgxKeyRequest.isvSvn].buffer)

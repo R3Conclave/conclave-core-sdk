@@ -26,7 +26,7 @@ object GramineEntryPoint {
     private val enclaveMode = EnclaveMode.valueOf(System.getenv("CONCLAVE_ENCLAVE_MODE")!!.uppercase())
     private val isPythonEnclave = parseBoolean(System.getenv("CONCLAVE_IS_PYTHON_ENCLAVE")!!)
     private val isSgxDebug = parseBoolean(System.getenv("SGX_DEBUG"))
-    private val signingKeyMeasurement = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { parseHex(it) }
+    private val simulationMrSigner = System.getenv("CONCLAVE_SIMULATION_MRSIGNER")?.let { parseHex(it) }
     private val conclaveWorkerThreads = System.getenv("CONCLAVE_ENCLAVE_WORKER_THREADS")!!.toInt()
     private val commonErrorMessage = "Manifest not present when initialising the enclave in $enclaveMode mode"
 
@@ -91,7 +91,7 @@ object GramineEntryPoint {
                     .execute(enclave, Paths.get(PYTHON_FILE))
         }
         validateEnclaveMode()
-        val env = GramineEnclaveEnvironment(enclaveClass, hostInterface, signingKeyMeasurement!!, enclaveMode)
+        val env = GramineEnclaveEnvironment(enclaveClass, hostInterface, simulationMrSigner?: byteArrayOf(), enclaveMode)
         hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
         Enclave::class.java
             .getAccessibleMethod("initialise", EnclaveEnvironment::class.java)
