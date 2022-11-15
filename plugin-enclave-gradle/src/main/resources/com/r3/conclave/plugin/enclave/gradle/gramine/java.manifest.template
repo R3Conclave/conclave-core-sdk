@@ -26,14 +26,13 @@ loader.env.SGX_DEBUG = "{{ sgx_debug }}"
 # Is this enclave implemented in python?
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 
-# Is this a simulation enclave?
 loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
 
 # In simulation mode, we need to provide the signing key measurement
-//  TODO: add the SIMULATION related check below once we have introduced attestation in Gramine
-// {% if enclave_mode == "SIMULATION" }
-  loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
-// {% endif %}
+# TODO: readd the SIMULATION related check below once we have introduced attestation in Gramine
+# {% if enclave_mode == "SIMULATION" }
+loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
+# {% endif %}
 
 # Number of call interface worker threads, this needs to be less than gramine_max_threads
 loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
