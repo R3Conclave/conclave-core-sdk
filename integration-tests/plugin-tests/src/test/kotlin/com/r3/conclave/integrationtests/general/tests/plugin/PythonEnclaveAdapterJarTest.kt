@@ -1,15 +1,32 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarFile
+import kotlin.io.path.createDirectories
 import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 class PythonEnclaveAdapterJarTest : AbstractTaskTest() {
     override val taskName: String get() = "pythonEnclaveAdapterJar"
     override val output: Path get() = buildDir / "libs" / "$projectName-fat-all.jar"
+
+    @BeforeEach
+    fun convertProjectToPython() {
+        gramineOnlyTest()
+        val srcMain = projectDir / "src" / "main"
+        srcMain.toFile().deleteRecursively()
+        val pythonScript = srcMain / "python" / "enclave.py"
+        pythonScript.parent.createDirectories()
+        pythonScript.writeText("""
+            def on_enclave_startup:
+                print("Python enclave started")
+        """.trimIndent())
+    }
 
     @Test
     fun `contents of jar`() {
