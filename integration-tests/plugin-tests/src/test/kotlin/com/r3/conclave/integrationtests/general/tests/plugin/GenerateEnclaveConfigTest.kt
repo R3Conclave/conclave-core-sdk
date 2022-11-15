@@ -2,12 +2,22 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
 class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
+    companion object {
+        @JvmStatic
+        @BeforeAll
+        fun check() {
+            graalvmOnlyTest()
+        }
+    }
+
     override val baseTaskName: String get() = "generateEnclaveConfig"
     override val outputName: String get() = "enclave.xml"
 

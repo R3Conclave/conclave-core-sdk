@@ -2,6 +2,7 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -12,12 +13,20 @@ import kotlin.io.path.div
 import kotlin.io.path.writeText
 
 class PythonEnclaveAdapterJarTest : AbstractTaskTest() {
+    companion object {
+        @JvmStatic
+        @BeforeAll
+        fun check() {
+            gramineOnlyTest()
+        }
+    }
+
+
     override val taskName: String get() = "pythonEnclaveAdapterJar"
     override val output: Path get() = buildDir / "libs" / "$projectName-fat.jar"
 
     @BeforeEach
     fun convertProjectToPython() {
-        gramineOnlyTest()
         val srcMain = projectDir / "src" / "main"
         srcMain.toFile().deleteRecursively()
         val pythonScript = srcMain / "python" / "enclave.py"
