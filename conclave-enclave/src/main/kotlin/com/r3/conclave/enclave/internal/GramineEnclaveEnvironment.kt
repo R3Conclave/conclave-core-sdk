@@ -12,7 +12,7 @@ import java.security.MessageDigest
 class GramineEnclaveEnvironment(
     enclaveClass: Class<*>,
     override val hostInterface: SocketEnclaveHostInterface,
-    private val simulationMrSigner: ByteArray?,
+    private val simulationMrSigner: ByteArray,
     override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
