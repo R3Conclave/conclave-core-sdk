@@ -13,7 +13,7 @@ import kotlin.io.path.writeText
 
 class PythonEnclaveAdapterJarTest : AbstractTaskTest() {
     override val taskName: String get() = "pythonEnclaveAdapterJar"
-    override val output: Path get() = buildDir / "libs" / "$projectName-fat-all.jar"
+    override val output: Path get() = buildDir / "libs" / "$projectName-fat.jar"
 
     @BeforeEach
     fun convertProjectToPython() {
