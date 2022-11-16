@@ -68,7 +68,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
          * Because of this, we need to add some safety margin.
          */
         val enclaveWorkerThreadCount = maxThreads.get()
-        //  TODO: Create a new parameters to distinguish between proper Enclave threads and threads used in the Enclave/Host Interface
+        //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
         val gramineMaxThreads = enclaveWorkerThreadCount * 2
 
         commandLine(
