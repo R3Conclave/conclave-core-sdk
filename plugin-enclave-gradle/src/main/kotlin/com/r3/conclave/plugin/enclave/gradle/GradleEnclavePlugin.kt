@@ -216,16 +216,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             task.privateKey.set(signingKey)
             task.enclaveJar.set(enclaveFatJarTask.archiveFile)
+
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
-                if (pythonFiles.size == 1) {
-                    task.pythonSourcePath.set(pythonFiles.first()!!)
-                } else {
-                    throw GradleException(
-                        "Only a single Python script is supported, but ${pythonFiles.size} were " +
-                                "found in $pythonSourcePath"
-                    )
-                }
+                task.pythonSourcePath.set(pythonFiles.first()!!)
             }
             task.directManifest.set(generateGramineManifestTask.manifestFile)
             task.sgxManifest.set(Paths.get(outputSgxManifestPath).toFile())
@@ -247,7 +241,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.entryCompression = STORED
 
             if (pythonSourcePath != null) {
-                task.addPythonScript(target, pythonSourcePath!!)
+                task.from(target.fileTree(pythonSourcePath).files.first()) { copySpec ->
+                    copySpec.rename { PYTHON_FILE }
+                }
             }
 
             task.from(enclaveFatJar.archiveFile) { copySpec ->
@@ -273,7 +269,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.entryCompression = STORED
 
             if (pythonSourcePath != null) {
-                task.addPythonScript(target, pythonSourcePath!!)
+                task.from(target.fileTree(pythonSourcePath).files.first()) { copySpec ->
+                    copySpec.rename { PYTHON_FILE }
+                }
             }
 
             task.from(enclaveFatJar.archiveFile) { copySpec ->
@@ -290,20 +288,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
             task.archiveAppendix.set("gramine-sgx-bundle")
             task.archiveClassifier.set(type.name.lowercase())
-        }
-    }
-
-    private fun Zip.addPythonScript(target: Project, pythonSourcePath: Path) {
-        val pythonFiles = target.fileTree(pythonSourcePath).files
-        if (pythonFiles.size == 1) {
-            from(pythonFiles.first()) { copySpec ->
-                copySpec.rename { PYTHON_FILE }
-            }
-        } else {
-            throw GradleException(
-                "Only a single Python script is supported, but ${pythonFiles.size} were " +
-                        "found in $pythonSourcePath"
-            )
         }
     }
 
