@@ -36,6 +36,11 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 
+    init {
+        System.loadLibrary("gramine_dcap")
+        GramineNative.initQuoteDCAP("/usr/lib/")
+    }
+
     private fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {
         val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
         println("certificate: " + pckCert.sigAlgName + " " + pckCert.sigAlgOID)
