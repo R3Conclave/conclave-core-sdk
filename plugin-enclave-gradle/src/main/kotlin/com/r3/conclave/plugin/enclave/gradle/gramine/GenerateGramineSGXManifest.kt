@@ -54,13 +54,8 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
             pythonSourcePath.get().asFile.toPath().copyTo(enclaveDestinationPythonPath)
         }
 
-        if (signDirectManifest(manifestPath, privateKeyPath).exitValue != 0) {
-            throw GradleException("Could not sign the manifest")
-        }
-
-        if (sgxGetToken().exitValue != 0) {
-            throw GradleException("Could not get the token for the SGX manifest")
-        }
+        signDirectManifest(manifestPath, privateKeyPath)
+        sgxGetToken()
     }
 
     private fun signDirectManifest(directManifest: String, privateKey: String): ExecResult {
