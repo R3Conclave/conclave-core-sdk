@@ -62,12 +62,12 @@ sgx.trusted_files = [
     "file:{{ java_home }}/",
     "file:{{ ld_preload }}",
     "file:{{ python_packages_path }}/",
-    //  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
-    //    see: https://github.com/gramineproject/examples/blob/master/pytorch/pytorch.manifest.template
+    #  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
+    #    see: https://github.com/gramineproject/examples/blob/master/pytorch/pytorch.manifest.template
     "file:{{ python.stdlib }}/",
     "file:{{ python.distlib }}/",
-    //  This will find Ubuntu specific Python directories,
-    //    such as /usr/local/lib/python3.8/dist-packages, where Numpy is also present
+    #  This will find Ubuntu specific Python directories,
+    #    such as /usr/local/lib/python3.8/dist-packages, where Numpy is also present
     "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
 {% if is_python_enclave == "true" %}
     "file:enclave.py",
