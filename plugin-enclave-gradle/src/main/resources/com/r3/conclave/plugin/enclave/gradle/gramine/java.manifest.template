@@ -3,7 +3,7 @@ libos.entrypoint = "{{ java_home }}/bin/java"
 {% if enclave_mode == "RELEASE" %}
 loader.log_level = "none"
 {% else %}
-loader.log_level = "debug"
+loader.log_level = "error"
 {% endif %}
 
 # This is needed to read large SGX manifests when running Python enclaves.
@@ -15,8 +15,8 @@ loader.log_level = "debug"
 loader.insecure__use_cmdline_argv = true
 
 sgx.remote_attestation = "dcap"
-sgx.isvprodid = 1
-sgx.isvsvn    = 1
+sgx.isvprodid = {{ isv_prod_id }}
+sgx.isvsvn    = {{ isv_svn }}
 
 # This sets an environment variables used by the dynamic loader
 {% if is_python_enclave == "true" %}
