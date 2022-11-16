@@ -3,7 +3,7 @@ libos.entrypoint = "{{ java_home }}/bin/java"
 {% if enclave_mode == "RELEASE" %}
 loader.log_level = "none"
 {% else %}
-loader.log_level = "error"
+loader.log_level = "debug"
 {% endif %}
 
 # This is needed to read large SGX manifests when running Python enclaves.
