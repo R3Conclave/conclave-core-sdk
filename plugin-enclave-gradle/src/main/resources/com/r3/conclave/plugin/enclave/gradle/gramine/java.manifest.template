@@ -18,9 +18,14 @@ loader.insecure__use_cmdline_argv = true
 sgx.remote_attestation = "none"
 
 # This sets an environment variables used by the dynamic loader
+{% if is_python_enclave == "true" %}
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
-loader.env.LD_PRELOAD = "{{ ld_preload }}"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
+{% else %}
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+{% endif %}
+
+loader.env.LD_PRELOAD = "{{ ld_preload }}"
 
 # Is this enclave implemented in python?
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
@@ -38,7 +43,9 @@ fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
   { path = "{{ java_home }}",            uri = "file:{{ java_home }}" },
+{% if is_python_enclave == "true" %}
   { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" },
+{% endif %}
   { path = "/usr{{ arch_libdir }}",      uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",                   uri = "file:/usr/lib" },
   { path = "/tmp",                       type = "tmpfs" },
@@ -61,6 +68,7 @@ sgx.trusted_files = [
     "file:/usr/{{ arch_libdir }}/",
     "file:{{ java_home }}/",
     "file:{{ ld_preload }}",
+{% if is_python_enclave == "true" %}
     "file:{{ python_packages_path }}/",
     #  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
     #    see: https://github.com/gramineproject/examples/blob/master/pytorch/pytorch.manifest.template
@@ -69,7 +77,6 @@ sgx.trusted_files = [
     #  This will find Ubuntu specific Python directories,
     #    such as /usr/local/lib/python3.8/dist-packages, where Numpy is also present
     "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
-{% if is_python_enclave == "true" %}
     "file:enclave.py",
 {% endif %}
     "file:enclave.jar"
