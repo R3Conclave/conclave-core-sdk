@@ -10,7 +10,9 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.process.ExecResult
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 
 open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
@@ -45,24 +47,16 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         val manifestPath = directManifest.get().asFile.absolutePath
         val privateKeyPath = privateKey.get().asFile.absolutePath
         val outputSGXManifestPath = sgxManifest.asFile.get().parentFile.absolutePath
-        val enclaveDestinationJarName = "${outputSGXManifestPath}/$GRAMINE_ENCLAVE_JAR"
-        val enclaveDestinationJarFile = File(enclaveDestinationJarName)
-        checkNotNull(
-            enclaveJar.get().asFile.copyTo(
-                enclaveDestinationJarFile,
-                overwrite = true
-            )
-        ) { "Enclave jar file not copied correctly while builgetEnclaveThreadCountFromManifestding the Gramine SGX manifest" }
-        val enclaveDestinationPythonFileName = "${outputSGXManifestPath}/$PYTHON_FILE"
-        val enclaveDestinationPythonFile = File(enclaveDestinationPythonFileName)
+        val enclaveDestinationJarPath = Paths.get("${outputSGXManifestPath}/$GRAMINE_ENCLAVE_JAR")
+        Files.copy(enclaveJar.get().asFile.toPath(), enclaveDestinationJarPath, StandardCopyOption.REPLACE_EXISTING)
+        val enclaveDestinationPythonPath = Paths.get("${outputSGXManifestPath}/$PYTHON_FILE")
 
         if (pythonSourcePath.isPresent) {
-            checkNotNull(
-                pythonSourcePath.get().asFile.copyTo(
-                    enclaveDestinationPythonFile,
-                    overwrite = true
-                )
-            ) { "Python script not copied correctly while building the Gramine SGX manifest" }
+            Files.copy(
+                pythonSourcePath.get().asFile.toPath(),
+                enclaveDestinationPythonPath,
+                StandardCopyOption.REPLACE_EXISTING
+            )
         }
 
         if (signDirectManifest(manifestPath, privateKeyPath).exitValue != 0) {
