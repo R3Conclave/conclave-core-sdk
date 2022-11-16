@@ -18,7 +18,8 @@ class EnclaveGramineQuoteServiceDCAP : EnclaveQuoteService() {
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
         val targetInfo = Cursor.allocate(SgxTargetInfo)
-        GramineNative.initQuoteDCAP(NativeLoader.libsPath.toString())
+        System.loadLibrary("gramine_dcap")
+        GramineNative.initQuoteDCAP("/usr/lib/")
         return targetInfo
     }
 
