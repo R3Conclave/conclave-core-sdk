@@ -47,9 +47,9 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         val outputSGXManifestPath = sgxManifest.asFile.get().parentFile.absolutePath
         val enclaveDestinationJarPath = Paths.get("${outputSGXManifestPath}/$GRAMINE_ENCLAVE_JAR")
         enclaveJar.get().asFile.toPath().copyTo(enclaveDestinationJarPath)
-        val enclaveDestinationPythonPath = Paths.get("${outputSGXManifestPath}/$PYTHON_FILE")
 
         if (pythonSourcePath.isPresent) {
+            val enclaveDestinationPythonPath = Paths.get("${outputSGXManifestPath}/$PYTHON_FILE")
             pythonSourcePath.get().asFile.toPath().copyTo(enclaveDestinationPythonPath)
         }
 
