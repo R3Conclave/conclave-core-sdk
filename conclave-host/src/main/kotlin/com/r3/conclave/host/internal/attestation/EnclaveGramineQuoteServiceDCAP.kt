@@ -15,8 +15,7 @@ class EnclaveGramineQuoteServiceDCAP : EnclaveQuoteService() {
     }
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
-        val targetInfo = Cursor.allocate(SgxTargetInfo)
-        return targetInfo
+        return Cursor.allocate(SgxTargetInfo)
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
