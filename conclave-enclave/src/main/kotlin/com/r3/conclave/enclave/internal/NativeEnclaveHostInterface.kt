@@ -2,7 +2,6 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
@@ -85,7 +84,7 @@ class NativeEnclaveHostInterface : EnclaveHostInterface() {
                 Native.jvmOCall(callType.toByte(), CallInterfaceMessageType.RETURN.toByte(), returnBuffer.getAllBytes(avoidCopying = true))
             }
         } catch (throwable: Throwable) {
-            val maybeSanitisedThrowable = if (sanitiseExceptions) sanitiseThrowable(throwable) else throwable
+            val maybeSanitisedThrowable = throwable
             val serializedException = ThrowableSerialisation.serialise(maybeSanitisedThrowable)
             Native.jvmOCall(callType.toByte(), CallInterfaceMessageType.EXCEPTION.toByte(), serializedException)
         }
