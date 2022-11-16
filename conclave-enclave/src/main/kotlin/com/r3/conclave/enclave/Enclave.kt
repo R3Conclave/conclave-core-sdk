@@ -288,7 +288,6 @@ abstract class Enclave {
 
     private fun getQuoteFromGramine(enclaveTargetInfoBytes: ByteArray): ByteArray {
         setUserData(enclaveTargetInfoBytes)
-        //val SGX_QUOTE_MAX_SIZE = 8192
 
         return try {
             FileInputStream("/dev/attestation/quote").use {
