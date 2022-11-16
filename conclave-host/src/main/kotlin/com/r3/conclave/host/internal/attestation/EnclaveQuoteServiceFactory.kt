@@ -9,7 +9,10 @@ object EnclaveQuoteServiceFactory {
     fun getService(attestationParameters: AttestationParameters?, enclaveHandle: EnclaveHandle): EnclaveQuoteService {
         return when (attestationParameters) {
             is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
-            is AttestationParameters.DCAP -> retrieveDCAPService(enclaveHandle)
+            //  Note that in Gramine the Signed Quote is automatically retrieved by the Enclave
+            //  So we do not need/use the EnclaveQuoteServiceDCAP and the related Enclave-Host call is
+            //      not executed in Gramine
+            is AttestationParameters.DCAP -> EnclaveQuoteServiceDCAP()
             null -> EnclaveQuoteServiceMock
         }
     }
