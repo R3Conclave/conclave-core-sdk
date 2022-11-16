@@ -10,10 +10,9 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.process.ExecResult
-import java.nio.file.Files
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import javax.inject.Inject
+import kotlin.io.path.copyTo
 
 open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
@@ -48,15 +47,11 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         val privateKeyPath = privateKey.get().asFile.absolutePath
         val outputSGXManifestPath = sgxManifest.asFile.get().parentFile.absolutePath
         val enclaveDestinationJarPath = Paths.get("${outputSGXManifestPath}/$GRAMINE_ENCLAVE_JAR")
-        Files.copy(enclaveJar.get().asFile.toPath(), enclaveDestinationJarPath, StandardCopyOption.REPLACE_EXISTING)
+        enclaveJar.get().asFile.toPath().copyTo(enclaveDestinationJarPath)
         val enclaveDestinationPythonPath = Paths.get("${outputSGXManifestPath}/$PYTHON_FILE")
 
         if (pythonSourcePath.isPresent) {
-            Files.copy(
-                pythonSourcePath.get().asFile.toPath(),
-                enclaveDestinationPythonPath,
-                StandardCopyOption.REPLACE_EXISTING
-            )
+            pythonSourcePath.get().asFile.toPath().copyTo(enclaveDestinationPythonPath)
         }
 
         if (signDirectManifest(manifestPath, privateKeyPath).exitValue != 0) {
