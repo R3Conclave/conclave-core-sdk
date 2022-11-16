@@ -5,7 +5,7 @@ package com.r3.conclave.host.internal;
  */
 public class GramineNative {
 
-    public static native int initQuoteDCAP(String bundlePath); // 0 --> OK
+    public static native int initQuoteDCAP(String bundlePath);
 
     public static native Object[] getQuoteCollateral(byte[] fmspc, int pck);
 }

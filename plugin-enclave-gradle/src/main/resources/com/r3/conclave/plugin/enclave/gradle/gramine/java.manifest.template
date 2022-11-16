@@ -14,8 +14,7 @@ loader.log_level = "error"
 # TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
 
-# TODO: Enable DCAP attestation
-sgx.remote_attestation = "none"
+sgx.remote_attestation = "dcap"
 
 # This sets an environment variables used by the dynamic loader
 {% if is_python_enclave == "true" %}
