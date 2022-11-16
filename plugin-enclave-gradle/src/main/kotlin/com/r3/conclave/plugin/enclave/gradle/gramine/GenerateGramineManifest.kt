@@ -1,14 +1,15 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
+import com.r3.conclave.plugin.enclave.gradle.LinuxExec
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
-import kotlin.io.path.absolutePathString
 
-open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory, private val linuxExec: LinuxExec) :
+    ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "java.manifest.template"
     }
@@ -25,30 +26,20 @@ open class GenerateGramineManifest @Inject constructor(objects: ObjectFactory) :
         //  is better to embed the conclave-build container to always run when building the enclave, not just for
         //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181
 
-        val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
-        val ldPreload = executePython("from sysconfig import get_config_var; " +
-                "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
-        )
-        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
-        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
-        // incorrect then we'll need to come up with a better solution.
-        val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
-            .splitToSequence("\n")
-            .single { it.startsWith("Location: ") }
-            .substringAfter("Location: ")
+        val architecture = "x86_64-linux-gnu"
+        val ldPreload = "/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/libpython3.8.so"
+        val pythonPackagesPath = "/usr/local/lib/python3.8/dist-packages"
 
-        commandLine(
-            listOf(
+        linuxExec.exec(
+            listOf<String>(
                 "gramine-manifest",
                 "-Djava_home=${System.getProperty("java.home")}",
                 "-Darch_libdir=/lib/$architecture",
                 "-Dld_preload=$ldPreload",
                 "-Dpython_packages_path=$pythonPackagesPath",
-                manifestTemplateFile.absolutePathString(),
+                manifestTemplateFile.toFile().absolutePath,
                 manifestFile.asFile.get().absolutePath
             )
         )
     }
-
-    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
 }

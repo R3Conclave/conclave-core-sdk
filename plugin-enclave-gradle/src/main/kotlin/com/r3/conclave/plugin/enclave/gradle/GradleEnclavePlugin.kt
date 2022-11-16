@@ -180,8 +180,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createEnclaveArtifacts(target, conclaveExtension, enclaveFatJarTask)
     }
 
-    private fun createGenerateGramineManifestTask(target: Project, type: BuildType): GenerateGramineManifest {
-        return target.createTask("generateGramineManifest$type") { task ->
+    private fun createGenerateGramineManifestTask(target: Project, type: BuildType, linuxExec: LinuxExec): GenerateGramineManifest {
+        return target.createTask("generateGramineManifest$type", linuxExec) { task ->
             task.manifestFile.set((baseDirectory / "gramine" / PluginUtils.GRAMINE_MANIFEST).toFile())
         }
     }
@@ -327,7 +327,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
-            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type)
+            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, linuxExec)
 
             val gramineZipBundle = createGramineZipBundle(
                 target,
