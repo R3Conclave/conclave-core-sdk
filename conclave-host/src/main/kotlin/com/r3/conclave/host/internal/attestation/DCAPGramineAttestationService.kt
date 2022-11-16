@@ -10,22 +10,17 @@ import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
 import com.r3.conclave.common.internal.toEcdsaP256AuthData
 import com.r3.conclave.common.internal.toPckCertPath
-import com.r3.conclave.host.internal.Native
+import com.r3.conclave.host.internal.GramineNative
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.x509Certs
 
-class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
+class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
-        val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
-        println("certificate: " + pckCert.sigAlgName + " " + pckCert.sigAlgOID)
-        val bytes = pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes()
+        val fmspc = getFmspc(signedQuote)
+        println("attestQuote - Size: ${fmspc.size}, Bytes: ${fmspc.contentToString()}")
 
-        println("certificate bytes: ${bytes.contentToString()}")
-        println("pckCert.issuerDN.name: ${pckCert.issuerDN.name}")
-        val fields = Native.getQuoteCollateral(
-            bytes, // fpsmc
-            if ("Processor" in pckCert.issuerDN.name) 0 else 1 // pckCert 'type': 0 - Processor, 1 - Platform
-        )
+        val fields = GramineNative.getQuoteCollateral(fmspc, 1)
+
         // TODO There's no reason why the JNI can't create the QuoteCollateral directly. It would also fix this hack
         //  with the collateral fields being passed up as Strings when in fact they should be byte arrays.
         val collateral = QuoteCollateral(
@@ -41,8 +36,11 @@ class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestat
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 
-    private fun getQuote() {
-
+    private fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {
+        val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
+        println("certificate: " + pckCert.sigAlgName + " " + pckCert.sigAlgOID)
+        println("pckCert.issuerDN.name: ${pckCert.issuerDN.name}")
+        return pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes()
     }
 
     private fun Any.asStringToBytes(): OpaqueBytes = OpaqueBytes((this as String).toByteArray())

@@ -16,4 +16,5 @@ class MockAttestationService(private val isSimulation: Boolean) : AttestationSer
     override fun attestQuote(signedQuote: ByteCursor<SgxSignedQuote>): MockAttestation {
         return MockAttestation(Instant.now(), signedQuote[quote][reportBody].asReadOnly(), isSimulation)
     }
+
 }

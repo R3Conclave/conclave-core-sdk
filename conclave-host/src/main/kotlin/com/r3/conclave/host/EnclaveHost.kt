@@ -417,9 +417,8 @@ class EnclaveHost private constructor(
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
 
-        // TODO: Fix the condition once Gramine attestation has been integrated
         quotingService =
-            EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle is NativeEnclaveHandle })
+            EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware }, enclaveHandle)
 
         try {
             this.commandsCallback = commandsCallback
