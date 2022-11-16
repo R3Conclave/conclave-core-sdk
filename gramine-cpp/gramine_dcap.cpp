@@ -115,7 +115,7 @@ namespace conclave {
         auto result = sgx_ql_get_quote_verification_collateral(fmspc, 6, pck_ca, &collateral);
         eval_result = result;
 
-        printf("After sgx_ql_get_quote_verification_collateral: result %d, pointer %p\n", result, collateral);
+        printf("After sgx_ql_get_quote_verification_collateral: SUCCESS %d, result %d, pointer %p\n", SGX_QL_SUCCESS, result, collateral);
         return SGX_QL_SUCCESS == result ? collateral : nullptr;
     }
 

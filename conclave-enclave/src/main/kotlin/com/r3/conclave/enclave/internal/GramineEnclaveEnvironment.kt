@@ -70,7 +70,7 @@ class GramineEnclaveEnvironment(
         body[SgxReportBody.mrsigner] = simulationMrsigner.buffer()
         body[SgxReportBody.isvProdId] = productID
         // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
-        body[SgxReportBody.isvSvn] = 2;//revocationLevel + 1
+        body[SgxReportBody.isvSvn] = revocationLevel + 1
         body[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
         return report
     }

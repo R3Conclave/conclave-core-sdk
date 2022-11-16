@@ -18,6 +18,7 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
         val fmspc = getFmspc(signedQuote)
         println("attestQuote - Size: ${fmspc.size}, Bytes: ${fmspc.contentToString()}")
+        println("signedQuote - signedQuote: ${signedQuote}}")
 
         val fields = GramineNative.getQuoteCollateral(fmspc, 1)
 
@@ -33,6 +34,8 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
             fields[6].asStringToBytes(),
             fields[7].asStringToBytes()
         )
+
+
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 
