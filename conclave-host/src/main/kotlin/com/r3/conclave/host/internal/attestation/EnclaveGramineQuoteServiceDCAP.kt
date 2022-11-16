@@ -3,8 +3,6 @@ package com.r3.conclave.host.internal.attestation
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.host.internal.GramineNative
-import com.r3.conclave.host.internal.NativeLoader
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
@@ -22,6 +20,7 @@ class EnclaveGramineQuoteServiceDCAP : EnclaveQuoteService() {
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
+        // This is not used in GRAMINE actually
         val reportData = report[body][reportData]
         val quoteBytes = getQuoteFromGramine(reportData.bytes)
         return Cursor.wrap(SgxSignedQuote, quoteBytes)

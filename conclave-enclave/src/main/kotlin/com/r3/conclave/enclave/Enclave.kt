@@ -8,6 +8,7 @@ import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
+import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
@@ -23,6 +24,9 @@ import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.io.UTFDataFormatException
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
@@ -282,6 +286,31 @@ abstract class Enclave {
         return createAttestationQuote(quotingEnclaveInfo, reportDataCursor).bytes
     }
 
+    private fun getQuoteFromGramine(enclaveTargetInfoBytes: ByteArray): ByteArray {
+        setUserData(enclaveTargetInfoBytes)
+        val SGX_QUOTE_MAX_SIZE = 8192
+
+        return try {
+            FileInputStream("/dev/attestation/quote").use {
+                it.readBytes().copyOf(SGX_QUOTE_MAX_SIZE)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            throw e
+        }
+    }
+
+    private fun setUserData(data: ByteArray) {
+        try {
+            FileOutputStream("/dev/attestation/user_report_data").use {
+                it.write(data)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            throw e
+        }
+    }
+
     /**
      * Internal implementation of createAttestationQuote, using byte cursors rather than raw byte arrays.
      */
@@ -290,7 +319,13 @@ abstract class Enclave {
             reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         val report = env.createReport(quotingEnclaveInfo, reportData)
-        return env.hostInterface.getSignedQuote(report)
+
+        return if (env is GramineEnclaveEnvironment) {
+            val quoteBytes = report[body][SgxReportBody.reportData].bytes
+            Cursor.wrap(SgxSignedQuote, quoteBytes)
+        } else {
+            env.hostInterface.getSignedQuote(report)
+        }
     }
 
     /**
