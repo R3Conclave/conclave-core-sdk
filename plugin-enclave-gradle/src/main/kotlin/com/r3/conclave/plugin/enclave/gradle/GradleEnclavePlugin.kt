@@ -205,8 +205,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         target: Project,
         enclaveFatJarTask: Jar,
         generateGramineManifestTask: GenerateGramineDirectManifest,
-        enclaveExtension: EnclaveExtension,
-        createDummyKeyTask: GenerateDummyMrsignerKey,
+        signingKey: Provider<RegularFile?>,
         type: BuildType
     ): GenerateGramineSGXManifest {
         return target.createTask("generateSGXGramineManifest$type") { task ->
@@ -215,13 +214,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val outputTokenPath = directManifestPath.replace("manifest", "token")
             val outputSig = directManifestPath.replace("manifest", "sig")
 
-            task.privateKey.set(enclaveExtension.signingType.flatMap {
-                when (it) {
-                    SigningType.DummyKey -> createDummyKeyTask.outputKey
-                    SigningType.PrivateKey -> enclaveExtension.signingKey
-                    else -> target.provider { null }
-                }
-            })
+            task.privateKey.set(signingKey)
             task.enclaveJar.set(enclaveFatJarTask.archiveFile)
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
@@ -443,8 +436,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 target,
                 enclaveFatJarTask,
                 generateGramineManifestTask,
-                enclaveExtension,
-                createDummyKeyTask,
+                signingKey,
                 type
             )
 
