@@ -38,6 +38,9 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
     val sgxManifest: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
+    val sgxToken: RegularFileProperty = objects.fileProperty()
+
+    @get:OutputFile
     val sgxSig: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
@@ -59,6 +62,10 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         if (signDirectManifest(manifestPath, privateKeyPath).exitValue != 0) {
             throw GradleException("Could not sign the manifest")
         }
+
+        if (sgxGetToken().exitValue != 0) {
+            throw GradleException("Could not get the token for the SGX manifest")
+        }
     }
 
     private fun signDirectManifest(directManifest: String, privateKey: String): ExecResult {
@@ -70,5 +77,14 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         )
         val enclaveJarBuildDir = sgxManifest.asFile.get().parentFile.absolutePath
         return commandLine(command, commandLineConfig = CommandLineConfig(workingDir = enclaveJarBuildDir))
+    }
+
+    private fun sgxGetToken(): ExecResult {
+        val command = listOf(
+            GRAMINE_GET_TOKEN_EXECUTABLE,
+            "--sig=${sgxSig.get().asFile.absolutePath}",
+            "--output=${sgxToken.asFile.get().absolutePath}"
+        )
+        return commandLine(command)
     }
 }
