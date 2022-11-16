@@ -321,7 +321,8 @@ abstract class Enclave {
         val report = env.createReport(quotingEnclaveInfo, reportData)
 
         return if (env is GramineEnclaveEnvironment) {
-            Cursor.wrap(SgxSignedQuote, reportData!!.bytes)
+            val signedQuoteBytes = getQuoteFromGramine(reportData!!.bytes)
+            Cursor.wrap(SgxSignedQuote, signedQuoteBytes)
         } else {
             env.hostInterface.getSignedQuote(report)
         }
