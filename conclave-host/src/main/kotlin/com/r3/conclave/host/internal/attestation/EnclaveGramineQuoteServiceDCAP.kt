@@ -1,51 +1,21 @@
 package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.SgxReport.body
-import com.r3.conclave.common.internal.SgxReportBody.reportData
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
 import java.nio.ByteBuffer
 
+// Note: we actually do not need this class in Gramine
+// TODO: Avoid calling initializeQuote in Gramine and remove this class
 class EnclaveGramineQuoteServiceDCAP : EnclaveQuoteService() {
 
-    companion object {
-        private const val SGX_QUOTE_MAX_SIZE = 8192
-    }
-
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
+        // This is called in GRAMINE context but not really useful
+        // TODO: Improve this mechanism
         return Cursor.allocate(SgxTargetInfo)
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        // This is not used in GRAMINE actually
-        val reportData = report[body][reportData]
-        val quoteBytes = getQuoteFromGramine(reportData.bytes)
-        return Cursor.wrap(SgxSignedQuote, quoteBytes)
-    }
-
-    private fun getQuoteFromGramine(enclaveTargetInfoBytes: ByteArray): ByteArray {
-        setUserData(enclaveTargetInfoBytes)
-
-        return try {
-            FileInputStream("/dev/attestation/quote").use {
-                it.readBytes().copyOf(SGX_QUOTE_MAX_SIZE)
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            throw e
-        }
-    }
-
-    private fun setUserData(data: ByteArray) {
-        try {
-            FileOutputStream("/dev/attestation/user_report_data").use {
-                it.write(data)
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            throw e
-        }
+        // This is actually not called in GRAMINE
+        // TODO: Improve this mechanism
+        return Cursor.wrap(SgxSignedQuote, byteArrayOf())
     }
 }

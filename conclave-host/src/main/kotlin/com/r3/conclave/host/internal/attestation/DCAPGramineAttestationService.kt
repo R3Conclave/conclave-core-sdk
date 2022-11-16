@@ -17,9 +17,6 @@ import com.r3.conclave.utilities.internal.x509Certs
 class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
         val fmspc = getFmspc(signedQuote)
-        println("attestQuote - Size: ${fmspc.size}, Bytes: ${fmspc.contentToString()}")
-        println("signedQuote - signedQuote: ${signedQuote}}")
-
         val fields = GramineNative.getQuoteCollateral(fmspc, 1)
 
         // TODO There's no reason why the JNI can't create the QuoteCollateral directly. It would also fix this hack
@@ -34,8 +31,6 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
             fields[6].asStringToBytes(),
             fields[7].asStringToBytes()
         )
-
-
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 
@@ -46,8 +41,6 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
 
     private fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {
         val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
-        println("certificate: " + pckCert.sigAlgName + " " + pckCert.sigAlgOID)
-        println("pckCert.issuerDN.name: ${pckCert.issuerDN.name}")
         return pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes()
     }
 
