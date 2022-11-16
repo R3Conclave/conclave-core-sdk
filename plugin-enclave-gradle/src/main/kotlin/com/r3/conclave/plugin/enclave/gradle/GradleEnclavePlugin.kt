@@ -219,7 +219,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
-                task.pythonSourcePath.set(pythonFiles.first()!!)
+                task.pythonSourcePath.set(pythonFiles.first())
             }
             task.directManifest.set(generateGramineManifestTask.manifestFile)
             task.sgxManifest.set(Paths.get(outputSgxManifestPath).toFile())
