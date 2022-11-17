@@ -68,6 +68,7 @@ namespace r3::conclave::dcap {
 
         if (skipQuotingLibrariesForGramine) {
             ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
+            SGX_QL_RESOLVE(ql_handle, sgx_ql_set_path);
 
             if (sgx_ql_set_path(SGX_QL_QPL_PATH, qpl.c_str()) != SGX_QL_SUCCESS) {
                 errors.push_back(std::string("sgx_ql_set_path failed: ") + qpl);
