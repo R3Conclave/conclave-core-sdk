@@ -11,7 +11,7 @@ object NativeLoader {
 
     val libsPath: Path = run {
         val tempDirectory = Files.createTempDirectory("com.r3.conclave.host-libraries")
-        Runtime.getRuntime().addShutdownHook(Thread { tempDirectory.toFile().deleteRecursively() })
+        //Runtime.getRuntime().addShutdownHook(Thread { tempDirectory.toFile().deleteRecursively() })
         tempDirectory.toAbsolutePath()
     }
 

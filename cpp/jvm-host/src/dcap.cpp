@@ -56,7 +56,9 @@ namespace r3::conclave::dcap {
         throw new std::exception(); // fatal, not suppose to happen
     }
 
-    bool QuotingAPI::init(const std::string& path, QuotingAPI::Errors& errors) {
+    bool QuotingAPI::init(const std::string& path,
+                          QuotingAPI::Errors& errors,
+                          const bool skipQuotingLibraries) {
         //  The users can use SGX_AESM_ADDR environment variable to select
         //    whether some functions of the quoting library run "in-process" or "out-of-process.
         //  Conclave uses the "in-process" approach, and the SGX_AESM_ADDR variable

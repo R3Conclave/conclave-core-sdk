@@ -1,23 +1,21 @@
 package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.OpaqueBytes
-import com.r3.conclave.common.internal.ByteCursor
+import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxEcdsa256BitQuoteAuthData.qeCertData
-import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.attestation.AttestationUtils.SGX_FMSPC_OID
 import com.r3.conclave.common.internal.attestation.AttestationUtils.sgxExtension
 import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.common.internal.attestation.QuoteCollateral
-import com.r3.conclave.common.internal.toEcdsaP256AuthData
-import com.r3.conclave.common.internal.toPckCertPath
-import com.r3.conclave.host.internal.GramineNative
+import com.r3.conclave.host.internal.Native
+import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.x509Certs
 
 class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
         val fmspc = getFmspc(signedQuote)
-        val fields = GramineNative.getQuoteCollateral(fmspc, 1)
+        val fields = Native.getQuoteCollateral(fmspc, 1)
 
         // TODO There's no reason why the JNI can't create the QuoteCollateral directly. It would also fix this hack
         //  with the collateral fields being passed up as Strings when in fact they should be byte arrays.
@@ -35,8 +33,8 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
     }
 
     init {
-        System.loadLibrary("gramine_dcap")
-        GramineNative.initQuoteDCAP("/usr/lib/")
+        val targetInfo = Cursor.allocate(SgxTargetInfo)
+        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), targetInfo.buffer.array(), true)
     }
 
     private fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {

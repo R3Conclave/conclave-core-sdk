@@ -340,22 +340,23 @@ void host_disk_get_size_ocall(long* res,
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
 static std::mutex dcap_mutex;
 
-jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
-
+jint initDCAP(JNIEnv *jniEnv, jstring bundle, const bool skipQuotingLibraries) {
     JniString jpath(jniEnv, bundle);
 
     if (quoting_lib != nullptr)
         return 0;
 
     r3::conclave::dcap::QuotingAPI::Errors errors;
+    printf("Initializing initDCAP\n");
     try {
         std::string path(std::string(jpath.c_str));
 
         quoting_lib = new r3::conclave::dcap::QuotingAPI();
 
-        if (!quoting_lib->init(path, errors)) {
+        if (!quoting_lib->init(path, errors, skipQuotingLibraries)) {
             std::string message("failed to initialize DCAP: ");
-            for(auto &err : errors)
+
+            for (auto &err : errors)
                 message += err + ";";
 
             delete quoting_lib;
@@ -363,8 +364,9 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
             raiseException(jniEnv, message.c_str());
             return -1;
         }
-    }
-    catch(...){
+
+    } catch (...) {
+
         if (quoting_lib != nullptr) {
             delete quoting_lib;
             quoting_lib = nullptr;
@@ -373,6 +375,7 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
         raiseException(jniEnv, "failed to initialize DCAP: unknown error");
         return -1;
     }
+    printf("InitDcap Ok returning 0\n");
 
     return 0;
 }
@@ -380,16 +383,23 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP(JNIEnv *jniEnv,
                                                                                jclass,
                                                                                jstring bundle,
-                                                                               jbyteArray targetInfoOut) {
-
+                                                                               jbyteArray targetInfoOut,
+                                                                               jboolean skipQuoting) {
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
-    if (initDCAP(jniEnv, bundle) != 0)
+    if (initDCAP(jniEnv, bundle, skipQuoting) != 0)
         return -1;
 
+    //  When in Gramine, we do not use this library to get the Enclave quote, we do not call
+    //    inte
+   // if (skipQuoting) {
+    //    return 0;
+   // }
+
     quote3_error_t eval_result;
+
     if (quoting_lib->get_target_info((sgx_target_info_t*)request.ptr, eval_result)) {
         request.releaseMode = 0;
         return 0;
