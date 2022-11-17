@@ -56,7 +56,7 @@ namespace r3::conclave::dcap {
         throw new std::exception(); // fatal, not suppose to happen
     }
 
-    bool QuotingAPI::init(const std::string& path, QuotingAPI::Errors& errors) {
+    bool QuotingAPI::init(const std::string& path, const bool skipQuotingLibrariesForGramine, Errors& errors) {
         //  The users can use SGX_AESM_ADDR environment variable to select
         //    whether some functions of the quoting library run "in-process" or "out-of-process.
         //  Conclave uses the "in-process" approach, and the SGX_AESM_ADDR variable
@@ -66,47 +66,53 @@ namespace r3::conclave::dcap {
 
         auto const qpl = get_plugin_path(path);
 
-        comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
-        urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
-        pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);
-        qe3_handle = try_dlopen( path, "libsgx_qe3_logic.so", errors);
+        if (skipQuotingLibrariesForGramine) {
+            ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
 
-        ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
-
-        if (ql_handle != nullptr) {
-            SGX_QL_RESOLVE(ql_handle, sgx_qe_set_enclave_load_policy);
-            SGX_QL_RESOLVE(ql_handle, sgx_qe_cleanup_by_policy);
-            SGX_QL_RESOLVE(ql_handle, sgx_ql_set_path);
-
-            SGX_QL_RESOLVE(ql_handle, sgx_qe_get_target_info);
-            SGX_QL_RESOLVE(ql_handle, sgx_qe_get_quote_size);
-            SGX_QL_RESOLVE(ql_handle, sgx_qe_get_quote);
-
-            sgx_qe_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT);
-
-            auto const qe3 = path + "/libsgx_qe3.signed.so";
-            if (sgx_ql_set_path(SGX_QL_QE3_PATH, qe3.c_str()) != SGX_QL_SUCCESS)
-                errors.push_back(std::string("sgx_ql_set_path failed: ") + qe3);
-
-            auto const pce = path + "/libsgx_pce.signed.so";
-            if (sgx_ql_set_path(SGX_QL_PCE_PATH, pce.c_str()) != SGX_QL_SUCCESS)
-                errors.push_back(std::string("sgx_ql_set_path failed: ") + pce);
-
-            auto const ide = path + "/libsgx_id_enclave.signed.so";
-            if (sgx_ql_set_path(SGX_QL_IDE_PATH, ide.c_str()) != SGX_QL_SUCCESS)
-                errors.push_back(std::string("sgx_ql_set_path failed: ") + ide);
-
-            if (sgx_ql_set_path(SGX_QL_QPL_PATH, qpl.c_str()) != SGX_QL_SUCCESS)
+            if (sgx_ql_set_path(SGX_QL_QPL_PATH, qpl.c_str()) != SGX_QL_SUCCESS) {
                 errors.push_back(std::string("sgx_ql_set_path failed: ") + qpl);
-        }
+            }
+        } else {
+            comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
+            urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
+            pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);
+            qe3_handle = try_dlopen( path, "libsgx_qe3_logic.so", errors);
 
+            ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
+
+            if (ql_handle != nullptr) {
+                SGX_QL_RESOLVE(ql_handle, sgx_qe_set_enclave_load_policy);
+                SGX_QL_RESOLVE(ql_handle, sgx_qe_cleanup_by_policy);
+                SGX_QL_RESOLVE(ql_handle, sgx_ql_set_path);
+
+                SGX_QL_RESOLVE(ql_handle, sgx_qe_get_target_info);
+                SGX_QL_RESOLVE(ql_handle, sgx_qe_get_quote_size);
+                SGX_QL_RESOLVE(ql_handle, sgx_qe_get_quote);
+
+                sgx_qe_set_enclave_load_policy(sgx_ql_request_policy_t::SGX_QL_PERSISTENT);
+
+                auto const qe3 = path + "/libsgx_qe3.signed.so";
+                if (sgx_ql_set_path(SGX_QL_QE3_PATH, qe3.c_str()) != SGX_QL_SUCCESS)
+                    errors.push_back(std::string("sgx_ql_set_path failed: ") + qe3);
+
+                auto const pce = path + "/libsgx_pce.signed.so";
+                if (sgx_ql_set_path(SGX_QL_PCE_PATH, pce.c_str()) != SGX_QL_SUCCESS)
+                    errors.push_back(std::string("sgx_ql_set_path failed: ") + pce);
+
+                auto const ide = path + "/libsgx_id_enclave.signed.so";
+                if (sgx_ql_set_path(SGX_QL_IDE_PATH, ide.c_str()) != SGX_QL_SUCCESS)
+                    errors.push_back(std::string("sgx_ql_set_path failed: ") + ide);
+
+                if (sgx_ql_set_path(SGX_QL_QPL_PATH, qpl.c_str()) != SGX_QL_SUCCESS)
+                    errors.push_back(std::string("sgx_ql_set_path failed: ") + qpl);
+            }
+        }
         qp_handle = try_dlopen( qpl, errors);
 
         if (qp_handle != nullptr) {
             SGX_QL_RESOLVE(qp_handle, sgx_ql_get_quote_verification_collateral);
             SGX_QL_RESOLVE(qp_handle, sgx_ql_free_quote_verification_collateral);
         }
-
         return errors.size() == 0;
     }
 

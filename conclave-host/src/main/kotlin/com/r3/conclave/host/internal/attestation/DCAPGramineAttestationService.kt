@@ -34,7 +34,7 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
 
     init {
         val targetInfo = Cursor.allocate(SgxTargetInfo)
-        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), targetInfo.buffer.array())
+        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
     }
 
     private fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {

@@ -340,7 +340,7 @@ void host_disk_get_size_ocall(long* res,
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
 static std::mutex dcap_mutex;
 
-jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
+jint initDCAP(JNIEnv *jniEnv, jstring bundle, jboolean skipQuotingLibraries) {
 
     JniString jpath(jniEnv, bundle);
 
@@ -353,7 +353,7 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
 
         quoting_lib = new r3::conclave::dcap::QuotingAPI();
 
-        if (!quoting_lib->init(path, errors)) {
+        if (!quoting_lib->init(path, skipQuotingLibraries, errors)) {
             std::string message("failed to initialize DCAP: ");
             for(auto &err : errors)
                 message += err + ";";
@@ -380,13 +380,14 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle) {
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP(JNIEnv *jniEnv,
                                                                                jclass,
                                                                                jstring bundle,
+                                                                               jboolean skipQuotingLibraries,
                                                                                jbyteArray targetInfoOut) {
 
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
-    if (initDCAP(jniEnv, bundle) != 0)
+    if (initDCAP(jniEnv, bundle, skipQuotingLibraries) != 0)
         return -1;
 
     quote3_error_t eval_result;
