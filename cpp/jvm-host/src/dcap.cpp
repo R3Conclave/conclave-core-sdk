@@ -66,25 +66,16 @@ namespace r3::conclave::dcap {
 
         auto const qpl = get_plugin_path(path);
 
-        if (skipQuotingLibrariesForGramine) {
-            ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
-            SGX_QL_RESOLVE(ql_handle, sgx_ql_set_path);
-
-            if (sgx_ql_set_path(SGX_QL_QPL_PATH, qpl.c_str()) != SGX_QL_SUCCESS) {
-                errors.push_back(std::string("sgx_ql_set_path failed: ") + qpl);
-            }
-        } else {
+        if (!skipQuotingLibrariesForGramine) {
             comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
             urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
             pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);
             qe3_handle = try_dlopen( path, "libsgx_qe3_logic.so", errors);
-
             ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
 
             if (ql_handle != nullptr) {
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_set_enclave_load_policy);
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_cleanup_by_policy);
-                SGX_QL_RESOLVE(ql_handle, sgx_ql_set_path);
 
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_get_target_info);
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_get_quote_size);

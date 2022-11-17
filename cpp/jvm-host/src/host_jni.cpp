@@ -387,8 +387,13 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP(J
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
-    if (initDCAP(jniEnv, bundle, skipQuotingLibraries) != 0)
+    if (initDCAP(jniEnv, bundle, skipQuotingLibraries) != 0) {
         return -1;
+    }
+
+    if (skipQuotingLibraries) {
+        return 0;
+    }
 
     quote3_error_t eval_result;
     if (quoting_lib->get_target_info((sgx_target_info_t*)request.ptr, eval_result)) {
