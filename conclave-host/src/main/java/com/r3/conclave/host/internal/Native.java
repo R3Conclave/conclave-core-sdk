@@ -64,7 +64,7 @@ public class Native {
             QeIdentity
         }
     */
-    public static native int initQuoteDCAP(String bundlePath, byte[] initQuoteResponseOut, boolean skipQuotingLibraries); // 0 --> OK
+    public static native int initQuoteDCAP(String bundlePath, byte[] initQuoteResponseOut); // 0 --> OK
     public static native int calcQuoteSizeDCAP();  // > 0 --> OK
     public static native int getQuoteDCAP(byte[] quoteRequestIn, byte[] quoteOut); // 0 --> OK
     public static native Object[] getQuoteCollateral(byte[] fmspc, int pck);

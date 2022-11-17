@@ -58,10 +58,10 @@ JNIEXPORT void JNICALL Java_com_r3_conclave_host_internal_Native_getQuote
 /*
  * Class:     com_r3_conclave_host_internal_Native
  * Method:    initQuoteDCAP
- * Signature: (Ljava/lang/String;[BZ)I
+ * Signature: (Ljava/lang/String;[B)I
  */
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP
-  (JNIEnv *, jclass, jstring, jbyteArray, jboolean);
+  (JNIEnv *, jclass, jstring, jbyteArray);
 
 /*
  * Class:     com_r3_conclave_host_internal_Native
