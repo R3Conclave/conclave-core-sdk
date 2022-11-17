@@ -103,6 +103,14 @@ class MockEnclaveEnvironment(
         return report
     }
 
+    override fun getSignedQuote(
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote> {
+        val report = createReport(quotingEnclaveInfo, reportData)
+        return hostInterface.getSignedQuote(report)
+    }
+
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
         return EnclaveUtils.sealData(aesSealingKey, toBeSealed)
     }

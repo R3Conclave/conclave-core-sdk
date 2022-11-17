@@ -4,6 +4,9 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
@@ -57,8 +60,8 @@ class GramineEnclaveEnvironment(
     }
 
     override fun createReport(
-            targetInfo: ByteCursor<SgxTargetInfo>?,
-            reportData: ByteCursor<SgxReportData>?
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport> {
         val report = Cursor.allocate(SgxReport)
         val body = report[SgxReport.body]
@@ -73,6 +76,15 @@ class GramineEnclaveEnvironment(
         body[SgxReportBody.isvSvn] = revocationLevel + 1
         body[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
         return report
+    }
+
+    override fun getSignedQuote(
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote> {
+        val signedQuoteBytes = getQuoteFromGramine(reportData!!.bytes)
+        val quoteBuffer = ByteBuffer.wrap(signedQuoteBytes);
+        return Cursor.slice(SgxSignedQuote, quoteBuffer)
     }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
@@ -126,5 +138,29 @@ class GramineEnclaveEnvironment(
 
     override fun setupFileSystems(inMemoryFsSize: Long, persistentFsSize: Long, inMemoryMountPath: String, persistentMountPath: String, encryptionKey: ByteArray) {
         // TODO: Gramine filesystem support
+    }
+
+    private fun getQuoteFromGramine(enclaveTargetInfoBytes: ByteArray): ByteArray {
+        setUserData(enclaveTargetInfoBytes)
+
+        return try {
+            FileInputStream("/dev/attestation/quote").use {
+                it.readBytes()
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            throw e
+        }
+    }
+
+    private fun setUserData(data: ByteArray) {
+        try {
+            FileOutputStream("/dev/attestation/user_report_data").use {
+                it.write(data)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            throw e
+        }
     }
 }

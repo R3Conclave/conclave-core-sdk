@@ -68,6 +68,17 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
     ): ByteCursor<SgxReport>
 
     /**
+     * Get an [SgxSignedQuote] quote from the host.
+     * @param targetInfo Optional information of the target enclave if the report is to be used as part of local
+     * attestation. An example is during quoting when the report is sent to the Quoting Enclave for signing.
+     * @param reportData Optional data to be included in the report. If null the data area of the report will be 0.
+     */
+    abstract fun getSignedQuote(
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote>
+
+    /**
      * Encrypt and authenticate the given [PlaintextAndEnvelope] using AES-GCM. The key used is unique to the enclave.
      * This method can be used to preserve secret data after the enclave is destroyed. The sealed data blob can be
      * unsealed on future instantiations of the enclave using [unsealData], even if the platform firmware has been

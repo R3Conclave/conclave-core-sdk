@@ -283,48 +283,7 @@ abstract class Enclave {
             ByteCursor.wrap(SgxReportData, reportData)
         }
         val quotingEnclaveInfo = env.hostInterface.getQuotingEnclaveInfo()
-        return createAttestationQuote(quotingEnclaveInfo, reportDataCursor).bytes
-    }
-
-    private fun getQuoteFromGramine(enclaveTargetInfoBytes: ByteArray): ByteArray {
-        setUserData(enclaveTargetInfoBytes)
-
-        return try {
-            FileInputStream("/dev/attestation/quote").use {
-                it.readBytes()
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            throw e
-        }
-    }
-
-    private fun setUserData(data: ByteArray) {
-        try {
-            FileOutputStream("/dev/attestation/user_report_data").use {
-                it.write(data)
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            throw e
-        }
-    }
-
-    /**
-     * Internal implementation of createAttestationQuote, using byte cursors rather than raw byte arrays.
-     */
-    private fun createAttestationQuote(
-            quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
-            reportData: ByteCursor<SgxReportData>?
-    ): ByteCursor<SgxSignedQuote> {
-        val report = env.createReport(quotingEnclaveInfo, reportData)
-
-        return if (env is GramineEnclaveEnvironment) {
-            val signedQuoteBytes = getQuoteFromGramine(reportData!!.bytes)
-            Cursor.wrap(SgxSignedQuote, signedQuoteBytes)
-        } else {
-            env.hostInterface.getSignedQuote(report)
-        }
+        return env.getSignedQuote(quotingEnclaveInfo, reportDataCursor).bytes
     }
 
     /**
@@ -520,7 +479,7 @@ abstract class Enclave {
 
         override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
             val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, parameterBuffer)
-            val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
+            val quote = env.getSignedQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
             return ByteBuffer.wrap(quote.bytes)
         }

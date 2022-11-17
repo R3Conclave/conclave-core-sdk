@@ -9,6 +9,9 @@ import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.getRemainingString
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -121,6 +124,14 @@ class NativeEnclaveEnvironment(
             report.buffer.array()
         )
         return report
+    }
+
+    override fun getSignedQuote(
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote> {
+        val report = createReport(quotingEnclaveInfo, reportData)
+        return hostInterface.getSignedQuote(report)
     }
 
     override fun setupFileSystems(
