@@ -47,11 +47,9 @@ open class GenerateGramineManifest @Inject constructor(
         // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
         //  enclave. Rather than documenting all this and expecting the user to have their machine correctly setup, it
         //  is better to embed the conclave-build container to always run when building the enclave, not just for
-        //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181
+        //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181. First, support to build and run Python enclaves on
+        //  different machines is required.
 
-        val architecture = "x86_64-linux-gnu"
-        val ldPreload = "/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/libpython3.8.so"
-        val pythonPackagesPath = "/usr/local/lib/python3.8/dist-packages"
 
         /**
          * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
@@ -60,7 +58,26 @@ open class GenerateGramineManifest @Inject constructor(
         val enclaveWorkerThreadCount = maxThreads.get()
         val gramineMaxThreads = enclaveWorkerThreadCount + 8
 
-        if (pythonEnclave.isPresent) {
+        // These values are the same inside and outside the conclave-build container
+        val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
+        val ldPreload = executePython("from sysconfig import get_config_var; " +
+                "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+        )
+        /**
+         * In case of Python enclaves, we need to build them outside the conclave-build container.
+         * All other enclaves are built in the container.
+         */
+        if (pythonEnclave.get()) {
+            /**
+             * Jep is installed in a user space, not a system space and will therefore produce different results
+             * if run inside or outside the container.
+             */
+
+            val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
+                .splitToSequence("\n")
+                .single { it.startsWith("Location: ") }
+                .substringAfter("Location: ")
+
             commandLine(
                 listOf(
                     "gramine-manifest",
@@ -78,6 +95,11 @@ open class GenerateGramineManifest @Inject constructor(
                 )
             )
         } else {
+            val pythonPackagesPath = linuxExec.execWithOutput(listOf("pip3", "show", "jep"))
+                .splitToSequence("\n")
+                .single { it.startsWith("Location: ") }
+                .substringAfter("Location: ")
+
             linuxExec.exec(
                 listOf<String>(
                     "gramine-manifest",
@@ -96,6 +118,8 @@ open class GenerateGramineManifest @Inject constructor(
             )
         }
     }
+
+    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
 
     /**
      * Compute the mrsigner value from a provided .pem file containing a 3072 bit RSA key.

@@ -5,7 +5,6 @@ import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -87,14 +86,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
         val args: List<String> = listOf(
-                "docker",
-                "run",
-                "-i",
-                "--rm",
-                "-v",
-                "${baseDirectory.get()}:/project",
-                tag.get()
-            ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+            "docker",
+            "run",
+            "-i",
+            "--rm",
+            "-v",
+            "${baseDirectory.get()}:/project",
+            tag.get()
+        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
 
         val errorOut = ByteArrayOutputStream()
         val result = commandLine(
@@ -114,6 +113,32 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         }
         result.assertNormalExitValue()
         return null
+    }
+
+    fun execWithOutput(params: List<String>): String {
+        val args: List<String> = listOf(
+            "docker",
+            "run",
+            "-i",
+            "--rm",
+            "-v",
+            "${baseDirectory.get()}:/project",
+            tag.get()
+        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+
+        val execOutputStream = ByteArrayOutputStream()
+        val execErrorStream = ByteArrayOutputStream()
+
+        project.exec { spec ->
+            // Store all the standard output instead of printing to the console
+            spec.standardOutput = execOutputStream
+
+            // Store all the standard error instead of printing to the console
+            spec.errorOutput = execErrorStream
+
+            spec.commandLine(args)
+        }
+        return execOutputStream.toString()
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
