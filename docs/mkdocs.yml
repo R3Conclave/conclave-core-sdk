@@ -54,6 +54,7 @@ nav:
 
 theme:
   name: 'material'
+  logo: assets/core_logo_no_shadow.svg
   features:
     - navigation.tabs
     - navigation.instant
