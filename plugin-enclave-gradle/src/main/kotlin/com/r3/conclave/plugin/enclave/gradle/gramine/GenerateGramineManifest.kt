@@ -60,22 +60,41 @@ open class GenerateGramineManifest @Inject constructor(
         val enclaveWorkerThreadCount = maxThreads.get()
         val gramineMaxThreads = enclaveWorkerThreadCount + 8
 
-        linuxExec.exec(
-            listOf<String>(
-                "gramine-manifest",
-                "-Djava_home=${System.getProperty("java.home")}",
-                "-Darch_libdir=/lib/$architecture",
-                "-Dld_preload=$ldPreload",
-                "-Dpython_packages_path=$pythonPackagesPath",
-                "-Dis_python_enclave=${pythonEnclave.get()}",
-                "-Dis_simulation_enclave=${buildType == BuildType.Simulation}",
-                "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
-                "-Denclave_worker_threads=$enclaveWorkerThreadCount",
-                "-Dgramine_max_threads=$gramineMaxThreads",
-                manifestTemplateFile.absolutePathString(),
-                manifestFile.asFile.get().absolutePath
+        if (pythonEnclave.isPresent) {
+            commandLine(
+                listOf(
+                    "gramine-manifest",
+                    "-Djava_home=${System.getProperty("java.home")}",
+                    "-Darch_libdir=/lib/$architecture",
+                    "-Dld_preload=$ldPreload",
+                    "-Dpython_packages_path=$pythonPackagesPath",
+                    "-Dis_python_enclave=${pythonEnclave.get()}",
+                    "-Dis_simulation_enclave=${buildType == BuildType.Simulation}",
+                    "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
+                    "-Denclave_worker_threads=$enclaveWorkerThreadCount",
+                    "-Dgramine_max_threads=$gramineMaxThreads",
+                    manifestTemplateFile.absolutePathString(),
+                    manifestFile.asFile.get().absolutePath
+                )
             )
-        )
+        } else {
+            linuxExec.exec(
+                listOf<String>(
+                    "gramine-manifest",
+                    "-Djava_home=${System.getProperty("java.home")}",
+                    "-Darch_libdir=/lib/$architecture",
+                    "-Dld_preload=$ldPreload",
+                    "-Dpython_packages_path=$pythonPackagesPath",
+                    "-Dis_python_enclave=${pythonEnclave.get()}",
+                    "-Dis_simulation_enclave=${buildType == BuildType.Simulation}",
+                    "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
+                    "-Denclave_worker_threads=$enclaveWorkerThreadCount",
+                    "-Dgramine_max_threads=$gramineMaxThreads",
+                    manifestTemplateFile.absolutePathString(),
+                    manifestFile.asFile.get().absolutePath
+                )
+            )
+        }
     }
 
     /**
