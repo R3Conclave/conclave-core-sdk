@@ -1,23 +1,18 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.SgxReport.body
-import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
-import com.r3.conclave.mail.internal.writeInt
 import com.r3.conclave.utilities.internal.getAllBytes
 import com.r3.conclave.utilities.internal.readIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
-import java.io.*
+import java.io.Closeable
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
-import java.time.Duration
-import java.time.temporal.TemporalUnit
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
-import javax.xml.crypto.Data
 
 /**
  * This class is the implementation of the [EnclaveHostInterface] for native enclaves.
@@ -200,7 +195,6 @@ class SocketEnclaveHostInterface(
      * It is used to link outgoing calls to the appropriate call worker.
      */
     private val threadLocalCallContext = ThreadLocal<EnclaveCallContext>()
-
 
     /**
      * Internal method for initiating a host call with specific arguments.
