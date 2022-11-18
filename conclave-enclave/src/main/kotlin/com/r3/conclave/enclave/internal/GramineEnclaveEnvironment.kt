@@ -65,7 +65,6 @@ class GramineEnclaveEnvironment(
             //    function "sgx_get_target_info", which fills that array.
             //  When working with the Gramine flow, such operation is done on the enclave side by passing an empty
             //    array that it is filled by Gramine (which communicates with the quoting enclave in background).
-            //  Here we reuse this
             val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
             createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
             val signedQuoteBytes = readSignedQuote()
