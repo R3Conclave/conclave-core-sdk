@@ -104,7 +104,7 @@ class MockEnclaveEnvironment(
     }
 
     override fun getSignedQuote(
-        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         //  Note that when we ask the host for the "signed quote", we actually return the report body.

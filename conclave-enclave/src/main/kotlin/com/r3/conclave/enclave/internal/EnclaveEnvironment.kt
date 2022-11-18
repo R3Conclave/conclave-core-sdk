@@ -74,7 +74,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
      * @param reportData Optional data to be included in the report. If null the data area of the report will be 0.
      */
     abstract fun getSignedQuote(
-        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote>
 

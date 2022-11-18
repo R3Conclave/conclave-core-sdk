@@ -5,10 +5,11 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
+import com.r3.conclave.common.internal.SgxReportBody.cpuSvn
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
+import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
-import com.r3.conclave.common.internal.SgxReportBody.reportData
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
@@ -24,9 +25,6 @@ import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
 import java.io.UTFDataFormatException
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
@@ -321,9 +319,10 @@ abstract class Enclave {
     }
 
     private fun getLocalSecretKey(): ByteArray {
-        val reportBody = env.createReport(null, null)[body]
-        val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
-        val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
+        val signedQuote = env.getSignedQuote(null, null)
+        val reportBody = signedQuote[quote][SgxQuote.reportBody]
+        val cpuSvn: ByteBuffer = reportBody[cpuSvn].read()
+        val isvSvn: Int = reportBody[isvSvn].read()
 
         return env.getSecretKey { keyRequest ->
             keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
@@ -443,9 +442,11 @@ abstract class Enclave {
 
         val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
 
-        val report = env.createReport(null, null)
+        val signedQuote = env.getSignedQuote(null, null)
+        val report = signedQuote[quote][reportBody]
+
         if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
-            val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
+            val mrenclave = SHA256Hash.get(report[mrenclave].read())
             if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
                 builder.append(" C:").append(mrenclave)
             }

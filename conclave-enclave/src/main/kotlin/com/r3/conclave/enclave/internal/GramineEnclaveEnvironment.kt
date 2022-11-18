@@ -79,7 +79,7 @@ class GramineEnclaveEnvironment(
     }
 
     override fun getSignedQuote(
-        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
+        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         //  Note that in Gramine the "signed quote" is automatically retrieved and returned
