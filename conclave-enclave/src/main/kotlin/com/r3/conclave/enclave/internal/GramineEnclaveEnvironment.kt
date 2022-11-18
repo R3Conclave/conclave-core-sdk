@@ -82,8 +82,9 @@ class GramineEnclaveEnvironment(
             signedQuote[SgxSignedQuote.quote][SgxQuote.reportBody] = report[SgxReport.body].read()
             return signedQuote
         } else {
-            val signedQuoteBytes =
-                retrieveSignedQuote(quotingEnclaveInfo?.bytes ?: byteArrayOf(), reportData?.bytes ?: byteArrayOf())
+            val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
+            val reportDataBytes = reportData?.bytes ?: Cursor.allocate(SgxReportData).bytes
+            val signedQuoteBytes = retrieveSignedQuote(quotingEnclaveInfoBytes, reportDataBytes)
             Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
         }
     }
@@ -135,14 +136,14 @@ class GramineEnclaveEnvironment(
         }
     }
 
-    private fun writeUserReportData(data: ByteArray?) {
+    private fun writeUserReportData(data: ByteArray) {
 
         return FileOutputStream("/dev/attestation/user_report_data").use {
             it.write(data)
         }
     }
 
-    private fun writeTargetInfo(data: ByteArray?) {
+    private fun writeTargetInfo(data: ByteArray) {
         FileOutputStream("/dev/attestation/target_info").use {
             it.write(data)
         }

@@ -32,11 +32,6 @@ class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareA
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 
-    init {
-        val targetInfo = Cursor.allocate(SgxTargetInfo)
-        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
-    }
-
     private fun getFmspc(signedQuote: ByteCursor<SgxSignedQuote>): ByteArray {
         val pckCert = signedQuote.toEcdsaP256AuthData()[qeCertData].toPckCertPath().x509Certs[0]
         return pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes()

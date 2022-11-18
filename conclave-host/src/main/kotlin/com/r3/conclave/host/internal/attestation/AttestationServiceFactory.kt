@@ -58,7 +58,7 @@ object AttestationServiceFactory {
         return if (enclaveHandle is NativeEnclaveHandle) {
             DCAPAttestationService(enclaveMode == EnclaveMode.RELEASE)
         } else {
-            DCAPGramineAttestationService(enclaveMode == EnclaveMode.RELEASE)
+            DCAPAttestationService(enclaveMode == EnclaveMode.RELEASE)
         }
     }
 }

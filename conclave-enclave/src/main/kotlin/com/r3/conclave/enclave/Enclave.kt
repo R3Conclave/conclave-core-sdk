@@ -5,9 +5,7 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
-import com.r3.conclave.common.internal.SgxReportBody.cpuSvn
 import com.r3.conclave.common.internal.SgxReportBody.isvProdId
-import com.r3.conclave.common.internal.SgxReportBody.isvSvn
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
@@ -273,13 +271,11 @@ abstract class Enclave {
      * @Throws IllegalArgumentException If the provided report data byte array is present, but is not 64 bytes long.
      */
     @Beta
-    fun createAttestationQuote(reportData: ByteArray?): ByteArray {
-        val reportDataCursor = reportData?.let {
-            require(reportData.size == 64) {
-                "User report data must be 64 bytes long, but was ${reportData.size} bytes instead."
-            }
-            ByteCursor.wrap(SgxReportData, reportData)
+    fun createAttestationQuote(reportData: ByteArray): ByteArray {
+        require(reportData.size == 64) {
+            "User report data must be 64 bytes long, but was ${reportData.size} bytes instead."
         }
+        val reportDataCursor = ByteCursor.wrap(SgxReportData, reportData)
         val quotingEnclaveInfo = env.hostInterface.getQuotingEnclaveInfo()
         return env.getSignedQuote(quotingEnclaveInfo, reportDataCursor).bytes
     }
