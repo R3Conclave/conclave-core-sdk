@@ -2,8 +2,6 @@ package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.host.AttestationParameters
-import com.r3.conclave.host.internal.EnclaveHandle
-import com.r3.conclave.host.internal.NativeEnclaveHandle
 
 object AttestationServiceFactory {
     /**
@@ -14,51 +12,21 @@ object AttestationServiceFactory {
      */
     fun getService(
         enclaveMode: EnclaveMode,
-        attestationParameters: AttestationParameters?,
-        enclaveHandle: EnclaveHandle
+        attestationParameters: AttestationParameters?
     ): AttestationService {
         return when (enclaveMode) {
-            EnclaveMode.RELEASE -> getHardwareService(
-                enclaveMode,
-                attestationParameters,
-                enclaveHandle
-            )
-
-            EnclaveMode.DEBUG -> getHardwareService(
-                enclaveMode,
-                attestationParameters,
-                enclaveHandle
-            )
-
+            EnclaveMode.RELEASE -> getHardwareService(isRelease = true, enclaveMode, attestationParameters)
+            EnclaveMode.DEBUG -> getHardwareService(isRelease = false, enclaveMode, attestationParameters)
             EnclaveMode.SIMULATION -> MockAttestationService(isSimulation = true)
             EnclaveMode.MOCK -> MockAttestationService(isSimulation = false)
         }
     }
 
-    private fun getHardwareService(
-        enclaveMode: EnclaveMode,
-        attestationParameters: AttestationParameters?,
-        enclaveHandle: EnclaveHandle
-    ): HardwareAttestationService {
+    private fun getHardwareService(isRelease: Boolean, enclaveMode: EnclaveMode, attestationParameters: AttestationParameters?): HardwareAttestationService {
         return when (attestationParameters) {
-            is AttestationParameters.EPID -> EpidAttestationService(
-                enclaveMode == EnclaveMode.RELEASE,
-                attestationParameters.attestationKey
-            )
-
-            is AttestationParameters.DCAP -> retrieveDCAPService(enclaveMode, enclaveHandle)
+            is AttestationParameters.EPID -> EpidAttestationService(isRelease, attestationParameters.attestationKey)
+            is AttestationParameters.DCAP -> DCAPAttestationService(isRelease)
             null -> throw IllegalArgumentException("Attestation parameters needed for $enclaveMode mode.")
-        }
-    }
-
-    private fun retrieveDCAPService(
-        enclaveMode: EnclaveMode,
-        enclaveHandle: EnclaveHandle
-    ): HardwareAttestationService {
-        return if (enclaveHandle is NativeEnclaveHandle) {
-            DCAPAttestationService(enclaveMode == EnclaveMode.RELEASE)
-        } else {
-            DCAPGramineAttestationService(enclaveMode == EnclaveMode.RELEASE)
         }
     }
 }
