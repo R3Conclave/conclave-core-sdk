@@ -52,35 +52,19 @@ class GramineEnclaveEnvironment(
         digest("SHA-256") { update(enclaveClass.name.toByteArray()) }.copyOf(16)
     }
 
+
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport> {
-
-        if (enclaveMode == EnclaveMode.SIMULATION) {
-            val tcbLevel = 1
-            val currentCpuSvn = versionToCpuSvn(tcbLevel)
-
-            val report = Cursor.allocate(SgxReport)
-
-            val body = report[SgxReport.body]
-            if (reportData != null) {
-                body[SgxReportBody.reportData] = reportData.buffer
-            }
-            body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
-            body[SgxReportBody.mrenclave] = ByteBuffer.wrap(simulationMrEnclave)
-            body[SgxReportBody.mrsigner] = simulationMrsigner.buffer()
-            body[SgxReportBody.isvProdId] = productID
-            // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
-            body[SgxReportBody.isvSvn] = revocationLevel + 1
-            body[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
-            return report
+        return if (enclaveMode == EnclaveMode.SIMULATION) {
+            createSimulationReport(reportData)
         } else {
             val report = retrieveReport(
                 targetInfo?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf(),
                 reportData?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf()
             )
-            return Cursor.slice(SgxReport, ByteBuffer.wrap(report))
+            Cursor.slice(SgxReport, ByteBuffer.wrap(report))
         }
     }
 
@@ -93,8 +77,10 @@ class GramineEnclaveEnvironment(
         //    In the background, Gramine interacts with the AESM service and the quoting enclave
         //    to get the "signed quote".
         return if (enclaveMode == EnclaveMode.SIMULATION) {
-            val report = createReport(quotingEnclaveInfo, reportData)
-            hostInterface.getSignedQuote(report)
+            val report = createSimulationReport(reportData)
+            val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
+            signedQuote[SgxSignedQuote.quote][SgxQuote.reportBody] = report[SgxReport.body].read()
+            return signedQuote
         } else {
             val signedQuoteBytes =
                 retrieveSignedQuote(quotingEnclaveInfo?.bytes ?: byteArrayOf(), reportData?.bytes ?: byteArrayOf())
@@ -160,5 +146,26 @@ class GramineEnclaveEnvironment(
         FileOutputStream("/dev/attestation/target_info").use {
             it.write(data)
         }
+    }
+
+    private fun createSimulationReport(
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxReport> {
+        val tcbLevel = 1
+        val currentCpuSvn = versionToCpuSvn(tcbLevel)
+        val report = Cursor.allocate(SgxReport)
+
+        val body = report[SgxReport.body]
+        if (reportData != null) {
+            body[SgxReportBody.reportData] = reportData.buffer
+        }
+        body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
+        body[SgxReportBody.mrenclave] = ByteBuffer.wrap(simulationMrEnclave)
+        body[SgxReportBody.mrsigner] = simulationMrsigner.buffer()
+        body[SgxReportBody.isvProdId] = productID
+        // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
+        body[SgxReportBody.isvSvn] = revocationLevel + 1
+        body[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
+        return report
     }
 }

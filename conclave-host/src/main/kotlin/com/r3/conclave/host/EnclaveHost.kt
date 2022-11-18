@@ -13,10 +13,7 @@ import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.EnclaveScanner.ScanResult
-import com.r3.conclave.host.internal.attestation.AttestationService
-import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
-import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
-import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
+import com.r3.conclave.host.internal.attestation.*
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
 import com.r3.conclave.host.internal.gramine.GramineEnclaveHandle
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
@@ -417,7 +414,7 @@ class EnclaveHost private constructor(
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
 
-        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
+        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { attestationParameters is AttestationParameters.EPID })
 
         try {
             this.commandsCallback = commandsCallback
