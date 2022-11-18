@@ -13,7 +13,7 @@ class SignEnclaveWithKeyTest : AbstractModeTaskTest() {
         }
     }
 
-    override val baseTaskName: String get() ="signEnclaveWithKey"
+    override val taskNameFormat: String get() ="signEnclaveWithKey%s"
     override val outputName: String get() = "enclave.signed.so"
     /**
      * Native image doesn't produce stable binaries.
@@ -27,9 +27,9 @@ class SignEnclaveWithKeyTest : AbstractModeTaskTest() {
         }
     }
 
-    @Test
-    fun signing() {
-        runTask()
-
-    }
+//    @Test
+//    fun signing() {
+//        runTask()
+//
+//    }
 }

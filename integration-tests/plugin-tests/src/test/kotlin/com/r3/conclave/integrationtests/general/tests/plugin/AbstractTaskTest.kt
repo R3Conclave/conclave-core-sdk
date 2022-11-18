@@ -1,5 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.runtimeType
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
@@ -14,20 +15,9 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.*
 
-abstract class AbstractTaskTest {
-    abstract val taskName: String
-    abstract val output: Path
-    /**
-     * If the task's output isn't stable then override with false, and explain why.
-     */
-    open val isReproducible: Boolean get() = true
-
+abstract class AbstractTaskTest : TaskTest {
     @field:TempDir
-    lateinit var projectDir: Path
-
-    val projectName: String get() = projectDir.name
-    val buildFile: Path get() = projectDir / "build.gradle"
-    val buildDir: Path get() = projectDir / "build"
+    override lateinit var projectDir: Path
 
     @BeforeEach
     fun copyProject() {
@@ -100,8 +90,6 @@ abstract class AbstractTaskTest {
     }
 
     companion object {
-        val enclaveMode = System.getProperty("enclaveMode").lowercase().replaceFirstChar(Char::titlecase)
-        private val runtimeType = System.getProperty("runtimeType")
         private val testGradleUserHome = System.getProperty("test.gradle.user.home")
         private val gradleVersion = System.getProperty("gradle.version")
 
@@ -116,7 +104,7 @@ abstract class AbstractTaskTest {
                 .withProjectDir(projectDirectory.toFile())
                 .withArguments(
                     task,
-                    "-PruntimeType=$runtimeType",
+                    "-PruntimeType=${runtimeType()}",
                     "--no-build-cache",
                     "--stacktrace",
                     "--info",

@@ -115,15 +115,14 @@ open class GenerateGramineDirectManifest @Inject constructor(
 
         /**
          * Check the key length by checking the modulus.
-         * Due to two's complement, the modulus representation is 385 bytes long rather than 384 (3072 / 8).
+         * toByteArray() has an extra byte for the sign, thus making 385 rather than 384 (3072 / 8).
          */
+        // TODO toByteArray() returns the minimum number of bytes for the representation, and so this may be less
+        //  than 385 bytes
         check(modulusBytes.size == 385) { "Signing key must be a 3072 bit RSA key." }
 
-        /** Do a quick sanity check to ensure that the most significant byte (two's complement sign) is zero. */
-        check(modulusBytes.last() == 0.toByte())
-
         return digest("SHA-256") {
-            update(modulusBytes, 0, 384)    // Ignore the empty sign byte.
+            update(modulusBytes, 0, 384)    // Ignore the sign byte.
         }
     }
 

@@ -204,7 +204,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
             task.maxThreads.set(conclaveExtension.maxThreads)
-            task.manifestFile.set((baseDirectory / type.name.lowercase() / PluginUtils.GRAMINE_MANIFEST).toFile())
+            task.manifestFile.set((baseDirectory / type.name.lowercase() / GRAMINE_MANIFEST).toFile())
         }
     }
 

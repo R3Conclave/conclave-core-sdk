@@ -18,7 +18,7 @@ class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
         }
     }
 
-    override val baseTaskName: String get() = "generateEnclaveConfig"
+    override val taskNameFormat: String get() = "generateEnclaveConfig%s"
     override val outputName: String get() = "enclave.xml"
 
     @Test
