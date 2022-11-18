@@ -1,6 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.SecureHash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
@@ -9,10 +10,11 @@ import java.security.MessageDigest
 /**
  * This class is the enclave environment intended for use with gramine-direct.
  */
-class GramineDirectEnclaveEnvironment(
-        enclaveClass: Class<*>,
-        override val hostInterface: SocketEnclaveHostInterface,
-        private val mrsigner: ByteArray
+class GramineEnclaveEnvironment(
+    enclaveClass: Class<*>,
+    override val hostInterface: SocketEnclaveHostInterface,
+    private val simulationMrsigner: SecureHash,
+    override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -22,8 +24,9 @@ class GramineDirectEnclaveEnvironment(
         }
     }
 
-    // TODO: (CON-1194) Handle enclave mode properly
-    override val enclaveMode = EnclaveMode.SIMULATION
+    init {
+        require(enclaveMode != EnclaveMode.MOCK) { "Gramine can't run in MOCK mode" }
+    }
 
     private val tcbLevel = 1
 
@@ -64,7 +67,7 @@ class GramineDirectEnclaveEnvironment(
         }
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(mrenclave)
-        body[SgxReportBody.mrsigner] = ByteBuffer.wrap(mrsigner)
+        body[SgxReportBody.mrsigner] = simulationMrsigner.buffer()
         body[SgxReportBody.isvProdId] = productID
         // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
         body[SgxReportBody.isvSvn] = revocationLevel + 1
@@ -90,7 +93,7 @@ class GramineDirectEnclaveEnvironment(
         val keyName = keyRequest[SgxKeyRequest.keyName].read()
         if (keyName == KeyName.REPORT) {
             return digest("SHA-256") {
-                update(mrsigner)
+                update(simulationMrsigner.bytes)
                 update(mrenclave)
                 update(keyRequest[SgxKeyRequest.keyId].buffer)
             }.copyOf(16)
@@ -112,7 +115,7 @@ class GramineDirectEnclaveEnvironment(
                 update(mrenclave)
             }
             if (keyPolicy.isSet(KeyPolicy.MRSIGNER)) {
-                update(mrsigner)
+                update(simulationMrsigner.bytes)
             }
             update(ByteBuffer.allocate(2).putShort(productID.toShort()).array())  // Product Id is an unsigned short.
             update(keyRequest[SgxKeyRequest.isvSvn].buffer)
