@@ -14,6 +14,6 @@ object EnclaveQuoteServiceFactory {
     }
 
     private fun retrieveDCAPService(enclaveHandle: EnclaveHandle): EnclaveQuoteService {
-        return if (enclaveHandle is NativeEnclaveHandle) EnclaveQuoteServiceDCAP() else EnclaveGramineQuoteServiceDCAP()
+        return if (enclaveHandle is NativeEnclaveHandle) EnclaveQuoteServiceDCAP() else EnclaveQuoteServiceGramineDCAP()
     }
 }

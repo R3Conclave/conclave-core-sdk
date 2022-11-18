@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 
 // Note: we actually do not need this class in Gramine
 // TODO: Avoid calling initializeQuote in Gramine and remove this class
-class EnclaveGramineQuoteServiceDCAP : EnclaveQuoteService() {
+class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
         val targetInfo = Cursor.allocate(SgxTargetInfo)

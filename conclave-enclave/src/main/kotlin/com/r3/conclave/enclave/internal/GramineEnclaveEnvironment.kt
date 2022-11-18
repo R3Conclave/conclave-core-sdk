@@ -82,9 +82,16 @@ class GramineEnclaveEnvironment(
             signedQuote[SgxSignedQuote.quote][SgxQuote.reportBody] = report[SgxReport.body].read()
             return signedQuote
         } else {
+            //  In Graal VM/Native Image flow the "quotingEnclaveInfo" (also called "SGX target info") is
+            //    requested by the host to the quoting enclave by passing an empty array to the
+            //    function "sgx_get_target_info", which fills that array.
+            //  When working with the Gramine flow, such operation is done on the enclave side by passing an empty
+            //    array that it is filled by Gramine (which communicates with the quoting enclave in background).
+            //  Here we reuse this
             val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
-            val reportDataBytes = reportData?.bytes ?: Cursor.allocate(SgxReportData).bytes
-            val signedQuoteBytes = retrieveSignedQuote(quotingEnclaveInfoBytes, reportDataBytes)
+            val reportDataCursor = createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
+
+            val signedQuoteBytes = retrieveSignedQuote(quotingEnclaveInfoBytes, reportDataCursor.bytes)
             Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
         }
     }
@@ -119,7 +126,7 @@ class GramineEnclaveEnvironment(
         writeTargetInfo(targetInfoBytes)
         writeUserReportData(userReportDataBytes)
 
-        return FileInputStream("/dev/attestation/quote").use {
+        return FileInputStream("/dev/attestation/report").use {
             it.readBytes()
         }
     }
