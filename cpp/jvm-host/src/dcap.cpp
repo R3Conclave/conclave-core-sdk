@@ -137,7 +137,7 @@ namespace r3::conclave::dcap {
 
     //  The users should not free sgx_ql_qve_collateral_t manually but they are expected to call free_quote_verification_collateral
     sgx_ql_qve_collateral_t* QuotingAPI::get_quote_verification_collateral(const uint8_t* fmspc, int pck_ca_type, quote3_error_t& eval_result){
-
+        printf("Pointer %p, type %d", fmspc, pck_ca_type)
         const char* pck_ca = pck_ca_type == 1 ? "platform" : "processor";
 
         collateral = nullptr;
