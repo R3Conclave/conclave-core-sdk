@@ -31,27 +31,6 @@ class GramineEnclaveEnvironment(
         require(enclaveMode != EnclaveMode.MOCK) { "Gramine can't run in MOCK mode" }
     }
 
-    private val simulationMrEnclave: ByteArray by lazy {
-        val digest = MessageDigest.getInstance("SHA-256")
-
-        val buffer = ByteArray(65536)
-        var bytesRead: Int
-
-        enclaveClass.protectionDomain.codeSource.location.openStream().use {
-            bytesRead = it.read(buffer)
-            while (bytesRead >= 0) {
-                digest.update(buffer, 0, bytesRead)
-                bytesRead = it.read(buffer)
-            }
-        }
-
-        digest.digest()
-    }
-
-    private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {
-        digest("SHA-256") { update(enclaveClass.name.toByteArray()) }.copyOf(16)
-    }
-
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
@@ -173,5 +152,26 @@ class GramineEnclaveEnvironment(
         body[SgxReportBody.isvSvn] = revocationLevel + 1
         body[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
         return report
+    }
+
+    private val simulationMrEnclave: ByteArray by lazy {
+        val digest = MessageDigest.getInstance("SHA-256")
+
+        val buffer = ByteArray(65536)
+        var bytesRead: Int
+
+        enclaveClass.protectionDomain.codeSource.location.openStream().use {
+            bytesRead = it.read(buffer)
+            while (bytesRead >= 0) {
+                digest.update(buffer, 0, bytesRead)
+                bytesRead = it.read(buffer)
+            }
+        }
+
+        digest.digest()
+    }
+
+    private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {
+        digest("SHA-256") { update(enclaveClass.name.toByteArray()) }.copyOf(16)
     }
 }

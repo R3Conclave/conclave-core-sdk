@@ -392,6 +392,9 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP(J
     }
 
     if (skipQuotingLibraries) {
+        //  When using Gramine, we skip the loading of quoting libraries, and we do not want
+        //    to call "get_target_info" below, as Gramine implicitely does this for us on the enclave side
+        //    (in the call that reads the report from /dev/attestation/report) and would fail otherwise.
         return 0;
     }
 

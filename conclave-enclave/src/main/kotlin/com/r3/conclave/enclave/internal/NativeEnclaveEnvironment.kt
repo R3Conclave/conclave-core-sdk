@@ -127,6 +127,8 @@ class NativeEnclaveEnvironment(
         quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
+        //  In Native mode, the quotingEnclaveInfo (also called "SGX target info")
+        //    is retrieved by the host, which calls SGX native functions.
         val report = createReport(quotingEnclaveInfo, reportData)
         return hostInterface.getSignedQuote(report)
     }

@@ -9,12 +9,14 @@ class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
         val targetInfo = Cursor.allocate(SgxTargetInfo)
-        //  When using Gramine we do not need to load (dlsym) all the quoting libraries
+        //  When using Gramine, we do not need to load (dlsym) all the quoting libraries,
+        //    hence we pass a true bool value to avoid loading them.
         Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
         return targetInfo
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
+        //  This is not executed in the context of Gramine flow.
         throw IllegalStateException("The quote can't be retrieved from the host when running Gramine")
     }
 }
