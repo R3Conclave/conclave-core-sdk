@@ -92,8 +92,14 @@ class GramineEnclaveEnvironment(
         //    by the enclave. There is no enclave to host communication that we need to handle in our code.
         //    In the background, Gramine interacts with the AESM service and the quoting enclave
         //    to get the "signed quote".
-        val signedQuoteBytes = retrieveSignedQuote(quotingEnclaveInfo?.bytes ?: byteArrayOf(), reportData?.bytes ?: byteArrayOf())
-        return Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
+        return if (enclaveMode == EnclaveMode.SIMULATION) {
+            val report = createReport(quotingEnclaveInfo, reportData)
+            hostInterface.getSignedQuote(report)
+        } else {
+            val signedQuoteBytes =
+                retrieveSignedQuote(quotingEnclaveInfo?.bytes ?: byteArrayOf(), reportData?.bytes ?: byteArrayOf())
+            Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
+        }
     }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
