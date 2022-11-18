@@ -1,19 +1,19 @@
 package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.host.AttestationParameters
-import com.r3.conclave.host.internal.EnclaveHandle
-import com.r3.conclave.host.internal.NativeEnclaveHandle
+import com.r3.conclave.host.internal.QuotingManager
 
 object EnclaveQuoteServiceFactory {
-    fun getService(attestationParameters: AttestationParameters?, enclaveHandle: EnclaveHandle): EnclaveQuoteService {
+    fun getService(attestationParameters: AttestationParameters?, quotingManager: QuotingManager): EnclaveQuoteService {
+
         return when (attestationParameters) {
             is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
-            is AttestationParameters.DCAP -> retrieveDCAPService(enclaveHandle)
+            is AttestationParameters.DCAP -> when (quotingManager) {
+                QuotingManager.HOST -> EnclaveQuoteServiceDCAP()
+                QuotingManager.ENCLAVE -> EnclaveQuoteServiceGramineDCAP()
+            }
+
             null -> EnclaveQuoteServiceMock
         }
-    }
-
-    private fun retrieveDCAPService(enclaveHandle: EnclaveHandle): EnclaveQuoteService {
-        return if (enclaveHandle is NativeEnclaveHandle) EnclaveQuoteServiceDCAP() else EnclaveQuoteServiceGramineDCAP()
     }
 }

@@ -17,7 +17,6 @@ class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        // This is actually not called in GRAMINE
-        return Cursor.wrap(SgxSignedQuote, byteArrayOf())
+        throw IllegalStateException("Gramine does not retrieve quote on the host")
     }
 }

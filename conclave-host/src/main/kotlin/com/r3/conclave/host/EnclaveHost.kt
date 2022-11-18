@@ -413,10 +413,9 @@ class EnclaveHost private constructor(
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
-
         quotingService = EnclaveQuoteServiceFactory.getService(
-            attestationParameters?.takeIf { attestationParameters is AttestationParameters.EPID },
-            enclaveHandle
+            attestationParameters?.takeIf { enclaveMode.isHardware },
+            enclaveHandle.quotingManager
         )
 
         try {

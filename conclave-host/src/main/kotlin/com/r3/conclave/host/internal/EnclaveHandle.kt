@@ -26,6 +26,16 @@ interface EnclaveHandle {
     val mockEnclave: Any
 
     /**
+     * This is to establish who triggers the quoting: HOST or ENCLAVE.
+     * In Graal/Native Image it is responsibility of the host to use sgx_qe_get_quote and
+     * pass the result of it to the enclave.
+     * In Gramine it is responsibility of the enclave (and Gramine internals) to quote the enclave with the usage
+     * of the AESM service.
+     * Note: Mock mode is currently following Graal/Native Image approach: the host does a call to the enclave.
+     */
+    val quotingManager: QuotingManager
+
+    /**
      * Initialise the enclave.
      */
     fun initialise()
