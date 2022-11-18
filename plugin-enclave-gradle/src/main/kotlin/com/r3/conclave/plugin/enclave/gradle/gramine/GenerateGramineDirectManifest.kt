@@ -76,6 +76,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
         val enclaveWorkerThreadCount = maxThreads.get()
         //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
         val gramineMaxThreads = enclaveWorkerThreadCount * 2
+        val simulationMrSigner =
+            if (buildType == BuildType.Simulation) computeSigningKeyMeasurement().toHexString() else ""
 
         commandLine(
             listOf(
@@ -88,7 +90,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 "-Dpython_packages_path=$pythonPackagesPath",
                 "-Dis_python_enclave=${pythonEnclave.get()}",
                 "-Denclave_mode=${buildType.name.uppercase()}",
-                "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
+                "-Dsimulation_mrsigner=$simulationMrSigner",
                 "-Denclave_worker_threads=$enclaveWorkerThreadCount",
                 "-Dgramine_max_threads=$gramineMaxThreads",
                 "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",

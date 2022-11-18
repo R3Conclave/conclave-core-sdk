@@ -1,7 +1,7 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.SecureHash
+import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getRemainingBytes
@@ -16,7 +16,7 @@ import java.security.MessageDigest
 class GramineEnclaveEnvironment(
     enclaveClass: Class<*>,
     override val hostInterface: SocketEnclaveHostInterface,
-    private val simulationMrsigner: SecureHash,
+    private val simulationMrsigner: SHA256Hash?,
     override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
@@ -51,7 +51,6 @@ class GramineEnclaveEnvironment(
     private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {
         digest("SHA-256") { update(enclaveClass.name.toByteArray()) }.copyOf(16)
     }
-
 
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
@@ -96,10 +95,12 @@ class GramineEnclaveEnvironment(
     }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
+        //  TODO: Gramine filesystem support
         return EnclaveUtils.sealData(aesSealingKey, toBeSealed)
     }
 
     override fun unsealData(sealedBlob: ByteBuffer): PlaintextAndEnvelope {
+        //  TODO: Gramine filesystem support
         return EnclaveUtils.unsealData(aesSealingKey, sealedBlob)
     }
 
@@ -125,10 +126,6 @@ class GramineEnclaveEnvironment(
         writeTargetInfo(targetInfoBytes)
         writeUserReportData(userReportDataBytes)
         return readReport()
-    }
-
-    private fun retrieveSignedQuote(targetInfoBytes: ByteArray, userReportDataBytes: ByteArray): ByteArray {
-        return readSignedQuote()
     }
 
     private fun readReport(): ByteArray {
@@ -159,6 +156,7 @@ class GramineEnclaveEnvironment(
     private fun createSimulationReport(
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport> {
+        check(simulationMrsigner != null) { "Simulation MRSigner not provided in the enclave" }
         val tcbLevel = 1
         val currentCpuSvn = versionToCpuSvn(tcbLevel)
         val report = Cursor.allocate(SgxReport)
@@ -169,7 +167,7 @@ class GramineEnclaveEnvironment(
         }
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(simulationMrEnclave)
-        body[SgxReportBody.mrsigner] = simulationMrsigner.buffer()
+        body[SgxReportBody.mrsigner] = simulationMrsigner!!.buffer()
         body[SgxReportBody.isvProdId] = productID
         // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
         body[SgxReportBody.isvSvn] = revocationLevel + 1

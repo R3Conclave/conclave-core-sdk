@@ -5,18 +5,16 @@ import com.r3.conclave.host.internal.Native
 import com.r3.conclave.host.internal.NativeLoader
 import java.nio.ByteBuffer
 
-// Note: we actually do not need this class in Gramine
-// TODO: Avoid calling initializeQuote in Gramine and remove this class
 class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
-        println("InitializeQuote EnclaveQuoteServiceGramineDCAP")
         val targetInfo = Cursor.allocate(SgxTargetInfo)
+        //  When using Gramine we do not need to load (dlsym) all the quoting libraries
         Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
         return targetInfo
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        throw IllegalStateException("Gramine does not retrieve quote on the host")
+        throw IllegalStateException("The quote can't be retrieved from the host when running Gramine")
     }
 }

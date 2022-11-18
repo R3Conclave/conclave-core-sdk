@@ -35,8 +35,7 @@ loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 
 loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
 
-# In simulation mode, we need to provide the signing key measurement
-# TODO: Use this only in SIMULATION mode, once we have introduced attestation in Gramine
+# In simulation mode, we need to provide the signing key measurement, it's empty in the other modes
 loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
 
 # Number of call interface worker threads, this needs to be less than gramine_max_threads
