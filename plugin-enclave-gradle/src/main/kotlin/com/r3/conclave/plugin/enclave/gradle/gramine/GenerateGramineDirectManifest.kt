@@ -76,28 +76,29 @@ open class GenerateGramineDirectManifest @Inject constructor(
         val enclaveWorkerThreadCount = maxThreads.get()
         //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
         val gramineMaxThreads = enclaveWorkerThreadCount * 2
-        val simulationMrSigner =
-            if (buildType == BuildType.Simulation) computeSigningKeyMeasurement().toHexString() else ""
 
-        commandLine(
-            listOf(
-                "gramine-manifest",
-                "-Djava_home=${System.getProperty("java.home")}",
-                "-Darch_libdir=/lib/$architecture",
-                "-Dld_preload=$ldPreload",
-                "-Disv_prod_id=${isvProdId.get()}",
-                "-Disv_svn=${isvSvn.get() + 1}",
-                "-Dpython_packages_path=$pythonPackagesPath",
-                "-Dis_python_enclave=${pythonEnclave.get()}",
-                "-Denclave_mode=${buildType.name.uppercase()}",
-                "-Dsimulation_mrsigner=$simulationMrSigner",
-                "-Denclave_worker_threads=$enclaveWorkerThreadCount",
-                "-Dgramine_max_threads=$gramineMaxThreads",
-                "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-                manifestTemplateFile.absolutePathString(),
-                manifestFile.asFile.get().absolutePath
-            )
+        val commands = mutableListOf(
+            "gramine-manifest",
+            "-Djava_home=${System.getProperty("java.home")}",
+            "-Darch_libdir=/lib/$architecture",
+            "-Dld_preload=$ldPreload",
+            "-Disv_prod_id=${isvProdId.get()}",
+            "-Disv_svn=${isvSvn.get() + 1}",
+            "-Dpython_packages_path=$pythonPackagesPath",
+            "-Dis_python_enclave=${pythonEnclave.get()}",
+            "-Denclave_mode=${buildType.name.uppercase()}",
+            "-Denclave_worker_threads=$enclaveWorkerThreadCount",
+            "-Dgramine_max_threads=$gramineMaxThreads",
+            "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+            manifestTemplateFile.absolutePathString(),
+            manifestFile.asFile.get().absolutePath
         )
+
+        if (buildType == BuildType.Simulation) {
+            val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
+            commands.add("-Dsimulation_mrsigner=$simulationMrSigner")
+        }
+        commandLine(commands)
     }
 
     /**
