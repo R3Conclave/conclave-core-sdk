@@ -412,7 +412,7 @@ class EnclaveHost private constructor(
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
-        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
+        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
 
         quotingService = EnclaveQuoteServiceFactory.getService(
             attestationParameters?.takeIf { attestationParameters is AttestationParameters.EPID },
