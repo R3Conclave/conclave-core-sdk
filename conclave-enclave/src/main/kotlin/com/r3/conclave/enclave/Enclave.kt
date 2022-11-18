@@ -453,8 +453,8 @@ abstract class Enclave {
         }
 
         if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
-            val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
-            val productId = report[body][isvProdId].read()
+            val mrsigner = SHA256Hash.get(report[mrsigner].read())
+            val productId = report[isvProdId].read()
             if (mrsigner !in parsedUserConstraint.acceptableSigners) {
                 builder.append(" S:").append(mrsigner)
             }
