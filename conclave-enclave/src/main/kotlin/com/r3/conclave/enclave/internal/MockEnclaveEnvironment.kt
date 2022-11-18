@@ -107,6 +107,9 @@ class MockEnclaveEnvironment(
         quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
+        //  Note that when we ask the host for the "signed quote", we actually return the report body.
+        //  We could have done this here, but we want to simulate the behaviour of getting this
+        //    from the host, as it is done in the Graal/Native Image flow.
         val report = createReport(quotingEnclaveInfo, reportData)
         return hostInterface.getSignedQuote(report)
     }

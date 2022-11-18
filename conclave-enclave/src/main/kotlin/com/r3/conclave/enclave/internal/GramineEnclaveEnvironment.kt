@@ -82,6 +82,10 @@ class GramineEnclaveEnvironment(
         quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
+        //  Note that in Gramine the "signed quote" is automatically retrieved and returned
+        //    by the enclave. There is no enclave to host communication that we need to handle in our code.
+        //    In the background, Gramine interacts with the AESM service and the quoting enclave
+        //    to get the "signed quote".
         val signedQuoteBytes = getQuoteFromGramine(reportData!!.bytes)
         val quoteBuffer = ByteBuffer.wrap(signedQuoteBytes);
         return Cursor.slice(SgxSignedQuote, quoteBuffer)
