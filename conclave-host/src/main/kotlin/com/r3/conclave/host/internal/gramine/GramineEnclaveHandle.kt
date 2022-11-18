@@ -50,7 +50,6 @@ class GramineEnclaveHandle(
     init {
         require(enclaveMode != EnclaveMode.MOCK)
         NativeLoader.loadHostLibraries(enclaveMode)
-        logger.info("NativeLoader.loadHostLibraries loaded")
         unzipEnclaveBundle()
         enclaveManifestPath = getManifestFromUnzippedBundle()
 

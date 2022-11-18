@@ -76,6 +76,7 @@ namespace r3::conclave::dcap {
             if (ql_handle != nullptr) {
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_set_enclave_load_policy);
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_cleanup_by_policy);
+                SGX_QL_RESOLVE(ql_handle, sgx_ql_set_path);
 
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_get_target_info);
                 SGX_QL_RESOLVE(ql_handle, sgx_qe_get_quote_size);
