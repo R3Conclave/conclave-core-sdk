@@ -319,10 +319,9 @@ abstract class Enclave {
     }
 
     private fun getLocalSecretKey(): ByteArray {
-        val signedQuote = env.getSignedQuote(null, null)
-        val reportBody = signedQuote[quote][SgxQuote.reportBody]
-        val cpuSvn: ByteBuffer = reportBody[cpuSvn].read()
-        val isvSvn: Int = reportBody[isvSvn].read()
+        val reportBody = env.createReport(null, null)[body]
+        val cpuSvn: ByteBuffer = reportBody[SgxReportBody.cpuSvn].read()
+        val isvSvn: Int = reportBody[SgxReportBody.isvSvn].read()
 
         return env.getSecretKey { keyRequest ->
             keyRequest[SgxKeyRequest.keyName] = KeyName.SEAL
@@ -442,19 +441,17 @@ abstract class Enclave {
 
         val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
 
-        val signedQuote = env.getSignedQuote(null, null)
-        val report = signedQuote[quote][reportBody]
-
+        val report = env.createReport(null, null)
         if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
-            val mrenclave = SHA256Hash.get(report[mrenclave].read())
+            val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
             if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
                 builder.append(" C:").append(mrenclave)
             }
         }
 
         if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
-            val mrsigner = SHA256Hash.get(report[mrsigner].read())
-            val productId = report[isvProdId].read()
+            val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
+            val productId = report[body][isvProdId].read()
             if (mrsigner !in parsedUserConstraint.acceptableSigners) {
                 builder.append(" S:").append(mrsigner)
             }
