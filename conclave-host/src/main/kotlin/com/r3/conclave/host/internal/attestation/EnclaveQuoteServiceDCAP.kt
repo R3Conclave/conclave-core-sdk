@@ -2,15 +2,12 @@ package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.host.internal.Native
-import com.r3.conclave.host.internal.NativeLoader
 import java.nio.ByteBuffer
 
 class EnclaveQuoteServiceDCAP : EnclaveQuoteService() {
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
-        val targetInfo = Cursor.allocate(SgxTargetInfo)
-        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), false, targetInfo.buffer.array())
-        return targetInfo
+        return Cursor.allocate(SgxTargetInfo)
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {

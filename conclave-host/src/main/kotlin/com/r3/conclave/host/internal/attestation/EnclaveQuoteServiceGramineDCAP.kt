@@ -10,6 +10,7 @@ import java.nio.ByteBuffer
 class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
 
     override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
+        println("InitializeQuote EnclaveQuoteServiceGramineDCAP")
         val targetInfo = Cursor.allocate(SgxTargetInfo)
         Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
         return targetInfo

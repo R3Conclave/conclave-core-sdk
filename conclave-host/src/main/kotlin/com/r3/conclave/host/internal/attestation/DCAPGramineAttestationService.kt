@@ -13,6 +13,7 @@ import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.x509Certs
 
 class DCAPGramineAttestationService(override val isRelease: Boolean) : HardwareAttestationService() {
+
     override fun doAttestQuote(signedQuote: ByteCursor<SgxSignedQuote>): DcapAttestation {
         val fmspc = getFmspc(signedQuote)
         val fields = Native.getQuoteCollateral(fmspc, 1)
