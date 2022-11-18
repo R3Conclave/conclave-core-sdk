@@ -89,9 +89,8 @@ class GramineEnclaveEnvironment(
             //    array that it is filled by Gramine (which communicates with the quoting enclave in background).
             //  Here we reuse this
             val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
-            val reportDataCursor = createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
-
-            val signedQuoteBytes = retrieveSignedQuote(quotingEnclaveInfoBytes, reportDataCursor.bytes)
+            createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
+            val signedQuoteBytes = readSignedQuote()
             Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
         }
     }
@@ -125,16 +124,17 @@ class GramineEnclaveEnvironment(
     private fun retrieveReport(targetInfoBytes: ByteArray, userReportDataBytes: ByteArray): ByteArray {
         writeTargetInfo(targetInfoBytes)
         writeUserReportData(userReportDataBytes)
-
-        return FileInputStream("/dev/attestation/report").use {
-            it.readBytes()
-        }
+        return readReport()
     }
 
     private fun retrieveSignedQuote(targetInfoBytes: ByteArray, userReportDataBytes: ByteArray): ByteArray {
-        writeTargetInfo(targetInfoBytes)
-        writeUserReportData(userReportDataBytes)
         return readSignedQuote()
+    }
+
+    private fun readReport(): ByteArray {
+        return FileInputStream("/dev/attestation/report").use {
+            it.readBytes()
+        }
     }
 
     private fun readSignedQuote(): ByteArray {
