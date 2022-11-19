@@ -620,7 +620,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     val bundleName = when (runtimeType.get()) {
                         GRAALVM -> PluginUtils.GRAALVM_BUNDLE_NAME
                         GRAMINE -> PluginUtils.GRAMINE_BUNDLE_NAME
-                        else -> throw IllegalArgumentException()
+                        null -> throw IllegalArgumentException()  // Keep the compiler happy
                     }
                     "$typeLowerCase-$bundleName"
                 }

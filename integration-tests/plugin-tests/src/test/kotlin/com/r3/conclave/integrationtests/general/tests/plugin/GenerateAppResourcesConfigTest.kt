@@ -28,8 +28,7 @@ class GenerateAppResourcesConfigTest : AbstractConclaveTaskTest() {
             resourceFile.parent.createDirectories()
             resourceFile.createFile()
         }
-        assertThat(resourcesConfig()["includes"].map { it["pattern"].textValue() })
-            .contains("src/main/resources/test-resource.txt")
+        assertThat(resourcesConfig()["includes"].map { it["pattern"].textValue() }).contains("test-resource.txt")
     }
 
     private fun resourcesConfig(): JsonNode = ObjectMapper().readTree(output.toFile())["resources"]

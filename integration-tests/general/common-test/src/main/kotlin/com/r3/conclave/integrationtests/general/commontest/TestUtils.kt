@@ -15,6 +15,7 @@ import java.security.MessageDigest
 import java.security.interfaces.RSAPublicKey
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -64,6 +65,12 @@ object TestUtils {
     fun ZipFile.assertEntryContents(name: String, block: (InputStream) -> Unit) {
         val entry = assertEntryExists(name)
         getInputStream(entry).use(block)
+    }
+
+    fun InputStream.readZipEntryNames(): List<String> {
+        return ZipInputStream(this).use { zip ->
+            generateSequence { zip.nextEntry?.name }.toList()
+        }
     }
 
     /**

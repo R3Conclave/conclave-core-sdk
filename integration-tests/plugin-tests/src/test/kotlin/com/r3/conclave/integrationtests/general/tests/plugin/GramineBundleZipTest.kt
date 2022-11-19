@@ -2,14 +2,13 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.readZipEntryNames
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.tomlj.Toml
-import java.io.InputStream
-import java.util.jar.JarInputStream
 import java.util.zip.ZipFile
 
 class GramineBundleZipTest : AbstractModeTaskTest() {
@@ -44,7 +43,7 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
                 assertThat(Toml.parse(it).getLong("sgx.thread_num")).isEqualTo(20)
             }
             zip.assertEntryContents("enclave.jar") {
-                val entryNames = it.readJarEntryNames()
+                val entryNames = it.readZipEntryNames()
                 if (isPython) {
                     assertThat(entryNames).contains("com/r3/conclave/python/PythonEnclaveAdapter.class")
                 } else {
@@ -79,16 +78,10 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
         }
         ZipFile(output.toFile()).use { zip ->
             zip.assertEntryContents("enclave.jar") {
-                val entryNames = it.readJarEntryNames()
+                val entryNames = it.readZipEntryNames()
                 assertThat(entryNames).contains("com/r3/conclave/python/PythonEnclaveAdapter.class")
                 assertThat(entryNames).doesNotContain("com/test/enclave/TestEnclave.class")
             }
-        }
-    }
-
-    private fun InputStream.readJarEntryNames(): List<String> {
-        return JarInputStream(this).use { jar ->
-            generateSequence { jar.nextJarEntry?.name }.toList()
         }
     }
 }

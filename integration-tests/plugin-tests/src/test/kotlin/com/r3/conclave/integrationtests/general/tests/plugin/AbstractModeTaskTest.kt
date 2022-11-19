@@ -11,6 +11,7 @@ abstract class AbstractModeTaskTest : AbstractConclaveTaskTest() {
         val capitalisedMode = TestUtils.enclaveMode.name.lowercase().replaceFirstChar(Char::titlecase)
         return String.format(taskNameFormat, capitalisedMode)
     }
+
     override val output: Path get() = enclaveModeBuildDir / outputName
 
     val enclaveModeBuildDir: Path get() = conclaveBuildDir / TestUtils.enclaveMode.name.lowercase()
