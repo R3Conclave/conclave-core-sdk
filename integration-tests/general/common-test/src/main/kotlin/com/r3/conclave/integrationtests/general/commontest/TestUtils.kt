@@ -9,9 +9,12 @@ import org.assertj.core.api.Assumptions.assumeThat
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
+import java.io.InputStream
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.security.interfaces.RSAPublicKey
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -50,6 +53,17 @@ object TestUtils {
 
     fun gramineOnlyTest() {
         assumeThat(runtimeType()).isEqualTo(RuntimeType.GRAMINE)
+    }
+
+    fun ZipFile.assertEntryExists(name: String): ZipEntry {
+        val entry = getEntry(name)
+        assertThat(entry).isNotNull
+        return entry
+    }
+
+    fun ZipFile.assertEntryContents(name: String, block: (InputStream) -> Unit) {
+        val entry = assertEntryExists(name)
+        getInputStream(entry).use(block)
     }
 
     /**

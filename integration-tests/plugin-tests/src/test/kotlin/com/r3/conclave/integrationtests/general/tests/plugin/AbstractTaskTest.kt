@@ -54,6 +54,18 @@ abstract class AbstractTaskTest : TaskTest {
         }
     }
 
+    fun changeToPythonEnclave(enclaveCode: String = """
+            def on_enclave_startup:
+                print("Python enclave started")
+        """.trimIndent()
+    ) {
+        val srcMain = projectDir / "src" / "main"
+        srcMain.toFile().deleteRecursively()
+        val pythonScript = srcMain / "python" / "user-enclave.py"
+        pythonScript.parent.createDirectories()
+        pythonScript.writeText(enclaveCode)
+    }
+
     fun updateBuildFile(oldValue: String, newValue: String) {
         buildFile.searchAndReplace(oldValue, newValue)
     }

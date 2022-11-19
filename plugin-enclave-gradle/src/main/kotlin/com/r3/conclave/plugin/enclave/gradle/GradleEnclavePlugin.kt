@@ -259,8 +259,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.from(generateGramineDirectManifestTask.manifestFile) { copySpec ->
                 copySpec.rename { GRAMINE_MANIFEST }
             }
-            task.archiveAppendix.set("gramine-bundle")
-            task.archiveClassifier.set(type.name.lowercase())
+            task.destinationDirectory.set((baseDirectory / type.name.lowercase()).toFile())
+            task.archiveBaseName.set("gramine-bundle")
         }
     }
 
@@ -293,8 +293,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.from(generateGramineManifestTask.sgxToken) { copySpec ->
                 copySpec.rename { GRAMINE_SGX_TOKEN }
             }
-            task.archiveAppendix.set("gramine-sgx-bundle")
-            task.archiveClassifier.set(type.name.lowercase())
+            task.destinationDirectory.set((baseDirectory / type.name.lowercase()).toFile())
+            task.archiveBaseName.set("gramine-bundle")
         }
     }
 
