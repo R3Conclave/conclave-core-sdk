@@ -3,12 +3,14 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.nio.file.Path
 import java.util.*
+import kotlin.io.path.div
 import kotlin.io.path.reader
 
-class GenerateEnclavePropertiesTest : AbstractConclaveTaskTest() {
+class GenerateEnclavePropertiesTest : AbstractTaskTest() {
     override val taskName: String get() = "generateEnclaveProperties"
-    override val outputName: String get() = "enclave.properties"
+    override val output: Path get() = conclaveBuildDir / "enclave.properties"
 
     @ParameterizedTest
     @CsvSource(

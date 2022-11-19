@@ -10,8 +10,6 @@ interface TestWithSigning : TaskTest {
         const val DUMMY_KEY_FILE_NAME = "dummy_key.pem"
     }
 
-    val conclaveBuildDir: Path
-
     val dummyKeyFile: Path get() = conclaveBuildDir / "dummy_key.pem"
 
     fun dummyKey(): RSAPublicKey = TestUtils.readSigningKey(dummyKeyFile)

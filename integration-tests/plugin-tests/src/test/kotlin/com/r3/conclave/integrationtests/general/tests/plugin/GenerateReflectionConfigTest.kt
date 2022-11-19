@@ -6,8 +6,10 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnly
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
+import kotlin.io.path.div
 
-class GenerateReflectionConfigTest : AbstractConclaveTaskTest() {
+class GenerateReflectionConfigTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -17,7 +19,7 @@ class GenerateReflectionConfigTest : AbstractConclaveTaskTest() {
     }
 
     override val taskName: String get() = "generateReflectionConfig"
-    override val outputName: String get() = "reflectconfig"
+    override val output: Path get() = conclaveBuildDir / "reflectconfig"
 
     @Test
     fun `task re-runs on enclave class name change`() {

@@ -6,10 +6,12 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnly
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
+import kotlin.io.path.div
 
-class GenerateAppResourcesConfigTest : AbstractConclaveTaskTest() {
+class GenerateAppResourcesConfigTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -19,7 +21,7 @@ class GenerateAppResourcesConfigTest : AbstractConclaveTaskTest() {
     }
 
     override val taskName: String get() = "generateAppResourcesConfig"
-    override val outputName: String get() = "app-resources-config.json"
+    override val output: Path get() = conclaveBuildDir / "app-resources-config.json"
 
     @Test
     fun `task re-runs on addition of resource file`() {

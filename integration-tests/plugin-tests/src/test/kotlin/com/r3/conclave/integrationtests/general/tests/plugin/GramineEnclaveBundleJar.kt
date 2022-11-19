@@ -48,8 +48,8 @@ class GramineEnclaveBundleJar : AbstractTaskTest() {
                 val actualEntryNames = bundleZip.readZipEntryNames()
                 val expectedEntryNames = mutableListOf("enclave.jar")
                 when (enclaveMode) {
-                    ITEnclaveMode.SIMULATION -> expectedEntryNames += "java.mamifest"
-                    ITEnclaveMode.DEBUG -> expectedEntryNames += listOf("java.mamifest.sgx", "java.sig", "java.token")
+                    ITEnclaveMode.SIMULATION -> expectedEntryNames += "java.manifest"
+                    ITEnclaveMode.DEBUG -> expectedEntryNames += listOf("java.manifest.sgx", "java.sig", "java.token")
                 }
                 assertThat(actualEntryNames).containsOnlyOnceElementsOf(expectedEntryNames)
             }
