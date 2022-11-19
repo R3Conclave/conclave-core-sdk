@@ -43,7 +43,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     @ValueSource(strings = ["dummyKey", "privateKey"])
     fun `signing key`(signingType: String) {
         // The signingKey config is specified in the enclaveMode block
-        assertThat(buildFile).content().doesNotContain("${enclaveMode().name.lowercase()} {")
+        assertThat(buildFile).content().doesNotContain("${enclaveMode.name.lowercase()} {")
         assertThat(dummyKeyFile).doesNotExist()
 
         val signingKeyFile = assertTaskIsIncremental {
@@ -60,7 +60,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
                 signingKeyFile = dummyKeyFile
                 ""
             }
-            val enclaveModeBlock = """${enclaveMode().name.lowercase()} {
+            val enclaveModeBlock = """${enclaveMode.name.lowercase()} {
                 |   signingType = $signingType
                 |   $signingKeyConfig
                 |}""".trimMargin()

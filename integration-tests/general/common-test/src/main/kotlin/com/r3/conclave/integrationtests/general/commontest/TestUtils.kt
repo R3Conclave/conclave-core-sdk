@@ -35,24 +35,24 @@ object TestUtils {
         }
     }
 
-    fun enclaveMode(): ITEnclaveMode = ITEnclaveMode.valueOf(System.getProperty("enclaveMode").uppercase())
+    val enclaveMode: ITEnclaveMode = ITEnclaveMode.valueOf(System.getProperty("enclaveMode").uppercase())
+
+    val runtimeType: RuntimeType = RuntimeType.valueOf(System.getProperty("runtimeType").uppercase())
 
     fun simulationOnlyTest() {
-        assumeThat(enclaveMode()).isEqualTo(ITEnclaveMode.SIMULATION)
+        assumeThat(enclaveMode).isEqualTo(ITEnclaveMode.SIMULATION)
     }
 
     fun debugOnlyTest() {
-        assumeThat(enclaveMode()).isEqualTo(ITEnclaveMode.DEBUG)
+        assumeThat(enclaveMode).isEqualTo(ITEnclaveMode.DEBUG)
     }
 
-    fun runtimeType(): RuntimeType = RuntimeType.valueOf(System.getProperty("runtimeType").uppercase())
-
     fun graalvmOnlyTest() {
-        assumeThat(runtimeType()).isEqualTo(RuntimeType.GRAALVM)
+        assumeThat(runtimeType).isEqualTo(RuntimeType.GRAALVM)
     }
 
     fun gramineOnlyTest() {
-        assumeThat(runtimeType()).isEqualTo(RuntimeType.GRAMINE)
+        assumeThat(runtimeType).isEqualTo(RuntimeType.GRAMINE)
     }
 
     fun ZipFile.assertEntryExists(name: String): ZipEntry {
@@ -89,10 +89,9 @@ object TestUtils {
         assertThat(key.publicExponent).isEqualTo(3)
         val modulusBytes = key.modulus.toByteArray().apply { reverse() }
         assertThat(modulusBytes).hasSize(385)
-        assertThat(modulusBytes.last()).isEqualTo(0)
         return SHA256Hash.wrap(
             with(MessageDigest.getInstance("SHA-256")) {
-                update(modulusBytes, 0, 384)
+                update(modulusBytes, 0, 384)  // Ignore the sign byte which is added by BigInteger.toByteArray()
                 digest()
             }
         )

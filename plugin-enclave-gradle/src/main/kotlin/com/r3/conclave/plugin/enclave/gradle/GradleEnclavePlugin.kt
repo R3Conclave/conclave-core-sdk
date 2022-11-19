@@ -235,7 +235,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
     }
 
-
     private fun createGramineZipBundle(
         target: Project,
         enclaveFatJar: Jar,
@@ -312,7 +311,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
-    private val gramineBuildDirectory: Path by lazy { baseDirectory.resolve("gramine") }
 
     /**
      * Get the main source set for a given project

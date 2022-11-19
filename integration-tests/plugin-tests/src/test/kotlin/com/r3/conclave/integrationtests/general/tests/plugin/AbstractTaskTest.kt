@@ -1,6 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.runtimeType
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
@@ -116,7 +116,7 @@ abstract class AbstractTaskTest : TaskTest {
                 .withProjectDir(projectDirectory.toFile())
                 .withArguments(
                     task,
-                    "-PruntimeType=${runtimeType()}",
+                    "-PruntimeType=${TestUtils.runtimeType}",
                     "--no-build-cache",
                     "--stacktrace",
                     "--info",
