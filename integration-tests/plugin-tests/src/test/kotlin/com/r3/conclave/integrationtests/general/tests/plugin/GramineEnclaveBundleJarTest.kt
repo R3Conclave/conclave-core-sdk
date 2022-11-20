@@ -12,7 +12,7 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.div
 
-class GramineEnclaveBundleJar : AbstractTaskTest() {
+class GramineEnclaveBundleJarTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -41,11 +41,11 @@ class GramineEnclaveBundleJar : AbstractTaskTest() {
     }
 
     private fun assertJarContents(enclaveClassName: String) {
-        JarFile(output.toFile()).use { jar ->
+        JarFile(output.toFile()).use { bundleJar ->
             val bundlePath = "com/r3/conclave/enclave/user-bundles/$enclaveClassName/" +
                     "${enclaveMode.name.lowercase()}-gramine.zip"
-            jar.assertEntryContents(bundlePath) { bundleZip ->
-                val actualEntryNames = bundleZip.readZipEntryNames()
+            bundleJar.assertEntryContents(bundlePath) { gramineZip ->
+                val actualEntryNames = gramineZip.readZipEntryNames()
                 val expectedEntryNames = mutableListOf("enclave.jar")
                 when (enclaveMode) {
                     ITEnclaveMode.SIMULATION -> expectedEntryNames += "java.manifest"

@@ -9,7 +9,11 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.div
 
-class GraalVMEnclaveBundleJar : AbstractTaskTest() {
+/**
+ * This test is similar to [GramineEnclaveBundleJarTest] in that it tests the enclaveBundleJar task but when the
+ * runtime type is Graal VM.
+ */
+class GraalVMEnclaveBundleJarTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll

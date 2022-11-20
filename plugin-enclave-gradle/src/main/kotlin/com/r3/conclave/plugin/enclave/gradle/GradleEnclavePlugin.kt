@@ -167,9 +167,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
         }
 
-        enclaveFatJarTask.isPreserveFileTimestamps = false
-        enclaveFatJarTask.isReproducibleFileOrder = true
-        enclaveFatJarTask.isZip64 = true
+        makeReproducible(enclaveFatJarTask)
         enclaveFatJarTask.archiveAppendix.set("fat")
         enclaveFatJarTask.from(generateEnclavePropertiesTask.enclavePropertiesFile) { copySpec ->
             enclaveFatJarTask.onEnclaveClassName { enclaveClassName ->
@@ -600,6 +598,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
                 task.archiveAppendix.set("bundle")
                 task.archiveClassifier.set(typeLowerCase)
+                makeReproducible(task)
 
                 val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
                     when (it) {
@@ -632,6 +631,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             target.artifacts.add(typeLowerCase, enclaveBundleJarTask.archiveFile)
         }
+    }
+
+    private fun makeReproducible(zipTask: Zip) {
+        zipTask.isPreserveFileTimestamps = false
+        zipTask.isReproducibleFileOrder = true
+        zipTask.isZip64 = true
     }
 
     private fun throwMissingFileForExternalSigning(config: String): Nothing {
