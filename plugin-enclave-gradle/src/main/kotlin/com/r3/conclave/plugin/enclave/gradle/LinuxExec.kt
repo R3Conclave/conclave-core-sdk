@@ -27,7 +27,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // of a Linux system or container.
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
-        // installed it by themselves.
+        // installed it by themselves. Only Python Gramine enclaves are built outside the container.
 
         val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
         LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
@@ -126,19 +126,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             tag.get()
         ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
 
-        val execOutputStream = ByteArrayOutputStream()
-        val execErrorStream = ByteArrayOutputStream()
-
-        project.exec { spec ->
-            // Store all the standard output instead of printing to the console
-            spec.standardOutput = execOutputStream
-
-            // Store all the standard error instead of printing to the console
-            spec.errorOutput = execErrorStream
-
-            spec.commandLine(args)
-        }
-        return execOutputStream.toString()
+        return commandWithOutput(*args.toTypedArray())
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(

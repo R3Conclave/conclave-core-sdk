@@ -64,8 +64,9 @@ open class GenerateGramineDirectManifest @Inject constructor(
 
         // These values are the same inside and outside the conclave-build container
         val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
-        val ldPreload = executePython("from sysconfig import get_config_var; " +
-                "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+        val ldPreload = executePython(
+            "from sysconfig import get_config_var; " +
+                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
         )
         /**
          * In case of Python enclaves, we need to build them outside the conclave-build container.
