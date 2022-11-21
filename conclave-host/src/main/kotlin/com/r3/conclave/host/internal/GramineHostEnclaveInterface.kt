@@ -1,8 +1,7 @@
-package com.r3.conclave.host.internal.gramine
+package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.internal.EnclaveCallType
 import com.r3.conclave.common.internal.MockCallInterfaceConnector
-import com.r3.conclave.host.internal.HostEnclaveInterface
 import java.nio.ByteBuffer
 
 /**

@@ -5,15 +5,4 @@ plugins {
 conclave {
     productID = 100
     revocationLevel = 2
-    //  This is needed as Gramine would complain otherwise.
-    //  TODO: Make the maxThreads conditional to the runtime type (Gramine with and without Python, Graal) https://r3-cev.atlassian.net/browse/CON-1223
-    maxThreads = 32
-
-    release {
-        signingType = dummyKey
-    }
-
-    release {
-        signingType = dummyKey
-    }
 }

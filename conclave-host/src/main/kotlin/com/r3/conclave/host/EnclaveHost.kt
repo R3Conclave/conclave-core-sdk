@@ -18,7 +18,6 @@ import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
-import com.r3.conclave.host.internal.gramine.GramineEnclaveHandle
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
 import com.r3.conclave.host.kds.KDSConfiguration
@@ -415,11 +414,8 @@ class EnclaveHost private constructor(
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
-        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
-
-        // TODO: Fix the condition once Gramine attestation has been integrated
-        quotingService =
-            EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle is NativeEnclaveHandle })
+        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
+        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
 
         try {
             this.commandsCallback = commandsCallback
@@ -468,18 +464,13 @@ class EnclaveHost private constructor(
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
-        return if (isFileSystemSupported()) {
+        // TODO: Improve the enclaveHandle !is GramineEnclaveHandle condition
+        return if (enclaveMode != EnclaveMode.MOCK && enclaveHandle !is GramineEnclaveHandle) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
             null
         }
-    }
-
-    private fun isFileSystemSupported(): Boolean {
-        //  This filesystem implementation is only supported in SIMULATION, DEBUG, RELEASE mode in Graal VM mode only
-        // TODO: Fix this once we have filesystem supported in Gramine
-        return enclaveMode != EnclaveMode.MOCK && enclaveHandle is NativeEnclaveHandle
     }
 
     private fun executeKdsPrivateKeyRequest(

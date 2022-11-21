@@ -1,40 +1,29 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ java_home }}/bin/java"
-{% if enclave_mode == "RELEASE" %}
-loader.log_level = "none"
-{% else %}
 loader.log_level = "error"
-{% endif %}
 
-# This is needed to read large SGX manifests when running Python enclaves.
-{% if is_python_enclave == "true" %}
-   loader.pal_internal_mem_size = "256M"
-{% endif %}
-
-# TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
+# TODO: remove this when in production
 loader.insecure__use_cmdline_argv = true
 
-# TODO: Enable DCAP attestation
-sgx.remote_attestation = "none"
+# TODO: add DCAP attestation
+sgx.remote_attestation = false
+# sgx.ra_client_spid = ""
 
 # This sets an environment variables used by the dynamic loader
-{% if is_python_enclave == "true" %}
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
-loader.env.PYTHONPATH = "{{ python_packages_path }}"
-{% else %}
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
-{% endif %}
-
 loader.env.LD_PRELOAD = "{{ ld_preload }}"
+loader.env.PYTHONPATH = "{{ python_packages_path }}"
 
 # Is this enclave implemented in python?
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 
-loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
+# Is this a simulation enclave?
+loader.env.CONCLAVE_IS_SIMULATION_ENCLAVE = "{{ is_simulation_enclave }}"
 
 # In simulation mode, we need to provide the signing key measurement
-# TODO: Use this only in SIMULATION mode, once we have introduced attestation in Gramine
-loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
+{% if is_simulation_enclave == "true" %}
+  loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
+{% endif %}
 
 # Number of call interface worker threads, this needs to be less than gramine_max_threads
 loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
@@ -43,42 +32,18 @@ fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
   { path = "{{ java_home }}",            uri = "file:{{ java_home }}" },
-{% if is_python_enclave == "true" %}
   { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" },
-{% endif %}
   { path = "/usr{{ arch_libdir }}",      uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",                   uri = "file:/usr/lib" },
   { path = "/tmp",                       type = "tmpfs" },
 ]
 
-{% if enclave_mode == "RELEASE" %}
-sgx.debug = false
-{% else %}
-sgx.debug = true
-{% endif %}
-
-sgx.enclave_size = "{{ enclave_size }}"
+sgx.enclave_size = "4G"
 
 sgx.thread_num = {{ gramine_max_threads }}
 
 sgx.trusted_files = [
-    "file:{{ gramine.libos }}",
-    "file:{{ gramine.runtimedir() }}/",
-    "file:{{ arch_libdir }}/",
-    "file:/usr/{{ arch_libdir }}/",
-    "file:{{ java_home }}/",
-    "file:{{ ld_preload }}",
-{% if is_python_enclave == "true" %}
-    "file:{{ python_packages_path }}/",
-    #  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
-    #    see: https://github.com/gramineproject/examples/blob/master/pytorch/pytorch.manifest.template
-    "file:{{ python.stdlib }}/",
-    "file:{{ python.distlib }}/",
-    #  This will find Ubuntu specific Python directories,
-    #    such as /usr/local/lib/python3.8/dist-packages, where Numpy is also present
-    "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
-    "file:enclave.py",
-{% endif %}
-    "file:enclave.jar"
+  "file:{{ java_home }}/bin/java",
+  "file:{{ gramine.runtimedir() }}/"
 ]
 

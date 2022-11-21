@@ -6,10 +6,6 @@ object PluginUtils {
     const val GRAMINE_BUNDLE_NAME = "gramine.zip"
     const val ENCLAVE_PROPERTIES = "enclave.properties"
     const val GRAMINE_ENCLAVE_JAR = "enclave.jar"
-    const val GRAMINE_EXECUTABLE = "java"
-    const val GRAMINE_MANIFEST = "$GRAMINE_EXECUTABLE.manifest"
-    const val GRAMINE_SGX_MANIFEST = "$GRAMINE_EXECUTABLE.manifest.sgx"
-    const val GRAMINE_SGX_TOKEN = "$GRAMINE_EXECUTABLE.token"
-    const val GRAMINE_SIG = "$GRAMINE_EXECUTABLE.sig"
+    const val GRAMINE_MANIFEST = "java.manifest"
     const val PYTHON_FILE = "enclave.py"
 }
