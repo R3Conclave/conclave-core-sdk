@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.plugin.enclave.gradle.LinuxExec
@@ -19,13 +20,14 @@ import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
-open class GenerateGramineManifest @Inject constructor(
+open class GenerateGramineDirectManifest @Inject constructor(
     objects: ObjectFactory,
     private val buildType: BuildType,
-    private val linuxExec: LinuxExec
-) : ConclaveTask() {
+    private val linuxExec: LinuxExec) : ConclaveTask() {
     companion object {
-        const val MANIFEST_TEMPLATE = "java.manifest.template"
+        const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
+        const val PYTHON_ENCLAVE_SIZE = "8G"
+        const val JAVA_ENCLAVE_SIZE = "4G"
     }
 
     @get:Input
@@ -50,13 +52,13 @@ open class GenerateGramineManifest @Inject constructor(
         //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181. First, support to build and run Python enclaves on
         //  different machines is required.
 
-
         /**
          * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
          * Because of this, we need to add some safety margin.
          */
         val enclaveWorkerThreadCount = maxThreads.get()
-        val gramineMaxThreads = enclaveWorkerThreadCount + 8
+        //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
+        val gramineMaxThreads = enclaveWorkerThreadCount * 2
 
         // These values are the same inside and outside the conclave-build container
         val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
