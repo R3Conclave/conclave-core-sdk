@@ -79,9 +79,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     /** Returns the ERROR output of the command only, in the returned list. */
     fun exec(params: List<String>): List<String>? {
-        // TODO: rewrite the comment
-        // If the host OS is Linux then we just execute the params that we are given. The first param is the name of the
-        // executable to run. If the host OS is not Linux then we execute in the context of a VM (currently Docker) by
+        // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.

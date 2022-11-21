@@ -51,8 +51,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
         // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
         //  enclave. Rather than documenting all this and expecting the user to have their machine correctly setup, it
         //  is better to embed the conclave-build container to always run when building the enclave, not just for
-        //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181. First, support to build and run Python enclaves on
-        //  different machines is required.
+        //  non-python. https://r3-cev.atlassian.net/browse/CON-1181 and https://r3-cev.atlassian.net/browse/CON-1229.
+        //  First, support to build and run Python enclaves on different machines is required.
 
         /**
          * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
@@ -68,15 +68,14 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "from sysconfig import get_config_var; " +
                     "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
         )
+
         /**
          * In case of Python enclaves, we need to build them outside the conclave-build container.
+         * This is because Jep is installed in a user space, not a system space and will therefore produce different
+         * results if run inside or outside the container.
          * All other enclaves are built in the container.
          */
         if (pythonEnclave.get()) {
-            /**
-             * Jep is installed in a user space, not a system space and will therefore produce different results
-             * if run inside or outside the container.
-             */
             // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
             // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
             // incorrect then we'll need to come up with a better solution.
