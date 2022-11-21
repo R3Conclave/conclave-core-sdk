@@ -4,10 +4,17 @@ import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineManifest
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineDirectManifest
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineSGXManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
@@ -186,7 +193,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             linuxExec: LinuxExec,
             conclaveExtension: ConclaveExtension,
             signingKey: Provider<RegularFile?>
-    ): GenerateGramineManifest {
+    ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type, linuxExec) { task ->
             // We do build only non python enclaves in conclave-build container.
             if (pythonSourcePath == null) {
@@ -199,11 +206,39 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
     }
 
+    private fun createGenerateGramineSGXManifestTask(
+        target: Project,
+        enclaveFatJarTask: Jar,
+        generateGramineManifestTask: GenerateGramineDirectManifest,
+        signingKey: Provider<RegularFile?>,
+        type: BuildType
+    ): GenerateGramineSGXManifest {
+        return target.createTask("generateSGXGramineManifest$type") { task ->
+            val directManifestPath = generateGramineManifestTask.manifestFile.get().asFile.absolutePath
+            val outputSgxManifestPath = "$directManifestPath.sgx"
+            val outputTokenPath = directManifestPath.replace("manifest", "token")
+            val outputSig = directManifestPath.replace("manifest", "sig")
+
+            task.privateKey.set(signingKey)
+            task.enclaveJar.set(enclaveFatJarTask.archiveFile)
+
+            if (pythonSourcePath != null) {
+                val pythonFiles = target.fileTree(pythonSourcePath).files
+                task.pythonSourcePath.set(pythonFiles.first())
+            }
+            task.directManifest.set(generateGramineManifestTask.manifestFile)
+            task.sgxManifest.set(Paths.get(outputSgxManifestPath).toFile())
+            task.sgxToken.set(Paths.get(outputTokenPath).toFile())
+            task.sgxSig.set(Paths.get(outputSig).toFile())
+        }
+    }
+
+
     private fun createGramineZipBundle(
         target: Project,
         enclaveFatJar: Jar,
         type: BuildType,
-        generateGramineManifestTask: GenerateGramineManifest
+        generateGramineDirectManifestTask: GenerateGramineDirectManifest
     ): TaskProvider<Zip> {
         return target.tasks.register("gramine${type}BundleZip", Zip::class.java) { task ->
             // No need to do any compression here, we're only using zip as a container. The compression will be done
@@ -211,24 +246,52 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.entryCompression = STORED
 
             if (pythonSourcePath != null) {
-                val pythonFiles = target.fileTree(pythonSourcePath!!).files
-                if (pythonFiles.size == 1) {
-                    task.from(pythonFiles.first()) { copySpec ->
-                        copySpec.rename { PluginUtils.PYTHON_FILE }
-                    }
-                } else {
-                    throw GradleException("Only a single Python script is supported, but ${pythonFiles.size} were " +
-                            "found in $pythonSourcePath")
+                task.from(target.fileTree(pythonSourcePath).files.first()) { copySpec ->
+                    copySpec.rename { PYTHON_FILE }
                 }
             }
 
             task.from(enclaveFatJar.archiveFile) { copySpec ->
-                copySpec.rename { PluginUtils.GRAMINE_ENCLAVE_JAR }
+                copySpec.rename { GRAMINE_ENCLAVE_JAR }
             }
-            task.from(generateGramineManifestTask.manifestFile) { copySpec ->
-                copySpec.rename { PluginUtils.GRAMINE_MANIFEST }
+            task.from(generateGramineDirectManifestTask.manifestFile) { copySpec ->
+                copySpec.rename { GRAMINE_MANIFEST }
             }
             task.archiveAppendix.set("gramine-bundle")
+            task.archiveClassifier.set(type.name.lowercase())
+        }
+    }
+
+    private fun createGramineSGXZipBundle(
+        target: Project,
+        enclaveFatJar: Jar,
+        type: BuildType,
+        generateGramineManifestTask: GenerateGramineSGXManifest
+    ): TaskProvider<Zip> {
+        return target.tasks.register("gramineSGX${type}BundleZip", Zip::class.java) { task ->
+            // No need to do any compression here, we're only using zip as a container. The compression will be done
+            // by the containing jar.
+            task.entryCompression = STORED
+
+            if (pythonSourcePath != null) {
+                task.from(target.fileTree(pythonSourcePath).files.first()) { copySpec ->
+                    copySpec.rename { PYTHON_FILE }
+                }
+            }
+
+            task.from(enclaveFatJar.archiveFile) { copySpec ->
+                copySpec.rename { GRAMINE_ENCLAVE_JAR }
+            }
+            task.from(generateGramineManifestTask.sgxManifest) { copySpec ->
+                copySpec.rename { GRAMINE_SGX_MANIFEST }
+            }
+            task.from(generateGramineManifestTask.sgxSig) { copySpec ->
+                copySpec.rename { GRAMINE_SIG }
+            }
+            task.from(generateGramineManifestTask.sgxToken) { copySpec ->
+                copySpec.rename { GRAMINE_SGX_TOKEN }
+            }
+            task.archiveAppendix.set("gramine-sgx-bundle")
             task.archiveClassifier.set(type.name.lowercase())
         }
     }
@@ -356,6 +419,21 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 enclaveFatJarTask,
                 type,
                 generateGramineManifestTask
+            )
+
+            val generateGramineSGXManifestTask = createGenerateGramineSGXManifestTask(
+                target,
+                enclaveFatJarTask,
+                generateGramineManifestTask,
+                signingKey,
+                type
+            )
+
+            val gramineSGXZipBundle = createGramineSGXZipBundle(
+                target,
+                enclaveFatJarTask,
+                type,
+                generateGramineSGXManifestTask
             )
 
             // GraalVM related tasks
@@ -530,7 +608,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
                         GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
-                        GRAMINE -> gramineZipBundle.get().archiveFile
+                        GRAMINE -> if (type == BuildType.Simulation) {
+                            gramineZipBundle.get().archiveFile
+                        } else {
+                            gramineSGXZipBundle.get().archiveFile
+                        }
                         else -> throw IllegalArgumentException()
                     }
                 }
