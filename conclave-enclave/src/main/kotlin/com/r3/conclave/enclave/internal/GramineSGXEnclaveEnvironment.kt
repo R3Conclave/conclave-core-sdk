@@ -1,14 +1,13 @@
 package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.getRemainingBytes
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.nio.ByteBuffer
-import java.security.MessageDigest
+import java.nio.file.Paths
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeBytes
 
 /**
  * This class is the enclave environment intended for use with gramine-sgx.
@@ -95,28 +94,19 @@ class GramineSGXEnclaveEnvironment(
     }
 
     private fun readReport(): ByteArray {
-        return FileInputStream("/dev/attestation/report").use {
-            it.readBytes()
-        }
+        return Paths.get("/dev/attestation/report").readBytes()
     }
 
     private fun readSignedQuote(): ByteArray {
-        return FileInputStream("/dev/attestation/quote").use {
-            it.readBytes()
-        }
+        return Paths.get("/dev/attestation/quote").readBytes()
     }
 
     private fun writeUserReportData(data: ByteArray) {
-
-        return FileOutputStream("/dev/attestation/user_report_data").use {
-            it.write(data)
-        }
+        return Paths.get("/dev/attestation/user_report_data").writeBytes(data)
     }
 
     private fun writeTargetInfo(data: ByteArray) {
-        FileOutputStream("/dev/attestation/target_info").use {
-            it.write(data)
-        }
+        return Paths.get("/dev/attestation/target_info").writeBytes(data)
     }
 
     private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {
