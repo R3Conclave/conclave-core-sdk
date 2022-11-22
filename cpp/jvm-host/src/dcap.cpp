@@ -56,7 +56,7 @@ namespace r3::conclave::dcap {
         throw new std::exception(); // fatal, not suppose to happen
     }
 
-    bool QuotingAPI::init(const std::string& path, const bool skipQuotingLibrariesForGramine, Errors& errors) {
+    bool QuotingAPI::init(const std::string& path, const bool loadQuotingLibraries, Errors& errors) {
         //  The users can use SGX_AESM_ADDR environment variable to select
         //    whether some functions of the quoting library run "in-process" or "out-of-process.
         //  Conclave uses the "in-process" approach, and the SGX_AESM_ADDR variable
@@ -66,7 +66,7 @@ namespace r3::conclave::dcap {
 
         auto const qpl = get_plugin_path(path);
 
-        if (!skipQuotingLibrariesForGramine) {
+        if (loadQuotingLibraries) {
             comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
             urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
             pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);

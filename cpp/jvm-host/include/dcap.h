@@ -43,7 +43,7 @@ namespace r3::conclave::dcap {
     public:
         typedef std::vector<std::string> Errors;
 
-        bool init(const std::string& path, const bool skipQuotingLibrariesForGramine, Errors& errors);
+        bool init(const std::string& path, const bool loadQuotingLibraries, Errors& errors);
 
         bool get_target_info(sgx_target_info_t* target_info, quote3_error_t& eval_result);
         bool get_quote_size(uint32_t* p_size, quote3_error_t& eval_result);

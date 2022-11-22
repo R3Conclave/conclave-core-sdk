@@ -340,7 +340,7 @@ void host_disk_get_size_ocall(long* res,
 static r3::conclave::dcap::QuotingAPI* quoting_lib = nullptr;
 static std::mutex dcap_mutex;
 
-jint initDCAP(JNIEnv *jniEnv, jstring bundle, jboolean skipQuotingLibraries) {
+jint initDCAP(JNIEnv *jniEnv, jstring bundle, jboolean loadQuotingLibraries) {
 
     JniString jpath(jniEnv, bundle);
 
@@ -353,7 +353,7 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle, jboolean skipQuotingLibraries) {
 
         quoting_lib = new r3::conclave::dcap::QuotingAPI();
 
-        if (!quoting_lib->init(path, skipQuotingLibraries, errors)) {
+        if (!quoting_lib->init(path, loadQuotingLibraries, errors)) {
             std::string message("failed to initialize DCAP: ");
             for(auto &err : errors)
                 message += err + ";";
@@ -380,21 +380,21 @@ jint initDCAP(JNIEnv *jniEnv, jstring bundle, jboolean skipQuotingLibraries) {
 JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_initQuoteDCAP(JNIEnv *jniEnv,
                                                                                jclass,
                                                                                jstring bundle,
-                                                                               jboolean skipQuotingLibraries,
+                                                                               jboolean loadQuotingLibraries,
                                                                                jbyteArray targetInfoOut) {
 
     JniPtr<sgx_target_info_t> request(jniEnv, targetInfoOut);
 
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
-    if (initDCAP(jniEnv, bundle, skipQuotingLibraries) != 0) {
+    if (initDCAP(jniEnv, bundle, loadQuotingLibraries) != 0) {
         return -1;
     }
 
-    if (skipQuotingLibraries) {
+    if (!loadQuotingLibraries) {
         //  When using Gramine, we skip the loading of quoting libraries, and we do not want
-        //    to call "get_target_info" below, as Gramine implicitely does this for us on the enclave side
-        //    (in the call that reads the report from /dev/attestation/report) and would fail otherwise.
+        //    to call "get_target_info" below, as Gramine implicitly does this for us on the enclave side
+        //    (in the call that reads the report from /dev/attestation/report).
         return 0;
     }
 
