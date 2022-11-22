@@ -16,6 +16,7 @@ class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
+        //  TODO: fix the abstraction here, so that this call is only used in the context of Native Image
         //  This is not executed in the context of Gramine flow.
         throw IllegalStateException("The quote can't be retrieved from the host when running Gramine")
     }

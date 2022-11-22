@@ -111,6 +111,7 @@ class MockEnclaveEnvironment(
         //  We could have directly created an empty quotingEnclaveInfo here, 
         //    but we want to keep the same mechanism we have in the Graal/Native Image flow, as this is
         //    what Mock mode is trying to emulate.
+        // TODO: simplify Mock mode, as with the introduction of Gramine there's no need to emulate Graal flow for it.
         val report = createReport(quotingEnclaveInfo, reportData)
         return hostInterface.getSignedQuote(report)
     }
