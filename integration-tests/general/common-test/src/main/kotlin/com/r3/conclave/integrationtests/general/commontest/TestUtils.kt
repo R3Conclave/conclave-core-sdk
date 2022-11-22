@@ -2,24 +2,28 @@ package com.r3.conclave.integrationtests.general.commontest
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxMetadataEnclaveCss
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.integrationtests.general.common.ByteCursor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assumptions.assumeThat
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import java.io.InputStream
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
 import java.security.MessageDigest
 import java.security.interfaces.RSAPublicKey
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.reader
+import kotlin.io.path.*
 
 object TestUtils {
     fun getAttestationParams(enclaveHost: EnclaveHost): AttestationParameters? {
@@ -78,12 +82,7 @@ object TestUtils {
      */
     fun generateSigningKey(file: Path) {
         file.parent?.createDirectories()
-        val exitCode = ProcessBuilder()
-            .command(listOf("openssl", "genrsa", "-out", file.absolutePathString(), "-3", "3072"))
-            .inheritIO()
-            .start()
-            .waitFor()
-        assertThat(exitCode).isZero
+        execCommand("openssl", "genrsa", "-out", file.absolutePathString(), "-3", "3072")
     }
 
     fun readSigningKey(file: Path): RSAPublicKey {
@@ -102,6 +101,42 @@ object TestUtils {
                 digest()
             }
         )
+    }
+
+    private val sgxSignTool: Path by lazy {
+        val path = Files.createTempFile("sgx_sign", null)
+        javaClass.getResourceAsStream("/sgx-tools/sgx_sign")!!.use {
+            Files.copy(it, path, REPLACE_EXISTING)
+        }
+        path.setPosixFilePermissions(path.getPosixFilePermissions() + OWNER_EXECUTE)
+        path
+    }
+
+    /**
+     * Extract the enclave metadata from the given signed .so file.
+     */
+    fun getEnclaveMetadata(enclaveFile: Path): ByteCursor<SgxMetadataEnclaveCss> {
+        // Get the location of the sgx_sign tool directly from the Gradle resources directory. This only works
+        // because the integration tests are not run via jars. If they were then we'd need to copy the tool into a
+        // temp file.
+        val cssFile = Files.createTempFile("enclave-css", null)
+        execCommand(
+            sgxSignTool.absolutePathString(), "dump",
+            "-enclave", enclaveFile.absolutePathString(),
+            // We don't need this but sgx_sign still requires it be specified.
+            "-dumpfile", "/dev/null",
+            "-cssfile", cssFile.absolutePathString()
+        )
+        return Cursor.wrap(SgxMetadataEnclaveCss.INSTANCE, cssFile.readBytes())
+    }
+
+    private fun execCommand(vararg command: String) {
+        val exitCode = ProcessBuilder()
+            .command(command.asList())
+            .inheritIO()
+            .start()
+            .waitFor()
+        assertThat(exitCode).isZero
     }
 
     /**

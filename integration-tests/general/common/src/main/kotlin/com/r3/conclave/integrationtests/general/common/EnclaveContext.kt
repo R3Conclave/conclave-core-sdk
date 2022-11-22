@@ -1,10 +1,8 @@
 package com.r3.conclave.integrationtests.general.common
 
 import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.internal.Cursor
 import com.r3.conclave.common.internal.SgxKeyRequest
 import com.r3.conclave.integrationtests.general.common.tasks.EnclaveTestAction
-import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.security.Signature
 
@@ -23,7 +21,7 @@ abstract class EnclaveContext {
     abstract fun callUntrustedHost(bytes: ByteArray): ByteArray?
     abstract val enclaveInstanceInfo: EnclaveInstanceInfo
     abstract val persistentMap: MutableMap<String, ByteArray>
-    abstract fun getSecretKey(keyRequest: Cursor<SgxKeyRequest, ByteBuffer>): ByteArray
+    abstract fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray
     abstract fun sealData(data: PlaintextAndAD): ByteArray
     abstract fun unsealData(sealedBlob: ByteArray): PlaintextAndAD
     abstract fun createAttestationQuote(reportData: ByteArray): ByteArray

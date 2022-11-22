@@ -54,7 +54,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
 
             val signingKeyFile: Path
             val signingKeyConfig = if (signingType == "privateKey") {
-                signingKeyFile = Files.createTempFile(buildDir, null, null).also(TestUtils::generateSigningKey)
+                signingKeyFile = Files.createTempFile(buildDir, "signingKey", null).also(TestUtils::generateSigningKey)
                 "signingKey = file('$signingKeyFile')"
             } else {
                 signingKeyFile = dummyKeyFile

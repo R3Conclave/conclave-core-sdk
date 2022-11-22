@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -18,6 +19,7 @@ import kotlin.io.path.*
 abstract class AbstractTaskTest : TaskTest {
     @field:TempDir
     override lateinit var projectDir: Path
+    open val runDeletionAndReproducibilityTest: Boolean get() = true
 
     @BeforeEach
     fun copyProject() {
@@ -37,6 +39,7 @@ abstract class AbstractTaskTest : TaskTest {
 
     @Test
     fun `check task is incremental on output deletion and check reproducibility`() {
+        assumeTrue(runDeletionAndReproducibilityTest)
         val originalContent = assertTaskIsIncremental {
             assertThat(output).exists()
             if (isReproducible && output.isRegularFile()) {
@@ -83,7 +86,7 @@ abstract class AbstractTaskTest : TaskTest {
         return buildResult.task(":$taskName")!!
     }
 
-    fun assertTaskRunIsIncremental() {
+    fun runTaskAndAssertItsIncremental() {
         assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
         assertThat(runTask().outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
     }
@@ -94,10 +97,10 @@ abstract class AbstractTaskTest : TaskTest {
      */
     fun <T> assertTaskIsIncremental(modify: () -> T): T {
         // First fresh run and then make sure the second run is up-to-date.
-        assertTaskRunIsIncremental()
+        runTaskAndAssertItsIncremental()
         val value = modify()
         // Then check that the build runs again with the new build.gradle changes and then is up-to-date again.
-        assertTaskRunIsIncremental()
+        runTaskAndAssertItsIncremental()
         return value
     }
 

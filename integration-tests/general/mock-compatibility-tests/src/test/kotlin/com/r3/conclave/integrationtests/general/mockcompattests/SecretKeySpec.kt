@@ -4,12 +4,10 @@ import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.integrationtests.general.common.ByteCursor
 import com.r3.conclave.integrationtests.general.common.tasks.GetSecretKey
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
-import java.nio.ByteBuffer
 import kotlin.reflect.KProperty0
-
-typealias ByteCursor<T> = Cursor<T, ByteBuffer>
 
 /**
  * A container of [SecretKeyAction]s which together make a specification for creating enclave secret keys.
