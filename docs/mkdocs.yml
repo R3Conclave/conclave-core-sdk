@@ -54,7 +54,8 @@ nav:
 
 theme:
   name: material
-  logo: docs/assets/cloud_logo_no_shadow.svg
+  favicon: assets/favicon.ico
+  logo: assets/cloud_logo_no_shadow.svg
   features:
     - navigation.tabs
     - navigation.instant
