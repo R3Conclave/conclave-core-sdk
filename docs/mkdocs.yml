@@ -53,9 +53,7 @@ nav:
   - FAQ: faq.md
 
 theme:
-  name: material
-  favicon: assets/favicon.ico
-  logo: assets/cloud_logo_no_shadow.svg
+  name: 'material'
   features:
     - navigation.tabs
     - navigation.instant
