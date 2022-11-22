@@ -11,12 +11,11 @@ import java.nio.ByteBuffer
 import java.security.MessageDigest
 
 /**
- * This class is the enclave environment intended for use with gramine-direct.
+ * This class is the enclave environment intended for use with gramine-sgx.
  */
-class GramineEnclaveEnvironment(
+class GramineSGXEnclaveEnvironment(
     enclaveClass: Class<*>,
     override val hostInterface: SocketEnclaveHostInterface,
-    private val simulationMrsigner: SHA256Hash?,
     override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
@@ -35,15 +34,11 @@ class GramineEnclaveEnvironment(
         targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport> {
-        return if (enclaveMode == EnclaveMode.SIMULATION) {
-            createSimulationReport(reportData)
-        } else {
-            val report = retrieveReport(
-                targetInfo?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf(),
-                reportData?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf()
-            )
-            Cursor.slice(SgxReport, ByteBuffer.wrap(report))
-        }
+        val report = retrieveReport(
+            targetInfo?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf(),
+            reportData?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf()
+        )
+        return Cursor.slice(SgxReport, ByteBuffer.wrap(report))
     }
 
     override fun getSignedQuote(
@@ -54,22 +49,15 @@ class GramineEnclaveEnvironment(
         //    by the enclave. There is no enclave to host communication that we need to handle in our code.
         //    In the background, Gramine interacts with the AESM service and the quoting enclave
         //    to get the "signed quote".
-        return if (enclaveMode == EnclaveMode.SIMULATION) {
-            val report = createSimulationReport(reportData)
-            val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
-            signedQuote[SgxSignedQuote.quote][SgxQuote.reportBody] = report[SgxReport.body].read()
-            return signedQuote
-        } else {
-            //  In Graal VM/Native Image flow the "quotingEnclaveInfo" (also called "SGX target info") is
-            //    requested by the host to the quoting enclave by passing an empty array to the
-            //    function "sgx_get_target_info", which fills that array.
-            //  When working with the Gramine flow, such operation is done on the enclave side by passing an empty
-            //    array that it is filled by Gramine (which communicates with the quoting enclave in background).
-            val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
-            createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
-            val signedQuoteBytes = readSignedQuote()
-            Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
-        }
+        //  In Graal VM/Native Image flow the "quotingEnclaveInfo" (also called "SGX target info") is
+        //    requested by the host to the quoting enclave by passing an empty array to the
+        //    function "sgx_get_target_info", which fills that array.
+        //  When working with the Gramine flow, such operation is done on the enclave side by passing an empty
+        //    array that it is filled by Gramine (which communicates with the quoting enclave in background).
+        val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
+        createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
+        val signedQuoteBytes = readSignedQuote()
+        return Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
     }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {
@@ -129,45 +117,6 @@ class GramineEnclaveEnvironment(
         FileOutputStream("/dev/attestation/target_info").use {
             it.write(data)
         }
-    }
-
-    private fun createSimulationReport(
-        reportData: ByteCursor<SgxReportData>?
-    ): ByteCursor<SgxReport> {
-        check(simulationMrsigner != null) { "Simulation MRSigner not provided in the enclave" }
-        val tcbLevel = 1
-        val currentCpuSvn = versionToCpuSvn(tcbLevel)
-        val report = Cursor.allocate(SgxReport)
-
-        val body = report[SgxReport.body]
-        if (reportData != null) {
-            body[SgxReportBody.reportData] = reportData.buffer
-        }
-        body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
-        body[SgxReportBody.mrenclave] = ByteBuffer.wrap(simulationMrEnclave)
-        body[SgxReportBody.mrsigner] = simulationMrsigner!!.buffer()
-        body[SgxReportBody.isvProdId] = productID
-        // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
-        body[SgxReportBody.isvSvn] = revocationLevel + 1
-        body[SgxReportBody.attributes][SgxAttributes.flags] = SgxEnclaveFlags.DEBUG
-        return report
-    }
-
-    private val simulationMrEnclave: ByteArray by lazy {
-        val digest = MessageDigest.getInstance("SHA-256")
-
-        val buffer = ByteArray(65536)
-        var bytesRead: Int
-
-        enclaveClass.protectionDomain.codeSource.location.openStream().use {
-            bytesRead = it.read(buffer)
-            while (bytesRead >= 0) {
-                digest.update(buffer, 0, bytesRead)
-                bytesRead = it.read(buffer)
-            }
-        }
-
-        digest.digest()
     }
 
     private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {

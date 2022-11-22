@@ -92,7 +92,11 @@ object GramineEntryPoint {
                     .execute(enclave, Paths.get(PYTHON_FILE))
         }
         validateEnclaveMode()
-        val env = GramineEnclaveEnvironment(enclaveClass, hostInterface, simulationMrSigner, enclaveMode)
+        val env = if (enclaveMode == EnclaveMode.SIMULATION) {
+            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, simulationMrSigner, enclaveMode)
+        } else {
+            GramineSGXEnclaveEnvironment(enclaveClass, hostInterface, enclaveMode)
+        }
         hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
         Enclave::class.java
             .getAccessibleMethod("initialise", EnclaveEnvironment::class.java)
