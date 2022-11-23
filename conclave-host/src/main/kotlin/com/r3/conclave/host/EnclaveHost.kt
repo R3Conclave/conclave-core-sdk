@@ -463,12 +463,7 @@ class EnclaveHost private constructor(
     private fun getEnclaveQuoteService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
         return when (attestationParameters) {
             is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
-            is AttestationParameters.DCAP -> if (enclaveHandle is NativeEnclaveHandle) {
-                EnclaveQuoteServiceDCAP()
-            } else {
-                EnclaveQuoteServiceGramineDCAP
-            }
-
+            is AttestationParameters.DCAP -> if (enclaveHandle is NativeEnclaveHandle) EnclaveQuoteServiceDCAP else EnclaveQuoteServiceGramineDCAP
             null -> EnclaveQuoteServiceMock
         }
     }

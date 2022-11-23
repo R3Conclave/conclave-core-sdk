@@ -5,15 +5,17 @@ import com.r3.conclave.host.internal.Native
 import com.r3.conclave.host.internal.NativeLoader
 import java.nio.ByteBuffer
 
-class EnclaveQuoteServiceDCAP : EnclaveQuoteService() {
+object EnclaveQuoteServiceDCAP : EnclaveQuoteService() {
     
     // In the context of signing the quote, targetInfo has always the same value.
     //    It identifies the quoting enclave as the enclave that will verify
     //    the report generated when signing the quote.
-    private val targetInfo = Cursor.allocate(SgxTargetInfo)
-
-    init {
-        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
+    private val targetInfo = Cursor.allocate(SgxTargetInfo).also {
+        Native.initQuoteDCAP(
+            NativeLoader.libsPath.toString(),
+            true,
+            it.buffer.array()
+        )
     }
 
     override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
