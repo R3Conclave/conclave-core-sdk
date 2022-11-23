@@ -42,8 +42,6 @@ class GramineEnclaveHandle(
 
     private val workingDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
 
-    override val quotingManager: QuotingManager = QuotingManager.ENCLAVE
-
     override val enclaveInterface: SocketHostEnclaveInterface
 
     init {

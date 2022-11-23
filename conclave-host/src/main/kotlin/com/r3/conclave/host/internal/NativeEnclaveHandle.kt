@@ -17,8 +17,6 @@ class NativeEnclaveHandle(
     private val enclaveId: Long
     override val enclaveInterface: HostEnclaveInterface
 
-    override val quotingManager: QuotingManager = QuotingManager.HOST
-
     init {
         require(enclaveMode != EnclaveMode.MOCK)
         NativeLoader.loadHostLibraries(enclaveMode)

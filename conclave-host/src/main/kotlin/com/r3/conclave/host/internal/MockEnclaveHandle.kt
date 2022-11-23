@@ -22,8 +22,6 @@ class MockEnclaveHandle(
 
     override val enclaveInterface = MockHostEnclaveInterface(callInterfaceConnector)
 
-    override val quotingManager: QuotingManager = QuotingManager.HOST
-
     override fun initialise() {
         try {
             // The Enclave class will only be on the class path for Mock enclaves and we do not want to add
