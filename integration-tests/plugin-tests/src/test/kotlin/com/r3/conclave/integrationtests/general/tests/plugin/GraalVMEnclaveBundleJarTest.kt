@@ -3,9 +3,9 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.SgxMetadataCssBody.IsvProdId
 import com.r3.conclave.common.internal.SgxMetadataCssBody.IsvSvn
-import com.r3.conclave.common.internal.SgxMetadataCssKey.modulus
 import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
 import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
+import com.r3.conclave.common.internal.SgxTypesKt
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
@@ -111,7 +111,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         val enclaveMetadata = getEnclaveMetadata(signedEnclave)
         assertThat(enclaveMetadata[body][IsvProdId].read()).isEqualTo(expectedProductID)
         assertThat(enclaveMetadata[body][IsvSvn].read()).isEqualTo(expectedRevocationLevel + 1)
-        assertThat(SHA256Hash.hash(enclaveMetadata[key][modulus].bytes)).isEqualTo(expectedMrsigner)
+        assertThat(SgxTypesKt.getMrsigner(enclaveMetadata[key])).isEqualTo(expectedMrsigner)
     }
 
     private fun assertUnsignedEnclaveHasntChanged() {
