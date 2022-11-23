@@ -94,7 +94,7 @@ object GramineEntryPoint {
         validateEnclaveMode()
         val env = if (enclaveMode == EnclaveMode.SIMULATION) {
             require(simulationMrSigner != null) { "Simulation signer not passed correctly by the manifest" }
-            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, simulationMrSigner, enclaveMode)
+            GramineDirectEnclaveEnvironment(enclaveClass, hostInterface, simulationMrSigner)
         } else {
             GramineSGXEnclaveEnvironment(enclaveClass, hostInterface, enclaveMode)
         }

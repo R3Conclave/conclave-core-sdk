@@ -13,8 +13,7 @@ import java.security.MessageDigest
 class GramineDirectEnclaveEnvironment(
     enclaveClass: Class<*>,
     override val hostInterface: SocketEnclaveHostInterface,
-    private val simulationMrsigner: SHA256Hash,
-    override val enclaveMode: EnclaveMode
+    private val simulationMrsigner: SHA256Hash
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {
@@ -24,9 +23,8 @@ class GramineDirectEnclaveEnvironment(
         }
     }
 
-    init {
-        require(enclaveMode != EnclaveMode.MOCK) { "Gramine can't run in MOCK mode" }
-    }
+    override val enclaveMode: EnclaveMode
+        get() = EnclaveMode.SIMULATION
 
     override fun createReport(
         targetInfo: ByteCursor<SgxTargetInfo>?,
@@ -35,7 +33,6 @@ class GramineDirectEnclaveEnvironment(
         val tcbLevel = 1
         val currentCpuSvn = versionToCpuSvn(tcbLevel)
         val report = Cursor.allocate(SgxReport)
-
         val body = report[SgxReport.body]
 
         if (reportData != null) {
