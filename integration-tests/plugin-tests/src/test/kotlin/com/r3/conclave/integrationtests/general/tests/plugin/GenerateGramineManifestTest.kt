@@ -6,6 +6,7 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMr
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readSigningKey
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -30,6 +31,24 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     override val outputName: String get() = "java.manifest"
 
     @Test
+    fun productID() {
+        assertTaskIsIncremental {
+            assertThat(manifest().getLong("sgx.isvprodid")).isEqualTo(11)
+            updateBuildFile("productID = 11", "productID = 111")
+        }
+        assertThat(manifest().getLong("sgx.isvprodid")).isEqualTo(111)
+    }
+
+    @Test
+    fun revocationLevel() {
+        assertTaskIsIncremental {
+            assertThat(manifest().getLong("sgx.isvsvn")).isEqualTo(13)
+            updateBuildFile("revocationLevel = 12", "revocationLevel = 121")
+        }
+        assertThat(manifest().getLong("sgx.isvsvn")).isEqualTo(122)
+    }
+
+    @Test
     fun maxThreads() {
         assertThat(buildFile).content().doesNotContain("maxThreads")
         assertTaskIsIncremental {
@@ -41,7 +60,9 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
 
     @ParameterizedTest
     @ValueSource(strings = ["dummyKey", "privateKey"])
-    fun `signing key`(signingType: String) {
+    fun `signing key in simulation mode`(signingType: String) {
+        simulationOnlyTest()
+
         // The signingKey config is specified in the enclaveMode block
         assertThat(buildFile).content().doesNotContain("${enclaveMode.name.lowercase()} {")
         assertThat(dummyKeyFile).doesNotExist()
@@ -49,7 +70,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
         val signingKeyFile = assertTaskIsIncremental {
             // Make sure the dummy key is used when no signing key is specified.
             assertThat(dummyKeyFile).exists()
-            assertManifestContainsMrsigner(dummyKeyFile)
+            assertManifestContainsSimulationMrsigner(dummyKeyFile)
             dummyKeyFile.deleteExisting()
 
             val signingKeyFile: Path
@@ -69,10 +90,10 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
             signingKeyFile
         }
 
-        assertManifestContainsMrsigner(signingKeyFile)
+        assertManifestContainsSimulationMrsigner(signingKeyFile)
     }
 
-    private fun assertManifestContainsMrsigner(keyFile: Path) {
+    private fun assertManifestContainsSimulationMrsigner(keyFile: Path) {
         val mrsigner = calculateMrsigner(readSigningKey(keyFile))
         val mrsignerEnvVar = manifest().getString("loader.env.CONCLAVE_SIMULATION_MRSIGNER")
         checkNotNull(mrsignerEnvVar)
