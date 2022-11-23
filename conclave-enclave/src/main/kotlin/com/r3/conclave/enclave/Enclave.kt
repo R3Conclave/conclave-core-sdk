@@ -474,7 +474,7 @@ abstract class Enclave {
         val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
 
         override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-            quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, parameterBuffer)
+            quotingEnclaveInfo = ByteCursor.wrap(SgxTargetInfo, parameterBuffer.getAllBytes(true))
             val quote = env.getSignedQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
             return ByteBuffer.wrap(quote.bytes)
