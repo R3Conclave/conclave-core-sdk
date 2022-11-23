@@ -11,8 +11,7 @@ object EnclaveQuoteServiceMock : EnclaveQuoteService() {
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
         //  TODO: refactor the EnclaveQuoteService, and remove this class.
-        //  Note that Mock mode will not call t
-        //  his code, only Simulation mode will do it
+        //  Note that Mock mode will not call this code, only Simulation mode will do it
         //    as it is mocking the signed quote.
         val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
         // We can populate the other fields as needed, but for now we just need to copy over the report body.
