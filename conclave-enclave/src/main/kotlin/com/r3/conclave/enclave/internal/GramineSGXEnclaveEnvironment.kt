@@ -44,17 +44,18 @@ class GramineSGXEnclaveEnvironment(
         quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
-        //  Note that in Gramine the "signed quote" is automatically retrieved and returned
-        //    by the enclave. There is no enclave to host communication that we need to handle in our code.
+        //  Note that in Gramine the "signed quote" is automatically retrieved and returned by the enclave.
+        //    There is no "enclave to host" communication that we need to handle in our code.
         //    In the background, Gramine interacts with the AESM service and the quoting enclave
         //    to get the "signed quote".
         //  In Graal VM/Native Image flow the "quotingEnclaveInfo" (also called "SGX target info") is
         //    requested by the host to the quoting enclave by passing an empty array to the
         //    function "sgx_get_target_info", which fills that array.
-        //  When working with the Gramine flow, such operation is done on the enclave side by passing an empty
-        //    array that it is filled by Gramine (which communicates with the quoting enclave in background).
-        val quotingEnclaveInfoBytes = quotingEnclaveInfo?.bytes ?: Cursor.allocate(SgxTargetInfo).bytes
-        createReport(ByteCursor.wrap(SgxTargetInfo, quotingEnclaveInfoBytes), reportData)
+        //  When working with the Gramine flow, such operation is done automatically when accessing
+        //    the /dev/attestation/quote pseudofile.
+        //  Note that Gramine uses the quotingEnclaveInfo of the quoting enclave and does not read the one that
+        //    might have been written into /dev/attestation/target_info, see the sgx_get_quote function in Gramine code.
+        createReport(null, reportData)
         val signedQuoteBytes = readSignedQuote()
         return Cursor.slice(SgxSignedQuote, ByteBuffer.wrap(signedQuoteBytes))
     }

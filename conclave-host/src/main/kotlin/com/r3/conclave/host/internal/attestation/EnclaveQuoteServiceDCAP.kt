@@ -13,7 +13,7 @@ class EnclaveQuoteServiceDCAP : EnclaveQuoteService() {
     private val targetInfo = Cursor.allocate(SgxTargetInfo)
 
     init {
-        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), false, targetInfo.buffer.array())
+        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), true, targetInfo.buffer.array())
     }
 
     override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
