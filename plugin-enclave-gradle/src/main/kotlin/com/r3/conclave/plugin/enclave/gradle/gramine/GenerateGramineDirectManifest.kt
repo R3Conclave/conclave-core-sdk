@@ -30,7 +30,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
     }
 
     @get:Input
-    val isvProdId: Property<Int> = objects.property(Int::class.java)
+    val productId: Property<Int> = objects.property(Int::class.java)
 
     @get:Input
     val revocationLevel: Property<Int> = objects.property(Int::class.java)
@@ -82,7 +82,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "-Djava_home=${System.getProperty("java.home")}",
             "-Darch_libdir=/lib/$architecture",
             "-Dld_preload=$ldPreload",
-            "-Disv_prod_id=${isvProdId.get()}",
+            "-Disv_prod_id=${productId.get()}",
             "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dpython_packages_path=$pythonPackagesPath",
             "-Dis_python_enclave=${pythonEnclave.get()}",

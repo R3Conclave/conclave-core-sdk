@@ -6,6 +6,10 @@ import com.r3.conclave.host.internal.Native
 import java.nio.ByteBuffer
 
 class EnclaveQuoteServiceEPID(private val attestationParameters: AttestationParameters.EPID): EnclaveQuoteService() {
+
+    // In the context of signing the quote, quoteResponse has always the same value.
+    //    It identifies the quoting enclave as the enclave that will verify
+    //    the report generated when signing the quote.
     private val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
 
     init {

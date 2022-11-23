@@ -198,7 +198,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         return target.createTask("generateGramineManifest$type", type) { task ->
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
-            task.isvProdId.set(conclaveExtension.productID)
+            task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
             task.manifestFile.set((gramineBuildDirectory / GRAMINE_MANIFEST).toFile())

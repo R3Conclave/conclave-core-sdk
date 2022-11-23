@@ -413,7 +413,7 @@ class EnclaveHost private constructor(
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
-        quotingService = getService(attestationParameters?.takeIf { enclaveMode.isHardware })
+        quotingService = getEnclaveQuoteService(attestationParameters?.takeIf { enclaveMode.isHardware })
 
         try {
             this.commandsCallback = commandsCallback
@@ -460,8 +460,7 @@ class EnclaveHost private constructor(
         }
     }
 
-    private fun getService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
-
+    private fun getEnclaveQuoteService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
         return when (attestationParameters) {
             is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
             is AttestationParameters.DCAP -> if (enclaveHandle is NativeEnclaveHandle) {
