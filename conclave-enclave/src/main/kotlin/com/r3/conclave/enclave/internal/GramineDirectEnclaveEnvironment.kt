@@ -13,7 +13,7 @@ import java.security.MessageDigest
 class GramineDirectEnclaveEnvironment(
     enclaveClass: Class<*>,
     override val hostInterface: SocketEnclaveHostInterface,
-    private val simulationMrsigner: SHA256Hash?,
+    private val simulationMrsigner: SHA256Hash,
     override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
@@ -32,7 +32,6 @@ class GramineDirectEnclaveEnvironment(
         targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport> {
-        check(simulationMrsigner != null) { "Simulation MRSigner not provided in the enclave" }
         val tcbLevel = 1
         val currentCpuSvn = versionToCpuSvn(tcbLevel)
         val report = Cursor.allocate(SgxReport)
@@ -44,7 +43,7 @@ class GramineDirectEnclaveEnvironment(
         }
         body[SgxReportBody.cpuSvn] = ByteBuffer.wrap(currentCpuSvn)
         body[SgxReportBody.mrenclave] = ByteBuffer.wrap(simulationMrEnclave)
-        body[SgxReportBody.mrsigner] = simulationMrsigner!!.buffer()
+        body[SgxReportBody.mrsigner] = simulationMrsigner.buffer()
         body[SgxReportBody.isvProdId] = productID
         // Revocation level in the report is 1 based. We subtract 1 from it when reading it back from the report.
         body[SgxReportBody.isvSvn] = revocationLevel + 1

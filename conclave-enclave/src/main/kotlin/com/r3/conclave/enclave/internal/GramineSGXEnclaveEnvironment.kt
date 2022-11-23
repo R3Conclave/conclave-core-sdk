@@ -26,7 +26,7 @@ class GramineSGXEnclaveEnvironment(
     }
 
     init {
-        require(enclaveMode != EnclaveMode.MOCK) { "Gramine can't run in MOCK mode" }
+        require(enclaveMode.isHardware) { "Gramine SGX can't run in MOCK or SIMULATION mode" }
     }
 
     override fun createReport(
