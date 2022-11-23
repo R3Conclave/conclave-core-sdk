@@ -278,8 +278,7 @@ abstract class Enclave {
             }
             ByteCursor.wrap(SgxReportData, reportData)
         }
-        val quotingEnclaveInfo = env.hostInterface.getQuotingEnclaveInfo()
-        return env.getSignedQuote(quotingEnclaveInfo, reportDataCursor).bytes
+        return env.getSignedQuote(getEnclaveInstanceInfoQuoteCallHandler.quotingEnclaveInfo, reportDataCursor).bytes
     }
 
     /**
@@ -470,11 +469,12 @@ abstract class Enclave {
      * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
      */
     private inner class GetEnclaveInstanceInfoQuoteCallHandler : CallHandler {
+        var quotingEnclaveInfo: ByteCursor<SgxTargetInfo>? = null
         private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
         val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
 
         override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
-            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, parameterBuffer)
+            quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, parameterBuffer)
             val quote = env.getSignedQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
             _mostRecentQuote = quote
             return ByteBuffer.wrap(quote.bytes)

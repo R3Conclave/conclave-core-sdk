@@ -1,18 +1,17 @@
 package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.internal.*
+import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 
 object EnclaveQuoteServiceMock : EnclaveQuoteService() {
 
-    override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
+    override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
         return Cursor.allocate(SgxTargetInfo)
     }
 
     override fun retrieveQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
-        // We can populate the other fields as needed, but for now we just need to copy over the report body.
-        signedQuote[SgxSignedQuote.quote][SgxQuote.reportBody] = report[SgxReport.body].read()
-        return signedQuote
+        //  TODO: refactor the EnclaveQuoteService, and remove this class.
+        throw IllegalStateException("Mock mode should not call retrieveQuote")
     }
 }

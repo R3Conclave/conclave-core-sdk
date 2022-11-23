@@ -6,10 +6,13 @@ import com.r3.conclave.host.internal.NativeLoader
 import java.nio.ByteBuffer
 
 class EnclaveQuoteServiceDCAP : EnclaveQuoteService() {
+    private val targetInfo = Cursor.allocate(SgxTargetInfo)
 
-    override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
-        val targetInfo = Cursor.allocate(SgxTargetInfo)
+    init {
         Native.initQuoteDCAP(NativeLoader.libsPath.toString(), false, targetInfo.buffer.array())
+    }
+
+    override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
         return targetInfo
     }
 

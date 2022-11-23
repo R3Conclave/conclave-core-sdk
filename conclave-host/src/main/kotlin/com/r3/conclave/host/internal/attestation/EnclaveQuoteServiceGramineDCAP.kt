@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 
 class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
 
-    override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
+    override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
         val targetInfo = Cursor.allocate(SgxTargetInfo)
         //  When using Gramine, we do not need to load (dlsym) all the quoting libraries,
         //    hence we pass a true bool value to avoid loading them.

@@ -4,8 +4,6 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
@@ -91,7 +89,7 @@ class GramineDirectEnclaveEnvironment(
     ) {
         //  TODO: Gramine filesystem support
     }
-    
+
     private val simulationMrEnclave: ByteArray by lazy {
         val digest = MessageDigest.getInstance("SHA-256")
 

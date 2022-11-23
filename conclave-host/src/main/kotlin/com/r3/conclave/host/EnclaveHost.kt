@@ -423,7 +423,6 @@ class EnclaveHost private constructor(
 
             // Register call handlers
             enclaveHandle.enclaveInterface.apply {
-                registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
                 registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
                 registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
                 registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
@@ -536,7 +535,7 @@ class EnclaveHost private constructor(
     }
 
     private fun getAttestation(): Attestation {
-        val quotingEnclaveTargetInfo = quotingService.initializeQuote()
+        val quotingEnclaveTargetInfo = quotingService.getQuotingEnclaveInfo()
         log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
         val signedQuote = enclaveHandle.enclaveInterface.getEnclaveInstanceInfoQuote(quotingEnclaveTargetInfo)
         log.debug { "Got quote $signedQuote" }
@@ -744,15 +743,6 @@ class EnclaveHost private constructor(
             val report = Cursor.slice(SgxReport, parameterBuffer)
             val signedQuote = quotingService.retrieveQuote(report)
             return signedQuote.buffer
-        }
-    }
-
-    /**
-     * Handler for servicing requests from the enclave for quoting info.
-     */
-    private inner class GetQuotingEnclaveInfoHandler : CallHandler {
-        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
-            return quotingService.initializeQuote().buffer
         }
     }
 
