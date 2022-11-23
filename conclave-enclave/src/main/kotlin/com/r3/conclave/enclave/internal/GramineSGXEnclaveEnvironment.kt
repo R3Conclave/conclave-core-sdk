@@ -34,8 +34,8 @@ class GramineSGXEnclaveEnvironment(
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport> {
         val report = retrieveReport(
-            targetInfo?.buffer?.getRemainingBytes(avoidCopying = true),
-            reportData?.buffer?.getRemainingBytes(avoidCopying = true)
+            targetInfo?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf(),
+            reportData?.buffer?.getRemainingBytes(avoidCopying = true) ?: byteArrayOf()
         )
         return Cursor.slice(SgxReport, ByteBuffer.wrap(report))
     }
@@ -89,13 +89,9 @@ class GramineSGXEnclaveEnvironment(
     }
 
     @Synchronized
-    private fun retrieveReport(targetInfoBytes: ByteArray?, userReportDataBytes: ByteArray?): ByteArray {
-        if (targetInfoBytes != null) {
-            writeTargetInfo(targetInfoBytes)
-        }
-        if (userReportDataBytes != null) {
-            writeUserReportData(userReportDataBytes)
-        }
+    private fun retrieveReport(targetInfoBytes: ByteArray, userReportDataBytes: ByteArray): ByteArray {
+        writeTargetInfo(targetInfoBytes)
+        writeUserReportData(userReportDataBytes)
         return readReport()
     }
 
