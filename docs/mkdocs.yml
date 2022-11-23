@@ -53,7 +53,8 @@ nav:
   - FAQ: faq.md
 
 theme:
-  name: 'material'
+  name: material
+  logo: images/core_logo_no_shadow
   features:
     - navigation.tabs
     - navigation.instant
