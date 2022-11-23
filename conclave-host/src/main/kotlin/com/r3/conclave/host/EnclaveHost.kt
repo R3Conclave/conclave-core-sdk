@@ -13,10 +13,7 @@ import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
 import com.r3.conclave.host.internal.EnclaveScanner.ScanResult
-import com.r3.conclave.host.internal.attestation.AttestationService
-import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
-import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
-import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
+import com.r3.conclave.host.internal.attestation.*
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
 import com.r3.conclave.host.internal.gramine.GramineEnclaveHandle
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
@@ -415,18 +412,14 @@ class EnclaveHost private constructor(
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
-        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters, enclaveHandle)
-
-        // TODO: Fix the condition once Gramine attestation has been integrated
-        quotingService =
-            EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware && enclaveHandle is NativeEnclaveHandle })
+        attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
+        quotingService = getEnclaveQuoteService(attestationParameters?.takeIf { enclaveMode.isHardware })
 
         try {
             this.commandsCallback = commandsCallback
 
             // Register call handlers
             enclaveHandle.enclaveInterface.apply {
-                registerCallHandler(HostCallType.GET_QUOTING_ENCLAVE_INFO, GetQuotingEnclaveInfoHandler())
                 registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
                 registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
                 registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
@@ -464,6 +457,14 @@ class EnclaveHost private constructor(
             hostStateManager.state = Started
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
+        }
+    }
+
+    private fun getEnclaveQuoteService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
+        return when (attestationParameters) {
+            is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
+            is AttestationParameters.DCAP -> if (enclaveHandle is NativeEnclaveHandle) EnclaveQuoteServiceDCAP else EnclaveQuoteServiceGramineDCAP
+            null -> EnclaveQuoteServiceMock
         }
     }
 
@@ -539,7 +540,7 @@ class EnclaveHost private constructor(
     }
 
     private fun getAttestation(): Attestation {
-        val quotingEnclaveTargetInfo = quotingService.initializeQuote()
+        val quotingEnclaveTargetInfo = quotingService.getQuotingEnclaveInfo()
         log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
         val signedQuote = enclaveHandle.enclaveInterface.getEnclaveInstanceInfoQuote(quotingEnclaveTargetInfo)
         log.debug { "Got quote $signedQuote" }
@@ -747,15 +748,6 @@ class EnclaveHost private constructor(
             val report = Cursor.slice(SgxReport, parameterBuffer)
             val signedQuote = quotingService.retrieveQuote(report)
             return signedQuote.buffer
-        }
-    }
-
-    /**
-     * Handler for servicing requests from the enclave for quoting info.
-     */
-    private inner class GetQuotingEnclaveInfoHandler : CallHandler {
-        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
-            return quotingService.initializeQuote().buffer
         }
     }
 

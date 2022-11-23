@@ -2,8 +2,10 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
+import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_PROPERTIES
+import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
@@ -144,7 +146,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             "generateEnclaveProperties",
             conclaveExtension
         ) {
-            it.enclavePropertiesFile.set(baseDirectory.resolve(PluginUtils.ENCLAVE_PROPERTIES).toFile())
+            it.enclavePropertiesFile.set(baseDirectory.resolve(ENCLAVE_PROPERTIES).toFile())
         }
 
         val enclaveFatJarTask = if (pythonSourcePath == null) {
@@ -167,7 +169,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         enclaveFatJarTask.from(generateEnclavePropertiesTask.enclavePropertiesFile) { copySpec ->
             enclaveFatJarTask.onEnclaveClassName { enclaveClassName ->
                 copySpec.into(enclaveClassName.substringBeforeLast('.').replace('.', '/'))
-                copySpec.rename { PluginUtils.ENCLAVE_PROPERTIES }
+                copySpec.rename { ENCLAVE_PROPERTIES }
             }
         }
 
@@ -196,8 +198,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         return target.createTask("generateGramineManifest$type", type) { task ->
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
+            task.productId.set(conclaveExtension.productID)
+            task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
-            task.manifestFile.set((gramineBuildDirectory / PluginUtils.GRAMINE_MANIFEST).toFile())
+            task.manifestFile.set((gramineBuildDirectory / GRAMINE_MANIFEST).toFile())
         }
     }
 
@@ -615,8 +619,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
                 task.rename {
                     val bundleName = when (runtimeType.get()) {
-                        GRAALVM -> PluginUtils.GRAALVM_BUNDLE_NAME
-                        GRAMINE -> PluginUtils.GRAMINE_BUNDLE_NAME
+                        GRAALVM -> GRAALVM_BUNDLE_NAME
+                        GRAMINE -> GRAMINE_BUNDLE_NAME
                         else -> throw IllegalArgumentException()
                     }
                     "$typeLowerCase-$bundleName"

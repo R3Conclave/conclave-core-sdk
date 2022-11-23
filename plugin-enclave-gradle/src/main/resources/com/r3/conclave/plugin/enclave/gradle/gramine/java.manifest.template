@@ -14,8 +14,10 @@ loader.log_level = "error"
 # TODO: remove this when in production, see: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#command-line-arguments
 loader.insecure__use_cmdline_argv = true
 
-# TODO: Enable DCAP attestation
-sgx.remote_attestation = "none"
+sgx.remote_attestation = "dcap"
+
+sgx.isvprodid = {{ isv_prod_id }}
+sgx.isvsvn    = {{ isv_svn }}
 
 # This sets an environment variables used by the dynamic loader
 {% if is_python_enclave == "true" %}
@@ -32,9 +34,9 @@ loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
 
 loader.env.CONCLAVE_ENCLAVE_MODE = "{{ enclave_mode }}"
 
-# In simulation mode, we need to provide the signing key measurement
-# TODO: Use this only in SIMULATION mode, once we have introduced attestation in Gramine
+{% if enclave_mode == "SIMULATION" %}
 loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
+{% endif %}
 
 # Number of call interface worker threads, this needs to be less than gramine_max_threads
 loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
