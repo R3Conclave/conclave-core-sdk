@@ -10,8 +10,10 @@ import com.r3.conclave.common.internal.KeyPolicy.MRENCLAVE
 import com.r3.conclave.common.internal.KeyPolicy.MRSIGNER
 import com.r3.conclave.common.internal.KeyPolicy.NOISVPRODID
 import com.r3.conclave.common.internal.SgxAttributes.flags
+import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
+import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.digest
@@ -101,6 +103,17 @@ class MockEnclaveEnvironment(
         body[SgxReportBody.isvSvn] = revocationLevel + 1
         body[attributes][flags] = SgxEnclaveFlags.DEBUG
         return report
+    }
+
+    override fun getSignedQuote(
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote> {
+        val report = createReport(Cursor.allocate(SgxTargetInfo), reportData)
+        val signedQuote = Cursor.wrap(SgxSignedQuote, ByteArray(SgxSignedQuote.minSize))
+        // We can populate the other fields as needed, but for now we just need to copy over the report body.
+        signedQuote[quote][reportBody] = report[body].read()
+        return signedQuote
     }
 
     override fun sealData(toBeSealed: PlaintextAndEnvelope): ByteArray {

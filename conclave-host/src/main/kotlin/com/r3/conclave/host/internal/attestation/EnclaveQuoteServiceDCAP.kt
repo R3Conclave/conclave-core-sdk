@@ -1,16 +1,24 @@
 package com.r3.conclave.host.internal.attestation
 
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.internal.Native
 import com.r3.conclave.host.internal.NativeLoader
 import java.nio.ByteBuffer
 
-class EnclaveQuoteServiceDCAP(val attestationParameters: AttestationParameters.DCAP): EnclaveQuoteService() {
+object EnclaveQuoteServiceDCAP : EnclaveQuoteService() {
+    
+    // In the context of signing the quote, targetInfo has always the same value.
+    //    It identifies the quoting enclave as the enclave that will verify
+    //    the report generated when signing the quote.
+    private val targetInfo = Cursor.allocate(SgxTargetInfo).also {
+        Native.initQuoteDCAP(
+            NativeLoader.libsPath.toString(),
+            true,
+            it.buffer.array()
+        )
+    }
 
-    override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
-        val targetInfo = Cursor.allocate(SgxTargetInfo)
-        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), targetInfo.buffer.array())
+    override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
         return targetInfo
     }
 
@@ -18,8 +26,7 @@ class EnclaveQuoteServiceDCAP(val attestationParameters: AttestationParameters.D
         val quoteBytes = ByteArray(Native.calcQuoteSizeDCAP())
         val getQuote = createSgxGetQuote(report)
         Native.getQuoteDCAP(getQuote.buffer.array(), quoteBytes)
-        val signedQuote = Cursor.wrap(SgxSignedQuote, quoteBytes)
-        return signedQuote
+        return Cursor.wrap(SgxSignedQuote, quoteBytes)
     }
 
     private fun createSgxGetQuote(report: ByteCursor<SgxReport>): Cursor<SgxGetQuote, ByteBuffer> {

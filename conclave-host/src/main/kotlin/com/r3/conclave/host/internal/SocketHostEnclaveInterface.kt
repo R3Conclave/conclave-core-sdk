@@ -11,7 +11,6 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.Semaphore
 
 /**
  * This class is a streaming socket based implementation of the [HostEnclaveInterface].
