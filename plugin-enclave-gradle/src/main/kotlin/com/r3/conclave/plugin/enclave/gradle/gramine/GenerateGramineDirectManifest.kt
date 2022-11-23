@@ -33,7 +33,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
     val isvProdId: Property<Int> = objects.property(Int::class.java)
 
     @get:Input
-    val isvSvn: Property<Int> = objects.property(Int::class.java)
+    val revocationLevel: Property<Int> = objects.property(Int::class.java)
 
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
@@ -83,7 +83,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "-Darch_libdir=/lib/$architecture",
             "-Dld_preload=$ldPreload",
             "-Disv_prod_id=${isvProdId.get()}",
-            "-Disv_svn=${isvSvn.get() + 1}",
+            "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dpython_packages_path=$pythonPackagesPath",
             "-Dis_python_enclave=${pythonEnclave.get()}",
             "-Denclave_mode=${buildType.name.uppercase()}",
