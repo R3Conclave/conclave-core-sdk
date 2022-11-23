@@ -124,7 +124,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             tag.get()
         ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
 
-        return commandWithOutput(*args.toTypedArray())
+        return commandWithOutput(*args.toTypedArray()).trimEnd()
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(

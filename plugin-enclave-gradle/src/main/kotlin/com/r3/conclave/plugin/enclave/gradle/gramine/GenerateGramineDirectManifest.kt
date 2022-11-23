@@ -62,13 +62,6 @@ open class GenerateGramineDirectManifest @Inject constructor(
         //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
         val gramineMaxThreads = enclaveWorkerThreadCount * 2
 
-        // These values are the same inside and outside the conclave-build container
-        val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
-        val ldPreload = executePython(
-            "from sysconfig import get_config_var; " +
-                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
-        )
-
         /**
          * In case of Python enclaves, we need to build them outside the conclave-build container.
          * This is because Jep is installed in a user space, not a system space and will therefore produce different
@@ -76,6 +69,11 @@ open class GenerateGramineDirectManifest @Inject constructor(
          * All other enclaves are built in the container.
          */
         if (pythonEnclave.get()) {
+            val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
+            val ldPreload = executePython(
+                "from sysconfig import get_config_var; " +
+                        "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+            )
             // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
             // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
             // incorrect then we'll need to come up with a better solution.
@@ -102,6 +100,15 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 )
             )
         } else {
+            // We want to call gcc and python from inside the container.
+             val architecture = linuxExec.execWithOutput(listOf("gcc", "-dumpmachine"))
+            val ldPreload = linuxExec.execWithOutput(
+                listOf(
+                    "python3", "-c",
+                    "from sysconfig import get_config_var; " +
+                            "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+                )
+            )
             // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
             // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
             // incorrect then we'll need to come up with a better solution.
