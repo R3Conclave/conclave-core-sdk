@@ -6,16 +6,14 @@ import com.r3.conclave.host.internal.NativeLoader
 import java.nio.ByteBuffer
 
 //  TODO: fix the abstraction related to the usage of this class and then remove it, as it doesn't do much.
-class EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
+object EnclaveQuoteServiceGramineDCAP : EnclaveQuoteService() {
 
-    companion object {
-        // Gramine does not need to use this target info as this is automatically retrieved when signing the quote
-        val targetInfo = Cursor.allocate(SgxTargetInfo).also {
-            //  When using Gramine, we do not need to load (dlsym) all the quoting libraries,
-            //    hence we pass a false bool value to avoid loading them.
-            //  TODO: Remove the unnecessary passing of the byte array once we have improved Native.initQuoteDCAP
-            Native.initQuoteDCAP(NativeLoader.libsPath.toString(), false, it.buffer.array())
-        }
+    // Gramine does not need to use this target info as this is automatically retrieved when signing the quote
+    private val targetInfo = Cursor.allocate(SgxTargetInfo).also {
+        //  When using Gramine, we do not need to load (dlsym) all the quoting libraries,
+        //    hence we pass a false bool value to avoid loading them.
+        //  TODO: Remove the unnecessary passing of the byte array once we have improved Native.initQuoteDCAP
+        Native.initQuoteDCAP(NativeLoader.libsPath.toString(), false, it.buffer.array())
     }
 
     override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {

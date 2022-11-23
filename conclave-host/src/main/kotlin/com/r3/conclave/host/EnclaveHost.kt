@@ -466,7 +466,7 @@ class EnclaveHost private constructor(
             is AttestationParameters.DCAP -> if (enclaveHandle is NativeEnclaveHandle) {
                 EnclaveQuoteServiceDCAP()
             } else {
-                EnclaveQuoteServiceGramineDCAP()
+                EnclaveQuoteServiceGramineDCAP
             }
 
             null -> EnclaveQuoteServiceMock

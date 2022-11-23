@@ -88,6 +88,7 @@ class GramineSGXEnclaveEnvironment(
         //  TODO: Gramine filesystem support
     }
 
+    @Synchronized
     private fun retrieveReport(targetInfoBytes: ByteArray?, userReportDataBytes: ByteArray?): ByteArray {
         if (targetInfoBytes != null) {
             writeTargetInfo(targetInfoBytes)
