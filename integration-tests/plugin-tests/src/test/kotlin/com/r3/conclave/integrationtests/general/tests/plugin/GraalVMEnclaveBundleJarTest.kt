@@ -59,6 +59,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
 
         assertEnclaveMetadata(expectedMrsigner = dummyMrsigner, expectedProductID = 11, expectedRevocationLevel = 12)
 
+        println("Changing the productID and revocationLevel ...")
         // Then modify the productID, which will invoke native-image for the second and final time for this test
         updateBuildFile("productID = 11", "productID = 12")
         updateBuildFile("revocationLevel = 12", "revocationLevel = 20")
@@ -68,6 +69,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         // Capture the modified time of the unsigned enclave file and make sure from now on it doesn't get rebuilt.
         originalUnsignedEnclaveModifiedTime = unsignedEnclave.getLastModifiedTime()
 
+        println("Deleting the output signed enclave file ...")
         // Delete the signed enclave file and make sure it's reproducible
         val bundleJarContentsUsingDummySigner = output.readBytes()
         output.deleteExisting()
@@ -79,6 +81,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         val userSigningKey = Files.createTempFile(buildDir, "userSigningKey", null).also(TestUtils::generateSigningKey)
         val userMrsigner = calculateMrsigner(readSigningKey(userSigningKey))
 
+        println("Using 'privateKey' signing ...")
         // Insert the config block for the current enclave mode and switch to the 'privateKey' signing type.
         val enclaveModeBlock = """${enclaveMode.name.lowercase()} {
                 |   signingType = privateKey
@@ -89,6 +92,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         assertEnclaveMetadata(expectedMrsigner = userMrsigner, expectedProductID = 12, expectedRevocationLevel = 20)
         assertUnsignedEnclaveHasntChanged()
 
+        println("Using 'dummyKey' signing ...")
         // Switch back to using the dummy key but this time make it explicit in the config.
         updateBuildFile("signingType = privateKey", "signingType = dummyKey")
         runTaskAndAssertItsIncremental()
@@ -96,6 +100,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         assertEnclaveMetadata(expectedMrsigner = dummyMrsigner, expectedProductID = 12, expectedRevocationLevel = 20)
         assertUnsignedEnclaveHasntChanged()
 
+        println("Using 'externalKey' signing ...")
         // Now use 'externalKey' signing and sign the enclave manually
         updateBuildFile("signingType = dummyKey", "signingType = externalKey")
 

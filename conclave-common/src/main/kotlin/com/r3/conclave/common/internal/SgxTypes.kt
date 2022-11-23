@@ -1,5 +1,7 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.SgxMetadataCssKey.modulus
 import com.r3.conclave.common.internal.SgxQeCertData.data
 import com.r3.conclave.common.internal.SgxQeCertData.type
 import com.r3.conclave.common.internal.SgxQuote.signType
@@ -663,6 +665,8 @@ object SgxMetadataCssKey : Struct() {
     @JvmField
     val signature = field(FixedBytes(SE_KEY_SIZE))
 }
+
+val ByteCursor<SgxMetadataCssKey>.mrsigner: SHA256Hash get() = SHA256Hash.hash(this[modulus].bytes)
 
 object SgxMetadataCssBody : Struct() {
     @JvmField
