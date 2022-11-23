@@ -41,6 +41,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 conclaveBuildDir
             )
         } catch (e: Exception) {
+            logger.info("Docker build of conclave-build failed.", e)
             throw GradleException(
                 "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
                         + "Please install Docker and rerun your build. "
