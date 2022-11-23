@@ -101,7 +101,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
             )
         } else {
             // We want to call gcc and python from inside the container.
-             val architecture = linuxExec.execWithOutput(listOf("gcc", "-dumpmachine"))
+            val architecture = linuxExec.execWithOutput(listOf("gcc", "-dumpmachine"))
             val ldPreload = linuxExec.execWithOutput(
                 listOf(
                     "python3", "-c",
@@ -136,8 +136,6 @@ open class GenerateGramineDirectManifest @Inject constructor(
             )
         }
     }
-
-    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
 
     /**
      * Compute the mrsigner value from a provided .pem file containing a 3072 bit RSA key.
@@ -175,4 +173,6 @@ open class GenerateGramineDirectManifest @Inject constructor(
             update(modulusBytes, 0, 384)    // Ignore the empty sign byte.
         }
     }
+
+    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
 }

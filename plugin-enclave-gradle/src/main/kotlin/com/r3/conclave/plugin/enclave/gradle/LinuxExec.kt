@@ -48,7 +48,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                         + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
             )
         }
-
     }
 
     /**
@@ -113,6 +112,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         return null
     }
 
+    /** Returns the output of the command executed in the container. */
     fun execWithOutput(params: List<String>): String {
         val args: List<String> = listOf(
             "docker",
