@@ -49,7 +49,7 @@ class GramineDirectEnclaveEnvironment(
     }
 
     override fun getSignedQuote(
-        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
+        targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         val report = createReport(null, reportData)

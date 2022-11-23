@@ -106,7 +106,7 @@ class MockEnclaveEnvironment(
     }
 
     override fun getSignedQuote(
-        quotingEnclaveInfo: ByteCursor<SgxTargetInfo>?,
+        targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxSignedQuote> {
         val report = createReport(Cursor.allocate(SgxTargetInfo), reportData)
