@@ -12,6 +12,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
+import kotlin.io.path.div
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:Input

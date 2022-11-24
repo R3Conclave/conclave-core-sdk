@@ -16,7 +16,7 @@ interface TaskTest {
     val projectDir: Path
 
     val projectName: String get() = projectDir.name
-    val buildFile: Path get() = projectDir / "build.gradle"
+    val buildGradleFile: Path get() = projectDir / "build.gradle"
     val buildDir: Path get() = projectDir / "build"
     val conclaveBuildDir: Path get() = buildDir / "conclave"
     val enclaveModeBuildDir: Path get() = conclaveBuildDir / TestUtils.enclaveMode.name.lowercase()

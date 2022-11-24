@@ -1,6 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.extension.EnclaveModeExtension
+import com.r3.conclave.plugin.enclave.gradle.extension.EnclaveExtension
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
@@ -13,7 +13,7 @@ import kotlin.io.path.absolutePathString
 open class SignEnclaveWithKey @Inject constructor(
     objects: ObjectFactory,
     private val plugin: GradleEnclavePlugin,
-    private val enclaveModeExtension: EnclaveModeExtension,
+    private val enclaveExtension: EnclaveExtension,
     private val buildType: BuildType,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
@@ -33,7 +33,7 @@ open class SignEnclaveWithKey @Inject constructor(
     val signedEnclavePath: String get() = outputSignedEnclave.asFile.get().absolutePath
 
     override fun action() {
-        if (enclaveModeExtension.signingType.get() == SigningType.DummyKey && buildType == BuildType.Release) {
+        if (enclaveExtension.signingType.get() == SigningType.DummyKey && buildType == BuildType.Release) {
             // Using 'quiet' logging type for 'Important information messages'.
             // See https://docs.gradle.org/current/userguide/logging.html.
             project.logger.quiet("A signingType of dummyKey has been specified for a release enclave. " +

@@ -42,10 +42,7 @@ import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
 import java.util.stream.Collectors.toList
 import javax.inject.Inject
-import kotlin.io.path.exists
-import kotlin.io.path.getPosixFilePermissions
-import kotlin.io.path.name
-import kotlin.io.path.setPosixFilePermissions
+import kotlin.io.path.*
 
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {

@@ -116,9 +116,6 @@ object TestUtils {
      * Extract the enclave metadata from the given signed .so file.
      */
     fun getEnclaveMetadata(enclaveFile: Path): ByteCursor<SgxMetadataEnclaveCss> {
-        // Get the location of the sgx_sign tool directly from the Gradle resources directory. This only works
-        // because the integration tests are not run via jars. If they were then we'd need to copy the tool into a
-        // temp file.
         val cssFile = Files.createTempFile("enclave-css", null)
         execCommand(
             sgxSignTool.absolutePathString(), "dump",

@@ -20,7 +20,7 @@ class GenerateEnclavePropertiesTest : AbstractTaskTest() {
     fun `required config in enclave properties`(name: String, currentValue: String, newValue: String) {
         assertTaskIsIncremental {
             assertThat(enclaveProperties()).containsEntry(name, currentValue)
-            updateBuildFile("$name = $currentValue", "$name = $newValue")
+            updateGradleBuildFile("$name = $currentValue", "$name = $newValue")
         }
         assertThat(enclaveProperties()).containsEntry(name, newValue)
     }
@@ -30,10 +30,10 @@ class GenerateEnclavePropertiesTest : AbstractTaskTest() {
         "enablePersistentMap, false, true"
     )
     fun `simple optional config in enclave properties`(name: String, defaultValue: String, newValue: String) {
-        assertThat(buildFile).content().doesNotContain(name)
+        assertThat(buildGradleFile).content().doesNotContain(name)
         assertTaskIsIncremental {
             assertThat(enclaveProperties()).containsEntry(name, defaultValue)
-            updateBuildFile("conclave {\n", "conclave {\n$name = $newValue\n")
+            updateGradleBuildFile("conclave {\n", "conclave {\n$name = $newValue\n")
         }
         assertThat(enclaveProperties()).containsEntry(name, newValue)
     }
@@ -46,10 +46,10 @@ class GenerateEnclavePropertiesTest : AbstractTaskTest() {
     )
     fun `optional size bytes config in enclave properties`(name: String, defaultRawValue: String, newBytesValue: String,
                                                            newRawValue: String) {
-        assertThat(buildFile).content().doesNotContain(name)
+        assertThat(buildGradleFile).content().doesNotContain(name)
         assertTaskIsIncremental {
             assertThat(enclaveProperties()).containsEntry(name, defaultRawValue)
-            updateBuildFile("conclave {\n", "conclave {\n$name = \"$newBytesValue\"\n")
+            updateGradleBuildFile("conclave {\n", "conclave {\n$name = \"$newBytesValue\"\n")
         }
         assertThat(enclaveProperties()).containsEntry(name, newRawValue)
     }

@@ -62,7 +62,7 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
     fun `changing enclave config`() {
         assertTaskIsIncremental {
             // TODO Change this to check for product ID once it's wired up since it's a 1:1 mapping
-            updateBuildFile("conclave {\n", "conclave {\nmaxThreads = 12\n")
+            updateGradleBuildFile("conclave {\n", "conclave {\nmaxThreads = 12\n")
         }
         ZipFile(output.toFile()).use { zip ->
             zip.assertEntryContents("java.manifest") {

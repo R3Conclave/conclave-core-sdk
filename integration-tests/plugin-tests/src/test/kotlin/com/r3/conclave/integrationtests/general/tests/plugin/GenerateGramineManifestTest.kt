@@ -34,7 +34,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     fun productID() {
         assertTaskIsIncremental {
             assertThat(manifest().getLong("sgx.isvprodid")).isEqualTo(11)
-            updateBuildFile("productID = 11", "productID = 111")
+            updateGradleBuildFile("productID = 11", "productID = 111")
         }
         assertThat(manifest().getLong("sgx.isvprodid")).isEqualTo(111)
     }
@@ -43,17 +43,17 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     fun revocationLevel() {
         assertTaskIsIncremental {
             assertThat(manifest().getLong("sgx.isvsvn")).isEqualTo(13)
-            updateBuildFile("revocationLevel = 12", "revocationLevel = 121")
+            updateGradleBuildFile("revocationLevel = 12", "revocationLevel = 121")
         }
         assertThat(manifest().getLong("sgx.isvsvn")).isEqualTo(122)
     }
 
     @Test
     fun maxThreads() {
-        assertThat(buildFile).content().doesNotContain("maxThreads")
+        assertThat(buildGradleFile).content().doesNotContain("maxThreads")
         assertTaskIsIncremental {
             assertThat(manifest().getLong("sgx.thread_num")).isEqualTo(20)  // maxThreads * 2
-            updateBuildFile("conclave {\n", "conclave {\nmaxThreads = 12\n")
+            updateGradleBuildFile("conclave {\n", "conclave {\nmaxThreads = 12\n")
         }
         assertThat(manifest().getLong("sgx.thread_num")).isEqualTo(24)
     }
@@ -64,7 +64,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
         simulationOnlyTest()
 
         // The signingKey config is specified in the enclaveMode block
-        assertThat(buildFile).content().doesNotContain("${enclaveMode.name.lowercase()} {")
+        assertThat(buildGradleFile).content().doesNotContain("${enclaveMode.name.lowercase()} {")
         assertThat(dummyKeyFile).doesNotExist()
 
         val signingKeyFile = assertTaskIsIncremental {
@@ -85,7 +85,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
                 |   signingType = $signingType
                 |   $signingKeyConfig
                 |}""".trimMargin()
-            updateBuildFile("conclave {\n", "conclave {\n$enclaveModeBlock\n")
+            updateGradleBuildFile("conclave {\n", "conclave {\n$enclaveModeBlock\n")
 
             signingKeyFile
         }

@@ -70,8 +70,8 @@ abstract class AbstractTaskTest : TaskTest {
         pythonScript.writeText(enclaveCode)
     }
 
-    fun updateBuildFile(oldValue: String, newValue: String) {
-        buildFile.searchAndReplace(oldValue, newValue)
+    fun updateGradleBuildFile(oldValue: String, newValue: String) {
+        buildGradleFile.searchAndReplace(oldValue, newValue)
     }
 
     fun Path.searchAndReplace(oldValue: String, newValue: String) {

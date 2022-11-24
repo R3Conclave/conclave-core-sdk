@@ -9,7 +9,7 @@ import org.gradle.api.provider.Property
 import java.util.*
 import javax.inject.Inject
 
-open class EnclaveModeExtension @Inject constructor(
+open class EnclaveExtension @Inject constructor(
     objects: ObjectFactory,
     projectLayout: ProjectLayout,
     type: BuildType

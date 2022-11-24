@@ -118,10 +118,8 @@ open class GenerateEnclaveProperties @Inject constructor(
     }
 
     override fun action() {
-        println("Inputs:")
-        inputs.properties.forEach { println(it) }
-        println()
-
+        // TODO Use inputs.properties to enumerate all property values and automatically dump them into the
+        //  properties file
         val properties = TreeMap<String, String>()
 
         properties["productID"] = productID.get().toString()

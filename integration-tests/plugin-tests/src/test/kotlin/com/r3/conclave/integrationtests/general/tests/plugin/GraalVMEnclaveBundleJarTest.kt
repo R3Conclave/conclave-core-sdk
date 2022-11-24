@@ -82,7 +82,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         expectedMrsigner: SHA256Hash
     ) {
         // Switch back to using the dummy key but this time make it explicit in the config.
-        updateBuildFile("signingType = privateKey", "signingType = dummyKey")
+        updateGradleBuildFile("signingType = privateKey", "signingType = dummyKey")
         runTaskAndAssertItsIncremental()
         assertThat(output).hasBinaryContent(bundleJarContentsUsingDummySigner)
         assertSignedEnclave(expectedMrsigner = expectedMrsigner, expectedProductID = 12, expectedRevocationLevel = 20)
@@ -100,7 +100,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
                     |   signingType = privateKey
                     |   signingKey = file('$userSigningKey')
                     |}""".trimMargin()
-        updateBuildFile("conclave {\n", "conclave {\n$enclaveModeBlock\n")
+        updateGradleBuildFile("conclave {\n", "conclave {\n$enclaveModeBlock\n")
         runTaskAndAssertItsIncremental()
         assertSignedEnclave(expectedMrsigner = userMrsigner, expectedProductID = 12, expectedRevocationLevel = 20)
         assertUnsignedEnclaveHasntChanged()
@@ -119,8 +119,8 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
 
     // Modify the productID, which will invoke native-image for the second and final time for this test
     private fun testChangingEnclaveConfig(expectedMrsigner: SHA256Hash) {
-        updateBuildFile("productID = 11", "productID = 12")
-        updateBuildFile("revocationLevel = 12", "revocationLevel = 20")
+        updateGradleBuildFile("productID = 11", "productID = 12")
+        updateGradleBuildFile("revocationLevel = 12", "revocationLevel = 20")
         runTaskAndAssertItsIncremental()
         assertSignedEnclave(expectedMrsigner = expectedMrsigner, expectedProductID = 12, expectedRevocationLevel = 20)
     }
@@ -141,7 +141,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         )
 
         // Now use 'externalKey' signing and sign the enclave manually
-        updateBuildFile(
+        updateGradleBuildFile(
             "signingType = dummyKey",
             """signingType = externalKey
                signatureDate = new Date(1970, 0, 1)
@@ -151,7 +151,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         )
 
         // First generate the signing material and expect the default output location to be used
-        val defaultSigningMaterialFile = buildDir / enclaveMode.name.lowercase() / "signing_material.bin"
+        val defaultSigningMaterialFile = buildDir / "enclave" / enclaveMode.name.lowercase() / "signing_material.bin"
         assertThat(defaultSigningMaterialFile).doesNotExist()
         runTaskAndAssertItsIncremental("generateEnclaveSigningMaterial$capitalisedMode")
         assertThat(defaultSigningMaterialFile).exists()
@@ -161,7 +161,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
         println("Using user provided location for signing material output...")
         val signingMaterialFile = Files.createTempFile(buildDir, "signing_material", ".bin")
         // Insert signingMaterial config
-        updateBuildFile(
+        updateGradleBuildFile(
             "signingType = externalKey",
             "signingType = externalKey\nsigningMaterial = file('$signingMaterialFile')\n"
         )
