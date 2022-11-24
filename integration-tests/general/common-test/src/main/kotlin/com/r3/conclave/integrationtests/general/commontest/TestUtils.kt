@@ -130,7 +130,7 @@ object TestUtils {
         return Cursor.wrap(SgxMetadataEnclaveCss.INSTANCE, cssFile.readBytes())
     }
 
-    private fun execCommand(vararg command: String) {
+    fun execCommand(vararg command: String) {
         val exitCode = ProcessBuilder()
             .command(command.asList())
             .inheritIO()

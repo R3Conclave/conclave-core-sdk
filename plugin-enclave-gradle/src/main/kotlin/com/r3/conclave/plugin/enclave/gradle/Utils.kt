@@ -7,7 +7,7 @@ import java.nio.file.Path
 fun ObjectFactory.stringProperty(): Property<String> = property(String::class.java)
 fun ObjectFactory.intProperty(): Property<Int> = property(Int::class.java)
 fun ObjectFactory.booleanProperty(): Property<Boolean> = property(Boolean::class.java)
-inline fun <reified T> ObjectFactory.newInstance(): T = newInstance(T::class.java)
+inline fun <reified T> ObjectFactory.newInstance(vararg parameters: Any): T = newInstance(T::class.java, *parameters)
 
 fun String.toSizeBytes(): Long {
     return when {

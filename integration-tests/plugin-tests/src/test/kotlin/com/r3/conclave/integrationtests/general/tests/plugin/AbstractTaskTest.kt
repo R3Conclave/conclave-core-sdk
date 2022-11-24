@@ -4,7 +4,8 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
-import org.gradle.testkit.runner.TaskOutcome
+import org.gradle.testkit.runner.TaskOutcome.SUCCESS
+import org.gradle.testkit.runner.TaskOutcome.UP_TO_DATE
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -53,7 +54,7 @@ abstract class AbstractTaskTest : TaskTest {
         }
         assertThat(output).exists()
         if (originalContent != null) {
-            assertThat(output).hasBinaryContent(originalContent)
+            assertThat(output).describedAs("reproducibility").hasBinaryContent(originalContent)
         }
     }
 
@@ -76,19 +77,19 @@ abstract class AbstractTaskTest : TaskTest {
     fun Path.searchAndReplace(oldValue: String, newValue: String) {
         val oldText = readText()
         val newText = oldText.replace(oldValue, newValue)
-        require(newText != oldText) { "'$oldValue' does not exist in $this" }
+        require(newText != oldText) { "'$oldValue' does not exist in $this:\n$oldText" }
         writeText(newText)
     }
 
-    fun runTask(): BuildTask {
+    fun runTask(taskName: String = this.taskName): BuildTask {
         val runner = gradleRunner(taskName, projectDir)
         val buildResult = runner.build()
         return buildResult.task(":$taskName")!!
     }
 
-    fun runTaskAndAssertItsIncremental() {
-        assertThat(runTask().outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(runTask().outcome).isEqualTo(TaskOutcome.UP_TO_DATE)
+    fun runTaskAndAssertItsIncremental(taskName: String = this.taskName) {
+        assertThat(runTask(taskName).outcome).describedAs("first run of %s", taskName).isEqualTo(SUCCESS)
+        assertThat(runTask(taskName).outcome).describedAs("second run of %s", taskName).isEqualTo(UP_TO_DATE)
     }
 
     /**

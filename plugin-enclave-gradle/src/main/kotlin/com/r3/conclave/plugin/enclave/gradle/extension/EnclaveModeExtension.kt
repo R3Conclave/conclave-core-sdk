@@ -1,13 +1,19 @@
 package com.r3.conclave.plugin.enclave.gradle.extension
 
+import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.SigningType
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import java.util.*
 import javax.inject.Inject
 
-open class EnclaveModeExtension @Inject constructor(objects: ObjectFactory) {
+open class EnclaveModeExtension @Inject constructor(
+    objects: ObjectFactory,
+    projectLayout: ProjectLayout,
+    type: BuildType
+) {
     // Define constants to make it easier for the configurer to select a signing type
     @Suppress("unused")
     val dummyKey = SigningType.DummyKey
@@ -20,6 +26,8 @@ open class EnclaveModeExtension @Inject constructor(objects: ObjectFactory) {
     val mrsignerPublicKey: RegularFileProperty = objects.fileProperty()
     val mrsignerSignature: RegularFileProperty = objects.fileProperty()
     val signatureDate: Property<Date> = objects.property(Date::class.java)
-    val signingMaterial: RegularFileProperty = objects.fileProperty()
+    val signingMaterial: RegularFileProperty = objects.fileProperty().convention(
+        projectLayout.buildDirectory.file("enclave/${type.name.lowercase()}/signing_material.bin")
+    )
     val signingKey: RegularFileProperty = objects.fileProperty()
 }

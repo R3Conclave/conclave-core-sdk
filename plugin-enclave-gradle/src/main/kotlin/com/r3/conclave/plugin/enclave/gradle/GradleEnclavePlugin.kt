@@ -440,11 +440,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             // GraalVM related tasks
 
-            // Set the default signing material location as an absolute path because if the
-            // user overrides it they will use a project relative (rather than build directory
-            // relative) path name.
-            enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
-
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>(
                 "buildUnsignedGraalEnclave$type",
                 this,
@@ -512,11 +507,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             ) { task ->
                 task.description = "Generate standalone signing material for a $type mode enclave that can be used " +
                         "with an external signing source."
-                task.inputs.files(
-                    buildUnsignedEnclaveTask.outputEnclave,
-                    generateEnclaveConfigTask.outputConfigFile,
-                    enclaveExtension.signingMaterial
-                )
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)

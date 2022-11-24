@@ -1,9 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle.extension
 
-import com.r3.conclave.plugin.enclave.gradle.booleanProperty
-import com.r3.conclave.plugin.enclave.gradle.intProperty
-import com.r3.conclave.plugin.enclave.gradle.newInstance
-import com.r3.conclave.plugin.enclave.gradle.stringProperty
+import com.r3.conclave.plugin.enclave.gradle.*
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
@@ -21,9 +18,9 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val persistentFileSystemSize: Property<String> = objects.stringProperty().convention("0")
     val maxThreads: Property<Int> = objects.intProperty().convention(10)
     val deadlockTimeout: Property<Int> = objects.intProperty().convention(10)
-    val release: EnclaveModeExtension = objects.newInstance()
-    val debug: EnclaveModeExtension = objects.newInstance()
-    val simulation: EnclaveModeExtension = objects.newInstance()
+    val release: EnclaveModeExtension = objects.newInstance(BuildType.Release)
+    val debug: EnclaveModeExtension = objects.newInstance(BuildType.Debug)
+    val simulation: EnclaveModeExtension = objects.newInstance(BuildType.Simulation)
 
     val supportLanguages: Property<String> = objects.stringProperty().convention("")
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
