@@ -15,7 +15,6 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
 import java.security.MessageDigest
@@ -113,9 +112,9 @@ object TestUtils {
     }
 
     /**
-     * Extract the enclave metadata from the given signed .so file.
+     * Extract the enclave SIGSTRUCT from the given signed .so file.
      */
-    fun getEnclaveMetadata(enclaveFile: Path): ByteCursor<SgxMetadataEnclaveCss> {
+    fun getEnclaveSigstruct(enclaveFile: Path): ByteCursor<SgxMetadataEnclaveCss> {
         val cssFile = Files.createTempFile("enclave-css", null)
         execCommand(
             sgxSignTool.absolutePathString(), "dump",

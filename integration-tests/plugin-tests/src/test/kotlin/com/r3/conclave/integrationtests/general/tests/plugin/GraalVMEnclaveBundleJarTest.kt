@@ -11,7 +11,7 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntry
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.execCommand
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.getEnclaveMetadata
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.getEnclaveSigstruct
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readSigningKey
 import org.assertj.core.api.Assertions.assertThat
@@ -187,10 +187,10 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
 
     private fun assertSignedEnclave(expectedMrsigner: SHA256Hash, expectedProductID: Int, expectedRevocationLevel: Int) {
         checkBundleJarContents()
-        val enclaveMetadata = getEnclaveMetadata(signedEnclave)
-        assertThat(enclaveMetadata[body][IsvProdId].read()).isEqualTo(expectedProductID)
-        assertThat(enclaveMetadata[body][IsvSvn].read()).isEqualTo(expectedRevocationLevel + 1)
-        assertThat(SgxTypesKt.getMrsigner(enclaveMetadata[key])).isEqualTo(expectedMrsigner)
+        val sigstruct = getEnclaveSigstruct(signedEnclave)
+        assertThat(sigstruct[body][IsvProdId].read()).isEqualTo(expectedProducxtID)
+        assertThat(sigstruct[body][IsvSvn].read()).isEqualTo(expectedRevocationLevel + 1)
+        assertThat(SgxTypesKt.getMrsigner(sigstruct[key])).isEqualTo(expectedMrsigner)
     }
 
     private fun assertUnsignedEnclaveHasntChanged() {

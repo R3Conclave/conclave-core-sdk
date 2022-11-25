@@ -705,6 +705,9 @@ object SgxMetadataCssBuffer : Struct() {
     val q2 = field(FixedBytes(SE_KEY_SIZE))
 }
 
+/**
+ * This is also known as the `SIGSTRUCT`.
+ */
 object SgxMetadataEnclaveCss : Struct() {
     @JvmField
     val header = field(SgxMetadataCssHeader)

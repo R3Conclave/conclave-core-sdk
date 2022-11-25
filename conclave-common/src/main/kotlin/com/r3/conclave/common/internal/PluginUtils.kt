@@ -9,6 +9,7 @@ object PluginUtils {
     const val GRAMINE_MANIFEST = "java.manifest"
     const val GRAMINE_SGX_MANIFEST = "java.manifest.sgx"
     const val GRAMINE_SGX_TOKEN = "java.token"
-    const val GRAMINE_SIG = "java.sig"
+    /** This contains the enclave's [SgxMetadataEnclaveCss], also known as the `SIGSTRUCT`. */
+    const val GRAMINE_SIGSTRUCT = "java.sig"
     const val PYTHON_FILE = "enclave.py"
 }
