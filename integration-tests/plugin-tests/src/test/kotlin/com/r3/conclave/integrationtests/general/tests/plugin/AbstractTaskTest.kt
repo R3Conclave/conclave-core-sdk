@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.utilities.internal.UtilsKt.digest
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
@@ -16,7 +17,6 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.*
-import kotlin.streams.asSequence
 
 abstract class AbstractTaskTest : TaskTest {
     @field:TempDir
@@ -43,18 +43,18 @@ abstract class AbstractTaskTest : TaskTest {
     fun `check task is incremental on output deletion and check reproducibility`() {
         assumeTrue(runDeletionAndReproducibilityTest)
         assertThat(output).doesNotExist()
-        val originalContent: Map<Path, ByteArray>? = assertTaskIsIncremental {
+        val original: Map<Path, ByteArray>? = assertTaskIsIncremental {
             assertThat(output).exists()
-            val map = if (isReproducible) getAllOutputFiles().associateWith { it.readBytes() } else null
+            val map = if (isReproducible) getAllOutputFiles().associateWith { digest(it, "SHA-256") } else null
             output.toFile().deleteRecursively()
             map
         }
         assertThat(output).exists()
-        if (originalContent != null) {
+        if (original != null) {
             val currentFiles = getAllOutputFiles()
-            assertThat(currentFiles).containsOnlyOnceElementsOf(originalContent.keys)
+            assertThat(currentFiles).containsOnlyOnceElementsOf(original.keys)
             for (file in currentFiles) {
-                assertThat(file).hasBinaryContent(originalContent[file])
+                assertThat(file).hasDigest("SHA-256", original[file])
             }
         }
     }

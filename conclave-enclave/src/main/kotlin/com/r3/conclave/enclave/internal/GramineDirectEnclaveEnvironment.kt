@@ -5,7 +5,6 @@ import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.utilities.internal.digest
 import java.nio.ByteBuffer
-import java.security.MessageDigest
 
 /**
  * This class is the enclave environment intended for use with gramine-direct.
@@ -87,20 +86,9 @@ class GramineDirectEnclaveEnvironment(
     }
 
     private val simulationMrEnclave: ByteArray by lazy {
-        val digest = MessageDigest.getInstance("SHA-256")
-
-        val buffer = ByteArray(65536)
-        var bytesRead: Int
-
         enclaveClass.protectionDomain.codeSource.location.openStream().use {
-            bytesRead = it.read(buffer)
-            while (bytesRead >= 0) {
-                digest.update(buffer, 0, bytesRead)
-                bytesRead = it.read(buffer)
-            }
+            it.digest("SHA-256")
         }
-
-        digest.digest()
     }
 
     private val aesSealingKey by lazy(LazyThreadSafetyMode.NONE) {

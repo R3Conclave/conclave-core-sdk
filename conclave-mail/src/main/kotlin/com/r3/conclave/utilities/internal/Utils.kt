@@ -13,6 +13,7 @@ import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import kotlin.io.path.createDirectories
+import kotlin.io.path.inputStream
 
 private val hexCode = "0123456789ABCDEF".toCharArray()
 
@@ -56,6 +57,19 @@ fun parseHex(str: String): ByteArray {
 inline fun digest(algorithm: String, block: MessageDigest.() -> Unit): ByteArray {
     val messageDigest = MessageDigest.getInstance(algorithm)
     block(messageDigest)
+    return messageDigest.digest()
+}
+
+fun Path.digest(algorithm: String): ByteArray = inputStream().use { it.digest(algorithm) }
+
+fun InputStream.digest(algorithm: String): ByteArray {
+    val messageDigest = MessageDigest.getInstance(algorithm)
+    val buffer = ByteArray(4096)
+    while (true) {
+        val n = read(buffer)
+        if (n < 0) break
+        messageDigest.update(buffer, 0, n)
+    }
     return messageDigest.digest()
 }
 
