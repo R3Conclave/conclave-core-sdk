@@ -1,5 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -15,12 +17,13 @@ class ShadowJarTest : AbstractTaskTest() {
     fun `contents of jar`() {
         runTask()
         JarFile(output.toFile()).use { jar ->
-            assertThat(jar.getJarEntry("com/test/enclave/TestEnclave.class")).isNotNull
-            val enclaveProperties = jar.getInputStream(jar.getJarEntry("com/test/enclave/enclave.properties")).use {
-                Properties().apply { load(it) }
+            jar.assertEntryExists("com/test/enclave/TestEnclave.class")
+            jar.assertEntryContents("com/test/enclave/enclave.properties") {
+                val enclaveProperties = Properties().apply { load(it) }
+                assertThat(enclaveProperties)
+                    .containsEntry("productID", "11")
+                    .containsEntry("revocationLevel", "12")
             }
-            assertThat(enclaveProperties).containsEntry("productID", "11")
-            assertThat(enclaveProperties).containsEntry("revocationLevel", "12")
         }
     }
 }

@@ -16,7 +16,7 @@ class GramineEnclaveBundleJarTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             gramineOnlyTest()
         }
     }
@@ -39,8 +39,6 @@ class GramineEnclaveBundleJarTest : AbstractTaskTest() {
         }
         assertJarContents("com.test.enclave.TestEnclave2")
     }
-
-    // TODO debug signing
 
     private fun assertJarContents(enclaveClassName: String) {
         JarFile(output.toFile()).use { bundleJar ->

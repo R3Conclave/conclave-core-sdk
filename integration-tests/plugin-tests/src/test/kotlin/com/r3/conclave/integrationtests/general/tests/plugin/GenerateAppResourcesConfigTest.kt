@@ -15,7 +15,7 @@ class GenerateAppResourcesConfigTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             graalvmOnlyTest()
         }
     }

@@ -33,7 +33,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
     companion object {
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             graalvmOnlyTest()
         }
     }
@@ -188,7 +188,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest(), TestWithSigning {
     private fun assertSignedEnclave(expectedMrsigner: SHA256Hash, expectedProductID: Int, expectedRevocationLevel: Int) {
         checkBundleJarContents()
         val sigstruct = getEnclaveSigstruct(signedEnclave)
-        assertThat(sigstruct[body][IsvProdId].read()).isEqualTo(expectedProducxtID)
+        assertThat(sigstruct[body][IsvProdId].read()).isEqualTo(expectedProductID)
         assertThat(sigstruct[body][IsvSvn].read()).isEqualTo(expectedRevocationLevel + 1)
         assertThat(SgxTypesKt.getMrsigner(sigstruct[key])).isEqualTo(expectedMrsigner)
     }

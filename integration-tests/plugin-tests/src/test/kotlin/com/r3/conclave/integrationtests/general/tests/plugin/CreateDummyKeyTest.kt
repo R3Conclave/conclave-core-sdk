@@ -1,16 +1,14 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
-import com.r3.conclave.integrationtests.general.tests.plugin.TestWithSigning.Companion.DUMMY_KEY_FILE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import kotlin.io.path.deleteIfExists
-import kotlin.io.path.div
 
 class CreateDummyKeyTest : AbstractTaskTest(), TestWithSigning {
     override val taskName: String get() = "createDummyKey"
-    override val output: Path get() = conclaveBuildDir / DUMMY_KEY_FILE_NAME
+    override val output: Path get() = dummyKeyFile
     /**
      * The dummy key is meant to be random.
      */

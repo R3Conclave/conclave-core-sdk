@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.tomlj.Toml
 import java.util.zip.ZipFile
 
-class GramineBundleZipTest : AbstractModeTaskTest() {
+class GramineDirectBundleZipTest : AbstractModeTaskTest() {
     companion object {
         private val pythonCode = """
             def receive_enclave_mail(mail):
@@ -20,13 +20,13 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
 
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             gramineOnlyTest()
         }
     }
 
-    override val taskNameFormat: String get() = "gramine%sBundleZip"
-    override val outputName: String get() = "gramine-bundle.zip"
+    override val taskNameFormat: String get() = "gramineDirect%sBundleZip"
+    override val outputName: String get() = "gramine-direct-bundle.zip"
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
@@ -39,11 +39,10 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
 
         ZipFile(output.toFile()).use { zip ->
             zip.assertEntryContents("java.manifest") {
-                // TODO Change this to check for product ID once it's wired up since it's a 1:1 mapping
-                assertThat(Toml.parse(it).getLong("sgx.thread_num")).isEqualTo(20)
+                assertThat(Toml.parse(it).getLong("sgx.isvprodid")).isEqualTo(11)
             }
-            zip.assertEntryContents("enclave.jar") {
-                val entryNames = it.readZipEntryNames()
+            zip.assertEntryContents("enclave.jar") { jar ->
+                val entryNames = jar.readZipEntryNames()
                 if (isPython) {
                     assertThat(entryNames).contains("com/r3/conclave/python/PythonEnclaveAdapter.class")
                 } else {
@@ -61,12 +60,11 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
     @Test
     fun `changing enclave config`() {
         assertTaskIsIncremental {
-            // TODO Change this to check for product ID once it's wired up since it's a 1:1 mapping
-            updateGradleBuildFile("conclave {\n", "conclave {\nmaxThreads = 12\n")
+            updateGradleBuildFile("conclave {\n", "conclave {\nproductID = 111\n")
         }
         ZipFile(output.toFile()).use { zip ->
             zip.assertEntryContents("java.manifest") {
-                assertThat(Toml.parse(it).getLong("sgx.thread_num")).isEqualTo(24)
+                assertThat(Toml.parse(it).getLong("sgx.isvprodid")).isEqualTo(111)
             }
         }
     }
@@ -77,10 +75,10 @@ class GramineBundleZipTest : AbstractModeTaskTest() {
             changeToPythonEnclave(pythonCode)
         }
         ZipFile(output.toFile()).use { zip ->
-            zip.assertEntryContents("enclave.jar") {
-                val entryNames = it.readZipEntryNames()
-                assertThat(entryNames).contains("com/r3/conclave/python/PythonEnclaveAdapter.class")
-                assertThat(entryNames).doesNotContain("com/test/enclave/TestEnclave.class")
+            zip.assertEntryContents("enclave.jar") { jar ->
+                assertThat(jar.readZipEntryNames())
+                    .contains("com/r3/conclave/python/PythonEnclaveAdapter.class")
+                    .doesNotContain("com/test/enclave/TestEnclave.class")
             }
         }
     }

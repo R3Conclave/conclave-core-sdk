@@ -22,7 +22,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     companion object {
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             gramineOnlyTest()
         }
     }

@@ -16,6 +16,7 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.*
+import kotlin.streams.asSequence
 
 abstract class AbstractTaskTest : TaskTest {
     @field:TempDir
@@ -41,20 +42,26 @@ abstract class AbstractTaskTest : TaskTest {
     @Test
     fun `check task is incremental on output deletion and check reproducibility`() {
         assumeTrue(runDeletionAndReproducibilityTest)
-        val originalContent = assertTaskIsIncremental {
+        assertThat(output).doesNotExist()
+        val originalContent: Map<Path, ByteArray>? = assertTaskIsIncremental {
             assertThat(output).exists()
-            if (isReproducible && output.isRegularFile()) {
-                val originalContent = output.readBytes()
-                output.deleteExisting()
-                originalContent
-            } else {
-                output.toFile().deleteRecursively()
-                null
-            }
+            val map = if (isReproducible) getAllOutputFiles().associateWith { it.readBytes() } else null
+            output.toFile().deleteRecursively()
+            map
         }
         assertThat(output).exists()
         if (originalContent != null) {
-            assertThat(output).describedAs("reproducibility").hasBinaryContent(originalContent)
+            val currentFiles = getAllOutputFiles()
+            assertThat(currentFiles).containsOnlyOnceElementsOf(originalContent.keys)
+            for (file in currentFiles) {
+                assertThat(file).hasBinaryContent(originalContent[file])
+            }
+        }
+    }
+
+    private fun getAllOutputFiles(): List<Path> {
+        return Files.walk(output).use { paths ->
+            paths.filter { it.isRegularFile() }.toList()
         }
     }
 

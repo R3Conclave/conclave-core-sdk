@@ -16,7 +16,7 @@ class PythonEnclaveAdapterJarTest : AbstractTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             gramineOnlyTest()
         }
     }
