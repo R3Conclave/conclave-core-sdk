@@ -1,31 +1,34 @@
 package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.common.EnclaveInstanceInfo
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.Cursor
-import com.r3.conclave.common.internal.EnclaveInstanceInfoImpl
-import com.r3.conclave.common.internal.SgxEnclaveMetadata
-import com.r3.conclave.common.internal.SgxEnclaveMetadata.enclaveCss
-import com.r3.conclave.common.internal.SgxMetadataCssBody.enclaveHash
-import com.r3.conclave.common.internal.SgxMetadataCssKey.modulus
-import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
-import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
+import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.SgxEnclaveCss.*
+import com.r3.conclave.common.internal.SgxEnclaveCss.body
+import com.r3.conclave.common.internal.SgxEnclaveCss.key
 import com.r3.conclave.common.internal.SgxQuote.reportBody
 import com.r3.conclave.common.internal.SgxReportBody.reportData
-import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.DcapAttestation
 import com.r3.conclave.common.internal.attestation.MockAttestation
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.host.internal.Native
 import com.r3.conclave.integrationtests.general.common.tasks.CreateAttestationQuoteAction
 import com.r3.conclave.integrationtests.general.common.tasks.GetEnclaveInstanceInfo
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.debugOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
+import org.tomlj.Toml
+import java.nio.file.Path
+import kotlin.io.path.div
+import kotlin.io.path.readBytes
 
 class AttestationTests : AbstractEnclaveActionTest() {
     @Test
@@ -43,27 +46,40 @@ class AttestationTests : AbstractEnclaveActionTest() {
     }
 
     @Test
-    fun `enclave info`() {
-        // TODO consider using Java/Kotlin code to read ELF file - https://github.com/fornwall/jelf/
-        val metadataCursor = Cursor.allocate(SgxEnclaveMetadata.INSTANCE)
-        Native.getMetadata(getEnclaveFilename(), metadataCursor.buffer.array())
+    fun `EnclaveInfo matches SIGSTRUCT`() {
+        val sigstruct = when (TestUtils.runtimeType) {
+            GRAALVM -> TestUtils.getEnclaveSigstruct(enclaveHost().getEnclaveBundlePath("enclaveFile"))
+            GRAMINE -> {
+                debugOnlyTest()  // Gramine doesn't simulate the SIGSTRUCT, unlike the Intel SDK
+                val gramineWorkingDir = enclaveHost().getEnclaveBundlePath("workingDirectory")
+                Cursor.wrap(SgxEnclaveCss.INSTANCE, (gramineWorkingDir / "java.sig").readBytes())
+            }
+        }
 
-        val metadata = Cursor.wrap(SgxEnclaveMetadata.INSTANCE, metadataCursor.buffer.array())
-        val metaCodeHash = SHA256Hash.get(metadata[enclaveCss][body][enclaveHash].read())
-        val metaCodeSigningKeyHash = SHA256Hash.hash(metadata[enclaveCss][key][modulus].bytes)
-
-        enclaveHost().enclaveInstanceInfo.enclaveInfo.apply {
-            assertThat(codeHash).isEqualTo(metaCodeHash)
-            assertThat(codeSigningKeyHash).isEqualTo(metaCodeSigningKeyHash)
+        with(enclaveHost().enclaveInstanceInfo.enclaveInfo) {
+            assertThat(codeHash).isEqualTo(SHA256Hash.get(sigstruct[body][enclaveHash].read()))
+            assertThat(codeSigningKeyHash).isEqualTo(SgxTypesKt.getMrsigner(sigstruct[key]))
+            assertThat(productID).isEqualTo(sigstruct[body][IsvProdId].read())
+            assertThat(revocationLevel).isEqualTo(sigstruct[body][IsvSvn].read() - 1)
+            assertThat(enclaveMode).isEqualTo(TestUtils.enclaveMode.toEnclaveMode())
         }
     }
 
-    private fun getEnclaveFilename(): String {
-        val enclaveHandleField = EnclaveHost::class.java.getDeclaredField("enclaveHandle").apply { isAccessible = true }
-        val enclaveHandle = enclaveHandleField.get(enclaveHost())
+    @Test
+    fun `EnclaveInfo matches in simulation gramine`() {
+        gramineOnlyTest()
+        simulationOnlyTest()
 
-        val enclaveFileField = enclaveHandle.javaClass.getDeclaredField("enclaveFile").apply { isAccessible = true }
-        return enclaveFileField.get(enclaveHandle).toString()
+        val gramineWorkingDir = enclaveHost().getEnclaveBundlePath("workingDirectory")
+        val manifest = Toml.parse(gramineWorkingDir / "java.manifest")
+
+        with(enclaveHost().enclaveInstanceInfo.enclaveInfo) {
+            assertThat(codeHash).isEqualTo(SHA256Hash.hash((gramineWorkingDir / "enclave.jar").readBytes()))
+            assertThat(codeSigningKeyHash).isEqualTo(SHA256Hash.parse(manifest.getString("loader.env.CONCLAVE_SIMULATION_MRSIGNER")!!))
+            assertThat(productID).isEqualTo(manifest.getLong("sgx.isvprodid")!!.toInt())
+            assertThat(revocationLevel).isEqualTo(manifest.getLong("sgx.isvsvn")!!.toInt() - 1)
+            assertThat(enclaveMode).isEqualTo(EnclaveMode.SIMULATION)
+        }
     }
 
     @Test
@@ -104,5 +120,14 @@ class AttestationTests : AbstractEnclaveActionTest() {
 
         val reportDataFromSignedQuote = signedQuoteByteCursor[quote][reportBody][reportData].bytes
         assertThat(String(reportDataFromSignedQuote)).isEqualTo(reportDataOriginal)
+    }
+
+    private fun EnclaveHost.getEnclaveBundlePath(pathField: String): Path {
+        val enclaveHandle = EnclaveHost::class.java.getDeclaredField("enclaveHandle")
+            .apply { isAccessible = true }
+            .get(this)
+        return enclaveHandle.javaClass.getDeclaredField(pathField)
+            .apply { isAccessible = true }
+            .get(enclaveHandle) as Path
     }
 }
