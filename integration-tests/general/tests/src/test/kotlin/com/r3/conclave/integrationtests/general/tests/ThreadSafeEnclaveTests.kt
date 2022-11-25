@@ -94,8 +94,6 @@ class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integr
         assertThat(result).isEqualTo((n * (n + 1)) / 2)
     }
 
-    @Disabled(": CON-360")
-    // fatal error 'PosixJavaThreads.start0: pthread_create'
     @Test
     fun `exception is thrown if too many threads are requested`() {
         val n = 15 // > defaultTCSNum(10)
