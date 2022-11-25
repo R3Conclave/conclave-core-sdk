@@ -325,7 +325,7 @@ index df3feeb..f2d2fdb 100644
      return;
  }
  
-@@ -330,21 +342,34 @@ CTrustThread * CTrustThreadPool::_acquire_free_thread()
+@@ -330,21 +342,31 @@ CTrustThread * CTrustThreadPool::_acquire_free_thread()
  CTrustThread * CTrustThreadPool::acquire_free_thread()
  {
      LockGuard lock(&m_thread_mutex);
@@ -360,9 +360,6 @@ index df3feeb..f2d2fdb 100644
 +            break;
 +        }
 +        if (!m_thread_blocking || !m_thread_mutex.wait(m_deadlock_timeout)) {
-+            std::cout << "The enclave ran out of TCS slots when calling from a new thread into the enclave. Please either increase "
-+                      << "the 'maxThreads' value in your enclave configuration or use fewer threads inside the enclave. See "
-+                      << "https://docs.conclave.net/enclave-configuration.html#maxThreads\n";
 +            break;
          }
 -        m_need_to_wait_for_new_thread_cond.unlock();
@@ -372,7 +369,7 @@ index df3feeb..f2d2fdb 100644
      if(trust_thread)
      {
          trust_thread->reset_ref();
-@@ -410,20 +435,31 @@
+@@ -410,20 +429,28 @@
      }
      else
      {
@@ -406,9 +403,6 @@ index df3feeb..f2d2fdb 100644
 +                break;
 +            }
 +            if (!m_thread_blocking || !m_thread_mutex.wait(m_deadlock_timeout)) {
-+                std::cout << "The enclave ran out of TCS slots when calling from a new thread into the enclave. Please either increase "
-+                          << "the 'maxThreads' value in your enclave configuration or use fewer threads inside the enclave. See "
-+                          << "https://docs.conclave.net/enclave-configuration.html#maxThreads\n";
 +                break;
              }
 -            m_need_to_wait_for_new_thread_cond.unlock();
@@ -416,7 +410,7 @@ index df3feeb..f2d2fdb 100644
          }
      }
  
-@@ -567,6 +598,15 @@ sgx_status_t CTrustThreadPool::fill_tcs_mini_pool()
+@@ -567,6 +592,15 @@ sgx_status_t CTrustThreadPool::fill_tcs_mini_pool()
      return ret;
  }
  
