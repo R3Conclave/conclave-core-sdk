@@ -43,18 +43,18 @@ abstract class AbstractTaskTest : TaskTest {
     fun `check task is incremental on output deletion and check reproducibility`() {
         assumeTrue(runDeletionAndReproducibilityTest)
         assertThat(output).doesNotExist()
-        val original: Map<Path, ByteArray>? = assertTaskIsIncremental {
+        val originalHashes: Map<Path, ByteArray>? = assertTaskIsIncremental {
             assertThat(output).exists()
             val map = if (isReproducible) getAllOutputFiles().associateWith { digest(it, "SHA-256") } else null
             output.toFile().deleteRecursively()
             map
         }
         assertThat(output).exists()
-        if (original != null) {
+        if (originalHashes != null) {
             val currentFiles = getAllOutputFiles()
-            assertThat(currentFiles).containsOnlyOnceElementsOf(original.keys)
+            assertThat(currentFiles).describedAs("output files").containsOnlyOnceElementsOf(originalHashes.keys)
             for (file in currentFiles) {
-                assertThat(file).hasDigest("SHA-256", original[file])
+                assertThat(file).describedAs("reproducibility of %s", file).hasDigest("SHA-256", originalHashes[file])
             }
         }
     }
