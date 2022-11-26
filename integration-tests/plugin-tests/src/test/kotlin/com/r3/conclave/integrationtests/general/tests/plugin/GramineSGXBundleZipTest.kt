@@ -26,7 +26,7 @@ import java.nio.file.Path
 import java.util.zip.ZipFile
 import kotlin.io.path.deleteExisting
 
-class GramineSGXBundleZipTest : AbstractModeTaskTest(), TestWithSigning {
+class GramineSGXBundleZipTest : AbstractModeTaskTest() {
     companion object {
         private val pythonCode = """
             def receive_enclave_mail(mail):
@@ -82,7 +82,7 @@ class GramineSGXBundleZipTest : AbstractModeTaskTest(), TestWithSigning {
     @Test
     fun `changing enclave config`() {
         assertTaskIsIncremental {
-            updateGradleBuildFile("productID = 11", "productID = 111")
+            modifyProductIdConfig(111)
         }
         ZipFile(output.toFile()).use { zip ->
             zip.assertEntryContents("java.manifest.sgx") {
@@ -129,13 +129,12 @@ class GramineSGXBundleZipTest : AbstractModeTaskTest(), TestWithSigning {
                 "signingKey = file('$signingKeyFile')"
             } else {
                 signingKeyFile = dummyKeyFile
-                ""
+                ""  // dummyKey doesn't need any further config
             }
-            val enclaveModeBlock = """${enclaveMode.name.lowercase()} {
-                |   signingType = $signingType
-                |   $signingKeyConfig
-                |}""".trimMargin()
-            updateGradleBuildFile("conclave {\n", "conclave {\n$enclaveModeBlock\n")
+            addEnclaveModeConfig("""
+                signingType = $signingType
+                $signingKeyConfig
+            """.trimIndent())
 
             signingKeyFile
         }

@@ -60,7 +60,7 @@ class GramineDirectBundleZipTest : AbstractModeTaskTest() {
     @Test
     fun `changing enclave config`() {
         assertTaskIsIncremental {
-            updateGradleBuildFile("productID = 11", "productID = 111")
+            modifyProductIdConfig(111)
         }
         ZipFile(output.toFile()).use { zip ->
             zip.assertEntryContents("java.manifest") {

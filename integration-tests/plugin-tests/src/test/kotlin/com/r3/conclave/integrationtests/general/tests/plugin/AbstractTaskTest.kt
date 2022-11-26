@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
 import com.r3.conclave.utilities.internal.UtilsKt.digest
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
@@ -16,11 +17,28 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.security.interfaces.RSAPublicKey
 import kotlin.io.path.*
 
-abstract class AbstractTaskTest : TaskTest {
+abstract class AbstractTaskTest {
     @field:TempDir
-    override lateinit var projectDir: Path
+    lateinit var projectDir: Path
+
+    abstract val taskName: String
+    abstract val output: Path
+    /**
+     * If the task's output isn't stable then override with false, and explain why.
+     */
+    open val isReproducible: Boolean get() = true
+
+    val projectName: String get() = projectDir.name
+    val buildGradleFile: Path get() = projectDir / "build.gradle"
+    val buildDir: Path get() = projectDir / "build"
+    val conclaveBuildDir: Path get() = buildDir / "conclave"
+    val enclaveModeBuildDir: Path get() = conclaveBuildDir / enclaveMode.name.lowercase()
+
+    val dummyKeyFile: Path get() = conclaveBuildDir / "dummy_key.pem"
+
     open val runDeletionAndReproducibilityTest: Boolean get() = true
 
     @BeforeEach
@@ -77,11 +95,38 @@ abstract class AbstractTaskTest : TaskTest {
         pythonScript.writeText(enclaveCode)
     }
 
-    fun updateGradleBuildFile(oldValue: String, newValue: String) {
+    fun modifyProductIdConfig(newValue: Int) {
+        modifyGradleBuildFile("productID = 11", "productID = $newValue")
+    }
+
+    fun modifyRevocationLevelConfig(newValue: Int) {
+        modifyGradleBuildFile("revocationLevel = 12", "revocationLevel = $newValue")
+    }
+
+    fun addSimpleEnclaveConfig(name: String, value: Any) {
+        val valueString = if (value is String) "\"$value\"" else value.toString()
+        addEnclaveConfigBlock("$name = $valueString")
+    }
+
+    fun addEnclaveModeConfig(newConfig: String) {
+        addEnclaveConfigBlock(
+            """${enclaveMode.name.lowercase()} {
+                    |   $newConfig
+                    |}
+                    |""".trimMargin()
+        )
+    }
+
+    fun addEnclaveConfigBlock(newConfig: String) {
+        modifyGradleBuildFile("conclave {\n", "conclave {\n$newConfig\n")
+    }
+
+    fun modifyGradleBuildFile(oldValue: String, newValue: String) {
         buildGradleFile.searchAndReplace(oldValue, newValue)
     }
 
     fun Path.searchAndReplace(oldValue: String, newValue: String) {
+        require(oldValue != newValue) { "Old and new values must be different: $oldValue" }
         val oldText = readText()
         val newText = oldText.replace(oldValue, newValue)
         require(newText != oldText) { "'$oldValue' does not exist in $this:\n$oldText" }
@@ -111,6 +156,8 @@ abstract class AbstractTaskTest : TaskTest {
         runTaskAndAssertItsIncremental()
         return value
     }
+
+    fun dummyKey(): RSAPublicKey = TestUtils.readSigningKey(dummyKeyFile)
 
     companion object {
         private val testGradleUserHome = System.getProperty("test.gradle.user.home")

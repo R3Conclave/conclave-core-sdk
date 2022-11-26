@@ -25,7 +25,7 @@ class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
     fun productID() {
         assertTaskIsIncremental {
             assertThat(enxlaveConfig()["ProdID"].textValue()).isEqualTo("11")
-            updateGradleBuildFile("productID = 11", "productID = 111")
+            modifyProductIdConfig(111)
         }
         assertThat(enxlaveConfig()["ProdID"].textValue()).isEqualTo("111")
     }
@@ -34,7 +34,7 @@ class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
     fun revocationLevel() {
         assertTaskIsIncremental {
             assertThat(enxlaveConfig()["ISVSVN"].textValue()).isEqualTo("13")
-            updateGradleBuildFile("revocationLevel = 12", "revocationLevel = 121")
+            modifyRevocationLevelConfig(121)
         }
         assertThat(enxlaveConfig()["ISVSVN"].textValue()).isEqualTo("122")
     }
@@ -49,7 +49,7 @@ class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
         assertThat(buildGradleFile).content().doesNotContain(gradleConfig)
         assertTaskIsIncremental {
             assertThat(enxlaveConfig()[xmlElement].textValue()).isEqualTo("0x${defaultRawValue.toString(16)}")
-            updateGradleBuildFile("conclave {\n", "conclave {\n$gradleConfig = \"$newBytesValue\"\n")
+            addSimpleEnclaveConfig(gradleConfig, newBytesValue)
         }
         assertThat(enxlaveConfig()[xmlElement].textValue()).isEqualTo("0x${newRawValue.toString(16)}")
     }
@@ -59,7 +59,7 @@ class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
         assertTaskIsIncremental {
             assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("10")
-            updateGradleBuildFile("conclave {\n", "conclave {\nmaxThreads = 15\n")
+            addSimpleEnclaveConfig("maxThreads", 15)
         }
         assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("15")
     }

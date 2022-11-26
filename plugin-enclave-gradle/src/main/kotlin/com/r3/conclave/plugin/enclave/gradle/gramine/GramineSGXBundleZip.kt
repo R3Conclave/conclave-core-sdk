@@ -7,27 +7,25 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
-import javax.inject.Inject
 import kotlin.io.path.copyTo
 
-open class GramineSGXBundleZip @Inject constructor(objects: ObjectFactory) : Zip() {
+open class GramineSGXBundleZip : Zip() {
     @get:InputFile
-    val signingKey: RegularFileProperty = objects.fileProperty()
+    val signingKey: RegularFileProperty = project.objects.fileProperty()
 
     @get:InputFile
-    val directManifest: RegularFileProperty = objects.fileProperty()
+    val directManifest: RegularFileProperty = project.objects.fileProperty()
 
     @get:InputFile
-    val enclaveJar: RegularFileProperty = objects.fileProperty()
+    val enclaveJar: RegularFileProperty = project.objects.fileProperty()
 
     @get:InputFile
     @get:Optional
-    val pythonFile: RegularFileProperty = objects.fileProperty()
+    val pythonFile: RegularFileProperty = project.objects.fileProperty()
 
     @TaskAction
     override fun copy() {

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import kotlin.io.path.deleteIfExists
 
-class CreateDummyKeyTest : AbstractTaskTest(), TestWithSigning {
+class CreateDummyKeyTest : AbstractTaskTest() {
     override val taskName: String get() = "createDummyKey"
     override val output: Path get() = dummyKeyFile
     /**

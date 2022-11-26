@@ -18,7 +18,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.deleteExisting
 
-class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
+class GenerateGramineManifestTest : AbstractModeTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -34,7 +34,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     fun productID() {
         assertTaskIsIncremental {
             assertThat(manifest().getLong("sgx.isvprodid")).isEqualTo(11)
-            updateGradleBuildFile("productID = 11", "productID = 111")
+            modifyProductIdConfig(111)
         }
         assertThat(manifest().getLong("sgx.isvprodid")).isEqualTo(111)
     }
@@ -43,7 +43,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
     fun revocationLevel() {
         assertTaskIsIncremental {
             assertThat(manifest().getLong("sgx.isvsvn")).isEqualTo(13)
-            updateGradleBuildFile("revocationLevel = 12", "revocationLevel = 121")
+            modifyRevocationLevelConfig(121)
         }
         assertThat(manifest().getLong("sgx.isvsvn")).isEqualTo(122)
     }
@@ -53,7 +53,7 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
         assertTaskIsIncremental {
             assertThat(manifest().getLong("sgx.thread_num")).isEqualTo(20)  // maxThreads * 2
-            updateGradleBuildFile("conclave {\n", "conclave {\nmaxThreads = 12\n")
+            addSimpleEnclaveConfig("maxThreads", 12)
         }
         assertThat(manifest().getLong("sgx.thread_num")).isEqualTo(24)
     }
@@ -79,13 +79,12 @@ class GenerateGramineManifestTest : AbstractModeTaskTest(), TestWithSigning {
                 "signingKey = file('$signingKeyFile')"
             } else {
                 signingKeyFile = dummyKeyFile
-                ""
+                ""  // dummyKey doesn't need any further config
             }
-            val enclaveModeBlock = """${enclaveMode.name.lowercase()} {
-                |   signingType = $signingType
-                |   $signingKeyConfig
-                |}""".trimMargin()
-            updateGradleBuildFile("conclave {\n", "conclave {\n$enclaveModeBlock\n")
+            addEnclaveModeConfig("""
+                signingType = $signingType
+                $signingKeyConfig
+            """.trimIndent())
 
             signingKeyFile
         }
