@@ -1,16 +1,22 @@
 package com.r3.conclave.plugin.enclave.gradle.extension
 
-import com.r3.conclave.plugin.enclave.gradle.booleanProperty
-import com.r3.conclave.plugin.enclave.gradle.stringProperty
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import javax.inject.Inject
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 
-open class PolicyConstraintExtension @Inject constructor(objects: ObjectFactory) {
-    val useOwnCodeHash: Property<Boolean> = objects.booleanProperty()
-    val useOwnCodeSignerAndProductID: Property<Boolean> = objects.booleanProperty()
-    val constraint: Property<String> = objects.stringProperty()
+abstract class PolicyConstraintExtension {
+    @get:Input
+    @get:Optional
+    abstract val useOwnCodeHash: Property<Boolean>
+    @get:Input
+    @get:Optional
+    abstract val useOwnCodeSignerAndProductID: Property<Boolean>
+    @get:Input
+    @get:Optional
+    abstract val constraint: Property<String>
 
     val isPresent: Boolean
+        @Internal
         get() = useOwnCodeHash.isPresent or useOwnCodeSignerAndProductID.isPresent or constraint.isPresent
 }

@@ -139,14 +139,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val generateEnclavePropertiesTask = target.createTask<GenerateEnclaveProperties>(
             "generateEnclaveProperties",
-            conclaveExtension
         ) { task ->
-            task.productID.set(conclaveExtension.productID)
-            task.revocationLevel.set(conclaveExtension.revocationLevel)
-            task.enablePersistentMap.set(conclaveExtension.enablePersistentMap)
-            task.maxPersistentMapSize.set(conclaveExtension.maxPersistentMapSize)
-            task.inMemoryFileSystemSize.set(conclaveExtension.inMemoryFileSystemSize)
-            task.persistentFileSystemSize.set(conclaveExtension.persistentFileSystemSize)
+            task.conclaveExtension.set(conclaveExtension)
             task.enclavePropertiesFile.set(baseDirectory.resolve(ENCLAVE_PROPERTIES).toFile())
         }
 
@@ -361,13 +355,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
 
             val enclaveModeDir = baseDirectory.resolve(typeLowerCase)
-
-            // Simulation and debug default to using a dummy key. Release defaults to external key
-            val keyType = when (type) {
-                BuildType.Release -> SigningType.ExternalKey
-                else -> SigningType.DummyKey
-            }
-            enclaveExtension.signingType.set(keyType)
 
             // Gramine related tasks
             val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, conclaveExtension, signingKey)

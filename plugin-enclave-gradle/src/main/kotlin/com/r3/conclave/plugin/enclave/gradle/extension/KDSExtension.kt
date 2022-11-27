@@ -1,21 +1,18 @@
 package com.r3.conclave.plugin.enclave.gradle.extension
 
-import com.r3.conclave.plugin.enclave.gradle.newInstance
-import com.r3.conclave.plugin.enclave.gradle.stringProperty
 import org.gradle.api.Action
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import javax.inject.Inject
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
 
-open class KDSExtension @Inject constructor(objects: ObjectFactory) {
-    val kdsEnclaveConstraint: Property<String> = objects.stringProperty()
-    val keySpec: KeySpecExtension = objects.newInstance()
-    val persistenceKeySpec: KeySpecExtension = objects.newInstance()
-
-    @Suppress("unused")
-    fun keySpec(action: Action<KeySpecExtension>) {
-        action.execute(keySpec)
-    }
+abstract class KDSExtension {
+    @get:Input
+    @get:Optional
+    abstract val kdsEnclaveConstraint: Property<String>
+    @get:Nested
+    abstract val persistenceKeySpec: KeySpecExtension
 
     @Suppress("unused")
     fun persistenceKeySpec(action: Action<KeySpecExtension>) {
@@ -23,5 +20,6 @@ open class KDSExtension @Inject constructor(objects: ObjectFactory) {
     }
 
     val isPresent: Boolean
-        get() = kdsEnclaveConstraint.isPresent or keySpec.isPresent or persistenceKeySpec.isPresent
+        @Internal
+        get() = kdsEnclaveConstraint.isPresent or persistenceKeySpec.isPresent
 }

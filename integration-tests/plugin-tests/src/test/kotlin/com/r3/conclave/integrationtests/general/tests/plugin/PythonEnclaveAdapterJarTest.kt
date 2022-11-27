@@ -12,7 +12,7 @@ import java.util.*
 import java.util.jar.JarFile
 import kotlin.io.path.div
 
-class PythonEnclaveAdapterJarTest : AbstractTaskTest() {
+class PythonEnclaveAdapterJarTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll

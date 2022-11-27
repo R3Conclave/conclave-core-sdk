@@ -12,7 +12,7 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.div
 
-class GramineEnclaveBundleJarTest : AbstractTaskTest() {
+class GramineEnclaveBundleJarTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -21,10 +21,7 @@ class GramineEnclaveBundleJarTest : AbstractTaskTest() {
         }
     }
 
-    override val taskName: String get() {
-        val capitalisedMode = enclaveMode.name.lowercase().replaceFirstChar(Char::titlecase)
-        return "enclaveBundle${capitalisedMode}Jar"
-    }
+    override val taskName: String get() = "enclaveBundle${capitalisedEnclaveMode()}Jar"
 
     override val output: Path get() {
         return buildDir / "libs" / "$projectName-bundle-${enclaveMode.name.lowercase()}.jar"

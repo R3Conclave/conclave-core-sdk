@@ -29,7 +29,7 @@ import kotlin.io.path.*
  * the number of times the unsigned enclave file is built, which takes a long time and would make this test class
  * unsuitable as an integration test.
  */
-class GraalVMEnclaveBundleJarTest : AbstractTaskTest() {
+class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -38,15 +38,13 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest() {
         }
     }
 
-    override val taskName: String get() = "enclaveBundle${capitalisedMode}Jar"
+    override val taskName: String get() = "enclaveBundle${capitalisedEnclaveMode()}Jar"
 
     override val output: Path get() {
         return buildDir / "libs" / "$projectName-bundle-${enclaveMode.name.lowercase()}.jar"
     }
 
     override val runDeletionAndReproducibilityTest: Boolean get() = false
-
-    private val capitalisedMode: String get() = enclaveMode.name.lowercase().replaceFirstChar(Char::titlecase)
 
     private lateinit var originalUnsignedEnclaveModifiedTime: FileTime
 
@@ -152,7 +150,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest() {
         // First generate the signing material and expect the default output location to be used
         val defaultSigningMaterialFile = buildDir / "enclave" / enclaveMode.name.lowercase() / "signing_material.bin"
         assertThat(defaultSigningMaterialFile).doesNotExist()
-        runTaskAndAssertItsIncremental("generateEnclaveSigningMaterial$capitalisedMode")
+        runTaskAndAssertItsIncremental("generateEnclaveSigningMaterial${capitalisedEnclaveMode()}")
         assertThat(defaultSigningMaterialFile).exists()
         assertUnsignedEnclaveHasntChanged()
         val signingMaterial = defaultSigningMaterialFile.readBytes()
@@ -164,7 +162,7 @@ class GraalVMEnclaveBundleJarTest : AbstractTaskTest() {
             "signingType = externalKey",
             "signingType = externalKey\nsigningMaterial = file('$signingMaterialFile')\n"
         )
-        runTaskAndAssertItsIncremental("generateEnclaveSigningMaterial$capitalisedMode")
+        runTaskAndAssertItsIncremental("generateEnclaveSigningMaterial${capitalisedEnclaveMode()}")
         assertUnsignedEnclaveHasntChanged()
         // The signing material should be the same
         assertThat(signingMaterialFile).hasBinaryContent(signingMaterial)

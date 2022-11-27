@@ -9,7 +9,7 @@ import java.util.*
 import java.util.jar.JarFile
 import kotlin.io.path.div
 
-class ShadowJarTest : AbstractTaskTest() {
+class ShadowJarTest : AbstractPluginTaskTest() {
     override val taskName: String get() = "shadowJar"
     override val output: Path get() = buildDir / "libs" / "$projectName-fat-all.jar"
 

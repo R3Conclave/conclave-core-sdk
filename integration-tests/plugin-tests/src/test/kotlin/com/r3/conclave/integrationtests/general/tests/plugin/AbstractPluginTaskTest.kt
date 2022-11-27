@@ -20,7 +20,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.security.interfaces.RSAPublicKey
 import kotlin.io.path.*
 
-abstract class AbstractTaskTest {
+abstract class AbstractPluginTaskTest {
     @field:TempDir
     lateinit var projectDir: Path
 
@@ -158,6 +158,8 @@ abstract class AbstractTaskTest {
     }
 
     fun dummyKey(): RSAPublicKey = TestUtils.readSigningKey(dummyKeyFile)
+
+    fun capitalisedEnclaveMode(): String = enclaveMode.name.lowercase().replaceFirstChar(Char::titlecase)
 
     companion object {
         private val testGradleUserHome = System.getProperty("test.gradle.user.home")

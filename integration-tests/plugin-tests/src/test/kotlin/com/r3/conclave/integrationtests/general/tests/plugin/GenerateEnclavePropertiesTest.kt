@@ -1,17 +1,15 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.*
-import org.junit.jupiter.params.provider.Arguments.arguments
 import java.nio.file.Path
 import java.util.*
-import java.util.stream.Stream
 import kotlin.io.path.div
 import kotlin.io.path.reader
 
-class GenerateEnclavePropertiesTest : AbstractTaskTest() {
+class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
     override val taskName: String get() = "generateEnclaveProperties"
     override val output: Path get() = conclaveBuildDir / "enclave.properties"
 
@@ -28,21 +26,17 @@ class GenerateEnclavePropertiesTest : AbstractTaskTest() {
         assertThat(enclaveProperties()).containsEntry(name, "100")
     }
 
-    class OptionalConfigs : ArgumentsProvider {
-        override fun provideArguments(context: ExtensionContext): Stream<Arguments> = Stream.of(
-            arguments("enablePersistentMap", false, true)
-        )
-    }
-
     @ParameterizedTest
-    @ArgumentsSource(OptionalConfigs::class)
-    fun `simple optional config in enclave properties`(name: String, defaultValue: Any, newValue: Any) {
+    @CsvSource(
+        "enablePersistentMap, false, true"
+    )
+    fun `optional boolean config in enclave properties`(name: String, defaultValue: Boolean, newValue: Boolean) {
         assertThat(buildGradleFile).content().doesNotContain(name)
         assertTaskIsIncremental {
-            assertThat(enclaveProperties()).containsEntry(name, defaultValue)
+            assertThat(enclaveProperties()).containsEntry(name, defaultValue.toString())
             addSimpleEnclaveConfig(name, newValue)
         }
-        assertThat(enclaveProperties()).containsEntry(name, newValue)
+        assertThat(enclaveProperties()).containsEntry(name, newValue.toString())
     }
 
     @ParameterizedTest
@@ -60,6 +54,26 @@ class GenerateEnclavePropertiesTest : AbstractTaskTest() {
         }
         assertThat(enclaveProperties()).containsEntry(name, newRawValue.toString())
     }
+
+    @Test
+    fun kdsEnclaveConstraint() {
+        val kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"
+        assertThat(buildGradleFile).content().doesNotContain("kdsEnclaveConstraint")
+        assertTaskIsIncremental {
+            assertThat(enclaveProperties()).doesNotContainKey("kds.kdsEnclaveConstraint")
+            addEnclaveConfigBlock("""
+                kds {
+                    kdsEnclaveConstraint = "$kdsEnclaveConstraint"
+                }
+            """.trimIndent())
+        }
+        assertThat(enclaveProperties()).containsEntry("kds.kdsEnclaveConstraint", kdsEnclaveConstraint)
+    }
+
+//    @Test
+//    fun persistenceKeySpec() {
+//
+//    }
 
     // TODO KDS
 

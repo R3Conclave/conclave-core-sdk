@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import kotlin.io.path.div
 
-class GenerateReflectionConfigTest : AbstractTaskTest() {
+class GenerateReflectionConfigTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll

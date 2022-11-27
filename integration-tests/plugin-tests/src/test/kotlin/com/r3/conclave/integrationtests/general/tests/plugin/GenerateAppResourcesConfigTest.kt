@@ -11,7 +11,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.div
 
-class GenerateAppResourcesConfigTest : AbstractTaskTest() {
+class GenerateAppResourcesConfigTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll

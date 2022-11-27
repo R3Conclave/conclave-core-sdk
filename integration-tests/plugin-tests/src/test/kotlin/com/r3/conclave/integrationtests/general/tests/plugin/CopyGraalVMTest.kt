@@ -7,7 +7,7 @@ import kotlin.io.path.div
 
 // This runs the tests from AbstractTaskTest, in particular making sure it's incremental (i.e. doesn't run once
 // GraalVM has been downloaded) which would otherwise lead to a poor developer experience.
-class CopyGraalVMTest : AbstractTaskTest() {
+class CopyGraalVMTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
