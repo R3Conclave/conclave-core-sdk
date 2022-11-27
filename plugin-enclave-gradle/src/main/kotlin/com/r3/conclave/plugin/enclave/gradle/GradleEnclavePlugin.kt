@@ -416,12 +416,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.outputEnclave.set(enclaveModeDir.resolve("enclave.so").toFile())
             }
 
-            val buildUnsignedEnclaveTask =
-                target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
-                    task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
-                    task.outputEnclave.set(task.inputEnclave.get())
-                }
-
             val generateEnclaveConfigTask =
                 target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type) { task ->
                     task.productID.set(conclaveExtension.productID)
@@ -439,11 +433,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     type,
                     linuxExec
                 ) { task ->
-                    task.inputs.files(
-                        buildUnsignedEnclaveTask.outputEnclave,
-                        generateEnclaveConfigTask.outputConfigFile
-                    )
-                    task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
+                    task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                     task.inputKey.set(signingKey)
                     task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
@@ -456,7 +446,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             ) { task ->
                 task.description = "Generate standalone signing material for a $type mode enclave that can be used " +
                         "with an external signing source."
-                task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
+                task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)
                 task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
@@ -530,12 +520,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.inputs.files(signedEnclaveFile)
                 }
 
-            val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->
-                task.dependsOn(generateEnclaveMetadataTask)
-                task.inputs.files(generateEnclaveMetadataTask.inputSignedEnclave)
-                task.outputSignedEnclave.set(generateEnclaveMetadataTask.inputSignedEnclave)
-            }
-
             val enclaveBundleJarTask = target.createTask<Jar>("enclaveBundle${type}Jar") { task ->
                 task.group = CONCLAVE_GROUP
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
@@ -545,15 +529,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
                 val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
                     when (it) {
-                        // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
+                        // generateEnclaveMetadataTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
-                        GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
+                        GRAALVM -> generateEnclaveMetadataTask.inputSignedEnclave
                         GRAMINE -> if (type == BuildType.Simulation) {
                             gramineDirectZipBundleTask.get().archiveFile
                         } else {
                             gramineSGXZipBundleTask.get().archiveFile
                         }
-                        else -> throw IllegalArgumentException()
+                        null -> throw IllegalArgumentException()  // Keep the compiler happy
                     }
                 }
                 task.from(bundleOutput)
