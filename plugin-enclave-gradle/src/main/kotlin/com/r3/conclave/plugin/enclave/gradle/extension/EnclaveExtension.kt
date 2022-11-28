@@ -42,6 +42,7 @@ open class EnclaveExtension @Inject constructor(
     )
 
     @get:InputFile
+    @get:Optional
     val signingKey: RegularFileProperty = objects.fileProperty()
 
     // Define constants to make it easier for the configurer to select a signing type
