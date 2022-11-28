@@ -13,6 +13,8 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
+import com.r3.conclave.plugin.enclave.gradle.GenerateEnclaveMetadata.Companion.ENCLAVE_MRENCLAVE_FILE
+import com.r3.conclave.plugin.enclave.gradle.GenerateEnclaveMetadata.Companion.ENCLAVE_MRSIGNER_FILE
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineDirectManifest
@@ -588,6 +590,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     }
                     task.inputSignedEnclave.set(signedEnclaveFile)
                     task.inputs.files(signedEnclaveFile)
+                    task.mrsignerOutputFile.set(enclaveDirectory.resolve(ENCLAVE_MRSIGNER_FILE).toFile())
+                    task.mrenclaveOutputFile.set(enclaveDirectory.resolve(ENCLAVE_MRENCLAVE_FILE).toFile())
                 }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->

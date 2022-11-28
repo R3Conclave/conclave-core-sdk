@@ -1,8 +1,10 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.utilities.internal.toHexString
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
 import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
@@ -13,8 +15,19 @@ open class GenerateEnclaveMetadata @Inject constructor(
     private val buildType: BuildType,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
+    companion object {
+        const val ENCLAVE_MRSIGNER_FILE = "mrsigner.txt"
+        const val ENCLAVE_MRENCLAVE_FILE = "mrenclave.txt"
+    }
+
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
+
+    @OutputFile
+    val mrsignerOutputFile: RegularFileProperty = objects.fileProperty()
+
+    @OutputFile
+    val mrenclaveOutputFile: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
         val metadataFile = temporaryDir.toPath().resolve("enclave_metadata.txt")
@@ -40,6 +53,10 @@ open class GenerateEnclaveMetadata @Inject constructor(
         }
 
         val enclaveMetadata = EnclaveMetadata.parseMetadataFile(metadataFile)
+
+        mrsignerOutputFile.asFile.get().writeText(enclaveMetadata.mrsigner.bytes.toHexString())
+        mrenclaveOutputFile.asFile.get().writeText(enclaveMetadata.mrenclave.bytes.toHexString())
+
         logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
 
