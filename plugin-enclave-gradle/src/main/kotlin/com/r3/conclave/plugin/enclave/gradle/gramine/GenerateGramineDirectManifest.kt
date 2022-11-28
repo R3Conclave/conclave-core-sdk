@@ -33,6 +33,12 @@ open class GenerateGramineDirectManifest @Inject constructor(
     }
 
     @get:Input
+    val productId: Property<Int> = objects.property(Int::class.java)
+
+    @get:Input
+    val revocationLevel: Property<Int> = objects.property(Int::class.java)
+
+    @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
 
     @get:InputFile
@@ -62,6 +68,10 @@ open class GenerateGramineDirectManifest @Inject constructor(
         //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
         val gramineMaxThreads = enclaveWorkerThreadCount * 2
 
+
+
+
+
         /**
          * In case of Python enclaves, we need to build them outside the conclave-build container.
          * This is because Jep is installed in a user space, not a system space and will therefore produce different
@@ -82,23 +92,28 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 .single { it.startsWith("Location: ") }
                 .substringAfter("Location: ")
 
-            commandLine(
-                listOf(
-                    "gramine-manifest",
-                    "-Djava_home=${System.getProperty("java.home")}",
-                    "-Darch_libdir=/lib/$architecture",
-                    "-Dld_preload=$ldPreload",
-                    "-Dpython_packages_path=$pythonPackagesPath",
-                    "-Dis_python_enclave=${pythonEnclave.get()}",
-                    "-Denclave_mode=${buildType.name.uppercase()}",
-                    "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
-                    "-Denclave_worker_threads=$enclaveWorkerThreadCount",
-                    "-Dgramine_max_threads=$gramineMaxThreads",
-                    "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-                    manifestTemplateFile.absolutePathString(),
-                    manifestFile.asFile.get().absolutePath
-                )
+            val commands = mutableListOf(
+                "gramine-manifest",
+                "-Djava_home=${System.getProperty("java.home")}",
+                "-Darch_libdir=/lib/$architecture",
+                "-Dld_preload=$ldPreload",
+                "-Disv_prod_id=${productId.get()}",
+                "-Disv_svn=${revocationLevel.get() + 1}",
+                "-Dpython_packages_path=$pythonPackagesPath",
+                "-Dis_python_enclave=${pythonEnclave.get()}",
+                "-Denclave_mode=${buildType.name.uppercase()}",
+                "-Denclave_worker_threads=$enclaveWorkerThreadCount",
+                "-Dgramine_max_threads=$gramineMaxThreads",
+                "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+                manifestTemplateFile.absolutePathString(),
+                manifestFile.asFile.get().absolutePath
             )
+
+            if (buildType == BuildType.Simulation) {
+                val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
+                commands.add("-Dsimulation_mrsigner=$simulationMrSigner")
+            }
+            commandLine(commands)
         } else {
             // We want to call gcc and python from inside the container.
             val architecture = linuxExec.execWithOutput(listOf("gcc", "-dumpmachine"))
@@ -117,24 +132,31 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 .single { it.startsWith("Location: ") }
                 .substringAfter("Location: ")
 
-            linuxExec.exec(
-                listOf<String>(
-                    "gramine-manifest",
-                    "-Djava_home=${System.getProperty("java.home")}",
-                    "-Darch_libdir=/lib/$architecture",
-                    "-Dld_preload=$ldPreload",
-                    "-Dpython_packages_path=$pythonPackagesPath",
-                    "-Dis_python_enclave=${pythonEnclave.get()}",
-                    "-Denclave_mode=${buildType.name.uppercase()}",
-                    "-Dsimulation_mrsigner=${computeSigningKeyMeasurement().toHexString()}",
-                    "-Denclave_worker_threads=$enclaveWorkerThreadCount",
-                    "-Dgramine_max_threads=$gramineMaxThreads",
-                    "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-                    manifestTemplateFile.absolutePathString(),
-                    manifestFile.asFile.get().absolutePath
-                )
+            val commands = mutableListOf(
+                "gramine-manifest",
+                "-Djava_home=${System.getProperty("java.home")}",
+                "-Darch_libdir=/lib/$architecture",
+                "-Dld_preload=$ldPreload",
+                "-Disv_prod_id=${productId.get()}",
+                "-Disv_svn=${revocationLevel.get() + 1}",
+                "-Dpython_packages_path=$pythonPackagesPath",
+                "-Dis_python_enclave=${pythonEnclave.get()}",
+                "-Denclave_mode=${buildType.name.uppercase()}",
+                "-Denclave_worker_threads=$enclaveWorkerThreadCount",
+                "-Dgramine_max_threads=$gramineMaxThreads",
+                "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+                manifestTemplateFile.absolutePathString(),
+                manifestFile.asFile.get().absolutePath
             )
+
+            if (buildType == BuildType.Simulation) {
+                val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
+                commands.add("-Dsimulation_mrsigner=$simulationMrSigner")
+            }
+            linuxExec.exec(commands)
         }
+
+
     }
 
     /**

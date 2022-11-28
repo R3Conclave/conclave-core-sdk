@@ -6,9 +6,7 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
-import com.r3.conclave.host.internal.EnclaveHandle
-import com.r3.conclave.host.internal.SocketHostEnclaveInterface
-import com.r3.conclave.host.internal.loggerFor
+import com.r3.conclave.host.internal.*
 import java.io.IOException
 import java.lang.IllegalArgumentException
 import java.net.URL
@@ -48,6 +46,7 @@ class GramineEnclaveHandle(
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
+        NativeLoader.loadHostLibraries(enclaveMode)
         unzipEnclaveBundle()
         enclaveManifestPath = getManifestFromUnzippedBundle()
 
