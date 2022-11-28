@@ -38,6 +38,9 @@ open class GenerateGramineDirectManifest @Inject constructor(
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
 
+    @get:Input
+    val enclaveWorkerThreads: Property<Int> = objects.property(Int::class.java)
+
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
 
@@ -69,14 +72,6 @@ open class GenerateGramineDirectManifest @Inject constructor(
             .single { it.startsWith("Location: ") }
             .substringAfter("Location: ")
 
-        /**
-         * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
-         * Because of this, we need to add some safety margin.
-         */
-        val enclaveWorkerThreadCount = maxThreads.get()
-        //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
-        val gramineMaxThreads = enclaveWorkerThreadCount * 2
-
         val commands = mutableListOf(
             "gramine-manifest",
             "-Djava_home=${System.getProperty("java.home")}",
@@ -87,8 +82,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "-Dpython_packages_path=$pythonPackagesPath",
             "-Dis_python_enclave=${pythonEnclave.get()}",
             "-Denclave_mode=${buildType.name.uppercase()}",
-            "-Denclave_worker_threads=$enclaveWorkerThreadCount",
-            "-Dgramine_max_threads=$gramineMaxThreads",
+            "-Denclave_worker_threads=$enclaveWorkerThreads",
+            "-Dgramine_max_threads=$maxThreads",
             "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
             manifestTemplateFile.absolutePathString(),
             manifestFile.asFile.get().absolutePath

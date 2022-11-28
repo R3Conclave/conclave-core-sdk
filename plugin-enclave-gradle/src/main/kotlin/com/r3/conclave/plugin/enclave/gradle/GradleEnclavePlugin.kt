@@ -201,6 +201,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
+            task.enclaveWorkerThreads.set(conclaveExtension.enclaveWorkerThreads)
             task.manifestFile.set((gramineBuildDirectory / GRAMINE_MANIFEST).toFile())
         }
     }
