@@ -37,10 +37,9 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
     val outputSigningMaterial: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val dockerOutputSigningFile: File?
         // The signing material file may not live in a directory accessible by docker.
         // Prepare the file so docker can access it if necessary.
-        dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
+        val dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
 
         linuxExec.exec(
             listOf<String>(
