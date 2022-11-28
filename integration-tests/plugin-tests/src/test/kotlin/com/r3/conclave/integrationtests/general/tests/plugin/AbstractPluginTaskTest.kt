@@ -44,11 +44,6 @@ abstract class AbstractPluginTaskTest {
     abstract val output: Path
 
     /**
-     * If the task's output isn't stable then override with false, and explain why.
-     */
-    open val isReproducible: Boolean get() = true
-
-    /**
      * The name of the enclave project being used to test the task.
      */
     val projectName: String get() = projectDir.name
@@ -78,7 +73,28 @@ abstract class AbstractPluginTaskTest {
      */
     val dummyKeyFile: Path get() = conclaveBuildDir / "dummy_key.pem"
 
+    /**
+     * Override if the task only runs for a specific runtime.
+     */
+    open val taskIsSpecificToRuntime: TestUtils.RuntimeType? get() = null
+
+    /**
+     * Override if the task only runs in a specific enclave mode.
+     */
+    open val taskIsSpecificToMode: TestUtils.ITEnclaveMode? get() = null
+
+    /**
+     * If the task's output isn't stable then override with false, and explain why.
+     */
+    open val isReproducible: Boolean get() = true
+
     open val runDeletionAndReproducibilityTest: Boolean get() = true
+
+    @BeforeEach
+    fun checkPreconditions() {
+        taskIsSpecificToRuntime?.let { assumeTrue(it == runtimeType) }
+        taskIsSpecificToMode?.let { assumeTrue(it == enclaveMode) }
+    }
 
     @BeforeEach
     fun copyProject() {

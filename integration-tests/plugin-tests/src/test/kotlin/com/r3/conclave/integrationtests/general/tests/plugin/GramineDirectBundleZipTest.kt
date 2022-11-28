@@ -1,10 +1,9 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readZipEntryNames
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -19,16 +18,11 @@ class GramineDirectBundleZipTest : AbstractPluginTaskTest() {
             def receive_enclave_mail(mail):
                 print("Mail!)
         """.trimIndent()
-
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            gramineOnlyTest()
-        }
     }
 
     override val taskName: String get() = "gramineDirect${capitalisedEnclaveMode()}BundleZip"
     override val output: Path get() = enclaveModeBuildDir / "gramine-direct-bundle.zip"
+    override val taskIsSpecificToRuntime get() = GRAMINE
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])

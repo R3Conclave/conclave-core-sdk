@@ -1,31 +1,22 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.ITEnclaveMode
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readZipEntryNames
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.div
 
 class GramineEnclaveBundleJarTest : AbstractPluginTaskTest() {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            gramineOnlyTest()
-        }
-    }
-
     override val taskName: String get() = "enclaveBundle${capitalisedEnclaveMode()}Jar"
-
     override val output: Path get() {
         return buildDir / "libs" / "$projectName-bundle-${enclaveMode.name.lowercase()}.jar"
     }
+    override val taskIsSpecificToRuntime get() = GRAMINE
 
     @Test
     fun `contents of jar`() {

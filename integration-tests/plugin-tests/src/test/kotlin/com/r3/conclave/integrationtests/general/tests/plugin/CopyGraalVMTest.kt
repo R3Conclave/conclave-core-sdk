@@ -1,7 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
-import org.junit.jupiter.api.BeforeAll
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import java.nio.file.Path
 import kotlin.io.path.div
 
@@ -10,14 +9,7 @@ import kotlin.io.path.div
  * once GraalVM has been downloaded) which would otherwise lead to a poor developer experience.
  */
 class CopyGraalVMTest : AbstractPluginTaskTest() {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun check() {
-            graalvmOnlyTest()
-        }
-    }
-
     override val taskName: String get() = "copyGraalVM"
     override val output: Path get() = conclaveBuildDir / "graalvm"
+    override val taskIsSpecificToRuntime get() = GRAALVM
 }

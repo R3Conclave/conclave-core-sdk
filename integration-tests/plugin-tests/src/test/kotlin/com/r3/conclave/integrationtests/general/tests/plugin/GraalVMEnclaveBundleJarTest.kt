@@ -7,15 +7,14 @@ import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
 import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
 import com.r3.conclave.common.internal.SgxTypesKt
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.execCommand
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.getEnclaveSigstruct
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readSigningKey
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,20 +30,11 @@ import kotlin.io.path.*
  * down to a minimum.
  */
 class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            graalvmOnlyTest()
-        }
-    }
-
     override val taskName: String get() = "enclaveBundle${capitalisedEnclaveMode()}Jar"
-
     override val output: Path get() {
         return buildDir / "libs" / "$projectName-bundle-${enclaveMode.name.lowercase()}.jar"
     }
-
+    override val taskIsSpecificToRuntime get() = GRAALVM
     override val runDeletionAndReproducibilityTest: Boolean get() = false
 
     private lateinit var originalUnsignedEnclaveModifiedTime: FileTime

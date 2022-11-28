@@ -7,16 +7,15 @@ import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
 import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
 import com.r3.conclave.common.internal.SgxTypesKt
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.ITEnclaveMode.DEBUG
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.debugOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readSigningKey
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readZipEntryNames
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -33,17 +32,12 @@ class GramineSGXBundleZipTest : AbstractPluginTaskTest() {
             def receive_enclave_mail(mail):
                 print("Mail!)
         """.trimIndent()
-
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            gramineOnlyTest()
-            debugOnlyTest()
-        }
     }
 
     override val taskName: String get() = "gramineSGX${capitalisedEnclaveMode()}BundleZip"
     override val output: Path get() = enclaveModeBuildDir / "gramine-sgx-bundle.zip"
+    override val taskIsSpecificToRuntime get() = GRAMINE
+    override val taskIsSpecificToMode get() = DEBUG
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])

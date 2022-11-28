@@ -2,24 +2,16 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import kotlin.io.path.div
 
 class GenerateReflectionConfigTest : AbstractPluginTaskTest() {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            graalvmOnlyTest()
-        }
-    }
-
     override val taskName: String get() = "generateReflectionConfig"
     override val output: Path get() = conclaveBuildDir / "reflectconfig"
+    override val taskIsSpecificToRuntime get() = GRAALVM
 
     @Test
     fun `task re-runs on enclave class name change`() {

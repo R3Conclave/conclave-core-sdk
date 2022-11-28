@@ -2,25 +2,18 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
+import kotlin.io.path.div
 
 class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            graalvmOnlyTest()
-        }
-    }
-
     override val taskName: String get() = "generateEnclaveConfig${capitalisedEnclaveMode()}"
     override val output: Path get() = enclaveModeBuildDir / "enclave.xml"
+    override val taskIsSpecificToRuntime get() = GRAALVM
 
     @Test
     fun productID() {

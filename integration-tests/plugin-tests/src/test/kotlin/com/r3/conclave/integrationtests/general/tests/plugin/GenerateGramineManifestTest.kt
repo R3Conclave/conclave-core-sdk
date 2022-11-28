@@ -2,13 +2,12 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readSigningKey
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -20,16 +19,9 @@ import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
 
 class GenerateGramineManifestTest : AbstractPluginTaskTest() {
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun precondition() {
-            gramineOnlyTest()
-        }
-    }
-
     override val taskName: String get() = "generateGramineManifest${capitalisedEnclaveMode()}"
     override val output: Path get() = enclaveModeBuildDir / "java.manifest"
+    override val taskIsSpecificToRuntime get() = GRAMINE
 
     @Test
     fun productID() {
