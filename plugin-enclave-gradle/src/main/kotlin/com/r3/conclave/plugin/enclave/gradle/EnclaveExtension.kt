@@ -1,7 +1,5 @@
-package com.r3.conclave.plugin.enclave.gradle.extension
+package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.BuildType
-import com.r3.conclave.plugin.enclave.gradle.SigningType
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
@@ -20,6 +18,17 @@ open class EnclaveExtension @Inject constructor(
     private val buildType: BuildType,
     private val projectLayout: ProjectLayout
 ) {
+    // Define constants to make it easier for the configurer to select a signing type
+    @Suppress("unused")
+    @get:Internal
+    val dummyKey = SigningType.DummyKey
+    @Suppress("unused")
+    @get:Internal
+    val privateKey = SigningType.PrivateKey
+    @Suppress("unused")
+    @get:Internal
+    val externalKey = SigningType.ExternalKey
+
     @get:Input
     val signingType: Property<SigningType> = objects.property(SigningType::class.java).convention(
         // Release mode defaults to external signing, whilst the other two default to the dummy key.
@@ -53,15 +62,4 @@ open class EnclaveExtension @Inject constructor(
     @get:InputFile
     @get:Optional
     val signingKey: RegularFileProperty = objects.fileProperty()
-
-    // Define constants to make it easier for the configurer to select a signing type
-    @Suppress("unused")
-    @get:Internal
-    val dummyKey = SigningType.DummyKey
-    @Suppress("unused")
-    @get:Internal
-    val privateKey = SigningType.PrivateKey
-    @Suppress("unused")
-    @get:Internal
-    val externalKey = SigningType.ExternalKey
 }

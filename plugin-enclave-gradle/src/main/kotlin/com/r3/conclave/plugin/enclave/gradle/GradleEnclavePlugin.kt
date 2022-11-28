@@ -12,7 +12,6 @@ import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
-import com.r3.conclave.plugin.enclave.gradle.extension.ConclaveExtension
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineDirectManifest
 import com.r3.conclave.plugin.enclave.gradle.gramine.GramineSGXBundleZip
 import com.r3.conclave.utilities.internal.copyResource
@@ -183,10 +182,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private fun createGenerateGramineManifestTask(
-            target: Project,
-            type: BuildType,
-            conclaveExtension: ConclaveExtension,
-            signingKey: Provider<RegularFile?>
+        target: Project,
+        type: BuildType,
+        conclaveExtension: ConclaveExtension,
+        signingKey: Provider<RegularFile?>
     ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type) { task ->
             task.pythonEnclave.set(pythonSourcePath != null)

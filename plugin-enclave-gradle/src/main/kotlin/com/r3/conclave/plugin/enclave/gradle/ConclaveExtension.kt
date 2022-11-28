@@ -1,14 +1,11 @@
-package com.r3.conclave.plugin.enclave.gradle.extension
+package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.plugin.enclave.gradle.*
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.*
 import javax.inject.Inject
 
 open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
@@ -39,7 +36,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:InputFiles
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     // We're using a string here so that we can do our own error checking in the plugin code
-    // TODO We are a few enum properties whch should have all the same parsing logic
+    // TODO There are a few enum properties whch should have all the same parsing logic
     @get:Input
     val runtime: Property<String> = objects.property(String::class.java)
     // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.
@@ -60,19 +57,73 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Nested
     val simulation: EnclaveExtension = objects.newInstance(BuildType.Simulation)
 
+    @Suppress("unused")
     fun release(action: Action<EnclaveExtension>) {
         action.execute(release)
     }
 
+    @Suppress("unused")
     fun debug(action: Action<EnclaveExtension>) {
         action.execute(debug)
     }
 
+    @Suppress("unused")
     fun simulation(action: Action<EnclaveExtension>) {
         action.execute(simulation)
     }
 
+    @Suppress("unused")
     fun kds(action: Action<KDSExtension>) {
         action.execute(kds)
     }
+}
+
+open class KDSExtension @Inject constructor(objects: ObjectFactory) {
+    @get:Input
+    @get:Optional
+    val kdsEnclaveConstraint: Property<String> = objects.property(String::class.java)
+    @get:Nested
+    val persistenceKeySpec: KeySpecExtension = objects.newInstance(KeySpecExtension::class.java)
+
+    @Suppress("unused")
+    fun persistenceKeySpec(action: Action<KeySpecExtension>) {
+        action.execute(persistenceKeySpec)
+    }
+
+    val isPresent: Boolean
+        @Internal
+        get() = kdsEnclaveConstraint.isPresent or persistenceKeySpec.isPresent
+}
+
+open class KeySpecExtension @Inject constructor(objects: ObjectFactory) {
+    @get:Input
+    @get:Optional
+    val masterKeyType: Property<String> = objects.property(String::class.java)
+    @get:Nested
+    val policyConstraint: PolicyConstraintExtension = objects.newInstance(PolicyConstraintExtension::class.java)
+
+    @Suppress("unused")
+    fun policyConstraint(action: Action<PolicyConstraintExtension>) {
+        action.execute(policyConstraint)
+    }
+
+    val isPresent: Boolean
+        @Internal
+        get() = masterKeyType.isPresent or policyConstraint.isPresent
+}
+
+open class PolicyConstraintExtension @Inject constructor(objects: ObjectFactory) {
+    @get:Input
+    @get:Optional
+    val useOwnCodeHash: Property<Boolean> = objects.property(Boolean::class.java)
+    @get:Input
+    @get:Optional
+    val useOwnCodeSignerAndProductID: Property<Boolean> = objects.property(Boolean::class.java)
+    @get:Input
+    @get:Optional
+    val constraint: Property<String> = objects.property(String::class.java)
+
+    val isPresent: Boolean
+        @Internal
+        get() = useOwnCodeHash.isPresent or useOwnCodeSignerAndProductID.isPresent or constraint.isPresent
 }

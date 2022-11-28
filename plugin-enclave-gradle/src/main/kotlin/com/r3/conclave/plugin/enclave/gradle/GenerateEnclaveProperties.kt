@@ -2,8 +2,6 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.kds.MasterKeyType
-import com.r3.conclave.plugin.enclave.gradle.extension.ConclaveExtension
-import com.r3.conclave.plugin.enclave.gradle.extension.KeySpecExtension
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
