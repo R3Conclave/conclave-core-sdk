@@ -13,19 +13,19 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
 import kotlin.io.path.copyTo
 
-open class GramineSGXBundleZip : Zip() {
+abstract class GramineSGXBundleZip : Zip() {
     @get:InputFile
-    val signingKey: RegularFileProperty = project.objects.fileProperty()
+    abstract val signingKey: RegularFileProperty
 
     @get:InputFile
-    val directManifest: RegularFileProperty = project.objects.fileProperty()
+    abstract val directManifest: RegularFileProperty
 
     @get:InputFile
-    val enclaveJar: RegularFileProperty = project.objects.fileProperty()
+    abstract val enclaveJar: RegularFileProperty
 
     @get:InputFile
     @get:Optional
-    val pythonFile: RegularFileProperty = project.objects.fileProperty()
+    abstract val pythonFile: RegularFileProperty
 
     @TaskAction
     override fun copy() {

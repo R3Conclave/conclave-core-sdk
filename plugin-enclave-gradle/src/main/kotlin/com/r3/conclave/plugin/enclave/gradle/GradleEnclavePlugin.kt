@@ -182,10 +182,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private fun createGenerateGramineManifestTask(
-        target: Project,
-        type: BuildType,
-        conclaveExtension: ConclaveExtension,
-        signingKey: Provider<RegularFile?>
+            target: Project,
+            type: BuildType,
+            conclaveExtension: ConclaveExtension,
+            signingKey: Provider<RegularFile?>
     ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type) { task ->
             task.pythonEnclave.set(pythonSourcePath != null)
