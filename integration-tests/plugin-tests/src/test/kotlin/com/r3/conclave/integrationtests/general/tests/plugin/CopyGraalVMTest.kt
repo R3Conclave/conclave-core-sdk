@@ -5,8 +5,10 @@ import org.junit.jupiter.api.BeforeAll
 import java.nio.file.Path
 import kotlin.io.path.div
 
-// This runs the tests from AbstractTaskTest, in particular making sure it's incremental (i.e. doesn't run once
-// GraalVM has been downloaded) which would otherwise lead to a poor developer experience.
+/**
+ * This runs the tests from [AbstractPluginTaskTest], in particular making sure it's incremental (i.e. doesn't run
+ * once GraalVM has been downloaded) which would otherwise lead to a poor developer experience.
+ */
 class CopyGraalVMTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic

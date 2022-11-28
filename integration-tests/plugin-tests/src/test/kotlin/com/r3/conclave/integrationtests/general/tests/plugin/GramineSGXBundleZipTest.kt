@@ -25,8 +25,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipFile
 import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
 
-class GramineSGXBundleZipTest : AbstractModeTaskTest() {
+class GramineSGXBundleZipTest : AbstractPluginTaskTest() {
     companion object {
         private val pythonCode = """
             def receive_enclave_mail(mail):
@@ -41,8 +42,8 @@ class GramineSGXBundleZipTest : AbstractModeTaskTest() {
         }
     }
 
-    override val taskNameFormat: String get() = "gramineSGX%sBundleZip"
-    override val outputName: String get() = "gramine-sgx-bundle.zip"
+    override val taskName: String get() = "gramineSGX${capitalisedEnclaveMode()}BundleZip"
+    override val output: Path get() = enclaveModeBuildDir / "gramine-sgx-bundle.zip"
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])

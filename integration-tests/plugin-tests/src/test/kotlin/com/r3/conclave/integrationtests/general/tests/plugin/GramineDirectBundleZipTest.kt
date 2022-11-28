@@ -9,9 +9,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.tomlj.Toml
+import java.nio.file.Path
 import java.util.zip.ZipFile
+import kotlin.io.path.div
 
-class GramineDirectBundleZipTest : AbstractModeTaskTest() {
+class GramineDirectBundleZipTest : AbstractPluginTaskTest() {
     companion object {
         private val pythonCode = """
             def receive_enclave_mail(mail):
@@ -25,8 +27,8 @@ class GramineDirectBundleZipTest : AbstractModeTaskTest() {
         }
     }
 
-    override val taskNameFormat: String get() = "gramineDirect%sBundleZip"
-    override val outputName: String get() = "gramine-direct-bundle.zip"
+    override val taskName: String get() = "gramineDirect${capitalisedEnclaveMode()}BundleZip"
+    override val output: Path get() = enclaveModeBuildDir / "gramine-direct-bundle.zip"
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])

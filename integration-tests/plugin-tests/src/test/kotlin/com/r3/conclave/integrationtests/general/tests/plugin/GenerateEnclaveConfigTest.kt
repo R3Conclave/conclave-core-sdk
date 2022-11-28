@@ -8,18 +8,20 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.nio.file.Path
+import kotlin.io.path.div
 
-class GenerateEnclaveConfigTest : AbstractModeTaskTest() {
+class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
-        fun check() {
+        fun precondition() {
             graalvmOnlyTest()
         }
     }
 
-    override val taskNameFormat: String get() = "generateEnclaveConfig%s"
-    override val outputName: String get() = "enclave.xml"
+    override val taskName: String get() = "generateEnclaveConfig${capitalisedEnclaveMode()}"
+    override val output: Path get() = enclaveModeBuildDir / "enclave.xml"
 
     @Test
     fun productID() {

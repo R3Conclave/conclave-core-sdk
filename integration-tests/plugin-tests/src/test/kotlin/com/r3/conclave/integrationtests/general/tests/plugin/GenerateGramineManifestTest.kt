@@ -17,8 +17,9 @@ import org.tomlj.TomlTable
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
 
-class GenerateGramineManifestTest : AbstractModeTaskTest() {
+class GenerateGramineManifestTest : AbstractPluginTaskTest() {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -27,8 +28,8 @@ class GenerateGramineManifestTest : AbstractModeTaskTest() {
         }
     }
 
-    override val taskNameFormat: String get() = "generateGramineManifest%s"
-    override val outputName: String get() = "java.manifest"
+    override val taskName: String get() = "generateGramineManifest${capitalisedEnclaveMode()}"
+    override val output: Path get() = enclaveModeBuildDir / "java.manifest"
 
     @Test
     fun productID() {
