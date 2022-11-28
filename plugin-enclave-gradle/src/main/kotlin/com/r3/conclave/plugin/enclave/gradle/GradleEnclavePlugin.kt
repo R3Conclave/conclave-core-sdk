@@ -436,7 +436,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)
-                task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
+                task.outputSigningMaterial.set(enclaveExtension.signingMaterialWithDefault)
             }
 
             val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>(

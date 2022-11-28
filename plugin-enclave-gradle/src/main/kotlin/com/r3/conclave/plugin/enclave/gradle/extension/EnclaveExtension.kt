@@ -3,9 +3,11 @@ package com.r3.conclave.plugin.enclave.gradle.extension
 import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.SigningType
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
@@ -15,8 +17,8 @@ import javax.inject.Inject
 
 open class EnclaveExtension @Inject constructor(
     objects: ObjectFactory,
-    projectLayout: ProjectLayout,
-    buildType: BuildType
+    private val buildType: BuildType,
+    private val projectLayout: ProjectLayout
 ) {
     @get:Input
     val signingType: Property<SigningType> = objects.property(SigningType::class.java).convention(
@@ -37,9 +39,15 @@ open class EnclaveExtension @Inject constructor(
 
     @get:InputFile
     @get:Optional
-    val signingMaterial: RegularFileProperty = objects.fileProperty().convention(
-        projectLayout.buildDirectory.file("enclave/${buildType.name.lowercase()}/signing_material.bin")
-    )
+    val signingMaterial: RegularFileProperty = objects.fileProperty()
+
+    // In theory in should be possible to add .convention() to signingMaterial above with the default, but it doesn't
+    // work as Gradle expects the file to exist.
+    val signingMaterialWithDefault: Provider<RegularFile>
+        @Internal
+        get() = signingMaterial.orElse(
+            projectLayout.buildDirectory.file("enclave/${buildType.name.lowercase()}/signing_material.bin")
+        )
 
     @get:InputFile
     @get:Optional
