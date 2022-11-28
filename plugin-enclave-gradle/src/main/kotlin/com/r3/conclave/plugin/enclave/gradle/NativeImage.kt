@@ -13,7 +13,6 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
 import kotlin.io.path.createDirectories
-import kotlin.io.path.div
 import kotlin.io.path.listDirectoryEntries
 import kotlin.math.roundToInt
 
@@ -89,22 +88,22 @@ open class NativeImage @Inject constructor(
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
 
     @get:Input
-    val maxStackSize: Property<String> = objects.stringProperty()
+    val maxStackSize: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val maxHeapSize: Property<String> = objects.stringProperty()
+    val maxHeapSize: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val supportLanguages: Property<String> = objects.stringProperty()
+    val supportLanguages: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val deadlockTimeout: Property<Int> = objects.intProperty()
+    val deadlockTimeout: Property<Int> = objects.property(Int::class.java)
 
     @get:OutputFile
     val outputEnclave: RegularFileProperty = objects.fileProperty()
 
     private fun defaultOptions(): List<String> {
-        val maxHeapSizeBytes = maxHeapSize.get().toSizeBytes()
+        val maxHeapSizeBytes = GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get())
         return listOf(
             "--no-fallback",
             "--no-server",
@@ -157,7 +156,7 @@ open class NativeImage @Inject constructor(
         // yellow zone size = 32K
         // red zone size = 8K
         val zoneSize = (32 * 1024) + (8 * 1024)
-        val stackSize = maxStackSize.get().toSizeBytes()
+        val stackSize = GenerateEnclaveConfig.getSizeBytes(maxStackSize.get())
         if (stackSize <= zoneSize) {
             // Invalid stack size
             throw GradleException("The configured stack size is too small (<= 40K). Please specify a larger stack " +
@@ -381,9 +380,9 @@ open class NativeImage @Inject constructor(
                 "-H:NativeLinkerOption=-Wl,-pie,-eenclave_entry",
                 "-H:NativeLinkerOption=-Wl,--export-dynamic",
                 "-H:NativeLinkerOption=-Wl,--defsym,__ImageBase=0,--defsym,__HeapSize=" +
-                            maxHeapSize.get().toSizeBytes() / 4096,
+                            GenerateEnclaveConfig.getSizeBytes(maxHeapSize.get()) / 4096,
                 "-H:NativeLinkerOption=-Wl,--defsym,__StackSize=" +
-                            maxStackSize.get().toSizeBytes() / 4096,
+                            GenerateEnclaveConfig.getSizeBytes(maxStackSize.get()) / 4096,
                 "-H:NativeLinkerOption=-Wl,--defsym,__DeadlockTimeout=" + deadlockTimeout.get(),
                 "-H:NativeLinkerOption=-Wl,--gc-sections"
         )

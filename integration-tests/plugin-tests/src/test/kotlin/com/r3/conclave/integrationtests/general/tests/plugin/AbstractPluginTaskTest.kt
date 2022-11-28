@@ -2,6 +2,7 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.runtimeType
 import com.r3.conclave.utilities.internal.UtilsKt.digest
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testkit.runner.BuildTask
@@ -244,7 +245,7 @@ abstract class AbstractPluginTaskTest {
                 .withProjectDir(projectDirectory.toFile())
                 .withArguments(
                     task,
-                    "-PruntimeType=${TestUtils.runtimeType}",
+                    "-PruntimeType=$runtimeType",
                     "--no-build-cache",
                     "--stacktrace",
                     "--info",

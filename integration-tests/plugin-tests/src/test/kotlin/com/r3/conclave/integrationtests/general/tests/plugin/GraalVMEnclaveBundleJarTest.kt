@@ -56,7 +56,7 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
     fun `single test run`() {
         // Perform the first run which will build the unsigned enclave .so and then sign it with the random dummy key
         runTaskAndAssertItsIncremental()
-        expectedMrsigner = calculateMrsigner(readSigningKey(dummyKeyFile))
+        expectedMrsigner = calculateMrsigner(dummyKey())
         expectedProductID = 11
         expectedRevocationLevel = 12
 
@@ -84,6 +84,7 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
     private fun testDummyKeySigning(bundleJarContentsUsingDummySigner: ByteArray) {
         // Switch back to using the dummy key but this time make it explicit in the config.
         modifyGradleBuildFile("signingType = privateKey", "signingType = dummyKey")
+        expectedMrsigner = calculateMrsigner(dummyKey())
         runTaskAndAssertItsIncremental()
         assertThat(output).hasBinaryContent(bundleJarContentsUsingDummySigner)
         assertEnclave()

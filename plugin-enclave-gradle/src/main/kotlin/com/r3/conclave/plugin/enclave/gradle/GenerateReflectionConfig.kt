@@ -49,7 +49,7 @@ open class GenerateReflectionConfig @Inject constructor(objects: ObjectFactory) 
     }
 
     @get:Input
-    val enclaveClass: Property<String> = objects.stringProperty()
+    val enclaveClass: Property<String> = objects.property(String::class.javaObjectType)
 
     @get:OutputFile
     val reflectionConfig: RegularFileProperty = objects.fileProperty()

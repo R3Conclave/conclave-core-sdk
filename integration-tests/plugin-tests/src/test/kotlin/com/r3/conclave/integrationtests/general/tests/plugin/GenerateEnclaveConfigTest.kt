@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
-import kotlin.io.path.div
 
 class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
     companion object {

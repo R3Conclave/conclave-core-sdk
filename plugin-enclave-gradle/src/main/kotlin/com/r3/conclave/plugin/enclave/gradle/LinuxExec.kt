@@ -12,17 +12,16 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
-import kotlin.io.path.div
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:Input
-    val baseDirectory: Property<String> = objects.stringProperty()
+    val baseDirectory: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val tag: Property<String> = objects.stringProperty()
+    val tag: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val tagLatest: Property<String> = objects.stringProperty()
+    val tagLatest: Property<String> = objects.property(String::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context

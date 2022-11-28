@@ -107,13 +107,16 @@ abstract class GenerateEnclaveProperties : DefaultTask() {
         //  properties file
         val properties = TreeMap<String, String>()
 
-        val conclaveExtension = conclaveExtension.get()
-        properties["productID"] = conclaveExtension.productID.get().toString()
-        properties["revocationLevel"] = conclaveExtension.revocationLevel.get().toString()
-        properties["enablePersistentMap"] = conclaveExtension.enablePersistentMap.get().toString()
-        properties["maxPersistentMapSize"] = conclaveExtension.maxPersistentMapSize.get().toSizeBytes().toString()
-        properties["inMemoryFileSystemSize"] = conclaveExtension.inMemoryFileSystemSize.get().toSizeBytes().toString()
-        properties["persistentFileSystemSize"] = conclaveExtension.persistentFileSystemSize.get().toSizeBytes().toString()
+        val conclave = conclaveExtension.get()
+        properties["productID"] = conclave.productID.get().toString()
+        properties["revocationLevel"] = conclave.revocationLevel.get().toString()
+        properties["enablePersistentMap"] = conclave.enablePersistentMap.get().toString()
+        properties["maxPersistentMapSize"] =
+            GenerateEnclaveConfig.getSizeBytes(conclave.maxPersistentMapSize.get()).toString()
+        properties["inMemoryFileSystemSize"] =
+            GenerateEnclaveConfig.getSizeBytes(conclave.inMemoryFileSystemSize.get()).toString()
+        properties["persistentFileSystemSize"] =
+            GenerateEnclaveConfig.getSizeBytes(conclave.persistentFileSystemSize.get()).toString()
 
         applyKDSConfig(properties)
 

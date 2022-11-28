@@ -413,7 +413,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.outputConfigFile.set(enclaveModeDir.resolve("enclave.xml").toFile())
                 }
 
-            val signEnclaveWithKeyTask = target.createTask<SignEnclaveWithKey>(
+            val signEnclaveWithKeyTask = target.createTask<SignEnclave>(
                     "signEnclaveWithKey$type",
                     this,
                     enclaveExtension,
@@ -524,7 +524,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         } else {
                             gramineSGXZipBundleTask.get().archiveFile
                         }
-                        null -> throw IllegalArgumentException()  // Keep the compiler happy
+                        else -> throw IllegalArgumentException()
                     }
                 }
                 task.from(bundleOutput)
@@ -533,7 +533,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     val bundleName = when (runtimeType.get()) {
                         GRAALVM -> GRAALVM_BUNDLE_NAME
                         GRAMINE -> GRAMINE_BUNDLE_NAME
-                        null -> throw IllegalArgumentException()  // Keep the compiler happy
+                        else -> throw IllegalArgumentException()
                     }
                     "$typeLowerCase-$bundleName"
                 }
