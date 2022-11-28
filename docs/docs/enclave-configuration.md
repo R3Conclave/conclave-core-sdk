@@ -44,8 +44,9 @@ conclave {
     persistentFileSystemSize = "0m"
     enablePersistentMap = false
     maxPersistentMapSize = "16m"
-    maxThreads = 10
-    supportLanguages = ""
+    maxThreads = 100
+    enclaveWorkerThreads = 10
+    supportLanguages = ""   
     reflectionConfigurationFiles.from("config.json")
     serializationConfigurationFiles.from("serialization.json")
 
@@ -143,7 +144,7 @@ with 256Mb or more EPC.
     megabytes or gigabytes respectively.
 
 ### maxThreads
-_Default:_ `10`
+_Default:_ `100`
 
 This is an advanced setting that defines the maximum number of threads that can be active inside an enclave
 simultaneously. If you're interested, you can read [this detailed technical description](threads.md), otherwise you
@@ -154,6 +155,12 @@ can create inside the enclave.
 The `maxThreads` option defines how many EPC slots are available for threads that are simultaneously
 active inside the enclave. Setting a higher number for this results in a larger SGX EPC memory requirement
 for the enclave even if not all the thread slots are currently in use inside the enclave.
+
+### enclaveWorkerThreads
+_Default:_ `10`
+
+This is an advanced setting that defines the maximum number of threads available for processing the messages received by
+the enclave. The value of this field must be less than the value set in the field maxThreads.
 
 ### deadlockTimeout
 _Default:_ `10`
