@@ -57,7 +57,7 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
         sgxGetToken()
     }
 
-    /** Signing Gramine manifest currently works only outside the container. */
+    /** TODO: Signing Gramine manifest currently works only outside the container. https://r3-cev.atlassian.net/browse/CON-1232 */
     private fun signDirectManifest(directManifest: String, privateKey: String): ExecResult {
         val command = listOf(
             GRAMINE_SGX_SIGN_EXECUTABLE,
