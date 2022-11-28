@@ -38,9 +38,6 @@ open class GenerateGramineDirectManifest @Inject constructor(
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
 
-    @get:Input
-    val enclaveWorkerThreads: Property<Int> = objects.property(Int::class.java)
-
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
 
@@ -82,8 +79,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "-Dpython_packages_path=$pythonPackagesPath",
             "-Dis_python_enclave=${pythonEnclave.get()}",
             "-Denclave_mode=${buildType.name.uppercase()}",
-            "-Denclave_worker_threads=$enclaveWorkerThreads",
-            "-Dgramine_max_threads=$maxThreads",
+            "-Denclave_worker_threads=10",
+            "-Dgramine_max_threads=${maxThreads.get()}",
             "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
             manifestTemplateFile.absolutePathString(),
             manifestFile.asFile.get().absolutePath

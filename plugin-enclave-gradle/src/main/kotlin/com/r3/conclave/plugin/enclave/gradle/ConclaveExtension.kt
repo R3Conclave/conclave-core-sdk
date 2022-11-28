@@ -17,7 +17,6 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val inMemoryFileSystemSize: Property<String> = objects.property(String::class.java).convention("64m")
     val persistentFileSystemSize: Property<String> = objects.property(String::class.java).convention("0")
     val maxThreads: Property<Int> = objects.property(Int::class.java).convention(100)
-    val enclaveWorkerThreads: Property<Int> = objects.property(Int::class.java).convention(10)
     val deadlockTimeout: Property<Int> = objects.property(Int::class.java).convention(10)
     val release: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val debug: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
