@@ -1,6 +1,11 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.utilities.internal.copyResource
@@ -9,17 +14,22 @@ import com.r3.conclave.utilities.internal.toHexString
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import java.nio.file.Path
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.copyTo
+import kotlin.io.path.deleteExisting
 
-open class GenerateGramineDirectManifest @Inject constructor(
+open class GenerateGramineBundle @Inject constructor(
     objects: ObjectFactory,
     private val buildType: BuildType
 ) : ConclaveTask() {
@@ -41,15 +51,24 @@ open class GenerateGramineDirectManifest @Inject constructor(
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
 
-    @get:Input
-    val pythonEnclave: Property<Boolean> = objects.property(Boolean::class.java)
+    @get:InputFile
+    val enclaveJar: RegularFileProperty = objects.fileProperty()
 
-    @get:OutputFile
-    val manifestFile: RegularFileProperty = objects.fileProperty()
+    @get:InputFile
+    @get:Optional
+    val pythonFile: RegularFileProperty = objects.fileProperty()
+
+    @get:OutputDirectory
+    val outputDir: DirectoryProperty = objects.directoryProperty()
 
     override fun action() {
         val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
+
+        enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
+        if (pythonFile.isPresent) {
+            pythonFile.copyToOutputDir(PYTHON_FILE)
+        }
 
         // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
         //  enclave. Rather than documenting all this and expecting the user to have their machine correctly setup, it
@@ -77,7 +96,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
         //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
         val gramineMaxThreads = enclaveWorkerThreadCount * 2
 
-        val commands = mutableListOf(
+        val gramineManifestCommand = mutableListOf(
             "gramine-manifest",
             "-Djava_home=${System.getProperty("java.home")}",
             "-Darch_libdir=/lib/$architecture",
@@ -85,20 +104,45 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "-Disv_prod_id=${productId.get()}",
             "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dpython_packages_path=$pythonPackagesPath",
-            "-Dis_python_enclave=${pythonEnclave.get()}",
+            "-Dis_python_enclave=${pythonFile.isPresent}",
             "-Denclave_mode=${buildType.name.uppercase()}",
             "-Denclave_worker_threads=$enclaveWorkerThreadCount",
             "-Dgramine_max_threads=$gramineMaxThreads",
-            "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+            "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
             manifestTemplateFile.absolutePathString(),
-            manifestFile.asFile.get().absolutePath
+            GRAMINE_MANIFEST
         )
-
         if (buildType == BuildType.Simulation) {
             val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
-            commands.add("-Dsimulation_mrsigner=$simulationMrSigner")
+            gramineManifestCommand += "-Dsimulation_mrsigner=$simulationMrSigner"
         }
-        commandLine(commands)
+        commandLine(gramineManifestCommand)
+
+        if (buildType != BuildType.Simulation) {
+            // This will create a .manifest.sgx and a .sig files into the output dir
+            project.exec { spec ->
+                spec.commandLine = listOf(
+                    "gramine-sgx-sign",
+                    "--manifest=$GRAMINE_MANIFEST",
+                    "--key=${signingKey.get().asFile.absolutePath}",
+                    "--output=$GRAMINE_SGX_MANIFEST"
+                )
+                spec.setWorkingDir(outputDir)
+            }
+
+            // This will create a .token file into the output dir
+            project.exec { spec ->
+                spec.commandLine = listOf(
+                    "gramine-sgx-get-token",
+                    "--sig=$GRAMINE_SIGSTRUCT",
+                    "--output=$GRAMINE_SGX_TOKEN"
+                )
+                spec.setWorkingDir(outputDir)
+            }
+
+            // The .manifest is not needed for debug and release modes
+            outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
+        }
     }
 
     /**
@@ -138,4 +182,10 @@ open class GenerateGramineDirectManifest @Inject constructor(
     }
 
     private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
+
+    private fun RegularFileProperty.copyToOutputDir(fileName: String): Path {
+        val target = outputDir.file(fileName).get().asFile.toPath()
+        get().asFile.toPath().copyTo(target)
+        return target
+    }
 }

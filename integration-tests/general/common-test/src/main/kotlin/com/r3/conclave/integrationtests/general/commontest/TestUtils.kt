@@ -65,9 +65,9 @@ object TestUtils {
         return entry
     }
 
-    fun ZipFile.assertEntryContents(name: String, block: (InputStream) -> Unit) {
+    fun <T> ZipFile.assertEntryContents(name: String, block: (InputStream) -> T): T {
         val entry = assertEntryExists(name)
-        getInputStream(entry).use(block)
+        return getInputStream(entry).use(block)
     }
 
     fun InputStream.readZipEntryNames(): List<String> {
