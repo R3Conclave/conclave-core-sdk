@@ -2,11 +2,10 @@
 
 ## 1.3 to 1.4
 
+### API changes
+
 For security reasons, a client that sets the security level in the [`EnclaveConstraint`](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html) to `INSECURE` will no longer be able to connect to `STALE` or `SECURE` enclaves.
 The behavior of the security levels `STALE`, and `SECURE` has not changed.
-
-The Gradle config `kds.keySpec` has been removed after being deprecated in the [previous release](#kds-enclave-configuration).
-Rename this to `kds.persistenceKeySpec`.
 
 The default value for the Conclave configuration field `maxThreads` has been increased to 100. This value should be suitable
 to cover most of the use-cases when the logic inside the enclaves uses a large number of threads. There should be no

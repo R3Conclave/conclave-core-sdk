@@ -40,10 +40,8 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Input
     val runtime: Property<String> = objects.property(String::class.java)
     // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.
-    @Suppress("unused")
     @get:Internal
     val graalvm = "graalvm"
-    @Suppress("unused")
     @get:Internal
     val gramine = "gramine"
 
@@ -57,22 +55,18 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Nested
     val simulation: EnclaveExtension = objects.newInstance(BuildType.Simulation)
 
-    @Suppress("unused")
     fun release(action: Action<EnclaveExtension>) {
         action.execute(release)
     }
 
-    @Suppress("unused")
     fun debug(action: Action<EnclaveExtension>) {
         action.execute(debug)
     }
 
-    @Suppress("unused")
     fun simulation(action: Action<EnclaveExtension>) {
         action.execute(simulation)
     }
 
-    @Suppress("unused")
     fun kds(action: Action<KDSExtension>) {
         action.execute(kds)
     }
@@ -83,9 +77,14 @@ open class KDSExtension @Inject constructor(objects: ObjectFactory) {
     @get:Optional
     val kdsEnclaveConstraint: Property<String> = objects.property(String::class.java)
     @get:Nested
+    val keySpec: KeySpecExtension = objects.newInstance(KeySpecExtension::class.java)
+    @get:Nested
     val persistenceKeySpec: KeySpecExtension = objects.newInstance(KeySpecExtension::class.java)
 
-    @Suppress("unused")
+    fun keySpec(action: Action<KeySpecExtension>) {
+        action.execute(keySpec)
+    }
+
     fun persistenceKeySpec(action: Action<KeySpecExtension>) {
         action.execute(persistenceKeySpec)
     }
@@ -102,7 +101,6 @@ open class KeySpecExtension @Inject constructor(objects: ObjectFactory) {
     @get:Nested
     val policyConstraint: PolicyConstraintExtension = objects.newInstance(PolicyConstraintExtension::class.java)
 
-    @Suppress("unused")
     fun policyConstraint(action: Action<PolicyConstraintExtension>) {
         action.execute(policyConstraint)
     }

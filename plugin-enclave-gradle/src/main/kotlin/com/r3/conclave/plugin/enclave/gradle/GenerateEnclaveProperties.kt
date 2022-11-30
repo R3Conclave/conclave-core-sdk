@@ -2,21 +2,21 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.kds.MasterKeyType
-import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
 import java.util.*
+import javax.inject.Inject
 
-abstract class GenerateEnclaveProperties : DefaultTask() {
+open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:Nested
-    abstract val conclaveExtension: Property<ConclaveExtension>
+    val conclaveExtension: Property<ConclaveExtension> = objects.property(ConclaveExtension::class.java)
 
     @get:OutputFile
-    abstract val enclavePropertiesFile: RegularFileProperty
+    val enclavePropertiesFile: RegularFileProperty = objects.fileProperty()
 
     private fun throwKDSPropertyMissingException(propertyName: String) {
         throw GradleException(
@@ -50,7 +50,11 @@ abstract class GenerateEnclaveProperties : DefaultTask() {
 
         val persistenceKeySpecPropertyName = "kds.persistenceKeySpec.configurationPresent"
 
-        if (kdsExtension.persistenceKeySpec.isPresent) {
+        if (kdsExtension.keySpec.isPresent) {
+            logger.warn("kds.keySpec has been replaced by kds.persistenceKeySpec and it is now deprecated")
+            applyKDSConfigPersistenceKeySpec(properties, kdsExtension.keySpec)
+            properties[persistenceKeySpecPropertyName] = "true"
+        } else if (kdsExtension.persistenceKeySpec.isPresent) {
             applyKDSConfigPersistenceKeySpec(properties, kdsExtension.persistenceKeySpec)
             properties[persistenceKeySpecPropertyName] = "true"
         } else {
@@ -99,8 +103,7 @@ abstract class GenerateEnclaveProperties : DefaultTask() {
             useOwnCodeSignerAndProductID.toString()
     }
 
-    @TaskAction
-    fun run() {
+    override fun action() {
         // TODO Use inputs.properties to enumerate all property values and automatically dump them into the
         //  properties file
         val properties = TreeMap<String, String>()

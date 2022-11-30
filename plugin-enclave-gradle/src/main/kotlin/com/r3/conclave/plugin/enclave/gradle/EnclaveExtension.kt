@@ -19,13 +19,10 @@ open class EnclaveExtension @Inject constructor(
     projectLayout: ProjectLayout
 ) {
     // Define constants to make it easier for the configurer to select a signing type
-    @Suppress("unused")
     @get:Internal
     val dummyKey = SigningType.DummyKey
-    @Suppress("unused")
     @get:Internal
     val privateKey = SigningType.PrivateKey
-    @Suppress("unused")
     @get:Internal
     val externalKey = SigningType.ExternalKey
 
