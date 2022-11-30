@@ -137,9 +137,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val generateEnclavePropertiesTask = target.createTask<GenerateEnclaveProperties>(
             "generateEnclaveProperties",
-        ) { task ->
-            task.conclaveExtension.set(conclaveExtension)
-            task.enclavePropertiesFile.set(baseDirectory.resolve(ENCLAVE_PROPERTIES).toFile())
+        ) {
+            it.conclaveExtension.set(conclaveExtension)
+            it.enclavePropertiesFile.set(baseDirectory.resolve(ENCLAVE_PROPERTIES).toFile())
         }
 
         val enclaveFatJarTask = if (pythonSourcePath == null) {
@@ -188,10 +188,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             signingKey: Provider<RegularFile?>
     ): GenerateGramineBundle {
         return target.createTask("generateGramine${type}Bundle", type) { task ->
+            task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
-            task.signingKey.set(signingKey)
             task.enclaveJar.set(enclaveFatJarTask.archiveFile)
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
@@ -230,6 +230,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     }
 
     private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
+    private val gramineBuildDirectory: Path by lazy { baseDirectory.resolve("gramine") }
 
     /**
      * Get the main source set for a given project
@@ -321,7 +322,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             }
 
-            val enclaveModeDir = baseDirectory.resolve(typeLowerCase)
+            val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
             // Gramine related tasks
             val generateGramineBundleTask = createGenerateGramineBundleTask(
@@ -334,6 +335,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val gramineBundleZipTask = createGramineBundleZipTask(target, type, generateGramineBundleTask)
 
             // GraalVM related tasks
+
+            val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
 
             val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>(
                 "buildUnsignedGraalEnclave$type",
@@ -359,8 +362,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                 task.supportLanguages.set(conclaveExtension.supportLanguages)
                 task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
-                task.outputEnclave.set(enclaveModeDir.resolve("enclave.so").toFile())
+                task.outputEnclave.set(unsignedEnclaveFile)
             }
+
+            val buildUnsignedEnclaveTask =
+                target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
+                    task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
+                    task.outputEnclave.set(task.inputEnclave.get())
+                }
 
             val generateEnclaveConfigTask =
                 target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type) { task ->
@@ -369,7 +378,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.maxHeapSize.set(conclaveExtension.maxHeapSize)
                     task.maxStackSize.set(conclaveExtension.maxStackSize)
                     task.tcsNum.set(conclaveExtension.maxThreads)
-                    task.outputConfigFile.set(enclaveModeDir.resolve("enclave.xml").toFile())
+                    task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
                 }
 
             val signEnclaveWithKeyTask = target.createTask<SignEnclave>(
@@ -379,10 +388,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     type,
                     linuxExec
                 ) { task ->
-                    task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
+                    task.inputs.files(
+                        buildUnsignedEnclaveTask.outputEnclave,
+                        generateEnclaveConfigTask.outputConfigFile
+                    )
+                    task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                     task.inputKey.set(signingKey)
-                    task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
+                    task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
                 }
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(
@@ -392,7 +405,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             ) { task ->
                 task.description = "Generate standalone signing material for a $type mode enclave that can be used " +
                         "with an external signing source."
-                task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
+                task.inputs.files(
+                    buildUnsignedEnclaveTask.outputEnclave,
+                    generateEnclaveConfigTask.outputConfigFile,
+                )
+                task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)
                 task.outputSigningMaterial.set(enclaveExtension.signingMaterialWithDefault)
@@ -430,7 +447,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         }
                         it
                     })
-                    task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
+                    task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
                 }
 
             val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>(
@@ -466,6 +483,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.inputs.files(signedEnclaveFile)
                 }
 
+            val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->
+                task.dependsOn(generateEnclaveMetadataTask)
+                task.inputs.files(generateEnclaveMetadataTask.inputSignedEnclave)
+                task.outputSignedEnclave.set(generateEnclaveMetadataTask.inputSignedEnclave)
+            }
+
             val enclaveBundleJarTask = target.createTask<Jar>("enclaveBundle${type}Jar") { task ->
                 task.group = CONCLAVE_GROUP
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
@@ -475,9 +498,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
                 val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
                     when (it) {
-                        // generateEnclaveMetadataTask determines which of the three Conclave supported signing methods
+                        // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
-                        GRAALVM -> generateEnclaveMetadataTask.inputSignedEnclave
+                        GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
                         GRAMINE -> gramineBundleZipTask.get().archiveFile
                         else -> throw IllegalArgumentException()
                     }
