@@ -22,6 +22,19 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     @get:Input
     val tagLatest: Property<String> = objects.property(String::class.java)
 
+    // Variables tag and baseDirectory are not initialised when constructor is called
+    private val dockerRunArgs: List<String> by lazy {
+        listOf(
+            "docker",
+            "run",
+            "-i",
+            "--rm",
+            "-v",
+            "${baseDirectory.get()}:/project",
+            tag.get()
+        )
+    }
+
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
         // of a Linux system or container.
@@ -83,15 +96,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
-        val args: List<String> = listOf(
-            "docker",
-            "run",
-            "-i",
-            "--rm",
-            "-v",
-            "${baseDirectory.get()}:/project",
-            tag.get()
-        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+        val args: List<String> =
+            dockerRunArgs + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
 
         val errorOut = ByteArrayOutputStream()
         val result = commandLine(
@@ -115,21 +121,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     /** Returns the output of the command executed in the container. */
     fun execWithOutput(params: List<String>): String {
-        val args: List<String> = listOf(
-            "docker",
-            "run",
-            "-i",
-            "--rm",
-            "-v",
-            "${baseDirectory.get()}:/project",
-            tag.get()
-        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+        val args: List<String> =
+            dockerRunArgs + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
 
         return commandWithOutput(*args.toTypedArray()).trimEnd()
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
-        "The sub-process ran out of RAM. Open the Docker preferences and " +
+        "The sub-process ran out of RAM. On macOS or Windows, open the Docker preferences and " +
                 "alter the amount of memory granted to the underlying virtual machine. We recommend at least 6 gigabytes of RAM " +
                 "as the native image build process is memory intensive."
     )
