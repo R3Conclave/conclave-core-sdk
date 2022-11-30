@@ -8,7 +8,11 @@ LABEL commit_id=${commit_id}
 
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     wget \
-    software-properties-common
+    software-properties-common \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
 
 # Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
 # last 5 packages installed below)
@@ -26,17 +30,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
 
 
 # Install Docker inside integration-tests container, so it can spin another docker container to build enclaves
-RUN apt-get update
-RUN apt-get install -y \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
-
 RUN mkdir -p /etc/apt/keyrings
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 RUN echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-RUN apt-get update
-RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+RUN apt-get -y update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
