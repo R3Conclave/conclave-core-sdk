@@ -15,8 +15,8 @@ import javax.inject.Inject
 
 open class EnclaveExtension @Inject constructor(
     objects: ObjectFactory,
-    private val buildType: BuildType,
-    private val projectLayout: ProjectLayout
+    buildType: BuildType,
+    projectLayout: ProjectLayout
 ) {
     // Define constants to make it easier for the configurer to select a signing type
     @Suppress("unused")
@@ -53,11 +53,10 @@ open class EnclaveExtension @Inject constructor(
     // In theory it should have been possible to add .convention() to signingMaterial above with the default, but
     // it doesn't work as Gradle expects the file to exist. So instead we create this ready-only Provider which
     // should be used by tasks instead.
-    val signingMaterialWithDefault: Provider<RegularFile>
-        @Internal
-        get() = signingMaterial.orElse(
-            projectLayout.buildDirectory.file("enclave/${buildType.name.lowercase()}/signing_material.bin")
-        )
+    @get:Internal
+    val signingMaterialWithDefault: Provider<RegularFile> = signingMaterial.orElse(
+        projectLayout.buildDirectory.file("enclave/${buildType.name.lowercase()}/signing_material.bin")
+    )
 
     @get:InputFile
     @get:Optional

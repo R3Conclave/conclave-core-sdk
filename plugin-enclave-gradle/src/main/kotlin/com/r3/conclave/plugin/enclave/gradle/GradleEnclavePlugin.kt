@@ -207,7 +207,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         generateGramineBundleTask: GenerateGramineBundle
     ): TaskProvider<Zip> {
         return target.tasks.register("gramine${type}BundleZip", Zip::class.java) { task ->
-//            makeReproducible(task)
             // No need to do any compression here, we're only using zip as a container. The compression will be done
             // by the containing jar.
             task.entryCompression = STORED
