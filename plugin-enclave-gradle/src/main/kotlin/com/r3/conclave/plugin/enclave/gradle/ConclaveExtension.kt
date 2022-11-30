@@ -26,7 +26,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Input
     val persistentFileSystemSize: Property<String> = objects.property(String::class.java).convention("0")
     @get:Input
-    val maxThreads: Property<Int> = objects.property(Int::class.java).convention(10)
+    val maxThreads: Property<Int> = objects.property(Int::class.java).convention(100)
     @get:Input
     val deadlockTimeout: Property<Int> = objects.property(Int::class.java).convention(10)
     @get:Input

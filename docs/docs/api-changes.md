@@ -8,6 +8,10 @@ The behavior of the security levels `STALE`, and `SECURE` has not changed.
 The Gradle config `kds.keySpec` has been removed after being deprecated in the [previous release](#kds-enclave-configuration).
 Rename this to `kds.persistenceKeySpec`.
 
+The default value for the Conclave configuration field `maxThreads` has been increased to 100. This value should be suitable
+to cover most of the use-cases when the logic inside the enclaves uses a large number of threads. There should be no
+major performance impact.
+
 ## 1.2 to 1.3
 
 ### Maven Central

@@ -44,7 +44,7 @@ conclave {
     persistentFileSystemSize = "0m"
     enablePersistentMap = false
     maxPersistentMapSize = "16m"
-    maxThreads = 10
+    maxThreads = 100
     supportLanguages = ""
     reflectionConfigurationFiles.from("config.json")
     serializationConfigurationFiles.from("serialization.json")
@@ -143,7 +143,7 @@ with 256Mb or more EPC.
     megabytes or gigabytes respectively.
 
 ### maxThreads
-_Default:_ `10`
+_Default:_ `100`
 
 This is an advanced setting that defines the maximum number of threads that can be active inside an enclave
 simultaneously. If you're interested, you can read [this detailed technical description](threads.md), otherwise you
