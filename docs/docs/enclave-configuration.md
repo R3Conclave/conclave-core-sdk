@@ -45,7 +45,7 @@ conclave {
     enablePersistentMap = false
     maxPersistentMapSize = "16m"
     maxThreads = 100
-    supportLanguages = ""   
+    supportLanguages = ""
     reflectionConfigurationFiles.from("config.json")
     serializationConfigurationFiles.from("serialization.json")
 
