@@ -89,10 +89,10 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
     fun maxThreads() {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
         assertTaskIsIncremental {
-            assertThat(bundle().manifest.getLong("sgx.thread_num")).isEqualTo(20)  // maxThreads * 2
+            assertThat(bundle().manifest.getLong("sgx.thread_num")).isEqualTo(100)
             addSimpleEnclaveConfig("maxThreads", 12)
         }
-        assertThat(bundle().manifest.getLong("sgx.thread_num")).isEqualTo(24)
+        assertThat(bundle().manifest.getLong("sgx.thread_num")).isEqualTo(12)
     }
 
     @ParameterizedTest

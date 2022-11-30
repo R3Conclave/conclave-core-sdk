@@ -22,7 +22,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
-import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
@@ -178,9 +178,7 @@ open class GenerateGramineBundle @Inject constructor(
 
     private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
 
-    private fun RegularFileProperty.copyToOutputDir(fileName: String): Path {
-        val target = outputDir.file(fileName).get().asFile.toPath()
-        get().asFile.toPath().copyTo(target)
-        return target
+    private fun RegularFileProperty.copyToOutputDir(fileName: String) {
+        get().asFile.toPath().copyTo(outputDir.file(fileName).get().asFile.toPath(), REPLACE_EXISTING)
     }
 }

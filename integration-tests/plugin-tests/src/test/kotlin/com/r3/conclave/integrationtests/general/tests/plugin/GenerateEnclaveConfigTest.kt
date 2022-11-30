@@ -52,7 +52,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
     fun maxThreads() {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
         assertTaskIsIncremental {
-            assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("10")
+            assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("100")
             addSimpleEnclaveConfig("maxThreads", 15)
         }
         assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("15")
