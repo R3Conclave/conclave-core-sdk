@@ -88,27 +88,30 @@ open class GenerateGramineBundle @Inject constructor(
             .single { it.startsWith("Location: ") }
             .substringAfter("Location: ")
 
-        val gramineManifestCommand = mutableListOf(
-            "gramine-manifest",
-            "-Djava_home=${System.getProperty("java.home")}",
-            "-Darch_libdir=/lib/$architecture",
-            "-Dld_preload=$ldPreload",
-            "-Disv_prod_id=${productId.get()}",
-            "-Disv_svn=${revocationLevel.get() + 1}",
-            "-Dpython_packages_path=$pythonPackagesPath",
-            "-Dis_python_enclave=${pythonFile.isPresent}",
-            "-Denclave_mode=${buildType.name.uppercase()}",
-            "-Denclave_worker_threads=10",
-            "-Dgramine_max_threads=${maxThreads.get()}",
-            "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-            manifestTemplateFile.absolutePathString(),
-            GRAMINE_MANIFEST
-        )
-        if (buildType == BuildType.Simulation) {
-            val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
-            gramineManifestCommand += "-Dsimulation_mrsigner=$simulationMrSigner"
+        project.exec { spec ->
+            val command = mutableListOf(
+                "gramine-manifest",
+                "-Djava_home=${System.getProperty("java.home")}",
+                "-Darch_libdir=/lib/$architecture",
+                "-Dld_preload=$ldPreload",
+                "-Disv_prod_id=${productId.get()}",
+                "-Disv_svn=${revocationLevel.get() + 1}",
+                "-Dpython_packages_path=$pythonPackagesPath",
+                "-Dis_python_enclave=${pythonFile.isPresent}",
+                "-Denclave_mode=${buildType.name.uppercase()}",
+                "-Denclave_worker_threads=10",
+                "-Dgramine_max_threads=${maxThreads.get()}",
+                "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+                manifestTemplateFile.absolutePathString(),
+                GRAMINE_MANIFEST
+            )
+            if (buildType == BuildType.Simulation) {
+                val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
+                command += "-Dsimulation_mrsigner=$simulationMrSigner"
+            }
+            spec.commandLine = command
+            spec.setWorkingDir(outputDir)
         }
-        commandLine(gramineManifestCommand)
 
         if (buildType != BuildType.Simulation) {
             // This will create a .manifest.sgx and a .sig files into the output dir
