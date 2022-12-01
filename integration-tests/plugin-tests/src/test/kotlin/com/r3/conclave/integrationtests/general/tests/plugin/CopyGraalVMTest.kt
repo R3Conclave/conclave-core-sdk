@@ -6,7 +6,7 @@ import kotlin.io.path.div
 
 /**
  * This runs the tests from [AbstractPluginTaskTest], in particular making sure it's incremental (i.e. doesn't run
- * once GraalVM has been downloaded) which would otherwise lead to a poor developer experience.
+ * again once GraalVM has been downloaded) which would otherwise lead to a poor developer experience.
  */
 class CopyGraalVMTest : AbstractPluginTaskTest() {
     override val taskName: String get() = "copyGraalVM"

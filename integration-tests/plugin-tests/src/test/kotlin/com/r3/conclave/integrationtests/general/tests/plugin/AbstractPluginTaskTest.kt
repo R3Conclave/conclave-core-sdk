@@ -24,7 +24,7 @@ import kotlin.io.path.*
 /**
  * Extend this class to test a task from the enclave Gradle plugin. By default the [check task is incremental on output deletion and check reproducibility]
  * test will be run which makes sure the task is "incremental" and produces a stable output. A Gradle task is
- * incremental if it only runs if at least one of its inputs has changed, and doesn't run if none of them have. In
+ * incremental if it only runs when at least one of its inputs has changed, and doesn't run if none of them have. In
  * the context of the enclave plugin the input is the enclave config, represented by the `conclave { ... }` block in
  * the build.gradle file.
  */
