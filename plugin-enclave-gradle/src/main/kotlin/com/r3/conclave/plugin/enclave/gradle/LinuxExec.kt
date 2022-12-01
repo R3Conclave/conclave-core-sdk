@@ -100,7 +100,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     }
 
     /** Returns the output of the command executed in the container. */
-    fun execWithOutput(params: List<String>): String = commandWithOutput(*getDockerRunArgs(params).toTypedArray()).trimEnd()
+    fun execWithOutput(params: List<String>): String =
+        commandWithOutput(*getDockerRunArgs(params).toTypedArray()).trimEnd()
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
         "The sub-process ran out of RAM. On macOS or Windows, open the Docker preferences and " +
@@ -108,13 +109,13 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 "as the native image build process is memory intensive."
     )
 
-    private fun getDockerRunArgs(params: List<String>): List<String>{
+    private fun getDockerRunArgs(params: List<String>): List<String> {
         // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
-        val idu = commandWithOutput("id", "-u")
-        val idg = commandWithOutput("id", "-g")
+        val idu = commandWithOutput("id", "-u").trimEnd()
+        val idg = commandWithOutput("id", "-g").trimEnd()
         return listOf(
             "docker",
             "run",
