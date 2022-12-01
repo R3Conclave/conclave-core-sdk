@@ -54,8 +54,8 @@ open class GenerateEnclaveMetadata @Inject constructor(
 
         val enclaveMetadata = EnclaveMetadata.parseMetadataFile(metadataFile)
 
-        mrsignerOutputFile.asFile.get().writeText(enclaveMetadata.mrsigner.bytes.toHexString().lowercase())
-        mrenclaveOutputFile.asFile.get().writeText(enclaveMetadata.mrenclave.bytes.toHexString().lowercase())
+        mrsignerOutputFile.asFile.get().writeText(enclaveMetadata.mrsigner.bytes.toHexString().uppercase())
+        mrenclaveOutputFile.asFile.get().writeText(enclaveMetadata.mrenclave.bytes.toHexString().uppercase())
 
         logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
