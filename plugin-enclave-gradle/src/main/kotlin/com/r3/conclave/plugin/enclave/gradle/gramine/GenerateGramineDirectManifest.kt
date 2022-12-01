@@ -54,10 +54,12 @@ open class GenerateGramineDirectManifest @Inject constructor(
         val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
 
-        // TODO We're relying on python3, pip3 and jep being installed on the machine that builds the Python
-        //  enclave. Rather than documenting all this and expecting the user to have their machine correctly setup, it
-        //  is better to embed the conclave-build container to always run when building the enclave, not just for
-        //  non-python. https://r3-cev.atlassian.net/browse/CON-1229.
+        // TODO We generate Gramine manifest for Python enclaves outside the conclave-build container because some
+        //  libraries are installed in the user space instead of the system space. Running such enclaves
+        //  outside the conclave-build container would fail. Because of that, we are relying on python3, pip3 and jep
+        //  to be installed on the local machine. Rather than documenting all this and expecting the user to have their
+        //  machine correctly setup, it is better to embed the conclave-build container to always run when building the enclave.
+        //  https://r3-cev.atlassian.net/browse/CON-1229
 
         val gramineManifestArgs = mutableListOf(
             "gramine-manifest",
@@ -79,10 +81,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
         }
 
         /**
-         * In case of Python enclaves, we need to build them outside the conclave-build container.
-         * This is because Jep is installed in a user space, not a system space and will therefore produce different
-         * results if run inside or outside the container.
-         * All other enclaves are built in the container.
+            Generate Gramine manifest for Python enclaves outside the conclave-build container.
          */
         if (pythonEnclave.get()) {
             val architecture = "x86_64-linux-gnu"
