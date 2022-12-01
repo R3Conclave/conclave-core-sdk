@@ -111,6 +111,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
                 .single { it.startsWith("Location: ") }
                 .substringAfter("Location: ")
 
+            gramineManifestArgs.add("-Darch_libdir=")
+            gramineManifestArgs.add("-Dld_preload=")
             gramineManifestArgs.add("-Dpython_packages_path=$pythonPackagesPath")
             linuxExec.exec(gramineManifestArgs)
         }
