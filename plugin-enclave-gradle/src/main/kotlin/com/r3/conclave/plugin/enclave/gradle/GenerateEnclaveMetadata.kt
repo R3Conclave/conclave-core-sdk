@@ -1,11 +1,19 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxCssBody.enclaveHash
+import com.r3.conclave.common.internal.SgxEnclaveCss
+import com.r3.conclave.common.internal.SgxEnclaveCss.body
+import com.r3.conclave.common.internal.SgxEnclaveCss.key
+import com.r3.conclave.common.internal.mrsigner
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.tasks.InputFile
 import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.readBytes
 
 open class GenerateEnclaveMetadata @Inject constructor(
     objects: ObjectFactory,
@@ -19,7 +27,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
     override fun action() {
         // TODO use -cssfile as it produces the binary SIGSTRUCT which can be read directly using SgxMetadataEnclaveCss.
         //  See TestUtils.getEnclaveSigstruct in the integration tests.
-        val metadataFile = temporaryDir.toPath().resolve("enclave_metadata.txt")
+        val metadataFile = temporaryDir.toPath().resolve("enclave_css.bin")
 
         if (!OperatingSystem.current().isLinux) {
             try {
@@ -27,7 +35,9 @@ open class GenerateEnclaveMetadata @Inject constructor(
                     listOf<String>(
                         plugin.signToolPath().absolutePathString(), "dump",
                         "-enclave", inputSignedEnclave.asFile.get().absolutePath,
-                        "-dumpfile", metadataFile.toAbsolutePath().toString()
+                        // We don't need this but sgx_sign still requires it be specified.
+                        "-dumpfile", "/dev/null",
+                        "-cssfile", metadataFile.absolutePathString()
                     )
                 )
             } finally {
@@ -37,13 +47,15 @@ open class GenerateEnclaveMetadata @Inject constructor(
             commandLine(
                 plugin.signToolPath().absolutePathString(), "dump",
                 "-enclave", inputSignedEnclave.asFile.get(),
-                "-dumpfile", metadataFile
+                // We don't need this but sgx_sign still requires it be specified.
+                "-dumpfile", "/dev/null",
+                "-cssfile", metadataFile.absolutePathString()
             )
         }
 
-        val enclaveMetadata = EnclaveMetadata.parseMetadataFile(metadataFile)
-        logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
-        logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
+        val enclaveMetadata = Cursor.wrap(SgxEnclaveCss, metadataFile.readBytes())
+        logger.lifecycle("Enclave code hash:   ${SHA256Hash.get(enclaveMetadata[body][enclaveHash].read())}")
+        logger.lifecycle("Enclave code signer: ${enclaveMetadata[key].mrsigner}")
 
         val buildTypeString = buildType.toString().uppercase()
         val buildSecurityString = when(buildType) {
