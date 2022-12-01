@@ -1,17 +1,11 @@
 package com.r3.conclave.integrationtests.general.commontest
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.Cursor
-import com.r3.conclave.common.internal.SgxEnclaveCss
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.Cursor
-import com.r3.conclave.common.internal.SgxMetadataEnclaveCss
+import com.r3.conclave.common.internal.SgxEnclaveCss
 import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
-import com.r3.conclave.integrationtests.general.common.ByteCursor
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assumptions.assumeThat
-import java.nio.file.Files
 import com.r3.conclave.integrationtests.general.common.ByteCursor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assumptions.assumeThat
@@ -21,9 +15,6 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
-import kotlin.io.path.*
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
 import java.security.MessageDigest
