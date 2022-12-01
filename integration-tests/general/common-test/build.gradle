@@ -2,6 +2,12 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
 }
 
+configurations {
+    conclavePlugin {
+        transitive = false
+    }
+}
+
 dependencies {
     api "com.r3.conclave:conclave-host:$conclave_version"
     api "com.r3.conclave:conclave-client:$conclave_version"
@@ -9,4 +15,12 @@ dependencies {
     implementation project(":general:common")
     implementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     implementation "org.assertj:assertj-core:$assertj_version"
+
+    conclavePlugin "com.r3.conclave:plugin-enclave-gradle:$conclave_version"
+}
+
+processResources {
+    // Extract the sgx_sign tool from the plugin jar so that it can used in the integration tests.
+    from(zipTree(configurations.conclavePlugin.singleFile))
+    include("sgx-tools/sgx_sign")
 }
