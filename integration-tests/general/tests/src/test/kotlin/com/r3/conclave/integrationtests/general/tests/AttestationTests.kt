@@ -4,7 +4,7 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.*
-import com.r3.conclave.common.internal.SgxEnclaveCss.*
+import com.r3.conclave.common.internal.SgxCssBody.*
 import com.r3.conclave.common.internal.SgxEnclaveCss.body
 import com.r3.conclave.common.internal.SgxEnclaveCss.key
 import com.r3.conclave.common.internal.SgxQuote.reportBody
