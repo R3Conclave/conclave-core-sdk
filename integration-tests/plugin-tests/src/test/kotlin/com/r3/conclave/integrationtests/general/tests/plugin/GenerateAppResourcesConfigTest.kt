@@ -17,7 +17,7 @@ class GenerateAppResourcesConfigTest : AbstractPluginTaskTest() {
 
     @Test
     fun `task re-runs on addition of resource file`() {
-        assertTaskIsIncrementalUponInputChange {
+        runTaskAfterInputChangeAndAssertItsIncremental {
             val resourceFile = projectDir.resolve("src/main/resources/test-resource.txt")
             resourceFile.parent.createDirectories()
             resourceFile.createFile()

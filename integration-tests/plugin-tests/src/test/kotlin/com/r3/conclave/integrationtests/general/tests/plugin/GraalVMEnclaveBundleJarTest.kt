@@ -1,10 +1,10 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.SgxMetadataCssBody.IsvProdId
-import com.r3.conclave.common.internal.SgxMetadataCssBody.IsvSvn
-import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.body
-import com.r3.conclave.common.internal.SgxMetadataEnclaveCss.key
+import com.r3.conclave.common.internal.SgxCssBody.IsvProdId
+import com.r3.conclave.common.internal.SgxCssBody.IsvSvn
+import com.r3.conclave.common.internal.SgxEnclaveCss.body
+import com.r3.conclave.common.internal.SgxEnclaveCss.key
 import com.r3.conclave.common.internal.SgxTypesKt
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM

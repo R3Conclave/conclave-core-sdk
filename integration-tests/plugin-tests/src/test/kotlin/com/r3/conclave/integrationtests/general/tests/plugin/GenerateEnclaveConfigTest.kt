@@ -17,7 +17,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
 
     @Test
     fun productID() {
-        assertTaskIsIncrementalUponInputChange {
+        runTaskAfterInputChangeAndAssertItsIncremental {
             assertThat(enclaveConfig()["ProdID"].textValue()).isEqualTo("11")
             modifyProductIdConfig(111)
         }
@@ -26,7 +26,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
 
     @Test
     fun revocationLevel() {
-        assertTaskIsIncrementalUponInputChange {
+        runTaskAfterInputChangeAndAssertItsIncremental {
             assertThat(enclaveConfig()["ISVSVN"].textValue()).isEqualTo("13")
             modifyRevocationLevelConfig(121)
         }
@@ -41,7 +41,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
     fun `optional size bytes enclave config`(gradleConfig: String, xmlElement: String, defaultRawValue: Long,
                                              newBytesValue: String, newRawValue: Long) {
         assertThat(buildGradleFile).content().doesNotContain(gradleConfig)
-        assertTaskIsIncrementalUponInputChange {
+        runTaskAfterInputChangeAndAssertItsIncremental {
             assertThat(enclaveConfig()[xmlElement].textValue()).isEqualTo("0x${defaultRawValue.toString(16)}")
             addSimpleEnclaveConfig(gradleConfig, newBytesValue)
         }
@@ -51,7 +51,7 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
     @Test
     fun maxThreads() {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
-        assertTaskIsIncrementalUponInputChange {
+        runTaskAfterInputChangeAndAssertItsIncremental {
             assertThat(enclaveConfig()["TCSNum"].textValue()).isEqualTo("100")
             addSimpleEnclaveConfig("maxThreads", 15)
         }

@@ -20,7 +20,7 @@ class GramineEnclaveBundleJarTest : AbstractPluginTaskTest() {
 
     @Test
     fun `contents of jar`() {
-        assertTaskIsIncrementalUponInputChange {
+        runTaskAfterInputChangeAndAssertItsIncremental {
             assertJarContents("com.test.enclave.TestEnclave")
             val enclaveCode = projectDir.resolve("src/main/kotlin/com/test/enclave/EnclaveTest.kt")
             enclaveCode.searchAndReplace("TestEnclave", "TestEnclave2")
