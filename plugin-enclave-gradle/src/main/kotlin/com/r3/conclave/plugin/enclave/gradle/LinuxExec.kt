@@ -118,7 +118,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             "run",
             "-i",
             "--rm",
-            "-u", "\$(id -u):\$(id -g)",
+            "-u", "1000:1000",
             "-v",
             "${baseDirectory.get()}:/project",
             tag.get()
