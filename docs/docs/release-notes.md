@@ -33,7 +33,8 @@
     [`Enclave.createAttestationQuote`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
 14. We have added Intel advisory IDs to DCAP-based attestation reports. These provide more information on any 
-    platform vulnerabilites that may be present on the system.
+    platform vulnerabilities that may be present on the system.
+15. Conclave no longer supports EPID attestation or Linux kernels older than 5.11.
 
 Please read the list of [known issues](known-issues.md).
 

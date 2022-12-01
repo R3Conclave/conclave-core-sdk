@@ -1,16 +1,6 @@
 ## The DCAP protocol
 
-There are two protocols for establishing what code runs in an enclave: EPID and DCAP. EPID is an older
-protocol designed for consumer applications and includes some sophisticated privacy features. For servers
-where the IP address doesn't need to be hidden (because it's public in DNS, to begin with), these features
-aren't helpful, and thus there is DCAP (_Data Center Attestation Primitives_). DCAP requires more modern hardware
-but is otherwise simpler and more robust. You may also see DCAP referred to as "ECDSA attestation".
-
-!!!Important
-
-    Intel does not provide EPID attestation support on any Xeon Scalable processors including the Ice Lake Xeon CPUs 
-    and any future generations. Please ensure you are using DCAP attestation on these platforms.
-
+Intel SGX uses the Data Center Attestation Primitives (DCAP) protocol to prove what code runs in an enclave.
 
 In DCAP, repeated attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed
 machine obtains a machine certificate from Intel via the cache, which may then be persisted to disk. All this is
@@ -19,19 +9,33 @@ automated for you.
 As cloud providers run caches, DCAP supports vendor-specific plugins. Intel provides a default one
 which requires a [subscription](https://api.portal.trustedservices.intel.com/provisioning-certification).
 
-Azure provides a DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) that does not require a subscription. Conclave
-bundles and uses Azure's DCAP plugin by default. The Azure caches are open to the public internet and can be used from anywhere. Azure Confidential Computing instances like DC4s_v3 come pre-provisioned for DCAP and as Conclave
+Azure provides a DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) that does not require a subscription. 
+Conclave bundles and uses Azure's DCAP plugin by default. The Azure caches are open to the public internet and can 
+be used from anywhere. Azure Confidential Computing instances like DC4s_v3 come pre-provisioned for DCAP and as Conclave
 comes with the necessary libraries bundled, you don't need to do any further setup.
 
+DCAP is also known as ECDSA attestation.
+
 ### DCAP Plugin
-To perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to date.
+To perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is 
+hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to 
+date.
 
-DCAP is designed to work on many different server topologies. So, rather than directly connecting to Intel services to retrieve this information, the cloud vendor or the owner of the SGX system must provide a DCAP client plugin with the required information. Intel provides a generic DCAP client plugin as part of the DCAP runtime. To use this, you also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provides an example and some instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). If you would like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs), then additional work may be required to provide data in the correct format for Conclave. Please contact R3 support if you need to set this up.
+DCAP is designed to work on different server topologies. So, rather than directly connecting to Intel services to 
+retrieve this information, the cloud vendor or the owner of the SGX system must provide a DCAP client plugin with 
+the required information. Intel provides a generic DCAP client plugin as part of the DCAP runtime. To use this, you 
+also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provides an example and some 
+instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). 
+If you would like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs), 
+then additional work may be required to provide data in the correct format for Conclave. Please contact R3 support 
+if you need to set this up.
 
-Microsoft has written a DCAP client plugin that works with its Azure Confidential Compute virtual machines. In fact, it also works outside of Azure for single CPU systems, but this may not always be the case.
+Microsoft has written a DCAP client plugin that works with its Azure Confidential Compute virtual machines. In fact, 
+it also works outside of Azure for single CPU systems, but this may not always be the case.
 
-Conclave's bundled Azure client plugin will *only* be used if no other plugin has been found on the system.
-The runtime will use the first `.so` it encounters in the search order below:
+Conclave's bundled Azure client plugin will *only* be used if no other plugin has been found on the system. The 
+runtime will use the first `.so` it encounters in the search order below:
+
 ```
 /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
 /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so
@@ -54,11 +58,12 @@ You may want to set the Azure DCAP client logging level to FATAL as the default 
 export AZDCAP_DEBUG_LOG_LEVEL=FATAL
 ```
 
-If you are using the bundled version, you can skip the rest of this section. Otherwise, read on for instructions on how to manually configure the DCAP plugin.
+If you are using the bundled version, you can skip the rest of this section. Otherwise, read on for instructions on 
+how to manually configure the DCAP plugin.
 
 #### Azure client plugin
 
-* Identify the currently installed DCAP client plugin. It will always have one of the following names: `libdcap_quoteprov.so.1` or `libdcap_quoteprov.so`. You might find other similarly named files, but they won't be used as a plugin.
+* Identify the currently installed DCAP client plugin. It will always have one of the following names: `libdcap_quoteprov.so.1`or `libdcap_quoteprov.so`. You might find other similarly named files, but they won't be used as a plugin.
 ```sh
 ls /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so*
 ls /usr/lib/libdcap_quoteprov.so*

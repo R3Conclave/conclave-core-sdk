@@ -17,11 +17,11 @@ Only release mode locks out the host and provides the standard SGX security mode
 ## System requirements
 The table below summarizes which modes can be used in which environments.
 
-| OS      | Mock               | Simulation                                   | Debug                     | Release                  |
-|---------|:------------------:|:--------------------------------------------:|:-------------------------:|:------------------------:|
-| Linux   | :heavy_check_mark: | :heavy_check_mark:                           | :heavy_check_mark:        | :heavy_check_mark:       |
-| macOS   | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
-| Windows | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
+| OS                                                           | Mock               | Simulation                                   | Debug                     | Release                  |
+|--------------------------------------------------------------|:------------------:|:--------------------------------------------:|:-------------------------:|:------------------------:|
+| Linux (Use 5.11 or higher, which has in-kernel SGX support.) | :heavy_check_mark: | :heavy_check_mark:                           | :heavy_check_mark:        | :heavy_check_mark:       |
+| macOS                                                        | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
+| Windows                                                      | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
 
 !!! info
     :fontawesome-brands-linux:: Using WSL or Docker. For
