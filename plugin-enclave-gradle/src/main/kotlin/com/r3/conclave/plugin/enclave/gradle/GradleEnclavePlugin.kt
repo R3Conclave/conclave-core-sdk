@@ -3,8 +3,6 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
-import com.r3.conclave.plugin.enclave.gradle.GenerateEnclaveMetadata.Companion.ENCLAVE_MRENCLAVE_FILE
-import com.r3.conclave.plugin.enclave.gradle.GenerateEnclaveMetadata.Companion.ENCLAVE_MRSIGNER_FILE
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.ProjectLayout
@@ -398,8 +396,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
                 task.inputSignedEnclave.set(signedEnclaveFile)
                 task.inputs.files(signedEnclaveFile)
-                task.mrsignerOutputFile.set(enclaveDirectory.resolve(ENCLAVE_MRSIGNER_FILE).toFile())
-                task.mrenclaveOutputFile.set(enclaveDirectory.resolve(ENCLAVE_MRENCLAVE_FILE).toFile())
+                task.mrsignerOutputFile.set(enclaveDirectory.resolve("mrsigner").toFile())
+                task.mrenclaveOutputFile.set(enclaveDirectory.resolve("mrenclave").toFile())
             }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->

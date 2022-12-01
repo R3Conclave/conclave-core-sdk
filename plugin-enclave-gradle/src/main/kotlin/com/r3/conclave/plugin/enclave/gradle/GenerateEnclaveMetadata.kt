@@ -15,11 +15,6 @@ open class GenerateEnclaveMetadata @Inject constructor(
     private val buildType: BuildType,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
-    companion object {
-        const val ENCLAVE_MRSIGNER_FILE = "mrsigner.txt"
-        const val ENCLAVE_MRENCLAVE_FILE = "mrenclave.txt"
-    }
-
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
