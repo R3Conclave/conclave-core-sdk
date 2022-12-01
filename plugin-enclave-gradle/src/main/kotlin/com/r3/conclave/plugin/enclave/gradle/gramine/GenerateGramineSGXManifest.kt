@@ -39,7 +39,7 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
     val sgxToken: RegularFileProperty = objects.fileProperty()
 
     @get:OutputFile
-    val sgxSig: RegularFileProperty = objects.fileProperty()
+    val sigstructFile: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
         val manifestPath = directManifest.get().asFile.absolutePath
@@ -72,7 +72,7 @@ open class GenerateGramineSGXManifest @Inject constructor(objects: ObjectFactory
     private fun sgxGetToken(): ExecResult {
         val command = listOf(
             GRAMINE_GET_TOKEN_EXECUTABLE,
-            "--sig=${sgxSig.get().asFile.absolutePath}",
+            "--sig=${sigstructFile.get().asFile.absolutePath}",
             "--output=${sgxToken.asFile.get().absolutePath}"
         )
         return commandLine(command)

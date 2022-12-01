@@ -10,7 +10,7 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
@@ -233,7 +233,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.directManifest.set(generateGramineManifestTask.manifestFile)
             task.sgxManifest.set(Paths.get(outputSgxManifestPath).toFile())
             task.sgxToken.set(Paths.get(outputTokenPath).toFile())
-            task.sgxSig.set(Paths.get(outputSig).toFile())
+            task.sigstructFile.set(Paths.get(outputSig).toFile())
         }
     }
 
@@ -289,8 +289,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.from(generateGramineManifestTask.sgxManifest) { copySpec ->
                 copySpec.rename { GRAMINE_SGX_MANIFEST }
             }
-            task.from(generateGramineManifestTask.sgxSig) { copySpec ->
-                copySpec.rename { GRAMINE_SIG }
+            task.from(generateGramineManifestTask.sigstructFile) { copySpec ->
+                copySpec.rename { GRAMINE_SIGSTRUCT }
             }
             task.from(generateGramineManifestTask.sgxToken) { copySpec ->
                 copySpec.rename { GRAMINE_SGX_TOKEN }

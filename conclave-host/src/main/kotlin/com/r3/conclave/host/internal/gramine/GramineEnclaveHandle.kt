@@ -5,7 +5,7 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIG
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.host.internal.*
 import java.io.IOException
 import java.lang.IllegalArgumentException
@@ -117,7 +117,7 @@ class GramineEnclaveHandle(
             workingDirectory / GRAMINE_MANIFEST
         } else {
             require((workingDirectory / GRAMINE_SGX_MANIFEST).exists()) { "Missing SGX Gramine manifest" }
-            require((workingDirectory / GRAMINE_SIG).exists()) { "Missing SIG file" }
+            require((workingDirectory / GRAMINE_SIGSTRUCT).exists()) { "Missing SIGSTRUCT file" }
             require((workingDirectory / GRAMINE_SGX_TOKEN).exists()) { "Missing SGX Token" }
             workingDirectory / GRAMINE_SGX_MANIFEST
         }
