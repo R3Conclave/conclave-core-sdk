@@ -59,14 +59,6 @@ open class GenerateGramineDirectManifest @Inject constructor(
         //  is better to embed the conclave-build container to always run when building the enclave, not just for
         //  non-python. https://r3-cev.atlassian.net/browse/CON-1229.
 
-        /**
-         * It's possible for a Gramine enclave to launch threads internally that Conclave won't know about!
-         * Because of this, we need to add some safety margin.
-         */
-        val enclaveWorkerThreadCount = maxThreads.get()
-        //  TODO: https://r3-cev.atlassian.net/browse/CON-1223
-        val gramineMaxThreads = enclaveWorkerThreadCount * 2
-
         val gramineManifestArgs = mutableListOf(
             "gramine-manifest",
             "-Djava_home=${System.getProperty("java.home")}",
@@ -74,8 +66,8 @@ open class GenerateGramineDirectManifest @Inject constructor(
             "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dis_python_enclave=${pythonEnclave.get()}",
             "-Denclave_mode=${buildType.name.uppercase()}",
-            "-Denclave_worker_threads=$enclaveWorkerThreadCount",
-            "-Dgramine_max_threads=$gramineMaxThreads",
+            "-Denclave_worker_threads=10",
+            "-Dgramine_max_threads=${maxThreads.get()}",
             "-Denclave_size=${if (pythonEnclave.get()) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
             manifestTemplateFile.absolutePathString(),
             manifestFile.asFile.get().absolutePath
