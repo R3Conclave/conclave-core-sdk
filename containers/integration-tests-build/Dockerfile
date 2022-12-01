@@ -11,11 +11,15 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     software-properties-common
 
 # Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
-# last 5 packages installed below)
+# packages installed below)
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+
+# Azure DCAP Client
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main" | tee /etc/apt/sources.list.d/msprod.list
 RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main"
+
+RUN apt-get -y update
 
 # Disable interactive dialogue
 # Otherwise, a message that requires user input might appear during the installation
