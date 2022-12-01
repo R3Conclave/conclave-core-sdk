@@ -6,17 +6,10 @@ import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_PROPERTIES
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
-import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineDirectManifest
-import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineSGXManifest
+import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineBundle
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
@@ -144,8 +137,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val generateEnclavePropertiesTask = target.createTask<GenerateEnclaveProperties>(
             "generateEnclaveProperties",
-            conclaveExtension
         ) {
+            it.conclaveExtension.set(conclaveExtension)
             it.enclavePropertiesFile.set(baseDirectory.resolve(ENCLAVE_PROPERTIES).toFile())
         }
 
@@ -162,9 +155,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
         }
 
-        enclaveFatJarTask.isPreserveFileTimestamps = false
-        enclaveFatJarTask.isReproducibleFileOrder = true
-        enclaveFatJarTask.isZip64 = true
+        enclaveFatJarTask.makeReproducible()
         enclaveFatJarTask.archiveAppendix.set("fat")
         enclaveFatJarTask.from(generateEnclavePropertiesTask.enclavePropertiesFile) { copySpec ->
             enclaveFatJarTask.onEnclaveClassName { enclaveClassName ->
@@ -189,109 +180,39 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         createEnclaveArtifacts(target, conclaveExtension, enclaveFatJarTask)
     }
 
-    private fun createGenerateGramineManifestTask(
+    private fun createGenerateGramineBundleTask(
             target: Project,
             type: BuildType,
             conclaveExtension: ConclaveExtension,
+            enclaveFatJarTask: Jar,
             signingKey: Provider<RegularFile?>
-    ): GenerateGramineDirectManifest {
-        return target.createTask("generateGramineManifest$type", type) { task ->
-            task.pythonEnclave.set(pythonSourcePath != null)
+    ): GenerateGramineBundle {
+        return target.createTask("generateGramine${type}Bundle", type) { task ->
             task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
-            task.manifestFile.set((gramineBuildDirectory / GRAMINE_MANIFEST).toFile())
-        }
-    }
-
-    private fun createGenerateGramineSGXManifestTask(
-        target: Project,
-        enclaveFatJarTask: Jar,
-        generateGramineManifestTask: GenerateGramineDirectManifest,
-        signingKey: Provider<RegularFile?>,
-        type: BuildType
-    ): GenerateGramineSGXManifest {
-        return target.createTask("generateSGXGramineManifest$type") { task ->
-            val directManifestPath = generateGramineManifestTask.manifestFile.get().asFile.absolutePath
-            val outputSgxManifestPath = "$directManifestPath.sgx"
-            val outputTokenPath = directManifestPath.replace("manifest", "token")
-            val outputSig = directManifestPath.replace("manifest", "sig")
-
-            task.privateKey.set(signingKey)
             task.enclaveJar.set(enclaveFatJarTask.archiveFile)
-
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
-                task.pythonSourcePath.set(pythonFiles.first())
+                task.pythonFile.set(pythonFiles.first())
             }
-            task.directManifest.set(generateGramineManifestTask.manifestFile)
-            task.sgxManifest.set(Paths.get(outputSgxManifestPath).toFile())
-            task.sgxToken.set(Paths.get(outputTokenPath).toFile())
-            task.sigstructFile.set(Paths.get(outputSig).toFile())
+            task.outputDir.set((baseDirectory / type.name.lowercase() / "gramine-bundle").toFile())
         }
     }
 
-
-    private fun createGramineZipBundle(
+    private fun createGramineBundleZipTask(
         target: Project,
-        enclaveFatJar: Jar,
         type: BuildType,
-        generateGramineDirectManifestTask: GenerateGramineDirectManifest
+        generateGramineBundleTask: GenerateGramineBundle
     ): TaskProvider<Zip> {
         return target.tasks.register("gramine${type}BundleZip", Zip::class.java) { task ->
             // No need to do any compression here, we're only using zip as a container. The compression will be done
             // by the containing jar.
             task.entryCompression = STORED
-
-            if (pythonSourcePath != null) {
-                task.from(target.fileTree(pythonSourcePath).files.first()) { copySpec ->
-                    copySpec.rename { PYTHON_FILE }
-                }
-            }
-
-            task.from(enclaveFatJar.archiveFile) { copySpec ->
-                copySpec.rename { GRAMINE_ENCLAVE_JAR }
-            }
-            task.from(generateGramineDirectManifestTask.manifestFile) { copySpec ->
-                copySpec.rename { GRAMINE_MANIFEST }
-            }
-            task.archiveAppendix.set("gramine-bundle")
-            task.archiveClassifier.set(type.name.lowercase())
-        }
-    }
-
-    private fun createGramineSGXZipBundle(
-        target: Project,
-        enclaveFatJar: Jar,
-        type: BuildType,
-        generateGramineManifestTask: GenerateGramineSGXManifest
-    ): TaskProvider<Zip> {
-        return target.tasks.register("gramineSGX${type}BundleZip", Zip::class.java) { task ->
-            // No need to do any compression here, we're only using zip as a container. The compression will be done
-            // by the containing jar.
-            task.entryCompression = STORED
-
-            if (pythonSourcePath != null) {
-                task.from(target.fileTree(pythonSourcePath).files.first()) { copySpec ->
-                    copySpec.rename { PYTHON_FILE }
-                }
-            }
-
-            task.from(enclaveFatJar.archiveFile) { copySpec ->
-                copySpec.rename { GRAMINE_ENCLAVE_JAR }
-            }
-            task.from(generateGramineManifestTask.sgxManifest) { copySpec ->
-                copySpec.rename { GRAMINE_SGX_MANIFEST }
-            }
-            task.from(generateGramineManifestTask.sigstructFile) { copySpec ->
-                copySpec.rename { GRAMINE_SIGSTRUCT }
-            }
-            task.from(generateGramineManifestTask.sgxToken) { copySpec ->
-                copySpec.rename { GRAMINE_SGX_TOKEN }
-            }
-            task.archiveAppendix.set("gramine-sgx-bundle")
-            task.archiveClassifier.set(type.name.lowercase())
+            task.from(generateGramineBundleTask.outputDir)
+            task.destinationDirectory.set((baseDirectory / type.name.lowercase()).toFile())
+            task.archiveBaseName.set("gramine-bundle")
         }
     }
 
@@ -403,44 +324,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
 
-            // Simulation and debug default to using a dummy key. Release defaults to external key
-            val keyType = when (type) {
-                BuildType.Release -> SigningType.ExternalKey
-                else -> SigningType.DummyKey
-            }
-            enclaveExtension.signingType.set(keyType)
-
             // Gramine related tasks
-            val generateGramineManifestTask = createGenerateGramineManifestTask(target, type, conclaveExtension, signingKey)
-
-            val gramineZipBundle = createGramineZipBundle(
+            val generateGramineBundleTask = createGenerateGramineBundleTask(
                 target,
-                enclaveFatJarTask,
                 type,
-                generateGramineManifestTask
-            )
-
-            val generateGramineSGXManifestTask = createGenerateGramineSGXManifestTask(
-                target,
+                conclaveExtension,
                 enclaveFatJarTask,
-                generateGramineManifestTask,
-                signingKey,
-                type
+                signingKey
             )
-
-            val gramineSGXZipBundle = createGramineSGXZipBundle(
-                target,
-                enclaveFatJarTask,
-                type,
-                generateGramineSGXManifestTask
-            )
+            val gramineBundleZipTask = createGramineBundleZipTask(target, type, generateGramineBundleTask)
 
             // GraalVM related tasks
-
-            // Set the default signing material location as an absolute path because if the
-            // user overrides it they will use a project relative (rather than build directory
-            // relative) path name.
-            enclaveExtension.signingMaterial.set(layout.buildDirectory.file("enclave/$type/signing_material.bin"))
 
             val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
 
@@ -514,12 +408,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.inputs.files(
                     buildUnsignedEnclaveTask.outputEnclave,
                     generateEnclaveConfigTask.outputConfigFile,
-                    enclaveExtension.signingMaterial
                 )
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)
-                task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
+                task.outputSigningMaterial.set(enclaveExtension.signingMaterialWithDefault)
             }
 
             val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>(
@@ -601,17 +494,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
                 task.archiveAppendix.set("bundle")
                 task.archiveClassifier.set(typeLowerCase)
+                task.makeReproducible()
 
                 val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
                     when (it) {
                         // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
                         // to use to sign the enclave and invokes the correct task accordingly.
                         GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
-                        GRAMINE -> if (type == BuildType.Simulation) {
-                            gramineZipBundle.get().archiveFile
-                        } else {
-                            gramineSGXZipBundle.get().archiveFile
-                        }
+                        GRAMINE -> gramineBundleZipTask.get().archiveFile
                         else -> throw IllegalArgumentException()
                     }
                 }
@@ -633,6 +523,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
             target.artifacts.add(typeLowerCase, enclaveBundleJarTask.archiveFile)
         }
+    }
+
+    private fun Jar.makeReproducible() {
+        isPreserveFileTimestamps = false
+        isReproducibleFileOrder = true
+        isZip64 = true
     }
 
     private fun throwMissingFileForExternalSigning(config: String): Nothing {
