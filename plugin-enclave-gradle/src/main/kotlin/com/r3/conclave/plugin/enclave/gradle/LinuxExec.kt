@@ -113,12 +113,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
+        val idu = commandWithOutput("id", "-u")
+        val idg = commandWithOutput("id", "-g")
         return listOf(
             "docker",
             "run",
             "-i",
             "--rm",
-            "-u", "1000:1000",
+            "-u", "$idu:$idg",
             "-v",
             "${baseDirectory.get()}:/project",
             tag.get()
