@@ -1,7 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -26,7 +25,7 @@ class PythonEnclaveAdapterJarTest : AbstractPluginTaskTest() {
         runTask()
         JarFile(output.toFile()).use { jar ->
             jar.assertEntryExists("com/r3/conclave/python/PythonEnclaveAdapter.class")
-            jar.assertEntryContents("com/r3/conclave/python/enclave.properties") {
+            jar.assertEntryExists("com/r3/conclave/python/enclave.properties") {
                 val enclaveProperties = Properties().apply { load(it) }
                 assertThat(enclaveProperties).containsEntry("productID", "11")
                 assertThat(enclaveProperties).containsEntry("revocationLevel", "12")

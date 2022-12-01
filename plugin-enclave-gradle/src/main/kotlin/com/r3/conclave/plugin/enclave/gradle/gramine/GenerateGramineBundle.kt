@@ -62,9 +62,6 @@ open class GenerateGramineBundle @Inject constructor(
     val outputDir: DirectoryProperty = objects.directoryProperty()
 
     override fun action() {
-        val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
-        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
-
         enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
         if (pythonFile.isPresent) {
             pythonFile.copyToOutputDir(PYTHON_FILE)
@@ -87,6 +84,20 @@ open class GenerateGramineBundle @Inject constructor(
             .splitToSequence("\n")
             .single { it.startsWith("Location: ") }
             .substringAfter("Location: ")
+
+        generateManifest(architecture, ldPreload, pythonPackagesPath)
+
+        if (buildType != BuildType.Simulation) {
+            generateSgxManifestAndSigstruct()
+            generateToken()
+            // The .manifest is not needed for debug and release modes
+            outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
+        }
+    }
+
+    private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
+        val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
+        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
 
         project.exec { spec ->
             val command = mutableListOf(
@@ -112,31 +123,34 @@ open class GenerateGramineBundle @Inject constructor(
             spec.commandLine = command
             spec.setWorkingDir(outputDir)
         }
+    }
 
-        if (buildType != BuildType.Simulation) {
-            // This will create a .manifest.sgx and a .sig files into the output dir
-            project.exec { spec ->
-                spec.commandLine = listOf(
-                    "gramine-sgx-sign",
-                    "--manifest=$GRAMINE_MANIFEST",
-                    "--key=${signingKey.get().asFile.absolutePath}",
-                    "--output=$GRAMINE_SGX_MANIFEST"
-                )
-                spec.setWorkingDir(outputDir)
-            }
+    /**
+     * This will create a .manifest.sgx and a .sig files into the output dir.
+     */
+    private fun generateSgxManifestAndSigstruct() {
+        project.exec { spec ->
+            spec.commandLine = listOf(
+                "gramine-sgx-sign",
+                "--manifest=$GRAMINE_MANIFEST",
+                "--key=${signingKey.get().asFile.absolutePath}",
+                "--output=$GRAMINE_SGX_MANIFEST"
+            )
+            spec.setWorkingDir(outputDir)
+        }
+    }
 
-            // This will create a .token file into the output dir
-            project.exec { spec ->
-                spec.commandLine = listOf(
-                    "gramine-sgx-get-token",
-                    "--sig=$GRAMINE_SIGSTRUCT",
-                    "--output=$GRAMINE_SGX_TOKEN"
-                )
-                spec.setWorkingDir(outputDir)
-            }
-
-            // The .manifest is not needed for debug and release modes
-            outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
+    /**
+     * This will create a .token file into the output dir
+     */
+    private fun generateToken() {
+        project.exec { spec ->
+            spec.commandLine = listOf(
+                "gramine-sgx-get-token",
+                "--sig=$GRAMINE_SIGSTRUCT",
+                "--output=$GRAMINE_SGX_TOKEN"
+            )
+            spec.setWorkingDir(outputDir)
         }
     }
 

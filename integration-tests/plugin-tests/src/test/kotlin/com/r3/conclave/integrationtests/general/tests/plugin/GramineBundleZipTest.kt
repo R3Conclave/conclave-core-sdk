@@ -13,7 +13,6 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.ITEnclaveMode.DEBUG
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.ITEnclaveMode.SIMULATION
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMrsigner
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
@@ -49,7 +48,7 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
 
     @Test
     fun productID() {
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             with(bundle()) {
                 assertThat(manifest.getLong("sgx.isvprodid")).isEqualTo(11)
                 if (sigstruct != null) {
@@ -68,7 +67,7 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
 
     @Test
     fun revocationLevel() {
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             with(bundle()) {
                 assertThat(manifest.getLong("sgx.isvsvn")).isEqualTo(13)
                 if (sigstruct != null) {
@@ -88,7 +87,7 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
     @Test
     fun maxThreads() {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(bundle().manifest.getLong("sgx.thread_num")).isEqualTo(100)
             addSimpleEnclaveConfig("maxThreads", 12)
         }
@@ -102,7 +101,7 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
         assertThat(buildGradleFile).content().doesNotContain("${enclaveMode.name.lowercase()} {")
         assertThat(dummyKeyFile).doesNotExist()
 
-        val signingKeyFile = assertTaskIsIncremental {
+        val signingKeyFile = assertTaskIsIncrementalUponInputChange {
             // Make sure the dummy key is used when no signing key is specified.
             assertThat(dummyKeyFile).exists()
             assertMrsigner(dummyKeyFile)
@@ -129,7 +128,7 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
 
     @Test
     fun `switching from java to python code`() {
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             with(bundle()) {
                 assertThat(pythonScriptContent).isNull()
                 ZipFile(enclaveJar.toFile()).use {
@@ -165,13 +164,13 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
     private fun bundle(): Bundle {
         return ZipFile(output.toFile()).use { zip ->
             val manifestEntryName = if (enclaveMode == SIMULATION) "java.manifest" else "java.manifest.sgx"
-            val manifest = zip.assertEntryContents(manifestEntryName) {
+            val manifest = zip.assertEntryExists(manifestEntryName) {
                 val parseResult = Toml.parse(it)
                 assertThat(parseResult.errors()).isEmpty()
                 parseResult
             }
             val enclaveJar = Files.createTempFile(tempDir, "enclave", ".jar")
-            zip.assertEntryContents("enclave.jar") {
+            zip.assertEntryExists("enclave.jar") {
                 Files.copy(it, enclaveJar, REPLACE_EXISTING)
             }
             val pythonScript = zip.getEntry("enclave.py")?.let {
@@ -179,7 +178,7 @@ class GramineBundleZipTest : AbstractPluginTaskTest() {
             }
             val sigstruct = if (enclaveMode == DEBUG) {
                 zip.assertEntryExists("java.token")
-                zip.assertEntryContents("java.sig") {
+                zip.assertEntryExists("java.sig") {
                     Cursor.wrap(SgxMetadataEnclaveCss.INSTANCE, it.readBytes())
                 }
             } else {

@@ -15,7 +15,7 @@ class GenerateReflectionConfigTest : AbstractPluginTaskTest() {
 
     @Test
     fun `task re-runs on enclave class name change`() {
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(reflectionConfig().map { it["name"].textValue() }).contains("com.test.enclave.TestEnclave")
             val enclaveCode = projectDir.resolve("src/main/kotlin/com/test/enclave/EnclaveTest.kt")
             enclaveCode.searchAndReplace("TestEnclave", "TestEnclave2")

@@ -48,7 +48,7 @@ open class EnclaveExtension @Inject constructor(
     val signingMaterial: RegularFileProperty = objects.fileProperty()
 
     // In theory it should have been possible to add .convention() to signingMaterial above with the default, but
-    // it doesn't work as Gradle expects the file to exist. So instead we create this ready-only Provider which
+    // it doesn't work as Gradle expects the file to exist. So instead we create this read-only Provider which
     // should be used by tasks instead.
     @get:Internal
     val signingMaterialWithDefault: Provider<RegularFile> = signingMaterial.orElse(

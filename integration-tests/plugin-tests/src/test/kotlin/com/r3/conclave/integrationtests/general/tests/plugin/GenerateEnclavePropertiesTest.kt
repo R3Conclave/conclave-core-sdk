@@ -26,7 +26,7 @@ class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
     @ParameterizedTest
     @ValueSource(strings = ["productID", "revocationLevel"])
     fun `required config in enclave properties`(name: String) {
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             if (name == "productID") {
                 modifyProductIdConfig(100)
             } else {
@@ -42,7 +42,7 @@ class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
     )
     fun `optional boolean config in enclave properties`(name: String, defaultValue: Boolean, newValue: Boolean) {
         assertThat(buildGradleFile).content().doesNotContain(name)
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(enclaveProperties()).containsEntry(name, defaultValue.toString())
             addSimpleEnclaveConfig(name, newValue)
         }
@@ -58,7 +58,7 @@ class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
     fun `optional size bytes config in enclave properties`(name: String, defaultRawValue: Long, newBytesValue: String,
                                                            newRawValue: Long) {
         assertThat(buildGradleFile).content().doesNotContain(name)
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(enclaveProperties()).containsEntry(name, defaultRawValue.toString())
             addSimpleEnclaveConfig(name, newBytesValue)
         }
@@ -68,7 +68,7 @@ class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
     @Test
     fun `kds-kdsEnclaveConstraint`() {
         assertThat(buildGradleFile).content().doesNotContain("kdsEnclaveConstraint")
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(enclaveProperties()).doesNotContainKey("kds.kdsEnclaveConstraint")
             addEnclaveConfigBlock("""
                 kds {
@@ -83,7 +83,7 @@ class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
     @EnumSource
     fun `kds-persistenceKeySpec-masterKeyType and constraint`(masterKeyType: MasterKeyType) {
         assertThat(buildGradleFile).content().doesNotContain("persistenceKeySpec")
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(enclaveProperties()).doesNotContainKey("kds.kdsEnclaveConstraint.persistenceKeySpec.masterKeyType")
             addEnclaveConfigBlock("""
                 kds {
@@ -108,7 +108,7 @@ class GenerateEnclavePropertiesTest : AbstractPluginTaskTest() {
         @Enum value: OptionalBooleanConfig
     ) {
         assertThat(buildGradleFile).content().doesNotContain("persistenceKeySpec")
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertThat(enclaveProperties().keys).noneMatch { (it as String).startsWith("kds.persistenceKeySpec.") }
             addEnclaveConfigBlock("""
                 kds {

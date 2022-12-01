@@ -24,9 +24,9 @@ import kotlin.io.path.*
 
 /**
  * This test is the GraalVM version of [GramineEnclaveBundleJarTest] however it's must more extensive. The reason for
- * this, and why this is the only GraalVM specific test class, is becuase of the lengthy build time of native image
+ * this, and why this is the only GraalVM specific test class, is because of the lengthy build time of native image
  * when creating the unsigned enclave .so file. To avoid having a long test build time, this class only has one big
- * test which rans through various scenarios, all the while trying to keep the number of times the enclave is rebuilt
+ * test which runs through various scenarios, all the while trying to keep the number of times the enclave is rebuilt
  * down to a minimum.
  */
 class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {

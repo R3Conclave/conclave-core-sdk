@@ -17,20 +17,20 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
 
     @Test
     fun productID() {
-        assertTaskIsIncremental {
-            assertThat(enxlaveConfig()["ProdID"].textValue()).isEqualTo("11")
+        assertTaskIsIncrementalUponInputChange {
+            assertThat(enclaveConfig()["ProdID"].textValue()).isEqualTo("11")
             modifyProductIdConfig(111)
         }
-        assertThat(enxlaveConfig()["ProdID"].textValue()).isEqualTo("111")
+        assertThat(enclaveConfig()["ProdID"].textValue()).isEqualTo("111")
     }
 
     @Test
     fun revocationLevel() {
-        assertTaskIsIncremental {
-            assertThat(enxlaveConfig()["ISVSVN"].textValue()).isEqualTo("13")
+        assertTaskIsIncrementalUponInputChange {
+            assertThat(enclaveConfig()["ISVSVN"].textValue()).isEqualTo("13")
             modifyRevocationLevelConfig(121)
         }
-        assertThat(enxlaveConfig()["ISVSVN"].textValue()).isEqualTo("122")
+        assertThat(enclaveConfig()["ISVSVN"].textValue()).isEqualTo("122")
     }
 
     @ParameterizedTest
@@ -41,22 +41,22 @@ class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
     fun `optional size bytes enclave config`(gradleConfig: String, xmlElement: String, defaultRawValue: Long,
                                              newBytesValue: String, newRawValue: Long) {
         assertThat(buildGradleFile).content().doesNotContain(gradleConfig)
-        assertTaskIsIncremental {
-            assertThat(enxlaveConfig()[xmlElement].textValue()).isEqualTo("0x${defaultRawValue.toString(16)}")
+        assertTaskIsIncrementalUponInputChange {
+            assertThat(enclaveConfig()[xmlElement].textValue()).isEqualTo("0x${defaultRawValue.toString(16)}")
             addSimpleEnclaveConfig(gradleConfig, newBytesValue)
         }
-        assertThat(enxlaveConfig()[xmlElement].textValue()).isEqualTo("0x${newRawValue.toString(16)}")
+        assertThat(enclaveConfig()[xmlElement].textValue()).isEqualTo("0x${newRawValue.toString(16)}")
     }
 
     @Test
     fun maxThreads() {
         assertThat(buildGradleFile).content().doesNotContain("maxThreads")
-        assertTaskIsIncremental {
-            assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("100")
+        assertTaskIsIncrementalUponInputChange {
+            assertThat(enclaveConfig()["TCSNum"].textValue()).isEqualTo("100")
             addSimpleEnclaveConfig("maxThreads", 15)
         }
-        assertThat(enxlaveConfig()["TCSNum"].textValue()).isEqualTo("15")
+        assertThat(enclaveConfig()["TCSNum"].textValue()).isEqualTo("15")
     }
 
-    private fun enxlaveConfig(): JsonNode = XmlMapper().readTree(output.toFile())
+    private fun enclaveConfig(): JsonNode = XmlMapper().readTree(output.toFile())
 }

@@ -65,8 +65,8 @@ object TestUtils {
         return entry
     }
 
-    fun <T> ZipFile.assertEntryContents(name: String, block: (InputStream) -> T): T {
-        val entry = assertEntryExists(name)
+    fun <T> ZipFile.assertEntryExists(name: String, block: (InputStream) -> T): T {
+        val entry = this.assertEntryExists(name)
         return getInputStream(entry).use(block)
     }
 

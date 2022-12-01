@@ -36,7 +36,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:InputFiles
     val serializationConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     // We're using a string here so that we can do our own error checking in the plugin code
-    // TODO There are a few enum properties whch should have all the same parsing logic
+    // TODO There are a few enum properties which should have all the same parsing logic
     @get:Input
     val runtime: Property<String> = objects.property(String::class.java)
     // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.

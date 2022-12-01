@@ -1,6 +1,5 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -18,7 +17,7 @@ class ShadowJarTest : AbstractPluginTaskTest() {
         runTask()
         JarFile(output.toFile()).use { jar ->
             jar.assertEntryExists("com/test/enclave/TestEnclave.class")
-            jar.assertEntryContents("com/test/enclave/enclave.properties") {
+            jar.assertEntryExists("com/test/enclave/enclave.properties") {
                 val enclaveProperties = Properties().apply { load(it) }
                 assertThat(enclaveProperties)
                     .containsEntry("productID", "11")

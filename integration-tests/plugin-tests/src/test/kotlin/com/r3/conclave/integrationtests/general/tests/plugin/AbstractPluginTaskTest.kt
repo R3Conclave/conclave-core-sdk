@@ -117,7 +117,7 @@ abstract class AbstractPluginTaskTest {
     fun `check task is incremental on output deletion and check reproducibility`() {
         assumeTrue(runDeletionAndReproducibilityTest)
         assertThat(output).doesNotExist()
-        val originalHashes: Map<Path, ByteArray>? = assertTaskIsIncremental {
+        val originalHashes: Map<Path, ByteArray>? = assertTaskIsIncrementalUponInputChange {
             assertThat(output).exists()
             val map = if (isReproducible) getAllOutputFiles().associateWith { digest(it, "SHA-256") } else null
             output.toFile().deleteRecursively()
@@ -230,10 +230,10 @@ abstract class AbstractPluginTaskTest {
     /**
      * Assert the Gradle task is incremental after the given modification.
      */
-    fun <T> assertTaskIsIncremental(modify: () -> T): T {
+    fun <T> assertTaskIsIncrementalUponInputChange(modification: () -> T): T {
         // First fresh run and then make sure the second run is up-to-date.
         runTaskAndAssertItsIncremental()
-        val value = modify()
+        val value = modification()
         // Then check that the build runs again with the new build.gradle changes and then is up-to-date again.
         runTaskAndAssertItsIncremental()
         return value

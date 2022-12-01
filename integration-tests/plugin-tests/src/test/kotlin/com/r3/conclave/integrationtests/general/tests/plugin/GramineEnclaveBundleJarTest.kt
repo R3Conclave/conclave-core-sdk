@@ -2,7 +2,7 @@ package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.ITEnclaveMode
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAMINE
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryContents
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.assertEntryExists
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readZipEntryNames
 import org.assertj.core.api.Assertions.assertThat
@@ -20,7 +20,7 @@ class GramineEnclaveBundleJarTest : AbstractPluginTaskTest() {
 
     @Test
     fun `contents of jar`() {
-        assertTaskIsIncremental {
+        assertTaskIsIncrementalUponInputChange {
             assertJarContents("com.test.enclave.TestEnclave")
             val enclaveCode = projectDir.resolve("src/main/kotlin/com/test/enclave/EnclaveTest.kt")
             enclaveCode.searchAndReplace("TestEnclave", "TestEnclave2")
@@ -32,7 +32,7 @@ class GramineEnclaveBundleJarTest : AbstractPluginTaskTest() {
         JarFile(output.toFile()).use { bundleJar ->
             val bundlePath = "com/r3/conclave/enclave/user-bundles/$enclaveClassName/" +
                     "${enclaveMode.name.lowercase()}-gramine.zip"
-            bundleJar.assertEntryContents(bundlePath) { gramineZip ->
+            bundleJar.assertEntryExists(bundlePath) { gramineZip ->
                 val actualEntryNames = gramineZip.readZipEntryNames()
                 val expectedEntryNames = mutableListOf("enclave.jar")
                 when (enclaveMode) {
