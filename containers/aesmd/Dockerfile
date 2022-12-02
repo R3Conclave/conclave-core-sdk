@@ -7,7 +7,8 @@ LABEL commit_id=${commit_id}
 # Install dependencies
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive  apt-get install -y \
-    wget
+    wget \
+    gnupg2
 
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intel-sgx.list
