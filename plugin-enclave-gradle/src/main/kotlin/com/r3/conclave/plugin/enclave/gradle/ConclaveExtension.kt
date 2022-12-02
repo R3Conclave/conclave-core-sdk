@@ -48,11 +48,11 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Nested
     val kds: KDSExtension = objects.newInstance(KDSExtension::class.java)
 
-    @get:Nested
+    @get:Internal
     val release: EnclaveExtension = objects.newInstance(BuildType.Release)
-    @get:Nested
+    @get:Internal
     val debug: EnclaveExtension = objects.newInstance(BuildType.Debug)
-    @get:Nested
+    @get:Internal
     val simulation: EnclaveExtension = objects.newInstance(BuildType.Simulation)
 
     fun release(action: Action<EnclaveExtension>) {

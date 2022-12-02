@@ -13,7 +13,6 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.calculateMr
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.enclaveMode
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.execCommand
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.getEnclaveSigstruct
-import com.r3.conclave.integrationtests.general.commontest.TestUtils.newTempFile
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.readSigningKey
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -122,8 +121,8 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
         }
         expectedMrsigner = calculateMrsigner(readSigningKey(userSigningKey))
 
-        val signatureFile = buildDir.newTempFile("signature", ".bin")
-        val publicKeyFile = buildDir.newTempFile("signing_public_key", ".pem")
+        val signatureFile = buildDir / "testExternalSigning-signature.bin"
+        val publicKeyFile = buildDir / "testExternalSigning-signing_public_key.pem"
 
         execCommand(
             "openssl", "rsa",
@@ -150,7 +149,7 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
         val signingMaterial = defaultSigningMaterialFile.readBytes()
 
         println("Using user provided location for signing material output...")
-        val signingMaterialFile = buildDir.newTempFile("signing_material", ".bin")
+        val signingMaterialFile = buildDir / "testExternalSigning-signing_material.bin"
         // Insert signingMaterial config
         modifyGradleBuildFile(
             "signingType = externalKey",

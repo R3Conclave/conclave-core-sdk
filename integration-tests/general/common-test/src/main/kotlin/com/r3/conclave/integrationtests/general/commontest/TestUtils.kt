@@ -59,13 +59,6 @@ object TestUtils {
         assumeThat(runtimeType).isEqualTo(RuntimeType.GRAMINE)
     }
 
-    /**
-     * Create reference to a new temporary file within the directory without actually creating it.
-     */
-    fun Path.newTempFile(prefix: String? = null, suffix: String? = null): Path {
-        return Files.createTempFile(this, prefix, suffix).also(Path::deleteExisting)
-    }
-
     fun ZipFile.assertEntryExists(name: String): ZipEntry {
         val entry = getEntry(name)
         assertThat(entry).isNotNull
