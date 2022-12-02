@@ -181,7 +181,7 @@ You *don't* need to trust:
 * The hardware manufacturers *other* than the CPU vendor. RAM, disk, firmware, the operating system, PCI devices, and
 other hardware components are all untrusted in the SGX threat model.
 * The owner of the hardware on which your enclave is running. You can verify the remote attestation to ensure that the
-remote system is up to date and that the enclave is running securely.
+remote system is up-to-date and that the enclave is running securely.
 * R3, as Conclave is [open source](https://github.com/R3Conclave/conclave-core-sdk).
 
 ### How should I authenticate users of my enclave?
@@ -244,6 +244,12 @@ Conclave requires at least Java 8 to build and run an enclave application. Java 
 As Intel's latest processors use DCAP attestation, you don't need to connect with Intel anymore. For example, no direct 
 connection to Intel is required on Microsoft Azure. Azure runs caching proxies in-cloud, and Conclave uses them 
 automatically.
+
+### Can I deploy Conclave applications on-premise?
+
+Conclave recommends to deploy enclaves on modern Azure virtual machines like DC4s_V3 that support the latest 
+attestation protocols. However, on-premise deployment is possible. Please [reach out to us on discord](https://discord.gg/zpHKkMZ8Sw)
+for more information about on-premise deployment. 
 
 ### Can I print debug output to the console from my enclave?
 
