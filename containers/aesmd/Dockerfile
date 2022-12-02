@@ -17,11 +17,27 @@ RUN echo 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod foca
 
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    az-dcap-client \
-    libsgx-quote-ex \
-    libsgx-dcap-ql
-# Need to set LD_LIBRARY_PATH to directory of aesm_service executable
+    sgx-aesm-service=2.17.100.3-focal1 \
+    libsgx-ae-epid=2.17.100.3-focal1 \
+    libsgx-ae-id-enclave=1.14.100.3-focal1 \
+    libsgx-ae-le=2.17.100.3-focal1 \
+    libsgx-ae-pce=2.17.100.3-focal1 \
+    libsgx-ae-qe3=1.14.100.3-focal1 \
+    libsgx-ae-qve=1.14.100.3-focal1 \
+    libsgx-aesm-ecdsa-plugin=2.17.100.3-focal1 \
+    libsgx-aesm-epid-plugin=2.17.100.3-focal1 \
+    libsgx-aesm-launch-plugin=2.17.100.3-focal1 \
+    libsgx-aesm-pce-plugin=2.17.100.3-focal1 \
+    libsgx-aesm-quote-ex-plugin=2.17.100.3-focal1 \
+    libsgx-dcap-quote-verify=1.14.100.3-focal1 \
+    libsgx-enclave-common=2.17.100.3-focal1 \
+    libsgx-launch=2.17.100.3-focal1 \
+    libsgx-pce-logic=1.14.100.3-focal1 \
+    libsgx-qe3-logic=1.14.100.3-focal1 \
+    libsgx-urts=2.17.100.3-focal1 \
+    az-dcap-client
 
+# Need to set LD_LIBRARY_PATH to directory of aesm_service executable
 WORKDIR /opt/intel/sgx-aesm-service/aesm
 ENV LD_LIBRARY_PATH=.
 
