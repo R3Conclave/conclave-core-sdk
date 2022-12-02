@@ -2,7 +2,7 @@
 
 ## 1.3.1
 1. To make deploying enclaves built with conclave easier, files containing the enclave code hash and signer are now 
-   generated when an enclave is built. See [here]() for more information.
+   generated when an enclave is built. See [here](enclave-configuration.md#enclave-build-process) for more information.
 
 ## 1.3
 
