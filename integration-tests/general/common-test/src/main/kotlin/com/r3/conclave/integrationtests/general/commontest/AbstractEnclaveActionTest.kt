@@ -22,6 +22,10 @@ abstract class AbstractEnclaveActionTest(
 
     var useKds = false
 
+    // Used to disable teardown for the `exception is thrown if too many threads are requested` test
+    // TODO: Figure out why this test hangs, then remove this teardown logic.
+    var doEnclaveTeardown = true
+
     companion object {
         fun <R> callEnclave(
             enclaveHost: EnclaveHost,
@@ -43,9 +47,13 @@ abstract class AbstractEnclaveActionTest(
 
     @AfterEach
     fun closeEnclaves() {
-        synchronized(enclaveTransports) {
-            enclaveTransports.values.forEach { it.close() }
-            enclaveTransports.clear()
+        // Disable teardown for the `exception is thrown if too many threads are requested` test
+        // TODO: Figure out why this test hangs, then remove this teardown logic.
+        if (doEnclaveTeardown) {
+            synchronized(enclaveTransports) {
+                enclaveTransports.values.forEach { it.close() }
+                enclaveTransports.clear()
+            }
         }
     }
 
