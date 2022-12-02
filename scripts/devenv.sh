@@ -21,7 +21,7 @@ if [[ -z ${container_id} ]]; then
   if [ doesContainerImageExist $container_image_sdk_build ]; then
     docker pull $container_image_sdk_build
   else
-    DOCKER_IMAGE_SAVE="${DOCKER_IMAGE_SAVE:-0}" ${code_host_dir}/containers/scripts/ci_build_publish_docker_images.sh
+    DOCKER_IMAGE_AESMD_BUILD="${DOCKER_IMAGE_AESMD_BUILD:-0}" DOCKER_IMAGE_SAVE="${DOCKER_IMAGE_SAVE:-0}" ${code_host_dir}/containers/scripts/ci_build_publish_docker_images.sh
   fi
 
   env_display=""
