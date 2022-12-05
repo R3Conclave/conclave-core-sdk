@@ -16,7 +16,6 @@ RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu foc
 
 RUN apt-get -y update
 
-
 # Disable interactive dialogue
 # Otherwise, a message that requires user input might appear during the installation
 # TODO: Update Conclave to Intel SGX SDK 2.18 and remove package versions: https://r3-cev.atlassian.net/browse/CON-1243
@@ -35,4 +34,3 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libsgx-pce-logic=1.14.100.3-focal1 \
     libsgx-qe3-logic=1.14.100.3-focal1 \
     libsgx-urts=2.17.100.3-focal1
-
