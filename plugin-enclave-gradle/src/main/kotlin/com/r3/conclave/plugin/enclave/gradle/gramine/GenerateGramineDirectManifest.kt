@@ -86,7 +86,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
         /**
             Generate Gramine manifest for Python enclaves outside the conclave-build container.
          */
-        if (!buildInDocker.get() && pythonEnclave.get()) {
+        if (!buildInDocker.get() || pythonEnclave.get()) {
             val architecture = "x86_64-linux-gnu"
             val ldPreload = executePython(
                 "from sysconfig import get_config_var; " +
