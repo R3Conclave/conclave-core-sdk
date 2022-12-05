@@ -121,14 +121,9 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
         }
         expectedMrsigner = calculateMrsigner(readSigningKey(userSigningKey))
 
-        val signatureFile = Files.createTempFile(buildDir, "signature", ".bin")
-        val publicKeyFile = Files.createTempFile(buildDir, "signing_public_key", ".pem")
-
-        execCommand(
-            "openssl", "rsa",
-            "-in", userSigningKey.absolutePathString(),
-            "-pubout", "-out", publicKeyFile.absolutePathString()
-        )
+        // Do not create an empty signature file, just have the reference to it
+        val signatureFile = buildDir / "testExternalSigning-signature.bin"
+        val publicKeyFile = getPublicSigningKey(userSigningKey)
 
         // Now use 'externalKey' signing and sign the enclave manually
         modifyGradleBuildFile(
@@ -149,7 +144,8 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
         val signingMaterial = defaultSigningMaterialFile.readBytes()
 
         println("Using user provided location for signing material output...")
-        val signingMaterialFile = Files.createTempFile(buildDir, "signing_material", ".bin")
+        // Do not create an empty signing material file, just have the reference to it
+        val signingMaterialFile = buildDir / "testExternalSigning-signing_material.bin"
         // Insert signingMaterial config
         modifyGradleBuildFile(
             "signingType = externalKey",
@@ -171,6 +167,16 @@ class GraalVMEnclaveBundleJarTest : AbstractPluginTaskTest() {
         // Run the main task again and have it sign the enclave using the external signing material
         runTaskAndAssertItsIncremental()
         assertEnclave()
+    }
+
+    private fun getPublicSigningKey(signingKeyFile: Path): Path? {
+        val publicKeyFile = Files.createTempFile(buildDir, "signing_public_key", ".pem")
+        execCommand(
+            "openssl", "rsa",
+            "-in", signingKeyFile.absolutePathString(),
+            "-pubout", "-out", publicKeyFile.absolutePathString()
+        )
+        return publicKeyFile
     }
 
     /**
