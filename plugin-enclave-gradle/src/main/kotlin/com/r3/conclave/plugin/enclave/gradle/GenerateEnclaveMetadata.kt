@@ -9,6 +9,8 @@ import com.r3.conclave.common.internal.SgxEnclaveCss.key
 import com.r3.conclave.common.internal.mrsigner
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
@@ -23,21 +25,32 @@ open class GenerateEnclaveMetadata @Inject constructor(
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
     override fun action() {
         val metadataFile = temporaryDir.toPath().resolve("enclave_css.bin")
 
-        try {
-            linuxExec.exec(
-                listOf<String>(
-                    plugin.signToolPath().absolutePathString(), "dump",
-                    "-enclave", inputSignedEnclave.asFile.get().absolutePath,
-                    // We don't need this but sgx_sign still requires it be specified.
-                    "-dumpfile", "/dev/null",
-                    "-cssfile", metadataFile.absolutePathString()
+        if (buildInDocker.get()) {
+            try {
+                linuxExec.exec(
+                    listOf<String>(
+                        plugin.signToolPath().absolutePathString(), "dump",
+                        "-enclave", inputSignedEnclave.asFile.get().absolutePath,
+                        // We don't need this but sgx_sign still requires it to be specified.
+                        "-dumpfile", "/dev/null",
+                        "-cssfile", metadataFile.absolutePathString()
+                    )
                 )
+            } finally {
+                linuxExec.cleanPreparedFiles()
+            }
+        } else {
+            commandLine(
+                plugin.signToolPath().absolutePathString(), "dump",
+                "-enclave", inputSignedEnclave.asFile.get(),
+                "-dumpfile", metadataFile
             )
-        } finally {
-            linuxExec.cleanPreparedFiles()
         }
 
         val enclaveMetadata = Cursor.wrap(SgxEnclaveCss, metadataFile.readBytes())

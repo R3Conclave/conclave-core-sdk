@@ -21,6 +21,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val release: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val debug: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
     val simulation: EnclaveExtension = objects.newInstance(EnclaveExtension::class.java)
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()

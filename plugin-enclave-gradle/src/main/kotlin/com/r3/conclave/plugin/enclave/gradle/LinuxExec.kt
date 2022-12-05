@@ -22,32 +22,36 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     @get:Input
     val tagLatest: Property<String> = objects.property(String::class.java)
 
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
         // of a Linux system or container.
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
+        if (buildInDocker.get()) {
+            val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
+            LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
-        val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
-        LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
-
-        try {
-            commandLine(
-                "docker",
-                "build",
-                "--tag", tag.get(),
-                "--tag", tagLatest.get(),
-                conclaveBuildDir
-            )
-        } catch (e: Exception) {
-            logger.info("Docker build of conclave-build failed.", e)
-            throw GradleException(
-                "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
-                        + "Please install Docker and rerun your build. "
-                        + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
-                        + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
-            )
+            try {
+                commandLine(
+                    "docker",
+                    "build",
+                    "--tag", tag.get(),
+                    "--tag", tagLatest.get(),
+                    conclaveBuildDir
+                )
+            } catch (e: Exception) {
+                logger.info("Docker build of conclave-build failed.", e)
+                throw GradleException(
+                    "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
+                            + "Please install Docker and rerun your build. "
+                            + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
+                            + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
+                )
+            }
         }
     }
 
@@ -74,14 +78,21 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      * by a call to prepareFile().
      */
     fun cleanPreparedFiles() {
-        this.project.delete(File("${baseDirectory.get()}/.linuxexec"))
+        if (buildInDocker.get()) {
+            this.project.delete(File("${baseDirectory.get()}/.linuxexec"))
+        }
     }
 
     /** Returns the ERROR output of the command only, in the returned list. */
     fun exec(params: List<String>): List<String>? {
         val errorOut = ByteArrayOutputStream()
+        val args: List<String> = when (buildInDocker.get()) {
+            true -> params
+            false -> getDockerRunArgs(params)
+        }
+
         val result = commandLine(
-            getDockerRunArgs(params),
+            args,
             commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
         )
 

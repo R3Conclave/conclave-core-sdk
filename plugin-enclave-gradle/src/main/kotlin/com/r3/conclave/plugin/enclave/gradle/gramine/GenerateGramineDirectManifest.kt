@@ -47,6 +47,9 @@ open class GenerateGramineDirectManifest @Inject constructor(
     @get:Input
     val pythonEnclave: Property<Boolean> = objects.property(Boolean::class.java)
 
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
     @get:OutputFile
     val manifestFile: RegularFileProperty = objects.fileProperty()
 
@@ -83,7 +86,7 @@ open class GenerateGramineDirectManifest @Inject constructor(
         /**
             Generate Gramine manifest for Python enclaves outside the conclave-build container.
          */
-        if (pythonEnclave.get()) {
+        if (!buildInDocker.get() && pythonEnclave.get()) {
             val architecture = "x86_64-linux-gnu"
             val ldPreload = executePython(
                 "from sysconfig import get_config_var; " +

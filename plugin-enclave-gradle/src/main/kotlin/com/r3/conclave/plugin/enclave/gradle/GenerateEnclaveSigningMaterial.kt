@@ -24,6 +24,9 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
         const val SIGNATURE_DATE_OFFSET = 20 //< Offset of date field in signing input structure
     }
 
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -37,23 +40,33 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
     val outputSigningMaterial: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        // The signing material file may not live in a directory accessible by docker.
-        // Prepare the file so docker can access it if necessary.
-        val dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
+        val dockerOutputSigningFile: File?
+        if (buildInDocker.get()) {
+            // The signing material file may not live in a directory accessible by docker.
+            // Prepare the file so docker can access it if necessary.
+            dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
 
-        linuxExec.exec(
-            listOf<String>(
-                plugin.signToolPath().absolutePathString(), "gendata",
-                "-enclave", inputEnclave.asFile.get().absolutePath,
-                "-out", dockerOutputSigningFile.absolutePath,
-                "-config", inputEnclaveConfig.asFile.get().absolutePath
+            linuxExec.exec(
+                listOf<String>(
+                    plugin.signToolPath().absolutePathString(), "gendata",
+                    "-enclave", inputEnclave.asFile.get().absolutePath,
+                    "-out", dockerOutputSigningFile.absolutePath,
+                    "-config", inputEnclaveConfig.asFile.get().absolutePath
+                )
             )
-        )
 
-        try {
-            postProcess(dockerOutputSigningFile)
-        } finally {
-            linuxExec.cleanPreparedFiles()
+            try {
+                postProcess(dockerOutputSigningFile)
+            } finally {
+                linuxExec.cleanPreparedFiles()
+            }
+        } else {
+            dockerOutputSigningFile = null
+            commandLine(
+                "-enclave", inputEnclave.asFile.get(),
+                "-out", outputSigningMaterial.asFile.get(),
+                "-config", inputEnclaveConfig.asFile.get()
+            )
         }
     }
 

@@ -201,6 +201,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             if (pythonSourcePath == null) {
                 task.dependsOn(linuxExec)
             }
+            task.buildInDocker.set(conclaveExtension.buildInDocker)
             task.pythonEnclave.set(pythonSourcePath != null)
             task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)
@@ -386,6 +387,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // Create a 'latest' tag too so users can follow our tutorial documentation using the
             // tag 'conclave-build:latest' rather than looking up the conclave version.
             task.tagLatest.set("conclave-build:latest")
+            task.buildInDocker.set(conclaveExtension.buildInDocker)
         }
 
         for (type in BuildType.values().filter { it != BuildType.Mock }) {
@@ -507,6 +509,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                     task.inputKey.set(signingKey)
                     task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
+                    task.buildInDocker.set(conclaveExtension.buildInDocker)
                 }
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(
@@ -521,6 +524,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     generateEnclaveConfigTask.outputConfigFile,
                     enclaveExtension.signingMaterial
                 )
+                task.buildInDocker.set(conclaveExtension.buildInDocker)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)
@@ -593,6 +597,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     }
                     task.inputSignedEnclave.set(signedEnclaveFile)
                     task.inputs.files(signedEnclaveFile)
+                    task.buildInDocker.set(conclaveExtension.buildInDocker)
                 }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->
