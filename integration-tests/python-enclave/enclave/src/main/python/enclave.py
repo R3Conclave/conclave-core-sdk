@@ -1,16 +1,13 @@
 # This is an adapted example from the Pytorch MNIST RNN: https://github.com/pytorch/examples/tree/main/mnist_rnn
+from io import BytesIO
+import zipfile
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import zipfile
-from io import BytesIO
 from torch.optim.lr_scheduler import StepLR
 from torchvision import datasets, transforms
-
-transform = None
-model = None
-classes = None
 
 
 class Net(nn.Module):
@@ -78,9 +75,12 @@ def test(model, device, test_loader):
 
 
 def run_pytorch_example():
-    epochs = 2
+    epochs = 1
     seed = 1
-    batch_size = 1000
+    #  This high value is to speed up the calculation, but it degrades the accuracy.
+    #    In this example we are not interested in the accuracy of the training or prediction of the model,
+    #    we are just interested in verifying that the example runs successfully without exceptions.
+    batch_size = 5000
     test_batch_size = 1000
     learning_rate = 0.2
     gamma = 0.7
@@ -120,28 +120,25 @@ def on_enclave_startup():
     print("Enclave ready...")
 
 
-def read_file_from_client(f, zip_destination_path):
-    # Read the model from the Mail body
-    model_size = int.from_bytes(f.read(4), byteorder='big')
-    global model
-    # Get the zip file from the client and saves it locally
-    with open(zip_destination_path, "wb") as binary_file:
-        binary_file.write(f.read(model_size))
-
-
-def unzip_bundle_to_temporary_dir(zip_file):
-    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-        zip_ref.extractall("/tmp/")
-
-
-def prepare_model_data(f):
-    zip_destination_path = "bundle.zip"
-    read_file_from_client(f, zip_destination_path)
-    unzip_bundle_to_temporary_dir(zip_destination_path)
-
-
 def receive_enclave_mail(mail):
     f = BytesIO(mail.body)
 
     prepare_model_data(f)
-    return str.encode(str(run_pytorch_example()))
+    result = run_pytorch_example()
+    return str.encode(str(result))
+
+
+def prepare_model_data(f):
+    bundle_bytes = read_bundle_from_client(f)
+    unzip_bundle_to_temporary_dir(bundle_bytes)
+
+
+def read_bundle_from_client(f):
+    # Read the model from the Mail body
+    model_size = int.from_bytes(f.read(4), byteorder='big')
+    return f.read(model_size)
+
+
+def unzip_bundle_to_temporary_dir(bundle_bytes):
+    zip_ref = zipfile.ZipFile(BytesIO(bundle_bytes))
+    zip_ref.extractall("/tmp/")

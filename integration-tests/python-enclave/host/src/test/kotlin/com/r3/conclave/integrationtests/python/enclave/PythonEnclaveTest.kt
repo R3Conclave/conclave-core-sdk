@@ -44,16 +44,15 @@ class PythonEnclaveTest {
         }
     }
 
-
     @Test
     fun run_mnist_rnn_pytorch_example() {
         val clientPostOffice = enclaveHost.enclaveInstanceInfo.createPostOffice()
         val mailRequest = prepareMailWithDataBundle(clientPostOffice)
         enclaveHost.deliverMail(mailRequest, null)
         val mailResponse = postedMail.single().encryptedBytes
-        // We do not really care of the accuracy of the Pytorch example, we just want it to run correctly.
+        // We do not really care of the accuracy of the result, we just want the Pytorch enclave to run correctly.
         val lastLossResult = clientPostOffice.decryptMail(mailResponse).bodyAsBytes
-        assertThat(lastLossResult).isEqualTo("1.3275963500976562".toByteArray())
+        assertThat(lastLossResult).isEqualTo("2.2989193603515625".toByteArray())
     }
 
     private fun prepareMailWithDataBundle(clientPostOffice: PostOffice): ByteArray {
