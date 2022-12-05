@@ -87,7 +87,7 @@ Please read the installation instructions in the "Install the DCAP packages" sec
 If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
 
 ```sh
-docker run --device /dev/sgx/enclave --device /dev/sgx/provision ...
+docker run --device /dev/sgx_enclave --device /dev/sgx_provision ...
 ```
 
 !!!Note

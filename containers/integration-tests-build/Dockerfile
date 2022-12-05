@@ -10,12 +10,11 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     wget \
     software-properties-common
 
-# Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
-# last 5 packages installed below)
-
+# Intel SGX libs
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intel-sgx.list
 
+# Azure DCAP plugin
 RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN echo 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main' > /etc/apt/sources.list.d/msprod.list
 
@@ -24,16 +23,15 @@ RUN apt-get -y update
 
 # Disable interactive dialogue
 # Otherwise, a message that requires user input might appear during the installation
+# TODO: Update Conclave to Intel SGX SDK 2.18 and remove package versions
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     sgx-aesm-service=2.17.100.3-focal1 \
-    libsgx-ae-epid=2.17.100.3-focal1 \
     libsgx-ae-id-enclave=1.14.100.3-focal1 \
     libsgx-ae-le=2.17.100.3-focal1 \
     libsgx-ae-pce=2.17.100.3-focal1 \
     libsgx-ae-qe3=1.14.100.3-focal1 \
     libsgx-ae-qve=1.14.100.3-focal1 \
     libsgx-aesm-ecdsa-plugin=2.17.100.3-focal1 \
-    libsgx-aesm-epid-plugin=2.17.100.3-focal1 \
     libsgx-aesm-launch-plugin=2.17.100.3-focal1 \
     libsgx-aesm-pce-plugin=2.17.100.3-focal1 \
     libsgx-aesm-quote-ex-plugin=2.17.100.3-focal1 \

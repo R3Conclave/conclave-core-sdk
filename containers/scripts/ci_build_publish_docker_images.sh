@@ -78,10 +78,10 @@ buildContainerIntegrationTestsBuild() {
   popd
 }
 
-# Builds AESMD docker image
+# Builds AESMD docker image (this is used by Gramine hardware integration tests)
 buildContainerAESMD() {
   pushd "${code_host_dir}/containers/aesmd/"
-  docker build -t $container_image_aesmd --build-arg commit_id=$commit_id .
+  docker build -t "$container_image_aesmd" --build-arg commit_id="$commit_id" .
   popd
 }
 
@@ -116,7 +116,7 @@ buildAndPublishContainerIfItDoesNotExist() {
 ## Build and publish
 ##################################################################################
 if [ -z "${DOCKER_IMAGE_AESMD_BUILD:-}" ] || [ "${DOCKER_IMAGE_AESMD_BUILD}" == "1" ]; then
-  buildAndPublishContainerIfItDoesNotExist $container_image_aesmd buildContainerAESMD
+  buildAndPublishContainerIfItDoesNotExist "$container_image_aesmd" buildContainerAESMD
 fi
 if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD}" == "1" ]; then
   buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build buildContainerConclaveBuild
