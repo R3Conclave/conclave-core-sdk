@@ -40,8 +40,10 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Input
     val runtime: Property<String> = objects.property(String::class.java)
     // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.
+    @Suppress("unused")
     @get:Internal
     val graalvm = "graalvm"
+    @Suppress("unused")
     @get:Internal
     val gramine = "gramine"
 
