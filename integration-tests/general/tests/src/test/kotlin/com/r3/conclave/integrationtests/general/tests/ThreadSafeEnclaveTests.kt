@@ -89,16 +89,17 @@ class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integr
 
     @Test
     fun `threading inside enclave`() {
-        val n = 8 // <= defaultTCSNum(10)
+        val n = 8 // <= thread safe enclave maxThreads (10)
         val result = callEnclave(TooManyThreadsRequestedAction(n))
         assertThat(result).isEqualTo((n * (n + 1)) / 2)
     }
 
-    @Disabled(": CON-360")
-    // fatal error 'PosixJavaThreads.start0: pthread_create'
     @Test
     fun `exception is thrown if too many threads are requested`() {
-        val n = 15 // > defaultTCSNum(10)
+        // This test hangs when tearing down the enclave, so we disable teardown here.
+        // TODO: CON-1244 Figure out why this test hangs, then remove this teardown logic.
+        doEnclaveTeardown = false
+        val n = 15 // > thread safe enclave maxThreads (10)
         assertThatThrownBy {
             callEnclave(TooManyThreadsRequestedAction(n))
         }.hasMessageContaining("The enclave ran out of TCS slots when calling from a new thread into the enclave.") // SGX_ERROR_OUT_OF_TCS
