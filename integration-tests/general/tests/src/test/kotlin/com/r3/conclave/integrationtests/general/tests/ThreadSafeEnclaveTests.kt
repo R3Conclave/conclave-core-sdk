@@ -96,8 +96,8 @@ class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integr
 
     @Test
     fun `exception is thrown if too many threads are requested`() {
-        // This test hangs when tearing down the enclave.
-        // TODO: Figure out why this test hangs, then remove this teardown logic.
+        // This test hangs when tearing down the enclave, so we disable teardown here.
+        // TODO: CON-1244 Figure out why this test hangs, then remove this teardown logic.
         doEnclaveTeardown = false
         val n = 15 // > defaultTCSNum(10)
         assertThatThrownBy {
