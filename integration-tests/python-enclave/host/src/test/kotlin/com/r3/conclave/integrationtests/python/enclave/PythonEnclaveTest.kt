@@ -4,11 +4,17 @@ import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand.PostMail
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.gramineOnlyTest
+import com.r3.conclave.mail.PostOffice
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.nio.file.Paths
+import kotlin.io.path.fileSize
+import kotlin.io.path.readBytes
 
 class PythonEnclaveTest {
     companion object {
@@ -38,22 +44,33 @@ class PythonEnclaveTest {
         }
     }
 
-    @Test
-    fun receive_from_untrusted_host() {
-        val data = "hello world".toByteArray()
-        val signature = enclaveHost.callEnclave(data)!!
-        with(enclaveHost.enclaveInstanceInfo.verifier()) {
-            update(data)
-            assertThat(verify(signature)).isTrue
-        }
-    }
 
     @Test
-    fun receive_enclave_mail() {
+    fun run_mnist_rnn_pytorch_example() {
         val clientPostOffice = enclaveHost.enclaveInstanceInfo.createPostOffice()
-        val mailRequest = clientPostOffice.encryptMail("12345".toByteArray())
+        val mailRequest = prepareMailWithDataBundle(clientPostOffice)
         enclaveHost.deliverMail(mailRequest, null)
         val mailResponse = postedMail.single().encryptedBytes
-        assertThat(clientPostOffice.decryptMail(mailResponse).bodyAsBytes).isEqualTo("54321".toByteArray())
+        // We do not really care of the accuracy of the Pytorch example, we just want it to run correctly.
+        val lastLossResult = clientPostOffice.decryptMail(mailResponse).bodyAsBytes
+        assertThat(lastLossResult).isEqualTo("1.3275963500976562".toByteArray())
+    }
+
+    private fun prepareMailWithDataBundle(clientPostOffice: PostOffice): ByteArray {
+        val pytorchModel = Paths.get(this::class.java.getResource("/bundle.zip")!!.file)
+
+        val body = writeData {
+            writeByte(1)
+            writeInt(pytorchModel.fileSize().toInt())
+            write(pytorchModel.readBytes())
+        }
+        return clientPostOffice.encryptMail(body)
+    }
+
+    private inline fun writeData(block: DataOutputStream.() -> Unit): ByteArray {
+        val baos = ByteArrayOutputStream()
+        val dos = DataOutputStream(baos)
+        block(dos)
+        return baos.toByteArray()
     }
 }
