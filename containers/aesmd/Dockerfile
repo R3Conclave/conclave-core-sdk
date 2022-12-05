@@ -1,4 +1,4 @@
-# This Dockerfile starts the AESMD service, which is used by Gramine hardware tests.
+# This Dockerfile starts the AESM service, which is used by Gramine hardware tests.
 FROM ubuntu:20.04
 
 ARG commit_id
@@ -16,7 +16,7 @@ RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu foc
 
 RUN apt-get update
 
-# TODO: Update Conclave to Intel SGX SDK 2.18 and remove package versions
+# TODO: Update Conclave to Intel SGX SDK 2.18 and remove package versions: https://r3-cev.atlassian.net/browse/CON-1243
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     sgx-aesm-service=2.17.100.3-focal1 \
     libsgx-ae-id-enclave=1.14.100.3-focal1 \

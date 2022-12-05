@@ -8,7 +8,7 @@ enclaveMode=$1
 runtimeType=$2
 
 if [ "$enclaveMode" != "Simulation" ] && [ "$runtimeType" == "Gramine" ]; then
-    # Hardware tests for Gramine need AESMD service running.
+    # Hardware tests for Gramine need the AESM service running.
     # Here we teardown any AESMD container that might be left running, build and start the AESMD container.
     docker stop aesmd || true
     docker run -d --rm --name aesmd ${sgx_hardware_flags[@]+"${sgx_hardware_flags[@]}"} "$container_image_aesmd"
