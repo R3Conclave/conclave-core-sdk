@@ -54,19 +54,19 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
                     "-config", inputEnclaveConfig.asFile.get().absolutePath
                 )
             )
-
-            try {
-                postProcess(dockerOutputSigningFile)
-            } finally {
-                linuxExec.cleanPreparedFiles()
-            }
         } else {
             dockerOutputSigningFile = null
             commandLine(
+                plugin.signToolPath().absolutePathString(), "gendata",
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSigningMaterial.asFile.get(),
                 "-config", inputEnclaveConfig.asFile.get()
             )
+        }
+        try {
+            postProcess(dockerOutputSigningFile)
+        } finally {
+            linuxExec.cleanPreparedFiles()
         }
     }
 

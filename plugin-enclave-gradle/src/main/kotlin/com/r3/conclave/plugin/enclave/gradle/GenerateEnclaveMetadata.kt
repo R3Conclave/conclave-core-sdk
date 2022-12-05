@@ -49,7 +49,9 @@ open class GenerateEnclaveMetadata @Inject constructor(
             commandLine(
                 plugin.signToolPath().absolutePathString(), "dump",
                 "-enclave", inputSignedEnclave.asFile.get(),
-                "-dumpfile", metadataFile
+                // We don't need this but sgx_sign still requires it be specified.
+                "-dumpfile", "/dev/null",
+                "-cssfile", metadataFile.absolutePathString()
             )
         }
 

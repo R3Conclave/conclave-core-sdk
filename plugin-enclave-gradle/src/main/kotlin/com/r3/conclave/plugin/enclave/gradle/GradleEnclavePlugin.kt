@@ -198,7 +198,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     ): GenerateGramineDirectManifest {
         return target.createTask("generateGramineManifest$type", type, linuxExec) { task ->
             // TODO: Build python enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
-            if (pythonSourcePath == null) {
+            if (pythonSourcePath == null && conclaveExtension.buildInDocker.get()) {
                 task.dependsOn(linuxExec)
             }
             task.buildInDocker.set(conclaveExtension.buildInDocker)

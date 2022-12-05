@@ -64,7 +64,7 @@ open class SignEnclave @Inject constructor(
             }
         } else {
             commandLine(
-                 plugin.signToolPath().absolutePathString(), "sign",
+                plugin.signToolPath().absolutePathString(), "sign",
                 "-key", inputKey.asFile.get(),
                 "-enclave", inputEnclave.asFile.get(),
                 "-out", outputSignedEnclave.asFile.get(),

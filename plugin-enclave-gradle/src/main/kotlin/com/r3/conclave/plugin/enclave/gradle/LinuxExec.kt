@@ -44,12 +44,13 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
-                logger.info("Docker build of conclave-build failed.", e)
+                logger.error("Docker build of conclave-build failed.", e)
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
                             + "Please install Docker and rerun your build. "
-                            + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine and "
-                            + "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module"
+                            + "See https://docs.conclave.net/enclave-modes.html#system-requirements "
+                            + "If the build still fails, please create a new issue on GitHub "
+                            + "https://github.com/R3Conclave/conclave-core-sdk/issues"
                 )
             }
         }
@@ -61,16 +62,22 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      * are deleted when cleanPreparedFiles() is called.
      */
     fun prepareFile(file: File): File {
-        val tmp = File("${baseDirectory.get()}/.linuxexec")
-        tmp.mkdir()
-        val newFile = File.createTempFile(file.nameWithoutExtension, file.extension, tmp)
-        // The source file may not exist if this is an output file. Let the actual command being
-        // invoked handle any problems with missing/incorrect files
-        try {
-            Files.copy(file.toPath(), newFile.toPath(), REPLACE_EXISTING)
-        } catch (e: IOException) {
+
+        return when (buildInDocker.get()) {
+            true -> file
+            false -> {
+                val tmp = File("${baseDirectory.get()}/.linuxexec")
+                tmp.mkdir()
+                val newFile = File.createTempFile(file.nameWithoutExtension, file.extension, tmp)
+                // The source file may not exist if this is an output file. Let the actual command being
+                // invoked handle any problems with missing/incorrect files
+                try {
+                    Files.copy(file.toPath(), newFile.toPath(), REPLACE_EXISTING)
+                } catch (e: IOException) {
+                }
+                newFile
+            }
         }
-        return newFile
     }
 
     /**
