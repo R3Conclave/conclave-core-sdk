@@ -61,14 +61,17 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
         action.execute(release)
     }
 
+    @Suppress("unused")
     fun debug(action: Action<EnclaveExtension>) {
         action.execute(debug)
     }
 
+    @Suppress("unused")
     fun simulation(action: Action<EnclaveExtension>) {
         action.execute(simulation)
     }
 
+    @Suppress("unused")
     fun kds(action: Action<KDSExtension>) {
         action.execute(kds)
     }
@@ -83,10 +86,12 @@ open class KDSExtension @Inject constructor(objects: ObjectFactory) {
     @get:Nested
     val persistenceKeySpec: KeySpecExtension = objects.newInstance(KeySpecExtension::class.java)
 
+    @Suppress("unused")
     fun keySpec(action: Action<KeySpecExtension>) {
         action.execute(keySpec)
     }
 
+    @Suppress("unused")
     fun persistenceKeySpec(action: Action<KeySpecExtension>) {
         action.execute(persistenceKeySpec)
     }
@@ -103,6 +108,7 @@ open class KeySpecExtension @Inject constructor(objects: ObjectFactory) {
     @get:Nested
     val policyConstraint: PolicyConstraintExtension = objects.newInstance(PolicyConstraintExtension::class.java)
 
+    @Suppress("unused")
     fun policyConstraint(action: Action<PolicyConstraintExtension>) {
         action.execute(policyConstraint)
     }
