@@ -62,7 +62,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      * are deleted when cleanPreparedFiles() is called.
      */
     fun prepareFile(file: File): File {
-
         return when (buildInDocker.get()) {
             true -> file
             false -> {
@@ -94,8 +93,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     fun exec(params: List<String>): List<String>? {
         val errorOut = ByteArrayOutputStream()
         val args: List<String> = when (buildInDocker.get()) {
-            true -> params
-            false -> getDockerRunArgs(params)
+            true -> getDockerRunArgs(params)
+            false -> params
         }
 
         val result = commandLine(
