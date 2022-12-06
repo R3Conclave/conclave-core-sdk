@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <conclave_tools.h>
-
 TEST(conclave_tools, is_bounded_array) {
     class A {};
     EXPECT_EQ(typeid(std::is_bounded_array<A>::type), typeid(std::false_type));

@@ -1,6 +1,6 @@
 --- a/external/dcap_source/QuoteGeneration/Makefile	2021-01-11 17:11:54.590165381 +0000
 +++ b/external/dcap_source/QuoteGeneration/Makefile	2021-01-12 09:41:11.225302161 +0000
-@@ -31,33 +31,28 @@
+@@ -31,23 +31,23 @@
  
  CUR_MKFILE:= $(lastword $(MAKEFILE_LIST))
  
@@ -23,18 +23,18 @@
  # DCAP requires prebuilt enclaves.
 -CHECK_OPT :=
 +prebuilt:
- ifeq ("$(wildcard psw/ae/data/prebuilt)", "")
+ ifeq ("$(wildcard psw/ae/data/prebuilt/*.signed.so)", "")
 -CHECK_OPT := opt_check_failed
 +	./download_prebuilt.sh
  endif
- 
--dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper tdx_qe id_enclave
+
+-dcap: tdx_logic tdx_qgs tdx_attest $(CHECK_OPT) pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
 -
 -opt_check_failed:
 -	@echo "Please run download_prebuilt.sh before compiling"
 -	@echo "Exiting......"
 -	@exit -2
-+dcap: prebuilt tdx_logic tdx_qgs tdx_attest pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper tdx_qe id_enclave
++dcap: prebuilt tdx_logic tdx_qgs tdx_attest pce_logic qe3_logic qcnl_wrapper qpl_wrapper qve_wrapper
  
  pce_logic:
  	$(MAKE) -C pce_wrapper/linux

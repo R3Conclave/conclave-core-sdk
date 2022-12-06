@@ -5,7 +5,7 @@ include(Determinise)
 # Enable the row below to get debug trace output from c++ modules.
 # add_definitions(-DDEBUG_TRACE_OUTPUT -DLOG_MEMORY)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Werror -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter")
 
 set(sources
         src/dlsym_symbols.cpp

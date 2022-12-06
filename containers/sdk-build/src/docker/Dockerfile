@@ -93,11 +93,11 @@ ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV JAVA_HOME           /usr/lib/jvm/java-17-openjdk-amd64
-ENV SGX_SDK_VERSION     2.17
+ENV SGX_SDK_VERSION     2.18
 
 # Linux SGX mitigation binaries
 RUN curl -sSL -o /opt/as.ld.objdump.r4.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.r4.tar.gz
-RUN echo "9e4eb03442d26d38d59f47f796389ad919f33d5598dc3825dcd750b8dc55e9d2  /opt/as.ld.objdump.r4.tar.gz" | sha256sum -c -
+RUN echo "85dcba642ee951686cb01479be377dc5da0b4f1597014679d1a29162f0dc8160  /opt/as.ld.objdump.r4.tar.gz" | sha256sum -c -
 RUN tar -zxf /opt/as.ld.objdump.r4.tar.gz -C /usr/local/bin external/toolset/ubuntu20.04 --strip=3
 
 # Nexus IQ
