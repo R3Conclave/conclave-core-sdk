@@ -44,13 +44,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
-                logger.error("Docker build of conclave-build failed.", e)
+                logger.info("Docker build of conclave-build failed. Re-run your build with '--info' and " +
+                        "submit a new GitHub issue https://github.com/R3Conclave/conclave-core-sdk/issues/new", e)
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
                             + "Please install Docker and rerun your build. "
                             + "See https://docs.conclave.net/enclave-modes.html#system-requirements "
                             + "If the build still fails, please create a new issue on GitHub "
-                            + "https://github.com/R3Conclave/conclave-core-sdk/issues"
+                            + "https://github.com/R3Conclave/conclave-core-sdk/issues/new"
                 )
             }
         }
@@ -92,10 +93,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     /** Returns the ERROR output of the command only, in the returned list. */
     fun exec(params: List<String>): List<String>? {
         val errorOut = ByteArrayOutputStream()
-        val args: List<String> = when (buildInDocker.get()) {
-            true -> getDockerRunArgs(params)
-            false -> params
-        }
+        val args: List<String> = if (buildInDocker.get()) getDockerRunArgs(params) else params
 
         val result = commandLine(
             args,
@@ -118,7 +116,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     /** Returns the output of the command executed in the container. */
     fun execWithOutput(params: List<String>): String =
-        commandWithOutput(*getDockerRunArgs(params).toTypedArray()).trimEnd()
+        commandWithOutput(*getDockerRunArgs(params).toTypedArray())
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
         "The sub-process ran out of RAM. On macOS or Windows, open the Docker preferences and " +
@@ -131,14 +129,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
-        val idu = commandWithOutput("id", "-u").trimEnd()
-        val idg = commandWithOutput("id", "-g").trimEnd()
+        val userId = commandWithOutput("id", "-u")
+        val groupId = commandWithOutput("id", "-g")
         return listOf(
             "docker",
             "run",
             "-i",
             "--rm",
-            "-u", "$idu:$idg",
+            "-u", "$userId:$groupId",
             "-v",
             "${baseDirectory.get()}:/project",
             tag.get()

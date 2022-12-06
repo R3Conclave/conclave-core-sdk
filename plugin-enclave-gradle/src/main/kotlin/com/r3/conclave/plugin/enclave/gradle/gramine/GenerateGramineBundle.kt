@@ -68,11 +68,9 @@ open class GenerateGramineBundle @Inject constructor(
         }
 
         // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
-        //  enclave. Rather than documenting all this and expecting the user to have their machine correctly setup, it
-        //  is better to embed the conclave-build container to always run when building the enclave, not just for
-        //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181
+        //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
 
-        val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
+        val architecture = commandWithOutput("gcc", "-dumpmachine")
         val ldPreload = executePython(
             "from sysconfig import get_config_var; " +
                     "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
@@ -94,7 +92,7 @@ open class GenerateGramineBundle @Inject constructor(
             outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
         }
     }
-    
+
     private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
         val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
@@ -190,7 +188,7 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command).trimEnd()
+    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)
 
     private fun RegularFileProperty.copyToOutputDir(fileName: String) {
         get().asFile.toPath().copyTo(outputDir.file(fileName).get().asFile.toPath(), REPLACE_EXISTING)
