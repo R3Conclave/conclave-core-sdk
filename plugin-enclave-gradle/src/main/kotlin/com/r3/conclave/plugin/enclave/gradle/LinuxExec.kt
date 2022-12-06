@@ -44,8 +44,10 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
-                logger.info("Docker build of conclave-build failed. Re-run your build with '--info' and " +
-                        "submit a new GitHub issue https://github.com/R3Conclave/conclave-core-sdk/issues/new", e)
+                logger.info(
+                    "Docker build of conclave-build failed. Re-run your build with '--info' to get more details.",
+                    e
+                )
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
                             + "Please install Docker and rerun your build. "
@@ -115,8 +117,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     }
 
     /** Returns the output of the command executed in the container. */
-    fun execWithOutput(params: List<String>): String =
-        commandWithOutput(*getDockerRunArgs(params).toTypedArray())
+    fun execWithOutput(params: List<String>): String {
+        return commandWithOutput(*getDockerRunArgs(params).toTypedArray())
+    }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
         "The sub-process ran out of RAM. On macOS or Windows, open the Docker preferences and " +

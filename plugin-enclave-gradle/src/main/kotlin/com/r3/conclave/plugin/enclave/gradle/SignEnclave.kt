@@ -39,10 +39,7 @@ open class SignEnclave @Inject constructor(
         if (enclaveExtension.signingType.get() == SigningType.DummyKey && buildType == BuildType.Release) {
             // Using 'quiet' logging type for 'Important information messages'.
             // See https://docs.gradle.org/current/userguide/logging.html.
-            project.logger.quiet(
-                "A signingType of dummyKey has been specified for a release enclave. " +
-                        "The resulting enclave will not be loadable on any SGX platform. See Conclave documentation for details"
-            )
+            project.logger.quiet("A signingType of dummyKey has been specified for a release enclave.")
         }
         if (buildInDocker.get()) {
             try {
