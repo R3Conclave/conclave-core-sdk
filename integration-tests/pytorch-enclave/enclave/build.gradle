@@ -1,0 +1,16 @@
+plugins {
+    id 'com.r3.conclave.enclave'
+}
+
+conclave {
+    productID = 100
+    revocationLevel = 2
+
+    release {
+        signingType = dummyKey
+    }
+
+    release {
+        signingType = dummyKey
+    }
+}
