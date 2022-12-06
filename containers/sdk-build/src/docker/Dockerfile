@@ -38,12 +38,9 @@ RUN add-apt-repository \
 # last 5 packages installed below)
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
-RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main"
 
 RUN apt-get update -y && apt-get install -y \
     autoconf \
-    az-dcap-client \
     bc \
     ccache \
     cmake \

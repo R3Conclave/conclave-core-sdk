@@ -30,7 +30,7 @@ object TestUtils {
     }
 
     private fun getHardwareAttestationParams(): AttestationParameters {
-        return if (Path.of("/dev/sgx_enclave").exists() || Path.of("/dev/sgx/enclave").exists()) {
+        return if (Path.of("/dev/sgx_enclave").exists()) {
             AttestationParameters.DCAP()
         } else {
             throw UnsupportedOperationException(
