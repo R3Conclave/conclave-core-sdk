@@ -9,10 +9,11 @@ configurations {
 }
 
 dependencies {
+    api project(":general:common")
     api "com.r3.conclave:conclave-host:$conclave_version"
     api "com.r3.conclave:conclave-client:$conclave_version"
 
-    implementation project(":general:common")
+    implementation "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     implementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     implementation "org.assertj:assertj-core:$assertj_version"
 

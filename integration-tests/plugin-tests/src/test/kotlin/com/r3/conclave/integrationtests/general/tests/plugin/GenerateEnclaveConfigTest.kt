@@ -1,114 +1,62 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
+import kotlin.io.path.div
 
-class GenerateEnclaveConfigTest : AbstractPluginTaskTest("generateEnclaveConfig", modeDependent = true) {
-    private class EnclaveConfiguration {
-        @JsonProperty("ProdID")
-        val productID: Int? = null
-        @JsonProperty("ISVSVN")
-        val revocationLevel: Int? = null
-        @JsonProperty("StackMaxSize")
-        val maxStackSize: String? = null
-        @JsonProperty("HeapMaxSize")
-        val maxHeapSize: String? = null
-        @JsonProperty("TCSNum")
-        val tcsNum: Int? = null
-        @JsonProperty("TCSPolicy")
-        val tcsPolicy: Int? = null
-        @JsonProperty("DisableDebug")
-        val disableDebug: Int? = null
-        @JsonProperty("MiscSelect")
-        val miscSelect: Int? = null
-        @JsonProperty ("MiscMask")
-        val miscMask: String? = null
+class GenerateEnclaveConfigTest : AbstractPluginTaskTest() {
+    override val taskName: String get() = "generateEnclaveConfig${capitalisedEnclaveMode()}"
+    override val output: Path get() = enclaveModeBuildDir / "enclave.xml"
+    override val taskIsSpecificToRuntime get() = GRAALVM
+
+    @Test
+    fun productID() {
+        runTaskAfterInputChangeAndAssertItsIncremental {
+            assertThat(enclaveConfig()["ProdID"].textValue()).isEqualTo("11")
+            modifyProductIdConfig(111)
+        }
+        assertThat(enclaveConfig()["ProdID"].textValue()).isEqualTo("111")
     }
 
     @Test
-    fun `increment product id`() {
-        assertTaskRunIsIncremental()
+    fun revocationLevel() {
+        runTaskAfterInputChangeAndAssertItsIncremental {
+            assertThat(enclaveConfig()["ISVSVN"].textValue()).isEqualTo("13")
+            modifyRevocationLevelConfig(121)
+        }
+        assertThat(enclaveConfig()["ISVSVN"].textValue()).isEqualTo("122")
+    }
 
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile()
-
-        val initialProductID = enclaveConfiguration.productID!!
-        val expectedProductId = initialProductID + 1
-
-        replaceAndRewriteBuildFile(
-            projectDir!!,
-            "productID = $initialProductID",
-            "productID = $expectedProductId"
-        )
-        assertTaskRunIsIncremental()
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile()
-        assertThat(updatedEnclaveConfiguration.productID).isEqualTo(expectedProductId)
+    @ParameterizedTest
+    @CsvSource(
+        "maxStackSize, StackMaxSize, 2097152, 16m, 16777216",
+        "maxHeapSize, HeapMaxSize, 268435456, 2g, 2147483648",
+    )
+    fun `optional size bytes enclave config`(gradleConfig: String, xmlElement: String, defaultRawValue: Long,
+                                             newBytesValue: String, newRawValue: Long) {
+        assertThat(buildGradleFile).content().doesNotContain(gradleConfig)
+        runTaskAfterInputChangeAndAssertItsIncremental {
+            assertThat(enclaveConfig()[xmlElement].textValue()).isEqualTo("0x${defaultRawValue.toString(16)}")
+            addSimpleEnclaveConfig(gradleConfig, newBytesValue)
+        }
+        assertThat(enclaveConfig()[xmlElement].textValue()).isEqualTo("0x${newRawValue.toString(16)}")
     }
 
     @Test
-    fun `increment revocation level`() {
-        assertTaskRunIsIncremental()
-
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile()
-
-        // The value on the file has been incremented by the task
-        val initialRevocationLevel = enclaveConfiguration.revocationLevel!! - 1
-        val expectedRevocationLevel = initialRevocationLevel + 1
-
-        replaceAndRewriteBuildFile(
-            projectDir!!,
-            "revocationLevel = $initialRevocationLevel",
-            "revocationLevel = $expectedRevocationLevel"
-        )
-
-        assertTaskRunIsIncremental()
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile()
-        // The expected value on the file is the incremented value from the closure
-        assertThat(updatedEnclaveConfiguration.revocationLevel).isEqualTo(expectedRevocationLevel + 1)
+    fun maxThreads() {
+        assertThat(buildGradleFile).content().doesNotContain("maxThreads")
+        runTaskAfterInputChangeAndAssertItsIncremental {
+            assertThat(enclaveConfig()["TCSNum"].textValue()).isEqualTo("100")
+            addSimpleEnclaveConfig("maxThreads", 15)
+        }
+        assertThat(enclaveConfig()["TCSNum"].textValue()).isEqualTo("15")
     }
 
-    @Test
-    fun `increment heap max size`() {
-        assertTaskRunIsIncremental()
-
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile()
-        val initialMaxHeapSize = enclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)
-        val expectedMaxHeapSize = initialMaxHeapSize + 1
-
-        replaceAndRewriteBuildFile(
-            projectDir!!,
-            """maxHeapSize = "$initialMaxHeapSize"""",
-            """maxHeapSize = "$expectedMaxHeapSize""""
-        )
-
-        assertTaskRunIsIncremental()
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile()
-        assertThat(updatedEnclaveConfiguration.maxHeapSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxHeapSize)
-    }
-
-    @Test
-    fun `increment stack max size`() {
-        assertTaskRunIsIncremental()
-
-        val enclaveConfiguration = loadEnclaveConfigurationFromFile()
-        val initialMaxStackSize = enclaveConfiguration.maxStackSize!!.drop(2).toLong(16)
-        val expectedMaxStackSize = initialMaxStackSize + 1
-
-        replaceAndRewriteBuildFile(
-            projectDir!!,
-            """maxStackSize = "$initialMaxStackSize"""",
-            """maxStackSize = "$expectedMaxStackSize""""
-        )
-
-        assertTaskRunIsIncremental()
-        val updatedEnclaveConfiguration = loadEnclaveConfigurationFromFile()
-        assertThat(updatedEnclaveConfiguration.maxStackSize!!.drop(2).toLong(16)).isEqualTo(expectedMaxStackSize)
-    }
-
-    private fun loadEnclaveConfigurationFromFile(): EnclaveConfiguration {
-        val enclaveConfigurationFile = projectDir!!.resolve("build/conclave/${enclaveMode.toLowerCase()}/enclave.xml")
-        return XmlMapper().readValue(enclaveConfigurationFile.toFile(), EnclaveConfiguration::class.java)
-    }
+    private fun enclaveConfig(): JsonNode = XmlMapper().readTree(output.toFile())
 }
