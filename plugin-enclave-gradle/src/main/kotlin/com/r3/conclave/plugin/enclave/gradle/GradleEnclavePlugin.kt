@@ -183,19 +183,12 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     private fun createGenerateGramineBundleTask(
             target: Project,
             type: BuildType,
-            linuxExec: LinuxExec,
             conclaveExtension: ConclaveExtension,
             enclaveFatJarTask: Jar,
             signingKey: Provider<RegularFile?>
     ): GenerateGramineBundle {
-        return target.createTask("generateGramine${type}Bundle", type, linuxExec) { task ->
-            // TODO: Build python enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
-            if (pythonSourcePath == null && conclaveExtension.buildInDocker.get()) {
-                task.dependsOn(linuxExec)
-            }
-            task.buildInDocker.set(conclaveExtension.buildInDocker)
-            // TODO: not sure this is needed
-            //task.pythonEnclave.set(pythonSourcePath != null)
+        return target.createTask("generateGramine${type}Bundle", type) { task ->
+            // TODO: Build Gramine enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
             task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
@@ -337,7 +330,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             val generateGramineBundleTask = createGenerateGramineBundleTask(
                 target,
                 type,
-                linuxExec,
                 conclaveExtension,
                 enclaveFatJarTask,
                 signingKey

@@ -8,7 +8,6 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
-import com.r3.conclave.plugin.enclave.gradle.LinuxExec
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.toHexString
@@ -32,8 +31,7 @@ import kotlin.io.path.deleteExisting
 
 open class GenerateGramineBundle @Inject constructor(
     objects: ObjectFactory,
-    private val buildType: BuildType,
-    private val linuxExec: LinuxExec
+    private val buildType: BuildType
 ) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
@@ -60,9 +58,6 @@ open class GenerateGramineBundle @Inject constructor(
     @get:Optional
     val pythonFile: RegularFileProperty = objects.fileProperty()
 
-    @get:Input
-    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
-
     @get:OutputDirectory
     val outputDir: DirectoryProperty = objects.directoryProperty()
 
@@ -72,42 +67,26 @@ open class GenerateGramineBundle @Inject constructor(
             pythonFile.copyToOutputDir(PYTHON_FILE)
         }
 
-        // TODO We generate Gramine manifest for Python enclaves outside the conclave-build container because some
-        //  libraries are installed in the user space instead of the system space. Running such enclaves
-        //  outside the conclave-build container would fail. Because of that, we are relying on python3, pip3 and jep
-        //  to be installed on the local machine. Rather than documenting all this and expecting the user to have their
-        //  machine correctly setup, it is better to embed the conclave-build container to always run when building the enclave.
-        //  https://r3-cev.atlassian.net/browse/CON-1229
+        // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
+        //  enclave. Rather than documenting all this and expecting the user to have their machine correctly setup, it
+        //  is better to embed the conclave-build container to always run when building the enclave, not just for
+        //  non-linux. https://r3-cev.atlassian.net/browse/CON-1181
 
-        if (buildInDocker.get() && !pythonFile.isPresent) {
+        val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
+        val ldPreload = executePython(
+            "from sysconfig import get_config_var; " +
+                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+        )
+        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
+        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
+        // incorrect then we'll need to come up with a better solution.
+        val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
+            .splitToSequence("\n")
+            .single { it.startsWith("Location: ") }
+            .substringAfter("Location: ")
 
-            // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
-            // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
-            // incorrect then we'll need to come up with a better solution.
-            val pythonPackagesPath = linuxExec.execWithOutput(listOf("pip3", "show", "jep"))
-                .splitToSequence("\n")
-                .single { it.startsWith("Location: ") }
-                .substringAfter("Location: ")
+        generateManifest(architecture, ldPreload, pythonPackagesPath)
 
-            generateManifest("", "", pythonPackagesPath, true)
-
-        } else {
-            val architecture = commandWithOutput("gcc", "-dumpmachine").trimEnd()
-            val ldPreload = executePython(
-                "from sysconfig import get_config_var; " +
-                        "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
-            )
-            // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
-            // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
-            // incorrect then we'll need to come up with a better solution.
-            val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
-                .splitToSequence("\n")
-                .single { it.startsWith("Location: ") }
-                .substringAfter("Location: ")
-
-            generateManifest(architecture, ldPreload, pythonPackagesPath, false)
-
-        }
         if (buildType != BuildType.Simulation) {
             generateSgxManifestAndSigstruct()
             generateToken()
@@ -116,43 +95,34 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun generateManifest(
-        architecture: String,
-        ldPreload: String,
-        pythonPackagesPath: String,
-        buildInDocker: Boolean
-    ) {
+
+    private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
         val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
 
-        val command = mutableListOf(
-            "gramine-manifest",
-            "-Djava_home=${System.getProperty("java.home")}",
-            "-Darch_libdir=/lib/$architecture",
-            "-Dld_preload=$ldPreload",
-            "-Disv_prod_id=${productId.get()}",
-            "-Disv_svn=${revocationLevel.get() + 1}",
-            "-Dpython_packages_path=$pythonPackagesPath",
-            "-Dis_python_enclave=${pythonFile.isPresent}",
-            "-Denclave_mode=${buildType.name.uppercase()}",
-            "-Denclave_worker_threads=10",
-            "-Dgramine_max_threads=${maxThreads.get()}",
-            "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-            manifestTemplateFile.absolutePathString(),
-            GRAMINE_MANIFEST
-        )
-        if (buildType == BuildType.Simulation) {
-            val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
-            command += "-Dsimulation_mrsigner=$simulationMrSigner"
-        }
-
-        if (buildInDocker) {
-            linuxExec.exec(command)
-        } else {
-            project.exec { spec ->
-                spec.commandLine = command
-                spec.setWorkingDir(outputDir)
+        project.exec { spec ->
+            val command = mutableListOf(
+                "gramine-manifest",
+                "-Djava_home=${System.getProperty("java.home")}",
+                "-Darch_libdir=/lib/$architecture",
+                "-Dld_preload=$ldPreload",
+                "-Disv_prod_id=${productId.get()}",
+                "-Disv_svn=${revocationLevel.get() + 1}",
+                "-Dpython_packages_path=$pythonPackagesPath",
+                "-Dis_python_enclave=${pythonFile.isPresent}",
+                "-Denclave_mode=${buildType.name.uppercase()}",
+                "-Denclave_worker_threads=10",
+                "-Dgramine_max_threads=${maxThreads.get()}",
+                "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+                manifestTemplateFile.absolutePathString(),
+                GRAMINE_MANIFEST
+            )
+            if (buildType == BuildType.Simulation) {
+                val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
+                command += "-Dsimulation_mrsigner=$simulationMrSigner"
             }
+            spec.commandLine = command
+            spec.setWorkingDir(outputDir)
         }
     }
 
