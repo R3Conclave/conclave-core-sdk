@@ -44,16 +44,13 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
-                logger.info(
-                    "Docker build of conclave-build failed. Re-run your build with '--info' to get more details.",
-                    e
-                )
+                logger.info("Docker build of conclave-build failed.", e)
                 throw GradleException(
                     "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
                             + "Please install Docker and rerun your build. "
                             + "See https://docs.conclave.net/enclave-modes.html#system-requirements "
-                            + "If the build still fails, please create a new issue on GitHub "
-                            + "https://github.com/R3Conclave/conclave-core-sdk/issues/new"
+                            + "If the build still fails, please rerun the build with '--info' flag and create a new "
+                            + "issue on GitHub https://github.com/R3Conclave/conclave-core-sdk/issues/new"
                 )
             }
         }

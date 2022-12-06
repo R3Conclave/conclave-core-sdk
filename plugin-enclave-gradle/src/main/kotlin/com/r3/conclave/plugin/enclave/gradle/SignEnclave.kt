@@ -36,11 +36,6 @@ open class SignEnclave @Inject constructor(
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
-        if (enclaveExtension.signingType.get() == SigningType.DummyKey && buildType == BuildType.Release) {
-            // Using 'quiet' logging type for 'Important information messages'.
-            // See https://docs.gradle.org/current/userguide/logging.html.
-            project.logger.quiet("A signingType of dummyKey has been specified for a release enclave.")
-        }
         if (buildInDocker.get()) {
             try {
                 // The input key file may not live in a directory accessible by docker.
