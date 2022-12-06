@@ -16,7 +16,7 @@ import java.nio.file.Paths
 import kotlin.io.path.fileSize
 import kotlin.io.path.readBytes
 
-class PythonEnclaveTest {
+class PytorchEnclaveTest {
     companion object {
         @JvmStatic
         @BeforeAll
@@ -45,7 +45,7 @@ class PythonEnclaveTest {
     }
 
     @Test
-    fun run_mnist_rnn_pytorch_example() {
+    fun `run mnist rnn pytorch example` () {
         val clientPostOffice = enclaveHost.enclaveInstanceInfo.createPostOffice()
         val mailRequest = prepareMailWithDataBundle(clientPostOffice)
         enclaveHost.deliverMail(mailRequest, null)

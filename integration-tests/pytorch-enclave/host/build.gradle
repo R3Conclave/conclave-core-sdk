@@ -7,6 +7,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
-    testRuntimeOnly project(path: ":python-enclave:enclave", configuration: enclaveMode)
+    testRuntimeOnly project(path: ":pytorch-enclave:enclave", configuration: enclaveMode)
     testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 }
