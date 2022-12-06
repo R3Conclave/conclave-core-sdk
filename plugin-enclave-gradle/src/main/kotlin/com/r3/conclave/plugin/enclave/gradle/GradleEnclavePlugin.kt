@@ -453,7 +453,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     })
                     task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
                     task.buildInDocker.set(conclaveExtension.buildInDocker)
-
                 }
 
             val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>(
