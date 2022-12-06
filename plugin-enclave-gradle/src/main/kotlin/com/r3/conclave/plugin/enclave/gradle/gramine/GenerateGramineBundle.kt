@@ -94,8 +94,7 @@ open class GenerateGramineBundle @Inject constructor(
             outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
         }
     }
-
-
+    
     private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
         val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
