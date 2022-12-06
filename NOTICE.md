@@ -430,3 +430,7 @@ redistribute it freely, subject to the following restrictions:
 
 3. This notice may not be removed or altered from any source
    distribution.
+
+**[TomlJ](https://github.com/tomlj/tomlj)**
+
+Apache 2: https://github.com/tomlj/tomlj/blob/main/LICENSE
