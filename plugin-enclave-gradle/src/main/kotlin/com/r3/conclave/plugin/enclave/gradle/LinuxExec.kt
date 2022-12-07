@@ -63,8 +63,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      */
     fun prepareFile(file: File): File {
         return when (buildInDocker.get()) {
-            true -> file
-            false -> {
+            false -> file
+            true -> {
                 val tmp = File("${baseDirectory.get()}/.linuxexec")
                 tmp.mkdir()
                 val newFile = File.createTempFile(file.nameWithoutExtension, file.extension, tmp)
