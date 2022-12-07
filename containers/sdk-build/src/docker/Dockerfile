@@ -55,6 +55,7 @@ RUN apt-get update -y && apt-get install -y \
     git \
     libboost-dev \
     libboost-system-dev \
+    libboost-thread-dev \
     libcurl4-openssl-dev \
     libgbm-dev \
     libprotobuf-c-dev \
