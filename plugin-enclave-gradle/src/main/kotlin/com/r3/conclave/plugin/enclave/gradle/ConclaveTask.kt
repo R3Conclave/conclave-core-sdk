@@ -97,6 +97,6 @@ abstract class ConclaveTask : DefaultTask() {
     fun commandWithOutput(vararg command: Any): String {
         val output = ByteArrayOutputStream()
         commandLine(command.asList(), CommandLineConfig(standardOutputStream = output))
-        return output.toString()
+        return output.toString().trimEnd()
     }
 }

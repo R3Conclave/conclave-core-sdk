@@ -9,8 +9,9 @@ import com.r3.conclave.common.internal.SgxEnclaveCss.key
 import com.r3.conclave.common.internal.mrsigner
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.readBytes
@@ -24,18 +25,21 @@ open class GenerateEnclaveMetadata @Inject constructor(
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
     override fun action() {
         // TODO use -cssfile as it produces the binary SIGSTRUCT which can be read directly using SgxMetadataEnclaveCss.
         //  See TestUtils.getEnclaveSigstruct in the integration tests.
         val metadataFile = temporaryDir.toPath().resolve("enclave_css.bin")
 
-        if (!OperatingSystem.current().isLinux) {
+        if (buildInDocker.get()) {
             try {
                 linuxExec.exec(
                     listOf<String>(
                         plugin.signToolPath().absolutePathString(), "dump",
                         "-enclave", inputSignedEnclave.asFile.get().absolutePath,
-                        // We don't need this but sgx_sign still requires it be specified.
+                        // We don't need this but sgx_sign still requires it to be specified.
                         "-dumpfile", "/dev/null",
                         "-cssfile", metadataFile.absolutePathString()
                     )
@@ -58,7 +62,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
         logger.lifecycle("Enclave code signer: ${enclaveMetadata[key].mrsigner}")
 
         val buildTypeString = buildType.toString().uppercase()
-        val buildSecurityString = when(buildType) {
+        val buildSecurityString = when (buildType) {
             BuildType.Release -> "SECURE"
             else -> "INSECURE"
         }

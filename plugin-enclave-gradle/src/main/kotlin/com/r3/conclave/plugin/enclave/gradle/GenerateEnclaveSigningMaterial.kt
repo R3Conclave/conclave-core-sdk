@@ -7,7 +7,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.os.OperatingSystem
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -25,6 +24,9 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
         const val SIGNATURE_DATE_OFFSET = 20 //< Offset of date field in signing input structure
     }
 
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -39,13 +41,13 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
 
     override fun action() {
         val dockerOutputSigningFile: File?
-        if (!OperatingSystem.current().isLinux) {
-            // The signing material file may not live in a directory accessible by docker on non-linux
-            // systems. Prepare the file so docker can access it if necessary.
+        if (buildInDocker.get()) {
+            // The signing material file may not live in a directory accessible by docker.
+            // Prepare the file so docker can access it if necessary.
             dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
 
             linuxExec.exec(
-                listOf<String> (
+                listOf<String>(
                     plugin.signToolPath().absolutePathString(), "gendata",
                     "-enclave", inputEnclave.asFile.get().absolutePath,
                     "-out", dockerOutputSigningFile.absolutePath,

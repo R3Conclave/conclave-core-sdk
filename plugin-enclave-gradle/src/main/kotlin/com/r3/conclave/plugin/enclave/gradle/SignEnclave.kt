@@ -2,10 +2,11 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
@@ -31,18 +32,14 @@ open class SignEnclave @Inject constructor(
     @get:Internal
     val signedEnclavePath: String get() = outputSignedEnclave.asFile.get().absolutePath
 
-    override fun action() {
-        if (enclaveExtension.signingType.get() == SigningType.DummyKey && buildType == BuildType.Release) {
-            // Using 'quiet' logging type for 'Important information messages'.
-            // See https://docs.gradle.org/current/userguide/logging.html.
-            project.logger.quiet("A signingType of dummyKey has been specified for a release enclave. " +
-                    "The resulting enclave will not be loadable on any SGX platform. See Conclave documentation for details")
-        }
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
-        if (!OperatingSystem.current().isLinux) {
+    override fun action() {
+        if (buildInDocker.get()) {
             try {
-                // The input key file may not live in a directory accessible by docker on non-linux
-                // systems. Prepare the file so docker can access it if necessary.
+                // The input key file may not live in a directory accessible by docker.
+                // Prepare the file so docker can access it if necessary.
                 val keyFile = linuxExec.prepareFile(inputKey.asFile.get())
 
                 linuxExec.exec(

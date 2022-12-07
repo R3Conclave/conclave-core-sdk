@@ -1,6 +1,5 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.*
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
@@ -29,6 +28,8 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val maxThreads: Property<Int> = objects.property(Int::class.java).convention(100)
     @get:Input
     val deadlockTimeout: Property<Int> = objects.property(Int::class.java).convention(10)
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     @get:Input
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     @get:InputFiles
