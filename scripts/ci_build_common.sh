@@ -49,8 +49,15 @@ mkdir -p $HOME/.container
 # tunnel through the SGX driver and AES daemon socket. This means you can
 # still run the devenv on a non-SGX host or a Mac without it breaking.
 sgx_hardware_flags=()
-if [ -e /dev/sgx_enclave ]; then  # DCAP
+if [ -e /dev/sgx_enclave ]; then
+    # /dev/sgx_enclave and /dev/sgx_provision are the current locations of the in-kernel driver
     sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/var/run/aesmd:/var/run/aesmd")
+elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
+    # /dev/sgx/enclave and /dev/sgx/provision are the legacy locations of the out-of-kernel driver
+    # Note that there is still code in the Intel SGX SDK that rely on these legacy locations.
+    # When available, the in-kerner driver should also have symbolic links to the correct in-kernel locations.
+    #   I.e., /dev/sgx/enclave should be a symbolic link to /dev/sgx_enclave
+    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/var/run/aesmd:/var/run/aesmd")
 else
     echo "No SGX device found in /dev/sgx_enclave"
 fi
