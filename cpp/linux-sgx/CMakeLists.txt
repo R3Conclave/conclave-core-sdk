@@ -20,6 +20,7 @@ ExternalProject_Add(linux-sgx-ext
             && git clone -b ${SGX_GIT_LABEL} --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
             && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
+            && bash -c "cd ${BUILD_SRC_DIR} && ./external/sgx-emm/create_symlink.sh"
             && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
             && bash -c "cd ${BUILD_SRC_DIR} && ./download_prebuilt.sh"
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteGeneration/download_prebuilt.sh"
