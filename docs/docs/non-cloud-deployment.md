@@ -48,7 +48,7 @@ You can get the installers for the system software from Intel
 [here](https://01.org/intel-software-guard-extensions/downloads).
 
 Follow this
-[user guide](https://download.01.org/intel-sgx/sgx-linux/2.17.1/docs/Intel_SGX_SDK_Release_Notes_Linux_2.17.1_Open_Source.pdf)
+[user guide](https://download.01.org/intel-sgx/sgx-linux/2.18/docs/Intel_SGX_SDK_Release_Notes_Linux_2.18_Open_Source.pdf)
 to install the driver and the system software. 
 
 <!-- The above user-guide link needs to be updated often. Find the version of the Intel SGX SDK in 
@@ -64,7 +64,7 @@ Intel provides:
 
     You need to re-run the installer after upgrading the kernel.
 
-Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.17.1)
+Alternatively, you can [compile the system software](https://github.com/intel/linux-sgx/releases/tag/sgx_2.18)
 yourself.
 The [kernel driver is also available on GitHub](https://github.com/intel/linux-sgx-driver).
 

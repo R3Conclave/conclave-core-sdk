@@ -4,7 +4,7 @@ project(fatfs_enclave)
 
 include(Determinise)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Wno-unused-parameter -fpermissive")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -Wno-unused-parameter -fpermissive")
 
 GET_DIRECTORY_PROPERTY(EDGER8R_INCLUDE_DIR DIRECTORY ${PROJECT_SOURCE_DIR}/../../linux-sgx DEFINITION EDGER8R_INCLUDE_DIR)
 
