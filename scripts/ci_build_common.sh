@@ -46,20 +46,22 @@ mkdir -p $HOME/.mx
 mkdir -p $HOME/.container
 
 # If running on a Linux host with SGX properly installed and configured,
-# tunnel through the SGX driver and AES daemon socket. This means you can
+# tunnel through the SGX driver and AESM daemon socket. This means you can
 # still run the devenv on a non-SGX host or a Mac without it breaking.
 sgx_hardware_flags=()
-if [ -e /dev/sgx_enclave ]; then
-    # /dev/sgx_enclave and /dev/sgx_provision are the current locations of the in-kernel driver
-    sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/dev:/dev" "-v" "/var/run/aesmd:/var/run/aesmd")
-elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
-    # /dev/sgx/enclave and /dev/sgx/provision are the legacy locations of the out-of-kernel driver
-    # Note that there is still code in the Intel SGX SDK that rely on these legacy locations.
-    # When available, the in-kerner driver should also have symbolic links to the correct in-kernel locations.
-    #   I.e., /dev/sgx/enclave should be a symbolic link to /dev/sgx_enclave
-    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/dev:/dev" "-v" "/var/run/aesmd:/var/run/aesmd")
+
+if [ -e /dev/sgx/enclave ] && [ -e /dev/sgx_enclave ]; then
+    # /dev/sgx_enclave (and /dev/sgx_provision) is the current path used by the new in-kernel driver, available in Linux Kernel 5.11 >= and recommended by Intel:
+    #    https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/driver/linux/README.md
+    # /dev/sgx/enclave is the path used by the old out-of-kernel driver, to be used with Linux Kernel < 5.11.
+    # To keep backward compatibility, the path /dev/sgx/enclave is also available when the in-kernel driver is used, but in this case it just represents a symbolic link pointing to /dev/sgx_enclave.
+    # We do not use out-of-kernel driver in Conclave and therefore, when /dev/sgx/enclave is available alone (i.e. not as a symbolic link), we consider the device as not supported by Conclave
+    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/dev/sgx_provision:/dev_provision" "-v" "/dev/sgx_enclave:/dev/sgx_enclave" "-v" "/var/run/aesmd:/var/run/aesmd")
+elif [ -e /dev/sgx/enclave ] && [ ! -e /dev/sgx_enclave]; then
+    echo "Out of kernel SGX device found in /dev/sgx/enclave but not supported by Conclave"
+    exit 1
 else
-    echo "No SGX device found in /dev/sgx_enclave"
+    echo "SGX device not found in /dev/sgx/enclave
 fi
 
 docker_group_add=()
