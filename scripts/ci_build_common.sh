@@ -57,7 +57,7 @@ elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
     # Note that there is still code in the Intel SGX SDK that rely on these legacy locations.
     # When available, the in-kerner driver should also have symbolic links to the correct in-kernel locations.
     #   I.e., /dev/sgx/enclave should be a symbolic link to /dev/sgx_enclave
-    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/var/run/aesmd:/var/run/aesmd")
+    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/dev:/dev" "-v" "/var/run/aesmd:/var/run/aesmd")
 else
     echo "No SGX device found in /dev/sgx_enclave"
 fi
