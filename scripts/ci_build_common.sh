@@ -51,7 +51,7 @@ mkdir -p $HOME/.container
 sgx_hardware_flags=()
 if [ -e /dev/sgx_enclave ]; then
     # /dev/sgx_enclave and /dev/sgx_provision are the current locations of the in-kernel driver
-    sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/var/run/aesmd:/var/run/aesmd")
+    sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/dev:/dev" "-v" "/var/run/aesmd:/var/run/aesmd")
 elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
     # /dev/sgx/enclave and /dev/sgx/provision are the legacy locations of the out-of-kernel driver
     # Note that there is still code in the Intel SGX SDK that rely on these legacy locations.
