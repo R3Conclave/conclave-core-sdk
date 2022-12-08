@@ -38,7 +38,8 @@ class EnclaveScannerTest {
         } else {
             enclaveScanner.findEnclave()
         }
-        assertThat(result).isEqualTo(ScanResult.Mock(MockEnclave::class.java.name))
+        assertThat(result).isInstanceOf(ScanResult.Mock::class.java)
+        assertThat((result as ScanResult.Mock).enclaveClassName).isEqualTo(MockEnclave::class.java.name)
     }
 
     @CartesianTest

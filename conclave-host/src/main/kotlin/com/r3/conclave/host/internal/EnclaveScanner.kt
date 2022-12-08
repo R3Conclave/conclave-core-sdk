@@ -2,8 +2,10 @@ package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
+import com.r3.conclave.host.internal.EnclaveScanner.ScanResult
+import com.r3.conclave.host.internal.gramine.GramineEnclaveHandle
 import io.github.classgraph.ClassGraph
 import java.net.URL
 import java.util.regex.Pattern
@@ -96,7 +98,7 @@ open class EnclaveScanner {
         scan().use {
             for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
                 if (!classInfo.isAbstract) {
-                    results += ScanResult.Mock(classInfo.name)
+                    results += ScanResult.Mock(classInfo.name, classInfo.resource.url)
                 }
             }
         }
@@ -126,9 +128,9 @@ open class EnclaveScanner {
         abstract val enclaveClassName: String
         abstract val enclaveMode: EnclaveMode
 
-        data class Mock(override val enclaveClassName: String) : ScanResult() {
+        class Mock(override val enclaveClassName: String, val url: URL) : ScanResult() {
             override val enclaveMode: EnclaveMode get() = EnclaveMode.MOCK
-            override fun toString(): String = "mock $enclaveClassName"
+            override fun toString(): String = "mock $enclaveClassName ($url)"
         }
 
         class GraalVM(
@@ -139,7 +141,7 @@ open class EnclaveScanner {
             init {
                 require(enclaveMode != EnclaveMode.MOCK)
             }
-            override fun toString(): String = "graalvm ${enclaveMode.name.lowercase()} $enclaveClassName"
+            override fun toString(): String = "${enclaveMode.name.lowercase()} graalvm $enclaveClassName ($soFileUrl)"
         }
 
         class Gramine(
@@ -150,7 +152,7 @@ open class EnclaveScanner {
             init {
                 require(enclaveMode != EnclaveMode.MOCK)
             }
-            override fun toString(): String = "gramine ${enclaveMode.name.lowercase()} $enclaveClassName"
+            override fun toString(): String = "${enclaveMode.name.lowercase()} gramine $enclaveClassName ($zipFileUrl)"
         }
     }
 }
