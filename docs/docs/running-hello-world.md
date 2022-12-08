@@ -153,9 +153,8 @@ suggests, isn't secure at all.
 This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
 simulation, debug, and release.
 
-Only the release mode provides confidential guarantees of SGX. You can learn to develop enclaves on Windows, macOS, 
-or Linux. However, to develop secure Conclave applications, you must use Linux 5.11 or higher, which has in-kernel 
-SGX support.
+You can learn to develop enclaves on Windows, macOS, or Linux. However, to develop secure Conclave applications, you 
+must use Linux 5.11 or higher, which has in-kernel SGX support.
 
 *Check these [system requirements](enclave-modes.md#system-requirements) for each enclave mode.*
 

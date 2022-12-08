@@ -1,6 +1,9 @@
 ## The DCAP protocol
 
-Intel SGX uses the Data Center Attestation Primitives (DCAP) protocol to prove what code runs in an enclave.
+Intel SGX uses the Data Center Attestation Primitives (DCAP) protocol to prove what code runs in an enclave. To 
+perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is
+hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to 
+date. DCAP is also known as ECDSA attestation.
 
 In DCAP, repeated attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed
 machine obtains a machine certificate from Intel via the cache, which may then be persisted to disk. All this is
@@ -10,31 +13,9 @@ As cloud providers run caches, DCAP supports vendor-specific plugins. Intel prov
 which requires a [subscription](https://api.portal.trustedservices.intel.com/provisioning-certification).
 
 Azure provides a DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) that does not require a subscription. 
-Conclave bundles and uses Azure's DCAP plugin by default. The Azure caches are open to the public internet and can 
-be used from anywhere. Azure Confidential Computing instances like DC4s_v3 come pre-provisioned for DCAP and as Conclave
-comes with the necessary libraries bundled, you don't need to do any further setup.
 
-DCAP is also known as ECDSA attestation.
-
-### DCAP Plugin
-To perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is 
-hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to 
-date.
-
-DCAP is designed to work on different server topologies. So, rather than directly connecting to Intel services to 
-retrieve this information, the cloud vendor or the owner of the SGX system must provide a DCAP client plugin with 
-the required information. Intel provides a generic DCAP client plugin as part of the DCAP runtime. To use this, you 
-also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provides an example and some 
-instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). 
-If you would like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs), 
-then additional work may be required to provide data in the correct format for Conclave. Please contact R3 support 
-if you need to set this up.
-
-Microsoft has written a DCAP client plugin that works with its Azure Confidential Compute virtual machines. In fact, 
-it also works outside of Azure for single CPU systems, but this may not always be the case.
-
-Conclave's bundled Azure client plugin will *only* be used if no other plugin has been found on the system. The 
-runtime will use the first `.so` it encounters in the search order below:
+Conclave bundles the Azure's DCAP plugin. This plugin will be used only if no other plugin has been found on the 
+system. The runtime will use the first `.so` it encounters in the search order below:
 
 ```
 /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
@@ -49,17 +30,39 @@ them if necessary).
 
     The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs, as well as existing
     CPUs. However, if Azure extends their offerings to include new platforms, or if you use a new generation system, 
-    then the bundled Azure client plugin may throw an error when attempting to load your enclave. In this case,
+    then the bundled Azure client plugin might throw an error when attempting to load your enclave. In this case,
     [follow the instructions below](#azure-client-plugin) to build/install an updated version of the Azure client 
     plugin that supports the platform.
 
-You may want to set the Azure DCAP client logging level to FATAL as the default setting is quite verbose:
+You might want to set the Azure DCAP client logging level to FATAL as the default setting is quite verbose:
+
 ```sh
 export AZDCAP_DEBUG_LOG_LEVEL=FATAL
 ```
 
-If you are using the bundled version, you can skip the rest of this section. Otherwise, read on for instructions on 
-how to manually configure the DCAP plugin.
+The Azure caches are open to the public internet and can be used from anywhere. Azure Confidential Computing 
+instances like DC4s_v3 come pre-provisioned for DCAP. As Conclave comes with the necessary libraries bundled, you 
+don't need to do any further setup.
+
+### DCAP Plugin
+
+DCAP is designed to work on different server topologies. So, instead of directly connecting to Intel services to 
+retrieve information about the platform that hosts the enclave, like in the old EPID protocol which is no longer 
+supported, the cloud vendor or the owner of the SGX system must provide a DCAP client plugin with the required 
+information. 
+
+Intel provides a generic DCAP client plugin as part of the DCAP runtime. To use their plugin, you also need to set 
+up a Provisioning Certificate Caching Service (PCCS). Intel provides an example and some instructions
+[here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). If 
+you would like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs), 
+then additional work may be required to provide data in the correct format for Conclave. Please contact R3 support 
+if you need to set this up.
+
+Microsoft has also written a DCAP client plugin that works with its Azure Confidential Compute virtual machines. In 
+fact, it also works outside of Azure for single CPU systems, but this may not always be the case.
+
+If you are using Conclave's bundled Azure plugin, you can skip the rest of this section. Otherwise, read on for 
+instructions on how to manually configure the DCAP plugin.
 
 #### Azure client plugin
 

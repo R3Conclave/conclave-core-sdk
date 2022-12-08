@@ -181,7 +181,7 @@ You *don't* need to trust:
 * The hardware manufacturers *other* than the CPU vendor. RAM, disk, firmware, the operating system, PCI devices, and
 other hardware components are all untrusted in the SGX threat model.
 * The owner of the hardware on which your enclave is running. You can verify the remote attestation to ensure that the
-remote system is up-to-date and that the enclave is running securely.
+remote system is up to date and that the enclave is running securely.
 * R3, as Conclave is [open source](https://github.com/R3Conclave/conclave-core-sdk).
 
 ### How should I authenticate users of my enclave?
