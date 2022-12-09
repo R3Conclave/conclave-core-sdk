@@ -3,7 +3,7 @@
 ## 1.4
 
 1. Intel SGX SDK has been updated to 2.18. This provides bug fixes, security updates, and other improvements. See the
-    [SGX SDK 1.8 release notes](https://github.com/intel/linux-sgx/releases/tag/sgx_2.18) for more details.
+    [SGX SDK 2.18 release notes](https://github.com/intel/linux-sgx/releases/tag/sgx_2.18) for more details.
 2. EPID attestation protocol has been deprecated, and it will be removed in an upcoming release. You should use DCAP instead.
 3. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html)
    are evaluated has changed slightly. From now on, if a client sets the security level to `INSECURE`, it will not pass 
