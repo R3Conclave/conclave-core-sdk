@@ -20,8 +20,22 @@ RUN echo 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod foca
 RUN apt-get update
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    libsgx-quote-ex \
-    libsgx-dcap-ql \
+    sgx-aesm-service \
+    libsgx-ae-id-enclave \
+    libsgx-ae-le \
+    libsgx-ae-pce \
+    libsgx-ae-qe3 \
+    libsgx-ae-qve \
+    libsgx-aesm-ecdsa-plugin \
+    libsgx-aesm-launch-plugin \
+    libsgx-aesm-pce-plugin \
+    libsgx-aesm-quote-ex-plugin \
+    libsgx-dcap-quote-verify \
+    libsgx-enclave-common \
+    libsgx-launch \
+    libsgx-pce-logic \
+    libsgx-qe3-logic \
+    libsgx-urts \
     az-dcap-client
 
 
