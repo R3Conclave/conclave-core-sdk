@@ -26,16 +26,18 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libsgx-ae-pce \
     libsgx-ae-qe3 \
     libsgx-ae-qve \
+    libsgx-enclave-common \
+    libsgx-urts \
+    libsgx-qe3-logic \
+    libsgx-pce-logic \
+    libsgx-aesm-pce-plugin \
     libsgx-aesm-ecdsa-plugin \
     libsgx-aesm-launch-plugin \
-    libsgx-aesm-pce-plugin \
     libsgx-aesm-quote-ex-plugin \
+    libsgx-dcap-ql \
     libsgx-dcap-quote-verify \
-    libsgx-enclave-common \
     libsgx-launch \
-    libsgx-pce-logic \
-    libsgx-qe3-logic \
-    libsgx-urts \
+    libsgx-quote-ex \
     az-dcap-client
 
 

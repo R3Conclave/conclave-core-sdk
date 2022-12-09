@@ -23,8 +23,23 @@ RUN apt-get -y update
 # Disable interactive dialogue
 # Otherwise, a message that requires user input might appear during the installation
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    libsgx-quote-ex \
-    libsgx-dcap-ql
+    libsgx-ae-id-enclave \
+    libsgx-ae-le \
+    libsgx-ae-pce \
+    libsgx-ae-qe3 \
+    libsgx-ae-qve \
+    libsgx-enclave-common \
+    libsgx-urts \
+    libsgx-qe3-logic \
+    libsgx-pce-logic \
+    libsgx-aesm-pce-plugin \
+    libsgx-aesm-ecdsa-plugin \
+    libsgx-aesm-launch-plugin \
+    libsgx-aesm-quote-ex-plugin \
+    libsgx-dcap-ql \
+    libsgx-dcap-quote-verify \
+    libsgx-launch \
+    libsgx-quote-ex
 
 # Install Docker inside integration-tests container, so it can spin another docker container to build enclaves
 RUN mkdir -p /etc/apt/keyrings
