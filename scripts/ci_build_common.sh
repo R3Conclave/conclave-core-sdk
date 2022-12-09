@@ -61,7 +61,7 @@ elif [ -e /dev/sgx/enclave ] && [ ! -e /dev/sgx_enclave]; then
     echo "Out of kernel SGX device found in /dev/sgx/enclave but not supported by Conclave"
     exit 1
 else
-    echo "SGX device not found in /dev/sgx/enclave
+    echo "SGX device not found in /dev/sgx/enclave"
 fi
 
 docker_group_add=()
