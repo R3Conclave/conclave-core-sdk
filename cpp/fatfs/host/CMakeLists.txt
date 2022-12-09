@@ -2,7 +2,7 @@ project(fatfs_host)
 
 include(Determinise)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra")
 add_definitions(-DFATFS_HOST)
 
 add_library(fatfs_host

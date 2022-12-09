@@ -68,7 +68,7 @@ namespace r3::conclave::dcap {
 
         if (loadQuotingLibraries) {
             comm_handle = try_dlopen( path, "libsgx_enclave_common.so.1", errors);
-            urts_handle = try_dlopen( path, "libsgx_urts.so", errors);
+            urts_handle = try_dlopen( path, "libsgx_urts.so.2", errors);
             pce_handle = try_dlopen( path, "libsgx_pce_logic.so", errors);
             qe3_handle = try_dlopen( path, "libsgx_qe3_logic.so", errors);
             ql_handle = try_dlopen( path, "libsgx_dcap_ql.so.1", errors);
