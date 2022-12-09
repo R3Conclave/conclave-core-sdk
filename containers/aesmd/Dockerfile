@@ -20,25 +20,13 @@ RUN echo 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod foca
 RUN apt-get update
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    sgx-aesm-service \
-    libsgx-ae-id-enclave \
-    libsgx-ae-le \
-    libsgx-ae-pce \
-    libsgx-ae-qe3 \
-    libsgx-ae-qve \
-    libsgx-enclave-common \
-    libsgx-urts \
-    libsgx-qe3-logic \
-    libsgx-pce-logic \
-    libsgx-aesm-pce-plugin \
-    libsgx-aesm-ecdsa-plugin \
-    libsgx-aesm-launch-plugin \
-    libsgx-aesm-quote-ex-plugin \
-    libsgx-dcap-ql \
-    libsgx-dcap-quote-verify \
-    libsgx-launch \
     libsgx-quote-ex \
-    az-dcap-client
+    libsgx-dcap-ql \
+    az-dcap-client \
+    # We have demised EPID, so we don't want to install EPID related libraries
+    libsgx-ae-epid- \
+    libsgx-aesm-epid-plugin-
+
 
 
 # Need to set LD_LIBRARY_PATH to directory of aesm_service executable
