@@ -107,7 +107,8 @@ RUN mkdir -p $NEXUS_IQ_HOME
 RUN wget -O $NEXUS_IQ_HOME/nexus-iq-cli.jar https://download.sonatype.com/clm/scanner/nexus-iq-cli-1.131.0-01.jar
 RUN echo "f9159984056cee4576f34fcfa6f33ccab42b070e  $NEXUS_IQ_HOME/nexus-iq-cli.jar" | shasum -c -
 
-RUN pip3 install jep
+ARG jep_version
+RUN pip3 install jep==$jep_version
 
 # Add jep to the library path
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/python3.8/dist-packages/jep"

@@ -9,8 +9,10 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
+import kotlin.io.path.readText
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     @get:Input
@@ -34,6 +36,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         if (buildInDocker.get()) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
+            val jepVersion = getJepVersionFromVersionsFile(conclaveBuildDir)
 
             try {
                 commandLine(
@@ -41,6 +44,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "build",
                     "--tag", tag.get(),
                     "--tag", tagLatest.get(),
+                    "--build-arg",
+                    "jep_version=$jepVersion",
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
@@ -54,6 +59,15 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 )
             }
         }
+    }
+
+    private fun getJepVersionFromVersionsFile(conclaveBuildDir: Path): String {
+        val versionsFilePath = conclaveBuildDir / "versions.gradle"
+        LinuxExec::class.java.copyResource("/conclave-build/versions.gradle", versionsFilePath)
+        val versions = versionsFilePath.readText()
+        val pattern = """(jep_version\s*=\s*')([0-9.]+[0-9])(')""".toRegex()
+        val result = pattern.find(versions)
+        return result!!.groupValues[2]
     }
 
     /**

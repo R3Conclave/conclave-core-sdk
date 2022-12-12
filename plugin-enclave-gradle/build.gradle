@@ -73,7 +73,13 @@ processResources {
 
     // conclave-build Dockerfile
     into("conclave-build") {
-        from("${rootProject.projectDir}/containers/conclave-build")
+        from("${rootProject.projectDir}/containers/conclave-build") {
+	    include "Dockerfile"
+	}
+
+        from("${rootProject.projectDir}") {
+            include "versions.gradle"
+        }
     }
 
     // C common headers
