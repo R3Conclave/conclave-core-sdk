@@ -9,12 +9,24 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.util.jar.JarFile
+import java.util.jar.Manifest
 import javax.inject.Inject
-import kotlin.io.path.readText
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+
+    companion object {
+
+        private val JEP_VERSION = run {
+            LinuxExec::class.java.classLoader
+                .getResources(JarFile.MANIFEST_NAME)
+                .asSequence()
+                .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue("Jep-Version") }
+                .firstOrNull() ?: throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
+        }
+    }
+
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
 
@@ -36,7 +48,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         if (buildInDocker.get()) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
-            val jepVersion = getJepVersionFromVersionsFile(conclaveBuildDir)
 
             try {
                 commandLine(
@@ -45,7 +56,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "--tag", tag.get(),
                     "--tag", tagLatest.get(),
                     "--build-arg",
-                    "jep_version=$jepVersion",
+                    "jep_version=$JEP_VERSION",
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
@@ -59,15 +70,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 )
             }
         }
-    }
-
-    private fun getJepVersionFromVersionsFile(conclaveBuildDir: Path): String {
-        val versionsFilePath = conclaveBuildDir / "versions.gradle"
-        LinuxExec::class.java.copyResource("/conclave-build/versions.gradle", versionsFilePath)
-        val versions = versionsFilePath.readText()
-        val pattern = """(jep_version\s*=\s*')([0-9.]+[0-9])(')""".toRegex()
-        val result = pattern.find(versions)
-        return result!!.groupValues[2]
     }
 
     /**
