@@ -14,18 +14,40 @@ hosted on. This information provides proof from Intel that the system supports S
 date. A DCAP client is used for this function. It is basically a library named `libdcap_quoteprov.so` or
 `libdcap_quoteprov.so.1`, which is to be installed in `/usr/lib/` or `/usr/lib/x86_64-linux-gnu`.
 
-You can use one of the three available DCAP clients listed below:
+You can use one of the three available DCAP clients (also called DCAP plugins) listed below:
 
-1. Intel DCAP client
-2. Azure DCAP client
-3. Conclave-Azure bundled client
+1. Conclave-Azure bundled client (recommended)
+2. Intel DCAP client
+3. Azure DCAP client
 
-To avoid conflicts between DCAP client plugins, you must uninstall the plugins that you don't need.
+To avoid conflicts between DCAP plugins, you must uninstall the plugins that you don't need.
+
+### Conclave-Azure Bundled Client
+
+Conclave provides a bundled Azure DCAP plugin, which is the recommended option for Azure virtual machines. _You can 
+use this default DCAP plugin for most of your use cases without any mandatory setup._
+
+This plugin will be used only if no other plugin exists in the default libraries under `/usr/lib/`. The runtime will
+use the first `.so` it finds in the order below:
+
+```
+/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
+/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so
+/usr/lib/libdcap_quoteprov.so.1
+/usr/lib/libdcap_quoteprov.so
+```
+If you choose Conclave's recommended bundled DCAP plugin, delete or rename any `.so` in the above locations.
+
+You might also want to set the Azure DCAP client logging level to FATAL as the default setting is quite verbose:
+
+```sh
+export AZDCAP_DEBUG_LOG_LEVEL=FATAL
+```
 
 ### Intel DCAP Client
 
-Intel provides a DCAP client (also called DCAP plugin) as part of the DCAP runtime. You can use this option if you 
-want to run your code on bare-metal machines and don't want to rely on cloud providers.
+Intel provides a DCAP client as part of the DCAP runtime. You can use this option if you want to run your code on 
+bare-metal machines and don't want to rely on cloud providers.
 
 To use Intel's DCAP plugin, you need to install the DCAP client package. For example, in Ubuntu, you can 
 use the following command:
@@ -44,30 +66,13 @@ you need to set this up.
 Microsoft provides an Azure DCAP client, which you can use on Azure virtual machines. Azure's DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) 
 does not require any subscription to Intel services. 
 
-To use an Azure DCAP client, you need to install Azure's DCAP client package. For example, in Ubuntu, you can use 
-the following command:
+To use an Azure DCAP client, you need to install Microsoft's package list and Azure's DCAP client package. For example,
+in Ubuntu, you can use the following commands:
 
+`wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -`
+`echo 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main' | sudo tee /etc/apt/sources.list.d/msprod.list`
 `sudo apt-get install az-dcap-client`
 
-### Conclave-Azure Bundled Client
-
-Conclave provides a bundled Azure DCAP plugin, which is the recommended option for Azure virtual machines. 
-This plugin will be used only if no other plugin exists in the default libraries under `/usr/lib/`. The runtime will 
-use the first `.so` it finds in the order below:
-
-```
-/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
-/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so
-/usr/lib/libdcap_quoteprov.so.1
-/usr/lib/libdcap_quoteprov.so
-```
-If you choose Conclave's recommended bundled DCAP plugin, delete or rename any `.so` in the above locations.
-
-You might also want to set the Azure DCAP client logging level to FATAL as the default setting is quite verbose:
-
-```sh
-export AZDCAP_DEBUG_LOG_LEVEL=FATAL
-```
 
 ## Using Docker container(s)
 If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
