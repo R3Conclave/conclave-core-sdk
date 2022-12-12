@@ -1,9 +1,7 @@
 ## The DCAP protocol
 
-Intel SGX uses the Data Center Attestation Primitives (DCAP) protocol to prove what code runs in an enclave. To 
-perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is
-hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to 
-date. DCAP is also known as ECDSA attestation.
+Intel SGX uses the Data Center Attestation Primitives (DCAP) protocol to prove what code runs in an enclave. DCAP is 
+also known as ECDSA attestation.
 
 In DCAP, repeated attestation requests are served from a cache rather than forwarded to Intel. A newly installed
 machine obtains a machine certificate from Intel via the cache, which may then be persisted to disk. All this is
@@ -11,8 +9,10 @@ automated for you.
 
 ## DCAP Client
 
-A DCAP client is basically a library named `libdcap_quoteprov.so.1` with a symbolic link at `libdcap_quoteprov.so`, 
-which is to be installed in `/usr/lib/` or `/usr/lib/x86_64-linux-gnu`.
+To perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is
+hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to
+date. A DCAP client is used for this function. It is basically a library named `libdcap_quoteprov.so.1` with a 
+symbolic link at `libdcap_quoteprov.so`, which is to be installed in `/usr/lib/` or `/usr/lib/x86_64-linux-gnu`.
 
 You can use one of the three available DCAP clients listed below:
 
@@ -20,7 +20,7 @@ You can use one of the three available DCAP clients listed below:
 2. Azure DCAP client
 3. Conclave-Azure bundled client
 
-To avoid conflicts between DCAP client plugins, you need to uninstall the plugins that you don't require.
+To avoid conflicts between DCAP client plugins, you must uninstall the plugins that you don't require.
 
 ### Intel DCAP Client
 
@@ -30,7 +30,7 @@ If you are using bare-metal machines, you need to install the DCAP client packag
 
 `sudo apt-get install libsgx-dcap-default-qpl`
 
-To use Intel's DCAP plugin, a [subscription](https://api.portal.trustedservices.intel.com/provisioning-certification). 
+To use Intel's DCAP plugin, you need a [subscription](https://api.portal.trustedservices.intel.com/provisioning-certification). 
 You must also set up a Provisioning Certificate Caching Service (PCCS). Intel provides an example and some 
 instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). 
 If you like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs),
