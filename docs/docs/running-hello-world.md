@@ -151,9 +151,12 @@ In the previous section, you run the sample application in [mock mode](enclave-m
 suggests, isn't secure at all.
 
 This section describes how to build and run the sample in other [enclave modes](enclave-modes.md), namely
-simulation, debug, and release. Note that only release mode provides confidential guarantees of SGX.
+simulation, debug, and release.
 
-*First, ensure that your system fulfills the [system requirements](enclave-modes.md#system-requirements).*
+You can learn to develop enclaves on Windows, macOS, or Linux. However, to develop secure Conclave applications, you 
+must use Linux 5.11 or higher, which has in-kernel SGX support.
+
+*Check these [system requirements](enclave-modes.md#system-requirements) for each enclave mode.*
 
 ### Build the enclave in other modes
 
