@@ -19,8 +19,8 @@ script_dir=$containers_script_dir/../../scripts
 source ${script_dir}/ci_build_common.sh
 source ${containers_script_dir}/common.sh
 
-# Git commit id
 commit_id=$(getGitCommitId)
+jep_version=$(getJepVersion)
 
 # Downloads or copys Graal from a local directory. This is required for building the sdk build.
 downloadOrCopyGraal() {
@@ -60,21 +60,21 @@ buildContainerSDKBuild() {
     downloadOrCopyGraal
   fi
 
-  docker build -t $container_image_sdk_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_sdk_build --build-arg commit_id=$commit_id --build-arg jep_version="$jep_version" .
   popd
 }
 
 # Builds conclave-build docker image
 buildContainerConclaveBuild() {
   pushd "${code_host_dir}/containers/conclave-build/"
-  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id --build-arg jep_version="$jep_version" .
   popd
 }
 
 # Builds integration-tests-build docker image (N.B.: Must be built after the conclave-build.)
 buildContainerIntegrationTestsBuild() {
   pushd "${code_host_dir}/containers/integration-tests-build"
-  docker build -t $container_image_integration_tests_build --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_integration_tests_build --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id --build-arg jep_version="$jep_version" .
   popd
 }
 

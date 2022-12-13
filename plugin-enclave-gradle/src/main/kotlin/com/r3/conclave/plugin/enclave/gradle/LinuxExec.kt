@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.retrievePackageVersionFromManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -13,6 +14,11 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+
+    companion object {
+        private val JEP_VERSION = retrievePackageVersionFromManifest("Jep-Version")
+    }
+
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
 
@@ -41,6 +47,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "build",
                     "--tag", tag.get(),
                     "--tag", tagLatest.get(),
+                    "--build-arg",
+                    "jep_version=$JEP_VERSION",
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
