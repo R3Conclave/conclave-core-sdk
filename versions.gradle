@@ -22,7 +22,7 @@ ext {
     ibm_icu4j_version = '72.1'
     locationtech_jts_version = '1.19.0'
     locationtech_spatial4j_version = '0.8'
-    h2database_h2_version = '2.1.214'
+    h2database_h2_version = '1.4.200'
     httpclient5_version = '5.2.1'
     ktor_version = '2.2.1'
     jep_version = '4.1.0'

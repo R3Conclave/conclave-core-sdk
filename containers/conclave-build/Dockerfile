@@ -30,6 +30,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
         openjdk-17-jdk-headless
 ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
-RUN pip3 install jep
+ARG jep_version
+RUN pip3 install jep==$jep_version
 
 CMD java -version
