@@ -219,10 +219,10 @@ As work in progress, there are plently of issues and features missing, which we 
 
 * Mock mode support is limited. There's currently no way to inspect objects from the Python environment without 
   using reflection.
-* All the necessary tools, such as Python, pip and Gramine, must be installed locally
+* All the necessary tools, such as Python, pip and Gramine, must be installed locally.
 * Most likely the enclave will only work on the same machine that it was built on.
-* Only a single Python file is supported
-* There's no yet API to send responses to other than the requester.
+* Only a single Python file is supported.
+* There's no API yet to send responses to other than the requester.
 
 ## Exploring the codebase
 
