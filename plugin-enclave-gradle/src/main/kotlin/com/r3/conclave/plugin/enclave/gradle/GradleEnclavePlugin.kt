@@ -2,6 +2,7 @@ package com.r3.conclave.plugin.enclave.gradle
 
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_PROPERTIES
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
@@ -28,16 +29,12 @@ import org.gradle.jvm.tasks.Jar
 import org.gradle.util.VersionNumber
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.jar.Manifest
 import java.util.stream.Collectors.toList
 import javax.inject.Inject
-import kotlin.io.path.exists
-import kotlin.io.path.getPosixFilePermissions
-import kotlin.io.path.name
-import kotlin.io.path.setPosixFilePermissions
+import kotlin.io.path.*
 
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {
@@ -61,6 +58,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
     private var pythonSourcePath: Path? = null
     private lateinit var runtimeType: Provider<RuntimeType>
+
+    private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
 
     override fun apply(target: Project) {
         checkGradleVersionCompatibility(target)
@@ -166,95 +165,19 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
         }
 
-        // Create configurations for each of the build types.
-        for (type in BuildType.values()) {
-            // https://docs.gradle.org/current/userguide/cross_project_publications.html
-            target.configurations.create(type.name.lowercase()) {
-                it.isCanBeConsumed = true
-                it.isCanBeResolved = false
-            }
-        }
-
-        // Create the tasks that are required to build the Mock build type artifact.
-        createMockArtifact(target, enclaveFatJarTask)
-
-        // Create the tasks that are required build the Release, Debug and Simulation artifacts.
-        createEnclaveArtifacts(target, conclaveExtension, enclaveFatJarTask)
+        registerNonMockArtifacts(target, conclaveExtension, enclaveFatJarTask)
+        // The artifact for mock mode is the just the enclave fat jar.
+        registerCrossProjectArtifact(target, EnclaveMode.MOCK, enclaveFatJarTask)
     }
 
-    private fun createGenerateGramineBundleTask(
-            target: Project,
-            type: BuildType,
-            conclaveExtension: ConclaveExtension,
-            enclaveFatJarTask: Jar,
-            signingKey: Provider<RegularFile?>
-    ): GenerateGramineBundle {
-        return target.createTask("generateGramine${type}Bundle", type) { task ->
-            // TODO: Build Gramine enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
-            task.signingKey.set(signingKey)
-            task.productId.set(conclaveExtension.productID)
-            task.revocationLevel.set(conclaveExtension.revocationLevel)
-            task.maxThreads.set(conclaveExtension.maxThreads)
-            task.enclaveJar.set(enclaveFatJarTask.archiveFile)
-            if (pythonSourcePath != null) {
-                val pythonFiles = target.fileTree(pythonSourcePath).files
-                task.pythonFile.set(pythonFiles.first())
-            }
-            task.outputDir.set((baseDirectory / type.name.lowercase() / "gramine-bundle").toFile())
-        }
-    }
-
-    private fun createGramineBundleZipTask(
+    private fun registerNonMockArtifacts(
         target: Project,
-        type: BuildType,
-        generateGramineBundleTask: GenerateGramineBundle
-    ): TaskProvider<Zip> {
-        return target.tasks.register("gramine${type}BundleZip", Zip::class.java) { task ->
-            // No need to do any compression here, we're only using zip as a container. The compression will be done
-            // by the containing jar.
-            task.entryCompression = STORED
-            task.from(generateGramineBundleTask.outputDir)
-            task.destinationDirectory.set((baseDirectory / type.name.lowercase()).toFile())
-            task.archiveBaseName.set("gramine-bundle")
-        }
-    }
-
-    fun signToolPath(): Path = getSgxTool("sgx_sign")
-
-    fun ldPath(): Path = getSgxTool("ld")
-
-    private fun getSgxTool(name: String): Path {
-        val path = baseDirectory / "sgx-tools" / name
-        if (!path.exists()) {
-            javaClass.copyResource("/sgx-tools/$name", path)
-            path.setPosixFilePermissions(path.getPosixFilePermissions() + OWNER_EXECUTE)
-        }
-        return path
-    }
-
-    private val baseDirectory: Path by lazy { layout.buildDirectory.get().asFile.toPath() / "conclave" }
-    private val gramineBuildDirectory: Path by lazy { baseDirectory.resolve("gramine") }
-
-    /**
-     * Get the main source set for a given project
-     */
-    private fun getMainSourceSet(project: Project): SourceSet {
-        return (project.properties["sourceSets"] as SourceSetContainer).getByName("main")
-    }
-
-    private fun createMockArtifact(target: Project, enclaveFatJar: Jar) {
-        // Mock mode does not require all the enclave building tasks. The enclave Jar file is just packaged
-        // as an artifact.
-        target.artifacts.add("mock", enclaveFatJar.archiveFile)
-    }
-
-    private fun createEnclaveArtifacts(target: Project, conclaveExtension: ConclaveExtension, enclaveFatJarTask: Jar) {
-        // Dummy key
+        conclaveExtension: ConclaveExtension,
+        enclaveFatJarTask: Jar
+    ) {
         val createDummyKeyTask = target.createTask<GenerateDummyMrsignerKey>("createDummyKey") { task ->
             task.outputKey.set(baseDirectory.resolve("dummy_key.pem").toFile())
         }
-
-        val linkerScriptFile = baseDirectory.resolve("Enclave.lds")
 
         val generateReflectionConfigTask =
             target.createTask<GenerateReflectionConfig>("generateReflectionConfig") { task ->
@@ -270,11 +193,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 task.appResourcesConfigFile.set((baseDirectory / "app-resources-config.json").toFile())
             }
 
-        val graalVMDistributionPath = "$baseDirectory/graalvm"
-
         val copyGraalVM = target.createTask<Exec>("copyGraalVM") { task ->
-            task.outputs.dir(graalVMDistributionPath)
-
             // Create a configuration for downloading graalvm-*.tar.gz using Gradle
             val graalVMConfigName = "${task.name}Config"
             val configuration = target.configurations.create(graalVMConfigName)
@@ -292,9 +211,10 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 }
             }
 
+            val outputDir = baseDirectory.resolve("graalvm").createDirectories()
+            task.outputs.dir(outputDir)
+            task.workingDir(outputDir)
             // Uncompress the graalvm-*.tar.gz
-            Files.createDirectories(Paths.get(graalVMDistributionPath))
-            task.workingDir(graalVMDistributionPath)
             task.commandLine("tar", "xf", LazyGraalVmFile(target))
         }
 
@@ -308,228 +228,312 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.buildInDocker.set(conclaveExtension.buildInDocker)
         }
 
-        for (type in BuildType.values().filter { it != BuildType.Mock }) {
-            val typeLowerCase = type.name.lowercase()
-
-            val enclaveExtension = when (type) {
-                BuildType.Release -> conclaveExtension.release
-                BuildType.Debug -> conclaveExtension.debug
-                BuildType.Simulation -> conclaveExtension.simulation
-                else -> throw IllegalStateException()
+        for (enclaveMode in EnclaveMode.values()) {
+            val enclaveExtension = when (enclaveMode) {
+                EnclaveMode.RELEASE -> conclaveExtension.release
+                EnclaveMode.DEBUG -> conclaveExtension.debug
+                EnclaveMode.SIMULATION -> conclaveExtension.simulation
+                EnclaveMode.MOCK -> continue
             }
-
-            val signingKey = enclaveExtension.signingType.flatMap {
-                when (it) {
-                    SigningType.DummyKey -> createDummyKeyTask.outputKey
-                    SigningType.PrivateKey -> enclaveExtension.signingKey
-                    else -> target.provider { null }
-                }
-            }
-
-            val enclaveDirectory = baseDirectory.resolve(typeLowerCase)
-
-            // Gramine related tasks
-            val generateGramineBundleTask = createGenerateGramineBundleTask(
+            val enclaveBundleJar = createNonMockEnclaveBundleJar(
                 target,
-                type,
                 conclaveExtension,
+                enclaveExtension,
+                createDummyKeyTask,
                 enclaveFatJarTask,
-                signingKey
+                linuxExec,
+                copyGraalVM,
+                generateReflectionConfigTask,
+                generateAppResourcesConfigTask
             )
-            val gramineBundleZipTask = createGramineBundleZipTask(target, type, generateGramineBundleTask)
+            registerCrossProjectArtifact(target, enclaveMode, enclaveBundleJar)
+        }
+    }
 
-            // GraalVM related tasks
+    private fun createGenerateGramineBundleTask(
+            target: Project,
+            enclaveMode: EnclaveMode,
+            conclaveExtension: ConclaveExtension,
+            enclaveFatJarTask: Jar,
+            signingKey: Provider<RegularFile?>
+    ): GenerateGramineBundle {
+        return target.createTask("generateGramine${enclaveMode.capitalise()}Bundle", enclaveMode) { task ->
+            // TODO: Build Gramine enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
+            task.signingKey.set(signingKey)
+            task.productId.set(conclaveExtension.productID)
+            task.revocationLevel.set(conclaveExtension.revocationLevel)
+            task.maxThreads.set(conclaveExtension.maxThreads)
+            task.enclaveJar.set(enclaveFatJarTask.archiveFile)
+            if (pythonSourcePath != null) {
+                val pythonFiles = target.fileTree(pythonSourcePath).files
+                task.pythonFile.set(pythonFiles.first())
+            }
+            task.outputDir.set((baseDirectory / enclaveMode.name.lowercase() / "gramine-bundle").toFile())
+        }
+    }
 
-            val unsignedEnclaveFile = enclaveDirectory.resolve("enclave.so").toFile()
+    private fun createGramineBundleZipTask(
+        target: Project,
+        enclaveMode: EnclaveMode,
+        generateGramineBundleTask: GenerateGramineBundle
+    ): TaskProvider<Zip> {
+        return target.tasks.register("gramine${enclaveMode.capitalise()}BundleZip", Zip::class.java) { task ->
+            // No need to do any compression here, we're only using zip as a container. The compression will be done
+            // by the containing jar.
+            task.entryCompression = STORED
+            task.from(generateGramineBundleTask.outputDir)
+            task.destinationDirectory.set((baseDirectory / enclaveMode.name.lowercase()).toFile())
+            task.archiveBaseName.set("gramine-bundle")
+        }
+    }
 
-            val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>(
-                "buildUnsignedGraalEnclave$type",
-                this,
-                type,
-                linkerScriptFile,
+    fun signToolPath(): Path = getSgxTool("sgx_sign")
+
+    fun ldPath(): Path = getSgxTool("ld")
+
+    private fun getSgxTool(name: String): Path {
+        val path = baseDirectory / "sgx-tools" / name
+        if (!path.exists()) {
+            javaClass.copyResource("/sgx-tools/$name", path)
+            path.setPosixFilePermissions(path.getPosixFilePermissions() + OWNER_EXECUTE)
+        }
+        return path
+    }
+
+    /**
+     * Get the main source set for a given project
+     */
+    private fun getMainSourceSet(project: Project): SourceSet {
+        return (project.properties["sourceSets"] as SourceSetContainer).getByName("main")
+    }
+
+    private fun createMockArtifact(target: Project, enclaveFatJar: Jar) {
+        // Mock mode does not require all the enclave building tasks. The enclave Jar file is just packaged
+        // as an artifact.
+        target.artifacts.add("mock", enclaveFatJar.archiveFile)
+    }
+
+    private fun createNonMockEnclaveBundleJar(
+        target: Project,
+        conclaveExtension: ConclaveExtension,
+        enclaveExtension: EnclaveExtension,
+        createDummyKeyTask: GenerateDummyMrsignerKey,
+        enclaveFatJarTask: Jar,
+        linuxExec: LinuxExec,
+        copyGraalVM: Task,
+        generateReflectionConfigTask: GenerateReflectionConfig,
+        generateAppResourcesConfigTask: GenerateAppResourcesConfig
+    ): Jar {
+        val signingKey = enclaveExtension.signingType.flatMap {
+            when (it) {
+                SigningType.DummyKey -> createDummyKeyTask.outputKey
+                SigningType.PrivateKey -> enclaveExtension.signingKey
+                else -> target.provider { null }
+            }
+        }
+
+        val enclaveMode = enclaveExtension.enclaveMode
+        val modeLowerCase = enclaveMode.name.lowercase()
+        val enclaveModeDir = baseDirectory.resolve(modeLowerCase)
+
+        // Gramine related tasks
+        val generateGramineBundleTask = createGenerateGramineBundleTask(
+            target,
+            enclaveMode,
+            conclaveExtension,
+            enclaveFatJarTask,
+            signingKey
+        )
+        val gramineBundleZipTask = createGramineBundleZipTask(target, enclaveMode, generateGramineBundleTask)
+
+        // GraalVM related tasks
+
+        val linkerScriptFile = baseDirectory.resolve("Enclave.lds")
+        val buildUnsignedGraalEnclaveTask = target.createTask<NativeImage>(
+            "buildUnsignedGraalEnclave${enclaveMode.capitalise()}",
+            this,
+            enclaveMode,
+            linkerScriptFile,
+            linuxExec
+        ) { task ->
+            task.dependsOn(
+                copyGraalVM,
+                generateReflectionConfigTask,
+                generateAppResourcesConfigTask,
                 linuxExec
-            ) { task ->
-                task.dependsOn(
-                    copyGraalVM,
-                    generateReflectionConfigTask,
-                    generateAppResourcesConfigTask,
-                    linuxExec
-                )
-                task.inputs.files(graalVMDistributionPath)
-                task.nativeImagePath.set(target.file(graalVMDistributionPath))
-                task.jarFile.set(enclaveFatJarTask.archiveFile)
-                task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
-                task.appResourcesConfig.set(generateAppResourcesConfigTask.appResourcesConfigFile)
-                task.reflectionConfigurationFiles.from(conclaveExtension.reflectionConfigurationFiles)
-                task.serializationConfigurationFiles.from(conclaveExtension.serializationConfigurationFiles)
-                task.maxStackSize.set(conclaveExtension.maxStackSize)
-                task.maxHeapSize.set(conclaveExtension.maxHeapSize)
-                task.supportLanguages.set(conclaveExtension.supportLanguages)
-                task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
-                task.outputEnclave.set(unsignedEnclaveFile)
+            )
+            task.nativeImagePath.set(copyGraalVM.outputs.files.singleFile)
+            task.jarFile.set(enclaveFatJarTask.archiveFile)
+            task.reflectionConfiguration.set(generateReflectionConfigTask.reflectionConfig)
+            task.appResourcesConfig.set(generateAppResourcesConfigTask.appResourcesConfigFile)
+            task.reflectionConfigurationFiles.from(conclaveExtension.reflectionConfigurationFiles)
+            task.serializationConfigurationFiles.from(conclaveExtension.serializationConfigurationFiles)
+            task.maxStackSize.set(conclaveExtension.maxStackSize)
+            task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+            task.supportLanguages.set(conclaveExtension.supportLanguages)
+            task.deadlockTimeout.set(conclaveExtension.deadlockTimeout)
+            task.outputEnclave.set(enclaveModeDir.resolve("enclave.so").toFile())
+        }
+
+        val buildUnsignedEnclaveTask =
+            target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave${enclaveMode.capitalise()}") { task ->
+                task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
+                task.outputEnclave.set(task.inputEnclave.get())
             }
 
-            val buildUnsignedEnclaveTask =
-                target.createTask<BuildUnsignedEnclave>("buildUnsignedEnclave$type") { task ->
-                    task.inputEnclave.set(buildUnsignedGraalEnclaveTask.outputEnclave)
-                    task.outputEnclave.set(task.inputEnclave.get())
-                }
+        val generateEnclaveConfigTask = target.createTask<GenerateEnclaveConfig>(
+            "generateEnclaveConfig${enclaveMode.capitalise()}",
+            enclaveMode
+        ) { task ->
+            task.productID.set(conclaveExtension.productID)
+            task.revocationLevel.set(conclaveExtension.revocationLevel)
+            task.maxHeapSize.set(conclaveExtension.maxHeapSize)
+            task.maxStackSize.set(conclaveExtension.maxStackSize)
+            task.tcsNum.set(conclaveExtension.maxThreads)
+            task.outputConfigFile.set(enclaveModeDir.resolve("enclave.xml").toFile())
+        }
 
-            val generateEnclaveConfigTask =
-                target.createTask<GenerateEnclaveConfig>("generateEnclaveConfig$type", type) { task ->
-                    task.productID.set(conclaveExtension.productID)
-                    task.revocationLevel.set(conclaveExtension.revocationLevel)
-                    task.maxHeapSize.set(conclaveExtension.maxHeapSize)
-                    task.maxStackSize.set(conclaveExtension.maxStackSize)
-                    task.tcsNum.set(conclaveExtension.maxThreads)
-                    task.outputConfigFile.set(enclaveDirectory.resolve("enclave.xml").toFile())
-                }
+        val signEnclaveWithKeyTask = target.createTask<SignEnclave>(
+            "signEnclaveWithKey${enclaveMode.capitalise()}",
+            this,
+            linuxExec
+        ) { task ->
+            task.inputs.files(
+                buildUnsignedEnclaveTask.outputEnclave,
+                generateEnclaveConfigTask.outputConfigFile
+            )
+            task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
+            task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
+            task.inputKey.set(signingKey)
+            task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
+            task.buildInDocker.set(conclaveExtension.buildInDocker)
+        }
 
-            val signEnclaveWithKeyTask = target.createTask<SignEnclave>(
-                    "signEnclaveWithKey$type",
-                    this,
-                    enclaveExtension,
-                    type,
-                    linuxExec
-                ) { task ->
-                    task.inputs.files(
-                        buildUnsignedEnclaveTask.outputEnclave,
-                        generateEnclaveConfigTask.outputConfigFile
-                    )
-                    task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
-                    task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                    task.inputKey.set(signingKey)
-                    task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
-                    task.buildInDocker.set(conclaveExtension.buildInDocker)
-                }
+        val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(
+            "generateEnclaveSigningMaterial${enclaveMode.capitalise()}",
+            this,
+            linuxExec
+        ) { task ->
+            task.description = "Generate standalone signing material for an ${enclaveMode.name.lowercase()} mode " +
+                    "enclave that can be used with an external signing source."
+            task.inputs.files(
+                buildUnsignedEnclaveTask.outputEnclave,
+                generateEnclaveConfigTask.outputConfigFile,
+            )
+            task.buildInDocker.set(conclaveExtension.buildInDocker)
+            task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
+            task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
+            task.signatureDate.set(enclaveExtension.signatureDate)
+            task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
+        }
 
-            val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(
-                "generateEnclaveSigningMaterial$type",
-                this,
-                linuxExec
-            ) { task ->
-                task.description = "Generate standalone signing material for a $type mode enclave that can be used " +
-                        "with an external signing source."
-                task.inputs.files(
-                    buildUnsignedEnclaveTask.outputEnclave,
-                    generateEnclaveConfigTask.outputConfigFile,
-                )
-                task.buildInDocker.set(conclaveExtension.buildInDocker)
-                task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
-                task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                task.signatureDate.set(enclaveExtension.signatureDate)
-                task.outputSigningMaterial.set(enclaveExtension.signingMaterial)
+        val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>(
+            "addEnclaveSignature${enclaveMode.capitalise()}",
+            this,
+            linuxExec
+        ) { task ->
+            /**
+             * Setting a dependency on a task (at least a `Copy` task) doesn't mean we'll be depending on the task's output.
+             * Despite the dependency task running when out of date, the dependent task would then be considered up-to-date,
+             * even when declaring `dependsOn`.
+             */
+            task.inputs.files(
+                generateEnclaveSigningMaterialTask.inputEnclave,
+                generateEnclaveSigningMaterialTask.outputSigningMaterial,
+                generateEnclaveConfigTask.outputConfigFile,
+                enclaveExtension.mrsignerPublicKey,
+                enclaveExtension.mrsignerSignature
+            )
+            task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
+            task.inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
+            task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
+            task.inputMrsignerPublicKey.set(enclaveExtension.mrsignerPublicKey.map {
+                if (!it.asFile.exists()) {
+                    throwMissingFileForExternalSigning("mrsignerPublicKey")
+                }
+                it
+            })
+            task.inputMrsignerSignature.set(enclaveExtension.mrsignerSignature.map {
+                if (!it.asFile.exists()) {
+                    throwMissingFileForExternalSigning("mrsignerSignature")
+                }
+                it
+            })
+            task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
+            task.buildInDocker.set(conclaveExtension.buildInDocker)
+        }
+
+        val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>(
+            "generateEnclaveMetadata${enclaveMode.capitalise()}",
+            this,
+            enclaveMode,
+            linuxExec
+        ) { task ->
+            val signingTask = enclaveExtension.signingType.map {
+                when (it) {
+                    SigningType.DummyKey -> signEnclaveWithKeyTask
+                    SigningType.PrivateKey -> signEnclaveWithKeyTask
+                    else -> addEnclaveSignatureTask
+                }
             }
-
-            val addEnclaveSignatureTask = target.createTask<AddEnclaveSignature>(
-                "addEnclaveSignature$type",
-                this,
-                linuxExec
-            ) { task ->
-                    /**
-                     * Setting a dependency on a task (at least a `Copy` task) doesn't mean we'll be depending on the task's output.
-                     * Despite the dependency task running when out of date, the dependent task would then be considered up-to-date,
-                     * even when declaring `dependsOn`.
-                     */
-                    task.inputs.files(
-                        generateEnclaveSigningMaterialTask.inputEnclave,
-                        generateEnclaveSigningMaterialTask.outputSigningMaterial,
-                        generateEnclaveConfigTask.outputConfigFile,
-                        enclaveExtension.mrsignerPublicKey,
-                        enclaveExtension.mrsignerSignature
-                    )
-                    task.inputEnclave.set(generateEnclaveSigningMaterialTask.inputEnclave)
-                    task.inputSigningMaterial.set(generateEnclaveSigningMaterialTask.outputSigningMaterial)
-                    task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
-                    task.inputMrsignerPublicKey.set(enclaveExtension.mrsignerPublicKey.map {
-                        if (!it.asFile.exists()) {
-                            throwMissingFileForExternalSigning("mrsignerPublicKey")
+            task.dependsOn(signingTask)
+            val signedEnclaveFile = enclaveExtension.signingType.flatMap {
+                when (it) {
+                    SigningType.DummyKey -> signEnclaveWithKeyTask.outputSignedEnclave
+                    SigningType.PrivateKey -> signEnclaveWithKeyTask.outputSignedEnclave
+                    else -> {
+                        if (!enclaveExtension.mrsignerPublicKey.isPresent) {
+                            throwMissingConfigForExternalSigning("mrsignerPublicKey")
                         }
-                        it
-                    })
-                    task.inputMrsignerSignature.set(enclaveExtension.mrsignerSignature.map {
-                        if (!it.asFile.exists()) {
-                            throwMissingFileForExternalSigning("mrsignerSignature")
+                        if (!enclaveExtension.mrsignerSignature.isPresent) {
+                            throwMissingConfigForExternalSigning("mrsignerSignature")
                         }
-                        it
-                    })
-                    task.outputSignedEnclave.set(enclaveDirectory.resolve("enclave.signed.so").toFile())
-                    task.buildInDocker.set(conclaveExtension.buildInDocker)
-                }
-
-            val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>(
-                "generateEnclaveMetadata$type",
-                this,
-                type,
-                linuxExec
-            ) { task ->
-                    val signingTask = enclaveExtension.signingType.map {
-                        when (it) {
-                            SigningType.DummyKey -> signEnclaveWithKeyTask
-                            SigningType.PrivateKey -> signEnclaveWithKeyTask
-                            else -> addEnclaveSignatureTask
-                        }
+                        addEnclaveSignatureTask.outputSignedEnclave
                     }
-                    task.dependsOn(signingTask)
-                    val signedEnclaveFile = enclaveExtension.signingType.flatMap {
-                        when (it) {
-                            SigningType.DummyKey -> signEnclaveWithKeyTask.outputSignedEnclave
-                            SigningType.PrivateKey -> signEnclaveWithKeyTask.outputSignedEnclave
-                            else -> {
-                                if (!enclaveExtension.mrsignerPublicKey.isPresent) {
-                                    throwMissingConfigForExternalSigning("mrsignerPublicKey")
-                                }
-                                if (!enclaveExtension.mrsignerSignature.isPresent) {
-                                    throwMissingConfigForExternalSigning("mrsignerSignature")
-                                }
-                                addEnclaveSignatureTask.outputSignedEnclave
-                            }
-                        }
-                    }
-                    task.inputSignedEnclave.set(signedEnclaveFile)
-                    task.inputs.files(signedEnclaveFile)
-                    task.buildInDocker.set(conclaveExtension.buildInDocker)
                 }
+            }
+            task.inputSignedEnclave.set(signedEnclaveFile)
+            task.inputs.files(signedEnclaveFile)
+            task.buildInDocker.set(conclaveExtension.buildInDocker)
+        }
 
-            val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->
+        val buildSignedEnclaveTask =
+            target.createTask<BuildSignedEnclave>("buildSignedEnclave${enclaveMode.capitalise()}") { task ->
                 task.dependsOn(generateEnclaveMetadataTask)
                 task.inputs.files(generateEnclaveMetadataTask.inputSignedEnclave)
                 task.outputSignedEnclave.set(generateEnclaveMetadataTask.inputSignedEnclave)
             }
 
-            val enclaveBundleJarTask = target.createTask<Jar>("enclaveBundle${type}Jar") { task ->
-                task.group = CONCLAVE_GROUP
-                task.description = "Compile an ${type}-mode enclave that can be loaded by SGX."
-                task.archiveAppendix.set("bundle")
-                task.archiveClassifier.set(typeLowerCase)
-                task.makeReproducible()
+        return target.createTask<Jar>("enclaveBundle${enclaveMode.capitalise()}Jar") { task ->
+            task.group = CONCLAVE_GROUP
+            task.description = "Build a Conclave enclave in ${enclaveMode.name.lowercase()} mode"
+            task.archiveAppendix.set("bundle")
+            task.archiveClassifier.set(modeLowerCase)
+            task.makeReproducible()
 
-                val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
-                    when (it) {
-                        // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
-                        // to use to sign the enclave and invokes the correct task accordingly.
-                        GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
-                        GRAMINE -> gramineBundleZipTask.get().archiveFile
-                        else -> throw IllegalArgumentException()
-                    }
-                }
-                task.from(bundleOutput)
-
-                task.rename {
-                    val bundleName = when (runtimeType.get()) {
-                        GRAALVM -> GRAALVM_BUNDLE_NAME
-                        GRAMINE -> GRAMINE_BUNDLE_NAME
-                        else -> throw IllegalArgumentException()
-                    }
-                    "$typeLowerCase-$bundleName"
-                }
-
-                task.onEnclaveClassName { enclaveClassName ->
-                    task.into("$ENCLAVE_BUNDLES_PATH/$enclaveClassName")
+            val bundleOutput: Provider<RegularFile> = runtimeType.flatMap {
+                when (it) {
+                    // buildSignedEnclaveTask determines which of the three Conclave supported signing methods
+                    // to use to sign the enclave and invokes the correct task accordingly.
+                    GRAALVM -> buildSignedEnclaveTask.outputSignedEnclave
+                    GRAMINE -> gramineBundleZipTask.get().archiveFile
+                    else -> throw IllegalArgumentException()
                 }
             }
+            task.from(bundleOutput)
 
-            target.artifacts.add(typeLowerCase, enclaveBundleJarTask.archiveFile)
+            task.rename {
+                val bundleName = when (runtimeType.get()) {
+                    GRAALVM -> GRAALVM_BUNDLE_NAME
+                    GRAMINE -> GRAMINE_BUNDLE_NAME
+                    else -> throw IllegalArgumentException()
+                }
+                "$modeLowerCase-$bundleName"
+            }
+
+            task.onEnclaveClassName { enclaveClassName ->
+                task.into("$ENCLAVE_BUNDLES_PATH/$enclaveClassName")
+            }
         }
     }
 
@@ -537,6 +541,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         isPreserveFileTimestamps = false
         isReproducibleFileOrder = true
         isZip64 = true
+    }
+
+    // https://docs.gradle.org/current/userguide/cross_project_publications.html
+    private fun registerCrossProjectArtifact(target: Project, enclaveMode: EnclaveMode, artifactJar: Jar) {
+        val configuration = target.configurations.create(enclaveMode.name.lowercase()) {
+            it.isCanBeConsumed = true
+            it.isCanBeResolved = false
+        }
+        target.artifacts.add(configuration.name, artifactJar.archiveFile)
     }
 
     private fun throwMissingFileForExternalSigning(config: String): Nothing {
@@ -579,6 +592,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             }
         }
     }
+
+    private fun EnclaveMode.capitalise(): String = name.lowercase().replaceFirstChar { it.uppercase() }
 
     /**
      * Helper method to perform some action when the enclave class name is available.

@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.common.EnclaveMode
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
@@ -52,12 +53,13 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     val kds: KDSExtension = objects.newInstance(KDSExtension::class.java)
 
     @get:Internal
-    val release: EnclaveExtension = objects.newInstance(BuildType.Release)
+    val release: EnclaveExtension = objects.newInstance(EnclaveMode.RELEASE)
     @get:Internal
-    val debug: EnclaveExtension = objects.newInstance(BuildType.Debug)
+    val debug: EnclaveExtension = objects.newInstance(EnclaveMode.DEBUG)
     @get:Internal
-    val simulation: EnclaveExtension = objects.newInstance(BuildType.Simulation)
+    val simulation: EnclaveExtension = objects.newInstance(EnclaveMode.SIMULATION)
 
+    @Suppress("unused")
     fun release(action: Action<EnclaveExtension>) {
         action.execute(release)
     }

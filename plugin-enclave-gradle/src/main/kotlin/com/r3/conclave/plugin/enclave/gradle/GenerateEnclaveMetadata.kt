@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.Cursor
 import com.r3.conclave.common.internal.SgxCssBody.enclaveHash
@@ -19,7 +20,7 @@ import kotlin.io.path.readBytes
 open class GenerateEnclaveMetadata @Inject constructor(
     objects: ObjectFactory,
     private val plugin: GradleEnclavePlugin,
-    private val buildType: BuildType,
+    private val enclaveMode: EnclaveMode,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile
@@ -61,12 +62,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
         logger.lifecycle("Enclave code hash:   ${SHA256Hash.get(enclaveMetadata[body][enclaveHash].read())}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata[key].mrsigner}")
 
-        val buildTypeString = buildType.toString().uppercase()
-        val buildSecurityString = when (buildType) {
-            BuildType.Release -> "SECURE"
-            else -> "INSECURE"
-        }
-
-        logger.lifecycle("Enclave mode:        $buildTypeString ($buildSecurityString)")
+        val buildSecurityString = if (enclaveMode == EnclaveMode.RELEASE) "SECURE" else "INSECURE"
+        logger.lifecycle("Enclave mode:        $enclaveMode ($buildSecurityString)")
     }
 }
