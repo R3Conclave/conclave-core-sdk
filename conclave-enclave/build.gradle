@@ -13,5 +13,4 @@ dependencies {
     testImplementation project(":internal-testing")
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
-    testImplementation "org.mockito:mockito-inline:$mockito_version"
 }

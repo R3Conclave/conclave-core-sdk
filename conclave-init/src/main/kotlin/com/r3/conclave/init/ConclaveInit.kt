@@ -45,7 +45,7 @@ object ConclaveInit {
             "# Dependency versions",
             "conclaveVersion=$conclaveVersion",
             "jupiterVersion=5.9.1",
-            "slf4jVersion=2.0.3",
+            "slf4jVersion=2.0.5",
         ))
     }
 

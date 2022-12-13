@@ -1,7 +1,7 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.internaltesting.threadWithFuture
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
