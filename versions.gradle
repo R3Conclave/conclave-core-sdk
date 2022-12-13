@@ -16,7 +16,7 @@ ext {
     junit_pioneer_version = '1.9.1'
     assertj_version = '3.23.1'
     guava_version = '31.1-jre'
-    spring_boot_version = '3.0.0'
+    spring_boot_version = '2.7.6'
     spring_dependency_management_version = '1.1.0'
     javax_json_version = '1.1.4'
     ibm_icu4j_version = '72.1'
