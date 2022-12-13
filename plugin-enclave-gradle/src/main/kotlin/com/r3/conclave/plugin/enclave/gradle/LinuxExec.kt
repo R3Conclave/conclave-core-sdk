@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.retrievePackageVersionFromManifest
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -10,21 +11,12 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import java.util.jar.JarFile
-import java.util.jar.Manifest
 import javax.inject.Inject
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
 
     companion object {
-
-        private val JEP_VERSION = run {
-            LinuxExec::class.java.classLoader
-                .getResources(JarFile.MANIFEST_NAME)
-                .asSequence()
-                .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue("Jep-Version") }
-                .firstOrNull() ?: throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
-        }
+        private val JEP_VERSION = retrievePackageVersionFromManifest("Jep-Version")
     }
 
     @get:Input

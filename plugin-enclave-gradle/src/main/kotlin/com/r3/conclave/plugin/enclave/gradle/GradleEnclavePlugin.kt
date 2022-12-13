@@ -43,12 +43,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     companion object {
         private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
 
-        private val CONCLAVE_SDK_VERSION = run {
-            GradleEnclavePlugin::class.java.classLoader
+        private val CONCLAVE_SDK_VERSION = retrievePackageVersionFromManifest("Conclave-Version")
+
+        fun retrievePackageVersionFromManifest(packageName: String): String {
+            return GradleEnclavePlugin::class.java.classLoader
                 .getResources(MANIFEST_NAME)
                 .asSequence()
-                .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue("Conclave-Version") }
-                .firstOrNull() ?: throw IllegalStateException("Could not find Conclave-Version in plugin's manifest")
+                .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue(packageName) }
+                .firstOrNull() ?: throw IllegalStateException("Could not find $packageName in plugin's manifest")
         }
     }
 
