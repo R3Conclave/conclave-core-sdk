@@ -201,9 +201,9 @@ The Python script also has access to an `enclave_sign(data)` global function, wh
 signed by the enclave's private signing key. This is equivalent to [`signer()`](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.enclave/-enclave/signer.html)
 in the Java API.
 
-The easiest way to use and test the API is to modify the latest [hello world](https://github.com/R3Conclave/conclave-tutorials/tree/master/hello-world)
-and replace the Java enclave with a Python one. If you need any help then please do [reach out](#community) we'll be
-happy to help.If you also have feedback on the API then we'd love to hear it.
+Have a look at the [PyTorch sample](https://github.com/R3Conclave/conclave-samples/tree/master/pytorch) to see how 
+this API is used. If you need any help then please do [reach out](#community) and we'll be happy to help. If you also 
+have feedback on the API then we'd love to hear it.
 
 ### How it works
 
@@ -217,12 +217,12 @@ good compatibility with existing Python libraries.
 
 As work in progress, there are plently of issues and features missing, which we plan to address. Some of which are:
 
-* Only simulation mode works. Mock mode should also work, but there's no way to interact with the Jep interpreter 
-  without using reflection.
-* All the necessary tool, such as Python, pip and Gramine, must be installed locally
+* Mock mode support is limited. There's currently no way to inspect objects from the Python environment without 
+  using reflection.
+* All the necessary tools, such as Python, pip and Gramine, must be installed locally
 * Most likely the enclave will only work on the same machine that it was built on.
 * Only a single Python file is supported
-
+* There's no yet API to send responses to other than the requester.
 
 ## Exploring the codebase
 
