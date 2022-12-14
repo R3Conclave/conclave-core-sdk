@@ -57,7 +57,7 @@ if [ -e /dev/sgx/enclave ] && [ -e /dev/sgx_enclave ]; then
     # To keep backward compatibility, the path /dev/sgx/enclave is also available when the in-kernel driver is used, but in this case it just represents a symbolic link pointing to /dev/sgx_enclave.
     # We do not use out-of-kernel driver in Conclave and therefore, when /dev/sgx/enclave is available alone (i.e. not as a symbolic link), we consider the device as not supported by Conclave
     sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/dev/sgx_provision:/dev_provision" "-v" "/dev/sgx_enclave:/dev/sgx_enclave" "-v" "/var/run/aesmd:/var/run/aesmd")
-elif [ -e /dev/sgx/enclave ] && [ ! -e /dev/sgx_enclave]; then
+elif [ -e /dev/sgx/enclave ] && [ ! -e /dev/sgx_enclave ]; then
     echo "Out of kernel SGX device found in /dev/sgx/enclave but not supported by Conclave"
     exit 1
 else
