@@ -1,12 +1,12 @@
 package com.r3.conclave.plugin.enclave.gradle.gramine
 
+import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
-import com.r3.conclave.plugin.enclave.gradle.BuildType
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
@@ -31,7 +31,7 @@ import kotlin.io.path.deleteExisting
 
 open class GenerateGramineBundle @Inject constructor(
     objects: ObjectFactory,
-    private val buildType: BuildType
+    private val enclaveMode: EnclaveMode
 ) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
@@ -85,7 +85,7 @@ open class GenerateGramineBundle @Inject constructor(
 
         generateManifest(architecture, ldPreload, pythonPackagesPath)
 
-        if (buildType != BuildType.Simulation) {
+        if (enclaveMode != EnclaveMode.SIMULATION) {
             generateSgxManifestAndSigstruct()
             generateToken()
             // The .manifest is not needed for debug and release modes
@@ -107,14 +107,14 @@ open class GenerateGramineBundle @Inject constructor(
                 "-Disv_svn=${revocationLevel.get() + 1}",
                 "-Dpython_packages_path=$pythonPackagesPath",
                 "-Dis_python_enclave=${pythonFile.isPresent}",
-                "-Denclave_mode=${buildType.name.uppercase()}",
+                "-Denclave_mode=$enclaveMode",
                 "-Denclave_worker_threads=10",
                 "-Dgramine_max_threads=${maxThreads.get()}",
                 "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
                 manifestTemplateFile.absolutePathString(),
                 GRAMINE_MANIFEST
             )
-            if (buildType == BuildType.Simulation) {
+            if (enclaveMode == EnclaveMode.SIMULATION) {
                 val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
                 command += "-Dsimulation_mrsigner=$simulationMrSigner"
             }

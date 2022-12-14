@@ -13,8 +13,6 @@ import kotlin.io.path.absolutePathString
 open class SignEnclave @Inject constructor(
     objects: ObjectFactory,
     private val plugin: GradleEnclavePlugin,
-    private val enclaveExtension: EnclaveExtension,
-    private val buildType: BuildType,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     @get:InputFile

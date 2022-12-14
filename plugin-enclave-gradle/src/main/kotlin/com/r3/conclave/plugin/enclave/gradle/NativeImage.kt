@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.common.EnclaveMode
 import io.github.classgraph.ClassGraph
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -57,7 +58,7 @@ reflection. Default: None
 open class NativeImage @Inject constructor(
         objects: ObjectFactory,
         private val plugin: GradleEnclavePlugin,
-        private val buildType: BuildType,
+        private val enclaveMode: EnclaveMode,
         private val linkerScript: Path,
         private val linuxExec: LinuxExec) : ConclaveTask() {
     companion object {
@@ -173,7 +174,7 @@ open class NativeImage @Inject constructor(
 
     private fun libraryPathOptions(): List<String> {
         val paths = mutableListOf("linux-sgx-libs/common")
-        paths += if (buildType == BuildType.Simulation) "linux-sgx-libs/simulation" else "linux-sgx-libs/hardware"
+        paths += if (enclaveMode == EnclaveMode.SIMULATION) "linux-sgx-libs/simulation" else "linux-sgx-libs/hardware"
         return paths.map { "-H:NativeLinkerOption=-L${copyResourceDirectory(it)}" }
     }
 
@@ -191,7 +192,7 @@ open class NativeImage @Inject constructor(
         // nothing is discarded by the linker. This is required if a static library has any constructors
         // or static variables that need to be initialised which would otherwise be discarded by
         // the linker.
-        val substratevmEnclaveModeLibsDir = copyResourceDirectory("substratevm-libs/${buildType.name.lowercase()}")
+        val substratevmEnclaveModeLibsDir = copyResourceDirectory("substratevm-libs/${enclaveMode.name.lowercase()}")
         return listOf("libjvm_enclave_common.a").map {
             "-H:NativeLinkerOption=${ substratevmEnclaveModeLibsDir / it }"
         }
@@ -358,7 +359,7 @@ open class NativeImage @Inject constructor(
      * ‘--entry’, ‘--undefined’, or ‘--gc-keep-exported’ or by a ENTRY command in the linker script.
      */
     private fun sgxLibrariesOptions(): List<String> {
-        val simSuffix = if (buildType == BuildType.Simulation) "_sim" else ""
+        val simSuffix = if (enclaveMode == EnclaveMode.SIMULATION) "_sim" else ""
         val trtsLib = "sgx_trts$simSuffix"
         val serviceLib = "sgx_tservice$simSuffix"
 
@@ -437,7 +438,7 @@ open class NativeImage @Inject constructor(
                     "-H:Name=enclave",
                     "-H:Path=" + outputs.files.first().parent
             )
-            + (if (buildType != BuildType.Release) debugOptions else emptyList())
+            + (if (enclaveMode != EnclaveMode.RELEASE) debugOptions else emptyList())
             + defaultOptions()
             + compilerOptions
             + placeholderLibPathOption()
