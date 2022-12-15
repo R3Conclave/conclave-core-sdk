@@ -29,13 +29,13 @@ data class QuoteCollateral(
 
     val tcbInfoIssuerChain: CertPath by lazy { parseCertPath(rawTcbInfoIssuerChain) }
 
-    val signedTcbInfo: SignedTcbInfo by lazy { SignedTcbInfo.fromJson(objectMapper.readTree(rawSignedTcbInfo.inputStream())) }
+    val signedTcbInfo: SignedTcbInfo by lazy {
+        SignedTcbInfo.fromJson(objectMapper.readTree(rawSignedTcbInfo.inputStream()))
+    }
 
     val qeIdentityIssuerChain: CertPath by lazy { parseCertPath(rawQeIdentityIssuerChain) }
 
     val signedQeIdentity: SignedEnclaveIdentity by lazy {
-        println("[rawSignedQeIdentity]")
-        println(String(rawSignedQeIdentity.bytes))
         SignedEnclaveIdentity.fromJson(objectMapper.readTree(rawSignedQeIdentity.inputStream()))
     }
 
