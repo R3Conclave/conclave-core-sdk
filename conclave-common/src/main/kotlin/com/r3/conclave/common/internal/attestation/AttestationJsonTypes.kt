@@ -21,7 +21,12 @@ import com.r3.conclave.common.internal.ByteCursor
 import com.r3.conclave.common.internal.Cursor
 import com.r3.conclave.common.internal.SgxQuote
 import com.r3.conclave.common.internal.SgxSignedQuote
+import java.lang.IllegalArgumentException
+import java.lang.NumberFormatException
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.util.*
+
 
 // We could avoid the redundant usage of @JsonProperty if we used the Kotlin Jackson module. However that makes shading
 // Kotlin more difficult and so we just put up with this minor boilerplate.
@@ -155,6 +160,79 @@ data class EpidVerificationReport @JsonCreator constructor(
     }
 }
 
+
+/**
+ * Utility functions for manual parsing of json primitives and producing sensible error messages.
+ */
+private fun JsonNode.checkFieldExists(fieldName: String) {
+    check(this.has(fieldName)) { "No such field $fieldName." }
+}
+
+private fun JsonNode.getInt(fieldName: String): Int {
+    checkFieldExists(fieldName)
+    val field = this.get(fieldName)
+    check(field.isInt) { "Expected $fieldName to be an integer, got ${field.nodeType}." }
+    return field.asInt()
+}
+
+private fun JsonNode.getString(fieldName: String): String {
+    checkFieldExists(fieldName)
+    val field = this.get(fieldName)
+    check(field.isTextual) { "Expected $fieldName to be a string, got ${field.nodeType}." }
+    return field.asText()
+}
+
+private fun JsonNode.getHexEncodedBytes(fieldName: String): OpaqueBytes {
+    val stringField = getString(fieldName)
+    val errorMessage by lazy { "$fieldName is not a valid hex string, " }
+    check(stringField.length % 2 == 0) { "$errorMessage, number of characters must be even." }
+    return try {
+        val bytes = stringField.chunked(2)
+                .map { it.toInt(16).toByte() }
+                .toByteArray()
+        OpaqueBytes(bytes)
+    } catch (e: NumberFormatException) {
+        throw IllegalArgumentException("$errorMessage, invalid characters.")
+    }
+}
+
+private fun JsonNode.getInstant(fieldName: String, format: String, timezone: String): Instant {
+    val dateString = getString(fieldName)
+    return try {
+        val dateFormat = SimpleDateFormat(format).apply { timeZone = TimeZone.getTimeZone(timezone) }
+        dateFormat.parse(dateString).toInstant()
+    } catch (e: Exception) {
+        throw IllegalArgumentException("Expected $fieldName to be a date of format $format, got $dateString", e)
+    }
+}
+
+private fun JsonNode.getArray(fieldName: String): JsonNode {
+    checkFieldExists(fieldName)
+    val field = this.get(fieldName)
+    check(field.isArray) { "Expected $fieldName to be an array, got ${field.nodeType}." }
+    return field
+}
+
+private fun JsonNode.getObject(fieldName: String): JsonNode {
+    checkFieldExists(fieldName)
+    val field = this.get(fieldName)
+    check(field.isObject) { "Expected $fieldName to be an object, got ${field.nodeType}." }
+    return field
+}
+
+/**
+ * Get a nullable json field.
+ * Note that this function will treat non-existing fields as "null".
+ */
+private fun <T> JsonNode.getNullable(fieldName: String, fn: (node: JsonNode) -> T): T? {
+    return if (this.has(fieldName) && !this.get(fieldName).isNull) {
+        fn(this)
+    } else {
+        null
+    }
+}
+
+
 /**
  * https://api.portal.trustedservices.intel.com/documentation#pcs-tcb-info-v2
  *
@@ -167,7 +245,16 @@ data class SignedTcbInfo @JsonCreator constructor(
 
     @JsonProperty("signature")
     val signature: OpaqueBytes
-)
+) {
+    companion object {
+        fun fromJson(json: JsonNode): SignedTcbInfo {
+            return SignedTcbInfo(
+                    TcbInfo.fromJson(json.getObject("tcbInfo")),
+                    json.getHexEncodedBytes("signature")
+            )
+        }
+    }
+}
 
 /**
  * @property version Version of the structure.
@@ -216,7 +303,44 @@ data class TcbInfo @JsonCreator constructor(
 
     @JsonProperty("tcbLevels")
     val tcbLevels: List<TcbLevel>
-)
+) {
+
+    /** The TcbInfo json is versioned. We currently support versions 2 and 3. */
+    enum class Version(val id: Int) {
+        V2(2), V3(3);
+
+        companion object {
+            fun fromInt(version: Int): Version {
+                return when(version) {
+                    2 -> V2
+                    3 -> V3
+                    else -> throw IllegalArgumentException("Unsupported TcbInfo json version: $version")
+                }
+            }
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JsonNode): TcbInfo {
+            /**
+             * First, get the version number.
+             * It's not required here, but it is needed for some sub-objects.
+             */
+            val versionNumber = json.getInt("version")
+            val version = Version.fromInt(versionNumber)
+            return TcbInfo(
+                    versionNumber,
+                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getHexEncodedBytes("fmspc"),
+                    json.getHexEncodedBytes("pceId"),
+                    json.getInt("tcbType"),
+                    json.getInt("tcbEvaluationDataNumber"),
+                    json.getArray("tcbLevels").map { TcbLevel.fromJson(it, version) }
+            )
+        }
+    }
+}
 
 /**
  * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
@@ -240,7 +364,20 @@ data class TcbLevel @JsonCreator constructor(
 
     @JsonProperty("advisoryIDs")
     val advisoryIDs: List<String>? = null
-)
+) {
+    companion object {
+        fun fromJson(json: JsonNode, version: TcbInfo.Version): TcbLevel {
+            return TcbLevel(
+                    Tcb.fromJson(json.getObject("tcb"), version),
+                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    TcbStatus.valueOf(json.getString("tcbStatus")),
+                    json.getNullable("advisoryIDs") { node ->
+                        node.getArray("advisoryIDs").map { it.asText() }
+                    }
+            )
+        }
+    }
+}
 
 enum class TcbStatus : VerificationStatus {
     /** TCB level of the SGX platform is up-to-date. */
@@ -307,7 +444,61 @@ data class Tcb @JsonCreator constructor(
     val sgxtcbcomp16svn: Int,
     @JsonProperty("pcesvn")
     val pcesvn: Int
-)
+) {
+    companion object {
+        fun fromJson(json: JsonNode, version: TcbInfo.Version): Tcb {
+            return when (version) {
+                TcbInfo.Version.V2 -> fromJsonV2(json)
+                TcbInfo.Version.V3 -> fromJsonV3(json)
+            }
+        }
+
+        private fun fromJsonV2(json: JsonNode): Tcb {
+            return Tcb(
+                    json.getInt("sgxtcbcomp01svn"),
+                    json.getInt("sgxtcbcomp02svn"),
+                    json.getInt("sgxtcbcomp03svn"),
+                    json.getInt("sgxtcbcomp04svn"),
+                    json.getInt("sgxtcbcomp05svn"),
+                    json.getInt("sgxtcbcomp06svn"),
+                    json.getInt("sgxtcbcomp07svn"),
+                    json.getInt("sgxtcbcomp08svn"),
+                    json.getInt("sgxtcbcomp09svn"),
+                    json.getInt("sgxtcbcomp10svn"),
+                    json.getInt("sgxtcbcomp11svn"),
+                    json.getInt("sgxtcbcomp12svn"),
+                    json.getInt("sgxtcbcomp13svn"),
+                    json.getInt("sgxtcbcomp14svn"),
+                    json.getInt("sgxtcbcomp15svn"),
+                    json.getInt("sgxtcbcomp16svn"),
+                    json.getInt("pcesvn")
+            )
+        }
+
+        private fun fromJsonV3(json: JsonNode): Tcb {
+            val tcbComponents = json.getArray("sgxtcbcomponents")
+            return Tcb(
+                    tcbComponents[0].getInt("svn"),
+                    tcbComponents[1].getInt("svn"),
+                    tcbComponents[2].getInt("svn"),
+                    tcbComponents[3].getInt("svn"),
+                    tcbComponents[4].getInt("svn"),
+                    tcbComponents[5].getInt("svn"),
+                    tcbComponents[6].getInt("svn"),
+                    tcbComponents[7].getInt("svn"),
+                    tcbComponents[8].getInt("svn"),
+                    tcbComponents[9].getInt("svn"),
+                    tcbComponents[10].getInt("svn"),
+                    tcbComponents[11].getInt("svn"),
+                    tcbComponents[12].getInt("svn"),
+                    tcbComponents[13].getInt("svn"),
+                    tcbComponents[14].getInt("svn"),
+                    tcbComponents[15].getInt("svn"),
+                    json.getInt("pcesvn")
+            )
+        }
+    }
+}
 
 /**
  * https://api.portal.trustedservices.intel.com/documentation#pcs-qe-identity-v2
@@ -320,7 +511,16 @@ data class SignedEnclaveIdentity @JsonCreator constructor(
 
     @JsonProperty("signature")
     val signature: OpaqueBytes
-)
+) {
+    companion object {
+        fun fromJson(json: JsonNode): SignedEnclaveIdentity {
+            return SignedEnclaveIdentity(
+                    EnclaveIdentity.fromJson(json.getObject("enclaveIdentity")),
+                    json.getHexEncodedBytes("signature")
+            )
+        }
+    }
+}
 
 /**
  * @property id Identifier of the SGX Enclave issued by Intel. Supported values are QE and QVE.
@@ -389,7 +589,41 @@ data class EnclaveIdentity @JsonCreator constructor(
 
     @JsonProperty("tcbLevels")
     val tcbLevels: List<EnclaveTcbLevel>
-)
+) {
+    /** The EnclaveIdentity json is versioned. We currently only support versions 2. */
+    enum class Version(val id: Int) {
+        V2(2);
+
+        companion object {
+            fun fromInt(version: Int): Version {
+                return when(version) {
+                    2 -> V2
+                    else -> throw IllegalArgumentException("Unsupported EnclaveIdentity json version: $version")
+                }
+            }
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JsonNode): EnclaveIdentity {
+            val version = Version.fromInt(json.getInt("version"))
+            return EnclaveIdentity(
+                    json.getString("id"),
+                    version.id,
+                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getInt("tcbEvaluationDataNumber"),
+                    json.getHexEncodedBytes("miscselect"),
+                    json.getHexEncodedBytes("miscselectMask"),
+                    json.getHexEncodedBytes("attributes"),
+                    json.getHexEncodedBytes("attributesMask"),
+                    json.getHexEncodedBytes("mrsigner"),
+                    json.getInt("isvprodid"),
+                    json.getArray("tcbLevels").map { EnclaveTcbLevel.fromJson(it) }
+            )
+        }
+    }
+}
 
 /**
  * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
@@ -407,7 +641,17 @@ data class EnclaveTcbLevel @JsonCreator constructor(
 
     @JsonProperty("tcbStatus")
     val tcbStatus: EnclaveTcbStatus
-)
+) {
+    companion object {
+        fun fromJson(json: JsonNode): EnclaveTcbLevel {
+            return EnclaveTcbLevel(
+                    EnclaveTcb.fromJson(json.getObject("tcb")),
+                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    EnclaveTcbStatus.valueOf(json.getString("tcbStatus"))
+            )
+        }
+    }
+}
 
 enum class EnclaveTcbStatus {
     /** TCB level of the SGX platform is up-to-date.. */
@@ -426,7 +670,13 @@ enum class EnclaveTcbStatus {
 data class EnclaveTcb @JsonCreator constructor(
     @JsonProperty("isvsvn")
     val isvsvn: Int
-)
+) {
+    companion object {
+        fun fromJson(json: JsonNode): EnclaveTcb {
+            return EnclaveTcb(json.getInt("isvsvn"))
+        }
+    }
+}
 
 val attestationObjectMapper = ObjectMapper().apply {
     registerModule(SimpleModule().apply {
