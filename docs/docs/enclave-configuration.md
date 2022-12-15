@@ -316,28 +316,6 @@ The path should be absolute or relative to the root of the enclave module.
     when building on Windows and macOS platforms. Additionally, on Windows, paths must use forwardslashes rather than
     the usual backslashes.
 
-## Enclave build process
-
-The Conclave gradle plugin automates the process of building a Conclave enclave and packaging it so that it can be
-instantiated elsewhere in a project.
-
-### Code hash and signer output
-
-When a Conclave enclave is built, information about the enclave is printed during the build process:
-
-```
-Enclave code hash:   4BEF016A8D35E04FCCFDDB725CE678C29A3FC284F47723869961334CED4C2A55
-Enclave code signer: 4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4
-Enclave mode:        SIMULATION (INSECURE)
-```
-
-These values can then be used by attesting parties as part of an [enclave constraints](constraints.md) string.
-
-The code hash and signer are also written to files in the enclave module build directory at the following paths:
-
-- Code hash: `<enclave-module-dir>/build/conclave/<enclave-mode>/mrenclave`
-- Code signer: `<enclave-module-dir>/build/conclave/<enclave-mode>/mrsigner`
-
 ## Assisted configuration of Native Image builds
 
 You can generate the reflection and serialization configuration files by using the
