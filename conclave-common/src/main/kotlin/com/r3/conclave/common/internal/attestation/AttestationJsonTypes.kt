@@ -166,7 +166,7 @@ data class EpidVerificationReport @JsonCreator constructor(
  * @property signature Signature calculated over [tcbInfo] body without whitespaces using TCB Signing Key
  * i.e: `{"version":2,"issueDate":"2019-07-30T12:00:00Z","nextUpdate":"2019-08-30T12:00:00Z",...}`
  */
-data class SignedTcbInfo constructor(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
+data class SignedTcbInfo(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
     companion object {
         fun fromJson(json: JsonNode): SignedTcbInfo {
             return SignedTcbInfo(
@@ -198,7 +198,7 @@ data class SignedTcbInfo constructor(val tcbInfo: TcbInfo, val signature: Opaque
  *
  * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
  */
-data class TcbInfo constructor(
+data class TcbInfo(
     val version: Int,
     val issueDate: Instant,
     val nextUpdate: Instant,
@@ -254,7 +254,7 @@ data class TcbInfo constructor(
  * @property advisoryIDs Array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to.
 
  */
-data class TcbLevel constructor(
+data class TcbLevel(
     val tcb: Tcb,
     val tcbDate: Instant,
     val tcbStatus: TcbStatus,
@@ -304,7 +304,7 @@ enum class TcbStatus : VerificationStatus {
     Revoked
 }
 
-data class Tcb constructor(
+data class Tcb(
     val sgxtcbcompsvn: List<Int>,
     val pcesvn: Int
 ) {
@@ -340,7 +340,7 @@ data class Tcb constructor(
  *
  * @property signature Signature calculated over qeIdentity body (without whitespaces) using TCB Info Signing Key.
  */
-data class SignedEnclaveIdentity constructor(
+data class SignedEnclaveIdentity(
     val enclaveIdentity: EnclaveIdentity,
     val signature: OpaqueBytes
 ) {
@@ -383,7 +383,7 @@ data class SignedEnclaveIdentity constructor(
  *
  * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
  */
-data class EnclaveIdentity constructor(
+data class EnclaveIdentity(
     val id: String,
     val version: Int,
     val issueDate: Instant,
@@ -438,7 +438,7 @@ data class EnclaveIdentity constructor(
  *
  * @property tcbStatus TCB level status.
  */
-data class EnclaveTcbLevel constructor(
+data class EnclaveTcbLevel(
     val tcb: EnclaveTcb,
     val tcbDate: Instant,
     val tcbStatus: EnclaveTcbStatus
@@ -468,7 +468,7 @@ enum class EnclaveTcbStatus {
 /**
  * @property isvsvn SGX Enclave’s ISV SVN.
  */
-data class EnclaveTcb constructor(val isvsvn: Int) {
+data class EnclaveTcb(val isvsvn: Int) {
     companion object {
         fun fromJson(json: JsonNode): EnclaveTcb {
             return EnclaveTcb(json.getInt("isvsvn"))
