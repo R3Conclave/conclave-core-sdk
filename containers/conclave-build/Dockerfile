@@ -11,23 +11,24 @@ ENV LC_ALL en_US.UTF-8
 
 # TODO curl and apt-transport-https are only needed to install gramine, so they should be run as part of a single
 #  command and then removed.
+# Disable interactive dialogue
+# Otherwise, a message that requires user input will appear while installing Java 17
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         build-essential \
         bash \
         curl \
         apt-transport-https \
-        python3-pip
+        python3-pip \
+        openjdk-17-jdk-headless
 
-# Install gramine for the in-kernel SGX driver
+# Add Gramine to Ubuntu repositories
 RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
 RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | tee /etc/apt/sources.list.d/gramine.list
 RUN apt-get -y update
-RUN apt-get -y install gramine
 
-# Disable interactive dialogue
-# Otherwise, a message that requires user input will appear while installing Java 17
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        openjdk-17-jdk-headless
+        gramine
+
 ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
 ARG jep_version

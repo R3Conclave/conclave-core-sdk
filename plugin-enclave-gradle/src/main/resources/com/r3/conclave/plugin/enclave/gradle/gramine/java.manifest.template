@@ -41,6 +41,8 @@ loader.env.CONCLAVE_SIMULATION_MRSIGNER = "{{ simulation_mrsigner }}"
 # Number of call interface worker threads, this needs to be less than gramine_max_threads
 loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
 
+host.env.CONCLAVE_DOCKER_IMAGE_TAG = "{{ docker_image_tag }}"
+
 fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },

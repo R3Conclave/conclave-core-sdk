@@ -98,32 +98,58 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     }
 
     /** Returns the ERROR output of the command only, in the returned list. */
-    fun exec(params: List<String>): List<String>? {
+    fun exec(params: List<String>, dockerWorkdirPath: String? = null, throwsException: Boolean=false): List<String>? {
         val errorOut = ByteArrayOutputStream()
-        val args: List<String> = if (buildInDocker.get()) getDockerRunArgs(params) else params
+        val args: List<String> = if (buildInDocker.get()) getDockerRunArgs(params, dockerWorkdirPath) else params
 
         val result = commandLine(
             args,
             commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
         )
 
-        if (result.exitValue == 137) {
-            // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
-            throwOutOfMemoryException()
-        }
         if (result.exitValue != 0) {
-            errorOut.writeTo(System.err)
-            // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
-            // Hopefully it's UTF-8 - it should be!
-            return String(errorOut.toByteArray()).split(System.lineSeparator())
+            handleError(result.exitValue, errorOut, throwsException)
         }
         result.assertNormalExitValue()
         return null
     }
 
-    /** Returns the output of the command executed in the container. */
-    fun execWithOutput(params: List<String>): String {
-        return commandWithOutput(*getDockerRunArgs(params).toTypedArray())
+    private fun handleError(exitCode:Int, errorOut :ByteArrayOutputStream, throwsException: Boolean): List<String> {
+        if (exitCode == 137) {
+            // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
+            throwOutOfMemoryException()
+        } else {
+            errorOut.writeTo(System.err)
+            // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
+            // Hopefully it's UTF-8 - it should be!
+            val errorString = String(errorOut.toByteArray())
+
+            if (throwsException) {
+                throw GradleException(errorString)
+            } else {
+                return errorString.split(System.lineSeparator())
+            }
+        }
+    }
+
+    fun execWithOutput(params: List<String>, dockerWorkdirPath: String? = null, throwsException: Boolean=false): String {
+        val standardOut = ByteArrayOutputStream()
+        val errorOut = ByteArrayOutputStream()
+        val args: List<String> = if (buildInDocker.get()) getDockerRunArgs(params, dockerWorkdirPath) else params
+
+        val (result, output) = commandWithResultAndOutput(args,
+            commandLineConfig = CommandLineConfig(
+                ignoreExitValue = true,
+                standardOutputStream = standardOut,
+                errorOutputStream = errorOut
+            )
+        )
+        println("Exit code for execWithOutput $result")
+        if (result.exitValue != 0) {
+            handleError(result.exitValue, errorOut, throwsException)
+        }
+        result.assertNormalExitValue()
+        return output
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
@@ -132,13 +158,14 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 "as the native image build process is memory intensive."
     )
 
-    private fun getDockerRunArgs(params: List<String>): List<String> {
+    private fun getDockerRunArgs(params: List<String>, dockerWorkdirPath: String?): List<String> {
         // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
         val userId = commandWithOutput("id", "-u")
         val groupId = commandWithOutput("id", "-g")
+        val workdir = dockerWorkdirPath?.mapBaseDirectory() ?: "/"
         return listOf(
             "docker",
             "run",
@@ -147,7 +174,12 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             "-u", "$userId:$groupId",
             "-v",
             "${baseDirectory.get()}:/project",
+            "-w", workdir,
             tag.get()
-        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+        ) + params.map { it.mapBaseDirectory() }
+    }
+
+    private fun String.mapBaseDirectory(): String {
+        return this.replace(baseDirectory.get(), "/project").replace("\\", "/")
     }
 }

@@ -175,14 +175,17 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveMode: EnclaveMode,
             conclaveExtension: ConclaveExtension,
             enclaveFatJarTask: Jar,
-            signingKey: Provider<RegularFile?>
+            signingKey: Provider<RegularFile?>,
+            linuxExec: LinuxExec
     ): GenerateGramineBundle {
-        return target.createTask("generateGramine${enclaveMode.capitalise()}Bundle", enclaveMode) { task ->
+        return target.createTask("generateGramine${enclaveMode.capitalise()}Bundle", enclaveMode, linuxExec) { task ->
             // TODO: Build Gramine enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
+            task.dependsOn(linuxExec)
             task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
+            task.dockerImageTag.set(linuxExec.tag)
             task.enclaveJar.set(enclaveFatJarTask.archiveFile)
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
@@ -282,7 +285,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
-            task.dependsOn(copyGraalVM)
             task.baseDirectory.set(target.projectDir.toPath().toString())
             task.tag.set("conclave-build:$CONCLAVE_SDK_VERSION")
             // Create a 'latest' tag too so users can follow our tutorial documentation using the
@@ -342,7 +344,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 enclaveMode,
                 conclaveExtension,
                 enclaveFatJarTask,
-                signingKey
+                signingKey,
+                linuxExec
             )
             val gramineBundleZipTask = createGramineBundleZipTask(target, enclaveMode, generateGramineBundleTask)
 

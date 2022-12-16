@@ -3,15 +3,18 @@ package com.r3.conclave.host.internal.gramine
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SECCOMP
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.host.internal.*
+import org.tomlj.Toml
 import java.io.IOException
 import java.lang.IllegalArgumentException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 import kotlin.io.path.createDirectories
@@ -22,11 +25,12 @@ class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
     override val enclaveClassName: String,
     private val zipFileUrl: URL
+
 ) : EnclaveHandle {
 
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
-
+        private const val DOCKER_WORKING_DIR = "/project"
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
                 EnclaveMode.SIMULATION -> "gramine-direct"
@@ -54,6 +58,10 @@ class GramineEnclaveHandle(
         enclaveInterface = SocketHostEnclaveInterface()
     }
 
+    private fun String.mapWorkingDirectory(): String {
+        return this.replace(workingDirectory.toFile().absolutePath, DOCKER_WORKING_DIR).replace("\\", "/")
+    }
+
     override fun initialise() {
         /** Bind a port for the interface to use. */
         val port = enclaveInterface.bindPort()
@@ -62,14 +70,7 @@ class GramineEnclaveHandle(
          * Start the enclave process, passing the port that the call interface is listening on.
          * TODO: Implement a *secure* method for passing port to the enclave.
          */
-        val command = mutableListOf(getGramineExecutable(enclaveMode))
-        command += listOf(
-            "java",
-            "-cp",
-            GRAMINE_ENCLAVE_JAR,
-            "com.r3.conclave.enclave.internal.GramineEntryPoint",
-            port.toString()
-        )
+        val command = prepareCommandToRun(port)
 
         gramineProcess = ProcessBuilder()
             .inheritIO()
@@ -135,6 +136,53 @@ class GramineEnclaveHandle(
                 }
             }
         }
+    }
+
+    private fun prepareCommandToRun(port: Int): List<String> {
+        val runningImageTag = retrieveImageTagFromManifest()
+        val dockerCommand = listOf(
+            "docker",
+            "run",
+            "--network",
+            "host",
+            "--device=/dev/sgx/enclave",
+            "--device=/dev/sgx/provision",
+            "-v",
+            "/var/run/aesmd:/var/run/aesmd",
+            "-v",
+            "/dev/sgx_enclave:/dev/sgx_enclave",
+            "-v",
+            "/dev/sgx_provision:/dev/sgx_provision",
+            "-i",
+            "--rm",
+            "-v",
+            "${workingDirectory.toFile().absolutePath}:$DOCKER_WORKING_DIR",
+            "-w", workingDirectory.toFile().absolutePath.mapWorkingDirectory(),
+            "--security-opt",
+            "seccomp=${workingDirectory.toFile().absolutePath}/$GRAMINE_SECCOMP",
+            runningImageTag
+        )
+
+        val gramineCommand = getGramineExecutable(enclaveMode)
+
+        val javaCommand = listOf(
+            "java",
+            "-cp",
+            GRAMINE_ENCLAVE_JAR,
+            "com.r3.conclave.enclave.internal.GramineEntryPoint",
+            port.toString()
+        )
+
+        println("FInal command: ${(dockerCommand + gramineCommand + javaCommand).joinToString()}")
+        return dockerCommand + gramineCommand + javaCommand
+    }
+
+    private fun retrieveImageTagFromManifest(): String {
+        val manifest = Paths.get(
+            if (enclaveMode == EnclaveMode.SIMULATION) "$workingDirectory/$GRAMINE_MANIFEST" else "$workingDirectory/$GRAMINE_SGX_MANIFEST"
+        )
+        val parseResult = Toml.parse(manifest)
+        return parseResult.getString("host.env.CONCLAVE_DOCKER_IMAGE_TAG")!!
     }
 
     override val mockEnclave: Any

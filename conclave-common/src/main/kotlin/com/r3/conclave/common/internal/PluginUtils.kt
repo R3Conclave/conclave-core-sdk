@@ -11,5 +11,6 @@ object PluginUtils {
     const val GRAMINE_SGX_TOKEN = "java.token"
     /** This contains the enclave's [SgxEnclaveCss], also known as the `SIGSTRUCT`. */
     const val GRAMINE_SIGSTRUCT = "java.sig"
+    const val GRAMINE_SECCOMP = "gramine-seccomp.json"
     const val PYTHON_FILE = "enclave.py"
 }
