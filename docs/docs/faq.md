@@ -212,7 +212,7 @@ Intel provides official guidance on the
 The developer is responsible for writing code that restarts the enclave from time to time. Restarting the enclave will
 force a re-attestation which refreshes the
 [`EnclaveInstanceInfo`](api/-conclave%20-core/com.r3.conclave.common/-enclave-instance-info/index.html). Enclave restarts
-should be synchronized between the host and the client-side tool. To avoid synchronization errors, remember to make the
+should be synchronized between the host and the client. To avoid synchronization errors, remember to make the
 host server refresh more frequently than the client requires.
 
 ### Isn't putting a whole JVM into an enclave a bit fat?
@@ -340,6 +340,3 @@ problems. These problems include high complexity, low performance, lack of stabi
 intensive training.
 
 SGX is relatively simple, high performance, easy-to-use, and stable over time.
-
-However, we acknowledge the limits of relying on hardware-based solutions and are interested in bringing circuit-based
-cryptographic algorithms to market one day.
