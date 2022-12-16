@@ -173,7 +173,7 @@ class GramineEnclaveHandle(
             port.toString()
         )
 
-        println("FInal command: ${(dockerCommand + gramineCommand + javaCommand).joinToString()}")
+        println("Docker command: ${(dockerCommand + gramineCommand + javaCommand).joinToString(" " )}")
         return dockerCommand + gramineCommand + javaCommand
     }
 
