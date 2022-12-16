@@ -9,6 +9,7 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.host.internal.*
 import org.tomlj.Toml
+import java.io.BufferedReader
 import java.io.IOException
 import java.lang.IllegalArgumentException
 import java.net.URL
@@ -48,6 +49,8 @@ class GramineEnclaveHandle(
 
     override val enclaveInterface: SocketHostEnclaveInterface
 
+    private val dockerImageTag: String
+
     init {
         require(enclaveMode != EnclaveMode.MOCK)
         NativeLoader.loadHostLibraries(enclaveMode)
@@ -56,11 +59,26 @@ class GramineEnclaveHandle(
 
         /** Create a socket host interface. */
         enclaveInterface = SocketHostEnclaveInterface()
+
+        dockerImageTag = retrieveImageTagFromManifest()
     }
 
     private fun String.mapWorkingDirectory(): String {
         return this.replace(workingDirectory.toFile().absolutePath, DOCKER_WORKING_DIR).replace("\\", "/")
     }
+
+    private fun runSimpleCommand(command: List<String>): String {
+        val process = ProcessBuilder()
+            .command(command)
+            .start()
+        process.waitFor(5L, TimeUnit.SECONDS)
+        val lines = process.inputStream.bufferedReader().use(BufferedReader::readText).trimEnd()
+            .split(System.lineSeparator())
+        //  We expect 1 line result and a newline
+        check(lines.size == 1) { "Command produced an unexpected result" }
+        return lines[0]
+    }
+
 
     override fun initialise() {
         /** Bind a port for the interface to use. */
@@ -70,7 +88,9 @@ class GramineEnclaveHandle(
          * Start the enclave process, passing the port that the call interface is listening on.
          * TODO: Implement a *secure* method for passing port to the enclave.
          */
-        val command = prepareCommandToRun(port)
+        val user = runSimpleCommand(listOf("id", "-u"))
+        val group = runSimpleCommand(listOf("id", "-g"))
+        val command = prepareCommandToRun(user, group, port)
 
         gramineProcess = ProcessBuilder()
             .inheritIO()
@@ -138,21 +158,38 @@ class GramineEnclaveHandle(
         }
     }
 
-    private fun prepareCommandToRun(port: Int): List<String> {
-        val runningImageTag = retrieveImageTagFromManifest()
-        val dockerCommand = listOf(
+    private fun prepareCommandToRun(user: String, group: String, port: Int): List<String> {
+        val dockerCommand = getDockerCommand(user, group)
+        val gramineCommand = getGramineExecutable(enclaveMode)
+        val javaCommand = getJavaCommand(port)
+
+        val command = dockerCommand + gramineCommand + javaCommand
+        logger.debug("Docker command: ${command.joinToString(" ")}")
+        return command
+    }
+
+    private fun getJavaCommand(port: Int): List<String> {
+        return listOf(
+            "java",
+            "-cp",
+            GRAMINE_ENCLAVE_JAR,
+            "com.r3.conclave.enclave.internal.GramineEntryPoint",
+            port.toString()
+        )
+    }
+
+    private fun getDockerCommand(user: String, group: String): List<String> {
+        return listOf(
             "docker",
             "run",
+            "-u",
+            "$user:$group",
             "--network",
             "host",
-            "--device=/dev/sgx/enclave",
-            "--device=/dev/sgx/provision",
+            "--device=/dev/sgx_enclave",
+            "--device=/dev/sgx_provision",
             "-v",
             "/var/run/aesmd:/var/run/aesmd",
-            "-v",
-            "/dev/sgx_enclave:/dev/sgx_enclave",
-            "-v",
-            "/dev/sgx_provision:/dev/sgx_provision",
             "-i",
             "--rm",
             "-v",
@@ -160,21 +197,8 @@ class GramineEnclaveHandle(
             "-w", workingDirectory.toFile().absolutePath.mapWorkingDirectory(),
             "--security-opt",
             "seccomp=${workingDirectory.toFile().absolutePath}/$GRAMINE_SECCOMP",
-            runningImageTag
+            dockerImageTag
         )
-
-        val gramineCommand = getGramineExecutable(enclaveMode)
-
-        val javaCommand = listOf(
-            "java",
-            "-cp",
-            GRAMINE_ENCLAVE_JAR,
-            "com.r3.conclave.enclave.internal.GramineEntryPoint",
-            port.toString()
-        )
-
-        println("Docker command: ${(dockerCommand + gramineCommand + javaCommand).joinToString(" " )}")
-        return dockerCommand + gramineCommand + javaCommand
     }
 
     private fun retrieveImageTagFromManifest(): String {
