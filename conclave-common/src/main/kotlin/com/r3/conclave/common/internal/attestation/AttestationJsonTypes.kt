@@ -499,15 +499,10 @@ private fun JsonNode.getString(fieldName: String): String {
 
 private fun JsonNode.getHexEncodedBytes(fieldName: String): OpaqueBytes {
     val stringField = getString(fieldName)
-    val errorMessage by lazy { "$fieldName is not a valid hex string, " }
-    require(stringField.length % 2 == 0) { "$errorMessage, number of characters must be even." }
     return try {
-        val bytes = stringField.chunked(2)
-                .map { it.toInt(16).toByte() }
-                .toByteArray()
-        OpaqueBytes(bytes)
+        OpaqueBytes.parse(stringField)
     } catch (e: NumberFormatException) {
-        throw IllegalArgumentException("$errorMessage, invalid characters.")
+        throw IllegalArgumentException("$fieldName is not a valid hex string.")
     }
 }
 
