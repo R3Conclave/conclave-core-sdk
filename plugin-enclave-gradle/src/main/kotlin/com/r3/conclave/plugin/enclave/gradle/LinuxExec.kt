@@ -144,7 +144,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 errorOutputStream = errorOut
             )
         )
-        println("Exit code for execWithOutput $result")
+
         if (result.exitValue != 0) {
             handleError(result.exitValue, errorOut, throwsException)
         }
@@ -165,7 +165,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // to support Windows.
         val userId = commandWithOutput("id", "-u")
         val groupId = commandWithOutput("id", "-g")
-        val workdir = dockerWorkdirPath?.mapBaseDirectory() ?: "/"
+        val workdir = dockerWorkdirPath?.mapBaseDirectory() ?: "/project"
         return listOf(
             "docker",
             "run",
