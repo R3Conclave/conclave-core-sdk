@@ -186,12 +186,6 @@ class SignedTcbInfoTest {
         assertThat(result.sgxtcbcomp15svn).isEqualTo(15)
         assertThat(result.sgxtcbcomp16svn).isEqualTo(16)
         assertThat(result.pcesvn).isEqualTo(9)
-
-        // TODO: Remove this once refactor is complete
-        if (version == TcbInfo.Version.V2) {
-            val oldResult = attestationObjectMapper.readValue(json.toString(), Tcb::class.java)
-            assertThat(result).isEqualTo(oldResult)
-        }
     }
 
     @ParameterizedTest
@@ -199,14 +193,7 @@ class SignedTcbInfoTest {
     fun `signature deserialization test`(version: TcbInfo.Version) {
         val json = loadResourceAsJson("test_tcbinfo_${version}.json")
         val result = SignedTcbInfo.fromJson(json)
-
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse("01020304"))   // Matches resource content
-
-        // TODO: Remove this once refactor is complete
-        if (version == TcbInfo.Version.V2) {
-            val oldResult = attestationObjectMapper.readValue(json.toString(), SignedTcbInfo::class.java)
-            assertThat(result).isEqualTo(oldResult)
-        }
     }
 
     @ParameterizedTest
@@ -214,17 +201,10 @@ class SignedTcbInfoTest {
     fun `tcb info deserialization test`(version: TcbInfo.Version) {
         val json = loadResourceAsJson("test_tcbinfo_$version.json")
         val result = SignedTcbInfo.fromJson(json)
-
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse("01020304"))
         assertThat(result.tcbInfo.version).isEqualTo(version.id)
         assertThat(result.tcbInfo.issueDate).isEqualTo(Instant.parse("2020-01-02T03:04:05Z"))
         assertThat(result.tcbInfo.nextUpdate).isEqualTo(Instant.parse("2021-02-03T04:05:06Z"))
-
-        // TODO: Remove this once refactor is complete
-        if (version == TcbInfo.Version.V2) {
-            val oldResult = attestationObjectMapper.readValue(json.toString(), SignedTcbInfo::class.java)
-            assertThat(result).isEqualTo(oldResult)
-        }
     }
 }
 
@@ -239,13 +219,6 @@ class SignedEnclaveIdentityTest {
     fun `signature deserializes correctly`(version: EnclaveIdentity.Version) {
         val json = loadResourceAsJson("test_signed_enclave_identity_$version.json")
         val result = SignedEnclaveIdentity.fromJson(json)
-
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse("01020304"))
-
-        // TODO: Remove this once refactor is complete
-        if (version == EnclaveIdentity.Version.V2) {
-            val oldResult = attestationObjectMapper.readValue(json.toString(), SignedEnclaveIdentity::class.java)
-            assertThat(result).isEqualTo(oldResult)
-        }
     }
 }

@@ -160,6 +160,364 @@ data class EpidVerificationReport @JsonCreator constructor(
     }
 }
 
+/**
+ * https://api.portal.trustedservices.intel.com/documentation#pcs-tcb-info-v2
+ *
+ * @property signature Signature calculated over [tcbInfo] body without whitespaces using TCB Signing Key
+ * i.e: `{"version":2,"issueDate":"2019-07-30T12:00:00Z","nextUpdate":"2019-08-30T12:00:00Z",...}`
+ */
+data class SignedTcbInfo constructor(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
+    companion object {
+        fun fromJson(json: JsonNode): SignedTcbInfo {
+            return SignedTcbInfo(
+                    TcbInfo.fromJson(json.getObject("tcbInfo")),
+                    json.getHexEncodedBytes("signature")
+            )
+        }
+    }
+}
+
+/**
+ * @property version Version of the structure.
+ *
+ * @property issueDate Date and time the TCB information was created.
+ *
+ * @property nextUpdate Date and time by which next TCB information will be issued.
+ *
+ * @property fmspc FMSPC (Family-Model-Stepping-Platform-CustomSKU).
+ *
+ * @property pceId PCE identifier.
+ *
+ * @property tcbType Type of TCB level composition that determines TCB level comparison logic.
+ *
+ * @property tcbEvaluationDataNumber A monotonically increasing sequence number changed when Intel updates the content
+ * of the TCB evaluation data set: TCB Info, QE Idenity and QVE Identity. The tcbEvaluationDataNumber update is
+ * synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU) and QE/QVE Identity.
+ * This sequence number allows users to easily determine when a particular TCB Info/QE Idenity/QVE Identiy superseedes
+ * another TCB Info/QE Identity/QVE Identity.
+ *
+ * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
+ */
+data class TcbInfo constructor(
+    val version: Int,
+    val issueDate: Instant,
+    val nextUpdate: Instant,
+    val fmspc: OpaqueBytes,
+    val pceId: OpaqueBytes,
+    val tcbType: Int,
+    val tcbEvaluationDataNumber: Int,
+    val tcbLevels: List<TcbLevel>
+) {
+    /** The TcbInfo json is versioned. We currently support versions 2 and 3. */
+    enum class Version(val id: Int) {
+        V2(2), V3(3);
+
+        companion object {
+            fun fromInt(version: Int): Version {
+                return when(version) {
+                    2 -> V2
+                    3 -> V3
+                    else -> throw IllegalArgumentException("Unsupported TcbInfo json version: $version")
+                }
+            }
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JsonNode): TcbInfo {
+            /**
+             * First, get the version number.
+             * It's not required here, but it is needed for some sub-objects.
+             */
+            val versionNumber = json.getInt("version")
+            val version = Version.fromInt(versionNumber)
+            return TcbInfo(
+                    versionNumber,
+                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getHexEncodedBytes("fmspc"),
+                    json.getHexEncodedBytes("pceId"),
+                    json.getInt("tcbType"),
+                    json.getInt("tcbEvaluationDataNumber"),
+                    json.getArray("tcbLevels").map { TcbLevel.fromJson(it, version) }
+            )
+        }
+    }
+}
+
+/**
+ * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
+ * that were originally published on or prior to this date.
+ *
+ * @property tcbStatus TCB level status.
+ *
+ * @property advisoryIDs Array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to.
+
+ */
+data class TcbLevel constructor(
+    val tcb: Tcb,
+    val tcbDate: Instant,
+    val tcbStatus: TcbStatus,
+    val advisoryIDs: List<String>? = null
+) {
+    companion object {
+        fun fromJson(json: JsonNode, version: TcbInfo.Version): TcbLevel {
+            return TcbLevel(
+                    Tcb.fromJson(json.getObject("tcb"), version),
+                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    TcbStatus.valueOf(json.getString("tcbStatus")),
+                    json.getNullable("advisoryIDs") { node ->
+                        node.getArray("advisoryIDs").map { it.asText() }
+                    }
+            )
+        }
+    }
+}
+
+enum class TcbStatus : VerificationStatus {
+    /** TCB level of the SGX platform is up-to-date. */
+    UpToDate,
+
+    /**
+     * TCB level of the SGX platform is up-to-date but due to certain issues affecting the platform, additional SW
+     * Hardening in the attesting SGX enclaves may be needed.
+     */
+    SWHardeningNeeded,
+
+    /**
+     * TCB level of the SGX platform is up-to-date but additional configuration of SGX platform may be needed.*/
+    ConfigurationNeeded,
+
+    /**
+     * TCB level of the SGX platform is up-to-date but additional configuration for the platform and SW Hardening in the
+     * attesting SGX enclaves may be needed.
+     */
+    ConfigurationAndSWHardeningNeeded,
+
+    /** TCB level of SGX platform is outdated. */
+    OutOfDate,
+
+    /** TCB level of SGX platform is outdated and additional configuration of SGX platform may be needed. */
+    OutOfDateConfigurationNeeded,
+
+    /** TCB level of SGX platform is revoked. The platform is not trustworthy. */
+    Revoked
+}
+
+data class Tcb constructor(
+    val sgxtcbcomp01svn: Int,
+    val sgxtcbcomp02svn: Int,
+    val sgxtcbcomp03svn: Int,
+    val sgxtcbcomp04svn: Int,
+    val sgxtcbcomp05svn: Int,
+    val sgxtcbcomp06svn: Int,
+    val sgxtcbcomp07svn: Int,
+    val sgxtcbcomp08svn: Int,
+    val sgxtcbcomp09svn: Int,
+    val sgxtcbcomp10svn: Int,
+    val sgxtcbcomp11svn: Int,
+    val sgxtcbcomp12svn: Int,
+    val sgxtcbcomp13svn: Int,
+    val sgxtcbcomp14svn: Int,
+    val sgxtcbcomp15svn: Int,
+    val sgxtcbcomp16svn: Int,
+    val pcesvn: Int
+) {
+    companion object {
+        fun fromJson(json: JsonNode, version: TcbInfo.Version): Tcb {
+            return when (version) {
+                TcbInfo.Version.V2 -> fromJsonV2(json)
+                TcbInfo.Version.V3 -> fromJsonV3(json)
+            }
+        }
+
+        private fun fromJsonV2(json: JsonNode): Tcb {
+            return Tcb(
+                    json.getInt("sgxtcbcomp01svn"),
+                    json.getInt("sgxtcbcomp02svn"),
+                    json.getInt("sgxtcbcomp03svn"),
+                    json.getInt("sgxtcbcomp04svn"),
+                    json.getInt("sgxtcbcomp05svn"),
+                    json.getInt("sgxtcbcomp06svn"),
+                    json.getInt("sgxtcbcomp07svn"),
+                    json.getInt("sgxtcbcomp08svn"),
+                    json.getInt("sgxtcbcomp09svn"),
+                    json.getInt("sgxtcbcomp10svn"),
+                    json.getInt("sgxtcbcomp11svn"),
+                    json.getInt("sgxtcbcomp12svn"),
+                    json.getInt("sgxtcbcomp13svn"),
+                    json.getInt("sgxtcbcomp14svn"),
+                    json.getInt("sgxtcbcomp15svn"),
+                    json.getInt("sgxtcbcomp16svn"),
+                    json.getInt("pcesvn")
+            )
+        }
+
+        private fun fromJsonV3(json: JsonNode): Tcb {
+            val tcbComponents = json.getArray("sgxtcbcomponents")
+            return Tcb(
+                    tcbComponents[0].getInt("svn"),
+                    tcbComponents[1].getInt("svn"),
+                    tcbComponents[2].getInt("svn"),
+                    tcbComponents[3].getInt("svn"),
+                    tcbComponents[4].getInt("svn"),
+                    tcbComponents[5].getInt("svn"),
+                    tcbComponents[6].getInt("svn"),
+                    tcbComponents[7].getInt("svn"),
+                    tcbComponents[8].getInt("svn"),
+                    tcbComponents[9].getInt("svn"),
+                    tcbComponents[10].getInt("svn"),
+                    tcbComponents[11].getInt("svn"),
+                    tcbComponents[12].getInt("svn"),
+                    tcbComponents[13].getInt("svn"),
+                    tcbComponents[14].getInt("svn"),
+                    tcbComponents[15].getInt("svn"),
+                    json.getInt("pcesvn")
+            )
+        }
+    }
+}
+
+/**
+ * https://api.portal.trustedservices.intel.com/documentation#pcs-qe-identity-v2
+ *
+ * @property signature Signature calculated over qeIdentity body (without whitespaces) using TCB Info Signing Key.
+ */
+data class SignedEnclaveIdentity constructor(
+    val enclaveIdentity: EnclaveIdentity,
+    val signature: OpaqueBytes
+) {
+    companion object {
+        fun fromJson(json: JsonNode): SignedEnclaveIdentity {
+            return SignedEnclaveIdentity(
+                    EnclaveIdentity.fromJson(json.getObject("enclaveIdentity")),
+                    json.getHexEncodedBytes("signature")
+            )
+        }
+    }
+}
+
+/**
+ * @property id Identifier of the SGX Enclave issued by Intel. Supported values are QE and QVE.
+ *
+ * @property version Version of the structure.
+ *
+ * @property issueDate Date and time the QE Identity information was created.
+ *
+ * @property nextUpdate Date and time by which next QE identity information will be issued.
+ *
+ * @property tcbEvaluationDataNumber A monotonically increasing sequence number changed when Intel updates the content
+ * of the TCB evaluation data set: TCB Info, QE Idenity and QVE Identity. The tcbEvaluationDataNumber update is
+ * synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU) and QE/QVE Identity.
+ * This sequence number allows users to easily determine when a particular TCB Info/QE Idenity/QVE Identiy superseedes
+ * another TCB Info/QE Identity/QVE Identity.
+ *
+ * @property miscselect miscselect "golden" value (upon applying mask).
+ *
+ * @property miscselectMask Mask to be applied to [miscselect] value retrieved from the platform.
+ *
+ * @property attributes attributes "golden" value (upon applying mask).
+ *
+ * @property attributesMask Mask to be applied to attributes value retrieved from the platform.
+ *
+ * @property mrsigner mrsigner hash.
+ *
+ * @property isvprodid Enclave Product ID.
+ *
+ * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
+ */
+data class EnclaveIdentity constructor(
+    val id: String,
+    val version: Int,
+    val issueDate: Instant,
+    val nextUpdate: Instant,
+    val tcbEvaluationDataNumber: Int,
+    val miscselect: OpaqueBytes,
+    val miscselectMask: OpaqueBytes,
+    val attributes: OpaqueBytes,
+    val attributesMask: OpaqueBytes,
+    val mrsigner: OpaqueBytes,
+    val isvprodid: Int,
+    val tcbLevels: List<EnclaveTcbLevel>
+) {
+    /** The EnclaveIdentity json is versioned. We currently only support versions 2. */
+    enum class Version(val id: Int) {
+        V2(2);
+
+        companion object {
+            fun fromInt(version: Int): Version {
+                return when(version) {
+                    2 -> V2
+                    else -> throw IllegalArgumentException("Unsupported EnclaveIdentity json version: $version")
+                }
+            }
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JsonNode): EnclaveIdentity {
+            val version = Version.fromInt(json.getInt("version"))
+            return EnclaveIdentity(
+                    json.getString("id"),
+                    version.id,
+                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getInt("tcbEvaluationDataNumber"),
+                    json.getHexEncodedBytes("miscselect"),
+                    json.getHexEncodedBytes("miscselectMask"),
+                    json.getHexEncodedBytes("attributes"),
+                    json.getHexEncodedBytes("attributesMask"),
+                    json.getHexEncodedBytes("mrsigner"),
+                    json.getInt("isvprodid"),
+                    json.getArray("tcbLevels").map { EnclaveTcbLevel.fromJson(it) }
+            )
+        }
+    }
+}
+
+/**
+ * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
+ * that were originally published on or prior to this date.
+ *
+ * @property tcbStatus TCB level status.
+ */
+data class EnclaveTcbLevel constructor(
+    val tcb: EnclaveTcb,
+    val tcbDate: Instant,
+    val tcbStatus: EnclaveTcbStatus
+) {
+    companion object {
+        fun fromJson(json: JsonNode): EnclaveTcbLevel {
+            return EnclaveTcbLevel(
+                    EnclaveTcb.fromJson(json.getObject("tcb")),
+                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    EnclaveTcbStatus.valueOf(json.getString("tcbStatus"))
+            )
+        }
+    }
+}
+
+enum class EnclaveTcbStatus {
+    /** TCB level of the SGX platform is up-to-date.. */
+    UpToDate,
+
+    /** TCB level of SGX platform is outdated. */
+    OutOfDate,
+
+    /** TCB level of SGX platform is revoked. The platform is not trustworthy. */
+    Revoked
+}
+
+/**
+ * @property isvsvn SGX Enclave’s ISV SVN.
+ */
+data class EnclaveTcb constructor(val isvsvn: Int) {
+    companion object {
+        fun fromJson(json: JsonNode): EnclaveTcb {
+            return EnclaveTcb(json.getInt("isvsvn"))
+        }
+    }
+}
 
 /**
  * Utility functions for manual parsing of json primitives and producing sensible error messages.
@@ -229,452 +587,6 @@ private fun <T> JsonNode.getNullable(fieldName: String, fn: (node: JsonNode) -> 
         fn(this)
     } else {
         null
-    }
-}
-
-
-/**
- * https://api.portal.trustedservices.intel.com/documentation#pcs-tcb-info-v2
- *
- * @property signature Signature calculated over [tcbInfo] body without whitespaces using TCB Signing Key
- * i.e: `{"version":2,"issueDate":"2019-07-30T12:00:00Z","nextUpdate":"2019-08-30T12:00:00Z",...}`
- */
-data class SignedTcbInfo @JsonCreator constructor(
-    @JsonProperty("tcbInfo")
-    val tcbInfo: TcbInfo,
-
-    @JsonProperty("signature")
-    val signature: OpaqueBytes
-) {
-    companion object {
-        fun fromJson(json: JsonNode): SignedTcbInfo {
-            return SignedTcbInfo(
-                    TcbInfo.fromJson(json.getObject("tcbInfo")),
-                    json.getHexEncodedBytes("signature")
-            )
-        }
-    }
-}
-
-/**
- * @property version Version of the structure.
- *
- * @property issueDate Date and time the TCB information was created.
- *
- * @property nextUpdate Date and time by which next TCB information will be issued.
- *
- * @property fmspc FMSPC (Family-Model-Stepping-Platform-CustomSKU).
- *
- * @property pceId PCE identifier.
- *
- * @property tcbType Type of TCB level composition that determines TCB level comparison logic.
- *
- * @property tcbEvaluationDataNumber A monotonically increasing sequence number changed when Intel updates the content
- * of the TCB evaluation data set: TCB Info, QE Idenity and QVE Identity. The tcbEvaluationDataNumber update is
- * synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU) and QE/QVE Identity.
- * This sequence number allows users to easily determine when a particular TCB Info/QE Idenity/QVE Identiy superseedes
- * another TCB Info/QE Identity/QVE Identity.
- *
- * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
- */
-data class TcbInfo @JsonCreator constructor(
-    @JsonProperty("version")
-    val version: Int,
-
-    @JsonProperty("issueDate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    val issueDate: Instant,
-
-    @JsonProperty("nextUpdate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    val nextUpdate: Instant,
-
-    @JsonProperty("fmspc")
-    val fmspc: OpaqueBytes,
-
-    @JsonProperty("pceId")
-    val pceId: OpaqueBytes,
-
-    @JsonProperty("tcbType")
-    val tcbType: Int,
-
-    @JsonProperty("tcbEvaluationDataNumber")
-    val tcbEvaluationDataNumber: Int,
-
-    @JsonProperty("tcbLevels")
-    val tcbLevels: List<TcbLevel>
-) {
-
-    /** The TcbInfo json is versioned. We currently support versions 2 and 3. */
-    enum class Version(val id: Int) {
-        V2(2), V3(3);
-
-        companion object {
-            fun fromInt(version: Int): Version {
-                return when(version) {
-                    2 -> V2
-                    3 -> V3
-                    else -> throw IllegalArgumentException("Unsupported TcbInfo json version: $version")
-                }
-            }
-        }
-    }
-
-    companion object {
-        fun fromJson(json: JsonNode): TcbInfo {
-            /**
-             * First, get the version number.
-             * It's not required here, but it is needed for some sub-objects.
-             */
-            val versionNumber = json.getInt("version")
-            val version = Version.fromInt(versionNumber)
-            return TcbInfo(
-                    versionNumber,
-                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    json.getHexEncodedBytes("fmspc"),
-                    json.getHexEncodedBytes("pceId"),
-                    json.getInt("tcbType"),
-                    json.getInt("tcbEvaluationDataNumber"),
-                    json.getArray("tcbLevels").map { TcbLevel.fromJson(it, version) }
-            )
-        }
-    }
-}
-
-/**
- * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
- * that were originally published on or prior to this date.
- *
- * @property tcbStatus TCB level status.
- *
- * @property advisoryIDs Array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to.
-
- */
-data class TcbLevel @JsonCreator constructor(
-    @JsonProperty("tcb")
-    val tcb: Tcb,
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    @JsonProperty("tcbDate")
-    val tcbDate: Instant,
-
-    @JsonProperty("tcbStatus")
-    val tcbStatus: TcbStatus,
-
-    @JsonProperty("advisoryIDs")
-    val advisoryIDs: List<String>? = null
-) {
-    companion object {
-        fun fromJson(json: JsonNode, version: TcbInfo.Version): TcbLevel {
-            return TcbLevel(
-                    Tcb.fromJson(json.getObject("tcb"), version),
-                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    TcbStatus.valueOf(json.getString("tcbStatus")),
-                    json.getNullable("advisoryIDs") { node ->
-                        node.getArray("advisoryIDs").map { it.asText() }
-                    }
-            )
-        }
-    }
-}
-
-enum class TcbStatus : VerificationStatus {
-    /** TCB level of the SGX platform is up-to-date. */
-    UpToDate,
-
-    /**
-     * TCB level of the SGX platform is up-to-date but due to certain issues affecting the platform, additional SW
-     * Hardening in the attesting SGX enclaves may be needed.
-     */
-    SWHardeningNeeded,
-
-    /**
-     * TCB level of the SGX platform is up-to-date but additional configuration of SGX platform may be needed.*/
-    ConfigurationNeeded,
-
-    /**
-     * TCB level of the SGX platform is up-to-date but additional configuration for the platform and SW Hardening in the
-     * attesting SGX enclaves may be needed.
-     */
-    ConfigurationAndSWHardeningNeeded,
-
-    /** TCB level of SGX platform is outdated. */
-    OutOfDate,
-
-    /** TCB level of SGX platform is outdated and additional configuration of SGX platform may be needed. */
-    OutOfDateConfigurationNeeded,
-
-    /** TCB level of SGX platform is revoked. The platform is not trustworthy. */
-    Revoked
-}
-
-data class Tcb @JsonCreator constructor(
-    @JsonProperty("sgxtcbcomp01svn")
-    val sgxtcbcomp01svn: Int,
-    @JsonProperty("sgxtcbcomp02svn")
-    val sgxtcbcomp02svn: Int,
-    @JsonProperty("sgxtcbcomp03svn")
-    val sgxtcbcomp03svn: Int,
-    @JsonProperty("sgxtcbcomp04svn")
-    val sgxtcbcomp04svn: Int,
-    @JsonProperty("sgxtcbcomp05svn")
-    val sgxtcbcomp05svn: Int,
-    @JsonProperty("sgxtcbcomp06svn")
-    val sgxtcbcomp06svn: Int,
-    @JsonProperty("sgxtcbcomp07svn")
-    val sgxtcbcomp07svn: Int,
-    @JsonProperty("sgxtcbcomp08svn")
-    val sgxtcbcomp08svn: Int,
-    @JsonProperty("sgxtcbcomp09svn")
-    val sgxtcbcomp09svn: Int,
-    @JsonProperty("sgxtcbcomp10svn")
-    val sgxtcbcomp10svn: Int,
-    @JsonProperty("sgxtcbcomp11svn")
-    val sgxtcbcomp11svn: Int,
-    @JsonProperty("sgxtcbcomp12svn")
-    val sgxtcbcomp12svn: Int,
-    @JsonProperty("sgxtcbcomp13svn")
-    val sgxtcbcomp13svn: Int,
-    @JsonProperty("sgxtcbcomp14svn")
-    val sgxtcbcomp14svn: Int,
-    @JsonProperty("sgxtcbcomp15svn")
-    val sgxtcbcomp15svn: Int,
-    @JsonProperty("sgxtcbcomp16svn")
-    val sgxtcbcomp16svn: Int,
-    @JsonProperty("pcesvn")
-    val pcesvn: Int
-) {
-    companion object {
-        fun fromJson(json: JsonNode, version: TcbInfo.Version): Tcb {
-            return when (version) {
-                TcbInfo.Version.V2 -> fromJsonV2(json)
-                TcbInfo.Version.V3 -> fromJsonV3(json)
-            }
-        }
-
-        private fun fromJsonV2(json: JsonNode): Tcb {
-            return Tcb(
-                    json.getInt("sgxtcbcomp01svn"),
-                    json.getInt("sgxtcbcomp02svn"),
-                    json.getInt("sgxtcbcomp03svn"),
-                    json.getInt("sgxtcbcomp04svn"),
-                    json.getInt("sgxtcbcomp05svn"),
-                    json.getInt("sgxtcbcomp06svn"),
-                    json.getInt("sgxtcbcomp07svn"),
-                    json.getInt("sgxtcbcomp08svn"),
-                    json.getInt("sgxtcbcomp09svn"),
-                    json.getInt("sgxtcbcomp10svn"),
-                    json.getInt("sgxtcbcomp11svn"),
-                    json.getInt("sgxtcbcomp12svn"),
-                    json.getInt("sgxtcbcomp13svn"),
-                    json.getInt("sgxtcbcomp14svn"),
-                    json.getInt("sgxtcbcomp15svn"),
-                    json.getInt("sgxtcbcomp16svn"),
-                    json.getInt("pcesvn")
-            )
-        }
-
-        private fun fromJsonV3(json: JsonNode): Tcb {
-            val tcbComponents = json.getArray("sgxtcbcomponents")
-            return Tcb(
-                    tcbComponents[0].getInt("svn"),
-                    tcbComponents[1].getInt("svn"),
-                    tcbComponents[2].getInt("svn"),
-                    tcbComponents[3].getInt("svn"),
-                    tcbComponents[4].getInt("svn"),
-                    tcbComponents[5].getInt("svn"),
-                    tcbComponents[6].getInt("svn"),
-                    tcbComponents[7].getInt("svn"),
-                    tcbComponents[8].getInt("svn"),
-                    tcbComponents[9].getInt("svn"),
-                    tcbComponents[10].getInt("svn"),
-                    tcbComponents[11].getInt("svn"),
-                    tcbComponents[12].getInt("svn"),
-                    tcbComponents[13].getInt("svn"),
-                    tcbComponents[14].getInt("svn"),
-                    tcbComponents[15].getInt("svn"),
-                    json.getInt("pcesvn")
-            )
-        }
-    }
-}
-
-/**
- * https://api.portal.trustedservices.intel.com/documentation#pcs-qe-identity-v2
- *
- * @property signature Signature calculated over qeIdentity body (without whitespaces) using TCB Info Signing Key.
- */
-data class SignedEnclaveIdentity @JsonCreator constructor(
-    @JsonProperty("enclaveIdentity")
-    val enclaveIdentity: EnclaveIdentity,
-
-    @JsonProperty("signature")
-    val signature: OpaqueBytes
-) {
-    companion object {
-        fun fromJson(json: JsonNode): SignedEnclaveIdentity {
-            return SignedEnclaveIdentity(
-                    EnclaveIdentity.fromJson(json.getObject("enclaveIdentity")),
-                    json.getHexEncodedBytes("signature")
-            )
-        }
-    }
-}
-
-/**
- * @property id Identifier of the SGX Enclave issued by Intel. Supported values are QE and QVE.
- *
- * @property version Version of the structure.
- *
- * @property issueDate Date and time the QE Identity information was created.
- *
- * @property nextUpdate Date and time by which next QE identity information will be issued.
- *
- * @property tcbEvaluationDataNumber A monotonically increasing sequence number changed when Intel updates the content
- * of the TCB evaluation data set: TCB Info, QE Idenity and QVE Identity. The tcbEvaluationDataNumber update is
- * synchronized across TCB Info for all flavors of SGX CPUs (Family-Model-Stepping-Platform-CustomSKU) and QE/QVE Identity.
- * This sequence number allows users to easily determine when a particular TCB Info/QE Idenity/QVE Identiy superseedes
- * another TCB Info/QE Identity/QVE Identity.
- *
- * @property miscselect miscselect "golden" value (upon applying mask).
- *
- * @property miscselectMask Mask to be applied to [miscselect] value retrieved from the platform.
- *
- * @property attributes attributes "golden" value (upon applying mask).
- *
- * @property attributesMask Mask to be applied to attributes value retrieved from the platform.
- *
- * @property mrsigner mrsigner hash.
- *
- * @property isvprodid Enclave Product ID.
- *
- * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
- */
-data class EnclaveIdentity @JsonCreator constructor(
-    @JsonProperty("id")
-    val id: String,
-
-    @JsonProperty("version")
-    val version: Int,
-
-    @JsonProperty("issueDate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    val issueDate: Instant,
-
-    @JsonProperty("nextUpdate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    val nextUpdate: Instant,
-
-    @JsonProperty("tcbEvaluationDataNumber")
-    val tcbEvaluationDataNumber: Int,
-
-    @JsonProperty("miscselect")
-    val miscselect: OpaqueBytes,
-
-    @JsonProperty("miscselectMask")
-    val miscselectMask: OpaqueBytes,
-
-    @JsonProperty("attributes")
-    val attributes: OpaqueBytes,
-
-    @JsonProperty("attributesMask")
-    val attributesMask: OpaqueBytes,
-
-    @JsonProperty("mrsigner")
-    val mrsigner: OpaqueBytes,
-
-    @JsonProperty("isvprodid")
-    val isvprodid: Int,
-
-    @JsonProperty("tcbLevels")
-    val tcbLevels: List<EnclaveTcbLevel>
-) {
-    /** The EnclaveIdentity json is versioned. We currently only support versions 2. */
-    enum class Version(val id: Int) {
-        V2(2);
-
-        companion object {
-            fun fromInt(version: Int): Version {
-                return when(version) {
-                    2 -> V2
-                    else -> throw IllegalArgumentException("Unsupported EnclaveIdentity json version: $version")
-                }
-            }
-        }
-    }
-
-    companion object {
-        fun fromJson(json: JsonNode): EnclaveIdentity {
-            val version = Version.fromInt(json.getInt("version"))
-            return EnclaveIdentity(
-                    json.getString("id"),
-                    version.id,
-                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    json.getInt("tcbEvaluationDataNumber"),
-                    json.getHexEncodedBytes("miscselect"),
-                    json.getHexEncodedBytes("miscselectMask"),
-                    json.getHexEncodedBytes("attributes"),
-                    json.getHexEncodedBytes("attributesMask"),
-                    json.getHexEncodedBytes("mrsigner"),
-                    json.getInt("isvprodid"),
-                    json.getArray("tcbLevels").map { EnclaveTcbLevel.fromJson(it) }
-            )
-        }
-    }
-}
-
-/**
- * @property tcbDate Date and time when the TCB level was certified not to be vulnerable to any issues described in SAs
- * that were originally published on or prior to this date.
- *
- * @property tcbStatus TCB level status.
- */
-data class EnclaveTcbLevel @JsonCreator constructor(
-    @JsonProperty("tcb")
-    val tcb: EnclaveTcb,
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    @JsonProperty("tcbDate")
-    val tcbDate: Instant,
-
-    @JsonProperty("tcbStatus")
-    val tcbStatus: EnclaveTcbStatus
-) {
-    companion object {
-        fun fromJson(json: JsonNode): EnclaveTcbLevel {
-            return EnclaveTcbLevel(
-                    EnclaveTcb.fromJson(json.getObject("tcb")),
-                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    EnclaveTcbStatus.valueOf(json.getString("tcbStatus"))
-            )
-        }
-    }
-}
-
-enum class EnclaveTcbStatus {
-    /** TCB level of the SGX platform is up-to-date.. */
-    UpToDate,
-
-    /** TCB level of SGX platform is outdated. */
-    OutOfDate,
-
-    /** TCB level of SGX platform is revoked. The platform is not trustworthy. */
-    Revoked
-}
-
-/**
- * @property isvsvn SGX Enclave’s ISV SVN.
- */
-data class EnclaveTcb @JsonCreator constructor(
-    @JsonProperty("isvsvn")
-    val isvsvn: Int
-) {
-    companion object {
-        fun fromJson(json: JsonNode): EnclaveTcb {
-            return EnclaveTcb(json.getInt("isvsvn"))
-        }
     }
 }
 
