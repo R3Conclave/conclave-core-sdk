@@ -480,27 +480,27 @@ data class EnclaveTcb(val isvsvn: Int) {
  * Utility functions for manual parsing of json primitives and producing sensible error messages.
  */
 private fun JsonNode.checkFieldExists(fieldName: String) {
-    check(this.has(fieldName)) { "No such field $fieldName." }
+    require(this.has(fieldName)) { "No such field $fieldName." }
 }
 
 private fun JsonNode.getInt(fieldName: String): Int {
     checkFieldExists(fieldName)
     val field = this.get(fieldName)
-    check(field.isInt) { "Expected $fieldName to be an integer, got ${field.nodeType}." }
+    require(field.isInt) { "Expected $fieldName to be an integer, got ${field.nodeType}." }
     return field.asInt()
 }
 
 private fun JsonNode.getString(fieldName: String): String {
     checkFieldExists(fieldName)
     val field = this.get(fieldName)
-    check(field.isTextual) { "Expected $fieldName to be a string, got ${field.nodeType}." }
+    require(field.isTextual) { "Expected $fieldName to be a string, got ${field.nodeType}." }
     return field.asText()
 }
 
 private fun JsonNode.getHexEncodedBytes(fieldName: String): OpaqueBytes {
     val stringField = getString(fieldName)
     val errorMessage by lazy { "$fieldName is not a valid hex string, " }
-    check(stringField.length % 2 == 0) { "$errorMessage, number of characters must be even." }
+    require(stringField.length % 2 == 0) { "$errorMessage, number of characters must be even." }
     return try {
         val bytes = stringField.chunked(2)
                 .map { it.toInt(16).toByte() }
@@ -524,14 +524,14 @@ private fun JsonNode.getInstant(fieldName: String, format: String, timezone: Str
 private fun JsonNode.getArray(fieldName: String): JsonNode {
     checkFieldExists(fieldName)
     val field = this.get(fieldName)
-    check(field.isArray) { "Expected $fieldName to be an array, got ${field.nodeType}." }
+    require(field.isArray) { "Expected $fieldName to be an array, got ${field.nodeType}." }
     return field
 }
 
 private fun JsonNode.getObject(fieldName: String): JsonNode {
     checkFieldExists(fieldName)
     val field = this.get(fieldName)
-    check(field.isObject) { "Expected $fieldName to be an object, got ${field.nodeType}." }
+    require(field.isObject) { "Expected $fieldName to be an object, got ${field.nodeType}." }
     return field
 }
 
