@@ -461,7 +461,7 @@ object QuoteVerifier {
     private fun isCpuSvnHigherOrEqual(pckTcb: IntArray, jsonTcb: Tcb): Boolean {
         for (j in pckTcb.indices) {
             // If *ANY* CPUSVN component is lower then CPUSVN is considered lower
-            if (pckTcb[j] < getSgxTcbComponentSvn(jsonTcb, j)) return false
+            if (pckTcb[j] < jsonTcb.sgxtcbcompsvn[j]) return false
         }
         // but for CPUSVN to be considered higher it requires that *EVERY* CPUSVN component to be higher or equal
         return true
@@ -473,29 +473,6 @@ object QuoteVerifier {
             "TCB_UNRECOGNIZED_STATUS"
         }
         return tcbLevelStatus
-    }
-
-    private fun getSgxTcbComponentSvn(tcb: Tcb, index: Int): Int {
-        // 0 base index
-        return when (index) {
-            0 -> tcb.sgxtcbcomp01svn
-            1 -> tcb.sgxtcbcomp02svn
-            2 -> tcb.sgxtcbcomp03svn
-            3 -> tcb.sgxtcbcomp04svn
-            4 -> tcb.sgxtcbcomp05svn
-            5 -> tcb.sgxtcbcomp06svn
-            6 -> tcb.sgxtcbcomp07svn
-            7 -> tcb.sgxtcbcomp08svn
-            8 -> tcb.sgxtcbcomp09svn
-            9 -> tcb.sgxtcbcomp10svn
-            10 -> tcb.sgxtcbcomp11svn
-            11 -> tcb.sgxtcbcomp12svn
-            12 -> tcb.sgxtcbcomp13svn
-            13 -> tcb.sgxtcbcomp14svn
-            14 -> tcb.sgxtcbcomp15svn
-            15 -> tcb.sgxtcbcomp16svn
-            else -> throw GeneralSecurityException("Invalid sgxtcbcompsvn index $index")
-        }
     }
 
     private fun verify(check: Boolean, status: ErrorStatus) {

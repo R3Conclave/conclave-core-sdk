@@ -305,22 +305,7 @@ enum class TcbStatus : VerificationStatus {
 }
 
 data class Tcb constructor(
-    val sgxtcbcomp01svn: Int,
-    val sgxtcbcomp02svn: Int,
-    val sgxtcbcomp03svn: Int,
-    val sgxtcbcomp04svn: Int,
-    val sgxtcbcomp05svn: Int,
-    val sgxtcbcomp06svn: Int,
-    val sgxtcbcomp07svn: Int,
-    val sgxtcbcomp08svn: Int,
-    val sgxtcbcomp09svn: Int,
-    val sgxtcbcomp10svn: Int,
-    val sgxtcbcomp11svn: Int,
-    val sgxtcbcomp12svn: Int,
-    val sgxtcbcomp13svn: Int,
-    val sgxtcbcomp14svn: Int,
-    val sgxtcbcomp15svn: Int,
-    val sgxtcbcomp16svn: Int,
+    val sgxtcbcompsvn: List<Int>,
     val pcesvn: Int
 ) {
     companion object {
@@ -332,46 +317,18 @@ data class Tcb constructor(
         }
 
         private fun fromJsonV2(json: JsonNode): Tcb {
-            return Tcb(
-                    json.getInt("sgxtcbcomp01svn"),
-                    json.getInt("sgxtcbcomp02svn"),
-                    json.getInt("sgxtcbcomp03svn"),
-                    json.getInt("sgxtcbcomp04svn"),
-                    json.getInt("sgxtcbcomp05svn"),
-                    json.getInt("sgxtcbcomp06svn"),
-                    json.getInt("sgxtcbcomp07svn"),
-                    json.getInt("sgxtcbcomp08svn"),
-                    json.getInt("sgxtcbcomp09svn"),
-                    json.getInt("sgxtcbcomp10svn"),
-                    json.getInt("sgxtcbcomp11svn"),
-                    json.getInt("sgxtcbcomp12svn"),
-                    json.getInt("sgxtcbcomp13svn"),
-                    json.getInt("sgxtcbcomp14svn"),
-                    json.getInt("sgxtcbcomp15svn"),
-                    json.getInt("sgxtcbcomp16svn"),
-                    json.getInt("pcesvn")
-            )
+            val sgxtcbcompsvn = ArrayList<Int>()
+            for (i in 1..16) {
+                val elementString = i.toString().padStart(2, '0')
+                sgxtcbcompsvn.add(json.getInt("sgxtcbcomp${elementString}svn"))
+            }
+            return Tcb(sgxtcbcompsvn, json.getInt("pcesvn"))
         }
 
         private fun fromJsonV3(json: JsonNode): Tcb {
             val tcbComponents = json.getArray("sgxtcbcomponents")
             return Tcb(
-                    tcbComponents[0].getInt("svn"),
-                    tcbComponents[1].getInt("svn"),
-                    tcbComponents[2].getInt("svn"),
-                    tcbComponents[3].getInt("svn"),
-                    tcbComponents[4].getInt("svn"),
-                    tcbComponents[5].getInt("svn"),
-                    tcbComponents[6].getInt("svn"),
-                    tcbComponents[7].getInt("svn"),
-                    tcbComponents[8].getInt("svn"),
-                    tcbComponents[9].getInt("svn"),
-                    tcbComponents[10].getInt("svn"),
-                    tcbComponents[11].getInt("svn"),
-                    tcbComponents[12].getInt("svn"),
-                    tcbComponents[13].getInt("svn"),
-                    tcbComponents[14].getInt("svn"),
-                    tcbComponents[15].getInt("svn"),
+                    tcbComponents.map { it.getInt("svn") },
                     json.getInt("pcesvn")
             )
         }

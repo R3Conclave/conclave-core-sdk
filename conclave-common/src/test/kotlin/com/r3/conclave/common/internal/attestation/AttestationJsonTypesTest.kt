@@ -168,23 +168,10 @@ class SignedTcbInfoTest {
         val json = loadResourceAsJson("test_tcb_${version}.json")
         val result = Tcb.fromJson(json, version)
 
-        for (i in 1..16) { /* TODO: Use an arraylist for this (smh)... */ }
-        assertThat(result.sgxtcbcomp01svn).isEqualTo(1)
-        assertThat(result.sgxtcbcomp02svn).isEqualTo(2)
-        assertThat(result.sgxtcbcomp03svn).isEqualTo(3)
-        assertThat(result.sgxtcbcomp04svn).isEqualTo(4)
-        assertThat(result.sgxtcbcomp05svn).isEqualTo(5)
-        assertThat(result.sgxtcbcomp06svn).isEqualTo(6)
-        assertThat(result.sgxtcbcomp07svn).isEqualTo(7)
-        assertThat(result.sgxtcbcomp08svn).isEqualTo(8)
-        assertThat(result.sgxtcbcomp09svn).isEqualTo(9)
-        assertThat(result.sgxtcbcomp10svn).isEqualTo(10)
-        assertThat(result.sgxtcbcomp11svn).isEqualTo(11)
-        assertThat(result.sgxtcbcomp12svn).isEqualTo(12)
-        assertThat(result.sgxtcbcomp13svn).isEqualTo(13)
-        assertThat(result.sgxtcbcomp14svn).isEqualTo(14)
-        assertThat(result.sgxtcbcomp15svn).isEqualTo(15)
-        assertThat(result.sgxtcbcomp16svn).isEqualTo(16)
+        for (i in 0 until 16) {
+            assertThat(result.sgxtcbcompsvn[i]).isEqualTo(i + 1)
+        }
+
         assertThat(result.pcesvn).isEqualTo(9)
     }
 
