@@ -1,6 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.retrievePackageVersionFromManifest
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -14,15 +14,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.extension
-import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-
     companion object {
-        private val JEP_VERSION = retrievePackageVersionFromManifest("Jep-Version")
+        private val JEP_VERSION = getManifestAttribute("Jep-Version")
     }
 
     @get:Input
@@ -100,8 +96,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // The source file may not exist if this is an output file. Let the actual command being
         // invoked handle any problems with missing/incorrect files
         if (file.exists()) {
-            Files.copy(file, newFile, REPLACE_EXISTING)
-
+            file.copyTo(newFile, REPLACE_EXISTING)
         }
         return newFile
     }
