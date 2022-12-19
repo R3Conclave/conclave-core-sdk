@@ -1,11 +1,9 @@
 package com.r3.conclave.common.internal.attestation
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.attestation.AttestationUtils.writeIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getIntLengthPrefixString
-import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.io.DataOutputStream
 import java.nio.ByteBuffer
@@ -30,13 +28,13 @@ data class QuoteCollateral(
     val tcbInfoIssuerChain: CertPath by lazy { parseCertPath(rawTcbInfoIssuerChain) }
 
     val signedTcbInfo: SignedTcbInfo by lazy {
-        SignedTcbInfo.fromJson(objectMapper.readTree(rawSignedTcbInfo.inputStream()))
+        SignedTcbInfo.fromJson(attestationObjectMapper.readTree(rawSignedTcbInfo.inputStream()))
     }
 
     val qeIdentityIssuerChain: CertPath by lazy { parseCertPath(rawQeIdentityIssuerChain) }
 
     val signedQeIdentity: SignedEnclaveIdentity by lazy {
-        SignedEnclaveIdentity.fromJson(objectMapper.readTree(rawSignedQeIdentity.inputStream()))
+        SignedEnclaveIdentity.fromJson(attestationObjectMapper.readTree(rawSignedQeIdentity.inputStream()))
     }
 
     private fun parseCertPath(bytes: OpaqueBytes): CertPath {
@@ -64,8 +62,6 @@ data class QuoteCollateral(
     }
 
     companion object {
-        private val objectMapper = ObjectMapper()
-
         fun getFromBuffer(buffer: ByteBuffer): QuoteCollateral {
             val version = buffer.getIntLengthPrefixString().toInt()
             val rawPckCrlIssuerChain = OpaqueBytes(buffer.getIntLengthPrefixBytes())
