@@ -20,6 +20,8 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         apt-transport-https \
         python3-pip \
         openjdk-17-jdk-headless
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
+CMD java -version
 
 # Add Gramine to Ubuntu repositories
 RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
@@ -29,9 +31,6 @@ RUN apt-get -y update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
         gramine
 
-ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
-
 ARG jep_version
 RUN pip3 install jep==$jep_version
 
-CMD java -version

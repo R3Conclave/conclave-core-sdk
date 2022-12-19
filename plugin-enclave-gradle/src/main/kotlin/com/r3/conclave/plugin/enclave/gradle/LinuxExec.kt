@@ -1,6 +1,7 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.retrievePackageVersionFromManifest
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_DOCKER_WORKING_DIR
+import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -9,7 +10,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -18,7 +18,6 @@ import javax.inject.Inject
 import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-
     companion object {
         private val JEP_VERSION = getManifestAttribute("Jep-Version")
     }
@@ -116,10 +115,11 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     /** Returns the ERROR output of the command only, in the returned list. */
     fun exec(params: List<String>): List<String>? {
         val errorOut = ByteArrayOutputStream()
+        val stdOut = ByteArrayOutputStream()
 
         val result = commandLine(
             command = if (buildInDocker(buildInDocker)) getDockerRunArgs(params) else params,
-            commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
+            commandLineConfig = CommandLineConfig(ignoreExitValue = true, standardOutputStream = stdOut, errorOutputStream = errorOut)
         )
 
         if (result.exitValue == 137) {
@@ -130,10 +130,11 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             errorOut.writeTo(System.err)
             // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
             // Hopefully it's UTF-8 - it should be!
-            return String(errorOut.toByteArray()).split(System.lineSeparator())
+            val errorMessage =  String(errorOut.toByteArray())
+            throw GradleException(errorMessage)
         }
         result.assertNormalExitValue()
-        return null
+        return String(stdOut.toByteArray()).split(System.lineSeparator())
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
@@ -156,8 +157,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             "--rm",
             "-u", "$userId:$groupId",
             "-v",
-            "${baseDirectory.get()}:/project",
+            "${baseDirectory.get()}:$GRAMINE_DOCKER_WORKING_DIR",
             tag.get()
-        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+        ) + params.map { it.replace(baseDirectory.get(), GRAMINE_DOCKER_WORKING_DIR).replace("\\", "/") }
     }
 }

@@ -94,15 +94,6 @@ abstract class ConclaveTask : DefaultTask() {
         }
     }
 
-    fun commandWithResultAndOutput(
-        command: List<String>,
-        commandLineConfig: CommandLineConfig
-    ): Pair<ExecResult, String> {
-        val cmd = command.joinToString(" ")
-        val result = commandLine(command, commandLineConfig)
-        return Pair(result, commandLineConfig.standardOutputStream.toString().trimEnd())
-    }
-
     fun commandWithOutput(vararg command: Any): String {
         val output = ByteArrayOutputStream()
         commandLine(command.asList(), CommandLineConfig(standardOutputStream = output))

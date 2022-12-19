@@ -3,7 +3,6 @@ package com.r3.conclave.plugin.enclave.gradle.gramine
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SECCOMP
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
@@ -41,6 +40,7 @@ open class GenerateGramineBundle @Inject constructor(
         const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
         const val PYTHON_ENCLAVE_SIZE = "8G"
         const val JAVA_ENCLAVE_SIZE = "4G"
+        const val DOCKER_IMAGE_ARCHITECTURE = "x86_64-linux-gnu"
     }
 
     @get:Input
@@ -51,9 +51,6 @@ open class GenerateGramineBundle @Inject constructor(
 
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
-
-    @get:Input
-    val dockerImageTag: Property<String> = objects.property(String::class.java)
 
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
@@ -69,30 +66,40 @@ open class GenerateGramineBundle @Inject constructor(
     val outputDir: DirectoryProperty = objects.directoryProperty()
 
     override fun action() {
+        enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
+        // Building enclaves with Python has been temporarily disabled
+        // TODO: CON-1215 - Building enclaves with Python inside a Docker container
+        check(!pythonFile.isPresent) { "Building enclaves with Python has been disabled" }
+
+        val architecture: String
+        val ldPreload: String
+        val pythonPackagesPath: String
 
         if (pythonFile.isPresent) {
             pythonFile.copyToOutputDir(PYTHON_FILE)
+
+            // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
+            //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
+
+            architecture = commandWithOutput("gcc", "-dumpmachine")
+            ldPreload = executePython(
+                "from sysconfig import get_config_var; " +
+                        "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+            )
+            // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
+            // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
+            // incorrect then we'll need to come up with a better solution.
+            pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
+                .splitToSequence("\n")
+                .single { it.startsWith("Location: ") }
+                .substringAfter("Location: ")
+        } else {
+            architecture = DOCKER_IMAGE_ARCHITECTURE
+            ldPreload = ""
+            pythonPackagesPath = ""
         }
 
-        // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
-        //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
-
-        val architecture = retrieveArchitecture()
-        val ldPreload = executePython(
-            "from sysconfig import get_config_var; " +
-                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
-        )
-        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
-        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
-        // incorrect then we'll need to come up with a better solution.
-        val pythonPackagesPath = linuxExec.execWithOutput(listOf("pip3", "show", "jep"))
-            .splitToSequence("\n")
-            .single { it.startsWith("Location: ") }
-            .substringAfter("Location: ")
-
-        enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
         generateManifest(architecture, ldPreload, pythonPackagesPath)
-        copySeccompToOutputDir()
 
         if (enclaveMode != EnclaveMode.SIMULATION) {
             generateSgxManifestAndSigstruct()
@@ -102,20 +109,13 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun copySeccompToOutputDir() {
-        val seccomp = outputDir.get().asFile.resolve(GRAMINE_SECCOMP).toPath()
-        javaClass.copyResource(GRAMINE_SECCOMP, seccomp)
-    }
-
-    private fun retrieveArchitecture(): String {
-        return linuxExec.execWithOutput(listOf("gcc", "-dumpmachine"))
-    }
-
     private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
         val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
-        val command = prepareManifestGenerationCommand(architecture, ldPreload, pythonPackagesPath, manifestTemplateFile)
-        linuxExec.exec(command, outputDir.get().asFile.absolutePath, throwsException = true)
+        val command =
+            prepareManifestGenerationCommand(architecture, ldPreload, pythonPackagesPath, manifestTemplateFile)
+        val dockerCommand = dockerCommandInWorkingDirectory(command)
+        linuxExec.exec(dockerCommand)
     }
 
     private fun prepareManifestGenerationCommand(
@@ -136,7 +136,6 @@ open class GenerateGramineBundle @Inject constructor(
             "-Dis_python_enclave=${pythonFile.isPresent}",
             "-Denclave_mode=${enclaveMode}",
             "-Denclave_worker_threads=10",
-            "-Ddocker_image_tag=${dockerImageTag.get()}",
             "-Dgramine_max_threads=${maxThreads.get()}",
             "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
             manifestTemplateFile.absolutePathString(),
@@ -147,6 +146,7 @@ open class GenerateGramineBundle @Inject constructor(
             val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
             command += "-Dsimulation_mrsigner=$simulationMrSigner"
         }
+
         return command
     }
 
@@ -154,25 +154,25 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
-        val command = listOf(
+        val command = dockerCommandInWorkingDirectory(
             "gramine-sgx-sign",
             "--manifest=${GRAMINE_MANIFEST}",
             "--key=${signingKey.get().asFile.absolutePath}",
             "--output=${GRAMINE_SGX_MANIFEST}"
         )
-        linuxExec.exec(command, outputDir.get().asFile.absolutePath, throwsException = true)
+        linuxExec.exec(command)
     }
 
     /**
      * This will create a .token file into the output dir
      */
     private fun generateToken() {
-        val command = listOf(
+        val command = dockerCommandInWorkingDirectory(
             "gramine-sgx-get-token",
             "--sig=$GRAMINE_SIGSTRUCT",
             "--output=${outputDir.file(GRAMINE_SGX_TOKEN).get().asFile.absolutePath}"
         )
-        linuxExec.exec(command, outputDir.get().asFile.absolutePath, throwsException = true)
+        linuxExec.exec(command)
     }
 
     /**
@@ -211,10 +211,16 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun executePython(command: String): String {
-        val pythonCommand = listOf("python3", "-c") + command
-        return linuxExec.execWithOutput(pythonCommand, throwsException = true)
+
+    private fun dockerCommandInWorkingDirectory(vararg command: String): List<String> {
+        return dockerCommandInWorkingDirectory(*command)
     }
+
+    private fun dockerCommandInWorkingDirectory(command: List<String>): List<String> {
+        return command + listOf("-w", outputDir.get().asFile.absolutePath)
+    }
+
+    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)
 
     private fun RegularFileProperty.copyToOutputDir(fileName: String) {
         get().asFile.toPath().copyTo(outputDir.file(fileName).get().asFile.toPath(), REPLACE_EXISTING)
