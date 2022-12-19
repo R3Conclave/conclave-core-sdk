@@ -34,7 +34,7 @@ open class GenerateEnclaveMetadata @Inject constructor(
         //  See TestUtils.getEnclaveSigstruct in the integration tests.
         val metadataFile = temporaryDir.toPath().resolve("enclave_css.bin")
 
-        if (buildInDocker.get()) {
+        if (linuxExec.buildInDocker(buildInDocker)) {
             try {
                 linuxExec.exec(
                     listOf<String>(

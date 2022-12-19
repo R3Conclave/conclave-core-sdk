@@ -36,21 +36,21 @@ open class AddEnclaveSignature @Inject constructor(
     val outputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        if (buildInDocker.get()) {
+        if (linuxExec.buildInDocker(buildInDocker)) {
             try {
                 // The input key files may not live in a directory accessible by docker.
                 // Prepare the files so docker can access them if necessary.
-                val mrSignerPublicKey = linuxExec.prepareFile(inputMrsignerPublicKey.asFile.get())
-                val mrSignerSignature = linuxExec.prepareFile(inputMrsignerSignature.asFile.get())
+                val mrSignerPublicKey = linuxExec.prepareFile(inputMrsignerPublicKey.asFile.get().toPath())
+                val mrSignerSignature = linuxExec.prepareFile(inputMrsignerSignature.asFile.get().toPath())
 
                 linuxExec.exec(
                     listOf<String>(
                         plugin.signToolPath().absolutePathString(), "catsig",
-                        "-key", mrSignerPublicKey.absolutePath,
+                        "-key", mrSignerPublicKey.absolutePathString(),
                         "-enclave", inputEnclave.asFile.get().absolutePath,
                         "-out", outputSignedEnclave.asFile.get().absolutePath,
                         "-config", inputEnclaveConfig.asFile.get().absolutePath,
-                        "-sig", mrSignerSignature.absolutePath,
+                        "-sig", mrSignerSignature.absolutePathString(),
                         "-unsigned", inputSigningMaterial.asFile.get().absolutePath
                     )
                 )

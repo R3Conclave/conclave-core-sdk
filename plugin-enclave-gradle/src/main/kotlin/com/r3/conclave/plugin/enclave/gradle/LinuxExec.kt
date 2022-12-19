@@ -6,17 +6,21 @@ import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.internal.os.OperatingSystem
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
+import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
 
     companion object {
-        private val JEP_VERSION = retrievePackageVersionFromManifest("Jep-Version")
+        private val JEP_VERSION = getManifestAttribute("Jep-Version")
     }
 
     @get:Input
@@ -37,7 +41,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-        if (buildInDocker.get()) {
+        if (buildInDocker(buildInDocker)) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
@@ -52,16 +56,32 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
-                logger.info("Docker build of conclave-build failed.", e)
-                throw GradleException(
-                    "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
-                            + "Please install Docker and rerun your build. "
-                            + "See https://docs.conclave.net/enclave-modes.html#system-requirements "
-                            + "If the build still fails, please rerun the build with '--info' flag and create a new "
-                            + "issue on GitHub https://github.com/R3Conclave/conclave-core-sdk/issues/new"
-                )
+                val message = if (OperatingSystem.current().isLinux) {
+                    "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
+                            "rerun your build. See https://docs.conclave.net/enclave-modes.html#system-requirements " +
+                            "for more information. If the build still fails, please rerun the build with the " +
+                            "--stacktrace flag and raise an issue at https://github.com/R3Conclave/conclave-core-sdk/issues/new"
+                } else {
+                    "Conclave requires Docker to be installed when building enclaves on non-Linux platforms. Please " +
+                            "install Docker and rerun your build. See " +
+                            "https://docs.conclave.net/running-hello-world.html#prerequisites and " +
+                            "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module for " +
+                            "more information."
+                }
+                throw GradleException(message, e)
             }
         }
+    }
+
+    /**
+     * Non-Linux environments must always use Docker.
+     */
+    // We pass in the [buildInDocker] as a parameter, even though this task also has the same property, to make sure
+    // the caller task re-runs if the buildInDocker config changes.
+    // TODO Come up with a better way than this. This might not be an issue after CON-1069 since we won't be building
+    //  the conclave-build image anymore.
+    fun buildInDocker(buildInDocker: Property<Boolean>): Boolean {
+        return !OperatingSystem.current().isLinux || buildInDocker.get()
     }
 
     /**
@@ -69,22 +89,18 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      * that lives in the project folder. The temporary directory and all files contained within
      * are deleted when cleanPreparedFiles() is called.
      */
-    fun prepareFile(file: File): File {
-        return when (buildInDocker.get()) {
-            false -> file
-            true -> {
-                val tmp = File("${baseDirectory.get()}/.linuxexec")
-                tmp.mkdir()
-                val newFile = File.createTempFile(file.nameWithoutExtension, file.extension, tmp)
-                // The source file may not exist if this is an output file. Let the actual command being
-                // invoked handle any problems with missing/incorrect files
-                try {
-                    Files.copy(file.toPath(), newFile.toPath(), REPLACE_EXISTING)
-                } catch (e: IOException) {
-                }
-                newFile
-            }
+    fun prepareFile(file: Path): Path {
+        // Use the file as is if we're not using Docker
+        if (!buildInDocker(buildInDocker)) return file
+
+        val tmp = Paths.get(baseDirectory.get(), ".linuxexec").createDirectories()
+        val newFile = Files.createTempFile(tmp, file.nameWithoutExtension, file.extension)
+        // The source file may not exist if this is an output file. Let the actual command being
+        // invoked handle any problems with missing/incorrect files
+        if (file.exists()) {
+            file.copyTo(newFile, REPLACE_EXISTING)
         }
+        return newFile
     }
 
     /**
@@ -92,64 +108,32 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      * by a call to prepareFile().
      */
     fun cleanPreparedFiles() {
-        if (buildInDocker.get()) {
+        if (buildInDocker(buildInDocker)) {
             this.project.delete(File("${baseDirectory.get()}/.linuxexec"))
         }
     }
 
     /** Returns the ERROR output of the command only, in the returned list. */
-    fun exec(params: List<String>, dockerWorkdirPath: String? = null, throwsException: Boolean=false): List<String>? {
+    fun exec(params: List<String>): List<String>? {
         val errorOut = ByteArrayOutputStream()
-        val args: List<String> = if (buildInDocker.get()) getDockerRunArgs(params, dockerWorkdirPath) else params
 
         val result = commandLine(
-            args,
+            command = if (buildInDocker(buildInDocker)) getDockerRunArgs(params) else params,
             commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
         )
 
-        if (result.exitValue != 0) {
-            handleError(result.exitValue, errorOut, throwsException)
-        }
-        result.assertNormalExitValue()
-        return null
-    }
-
-    private fun handleError(exitCode:Int, errorOut :ByteArrayOutputStream, throwsException: Boolean): List<String> {
-        if (exitCode == 137) {
+        if (result.exitValue == 137) {
             // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
             throwOutOfMemoryException()
-        } else {
+        }
+        if (result.exitValue != 0) {
             errorOut.writeTo(System.err)
             // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
             // Hopefully it's UTF-8 - it should be!
-            val errorString = String(errorOut.toByteArray())
-
-            if (throwsException) {
-                throw GradleException(errorString)
-            } else {
-                return errorString.split(System.lineSeparator())
-            }
-        }
-    }
-
-    fun execWithOutput(params: List<String>, dockerWorkdirPath: String? = null, throwsException: Boolean=false): String {
-        val standardOut = ByteArrayOutputStream()
-        val errorOut = ByteArrayOutputStream()
-        val args: List<String> = if (buildInDocker.get()) getDockerRunArgs(params, dockerWorkdirPath) else params
-
-        val (result, output) = commandWithResultAndOutput(args,
-            commandLineConfig = CommandLineConfig(
-                ignoreExitValue = true,
-                standardOutputStream = standardOut,
-                errorOutputStream = errorOut
-            )
-        )
-
-        if (result.exitValue != 0) {
-            handleError(result.exitValue, errorOut, throwsException)
+            return String(errorOut.toByteArray()).split(System.lineSeparator())
         }
         result.assertNormalExitValue()
-        return output
+        return null
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
@@ -158,14 +142,13 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 "as the native image build process is memory intensive."
     )
 
-    private fun getDockerRunArgs(params: List<String>, dockerWorkdirPath: String?): List<String> {
+    private fun getDockerRunArgs(params: List<String>): List<String> {
         // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
         val userId = commandWithOutput("id", "-u")
         val groupId = commandWithOutput("id", "-g")
-        val workdir = dockerWorkdirPath?.mapBaseDirectory() ?: "/project"
         return listOf(
             "docker",
             "run",
@@ -174,12 +157,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             "-u", "$userId:$groupId",
             "-v",
             "${baseDirectory.get()}:/project",
-            "-w", workdir,
             tag.get()
-        ) + params.map { it.mapBaseDirectory() }
-    }
-
-    private fun String.mapBaseDirectory(): String {
-        return this.replace(baseDirectory.get(), "/project").replace("\\", "/")
+        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
     }
 }
