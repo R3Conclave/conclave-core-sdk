@@ -9,6 +9,7 @@ import com.r3.conclave.common.internal.SgxQuote
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
 import java.time.Instant
@@ -157,13 +158,8 @@ class EpidVerificationReportTest {
 
 
 class SignedTcbInfoTest {
-    companion object {
-        @JvmStatic
-        val getTcbInfoVersions = listOf(TcbInfo.Version.V2, TcbInfo.Version.V3)
-    }
-
     @ParameterizedTest
-    @MethodSource("getGetTcbInfoVersions")
+    @EnumSource(TcbInfo.Version::class)
     fun `tcb deserialization test`(version: TcbInfo.Version) {
         val json = loadResourceAsJson("test_tcb_${version}.json")
         val result = Tcb.fromJson(json, version)
@@ -176,7 +172,7 @@ class SignedTcbInfoTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getGetTcbInfoVersions")
+    @EnumSource(TcbInfo.Version::class)
     fun `signature deserialization test`(version: TcbInfo.Version) {
         val json = loadResourceAsJson("test_tcbinfo_${version}.json")
         val result = SignedTcbInfo.fromJson(json)
@@ -184,7 +180,7 @@ class SignedTcbInfoTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getGetTcbInfoVersions")
+    @EnumSource(TcbInfo.Version::class)
     fun `tcb info deserialization test`(version: TcbInfo.Version) {
         val json = loadResourceAsJson("test_tcbinfo_$version.json")
         val result = SignedTcbInfo.fromJson(json)
@@ -196,13 +192,8 @@ class SignedTcbInfoTest {
 }
 
 class SignedEnclaveIdentityTest {
-    companion object {
-        @JvmStatic
-        val enclaveIdentityVersions = listOf(EnclaveIdentity.Version.V2)
-    }
-
     @ParameterizedTest
-    @MethodSource("getEnclaveIdentityVersions")
+    @EnumSource(EnclaveIdentity.Version::class)
     fun `signature deserializes correctly`(version: EnclaveIdentity.Version) {
         val json = loadResourceAsJson("test_signed_enclave_identity_$version.json")
         val result = SignedEnclaveIdentity.fromJson(json)
