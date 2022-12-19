@@ -71,7 +71,7 @@ open class GenerateGramineBundle @Inject constructor(
         check(!pythonFile.isPresent) { "Building enclaves with Python has been disabled" }
 
         val architecture: String
-        val ldPreload: String
+        val pythonLdPreload: String
         val pythonPackagesPath: String
 
         if (pythonFile.isPresent) {
@@ -81,7 +81,7 @@ open class GenerateGramineBundle @Inject constructor(
             //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
 
             architecture = commandWithOutput("gcc", "-dumpmachine")
-            ldPreload = executePython(
+            pythonLdPreload = executePython(
                 "from sysconfig import get_config_var; " +
                         "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
             )
@@ -94,11 +94,11 @@ open class GenerateGramineBundle @Inject constructor(
                 .substringAfter("Location: ")
         } else {
             architecture = DOCKER_IMAGE_ARCHITECTURE
-            ldPreload = ""
+            pythonLdPreload = ""
             pythonPackagesPath = ""
         }
 
-        generateManifest(architecture, ldPreload, pythonPackagesPath)
+        generateManifest(architecture, pythonLdPreload, pythonPackagesPath)
 
         if (enclaveMode != EnclaveMode.SIMULATION) {
             generateSgxManifestAndSigstruct()
@@ -108,12 +108,12 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
+    private fun generateManifest(architecture: String, pythonLdPreload: String, pythonPackagesPath: String) {
         val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
         val command = prepareManifestGenerationCommand(
             architecture,
-            ldPreload,
+            pythonLdPreload,
             pythonPackagesPath,
             manifestTemplatePath.absolutePathString()
         )
@@ -122,7 +122,7 @@ open class GenerateGramineBundle @Inject constructor(
 
     private fun prepareManifestGenerationCommand(
         architecture: String,
-        ldPreload: String,
+        pythonLdPreload: String,
         pythonPackagesPath: String,
         manifestTemplate: String
     ): MutableList<String> {
@@ -131,7 +131,7 @@ open class GenerateGramineBundle @Inject constructor(
             "gramine-manifest",
             "-Djava_home=${System.getProperty("java.home")}",
             "-Darch_libdir=/lib/$architecture",
-            "-Dld_preload=$ldPreload",
+            "-Dpython_ld_preload=$pythonLdPreload",
             "-Disv_prod_id=${productId.get()}",
             "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dpython_packages_path=$pythonPackagesPath",
