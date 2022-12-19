@@ -9,6 +9,10 @@ import org.gradle.api.tasks.*
 import javax.inject.Inject
 
 open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
+    companion object {
+        const val GRAALVM = "graalvm"
+        const val GRAMINE = "gramine"
+    }
     @get:Input
     val productID: Property<Int> = objects.property(Int::class.java)
     @get:Input
@@ -44,10 +48,10 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     // Constants for the two types we support. Allows the user to not have to use string quotes if they don't want to.
     @Suppress("unused")
     @get:Internal
-    val graalvm = "graalvm"
+    val graalvm = GRAALVM
     @Suppress("unused")
     @get:Internal
-    val gramine = "gramine"
+    val gramine = GRAMINE
 
     @get:Nested
     val kds: KDSExtension = objects.newInstance(KDSExtension::class.java)

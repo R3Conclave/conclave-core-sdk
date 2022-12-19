@@ -296,7 +296,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // tag 'conclave-build:latest' rather than looking up the conclave version.
             task.tagLatest.set("conclave-build:latest")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
-        }
+            task.runtimeType.set(conclaveExtension.runtime)
+         }
 
         for (enclaveMode in EnclaveMode.values()) {
             val enclaveExtension = when (enclaveMode) {

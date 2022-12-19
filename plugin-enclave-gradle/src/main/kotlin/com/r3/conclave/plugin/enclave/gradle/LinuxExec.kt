@@ -1,6 +1,7 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_DOCKER_WORKING_DIR
+import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
+import com.r3.conclave.plugin.enclave.gradle.ConclaveExtension.Companion.GRAMINE
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
@@ -33,6 +34,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     @get:Input
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
+    @get:Input
+    val runtimeType: Property<String> = objects.property(String::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -80,7 +84,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     // TODO Come up with a better way than this. This might not be an issue after CON-1069 since we won't be building
     //  the conclave-build image anymore.
     fun buildInDocker(buildInDocker: Property<Boolean>): Boolean {
-        return !OperatingSystem.current().isLinux || buildInDocker.get()
+        return !OperatingSystem.current().isLinux || buildInDocker.get() || runtimeType.get() == GRAMINE
     }
 
     /**
@@ -149,7 +153,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     private fun List<String>.mapToDockerWorkingDirectory(): List<String> {
         return map {
-            it.replace(baseDirectory.get(), GRAMINE_DOCKER_WORKING_DIR).replace("\\", "/")
+            it.replace(baseDirectory.get(), DOCKER_WORKING_DIR).replace("\\", "/")
         }
     }
 
@@ -170,7 +174,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             "--rm",
             "-u", "$userId:$groupId",
             "-v",
-            "${baseDirectory.get()}:$GRAMINE_DOCKER_WORKING_DIR"
+            "${baseDirectory.get()}:$DOCKER_WORKING_DIR"
         )
         return dockerRun + dockerizedExtraParams + image + dockerizedCommand
     }

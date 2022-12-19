@@ -8,7 +8,7 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SECCOMP
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_DOCKER_WORKING_DIR
+import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
@@ -62,7 +62,7 @@ class GramineEnclaveHandle(
     }
 
     private fun String.mapWorkingDirectory(): String {
-        return this.replace(workingDirectory.toFile().absolutePath, GRAMINE_DOCKER_WORKING_DIR).replace("\\", "/")
+        return this.replace(workingDirectory.toFile().absolutePath, DOCKER_WORKING_DIR).replace("\\", "/")
     }
 
     private fun runSimpleCommand(vararg command: String): String {
@@ -191,9 +191,9 @@ class GramineEnclaveHandle(
             "--rm",
             //  Map the host's working directory to the Docker container's working directory
             "-v",
-            "$workingDirectoryPath:$GRAMINE_DOCKER_WORKING_DIR",
+            "$workingDirectoryPath:$DOCKER_WORKING_DIR",
             //  Set the directory internally used in Docker as the working directory
-            "-w", GRAMINE_DOCKER_WORKING_DIR,
+            "-w", DOCKER_WORKING_DIR,
             "--security-opt",
             "seccomp=$workingDirectoryPath/$GRAMINE_SECCOMP",
             dockerImageTag
