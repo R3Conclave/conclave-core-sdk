@@ -1,9 +1,5 @@
 # Release notes
 
-## 1.3.1
-1. To make deploying enclaves built with conclave easier, files containing the enclave code hash and signer are now 
-   generated when an enclave is built. See [here](enclave-configuration.md#enclave-build-process) for more information.
-
 ## 1.3
 
 1. :tada: **The Conclave Core SDK is now open source!** :tada: Read our
@@ -37,7 +33,7 @@
     [`Enclave.createAttestationQuote`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
 14. We have added Intel advisory IDs to DCAP-based attestation reports. These provide more information on any 
-    platform vulnerabilites that may be present on the system.
+    platform vulnerabilities that may be present on the system.
 
 Please read the list of [known issues](known-issues.md).
 
