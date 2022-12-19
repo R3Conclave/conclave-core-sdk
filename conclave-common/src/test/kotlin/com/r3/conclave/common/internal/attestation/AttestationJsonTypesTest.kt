@@ -189,7 +189,7 @@ class SignedTcbInfoTest {
         val json = loadResourceAsJson("test_tcbinfo_$version.json")
         val result = SignedTcbInfo.fromJson(json)
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse("01020304"))
-        assertThat(result.tcbInfo.version).isEqualTo(version.id)
+        assertThat(result.tcbInfo.version).isEqualTo(version)
         assertThat(result.tcbInfo.issueDate).isEqualTo(Instant.parse("2020-01-02T03:04:05Z"))
         assertThat(result.tcbInfo.nextUpdate).isEqualTo(Instant.parse("2021-02-03T04:05:06Z"))
     }

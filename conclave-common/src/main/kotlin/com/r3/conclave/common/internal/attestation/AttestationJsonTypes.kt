@@ -199,7 +199,7 @@ data class SignedTcbInfo(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
  * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
  */
 data class TcbInfo(
-    val version: Int,
+    val version: Version,
     val issueDate: Instant,
     val nextUpdate: Instant,
     val fmspc: OpaqueBytes,
@@ -209,8 +209,8 @@ data class TcbInfo(
     val tcbLevels: List<TcbLevel>
 ) {
     /** The TcbInfo json is versioned. We currently support versions 2 and 3. */
-    enum class Version(val id: Int) {
-        V2(2), V3(3);
+    enum class Version {
+        V2, V3;
 
         companion object {
             fun fromInt(version: Int): Version {
@@ -229,10 +229,9 @@ data class TcbInfo(
              * First, get the version number.
              * It's not required here, but it is needed for some sub-objects.
              */
-            val versionNumber = json.getInt("version")
-            val version = Version.fromInt(versionNumber)
+            val version = Version.fromInt(json.getInt("version"))
             return TcbInfo(
-                    versionNumber,
+                    version,
                     json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
                     json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
                     json.getHexEncodedBytes("fmspc"),
@@ -388,7 +387,7 @@ data class SignedEnclaveIdentity(
  */
 data class EnclaveIdentity(
     val id: String,
-    val version: Int,
+    val version: Version,
     val issueDate: Instant,
     val nextUpdate: Instant,
     val tcbEvaluationDataNumber: Int,
@@ -401,8 +400,8 @@ data class EnclaveIdentity(
     val tcbLevels: List<EnclaveTcbLevel>
 ) {
     /** The EnclaveIdentity json is versioned. We currently only support versions 2. */
-    enum class Version(val id: Int) {
-        V2(2);
+    enum class Version {
+        V2;
 
         companion object {
             fun fromInt(version: Int): Version {
@@ -419,7 +418,7 @@ data class EnclaveIdentity(
             val version = Version.fromInt(json.getInt("version"))
             return EnclaveIdentity(
                     json.getString("id"),
-                    version.id,
+                    version,
                     json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
                     json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
                     json.getInt("tcbEvaluationDataNumber"),
