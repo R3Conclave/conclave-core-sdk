@@ -25,6 +25,7 @@ import java.lang.IllegalArgumentException
 import java.lang.NumberFormatException
 import java.time.Instant
 import java.util.*
+import kotlin.collections.Collection
 
 
 // We could avoid the redundant usage of @JsonProperty if we used the Kotlin Jackson module. However that makes shading
@@ -332,7 +333,7 @@ data class Tcb(
                 val elementString = i.toString().padStart(2, '0')
                 sgxtcbcompsvn.add(json.getInt("sgxtcbcomp${elementString}svn"))
             }
-            return Tcb(sgxtcbcompsvn, json.getInt("pcesvn"))
+            return Tcb(Collections.unmodifiableList(sgxtcbcompsvn), json.getInt("pcesvn"))
         }
 
         /**
@@ -349,7 +350,7 @@ data class Tcb(
         private fun fromJsonV3(json: JsonNode): Tcb {
             val tcbComponents = json.getArray("sgxtcbcomponents")
             return Tcb(
-                    tcbComponents.map { it.getInt("svn") },
+                    Collections.unmodifiableList(tcbComponents.map { it.getInt("svn") }),
                     json.getInt("pcesvn")
             )
         }
