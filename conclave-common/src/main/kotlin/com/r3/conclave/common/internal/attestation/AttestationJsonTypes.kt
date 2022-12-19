@@ -520,11 +520,11 @@ private fun JsonNode.getString(fieldName: String): String {
 }
 
 private fun JsonNode.getHexEncodedBytes(fieldName: String): OpaqueBytes {
-    val stringField = getString(fieldName)
+    val hexString = getString(fieldName)
     return try {
-        OpaqueBytes.parse(stringField)
-    } catch (e: NumberFormatException) {
-        throw IllegalArgumentException("$fieldName is not a valid hex string.")
+        OpaqueBytes.parse(hexString)
+    } catch (e: IllegalArgumentException) {
+        throw IllegalArgumentException("Expected $fieldName to be a valid hex string, got '$hexString'.")
     }
 }
 
