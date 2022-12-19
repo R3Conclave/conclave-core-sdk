@@ -23,7 +23,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
@@ -110,19 +109,22 @@ open class GenerateGramineBundle @Inject constructor(
     }
 
     private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
-        val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
-        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
-        val command =
-            prepareManifestGenerationCommand(architecture, ldPreload, pythonPackagesPath, manifestTemplateFile)
-        val dockerCommand = dockerCommandInWorkingDirectory(*command.toTypedArray())
-        linuxExec.exec(dockerCommand)
+        val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
+        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
+        val command = prepareManifestGenerationCommand(
+            architecture,
+            ldPreload,
+            pythonPackagesPath,
+            manifestTemplatePath.absolutePathString()
+        )
+        execDockerCommand(*command.toTypedArray())
     }
 
     private fun prepareManifestGenerationCommand(
         architecture: String,
         ldPreload: String,
         pythonPackagesPath: String,
-        manifestTemplateFile: Path
+        manifestTemplate: String
     ): MutableList<String> {
 
         val command = mutableListOf(
@@ -138,7 +140,7 @@ open class GenerateGramineBundle @Inject constructor(
             "-Denclave_worker_threads=10",
             "-Dgramine_max_threads=${maxThreads.get()}",
             "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-            manifestTemplateFile.absolutePathString(),
+            manifestTemplate,
             GRAMINE_MANIFEST
         )
         if (enclaveMode == EnclaveMode.SIMULATION) {
@@ -152,25 +154,23 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
-        val command = dockerCommandInWorkingDirectory(
+        execDockerCommand(
             "gramine-sgx-sign",
             "--manifest=${GRAMINE_MANIFEST}",
             "--key=${signingKey.get().asFile.absolutePath}",
             "--output=${GRAMINE_SGX_MANIFEST}"
         )
-        linuxExec.exec(command)
     }
 
     /**
      * This will create a .token file into the output dir
      */
     private fun generateToken() {
-        val command = dockerCommandInWorkingDirectory(
+        execDockerCommand(
             "gramine-sgx-get-token",
             "--sig=$GRAMINE_SIGSTRUCT",
             "--output=${outputDir.file(GRAMINE_SGX_TOKEN).get().asFile.absolutePath}"
         )
-        linuxExec.exec(command)
     }
 
     /**
@@ -209,8 +209,8 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun dockerCommandInWorkingDirectory(vararg command: String): List<String> {
-        return command.asList() + listOf("-w", outputDir.get().asFile.absolutePath)
+    private fun execDockerCommand(vararg command: String) {
+        linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
     }
 
     private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)

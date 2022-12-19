@@ -174,7 +174,7 @@ class GramineEnclaveHandle(
     }
 
     private fun getDockerCommand(user: String, group: String): List<String> {
-        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory.toAbsolutePath())
+        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory.toAbsolutePath() / GRAMINE_SECCOMP)
         val workingDirectoryPath = workingDirectory.toFile().absolutePath
         return listOf(
             "docker",
@@ -189,7 +189,7 @@ class GramineEnclaveHandle(
             "/var/run/aesmd:/var/run/aesmd",
             "-i",
             "--rm",
-            //  Map host working directory to Docker working directory
+            //  Map the host's working directory to the Docker container's working directory
             "-v",
             "$workingDirectoryPath:$GRAMINE_DOCKER_WORKING_DIR",
             //  Set the directory internally used in Docker as the working directory

@@ -113,13 +113,17 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     }
 
     /** Returns the ERROR output of the command only, in the returned list. */
-    fun exec(params: List<String>): List<String>? {
+    fun exec(command: List<String>, dockerExtraParams: List<String> = emptyList()): List<String>? {
         val errorOut = ByteArrayOutputStream()
         val stdOut = ByteArrayOutputStream()
 
         val result = commandLine(
-            command = if (buildInDocker(buildInDocker)) getDockerRunArgs(params) else params,
-            commandLineConfig = CommandLineConfig(ignoreExitValue = true, standardOutputStream = stdOut, errorOutputStream = errorOut)
+            command = if (buildInDocker(buildInDocker)) getDockerRunArgs(command, dockerExtraParams) else command,
+            commandLineConfig = CommandLineConfig(
+                ignoreExitValue = true,
+                standardOutputStream = stdOut,
+                errorOutputStream = errorOut
+            )
         )
 
         if (result.exitValue == 137) {
@@ -143,22 +147,31 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 "as the native image build process is memory intensive."
     )
 
-    private fun getDockerRunArgs(params: List<String>): List<String> {
+    private fun List<String>.mapToDockerWorkingDirectory(): List<String> {
+        return map {
+            it.replace(baseDirectory.get(), GRAMINE_DOCKER_WORKING_DIR).replace("\\", "/")
+        }
+    }
+
+    private fun getDockerRunArgs(command: List<String>, extraParams: List<String>): List<String> {
         // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
         val userId = commandWithOutput("id", "-u")
         val groupId = commandWithOutput("id", "-g")
-        return listOf(
+        val image = tag.get()
+        val dockerizedCommand = command.mapToDockerWorkingDirectory()
+        val dockerizedExtraParams = extraParams.mapToDockerWorkingDirectory()
+        val dockerRun = listOf(
             "docker",
             "run",
             "-i",
             "--rm",
             "-u", "$userId:$groupId",
             "-v",
-            "${baseDirectory.get()}:$GRAMINE_DOCKER_WORKING_DIR",
-            tag.get()
-        ) + params.map { it.replace(baseDirectory.get(), GRAMINE_DOCKER_WORKING_DIR).replace("\\", "/") }
+            "${baseDirectory.get()}:$GRAMINE_DOCKER_WORKING_DIR"
+        )
+        return dockerRun + dockerizedExtraParams + image + dockerizedCommand
     }
 }
