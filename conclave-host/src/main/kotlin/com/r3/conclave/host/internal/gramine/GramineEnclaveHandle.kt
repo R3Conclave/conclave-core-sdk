@@ -1,14 +1,14 @@
 package com.r3.conclave.host.internal.gramine
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.PluginUtils
+import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
+import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SECCOMP
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SECCOMP
-import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
+import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
@@ -33,7 +33,7 @@ class GramineEnclaveHandle(
 
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
-        private val dockerImageTag = PluginUtils.getManifestAttribute("Conclave-Build-Image-Tag")
+        private val dockerImageTag = getManifestAttribute("Conclave-Build-Image-Tag")
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
                 EnclaveMode.SIMULATION -> "gramine-direct"

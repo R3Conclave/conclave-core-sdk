@@ -21,6 +21,8 @@ dependencies {
 
 jar {
     manifest {
-        attributes("Conclave-Build-Image-Tag": "conclave-build:$conclave_version")
+        attributes("Conclave-Version": rootProject.version.toString(),
+                   "Jep-Version": jep_version.toString(),
+                   "Conclave-Build-Image-Tag": "conclave-build:$conclave_version")
     }
 }

@@ -1,8 +1,8 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
+import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.plugin.enclave.gradle.ConclaveExtension.Companion.GRAMINE
-import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
