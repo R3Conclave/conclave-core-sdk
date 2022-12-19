@@ -437,9 +437,7 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP(JN
 jbyteArray jbyteArrayFromCharPtr(JNIEnv *jniEnv, unsigned size, char* data) {
     unsigned sizeActual = size - 1; // Drop the \0 terminator
     jbyteArray array = jniEnv->NewByteArray(sizeActual);
-    jbyte *bytes = jniEnv->GetByteArrayElements(array, 0);
-    memcpy(bytes, data, sizeActual);
-    jniEnv->ReleaseByteArrayElements(array, bytes, 0);
+    jniEnv->SetByteArrayRegion(array, 0, sizeActual, (jbyte*)data);
     return array;
 }
 
