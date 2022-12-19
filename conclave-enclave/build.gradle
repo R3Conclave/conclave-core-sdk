@@ -8,10 +8,9 @@ dependencies {
 
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-    // The GraalVM SDK is not needed if the user chooses the Gramine runtime, so we don't want to include it
-    // unnecessarily. It's declared as "compileOnly" to make sure everything still compiles, but the
-    // actual dependency is only added by the plugin if the user choose GraalVM as the runtime. Only then will it be
-    // included in the enclave fat jar.
+    // The GraalVM SDK is only needed when the graalvm runtime is selected. We add it here as a compile time only
+    // dependency to ensure compilation is successful. It is added to the enclave fat jar later by the plugin only if
+    // graalvm is the selected runtime.
     compileOnly "com.r3.conclave:graal-sdk:$conclave_graal_version"
 
     testImplementation project(":internal-testing")

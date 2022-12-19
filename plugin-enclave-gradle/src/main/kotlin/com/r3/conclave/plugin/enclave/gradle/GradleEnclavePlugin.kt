@@ -41,9 +41,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     companion object {
         private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Version")
 
-        // We manually specify the Conclave version, rather than appending CONCLAVE_SDK_VERSION, because it might be
-        // possible for the two versions to go out of sync. For example, Conclave SDK is 1.4-SNAPSHOT, but it's still
-        // using 20.0.0.2-1.3 because we've not had the need to update GraalVM since 1.3.
+        // Rather than appending CONCLAVE_SDK_VERSION here, we hard code it so the SDK and conclave-graalvm
+        // versions can go out of sync.
         private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
 
         fun getManifestAttribute(name: String): String {
