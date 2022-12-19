@@ -31,7 +31,7 @@ class QuoteVerifierTest {
          * Returns -1 if the sequence isn't found.
          */
         fun ByteArray.findSubsequence(subsequence: ByteArray): Int {
-            check(subsequence.isNotEmpty())
+            require(subsequence.isNotEmpty())
 
             val lowestPossibleIndex = this.size - subsequence.size
 
