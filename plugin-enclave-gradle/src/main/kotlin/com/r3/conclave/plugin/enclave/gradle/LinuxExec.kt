@@ -62,7 +62,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 } else {
                     "Conclave requires Docker to be installed when building enclaves on non-Linux platforms. Please " +
                             "install Docker and rerun your build. See " +
-                            "https://docs.conclave.net/tutorial.html#setting-up-your-machine and " +
+                            "https://docs.conclave.net/running-hello-world.html#prerequisites and " +
                             "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module for " +
                             "more information."
                 }
