@@ -114,7 +114,7 @@ open class GenerateGramineBundle @Inject constructor(
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
         val command =
             prepareManifestGenerationCommand(architecture, ldPreload, pythonPackagesPath, manifestTemplateFile)
-        val dockerCommand = dockerCommandInWorkingDirectory(command)
+        val dockerCommand = dockerCommandInWorkingDirectory(*command.toTypedArray())
         linuxExec.exec(dockerCommand)
     }
 
@@ -134,19 +134,17 @@ open class GenerateGramineBundle @Inject constructor(
             "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dpython_packages_path=$pythonPackagesPath",
             "-Dis_python_enclave=${pythonFile.isPresent}",
-            "-Denclave_mode=${enclaveMode}",
+            "-Denclave_mode=$enclaveMode",
             "-Denclave_worker_threads=10",
             "-Dgramine_max_threads=${maxThreads.get()}",
             "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
             manifestTemplateFile.absolutePathString(),
             GRAMINE_MANIFEST
         )
-
         if (enclaveMode == EnclaveMode.SIMULATION) {
             val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
             command += "-Dsimulation_mrsigner=$simulationMrSigner"
         }
-
         return command
     }
 
@@ -211,13 +209,8 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-
     private fun dockerCommandInWorkingDirectory(vararg command: String): List<String> {
-        return dockerCommandInWorkingDirectory(*command)
-    }
-
-    private fun dockerCommandInWorkingDirectory(command: List<String>): List<String> {
-        return command + listOf("-w", outputDir.get().asFile.absolutePath)
+        return command.asList() + listOf("-w", outputDir.get().asFile.absolutePath)
     }
 
     private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)
