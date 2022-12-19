@@ -304,6 +304,9 @@ enum class TcbStatus : VerificationStatus {
     Revoked
 }
 
+/**
+ * This class is used for both V2 and V3 APIs.
+ */
 data class Tcb(
     val sgxtcbcompsvn: List<Int>,
     val pcesvn: Int
