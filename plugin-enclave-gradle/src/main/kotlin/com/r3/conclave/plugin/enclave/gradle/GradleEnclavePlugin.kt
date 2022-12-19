@@ -39,11 +39,8 @@ import kotlin.io.path.*
 
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {
-        private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Version")
-
-        // Rather than appending CONCLAVE_SDK_VERSION here, we hard code it so the SDK and conclave-graalvm
-        // versions can go out of sync.
-        private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
+        private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Release-Version")
+        private val CONCLAVE_GRAALVM_VERSION = getManifestAttribute("Conclave-GraalVM-Version")
 
         fun getManifestAttribute(name: String): String {
             // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
