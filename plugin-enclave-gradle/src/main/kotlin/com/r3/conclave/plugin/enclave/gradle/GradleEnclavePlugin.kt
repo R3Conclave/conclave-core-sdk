@@ -39,9 +39,11 @@ import kotlin.io.path.*
 
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {
-        private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
-
         private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Version")
+
+        // Rather than appending CONCLAVE_SDK_VERSION here, we hard code it so the SDK and conclave-graalvm
+        // versions can go out of sync.
+        private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
 
         fun getManifestAttribute(name: String): String {
             // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
@@ -112,15 +114,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
 
-            // If language support is enabled then automatically add the required dependency.
-            if (runtimeType.get() == GRAALVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
-                // It might be possible that the conclave part of the version not match the current version, e.g. if
-                // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
-                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:$CONCLAVE_GRAALVM_VERSION")
+            // Only add the GraalVM SDK as a dependency if the enclave is going to need it.
+            if (runtimeType.get() == GRAALVM) {
+                // If the user has asked for language support, then we need to expose the GraalVM polygot API to
+                // them with "implementation", otherwise "runtimeOnly" is sufficient for a GraalVM enclave.
+                val configuration = if (conclaveExtension.supportLanguages.get().isEmpty()) "runtimeOnly" else "implementation"
+                target.dependencies.add(configuration, "com.r3.conclave:graal-sdk:$CONCLAVE_GRAALVM_VERSION")
             }
+
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$CONCLAVE_SDK_VERSION")
             target.dependencies.add("testImplementation", "com.r3.conclave:conclave-host:$CONCLAVE_SDK_VERSION")
+
             // Make sure that the user has specified productID, print friendly error message if not
             if (!conclaveExtension.productID.isPresent) {
                 throw GradleException(
