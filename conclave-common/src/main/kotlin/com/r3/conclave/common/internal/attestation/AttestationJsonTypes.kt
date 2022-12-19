@@ -267,7 +267,7 @@ data class TcbLevel(
                     json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
                     TcbStatus.valueOf(json.getString("tcbStatus")),
                     json.getNullable("advisoryIDs") { node ->
-                        node.getArray("advisoryIDs").map { it.asText() }
+                        node.map { it.asText() }
                     }
             )
         }
@@ -531,12 +531,12 @@ private fun JsonNode.getObject(fieldName: String): JsonNode {
 }
 
 /**
- * Get a nullable json field.
+ * Get a nullable json array.
  * Note that this function will treat non-existing fields as "null".
  */
 private fun <T> JsonNode.getNullable(fieldName: String, fn: (node: JsonNode) -> T): T? {
     return if (this.has(fieldName) && !this.get(fieldName).isNull) {
-        fn(this)
+        fn(this.get(fieldName))
     } else {
         null
     }
