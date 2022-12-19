@@ -317,6 +317,15 @@ data class Tcb(
             }
         }
 
+        /**
+         * Example V2 Json:
+         * "tcb": {
+         *   "sgxtcbcomp01svn": <int>,
+         *   "sgxtcbcomp02svn": <int>,
+         *   ...
+         *   "pcesvn": <int>
+         * }
+         */
         private fun fromJsonV2(json: JsonNode): Tcb {
             val sgxtcbcompsvn = ArrayList<Int>()
             for (i in 1..16) {
@@ -326,6 +335,17 @@ data class Tcb(
             return Tcb(sgxtcbcompsvn, json.getInt("pcesvn"))
         }
 
+        /**
+         * Example V3 Json:
+         * "tcb": {
+         *   "sgxtcbcomponents": [
+         *     { "svn": <int> },
+         *     { "svn": <int> },
+         *     ...
+         *   ],
+         *   "pcesvn": <int>
+         * }
+         */
         private fun fromJsonV3(json: JsonNode): Tcb {
             val tcbComponents = json.getArray("sgxtcbcomponents")
             return Tcb(
