@@ -232,8 +232,8 @@ data class TcbInfo(
             val version = Version.fromInt(json.getInt("version"))
             return TcbInfo(
                     version,
-                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getDcapInstant("issueDate"),
+                    json.getDcapInstant("nextUpdate"),
                     json.getHexEncodedBytes("fmspc"),
                     json.getHexEncodedBytes("pceId"),
                     json.getInt("tcbType"),
@@ -263,7 +263,7 @@ data class TcbLevel(
         fun fromJson(json: JsonNode, version: TcbInfo.Version): TcbLevel {
             return TcbLevel(
                     Tcb.fromJson(json.getObject("tcb"), version),
-                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getDcapInstant("tcbDate"),
                     TcbStatus.valueOf(json.getString("tcbStatus")),
                     json.getNullable("advisoryIDs") { node ->
                         node.map { it.asText() }
@@ -419,8 +419,8 @@ data class EnclaveIdentity(
             return EnclaveIdentity(
                     json.getString("id"),
                     version,
-                    json.getInstant("issueDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
-                    json.getInstant("nextUpdate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getDcapInstant("issueDate"),
+                    json.getDcapInstant("nextUpdate"),
                     json.getInt("tcbEvaluationDataNumber"),
                     json.getHexEncodedBytes("miscselect"),
                     json.getHexEncodedBytes("miscselectMask"),
@@ -449,7 +449,7 @@ data class EnclaveTcbLevel(
         fun fromJson(json: JsonNode): EnclaveTcbLevel {
             return EnclaveTcbLevel(
                     EnclaveTcb.fromJson(json.getObject("tcb")),
-                    json.getInstant("tcbDate", "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC"),
+                    json.getDcapInstant("tcbDate"),
                     EnclaveTcbStatus.valueOf(json.getString("tcbStatus"))
             )
         }
@@ -508,13 +508,16 @@ private fun JsonNode.getHexEncodedBytes(fieldName: String): OpaqueBytes {
     }
 }
 
-private fun JsonNode.getInstant(fieldName: String, format: String, timezone: String): Instant {
+const val DCAP_INSTANT_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+const val DCAP_INSTANT_TIMEZONE = "UTC"
+
+private fun JsonNode.getDcapInstant(fieldName: String): Instant {
     val dateString = getString(fieldName)
     return try {
-        val dateFormat = SimpleDateFormat(format).apply { timeZone = TimeZone.getTimeZone(timezone) }
+        val dateFormat = SimpleDateFormat(DCAP_INSTANT_FORMAT).apply { timeZone = TimeZone.getTimeZone(DCAP_INSTANT_TIMEZONE) }
         dateFormat.parse(dateString).toInstant()
     } catch (e: Exception) {
-        throw IllegalArgumentException("Expected $fieldName to be a date of format $format, got $dateString", e)
+        throw IllegalArgumentException("Expected $fieldName to be a date of format $DCAP_INSTANT_FORMAT, got $dateString", e)
     }
 }
 
