@@ -2,9 +2,9 @@
 
 ## 1.3.1
 
-1. To make deploying enclaves built with conclave easier, files containing the enclave code hash and signer are now
+1. To make deploying enclaves built with Conclave easier, files containing the enclave code hash and signer are now
    generated when an enclave is built. See [here](enclave-configuration.md#enclave-build-process) for more information.
-2. Added support for the intel PCCS (Provisioning certificate caching service) and intel DCAP plugin. See
+2. Added support for the Intel PCCS (Provisioning certificate caching service) and Intel DCAP plugin. See
    [here](dcap.md#intel-dcap-client--pccs) for more information.
 
 ## 1.3

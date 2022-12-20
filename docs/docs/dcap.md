@@ -9,7 +9,7 @@ In DCAP, repeated attestation requests are served from a cache rather than sent 
 as the Provisioning Certificate Caching Service (PCCS). A newly installed machine obtains a machine certificate from 
 Intel via the PCCS, which may then be persisted to disk. This process is automatic.
 
-The PCCS is typically operated as an organisation-wide service. For example, microsoft provides a PCCS service for users 
+The PCCS is typically operated as an organisation-wide service. For example, Microsoft provides a PCCS service for users 
 of the Azure cloud platform.
 
 ## DCAP Client
