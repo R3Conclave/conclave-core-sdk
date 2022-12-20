@@ -160,8 +160,9 @@ processResources {
 
 jar {
     manifest {
-        // This is used in the plugin to add implicit dependencies of the right version.
-        attributes("Conclave-Version": rootProject.version.toString(),
-                   "Jep-Version": jep_version.toString())
+        attributes(
+                "Conclave-GraalVM-Version": conclave_graal_version.toString(),
+                "Jep-Version": jep_version.toString()
+        )
     }
 }
