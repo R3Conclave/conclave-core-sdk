@@ -22,9 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
-import kotlin.io.path.createDirectories
-import kotlin.io.path.div
-import kotlin.io.path.exists
+import kotlin.io.path.*
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
@@ -36,6 +34,7 @@ class GramineEnclaveHandle(
         private val logger = loggerFor<GramineEnclaveHandle>()
         private val dockerImageTag =
             getManifestAttribute(PluginUtils::class.java.classLoader, "Conclave-Build-Image-Tag")
+
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
                 EnclaveMode.SIMULATION -> "gramine-direct"
@@ -63,10 +62,6 @@ class GramineEnclaveHandle(
         enclaveInterface = SocketHostEnclaveInterface()
     }
 
-    private fun String.mapWorkingDirectory(): String {
-        return this.replace(workingDirectory.toFile().absolutePath, DOCKER_WORKING_DIR).replace("\\", "/")
-    }
-
     private fun runSimpleCommand(vararg command: String): String {
         val process = ProcessBuilder()
             .command(command.asList())
@@ -85,9 +80,7 @@ class GramineEnclaveHandle(
          * Start the enclave process, passing the port that the call interface is listening on.
          * TODO: Implement a *secure* method for passing port to the enclave.
          */
-        val user = runSimpleCommand("id", "-u")
-        val group = runSimpleCommand("id", "-g")
-        val command = prepareCommandToRun(user, group, port)
+        val command = prepareCommandToRun(port)
 
         gramineProcess = ProcessBuilder()
             .inheritIO()
@@ -141,6 +134,15 @@ class GramineEnclaveHandle(
         }
     }
 
+    private fun isPythonEnclave(): Boolean {
+        workingDirectory.toFile().walk().forEach {
+            if (it.extension == "py") {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun unzipEnclaveBundle() {
         ZipInputStream(zipFileUrl.openStream()).use { zip ->
             while (true) {
@@ -155,13 +157,19 @@ class GramineEnclaveHandle(
         }
     }
 
-    private fun prepareCommandToRun(user: String, group: String, port: Int): List<String> {
-        val dockerCommand = getDockerCommand(user, group)
+    private fun prepareCommandToRun(port: Int): List<String> {
         val gramineCommand = getGramineExecutable(enclaveMode)
         val javaCommand = getJavaCommand(port)
 
-        val command = dockerCommand + gramineCommand + javaCommand
-        logger.debug("Docker command: ${command.joinToString(" ")}")
+        val command = if (isPythonEnclave()) {
+            listOf(gramineCommand) + javaCommand
+        } else {
+            val user = runSimpleCommand("id", "-u")
+            val group = runSimpleCommand("id", "-g")
+            val dockerCommand = getDockerCommand(user, group)
+            dockerCommand + listOf(gramineCommand) + javaCommand
+        }
+        logger.debug("Running enclave with command: ${command.joinToString(" ")}")
         return command
     }
 
