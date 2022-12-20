@@ -160,9 +160,10 @@ processResources {
 
 def genDockerContainerTag() {
     new ByteArrayOutputStream().withStream { os ->
-        def result = exec {
+        exec {
             executable = 'bash'
-            args "-c", "../scripts/genDockerImageTag.sh" // N.B.: The script must only print to the standard output the docker image tag. Printing other information will cause issues
+            args "-c", "../scripts/genDockerImageTag.sh" // N.B.: The script must only print to the standard output
+                                                         // the docker image tag. Printing other information will cause issues
             standardOutput = os
         }
         return os.toString().trim()
