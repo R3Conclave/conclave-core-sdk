@@ -349,6 +349,9 @@ data class Tcb(
          */
         private fun fromJsonV3(json: JsonNode): Tcb {
             val tcbComponents = json.getArray("sgxtcbcomponents")
+            require(tcbComponents.size() == 16) {
+                "Unexpected tcb component count, expected 16, got ${tcbComponents.size()}"
+            }
             return Tcb(
                     Collections.unmodifiableList(tcbComponents.map { it.getInt("svn") }),
                     json.getInt("pcesvn")
