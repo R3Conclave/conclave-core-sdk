@@ -294,9 +294,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.dependsOn(copyGraalVM)
             task.baseDirectory.set(target.projectDir.toPath().toString())
             task.tag.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$DOCKER_CONCLAVE_BUILD_TAG")
-            // Create a 'latest' tag too so users can follow our tutorial documentation using the
-            // tag 'conclave-build:latest' rather than looking up the conclave version.
-            task.tagLatest.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:latest")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
             task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
         }
