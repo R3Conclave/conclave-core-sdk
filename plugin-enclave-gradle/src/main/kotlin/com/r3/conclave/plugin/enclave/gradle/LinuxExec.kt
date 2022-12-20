@@ -31,6 +31,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     val tagLatest: Property<String> = objects.property(String::class.java)
 
     @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+
+    @get:Input
     val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
