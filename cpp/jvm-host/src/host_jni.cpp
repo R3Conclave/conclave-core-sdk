@@ -434,8 +434,14 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP(JN
     return (int)eval_result;
 }
 
-jbyteArray jbyteArrayFromCharPtr(JNIEnv *jniEnv, unsigned size, char* data) {
-    unsigned sizeActual = size - 1; // Drop the \0 terminator
+jbyteArray jbyteArrayFromCharPtr(JNIEnv *jniEnv, unsigned int size, char* data) {
+    if (size < 1) {
+        raiseException(jniEnv, "Failed to create byte array, data too short.");
+    }
+    if (data == nullptr) {
+        raiseException(jniEnv, "Failed to create byte array, data is null.");
+    }
+    unsigned int sizeActual = size - 1; // Drop the \0 terminator
     jbyteArray array = jniEnv->NewByteArray(sizeActual);
     jniEnv->SetByteArrayRegion(array, 0, sizeActual, (jbyte*)data);
     return array;
