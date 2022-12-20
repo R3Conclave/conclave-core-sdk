@@ -113,10 +113,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     /** Returns the ERROR output of the command only, in the returned list. */
     fun exec(params: List<String>): List<String>? {
         val errorOut = ByteArrayOutputStream()
-        val args: List<String> = if (useInternalDockerRepo.get()) getDockerRunArgs(params, tag.get()) else params
 
         val result = commandLine(
-            command = if (buildInDocker(useInternalDockerRepo)) getDockerRunArgs(params) else params,
+            command = if (buildInDocker(useInternalDockerRepo)) getDockerRunArgs(params, tag.get()) else params,
             commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
         )
 
@@ -183,7 +182,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             "-u", "$userId:$groupId",
             "-v",
             "${baseDirectory.get()}:/project",
-            tag.get()
+            container
         ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
     }
 }
