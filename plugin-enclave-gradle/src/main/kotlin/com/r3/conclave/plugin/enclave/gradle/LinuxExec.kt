@@ -42,7 +42,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-        if (buildInDocker(useInternalDockerRegistry)) {
+        if (buildInDocker(buildInDocker) && !useInternalDockerRegistry.get()) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
