@@ -4,8 +4,9 @@ set -xeuo pipefail
 script_dir=$(dirname ${BASH_SOURCE[0]})
 source ${script_dir}/ci_build_common.sh
 
-enclaveMode=$1
-runtimeType=$2
+# Set first char to uppercase
+enclaveMode=${1^}
+runtimeType=${2^}
 
 if [ "$enclaveMode" != "Simulation" ] && [ "$runtimeType" == "Gramine" ]; then
     # Hardware tests for Gramine need the AESM service running.
