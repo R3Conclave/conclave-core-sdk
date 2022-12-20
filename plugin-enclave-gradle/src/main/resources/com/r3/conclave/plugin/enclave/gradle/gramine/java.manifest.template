@@ -23,11 +23,13 @@ sgx.isvsvn    = {{ isv_svn }}
 {% if is_python_enclave == "true" %}
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}:/usr/lib:{{ python_packages_path }}/jep"
 loader.env.PYTHONPATH = "{{ python_packages_path }}"
-loader.env.LD_PRELOAD = "{{ python_ld_preload }}"
 {% else %}
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 {% endif %}
 
+{% if ld_preload != "" %}
+loader.env.LD_PRELOAD = "{{ ld_preload }}"
+{% endif %}
 
 # Is this enclave implemented in python?
 loader.env.CONCLAVE_IS_PYTHON_ENCLAVE = "{{ is_python_enclave }}"
@@ -70,7 +72,7 @@ sgx.trusted_files = [
     "file:/usr/{{ arch_libdir }}/",
     "file:{{ java_home }}/",
 {% if is_python_enclave == "true" %}
-    "file:{{ python_ld_preload }}",
+    "file:{{ ld_preload }}",
     "file:{{ python_packages_path }}/",
     #  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
     #    see: https://github.com/gramineproject/examples/blob/master/pytorch/pytorch.manifest.template

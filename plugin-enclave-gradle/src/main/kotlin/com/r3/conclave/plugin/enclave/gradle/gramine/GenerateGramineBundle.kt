@@ -128,7 +128,7 @@ open class GenerateGramineBundle @Inject constructor(
 
     private fun prepareManifestGenerationCommand(
         architecture: String,
-        pythonLdPreload: String,
+        ldPreload: String,
         pythonPackagesPath: String,
         manifestTemplate: String
     ): MutableList<String> {
@@ -136,7 +136,7 @@ open class GenerateGramineBundle @Inject constructor(
             "gramine-manifest",
             "-Djava_home=${System.getProperty("java.home")}",
             "-Darch_libdir=/lib/$architecture",
-            "-Dpython_ld_preload=$pythonLdPreload",
+            "-Dld_preload=$ldPreload",
             "-Disv_prod_id=${productId.get()}",
             "-Disv_svn=${revocationLevel.get() + 1}",
             "-Dpython_packages_path=$pythonPackagesPath",
