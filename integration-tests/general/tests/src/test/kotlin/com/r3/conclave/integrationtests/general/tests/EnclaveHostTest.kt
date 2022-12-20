@@ -78,12 +78,12 @@ class EnclaveHostTest : AbstractEnclaveActionTest() {
     fun `close() in callback not allowed`(@Values(booleans = [false, true]) threadSafeEnclave: Boolean) {
         val echo = EchoWithCallback(byteArrayOf())
         val enclaveHost = enclaveHost(if (threadSafeEnclave) THREAD_SAFE_ENCLAVE else NON_THREAD_SAFE_ENCLAVE)
-        assertThatIllegalStateException().isThrownBy {
+        assertThatThrownBy {
             callEnclave(enclaveHost, echo) {
                 enclaveHost.close()
                 null
             }
-        }.withMessage("Enclave cannot be shutdown in a callback")
+        }.hasMessageContaining("Enclave cannot be shutdown in a callback")
     }
 
     @Test
