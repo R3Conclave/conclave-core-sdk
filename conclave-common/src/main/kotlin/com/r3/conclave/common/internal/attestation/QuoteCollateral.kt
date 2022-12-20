@@ -45,10 +45,6 @@ data class QuoteCollateral(
         return CertificateFactory.getInstance("X.509").generateCRL(bytes.inputStream()) as X509CRL
     }
 
-    private inline fun <reified T> parseJson(bytes: OpaqueBytes): T {
-        return attestationObjectMapper.readValue(bytes.inputStream(), T::class.java)
-    }
-
     fun serialiseTo(dos: DataOutputStream) {
         // We need to serialise the version as a length prefixed string to maintain backwards compatibility.
         dos.writeIntLengthPrefixBytes(version.toString().toByteArray())
