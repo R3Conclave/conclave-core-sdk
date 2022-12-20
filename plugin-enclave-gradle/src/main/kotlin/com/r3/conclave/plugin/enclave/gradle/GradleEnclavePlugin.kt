@@ -3,6 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_PROPERTIES
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
@@ -38,9 +39,9 @@ import kotlin.io.path.*
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {
         private val CONCLAVE_SDK_VERSION =
-            getManifestAttribute(this::class.java.classLoader, "Conclave-Release-Version")
+            getManifestAttribute(PluginUtils::class.java.classLoader, "Conclave-Release-Version")
         private val CONCLAVE_GRAALVM_VERSION =
-            getManifestAttribute(this::class.java.classLoader, "Conclave-GraalVM-Version")
+            getManifestAttribute(PluginUtils::class.java.classLoader, "Conclave-GraalVM-Version")
     }
 
     enum class RuntimeType {
