@@ -15,4 +15,5 @@ conclave {
     productID = 1
     revocationLevel = 0
     runtime = runtimeType
+    useInternalDockerRepo = true
 }
