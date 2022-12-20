@@ -225,18 +225,28 @@ To generate `host-release.jar`:
     On a Linux machine that meets the [system requirements](enclave-modes.md#system-requirements), you can run your
     app in all the modes the same way as in mock mode.
 
-=== "macOS/Windows"
+=== "macOS"
 
-    Conclave needs a Linux environment to run the host in simulation mode. But you don't need to do anything as long as
-    Docker is installed on your system. You can run the host and client as we did for mock mode. The only differences are that the host will be
-    run inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+    You need a Linux environment to run the host in simulation mode. But you don't need to do anything as long as Docker 
+    is installed on your system. You can run the host and client as we did for mock mode. The only differences are that
+    the host will be run inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
 
     !!!Note
-        * You need Docker to run the *host* on macOS/Windows. You can run the *client* on macOS/Windows without Docker.
-        * It is not possible to run enclaves in debug or release mode on macOS/Windows.
+        * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
+        * It is not possible to run enclaves in debug or release mode on macOS.
         * Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on
           [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64
           binaries.
+
+=== "Windows"
+
+    You need a Linux environment to run the host in simulation mode. But you don't need to do anything as long as Docker 
+    is installed on your system. You can run the host and client as we did for mock mode. The only differences are that
+    the host will be run inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+
+    !!! note
+        * You need Docker to run the *host* on Windows. You don't need Docker to run the client.
+        * It is not possible to run enclaves in debug or release mode on Windows.
 
 !!!Note
 
