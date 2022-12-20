@@ -139,34 +139,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 "as the native image build process is memory intensive."
     )
 
-    private fun buildConclaveBuildContainer() {
-        // Check if the container exists.
-        // If the container exists skip the following step
-        val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
-        LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
-
-        try {
-            logger.info("Building container ${tag.get()}")
-            commandLine(
-                "docker",
-                "build",
-                "--tag", tagLatest.get(),
-                "--build-arg",
-                "jep_version=$JEP_VERSION",
-                conclaveBuildDir
-            )
-        } catch (e: Exception) {
-            logger.info("Docker build of conclave-build failed.", e)
-            throw GradleException(
-                "Conclave requires Docker to be installed when building GraalVM native-image based enclaves. "
-                        + "Please install Docker and rerun your build. "
-                        + "See https://docs.conclave.net/enclave-modes.html#system-requirements "
-                        + "If the build still fails, please rerun the build with '--info' flag and create a new "
-                        + "issue on GitHub https://github.com/R3Conclave/conclave-core-sdk/issues/new"
-            )
-        }
-    }
-
     private fun getDockerRunArgs(params: List<String>, container: String): List<String> {
         // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
