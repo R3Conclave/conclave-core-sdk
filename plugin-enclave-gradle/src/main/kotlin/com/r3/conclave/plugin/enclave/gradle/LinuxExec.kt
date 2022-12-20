@@ -34,7 +34,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
+    val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -42,7 +42,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-        if (buildInDocker(useInternalDockerRepo)) {
+        if (buildInDocker(useInternalDockerRegistry)) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
@@ -91,7 +91,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      */
     fun prepareFile(file: Path): Path {
         // Use the file as is if we're not using Docker
-        if (!buildInDocker(useInternalDockerRepo)) return file
+        if (!buildInDocker(useInternalDockerRegistry)) return file
 
         val tmp = Paths.get(baseDirectory.get(), ".linuxexec").createDirectories()
         val newFile = Files.createTempFile(tmp, file.nameWithoutExtension, file.extension)
@@ -108,7 +108,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
      * by a call to prepareFile().
      */
     fun cleanPreparedFiles() {
-        if (buildInDocker(useInternalDockerRepo)) {
+        if (buildInDocker(useInternalDockerRegistry)) {
             this.project.delete(File("${baseDirectory.get()}/.linuxexec"))
         }
     }
@@ -118,7 +118,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         val errorOut = ByteArrayOutputStream()
 
         val result = commandLine(
-            command = if (buildInDocker(useInternalDockerRepo)) getDockerRunArgs(params, tag.get()) else params,
+            command = if (buildInDocker(useInternalDockerRegistry)) getDockerRunArgs(params, tag.get()) else params,
             commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
         )
 

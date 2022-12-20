@@ -31,10 +31,10 @@ open class SignEnclave @Inject constructor(
     val signedEnclavePath: String get() = outputSignedEnclave.asFile.get().absolutePath
 
     @get:Input
-    val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
-        if (linuxExec.buildInDocker(useInternalDockerRepo)) {
+        if (linuxExec.buildInDocker(buildInDocker)) {
             try {
                 // The input key file may not live in a directory accessible by docker.
                 // Prepare the file so docker can access it if necessary.

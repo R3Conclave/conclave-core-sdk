@@ -298,7 +298,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // tag 'conclave-build:latest' rather than looking up the conclave version.
             task.tagLatest.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:latest")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
-            task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
+            task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
         }
 
         for (enclaveMode in EnclaveMode.values()) {
@@ -416,7 +416,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                     task.inputKey.set(signingKey)
                     task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
-                    task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
+                    task.buildInDocker.set(conclaveExtension.buildInDocker)
                 }
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(

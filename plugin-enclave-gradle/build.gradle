@@ -165,7 +165,7 @@ def genDockerContainerTag() {
             args "-c", "../scripts/genDockerImageTag.sh" // N.B.: The script must only print to the standard output the docker image tag. Printing other information will cause issues
             standardOutput = os
         }
-        return os.toString()
+        return os.toString().trim()
     }
 }
 
