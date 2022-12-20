@@ -2,6 +2,7 @@ package com.r3.conclave.integrationtests.general.tests.filesystem.db
 
 import com.r3.conclave.integrationtests.general.common.tasks.ExecuteSql
 import com.r3.conclave.integrationtests.general.common.tasks.SqlQuery
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import com.r3.conclave.integrationtests.general.tests.filesystem.FileSystemEnclaveTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
@@ -16,6 +17,7 @@ class DatabaseEnclaveTest : FileSystemEnclaveTest("com.r3.conclave.integrationte
         "true, true"
     )
     fun `sql inside enclave`(restartBetweenCmds: Boolean, useKds: Boolean) {
+        if (restartBetweenCmds) graalvmOnlyTest() // CON-1268: Gramine: cannot access database after restarting the enclave
         this.useKds = useKds
 
         callEnclave(ExecuteSql("""
