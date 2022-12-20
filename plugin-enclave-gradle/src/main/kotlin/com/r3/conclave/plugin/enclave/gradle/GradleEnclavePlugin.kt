@@ -292,7 +292,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         }
 
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
-            task.dependsOn(copyGraalVM)
             task.baseDirectory.set(target.projectDir.toPath().toString())
             task.tag.set("conclave-build:$CONCLAVE_SDK_VERSION")
             // Create a 'latest' tag too so users can follow our tutorial documentation using the
