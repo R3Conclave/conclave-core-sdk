@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.integrationtests.general.common.tasks.*
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -40,6 +41,7 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         "/tmp/fos.data, false"
     )
     fun fileOutputStreamWriteRead(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val fileData = byteArrayOf(1, 2, 3, 4)
         val reversedFileData = fileData.reversed().toByteArray()
         // Create a FileOutputStream and write the content byte by byte
@@ -79,6 +81,7 @@ class FileOutputStreamTest : FileSystemEnclaveTest() {
         "/tmp/fos-append.data, false"
     )
     fun fileOutputStreamAppendWrite(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val fileData = byteArrayOf(10, 20, 30, 40)
         val appendData = byteArrayOf(50, 60, 70)
         // Create a FileOutputStream with append mode set

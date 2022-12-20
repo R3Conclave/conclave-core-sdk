@@ -1,9 +1,10 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
-import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.common.EnclaveException
+import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.integrationtests.general.common.tasks.ReadAndWriteFiles
 import com.r3.conclave.integrationtests.general.common.tasks.ReadFiles
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -15,6 +16,7 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
 
     @Test
     fun `cannot read previously saved files after enclave restarts when using in-memory filesystem`() {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         //  Files that have been written in the in-memory filesystems are not
         //    present anymore after a restart.
         //  Files like /tmp/test_file_0.txt are written in ReadAndWriteFiles, but then they are not found again
@@ -30,6 +32,7 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `can read files after enclave restarts from a restarted persistent filesystem `(useKds: Boolean) {
+        graalvmOnlyTest() // CON-1259: Make sure using enclave file system with Gramine produces graceful exception
         this.useKds = useKds
 
         val reply = restartEnclaveBetweenWriteAndRead("")
@@ -42,6 +45,7 @@ class EnclaveRestartFileSystemTest : FileSystemEnclaveTest() {
 
     @Test
     fun `an enclave with persistent disk size bigger than 0 but without host path`() {
+        graalvmOnlyTest() // CON-1259: Make sure using enclave file system with Gramine produces graceful exception
         fileSystemFileTempDir = null
         assertThatThrownBy {
             callEnclave(ReadAndWriteFiles(numThreads, ""))
