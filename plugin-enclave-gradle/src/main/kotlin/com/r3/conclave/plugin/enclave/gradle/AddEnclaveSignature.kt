@@ -36,12 +36,12 @@ open class AddEnclaveSignature @Inject constructor(
     val outputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        if (useInternalDockerRepo.get()) {
+        if (linuxExec.buildInDocker(useInternalDockerRepo)) {
             try {
                 // The input key files may not live in a directory accessible by docker.
                 // Prepare the files so docker can access them if necessary.
-                val mrSignerPublicKey = linuxExec.prepareFile(inputMrsignerPublicKey.asFile.get())
-                val mrSignerSignature = linuxExec.prepareFile(inputMrsignerSignature.asFile.get())
+                val mrSignerPublicKey = linuxExec.prepareFile(inputMrsignerPublicKey.asFile.get().toPath())
+                val mrSignerSignature = linuxExec.prepareFile(inputMrsignerSignature.asFile.get().toPath())
 
                 linuxExec.exec(
                     listOf<String>(

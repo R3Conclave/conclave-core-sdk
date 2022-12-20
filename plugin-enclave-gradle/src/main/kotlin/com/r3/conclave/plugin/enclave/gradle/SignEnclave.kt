@@ -34,16 +34,16 @@ open class SignEnclave @Inject constructor(
     val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
-        if (useInternalDockerRepo.get()) {
+        if (linuxExec.buildInDocker(useInternalDockerRepo)) {
             try {
                 // The input key file may not live in a directory accessible by docker.
                 // Prepare the file so docker can access it if necessary.
-                val keyFile = linuxExec.prepareFile(inputKey.asFile.get())
+                val keyFile = linuxExec.prepareFile(inputKey.asFile.get().toPath())
 
                 linuxExec.exec(
                     listOf<String>(
                         plugin.signToolPath().absolutePathString(), "sign",
-                        "-key", keyFile.absolutePath,
+                        "-key", keyFile.absolutePathString(),
                         "-enclave", inputEnclave.asFile.get().absolutePath,
                         "-out", outputSignedEnclave.asFile.get().absolutePath,
                         "-config", inputEnclaveConfig.asFile.get().absolutePath
