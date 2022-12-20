@@ -53,13 +53,16 @@ Other configuration options for the Azure DCAP client are documented [here](http
 ### Intel DCAP Client & PCCS
 
 Intel provides reference DCAP client and PCCS implementations. If you do not want to rely on externally hosted services
-for attestation, you can set up your own PCCS based on the Intel implementation. This requires that you create an
-account with Intel and generate an API key so that your PCCS can communicate with the Intel provisioning servers.
+for attestation, such as the Azure PCCS, you can set up your own PCCS based on the Intel implementation. This requires 
+that you create an account with Intel and generate an API key so that your PCCS can communicate with the Intel 
+provisioning servers.
 
 Full Installation instructions for the Intel PCCS and DCAP client can be found on 
 [Intel's website](https://www.intel.com/content/www/us/en/developer/articles/guide/intel-software-guard-extensions-data-center-attestation-primitives-quick-install-guide.html).
 
 Once installed, Conclave will load the Intel DCAP client rather than the bundled Azure client.
+
+This is the recommended approach for applications that will run outside the Azure cloud.
 
 ### Azure DCAP Client
 
