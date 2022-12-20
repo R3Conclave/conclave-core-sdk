@@ -46,11 +46,11 @@ open class AddEnclaveSignature @Inject constructor(
                 linuxExec.exec(
                     listOf<String>(
                         plugin.signToolPath().absolutePathString(), "catsig",
-                        "-key", mrSignerPublicKey.absolutePath,
+                        "-key", mrSignerPublicKey.absolutePathString(),
                         "-enclave", inputEnclave.asFile.get().absolutePath,
                         "-out", outputSignedEnclave.asFile.get().absolutePath,
                         "-config", inputEnclaveConfig.asFile.get().absolutePath,
-                        "-sig", mrSignerSignature.absolutePath,
+                        "-sig", mrSignerSignature.absolutePathString(),
                         "-unsigned", inputSigningMaterial.asFile.get().absolutePath
                     )
                 )
