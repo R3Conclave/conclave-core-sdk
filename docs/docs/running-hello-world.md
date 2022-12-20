@@ -229,7 +229,7 @@ To generate `host-release.jar`:
 
     Conclave needs a Linux environment to run the host in simulation mode. But you don't need to do anything as long as
     Docker is installed on your system. You can run the host and client as we did for mock mode. The only differences are that the host will be
-    run from inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+    run inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
 
     !!!Note
         * You need Docker to run the *host* on macOS/Windows. You can run the *client* on macOS/Windows without Docker.
