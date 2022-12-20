@@ -1,6 +1,7 @@
 package com.r3.conclave.host.internal.gramine
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
@@ -33,7 +34,8 @@ class GramineEnclaveHandle(
 
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
-        private val dockerImageTag = getManifestAttribute("Conclave-Build-Image-Tag")
+        private val dockerImageTag =
+            getManifestAttribute(PluginUtils::class.java.classLoader, "Conclave-Build-Image-Tag")
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
                 EnclaveMode.SIMULATION -> "gramine-direct"

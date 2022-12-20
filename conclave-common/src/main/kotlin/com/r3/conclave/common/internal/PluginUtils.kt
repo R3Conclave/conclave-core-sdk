@@ -20,16 +20,16 @@ object PluginUtils {
     const val GRAMINE_SIGSTRUCT = "java.sig"
     const val PYTHON_FILE = "enclave.py"
 
-    fun getManifestAttribute(name: String): String {
+    fun getManifestAttribute(classLoader: ClassLoader, attributeName: String): String {
         // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
-        val values = PluginUtils::class.java.classLoader
+        val values = classLoader
             .getResources(JarFile.MANIFEST_NAME)
             .asSequence()
-            .mapNotNullTo(TreeSet()) { it.openStream().use(::Manifest).mainAttributes.getValue(name) }
+            .mapNotNullTo(TreeSet()) { it.openStream().use(::Manifest).mainAttributes.getValue(attributeName) }
         return when (values.size) {
             1 -> values.first()
-            0 -> throw IllegalStateException("Could not find manifest attribute $name")
-            else -> throw IllegalStateException("Found multiple values for manifest attribute $name: $values")
+            0 -> throw IllegalStateException("Could not find manifest attribute $attributeName")
+            else -> throw IllegalStateException("Found multiple values for manifest attribute $attributeName: $values")
         }
     }
 }

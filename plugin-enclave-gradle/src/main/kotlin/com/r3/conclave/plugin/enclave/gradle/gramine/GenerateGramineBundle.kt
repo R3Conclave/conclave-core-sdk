@@ -66,39 +66,15 @@ open class GenerateGramineBundle @Inject constructor(
 
     override fun action() {
         enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
-        // Building enclaves with Python has been temporarily disabled
-        // TODO: CON-1215 - Building enclaves with Python inside a Docker container
-        check(!pythonFile.isPresent) { "Building enclaves with Python has been disabled" }
 
-        val architecture: String
-        val pythonLdPreload: String
-        val pythonPackagesPath: String
+        val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
+        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
 
         if (pythonFile.isPresent) {
-            pythonFile.copyToOutputDir(PYTHON_FILE)
-
-            // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
-            //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
-
-            architecture = commandWithOutput("gcc", "-dumpmachine")
-            pythonLdPreload = executePython(
-                "from sysconfig import get_config_var; " +
-                        "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
-            )
-            // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
-            // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
-            // incorrect then we'll need to come up with a better solution.
-            pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
-                .splitToSequence("\n")
-                .single { it.startsWith("Location: ") }
-                .substringAfter("Location: ")
+            generateManifestForPythonEnclaves(manifestTemplatePath.absolutePathString())
         } else {
-            architecture = DOCKER_IMAGE_ARCHITECTURE
-            pythonLdPreload = ""
-            pythonPackagesPath = ""
+            generateManifestForJavaEnclaves(manifestTemplatePath.absolutePathString())
         }
-
-        generateManifest(architecture, pythonLdPreload, pythonPackagesPath)
 
         if (enclaveMode != EnclaveMode.SIMULATION) {
             generateSgxManifestAndSigstruct()
@@ -108,16 +84,46 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun generateManifest(architecture: String, pythonLdPreload: String, pythonPackagesPath: String) {
-        val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
-        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
+    private fun generateManifestForPythonEnclaves(manifestTemplatePath: String) {
+        // We currently build Python enclaves outside of the conclave-build container
+        // TODO: CON-1215 - Building enclaves with Python inside a Docker container
+        pythonFile.copyToOutputDir(PYTHON_FILE)
+
+        // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
+        //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
+        val architecture = commandWithOutput("gcc", "-dumpmachine")
+        val pythonLdPreload = executePython(
+            "from sysconfig import get_config_var; " +
+                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+        )
+        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
+        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
+        // incorrect then we'll need to come up with a better solution.
+        val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
+            .splitToSequence("\n")
+            .single { it.startsWith("Location: ") }
+            .substringAfter("Location: ")
         val command = prepareManifestGenerationCommand(
             architecture,
             pythonLdPreload,
             pythonPackagesPath,
-            manifestTemplatePath.absolutePathString()
+            manifestTemplatePath
         )
-        execDockerCommand(*command.toTypedArray())
+
+        project.exec { spec ->
+            spec.commandLine = command
+            spec.setWorkingDir(outputDir)
+        }
+    }
+
+    private fun generateManifestForJavaEnclaves(manifestTemplatePath: String) {
+        val command = prepareManifestGenerationCommand(
+            DOCKER_IMAGE_ARCHITECTURE,
+            "",
+            "",
+            manifestTemplatePath
+        )
+        linuxExec.exec(command, listOf("-w", outputDir.get().asFile.absolutePath))
     }
 
     private fun prepareManifestGenerationCommand(
@@ -126,7 +132,6 @@ open class GenerateGramineBundle @Inject constructor(
         pythonPackagesPath: String,
         manifestTemplate: String
     ): MutableList<String> {
-
         val command = mutableListOf(
             "gramine-manifest",
             "-Djava_home=${System.getProperty("java.home")}",
@@ -154,7 +159,7 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
-        execDockerCommand(
+        execCommand(
             "gramine-sgx-sign",
             "--manifest=${GRAMINE_MANIFEST}",
             "--key=${signingKey.get().asFile.absolutePath}",
@@ -166,7 +171,7 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .token file into the output dir
      */
     private fun generateToken() {
-        execDockerCommand(
+        execCommand(
             "gramine-sgx-get-token",
             "--sig=$GRAMINE_SIGSTRUCT",
             "--output=${outputDir.file(GRAMINE_SGX_TOKEN).get().asFile.absolutePath}"
@@ -209,8 +214,15 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun execDockerCommand(vararg command: String) {
-        linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
+    private fun execCommand(vararg command: String) {
+        if (pythonFile.isPresent) {
+            project.exec { spec ->
+                spec.commandLine = command.asList()
+                spec.setWorkingDir(outputDir)
+            }
+        } else {
+            linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
+        }
     }
 
     private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)

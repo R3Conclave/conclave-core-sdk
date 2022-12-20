@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.plugin.enclave.gradle.ConclaveExtension.Companion.GRAMINE
@@ -20,7 +21,7 @@ import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
-        private val JEP_VERSION = getManifestAttribute("Jep-Version")
+        private val JEP_VERSION = getManifestAttribute(this::class.java.classLoader, "Jep-Version")
     }
 
     @get:Input
