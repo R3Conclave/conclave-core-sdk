@@ -232,8 +232,8 @@ To generate `host-release.jar`:
     run from inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
 
     !!!Note
-        * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
-        * It is not possible to run enclaves in debug or release mode on macOS.
+        * You need Docker to run the *host* on macOS/Windows. You can run the *client* on macOS/Windows without Docker.
+        * It is not possible to run enclaves in debug or release mode on macOS/Windows.
         * Conclave works *only* in [mock mode](enclave-modes.md#mock-mode) on
           [new Mac computers with Apple silicon](https://support.apple.com/en-in/HT211814) due to the reliance on x64
           binaries.
