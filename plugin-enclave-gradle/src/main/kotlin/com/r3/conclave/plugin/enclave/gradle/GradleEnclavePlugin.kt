@@ -371,32 +371,34 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 type,
                 linuxExec
             ) { task ->
-                    val signingTask = enclaveExtension.signingType.map {
-                        when (it) {
-                            SigningType.DummyKey -> signEnclaveWithKeyTask
-                            SigningType.PrivateKey -> signEnclaveWithKeyTask
-                            else -> addEnclaveSignatureTask
-                        }
+                val signingTask = enclaveExtension.signingType.map {
+                    when (it) {
+                        SigningType.DummyKey -> signEnclaveWithKeyTask
+                        SigningType.PrivateKey -> signEnclaveWithKeyTask
+                        else -> addEnclaveSignatureTask
                     }
-                    task.dependsOn(signingTask)
-                    val signedEnclaveFile = enclaveExtension.signingType.flatMap {
-                        when (it) {
-                            SigningType.DummyKey -> signEnclaveWithKeyTask.outputSignedEnclave
-                            SigningType.PrivateKey -> signEnclaveWithKeyTask.outputSignedEnclave
-                            else -> {
-                                if (!enclaveExtension.mrsignerPublicKey.isPresent) {
-                                    throwMissingConfigForExternalSigning("mrsignerPublicKey")
-                                }
-                                if (!enclaveExtension.mrsignerSignature.isPresent) {
-                                    throwMissingConfigForExternalSigning("mrsignerSignature")
-                                }
-                                addEnclaveSignatureTask.outputSignedEnclave
-                            }
-                        }
-                    }
-                    task.inputSignedEnclave.set(signedEnclaveFile)
-                    task.inputs.files(signedEnclaveFile)
                 }
+                task.dependsOn(signingTask)
+                val signedEnclaveFile = enclaveExtension.signingType.flatMap {
+                    when (it) {
+                        SigningType.DummyKey -> signEnclaveWithKeyTask.outputSignedEnclave
+                        SigningType.PrivateKey -> signEnclaveWithKeyTask.outputSignedEnclave
+                        else -> {
+                            if (!enclaveExtension.mrsignerPublicKey.isPresent) {
+                                throwMissingConfigForExternalSigning("mrsignerPublicKey")
+                            }
+                            if (!enclaveExtension.mrsignerSignature.isPresent) {
+                                throwMissingConfigForExternalSigning("mrsignerSignature")
+                            }
+                            addEnclaveSignatureTask.outputSignedEnclave
+                        }
+                    }
+                }
+                task.inputSignedEnclave.set(signedEnclaveFile)
+                task.inputs.files(signedEnclaveFile)
+                task.mrsignerOutputFile.set(enclaveDirectory.resolve("mrsigner").toFile())
+                task.mrenclaveOutputFile.set(enclaveDirectory.resolve("mrenclave").toFile())
+            }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave$type") { task ->
                 task.dependsOn(generateEnclaveMetadataTask)
