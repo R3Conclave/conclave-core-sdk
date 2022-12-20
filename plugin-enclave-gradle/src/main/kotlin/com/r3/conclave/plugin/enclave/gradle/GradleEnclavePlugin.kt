@@ -40,14 +40,15 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     companion object {
         private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
 
-        private val CONCLAVE_SDK_VERSION = retrievePackageVersionFromManifest("Conclave-Version")
+        private val CONCLAVE_SDK_VERSION = retrieveAttributeFromManifest("Conclave-Version")
+        private val DOCKER_CONCLAVE_BUILD_TAG = retrieveAttributeFromManifest("Docker-Conclave-Build-Tag")
 
-        fun retrievePackageVersionFromManifest(packageName: String): String {
-            return GradleEnclavePlugin::class.java.classLoader
-                .getResources(MANIFEST_NAME)
-                .asSequence()
-                .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue(packageName) }
-                .firstOrNull() ?: throw IllegalStateException("Could not find $packageName in plugin's manifest")
+        fun retrieveAttributeFromManifest(attributeName: String): String {
+           return GradleEnclavePlugin::class.java.classLoader
+               .getResources(MANIFEST_NAME)
+               .asSequence()
+               .mapNotNull { it.openStream().use(::Manifest).mainAttributes.getValue(attributeName) }
+               .firstOrNull() ?: throw IllegalStateException("Could not find the attribute $attributeName in plugin's manifest")
         }
     }
 
@@ -284,11 +285,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
             task.dependsOn(copyGraalVM)
             task.baseDirectory.set(target.projectDir.toPath().toString())
-            task.tag.set("conclave-build:$CONCLAVE_SDK_VERSION")
+            task.tag.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$DOCKER_CONCLAVE_BUILD_TAG")
             // Create a 'latest' tag too so users can follow our tutorial documentation using the
             // tag 'conclave-build:latest' rather than looking up the conclave version.
-            task.tagLatest.set("conclave-build:latest")
-            task.buildInDocker.set(conclaveExtension.buildInDocker)
+            task.tagLatest.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:latest")
+            task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
         }
 
         for (enclaveMode in EnclaveMode.values()) {
@@ -406,7 +407,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                     task.inputKey.set(signingKey)
                     task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
-                    task.buildInDocker.set(conclaveExtension.buildInDocker)
+                    task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
                 }
 
             val generateEnclaveSigningMaterialTask = target.createTask<GenerateEnclaveSigningMaterial>(
@@ -420,7 +421,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     buildUnsignedEnclaveTask.outputEnclave,
                     generateEnclaveConfigTask.outputConfigFile,
                 )
-                task.buildInDocker.set(conclaveExtension.buildInDocker)
+                task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
                 task.inputEnclave.set(buildUnsignedEnclaveTask.outputEnclave)
                 task.inputEnclaveConfig.set(generateEnclaveConfigTask.outputConfigFile)
                 task.signatureDate.set(enclaveExtension.signatureDate)
@@ -460,7 +461,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                         it
                     })
                     task.outputSignedEnclave.set(enclaveModeDir.resolve("enclave.signed.so").toFile())
-                    task.buildInDocker.set(conclaveExtension.buildInDocker)
+                    task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
                 }
 
             val generateEnclaveMetadataTask = target.createTask<GenerateEnclaveMetadata>(
@@ -494,7 +495,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                     }
                     task.inputSignedEnclave.set(signedEnclaveFile)
                     task.inputs.files(signedEnclaveFile)
-                    task.buildInDocker.set(conclaveExtension.buildInDocker)
+                    task.useInternalDockerRepo.set(conclaveExtension.useInternalDockerRepo)
                 }
 
             val buildSignedEnclaveTask = target.createTask<BuildSignedEnclave>("buildSignedEnclave${enclaveMode.capitalise()}") { task ->

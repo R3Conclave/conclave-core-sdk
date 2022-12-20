@@ -25,7 +25,7 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
     }
 
     @get:Input
-    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+    val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
@@ -41,7 +41,7 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
 
     override fun action() {
         val dockerOutputSigningFile: File?
-        if (buildInDocker.get()) {
+        if (useInternalDockerRepo.get()) {
             // The signing material file may not live in a directory accessible by docker.
             // Prepare the file so docker can access it if necessary.
             dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())

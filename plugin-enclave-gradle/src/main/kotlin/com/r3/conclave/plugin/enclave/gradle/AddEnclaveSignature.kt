@@ -30,13 +30,13 @@ open class AddEnclaveSignature @Inject constructor(
     val inputMrsignerSignature: RegularFileProperty = objects.fileProperty()
 
     @get:Input
-    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+    val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:OutputFile
     val outputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        if (buildInDocker.get()) {
+        if (useInternalDockerRepo.get()) {
             try {
                 // The input key files may not live in a directory accessible by docker.
                 // Prepare the files so docker can access them if necessary.

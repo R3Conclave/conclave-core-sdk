@@ -27,14 +27,14 @@ open class GenerateEnclaveMetadata @Inject constructor(
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
     @get:Input
-    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+    val useInternalDockerRepo: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
         // TODO use -cssfile as it produces the binary SIGSTRUCT which can be read directly using SgxMetadataEnclaveCss.
         //  See TestUtils.getEnclaveSigstruct in the integration tests.
         val metadataFile = temporaryDir.toPath().resolve("enclave_css.bin")
 
-        if (buildInDocker.get()) {
+        if (useInternalDockerRepo.get()) {
             try {
                 linuxExec.exec(
                     listOf<String>(
