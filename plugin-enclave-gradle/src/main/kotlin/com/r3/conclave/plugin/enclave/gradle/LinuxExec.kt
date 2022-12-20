@@ -171,11 +171,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         val dockerRun = listOf(
             "docker",
             "run",
-            "-i",
             "--rm",
             "-u", "$userId:$groupId",
-            "-v",
-            "${baseDirectory.get()}:$DOCKER_WORKING_DIR"
+            "-v", "${baseDirectory.get()}:$DOCKER_WORKING_DIR"
         )
         return dockerRun + dockerizedExtraParams + image + dockerizedCommand
     }

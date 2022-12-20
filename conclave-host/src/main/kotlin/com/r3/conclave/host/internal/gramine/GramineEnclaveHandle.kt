@@ -5,7 +5,6 @@ import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
-import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SECCOMP
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
@@ -32,6 +31,8 @@ class GramineEnclaveHandle(
 
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
+        private const val GRAMINE_SECCOMP = "gramine-seccomp.json"
+
         private val dockerImageTag =
             getManifestAttribute(PluginUtils::class.java.classLoader, "Conclave-Build-Image-Tag")
 
@@ -184,24 +185,20 @@ class GramineEnclaveHandle(
     }
 
     private fun getDockerCommand(user: String, group: String): List<String> {
-        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory.toAbsolutePath() / GRAMINE_SECCOMP)
-        val workingDirectoryPath = workingDirectory.toFile().absolutePath
+        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory / GRAMINE_SECCOMP)
+        val workingDirectoryPath = workingDirectory.absolutePathString()
         return listOf(
             "docker",
             "run",
-            "-u",
-            "$user:$group",
+            "-u", "$user:$group",
             "--network",
             "host",
             "--device=/dev/sgx_enclave",
             "--device=/dev/sgx_provision",
-            "-v",
-            "/var/run/aesmd:/var/run/aesmd",
-            "-i",
+            "-v", "/var/run/aesmd:/var/run/aesmd",
             "--rm",
             //  Map the host's working directory to the Docker container's working directory
-            "-v",
-            "$workingDirectoryPath:$DOCKER_WORKING_DIR",
+            "-v", "$workingDirectoryPath:$DOCKER_WORKING_DIR",
             //  Set the directory internally used in Docker as the working directory
             "-w", DOCKER_WORKING_DIR,
             "--security-opt",

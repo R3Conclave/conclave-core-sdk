@@ -13,7 +13,6 @@ object PluginUtils {
     const val GRAMINE_MANIFEST = "java.manifest"
     const val GRAMINE_SGX_MANIFEST = "java.manifest.sgx"
     const val GRAMINE_SGX_TOKEN = "java.token"
-    const val GRAMINE_SECCOMP = "gramine-seccomp.json"
     const val DOCKER_WORKING_DIR = "/project"
 
     /** This contains the enclave's [SgxEnclaveCss], also known as the `SIGSTRUCT`. */
