@@ -23,7 +23,7 @@ conclave {
     inMemoryFileSystemSize = "0"
     persistentFileSystemSize = "64m"
     reflectionConfigurationFiles.from("reflect-config.json")
-    useInternalDockerRepo = true
+    useInternalDockerRegistry = true
 
     kds {
         kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"
