@@ -210,7 +210,7 @@ enum class TypeID {
  * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
  */
 data class TcbInfo(
-    val id: TypeID,
+    val id: TypeID?,
     val version: Version,
     val issueDate: Instant,
     val nextUpdate: Instant,
@@ -242,8 +242,15 @@ data class TcbInfo(
              * It's not required here, but it is needed for some sub-objects.
              */
             val version = Version.fromInt(json.getInt("version"))
+
+            // ID field is only present in V3 json
+            val id = when (version) {
+                Version.V2 -> null
+                Version.V3 -> TypeID.valueOf(json.getString("id"))
+            }
+
             return TcbInfo(
-                    TypeID.valueOf(json.getString("id")),
+                    id,
                     version,
                     json.getInstant("issueDate"),
                     json.getInstant("nextUpdate"),
@@ -422,7 +429,7 @@ data class SignedEnclaveIdentity(
  * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
  */
 data class EnclaveIdentity(
-    val id: TypeID,
+    val id: String,
     val version: Version,
     val issueDate: Instant,
     val nextUpdate: Instant,
@@ -453,7 +460,7 @@ data class EnclaveIdentity(
         fun fromJson(json: JsonNode): EnclaveIdentity {
             val version = Version.fromInt(json.getInt("version"))
             return EnclaveIdentity(
-                    TypeID.valueOf(json.getString("id")),
+                    json.getString("id"),
                     version,
                     json.getInstant("issueDate"),
                     json.getInstant("nextUpdate"),
