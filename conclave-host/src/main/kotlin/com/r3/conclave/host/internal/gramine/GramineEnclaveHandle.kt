@@ -65,6 +65,7 @@ class GramineEnclaveHandle(
         val command = mutableListOf(getGramineExecutable(enclaveMode))
         command += listOf(
             "java",
+            "-XX:-UseCompressedClassPointers",
             "-cp",
             GRAMINE_ENCLAVE_JAR,
             "com.r3.conclave.enclave.internal.GramineEntryPoint",
