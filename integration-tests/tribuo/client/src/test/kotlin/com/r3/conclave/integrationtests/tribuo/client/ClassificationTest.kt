@@ -29,7 +29,7 @@ class ClassificationTest : TribuoTest() {
         @BeforeAll
         @JvmStatic
         fun classificationSetup() {
-            // Test fails for Gramine in debug mode. CON-1280: Tribuo AnomalyDetectionTest fails for Gramine in debug mode
+            // Test fails for Gramine in debug mode. CON-1280: Multiple Tribuo tests fail for Gramine in debug mode
             if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
                 TestUtils.simulationOnlyTest()
             }
