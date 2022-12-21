@@ -45,7 +45,7 @@ If using the Azure DCAP Client and PCCS, you may also want to set the Azure DCAP
 default setting is quite verbose:
 
 ```sh
-export AZDCAP_DEBUG_LOG_LEVEL=FATAL
+export AZDCAP_DEBUG_LOG_LEVEL=ERROR
 ```
 
 Other configuration options for the Azure DCAP client are documented [here](https://github.com/microsoft/Azure-DCAP-Client).
