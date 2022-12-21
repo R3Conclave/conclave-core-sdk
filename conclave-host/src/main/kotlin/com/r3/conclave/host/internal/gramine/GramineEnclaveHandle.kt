@@ -1,7 +1,6 @@
 package com.r3.conclave.host.internal.gramine
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.PluginUtils
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
@@ -14,14 +13,16 @@ import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
 import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.utilities.internal.copyResource
-import java.io.BufferedReader
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
-import kotlin.io.path.*
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
@@ -32,7 +33,6 @@ class GramineEnclaveHandle(
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
         private const val GRAMINE_SECCOMP = "gramine-seccomp.json"
-
         private val dockerImageTag = getManifestAttribute("Conclave-Build-Image-Tag")
 
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
@@ -79,7 +79,7 @@ class GramineEnclaveHandle(
          * Start the enclave process, passing the port that the call interface is listening on.
          * TODO: Implement a *secure* method for passing port to the enclave.
          */
-        val command = prepareCommandToRun(port)
+        val command = prepareCommand(port)
 
         gramineProcess = ProcessBuilder()
             .inheritIO()
@@ -156,7 +156,7 @@ class GramineEnclaveHandle(
         }
     }
 
-    private fun prepareCommandToRun(port: Int): List<String> {
+    private fun prepareCommand(port: Int): List<String> {
         val gramineCommand = getGramineExecutable(enclaveMode)
         val javaCommand = getJavaCommand(port)
 
