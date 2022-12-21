@@ -10,9 +10,9 @@ import java.nio.ByteBuffer
  * This class is the enclave environment intended for use with gramine-direct.
  */
 class GramineDirectEnclaveEnvironment(
-    enclaveClass: Class<*>,
-    override val callInterface: SocketEnclaveHostInterface,
-    private val simulationMrsigner: SHA256Hash
+        enclaveClass: Class<*>,
+        override val hostInterface: SocketEnclaveHostInterface,
+        private val simulationMrsigner: SHA256Hash
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {

@@ -244,7 +244,7 @@ abstract class Enclave {
         this.env = env
         initCryptography()
 
-        env.callInterface.apply {
+        env.hostInterface.apply {
             registerCallHandler(EnclaveCallType.START_ENCLAVE, StartCallHandler())
             registerCallHandler(EnclaveCallType.STOP_ENCLAVE, StopCallHandler())
             registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, GetKdsPersistenceKeySpecCallHandler())

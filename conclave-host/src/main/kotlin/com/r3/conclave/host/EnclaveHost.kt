@@ -419,7 +419,7 @@ class EnclaveHost private constructor(
             this.commandsCallback = commandsCallback
 
             // Register call handlers
-            enclaveHandle.callInterface.apply {
+            enclaveHandle.enclaveInterface.apply {
                 registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
                 registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
                 registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)

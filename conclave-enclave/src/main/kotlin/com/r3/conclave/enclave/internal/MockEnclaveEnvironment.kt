@@ -44,7 +44,7 @@ class MockEnclaveEnvironment(
         }
     }
 
-    override val callInterface = MockEnclaveHostInterface(callInterfaceConnector)
+    override val hostInterface = MockEnclaveHostInterface(callInterfaceConnector)
 
     private val configuration = mockConfiguration ?: MockConfiguration()
 

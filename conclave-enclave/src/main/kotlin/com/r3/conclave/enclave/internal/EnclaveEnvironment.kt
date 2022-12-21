@@ -46,7 +46,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
 
     abstract val enclaveMode: EnclaveMode
 
-    abstract val callInterface: CallInterface<HostCallType, EnclaveCallType>
+    abstract val hostInterface: CallInterface<HostCallType, EnclaveCallType>
 
     // Enclave properties from build system
     open val productID: Int = enclaveProperties.getProperty("productID").toInt()
@@ -147,14 +147,14 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
             put(encodedSigningKey)
             put(encodedEncryptionKey)
         }
-        callInterface.executeOutgoingCall(HostCallType.SET_ENCLAVE_INFO, buffer)
+        hostInterface.executeOutgoingCall(HostCallType.SET_ENCLAVE_INFO, buffer)
     }
 
     /**
      * Get a signed quote from the host.
      */
     fun getSignedQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        val quoteBuffer = callInterface.executeOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
+        val quoteBuffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
         return Cursor.slice(SgxSignedQuote, quoteBuffer)
     }
 
@@ -162,7 +162,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
      * Get quoting enclave info from the host.
      */
     fun getQuotingEnclaveInfo(): ByteCursor<SgxTargetInfo> {
-        val infoBuffer = callInterface.executeOutgoingCallWithReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
+        val infoBuffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
         return Cursor.slice(SgxTargetInfo, infoBuffer)
     }
 
@@ -170,7 +170,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
      * Request an attestation from the host.
      */
     fun getAttestation(): Attestation {
-        val buffer = callInterface.executeOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
+        val buffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
         return Attestation.getFromBuffer(buffer)
     }
 
@@ -178,7 +178,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
      * Send a response to the host enclave message handler.
      */
     fun sendEnclaveMessageResponse(response: ByteBuffer) {
-        callInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, response)
+        hostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, response)
     }
 }
 

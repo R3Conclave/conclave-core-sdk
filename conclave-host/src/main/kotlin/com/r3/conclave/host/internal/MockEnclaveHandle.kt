@@ -20,7 +20,7 @@ class MockEnclaveHandle(
 
     private val callInterfaceConnector = MockCallInterfaceConnector()
 
-    override val callInterface = MockHostEnclaveInterface(callInterfaceConnector)
+    override val enclaveInterface = MockHostEnclaveInterface(callInterfaceConnector)
 
     override fun initialise() {
         try {

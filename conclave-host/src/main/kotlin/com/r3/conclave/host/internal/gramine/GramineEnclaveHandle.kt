@@ -42,7 +42,7 @@ class GramineEnclaveHandle(
 
     private val workingDirectory: Path = Files.createTempDirectory("$enclaveClassName-gramine")
 
-    override val callInterface: SocketHostEnclaveInterface
+    override val enclaveInterface: SocketHostEnclaveInterface
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
@@ -51,12 +51,12 @@ class GramineEnclaveHandle(
         enclaveManifestPath = getManifestFromUnzippedBundle()
 
         /** Create a socket host interface. */
-        callInterface = SocketHostEnclaveInterface()
+        enclaveInterface = SocketHostEnclaveInterface()
     }
 
     override fun initialise() {
         /** Bind a port for the interface to use. */
-        val port = callInterface.bindPort()
+        val port = enclaveInterface.bindPort()
 
         /**
          * Start the enclave process, passing the port that the call interface is listening on.
@@ -83,7 +83,7 @@ class GramineEnclaveHandle(
         Runtime.getRuntime().addShutdownHook(Thread(gramineProcess::destroyForcibly))
 
         /** Wait for the local call interface start process to complete. */
-        callInterface.start()
+        enclaveInterface.start()
 
         /** Initialise the enclave. */
         initializeEnclave(enclaveClassName)
@@ -91,8 +91,8 @@ class GramineEnclaveHandle(
 
     override fun destroy() {
         /** Close the call interface if it's running. */
-        if (callInterface.isRunning) {
-            callInterface.close()
+        if (enclaveInterface.isRunning) {
+            enclaveInterface.close()
         }
 
         /** Wait for the gramine process to terminate if it's running. If it doesn't, destroy it forcibly. */

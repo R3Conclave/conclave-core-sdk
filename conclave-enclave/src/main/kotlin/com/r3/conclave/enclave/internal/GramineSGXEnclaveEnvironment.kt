@@ -13,9 +13,9 @@ import kotlin.io.path.writeBytes
  * This class is the enclave environment intended for use with gramine-sgx.
  */
 class GramineSGXEnclaveEnvironment(
-    enclaveClass: Class<*>,
-    override val callInterface: SocketEnclaveHostInterface,
-    override val enclaveMode: EnclaveMode
+        enclaveClass: Class<*>,
+        override val hostInterface: SocketEnclaveHostInterface,
+        override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         private fun versionToCpuSvn(num: Int): ByteArray {

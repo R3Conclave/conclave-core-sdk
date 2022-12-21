@@ -20,7 +20,7 @@ interface EnclaveHandle {
     /**
      * Object for initiating enclave calls from.
      */
-    val callInterface: CallInterface<EnclaveCallType, HostCallType>
+    val enclaveInterface: CallInterface<EnclaveCallType, HostCallType>
 
     /** The name of the Enclave subclass inside the sub-JVM. */
     val enclaveClassName: String
@@ -48,7 +48,7 @@ interface EnclaveHandle {
      * This is not currently used in mock mode.
      */
     fun initializeEnclave(enclaveClassName: String) {
-        callInterface.executeOutgoingCall(EnclaveCallType.INITIALISE_ENCLAVE, ByteBuffer.wrap(enclaveClassName.toByteArray()))
+        enclaveInterface.executeOutgoingCall(EnclaveCallType.INITIALISE_ENCLAVE, ByteBuffer.wrap(enclaveClassName.toByteArray()))
     }
 
     /**
@@ -60,21 +60,21 @@ interface EnclaveHandle {
             putNullable(sealedState) { put(it) }
             rewind()
         }
-        callInterface.executeOutgoingCall(EnclaveCallType.START_ENCLAVE, sealedStateBuffer)
+        enclaveInterface.executeOutgoingCall(EnclaveCallType.START_ENCLAVE, sealedStateBuffer)
     }
 
     /**
      * Stops the enclave, calling the onShutdown hook.
      */
     fun stopEnclave() {
-        callInterface.executeOutgoingCall(EnclaveCallType.STOP_ENCLAVE)
+        enclaveInterface.executeOutgoingCall(EnclaveCallType.STOP_ENCLAVE)
     }
 
     /**
      * Request a quote for enclave instance info from the enclave.
      */
     fun getEnclaveInstanceInfoQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-        val returnBuffer = callInterface.executeOutgoingCallWithReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
+        val returnBuffer = enclaveInterface.executeOutgoingCallWithReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
         return Cursor.wrap(SgxSignedQuote, returnBuffer.getRemainingBytes())
     }
 
@@ -83,7 +83,7 @@ interface EnclaveHandle {
      * Returns null if no KDS key spec is present in the enclave.
      */
     fun getKdsPersistenceKeySpec(): KDSKeySpec? {
-        return callInterface.executeOutgoingCall(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC)?.let { buffer ->
+        return enclaveInterface.executeOutgoingCall(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC)?.let { buffer ->
             val name = buffer.getIntLengthPrefixString()
             val masterKeyType = MasterKeyType.fromID(buffer.get().toInt())
             val policyConstraint = buffer.getRemainingString()
@@ -98,13 +98,13 @@ interface EnclaveHandle {
         val kdsResponseBuffer = ByteBuffer.allocate(kdsResponse.size).apply {
             putKdsPrivateKeyResponse(kdsResponse)
         }
-        callInterface.executeOutgoingCall(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsResponseBuffer)
+        enclaveInterface.executeOutgoingCall(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, kdsResponseBuffer)
     }
 
     /**
      * Send a command to the enclave message handler.
      */
     fun sendMessageHandlerCommand(command: ByteBuffer) {
-        callInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, command)
+        enclaveInterface.executeOutgoingCall(EnclaveCallType.CALL_MESSAGE_HANDLER, command)
     }
 }
