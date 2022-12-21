@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.host.EnclaveHost
 import com.r3.conclave.host.MailCommand
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.io.TempDir
@@ -31,6 +32,10 @@ open class TribuoTest {
         @BeforeAll
         @JvmStatic
         fun start() {
+            // Test fails for Gramine in debug mode. CON-1280: Tribuo AnomalyDetectionTest fails for Gramine in debug mode
+            if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
+                simulationOnlyTest()
+            }
             enclaveHost = EnclaveHost.load("com.r3.conclave.integrationtests.tribuo.enclave.TribuoEnclave")
             val port = 9999
             println("Listening on port $port.")

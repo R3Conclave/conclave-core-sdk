@@ -1,5 +1,6 @@
 package com.r3.conclave.integrationtests.tribuo.client
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.tribuo.common.ClassEvaluationResult
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -28,6 +29,11 @@ class ClassificationTest : TribuoTest() {
         @BeforeAll
         @JvmStatic
         fun classificationSetup() {
+            // Test fails for Gramine in debug mode. CON-1280: Tribuo AnomalyDetectionTest fails for Gramine in debug mode
+            if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
+                TestUtils.simulationOnlyTest()
+            }
+
             classification = Classification(client)
             enclaveIrisDataPath = classification.irisDataPath
         }
@@ -35,7 +41,7 @@ class ClassificationTest : TribuoTest() {
         @AfterAll
         @JvmStatic
         fun classificationTeardown() {
-            classification.close()
+            if (::classification.isInitialized) classification.close()
         }
     }
 
