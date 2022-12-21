@@ -42,4 +42,5 @@ ARG jep_version
 RUN pip3 install  \
     torch \
     torchvision \
+    torchaudio \
     jep==$jep_version
