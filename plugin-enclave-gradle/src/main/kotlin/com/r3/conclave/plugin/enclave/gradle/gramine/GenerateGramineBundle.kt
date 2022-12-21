@@ -90,8 +90,6 @@ open class GenerateGramineBundle @Inject constructor(
         // TODO: CON-1215 - Building enclaves with Python inside a Docker container
         pythonFile.copyToOutputDir(PYTHON_FILE)
 
-        // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
-        //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
         val architecture = execCommand("gcc", "-dumpmachine")
         val pythonLdPreload = executePython(
             "from sysconfig import get_config_var; " +
