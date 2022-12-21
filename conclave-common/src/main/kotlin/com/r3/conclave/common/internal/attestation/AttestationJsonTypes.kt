@@ -179,7 +179,7 @@ data class SignedTcbInfo(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
 
 /**
  * The set of technologies that the quote/identity may apply to.
- * This is really more of a type than an "id", but this is the naming used in Intels code
+ * This is really more of a type than an "id", but this is the naming used in Intel's code
  */
 enum class TypeID {
     SGX,
