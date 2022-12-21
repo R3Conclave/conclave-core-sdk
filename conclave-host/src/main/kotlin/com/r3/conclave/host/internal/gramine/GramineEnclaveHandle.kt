@@ -201,7 +201,7 @@ class GramineEnclaveHandle(
             "-w", DOCKER_WORKING_DIR,
             "--security-opt",
             "seccomp=$workingDirectoryPath/$GRAMINE_SECCOMP",
-            dockerImageTag
+            "conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$dockerImageTag"
         )
     }
 
