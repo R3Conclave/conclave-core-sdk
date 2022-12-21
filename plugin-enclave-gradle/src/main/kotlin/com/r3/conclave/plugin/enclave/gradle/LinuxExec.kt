@@ -34,6 +34,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     @get:Input
     val runtimeType: Property<GradleEnclavePlugin.RuntimeType> = objects.property(GradleEnclavePlugin.RuntimeType::class.java)
 
+    @get:Input
+    val isPythonEnclave: Property<Boolean> = objects.property(Boolean::class.java)
+
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
         // of a Linux system or container.
@@ -80,7 +83,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
         // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
         // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
-        return !OperatingSystem.current().isLinux || buildInDocker.get() || runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE
+        return !OperatingSystem.current().isLinux || buildInDocker.get() || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave.get())
     }
 
     /**

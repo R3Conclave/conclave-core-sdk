@@ -276,6 +276,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.buildInDocker.set(conclaveExtension.buildInDocker)
             task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
             task.runtimeType.set(runtimeType)
+            task.isPythonEnclave.set(pythonSourcePath != null)
         }
 
         for (enclaveMode in EnclaveMode.values()) {
