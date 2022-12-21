@@ -16,6 +16,7 @@ conclave {
     productID = 1
     revocationLevel = 0
     runtime = runtimeType
+    useInternalDockerRegistry = true
 
     simulation {
         signingType = privateKey
