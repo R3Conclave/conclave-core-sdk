@@ -1,12 +1,11 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
-import com.r3.conclave.common.EnclaveMode.SIMULATION
 import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.integrationtests.general.common.tasks.*
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
@@ -187,7 +186,7 @@ class FilesTest : FileSystemEnclaveTest() {
         graalvmOnlyTest() // CON-1259: Make sure using enclave file system with Gramine produces graceful exception
 
         //  We want this test to run only in SIMULATION mode
-        assumeTrue(SIMULATION.name == System.getProperty("enclaveMode").uppercase())
+        simulationOnlyTest()
 
         copyCorruptedFileSystem()
 

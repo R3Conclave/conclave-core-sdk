@@ -65,7 +65,7 @@ class GramineEnclaveHandle(
         val command = mutableListOf(getGramineExecutable(enclaveMode))
         command += listOf(
             "java",
-            "-XX:-UseCompressedClassPointers",
+            "-XX:-UseCompressedClassPointers", // TODO CON-1165, we need to understand why this is needed
             "-cp",
             GRAMINE_ENCLAVE_JAR,
             "com.r3.conclave.enclave.internal.GramineEntryPoint",
