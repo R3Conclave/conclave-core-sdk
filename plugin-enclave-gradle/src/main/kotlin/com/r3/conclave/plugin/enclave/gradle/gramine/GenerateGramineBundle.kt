@@ -23,6 +23,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
@@ -71,9 +72,9 @@ open class GenerateGramineBundle @Inject constructor(
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
 
         if (pythonFile.isPresent) {
-            generateManifestForPythonEnclaves(manifestTemplatePath.absolutePathString())
+            generateManifestForPythonEnclaves(manifestTemplatePath)
         } else {
-            generateManifestForJavaEnclaves(manifestTemplatePath.absolutePathString())
+            generateManifestForJavaEnclaves(manifestTemplatePath)
         }
 
         if (enclaveMode != EnclaveMode.SIMULATION) {
@@ -84,7 +85,7 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun generateManifestForPythonEnclaves(manifestTemplatePath: String) {
+    private fun generateManifestForPythonEnclaves(manifestTemplatePath: Path) {
         // We currently build Python enclaves outside of the conclave-build container
         // TODO: CON-1215 - Building enclaves with Python inside a Docker container
         pythonFile.copyToOutputDir(PYTHON_FILE)
@@ -112,7 +113,7 @@ open class GenerateGramineBundle @Inject constructor(
         execCommand(*command.toTypedArray())
     }
 
-    private fun generateManifestForJavaEnclaves(manifestTemplatePath: String) {
+    private fun generateManifestForJavaEnclaves(manifestTemplatePath: Path) {
         val command = prepareManifestGenerationCommand(
             DOCKER_IMAGE_ARCHITECTURE,
             "",
@@ -126,7 +127,7 @@ open class GenerateGramineBundle @Inject constructor(
         architecture: String,
         ldPreload: String,
         pythonPackagesPath: String,
-        manifestTemplate: String
+        manifestTemplate: Path
     ): MutableList<String> {
         val command = mutableListOf(
             "gramine-manifest",
@@ -141,7 +142,7 @@ open class GenerateGramineBundle @Inject constructor(
             "-Denclave_worker_threads=10",
             "-Dgramine_max_threads=${maxThreads.get()}",
             "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-            manifestTemplate,
+            manifestTemplate.absolutePathString(),
             GRAMINE_MANIFEST
         )
         if (enclaveMode == EnclaveMode.SIMULATION) {
