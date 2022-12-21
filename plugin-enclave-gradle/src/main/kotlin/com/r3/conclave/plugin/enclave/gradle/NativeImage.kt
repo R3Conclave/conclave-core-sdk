@@ -471,7 +471,7 @@ open class NativeImage @Inject constructor(
                             + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine"
                 )
             } else {
-                throw GradleException("The native-image enclave build failed. See the error message above for details.")
+                throw e
             }
         }
     }

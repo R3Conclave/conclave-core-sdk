@@ -91,7 +91,7 @@ open class GenerateGramineBundle @Inject constructor(
 
         // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
         //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
-        val architecture = commandWithOutput("gcc", "-dumpmachine")
+        val architecture = execCommand("gcc", "-dumpmachine")
         val pythonLdPreload = executePython(
             "from sysconfig import get_config_var; " +
                     "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
@@ -99,8 +99,8 @@ open class GenerateGramineBundle @Inject constructor(
         // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
         // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
         // incorrect then we'll need to come up with a better solution.
-        val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
-            .splitToSequence("\n")
+        val pythonPackagesPath = execCommand("pip3", "show", "jep")
+            .splitToSequence(System.lineSeparator())
             .single { it.startsWith("Location: ") }
             .substringAfter("Location: ")
         val command = prepareManifestGenerationCommand(
@@ -210,18 +210,15 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun execCommand(vararg command: String) {
-        if (pythonFile.isPresent) {
-            project.exec { spec ->
-                spec.commandLine = command.asList()
-                spec.setWorkingDir(outputDir)
-            }
+    private fun execCommand(vararg command: String): String {
+       return if (pythonFile.isPresent) {
+            commandWithOutput(command, workingDir = outputDir.get().asFile.absolutePath)
         } else {
             linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
         }
     }
 
-    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)
+    private fun executePython(command: String): String = execCommand("python3", "-c", command)
 
     private fun RegularFileProperty.copyToOutputDir(fileName: String) {
         get().asFile.toPath().copyTo(outputDir.file(fileName).get().asFile.toPath(), REPLACE_EXISTING)

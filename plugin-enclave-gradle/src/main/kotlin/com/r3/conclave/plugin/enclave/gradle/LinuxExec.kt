@@ -118,8 +118,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         }
     }
 
-    /** Returns the ERROR output of the command only, in the returned list. */
-    fun exec(command: List<String>, dockerExtraParams: List<String> = emptyList()): List<String>? {
+    /** Returns the standard output of the command or throws a Gradle exception in case of failures. */
+    fun exec(command: List<String>, dockerExtraParams: List<String> = emptyList()): String {
         val errorOut = ByteArrayOutputStream()
         val stdOut = ByteArrayOutputStream()
 
@@ -138,13 +138,10 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         }
         if (result.exitValue != 0) {
             errorOut.writeTo(System.err)
-            // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
-            // Hopefully it's UTF-8 - it should be!
-            val errorMessage =  String(errorOut.toByteArray())
-            throw GradleException(errorMessage)
+            throw GradleException(errorOut.toString())
         }
         result.assertNormalExitValue()
-        return String(stdOut.toByteArray()).split(System.lineSeparator())
+        return stdOut.toString()
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
