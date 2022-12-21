@@ -19,9 +19,8 @@ object PluginUtils {
     const val GRAMINE_SIGSTRUCT = "java.sig"
     const val PYTHON_FILE = "enclave.py"
 
-    fun getManifestAttribute(classLoader: ClassLoader, attributeName: String): String {
-
-        val values = classLoader
+    fun getManifestAttribute(attributeName: String): String {
+        val values = PluginUtils::class.java.classLoader
             .getResources(JarFile.MANIFEST_NAME)
             .asSequence()
             .mapNotNullTo(TreeSet()) { it.openStream().use(::Manifest).mainAttributes.getValue(attributeName) }

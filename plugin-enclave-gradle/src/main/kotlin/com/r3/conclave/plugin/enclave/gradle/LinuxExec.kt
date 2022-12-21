@@ -19,7 +19,7 @@ import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
-        private val JEP_VERSION = getManifestAttribute(this::class.java.classLoader, "Jep-Version")
+        private val JEP_VERSION = getManifestAttribute("Jep-Version")
     }
 
     @get:Input
