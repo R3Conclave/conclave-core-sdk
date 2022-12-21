@@ -80,7 +80,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
         // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
         // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
-        return !OperatingSystem.current().isLinux || buildInDocker.get() || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave)
+        return !OperatingSystem.current().isLinux || (buildInDocker.get() && !isPythonEnclave) || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave)
     }
 
     /**
