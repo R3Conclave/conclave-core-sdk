@@ -7,6 +7,7 @@ import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_PROPERTIES
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
+import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
@@ -30,9 +31,6 @@ import org.gradle.util.VersionNumber
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
-import java.util.*
-import java.util.jar.JarFile.MANIFEST_NAME
-import java.util.jar.Manifest
 import java.util.stream.Collectors.toList
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -42,19 +40,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Release-Version")
         private val CONCLAVE_GRAALVM_VERSION = getManifestAttribute("Conclave-GraalVM-Version")
         private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
-
-        fun getManifestAttribute(name: String): String {
-            // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
-            val values = GradleEnclavePlugin::class.java.classLoader
-                .getResources(MANIFEST_NAME)
-                .asSequence()
-                .mapNotNullTo(TreeSet()) { it.openStream().use(::Manifest).mainAttributes.getValue(name) }
-            return when (values.size) {
-                1 -> values.first()
-                0 -> throw IllegalStateException("Could not find manifest attribute $name")
-                else -> throw IllegalStateException("Found multiple values for manifest attribute $name: $values")
-            }
-        }
     }
 
     enum class RuntimeType {
