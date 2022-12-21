@@ -1,6 +1,5 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem.db
 
-import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.integrationtests.general.common.tasks.ExecuteSql
 import com.r3.conclave.integrationtests.general.common.tasks.SqlQuery
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
@@ -8,7 +7,6 @@ import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnly
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import com.r3.conclave.integrationtests.general.tests.filesystem.FileSystemEnclaveTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
@@ -25,7 +23,7 @@ class DatabaseEnclaveTest : FileSystemEnclaveTest("com.r3.conclave.integrationte
 
         //  For Gramine, we want this test to run only in SIMULATION mode
         // CON-1268: Gramine: cannot access database
-        if (TestUtils.RuntimeType.GRAMINE.name == TestUtils.runtimeType.name) {
+        if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
             simulationOnlyTest()
         }
 

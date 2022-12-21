@@ -93,7 +93,7 @@ class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integr
     fun `threading inside enclave`() {
         //  For Gramine, we want this test to run only in SIMULATION mode
         // CON-1270: Requesting too many threads is failing in Gramine
-        if (TestUtils.RuntimeType.GRAMINE.name == TestUtils.runtimeType.name) {
+        if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
             simulationOnlyTest()
         }
 
