@@ -21,20 +21,18 @@ class DCAPAttestationService(override val isRelease: Boolean) : HardwareAttestat
             pckCert.sgxExtension.getBytes(SGX_FMSPC_OID).getRemainingBytes(), // fpsmc
             if ("Processor" in pckCert.issuerDN.name) 0 else 1 // pckCert 'type': 0 - Processor, 1 - Platform
         )
-        // TODO There's no reason why the JNI can't create the QuoteCollateral directly. It would also fix this hack
-        //  with the collateral fields being passed up as Strings when in fact they should be byte arrays.
         val collateral = QuoteCollateral(
             fields[0] as Int,
-            fields[1].asStringToBytes(),
-            fields[2].asStringToBytes(),
-            fields[3].asStringToBytes(),
-            fields[4].asStringToBytes(),
-            fields[5].asStringToBytes(),
-            fields[6].asStringToBytes(),
-            fields[7].asStringToBytes()
+            fields[1].toOpaqueBytes(),
+            fields[2].toOpaqueBytes(),
+            fields[3].toOpaqueBytes(),
+            fields[4].toOpaqueBytes(),
+            fields[5].toOpaqueBytes(),
+            fields[6].toOpaqueBytes(),
+            fields[7].toOpaqueBytes()
         )
         return DcapAttestation(signedQuote.asReadOnly(), collateral)
     }
 
-    private fun Any.asStringToBytes(): OpaqueBytes = OpaqueBytes((this as String).toByteArray())
+    private fun Any.toOpaqueBytes(): OpaqueBytes = OpaqueBytes(this as ByteArray)
 }

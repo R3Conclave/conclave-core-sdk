@@ -1,0 +1,37 @@
+{
+  "tcbInfo":{
+    "version":2,
+    "issueDate":"2020-01-02T03:04:05Z",
+    "nextUpdate":"2021-02-03T04:05:06Z",
+    "fmspc":"00906ed50000",
+    "pceId":"0000",
+    "tcbType":0,
+    "tcbEvaluationDataNumber":7,
+    "tcbLevels":[
+      {
+        "tcb":{
+          "sgxtcbcomp01svn":1,
+          "sgxtcbcomp02svn":2,
+          "sgxtcbcomp03svn":3,
+          "sgxtcbcomp04svn":4,
+          "sgxtcbcomp05svn":5,
+          "sgxtcbcomp06svn":6,
+          "sgxtcbcomp07svn":7,
+          "sgxtcbcomp08svn":8,
+          "sgxtcbcomp09svn":9,
+          "sgxtcbcomp10svn":10,
+          "sgxtcbcomp11svn":11,
+          "sgxtcbcomp12svn":12,
+          "sgxtcbcomp13svn":13,
+          "sgxtcbcomp14svn":14,
+          "sgxtcbcomp15svn":15,
+          "sgxtcbcomp16svn":16,
+          "pcesvn":9
+        },
+        "tcbDate":"2019-11-13T00:00:00Z",
+        "tcbStatus":"UpToDate"
+      }
+    ]
+  },
+  "signature":"01020304"
+}
