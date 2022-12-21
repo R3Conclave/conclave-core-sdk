@@ -71,6 +71,9 @@ sgx.trusted_files = [
     "file:{{ arch_libdir }}/",
     "file:/usr/{{ arch_libdir }}/",
     "file:{{ java_home }}/",
+{% if ld_preload != "" %}
+    "file:{{ ld_preload }}",
+{% endif %}
 {% if is_python_enclave == "true" %}
     "file:{{ python_packages_path }}/",
     #  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
