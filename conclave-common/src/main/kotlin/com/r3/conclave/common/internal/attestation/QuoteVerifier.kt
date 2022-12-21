@@ -453,8 +453,8 @@ object QuoteVerifier {
          * Ignore TDX quotes for now
          * TODO: CON-1273, Audit changes to the intel QVL
          */
-        if (tcbInfo.id == TypeID.TDX) {
-            throw IllegalArgumentException("Tdx quotes are not supported.")
+        require(tcbInfo.id != TypeID.TDX) {
+            "TDX quotes are not supported."
         }
 
         for (tcbLevel in tcbInfo.tcbLevels) {
