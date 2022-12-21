@@ -228,8 +228,8 @@ To generate `host-release.jar`:
 === "macOS"
 
     You need a Linux environment to run the host in simulation mode. But you don't need to do anything as long as Docker 
-    is installed on your system. You can run the host and client as we did for mock mode. The only differences are that
-    the host will be run inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+    is installed on your system. You can run the host and client as we did for mock mode. The difference is that you must 
+    run the host from inside the container, and the host JAR is named `host-simulation.jar` rather than `host-mock.jar`.
 
     !!!Note
         * You need Docker to run the *host* on macOS. You can run the *client* on macOS without Docker.
@@ -241,8 +241,8 @@ To generate `host-release.jar`:
 === "Windows"
 
     You need a Linux environment to run the host in simulation mode. But you don't need to do anything as long as Docker 
-    is installed on your system. You can run the host and client as we did for mock mode. The only differences are that
-    the host will be run inside the container, and the host JAR will be named `host-simulation.jar` rather than `host-mock.jar`.
+    is installed on your system. You can run the host and client as we did for mock mode. The difference is that you must 
+    run the host from inside the container, and the host JAR is named `host-simulation.jar` rather than `host-mock.jar`.
 
     !!! note
         * You need Docker to run the *host* on Windows. You don't need Docker to run the client.
