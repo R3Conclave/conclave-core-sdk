@@ -109,11 +109,7 @@ open class GenerateGramineBundle @Inject constructor(
             pythonPackagesPath,
             manifestTemplatePath
         )
-
-        project.exec { spec ->
-            spec.commandLine = command
-            spec.setWorkingDir(outputDir)
-        }
+        execCommand(*command.toTypedArray())
     }
 
     private fun generateManifestForJavaEnclaves(manifestTemplatePath: String) {
@@ -123,7 +119,7 @@ open class GenerateGramineBundle @Inject constructor(
             "",
             manifestTemplatePath
         )
-        linuxExec.exec(command, listOf("-w", outputDir.get().asFile.absolutePath))
+        execCommand(*command.toTypedArray())
     }
 
     private fun prepareManifestGenerationCommand(
