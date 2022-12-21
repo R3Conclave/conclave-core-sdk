@@ -6,6 +6,7 @@ import com.r3.conclave.integrationtests.general.common.tasks.EchoWithCallback
 import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -62,6 +63,7 @@ class DefaultEnclaveTests : AbstractEnclaveActionTest() {
 
     @Test
     fun `destroy in OCALL`() {
+        graalvmOnlyTest() // CON-1262: Make sure EnclaveHost.close() cannot be called inside a callback
         val echo = EchoWithCallback(byteArrayOf())
         var called = false
         assertThatThrownBy {

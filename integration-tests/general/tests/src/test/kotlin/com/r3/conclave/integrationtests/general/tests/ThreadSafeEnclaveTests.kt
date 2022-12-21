@@ -5,9 +5,9 @@ import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.common.toByteArray
 import com.r3.conclave.integrationtests.general.common.toInt
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
@@ -96,6 +96,8 @@ class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integr
 
     @Test
     fun `exception is thrown if too many threads are requested`() {
+        graalvmOnlyTest() // CON-1270: Requesting too many threads is failing in Gramine
+
         // This test hangs when tearing down the enclave, so we disable teardown here.
         // TODO: CON-1244 Figure out why this test hangs, then remove this teardown logic.
         doEnclaveTeardown = false

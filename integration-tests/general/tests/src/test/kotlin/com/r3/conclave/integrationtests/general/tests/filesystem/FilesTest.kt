@@ -184,6 +184,8 @@ class FilesTest : FileSystemEnclaveTest() {
 
     @Test
     fun `an enclave with corrupted persistent filesystem fails`() {
+        graalvmOnlyTest() // CON-1259: Make sure using enclave file system with Gramine produces graceful exception
+
         //  We want this test to run only in SIMULATION mode
         assumeTrue(SIMULATION.name == System.getProperty("enclaveMode").uppercase())
 
