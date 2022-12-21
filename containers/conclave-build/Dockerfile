@@ -22,7 +22,8 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
 RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | tee /etc/apt/sources.list.d/gramine.list
 RUN apt-get -y update
-RUN apt-get -y install gramine
+ARG gramine_version
+RUN apt-get -y install gramine=$gramine_version
 
 # Disable interactive dialogue
 # Otherwise, a message that requires user input will appear while installing Java 17

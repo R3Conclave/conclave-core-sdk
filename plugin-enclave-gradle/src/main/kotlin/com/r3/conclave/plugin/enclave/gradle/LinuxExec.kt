@@ -19,6 +19,7 @@ import kotlin.io.path.*
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
     companion object {
         private val JEP_VERSION = getManifestAttribute("Jep-Version")
+        private val GRAMINE_VERSION = getManifestAttribute("Gramine-Version")
     }
 
     @get:Input
@@ -50,6 +51,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "--tag", tag.get(),
                     "--build-arg",
                     "jep_version=$JEP_VERSION",
+                    "--build-arg",
+                    "gramine_version=$GRAMINE_VERSION",
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
