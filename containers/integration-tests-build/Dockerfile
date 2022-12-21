@@ -13,8 +13,6 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl \
     gnupg \
     lsb-release \
-    torch \
-    torchvision \
     python3-pip
 
 # Intel SGX libs
@@ -41,4 +39,7 @@ RUN echo \
 RUN apt-get -y update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 ARG jep_version
-RUN pip3 install jep==$jep_version
+RUN pip3 install  \
+    torch \
+    torchvision \
+    jep==$jep_version
