@@ -2,13 +2,10 @@ package com.r3.conclave.integrationtests.general.tests
 
 import com.r3.conclave.integrationtests.general.common.tasks.CheckNotMultiThreadedAction
 import com.r3.conclave.integrationtests.general.common.tasks.Echo
-import com.r3.conclave.integrationtests.general.common.tasks.EchoWithCallback
 import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.common.threadWithFuture
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
@@ -58,20 +55,6 @@ class DefaultEnclaveTests : AbstractEnclaveActionTest() {
         for (n in 1..1000) {
             callEnclave(echo)
         }
-    }
-
-    @Test
-    fun `destroy in OCALL`() {
-        val echo = EchoWithCallback(byteArrayOf())
-        var called = false
-        assertThatThrownBy {
-            callEnclave(echo) {
-                called = true
-                enclaveHost().close()
-                null
-            }
-        }
-        assertTrue(called, "Ocall must be called")
     }
 
     @Test

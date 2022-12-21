@@ -6,20 +6,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import java.io.IOException
 import java.nio.file.DirectoryNotEmptyException
-import java.nio.file.NoSuchFileException
 import java.nio.file.FileSystemException
+import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicInteger
 
-
 // TODO The file system tests should test for both persisting and in-memory scenerios.
-abstract class FileSystemEnclaveTest(defaultEnclaveClassName: String) :
-    AbstractEnclaveActionTest(defaultEnclaveClassName) {
-    constructor() : this(FILESYSTEM_ENCLAVE_CLASS_NAME)
-
-    companion object {
-        const val FILESYSTEM_ENCLAVE_CLASS_NAME =
-            "com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave"
-    }
+abstract class FileSystemEnclaveTest(defaultEnclaveUnderTest: String) :
+    AbstractEnclaveActionTest(defaultEnclaveUnderTest) {
+    constructor() : this(PERSISTING_ENCLAVE)
 
     val uid = AtomicInteger()
 

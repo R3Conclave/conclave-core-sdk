@@ -582,6 +582,7 @@ abstract class Enclave {
      */
     private inner class StopCallHandler : CallHandler {
         override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            check(!lock.isHeldByCurrentThread) { "Enclave cannot be shutdown in a callback" }
             lock.withLock {
                 enclaveStateManager.transitionStateFrom<Started>(to = Closed)
                 // Wait until all receive calls being processed have completed

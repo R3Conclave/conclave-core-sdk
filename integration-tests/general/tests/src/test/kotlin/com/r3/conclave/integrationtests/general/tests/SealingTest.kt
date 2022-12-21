@@ -12,7 +12,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
-class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave") {
+class SealingTest : AbstractEnclaveActionTest(THREAD_SAFE_ENCLAVE) {
     @ParameterizedTest
     @ValueSource(booleans = [ false, true ])
     fun `seal and unseal with same enclave instance`(withAD: Boolean) {
@@ -37,7 +37,7 @@ class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.
     @ParameterizedTest
     @ValueSource(booleans = [ false, true ])
     fun `unseal with different enclave of same MRSIGNER`(withAD: Boolean) {
-        val sameMrsignerEnclave = enclaveHost("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner")
+        val sameMrsignerEnclave = enclaveHost(THREAD_SAFE_ENCLAVE_SAME_SIGNER)
         assertThat(enclaveHost().mrsigner).isEqualTo(sameMrsignerEnclave.mrsigner)
 
         val data = PlaintextAndAD("Sealing Hello World!".toByteArray(), if (withAD) "with AD!".toByteArray() else null)
@@ -49,7 +49,7 @@ class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.
     @ParameterizedTest
     @ValueSource(booleans = [ false, true ])
     fun `unseal with enclave of different MRSIGNER`(withAD: Boolean) {
-        val differentMrsignerEnclave = enclaveHost("com.r3.conclave.integrationtests.general.defaultenclave.DefaultEnclave")
+        val differentMrsignerEnclave = enclaveHost(DEFAULT_ENCLAVE)
         assertThat(enclaveHost().mrsigner).isNotEqualTo(differentMrsignerEnclave.mrsigner)
 
         val data = PlaintextAndAD("Sealing Hello World!".toByteArray(), if (withAD) "with AD!".toByteArray() else null)

@@ -10,23 +10,15 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
-abstract class AbstractEnclaveActionTest(
-    private val defaultEnclaveClassName: String = "com.r3.conclave.integrationtests.general.defaultenclave.DefaultEnclave"
-) {
-    /**
-     * Set this to null if a test needs to initialise a host without the enclave file system path.
-     */
-    @TempDir
-    @JvmField
-    var fileSystemFileTempDir: Path? = null
-
-    var useKds = false
-
-    // Used to disable teardown for the `exception is thrown if too many threads are requested` test
-    // TODO: CON-1244 Figure out why this test hangs, then remove this teardown logic.
-    var doEnclaveTeardown = true
-
+abstract class AbstractEnclaveActionTest(private val defaultEnclaveUnderTest: String = DEFAULT_ENCLAVE) {
     companion object {
+        const val DEFAULT_ENCLAVE = "com.r3.conclave.integrationtests.general.defaultenclave.DefaultEnclave"
+        const val THREAD_SAFE_ENCLAVE = "com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave"
+        const val NON_THREAD_SAFE_ENCLAVE = DEFAULT_ENCLAVE
+        const val THREAD_SAFE_ENCLAVE_SAME_SIGNER = "com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner"
+        const val PERSISTING_ENCLAVE = "com.r3.conclave.integrationtests.general.persistingenclave.PersistingEnclave"
+        const val DATABASE_ENCLAVE = "com.r3.conclave.integrationtests.filesystem.db.enclave.DatabaseEnclave"
+
         fun <R> callEnclave(
             enclaveHost: EnclaveHost,
             action: EnclaveTestAction<R>,
@@ -43,6 +35,19 @@ abstract class AbstractEnclaveActionTest(
         }
     }
 
+    /**
+     * Set this to null if a test needs to initialise a host without the enclave file system path.
+     */
+    @TempDir
+    @JvmField
+    var fileSystemFileTempDir: Path? = null
+
+    var useKds = false
+
+    // Used to disable teardown for the `exception is thrown if too many threads are requested` test
+    // TODO: CON-1244 Figure out why this test hangs, then remove this teardown logic.
+    var doEnclaveTeardown = true
+
     private val enclaveTransports = HashMap<String, TestEnclaveTransport>()
 
     @AfterEach
@@ -57,11 +62,11 @@ abstract class AbstractEnclaveActionTest(
         }
     }
 
-    fun enclaveHost(enclaveClassName: String = defaultEnclaveClassName): EnclaveHost {
+    fun enclaveHost(enclaveClassName: String = defaultEnclaveUnderTest): EnclaveHost {
         return getEnclaveTransport(enclaveClassName).enclaveHost
     }
 
-    fun restartEnclave(enclaveClassName: String = defaultEnclaveClassName) {
+    fun restartEnclave(enclaveClassName: String = defaultEnclaveUnderTest) {
         synchronized(enclaveTransports) {
             enclaveTransports.getValue(enclaveClassName).restartEnclave()
         }
@@ -69,13 +74,13 @@ abstract class AbstractEnclaveActionTest(
 
     fun <R> callEnclave(
         action: EnclaveTestAction<R>,
-        enclaveClassName: String = defaultEnclaveClassName,
+        enclaveClassName: String = defaultEnclaveUnderTest,
         callback: ((ByteArray) -> ByteArray?)? = null
     ): R {
         return callEnclave(enclaveHost(enclaveClassName), action, callback)
     }
 
-    fun newMailClient(enclaveClassName: String = defaultEnclaveClassName): MailClient {
+    fun newMailClient(enclaveClassName: String = defaultEnclaveUnderTest): MailClient {
         return MailClientImpl(getEnclaveTransport(enclaveClassName))
     }
 
