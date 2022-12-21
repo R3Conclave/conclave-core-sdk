@@ -449,17 +449,17 @@ object QuoteVerifier {
         val pckTcbs = IntArray(16) { pckExtensions.getInt("${SGX_TCB_OID}.${it + 1}") }
         val pckPceSvn = pckExtensions.getInt(SGX_PCESVN_OID)
 
+        /**
+         * Ignore TDX quotes for now
+         * TODO: CON-1273, Audit changes to the intel QVL
+         */
+        if (tcbInfo.id == TypeID.TDX) {
+            throw IllegalArgumentException("Tdx quotes are not supported.")
+        }
+
         for (tcbLevel in tcbInfo.tcbLevels) {
             if (isCpuSvnHigherOrEqual(pckTcbs, tcbLevel.tcb) && pckPceSvn >= tcbLevel.tcb.pcesvn) {
-                if (tcbInfo.version.id >= 3 && tcbInfo.id == TypeID.TDX) {
-                    /**
-                     * Ignore TDX quotes for now
-                     * TODO: CON-1273, Audit changes to the intel QVL
-                     */
-                    continue
-                } else {
-                    return tcbLevel
-                }
+                return tcbLevel
             }
         }
 
@@ -478,6 +478,11 @@ object QuoteVerifier {
     private fun checkTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
         val tcbLevel = getMatchingTcbLevel(pckExtensions, tcbInfo)
 
+        /**
+         * This check will currently always pass, but is added for safety in case of future modifications.
+         * Logic comes from the Intel QVL
+         * TODO: CON-1273, Audit changes to the intel QVL
+         */
         check (!(tcbLevel.tcbStatus == TcbStatus.OutOfDateConfigurationNeeded && tcbInfo.version.id < 2)) {
             "TCB_UNRCOGNISED_STATUS"
         }
