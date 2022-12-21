@@ -106,7 +106,7 @@ class ThreadSafeEnclaveTests : AbstractEnclaveActionTest("com.r3.conclave.integr
 
     @Test
     fun `exception is thrown if too many threads are requested`() {
-        graalvmOnlyTest() // CON-1270: Requesting too many threads is failing in Gramine
+        graalvmOnlyTest() // CON-1270: Requesting too many threads test is failing in Gramine
 
         // This test hangs when tearing down the enclave, so we disable teardown here.
         // TODO: CON-1244 Figure out why this test hangs, then remove this teardown logic.
