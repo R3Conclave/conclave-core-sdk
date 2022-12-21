@@ -178,6 +178,17 @@ data class SignedTcbInfo(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
 }
 
 /**
+ * The set of technologies that the quote/identity may apply to.
+ * This is really more of a type than an "id", but this is the naming used in Intels code
+ */
+enum class TypeID {
+    SGX,
+    TDX
+}
+
+/**
+ * @property id ID of the tcb info type.
+ *
  * @property version Version of the structure.
  *
  * @property issueDate Date and time the TCB information was created.
@@ -199,6 +210,7 @@ data class SignedTcbInfo(val tcbInfo: TcbInfo, val signature: OpaqueBytes) {
  * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
  */
 data class TcbInfo(
+    val id: TypeID,
     val version: Version,
     val issueDate: Instant,
     val nextUpdate: Instant,
@@ -209,8 +221,8 @@ data class TcbInfo(
     val tcbLevels: List<TcbLevel>
 ) {
     /** The TcbInfo json is versioned. We currently support versions 2 and 3. */
-    enum class Version {
-        V2, V3;
+    enum class Version(val id: Int) {
+        V2(2), V3(3);
 
         companion object {
             fun fromInt(version: Int): Version {
@@ -231,6 +243,7 @@ data class TcbInfo(
              */
             val version = Version.fromInt(json.getInt("version"))
             return TcbInfo(
+                    TypeID.valueOf(json.getString("id")),
                     version,
                     json.getInstant("issueDate"),
                     json.getInstant("nextUpdate"),
@@ -409,7 +422,7 @@ data class SignedEnclaveIdentity(
  * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
  */
 data class EnclaveIdentity(
-    val id: String,
+    val id: TypeID,
     val version: Version,
     val issueDate: Instant,
     val nextUpdate: Instant,
@@ -423,8 +436,8 @@ data class EnclaveIdentity(
     val tcbLevels: List<EnclaveTcbLevel>
 ) {
     /** The EnclaveIdentity json is versioned. We currently only support versions 2. */
-    enum class Version {
-        V2;
+    enum class Version(val id: Int) {
+        V2(2);
 
         companion object {
             fun fromInt(version: Int): Version {
@@ -440,7 +453,7 @@ data class EnclaveIdentity(
         fun fromJson(json: JsonNode): EnclaveIdentity {
             val version = Version.fromInt(json.getInt("version"))
             return EnclaveIdentity(
-                    json.getString("id"),
+                    TypeID.valueOf(json.getString("id")),
                     version,
                     json.getInstant("issueDate"),
                     json.getInstant("nextUpdate"),

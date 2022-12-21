@@ -445,13 +445,21 @@ object QuoteVerifier {
         return EnclaveTcbStatus.Revoked
     }
 
-    private fun getMatchingTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
+    private fun getMatchingTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbLevel {
         val pckTcbs = IntArray(16) { pckExtensions.getInt("${SGX_TCB_OID}.${it + 1}") }
         val pckPceSvn = pckExtensions.getInt(SGX_PCESVN_OID)
 
-        for (lvl in tcbInfo.tcbLevels) {
-            if (isCpuSvnHigherOrEqual(pckTcbs, lvl.tcb) && pckPceSvn >= lvl.tcb.pcesvn) {
-                return lvl.tcbStatus
+        for (tcbLevel in tcbInfo.tcbLevels) {
+            if (isCpuSvnHigherOrEqual(pckTcbs, tcbLevel.tcb) && pckPceSvn >= tcbLevel.tcb.pcesvn) {
+                if (tcbInfo.version.id >= 3 && tcbInfo.id == TypeID.TDX) {
+                    /**
+                     * Ignore TDX quotes for now
+                     * TODO: CON-1273, Audit changes to the intel QVL
+                     */
+                    continue
+                } else {
+                    return tcbLevel
+                }
             }
         }
 
@@ -468,7 +476,13 @@ object QuoteVerifier {
     }
 
     private fun checkTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
-        return getMatchingTcbLevel(pckExtensions, tcbInfo)
+        val tcbLevel = getMatchingTcbLevel(pckExtensions, tcbInfo)
+
+        check (!(tcbInfo.version.id > 1 && tcbLevel.tcbStatus == TcbStatus.OutOfDateConfigurationNeeded)) {
+            "TCB_UNRCOGNISED_STATUS"
+        }
+
+        return tcbLevel.tcbStatus
     }
 
     private fun verify(check: Boolean, status: ErrorStatus) {
