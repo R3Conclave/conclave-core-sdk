@@ -478,7 +478,7 @@ object QuoteVerifier {
     private fun checkTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
         val tcbLevel = getMatchingTcbLevel(pckExtensions, tcbInfo)
 
-        check (!(tcbInfo.version.id > 1 && tcbLevel.tcbStatus == TcbStatus.OutOfDateConfigurationNeeded)) {
+        check (!(tcbLevel.tcbStatus == TcbStatus.OutOfDateConfigurationNeeded && tcbInfo.version.id < 2)) {
             "TCB_UNRCOGNISED_STATUS"
         }
 
