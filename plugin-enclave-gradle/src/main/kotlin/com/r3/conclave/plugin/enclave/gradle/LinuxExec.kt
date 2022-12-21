@@ -28,10 +28,10 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     val tag: Property<String> = objects.property(String::class.java)
 
     @get:Input
-    val tagLatest: Property<String> = objects.property(String::class.java)
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
+    val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -39,7 +39,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-        if (buildInDocker(buildInDocker)) {
+        if (buildInDocker(buildInDocker) && !useInternalDockerRegistry.get()) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
@@ -48,7 +48,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "docker",
                     "build",
                     "--tag", tag.get(),
-                    "--tag", tagLatest.get(),
                     "--build-arg",
                     "jep_version=$JEP_VERSION",
                     conclaveBuildDir

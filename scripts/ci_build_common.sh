@@ -7,31 +7,8 @@ code_docker_dir=${code_host_dir}
 
 source ${code_host_dir}/containers/scripts/common.sh
 
-conclave_graal_version=$(grep -w "conclave_graal_version =" ./versions.gradle | cut -d '=' -f 2 | sed "s/[ ']//g")
-artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz.sha512
-url="https://software.r3.com/artifactory/conclave-maven/${artifact_path}"
-
-conclave_graal_sha512sum=$(curl -SLf $url)
-
-# Generate the docker image tag based on the contents inside the containers module
-# Please be sure that any script that might change the final docker container image
-# is inside the folder containers/scripts. Otherwise, the tag generated won't be
-# correct and you run the risk of overwriting existing docker images that are used
-# by older release branches. Keep in mind that temporary or build directories should be excluded
-# The following code generates the hash based on the contents of a directory and the version of graal used.
-# This hash takes into account the contents of each file inside the directory and subdirectories
-# The cut command removes the dash at the end.
-# All subdirectories with name build and download and hidden files are excluded. Please be sure that any file
-# that is not tracked by git should not be included in this hash.
-# In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
-# must include the conclave_graal sha512sum as well.
-pushd ${code_host_dir}
-containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
-docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum | sha256sum | cut -d ' ' -f1)
-popd
-
-# Docker container images repository
-container_image_repo=conclave-docker-dev.software.r3.com/com.r3.conclave
+container_image_repo="conclave-docker-dev.software.r3.com/com.r3.conclave"
+docker_image_tag=$(${code_host_dir}/scripts/genDockerImageTag.sh)
 
 # Docker container images
 container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag

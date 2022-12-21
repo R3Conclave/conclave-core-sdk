@@ -41,6 +41,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     companion object {
         private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Release-Version")
         private val CONCLAVE_GRAALVM_VERSION = getManifestAttribute("Conclave-GraalVM-Version")
+        private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
 
         fun getManifestAttribute(name: String): String {
             // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
@@ -292,11 +293,9 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
             task.dependsOn(copyGraalVM)
             task.baseDirectory.set(target.projectDir.toPath().toString())
-            task.tag.set("conclave-build:$CONCLAVE_SDK_VERSION")
-            // Create a 'latest' tag too so users can follow our tutorial documentation using the
-            // tag 'conclave-build:latest' rather than looking up the conclave version.
-            task.tagLatest.set("conclave-build:latest")
+            task.tag.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$DOCKER_CONCLAVE_BUILD_TAG")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
+            task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
         }
 
         for (enclaveMode in EnclaveMode.values()) {
