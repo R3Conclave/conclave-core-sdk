@@ -28,7 +28,3 @@ RUN apt-get -y update
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
         gramine
-
-# The jep_version parameter is currently unused. It will be enabled when we build Python Gramine enclaves inside this container.
-# TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container
-

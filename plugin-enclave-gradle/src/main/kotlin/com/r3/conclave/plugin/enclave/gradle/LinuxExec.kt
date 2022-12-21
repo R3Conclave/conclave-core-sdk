@@ -18,9 +18,6 @@ import javax.inject.Inject
 import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-    companion object {
-        private val JEP_VERSION = getManifestAttribute("Jep-Version")
-    }
 
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
@@ -52,8 +49,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "docker",
                     "build",
                     "--tag", tag.get(),
-                    "--build-arg",
-                    "jep_version=$JEP_VERSION",
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
