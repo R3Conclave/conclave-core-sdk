@@ -35,7 +35,7 @@ class AnomalyDetectionTest : TribuoTest() {
     @Order(1)
     @Test
     fun confusionMatrix() {
-        // Test fails for Gramine in debug mode. CON-1280: Multiple Tribuo tests fail for Gramine in debug mode
+        // CON-1280: Multiple Tribuo tests fail for Gramine in debug mode
         if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
             simulationOnlyTest()
         }
