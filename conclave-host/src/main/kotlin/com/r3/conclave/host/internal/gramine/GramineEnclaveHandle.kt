@@ -33,7 +33,7 @@ class GramineEnclaveHandle(
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
         private const val GRAMINE_SECCOMP = "gramine-seccomp.json"
-        private val dockerImageTag = getManifestAttribute("Conclave-Build-Image-Tag")
+        private val dockerImageTag = getManifestAttribute("Docker-Conclave-Build-Tag")
 
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
