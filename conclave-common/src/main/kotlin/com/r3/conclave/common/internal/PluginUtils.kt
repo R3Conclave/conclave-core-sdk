@@ -20,7 +20,7 @@ object PluginUtils {
     const val PYTHON_FILE = "enclave.py"
 
     fun getManifestAttribute(classLoader: ClassLoader, attributeName: String): String {
-        // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
+
         val values = classLoader
             .getResources(JarFile.MANIFEST_NAME)
             .asSequence()

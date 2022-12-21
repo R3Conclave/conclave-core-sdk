@@ -83,6 +83,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     // TODO Come up with a better way than this. This might not be an issue after CON-1069 since we won't be building
     //  the conclave-build image anymore.
     fun buildInDocker(buildInDocker: Property<Boolean>): Boolean {
+        // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
+        // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
+        // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
         return !OperatingSystem.current().isLinux || buildInDocker.get() || runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE
     }
 

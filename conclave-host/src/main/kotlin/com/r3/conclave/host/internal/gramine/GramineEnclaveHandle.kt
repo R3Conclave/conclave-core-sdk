@@ -68,8 +68,7 @@ class GramineEnclaveHandle(
             .command(command.asList())
             .start()
         process.waitFor(5L, TimeUnit.SECONDS)
-        return process.inputStream.bufferedReader().use(BufferedReader::readText).trimEnd()
-            .removeSuffix(System.lineSeparator())
+        return process.inputStream.reader().use { it.readText() }.trimEnd()
     }
 
 

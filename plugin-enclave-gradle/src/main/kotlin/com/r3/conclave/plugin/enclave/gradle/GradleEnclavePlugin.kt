@@ -175,7 +175,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             linuxExec: LinuxExec
     ): GenerateGramineBundle {
         return target.createTask("generateGramine${enclaveMode.capitalise()}Bundle", enclaveMode, linuxExec) { task ->
-            // TODO: Build Gramine enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
             task.dependsOn(linuxExec)
             task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)

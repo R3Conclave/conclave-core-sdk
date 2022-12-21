@@ -18,7 +18,6 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         bash \
         curl \
         apt-transport-https \
-        python3-pip \
         openjdk-17-jdk-headless
 ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
