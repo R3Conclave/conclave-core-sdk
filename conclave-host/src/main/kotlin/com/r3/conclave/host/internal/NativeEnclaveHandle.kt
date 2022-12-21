@@ -15,7 +15,7 @@ class NativeEnclaveHandle(
 ) : EnclaveHandle {
     private val enclaveFile: Path
     private val enclaveId: Long
-    override val enclaveInterface: HostEnclaveInterface
+    override val callInterface: NativeHostEnclaveInterface
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
@@ -23,13 +23,13 @@ class NativeEnclaveHandle(
         enclaveFile = Files.createTempFile(enclaveClassName, "signed.so").toAbsolutePath()
         enclaveFileUrl.openStream().use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
         enclaveId = Native.createEnclave(enclaveFile.toString(), enclaveMode != EnclaveMode.RELEASE)
-        enclaveInterface = NativeHostEnclaveInterface(enclaveId)
-        NativeApi.registerHostEnclaveInterface(enclaveId, enclaveInterface)
+        callInterface = NativeHostEnclaveInterface(enclaveId)
+        NativeApi.registerHostEnclaveInterface(enclaveId, callInterface)
     }
 
     override fun initialise() {
         synchronized(this) {
-            enclaveInterface.initializeEnclave(enclaveClassName)
+            initializeEnclave(enclaveClassName)
         }
     }
 

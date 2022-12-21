@@ -14,7 +14,7 @@ import kotlin.io.path.writeBytes
  */
 class GramineSGXEnclaveEnvironment(
     enclaveClass: Class<*>,
-    override val hostInterface: SocketEnclaveHostInterface,
+    override val callInterface: SocketEnclaveHostInterface,
     override val enclaveMode: EnclaveMode
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {

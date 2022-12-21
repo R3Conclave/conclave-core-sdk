@@ -11,7 +11,7 @@ import java.nio.ByteBuffer
  */
 class GramineDirectEnclaveEnvironment(
     enclaveClass: Class<*>,
-    override val hostInterface: SocketEnclaveHostInterface,
+    override val callInterface: SocketEnclaveHostInterface,
     private val simulationMrsigner: SHA256Hash
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {

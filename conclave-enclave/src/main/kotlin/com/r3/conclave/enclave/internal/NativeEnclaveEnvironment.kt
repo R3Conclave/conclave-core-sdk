@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 @PotentialPackagePrivate
 class NativeEnclaveEnvironment(
     enclaveClass: Class<*>,
-    override val hostInterface: NativeEnclaveHostInterface
+    override val callInterface: NativeEnclaveHostInterface
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
@@ -100,7 +100,7 @@ class NativeEnclaveEnvironment(
                     .apply { isAccessible = true }
                     .newInstance()
                 val env = NativeEnclaveEnvironment(enclaveClass, singletonHostInterface)
-                env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
+                env.callInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
                 initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e
@@ -130,7 +130,7 @@ class NativeEnclaveEnvironment(
         //  In Native mode, the targetInfo  (also called "quoting enclave info")
         //    is retrieved by the host, which calls SGX native functions.
         val report = createReport(targetInfo, reportData)
-        return hostInterface.getSignedQuote(report)
+        return getSignedQuote(report)
     }
 
     override fun setupFileSystems(

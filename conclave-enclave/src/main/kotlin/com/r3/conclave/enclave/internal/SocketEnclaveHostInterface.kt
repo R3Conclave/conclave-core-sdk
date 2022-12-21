@@ -25,7 +25,7 @@ class SocketEnclaveHostInterface(
         private val host: String,
         private val port: Int,
         private val maximumConcurrentCalls: Int
-) : EnclaveHostInterface(), Closeable {
+) :  CallInterface<HostCallType, EnclaveCallType>(), Closeable {
     var sanitiseExceptions = false
 
     /** Represents the lifecycle of the interface. */

@@ -19,7 +19,7 @@ import java.util.concurrent.ArrayBlockingQueue
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (socket with streamed ECalls and OCalls).
  */
-class SocketHostEnclaveInterface : HostEnclaveInterface(), Closeable {
+class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(), Closeable {
     private lateinit var serverSocket: ServerSocket
 
     private lateinit var callContextPool: ArrayBlockingQueue<EnclaveCallContext>

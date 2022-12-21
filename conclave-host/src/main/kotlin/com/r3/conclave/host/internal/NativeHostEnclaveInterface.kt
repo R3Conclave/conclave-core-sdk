@@ -14,7 +14,7 @@ typealias StackFrame = CallInterfaceStackFrame<EnclaveCallType>
  *  - Route calls from the enclave to the appropriate host side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (ECalls and OCalls).
  */
-class NativeHostEnclaveInterface(private val enclaveId: Long) : HostEnclaveInterface() {
+class NativeHostEnclaveInterface(private val enclaveId: Long) : CallInterface<EnclaveCallType, HostCallType>() {
     /**
      * Each thread has a lazily created stack which contains a frame for the currently active enclave call.
      * When a message arrives from the enclave, this stack is used to associate the return value with the corresponding call.
