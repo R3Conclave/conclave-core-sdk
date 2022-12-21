@@ -96,7 +96,7 @@ abstract class ConclaveTask : DefaultTask() {
 
     fun commandWithOutput(vararg command: String, workingDir: String? = null): String {
         val output = ByteArrayOutputStream()
-        commandLine(command.asList(), CommandLineConfig(standardOutputStream = output, workingDir = workingDir ))
+        commandLine(command.asList(), CommandLineConfig(standardOutputStream = output, workingDir = workingDir))
         return output.toString().trimEnd()
     }
 }

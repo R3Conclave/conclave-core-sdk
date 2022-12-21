@@ -199,8 +199,7 @@ class GramineEnclaveHandle(
             "-v", "$workingDirectoryPath:$DOCKER_WORKING_DIR",
             //  Set the directory internally used in Docker as the working directory
             "-w", DOCKER_WORKING_DIR,
-            "--security-opt",
-            "seccomp=$workingDirectoryPath/$GRAMINE_SECCOMP",
+            "--security-opt", "seccomp=$workingDirectoryPath/$GRAMINE_SECCOMP",
             "conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$dockerImageTag"
         )
     }
