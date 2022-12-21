@@ -211,7 +211,7 @@ open class GenerateGramineBundle @Inject constructor(
 
     private fun execCommand(vararg command: String): String {
        return if (pythonFile.isPresent) {
-            commandWithOutput(command, workingDir = outputDir.get().asFile.absolutePath)
+           commandWithOutput(command = command, workingDir = outputDir.get().asFile.absolutePath)
         } else {
             linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
         }
