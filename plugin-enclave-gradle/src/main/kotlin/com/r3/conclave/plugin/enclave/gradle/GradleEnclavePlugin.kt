@@ -270,13 +270,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.commandLine("tar", "xf", LazyGraalVmFile(target))
         }
 
-        val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
+        val isPythonEnclave = pythonSourcePath != null
+
+        val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment", isPythonEnclave) { task ->
             task.baseDirectory.set(target.projectDir.toPath().toString())
             task.tag.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$DOCKER_CONCLAVE_BUILD_TAG")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
             task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
             task.runtimeType.set(runtimeType)
-            task.isPythonEnclave.set(pythonSourcePath != null)
         }
 
         for (enclaveMode in EnclaveMode.values()) {

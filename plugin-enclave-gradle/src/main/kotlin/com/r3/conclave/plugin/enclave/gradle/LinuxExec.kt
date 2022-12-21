@@ -1,7 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
-import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -17,7 +16,8 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
 import kotlin.io.path.*
 
-open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
+open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isPythonEnclave: Boolean) :
+    ConclaveTask() {
 
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
@@ -33,9 +33,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     @get:Input
     val runtimeType: Property<GradleEnclavePlugin.RuntimeType> = objects.property(GradleEnclavePlugin.RuntimeType::class.java)
-
-    @get:Input
-    val isPythonEnclave: Property<Boolean> = objects.property(Boolean::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -83,7 +80,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
         // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
         // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
-        return !OperatingSystem.current().isLinux || buildInDocker.get() || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave.get())
+        return !OperatingSystem.current().isLinux || buildInDocker.get() || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave)
     }
 
     /**
