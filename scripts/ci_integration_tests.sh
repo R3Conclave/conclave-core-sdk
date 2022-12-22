@@ -15,7 +15,7 @@ if [ "$enclaveMode" != "Simulation" ] && [ "$runtimeType" == "Gramine" ]; then
 fi
 
 # Gramine needs a custom seccomp profile to work. https://github.com/gramineproject/gramine/issues/164#issuecomment-949349475
-runDocker "$container_image_integration_tests_build" "cd integration-tests && ./gradlew -Xmx4g -PenclaveMode=$enclaveMode -PruntimeType=$runtimeType test -s -i" "--security-opt seccomp=$script_dir/gramine-seccomp.json"
+runDocker "$container_image_integration_tests_build" "cd integration-tests && ./gradlew -PenclaveMode=$enclaveMode -PruntimeType=$runtimeType test -s -i" "--security-opt seccomp=$script_dir/gramine-seccomp.json"
 
 if [ "$enclaveMode" != "Simulation" ] && [ "$runtimeType" == "Gramine" ]; then
     # Teardown AESM container

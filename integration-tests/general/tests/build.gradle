@@ -27,4 +27,5 @@ dependencies {
 
 test {
     systemProperty "kdsJar", configurations.kds.asPath
+    maxHeapSize = "4g"
 }
