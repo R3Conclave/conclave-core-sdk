@@ -1,6 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.Companion.getManifestAttribute
+import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -16,10 +16,8 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import javax.inject.Inject
 import kotlin.io.path.*
 
-open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-    companion object {
-        private val JEP_VERSION = getManifestAttribute("Jep-Version")
-    }
+open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isPythonEnclave: Boolean) :
+    ConclaveTask() {
 
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
@@ -32,6 +30,9 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     @get:Input
     val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
+
+    @get:Input
+    val runtimeType: Property<GradleEnclavePlugin.RuntimeType> = objects.property(GradleEnclavePlugin.RuntimeType::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -48,8 +49,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                     "docker",
                     "build",
                     "--tag", tag.get(),
-                    "--build-arg",
-                    "jep_version=$JEP_VERSION",
                     conclaveBuildDir
                 )
             } catch (e: Exception) {
@@ -78,7 +77,10 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
     // TODO Come up with a better way than this. This might not be an issue after CON-1069 since we won't be building
     //  the conclave-build image anymore.
     fun buildInDocker(buildInDocker: Property<Boolean>): Boolean {
-        return !OperatingSystem.current().isLinux || buildInDocker.get()
+        // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
+        // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
+        // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
+        return !OperatingSystem.current().isLinux || (buildInDocker.get() && !isPythonEnclave) || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave)
     }
 
     /**
@@ -110,13 +112,18 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         }
     }
 
-    /** Returns the ERROR output of the command only, in the returned list. */
-    fun exec(params: List<String>): List<String>? {
+    /** Returns the standard output of the command or throws a Gradle exception in case of failures. */
+    fun exec(command: List<String>, dockerExtraParams: List<String> = emptyList()): String {
         val errorOut = ByteArrayOutputStream()
+        val stdOut = ByteArrayOutputStream()
 
         val result = commandLine(
-            command = if (buildInDocker(buildInDocker)) getDockerRunArgs(params) else params,
-            commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
+            command = if (buildInDocker(buildInDocker)) getDockerRunArgs(command, dockerExtraParams) else command,
+            commandLineConfig = CommandLineConfig(
+                ignoreExitValue = true,
+                standardOutputStream = stdOut,
+                errorOutputStream = errorOut
+            )
         )
 
         if (result.exitValue == 137) {
@@ -125,12 +132,10 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
         }
         if (result.exitValue != 0) {
             errorOut.writeTo(System.err)
-            // Using default charset here because the strings come from a sub-process and that's what they'll pick up.
-            // Hopefully it's UTF-8 - it should be!
-            return String(errorOut.toByteArray()).split(System.lineSeparator())
+            throw GradleException(errorOut.toString())
         }
         result.assertNormalExitValue()
-        return null
+        return stdOut.toString()
     }
 
     fun throwOutOfMemoryException(): Nothing = throw GradleException(
@@ -139,22 +144,29 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
                 "as the native image build process is memory intensive."
     )
 
-    private fun getDockerRunArgs(params: List<String>): List<String> {
+    private fun List<String>.mapToDockerWorkingDirectory(): List<String> {
+        return map {
+            it.replace(baseDirectory.get(), DOCKER_WORKING_DIR).replace("\\", "/")
+        }
+    }
+
+    private fun getDockerRunArgs(command: List<String>, extraParams: List<String>): List<String> {
         // The first param is the name of the executable to run. We execute the command in the context of a VM (currently Docker) by
         // mounting the Host project directory as /project in the VM. We need to fix-up any path in parameters that point
         // to the project directory and convert them to point to /project instead, converting backslashes into forward slashes
         // to support Windows.
         val userId = commandWithOutput("id", "-u")
         val groupId = commandWithOutput("id", "-g")
-        return listOf(
+        val image = tag.get()
+        val dockerizedCommand = command.mapToDockerWorkingDirectory()
+        val dockerizedExtraParams = extraParams.mapToDockerWorkingDirectory()
+        val dockerRun = listOf(
             "docker",
             "run",
-            "-i",
             "--rm",
             "-u", "$userId:$groupId",
-            "-v",
-            "${baseDirectory.get()}:/project",
-            tag.get()
-        ) + params.map { it.replace(baseDirectory.get(), "/project").replace("\\", "/") }
+            "-v", "${baseDirectory.get()}:$DOCKER_WORKING_DIR"
+        )
+        return dockerRun + dockerizedExtraParams + image + dockerizedCommand
     }
 }
