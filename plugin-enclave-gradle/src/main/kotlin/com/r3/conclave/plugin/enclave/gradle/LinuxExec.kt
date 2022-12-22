@@ -58,7 +58,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
     private fun runDockerCommand(vararg dockerCommand: Any, commandLineConfig: CommandLineConfig = CommandLineConfig()): ExecResult {
         try {
-            return commandLine(dockerCommand, commandLineConfig)
+            return commandLine(*dockerCommand, commandLineConfig)
         } catch (e: Exception) {
             val message = if (OperatingSystem.current().isLinux) {
                 "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
