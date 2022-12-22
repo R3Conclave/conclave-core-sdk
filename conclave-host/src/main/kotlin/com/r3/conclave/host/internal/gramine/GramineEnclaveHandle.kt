@@ -166,7 +166,11 @@ class GramineEnclaveHandle(
         } else {
             val user = runSimpleCommand("id", "-u")
             val group = runSimpleCommand("id", "-g")
-            val dockerCommand = getDockerCommand(user, group)
+            val dockerCommand = if (enclaveMode == EnclaveMode.SIMULATION) {
+                getDockerRun() + getDockerOptions(user, group)
+            } else {
+                getDockerRun() + getHardwareOptions() + getDockerOptions(user, group)
+            }
             dockerCommand + listOf(gramineCommand) + javaCommand
         }
         logger.debug("Running enclave with command: ${command.joinToString(" ")}")
@@ -184,18 +188,28 @@ class GramineEnclaveHandle(
         )
     }
 
-    private fun getDockerCommand(user: String, group: String): List<String> {
-        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory / GRAMINE_SECCOMP)
-        val workingDirectoryPath = workingDirectory.absolutePathString()
+    private fun getHardwareOptions(): List<String> {
         return listOf(
-            "docker",
-            "run",
-            "-u", "$user:$group",
-            "--network",
-            "host",
             "--device=/dev/sgx_enclave",
             "--device=/dev/sgx_provision",
             "-v", "/var/run/aesmd:/var/run/aesmd",
+        )
+    }
+
+    private fun getDockerRun(): List<String> {
+        return listOf(
+            "docker",
+            "run"
+        )
+    }
+
+    private fun getDockerOptions(user: String, group: String): List<String> {
+        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory / GRAMINE_SECCOMP)
+        val workingDirectoryPath = workingDirectory.absolutePathString()
+        return listOf(
+            "-u", "$user:$group",
+            "--network",
+            "host",
             "--rm",
             //  Map the host's working directory to the Docker container's working directory
             "-v", "$workingDirectoryPath:$DOCKER_WORKING_DIR",
