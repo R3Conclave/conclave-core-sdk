@@ -38,16 +38,16 @@ conclave {
 
     simulation {
         signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingKey = file("sample_private_key.pem")
     }
 
     debug {
         signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingKey = file("sample_private_key.pem")
     }
 
     release {
         signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingKey = file("sample_private_key.pem")
     }
 }
