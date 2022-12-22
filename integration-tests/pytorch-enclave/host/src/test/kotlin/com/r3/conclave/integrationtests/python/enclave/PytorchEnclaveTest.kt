@@ -52,7 +52,8 @@ class PytorchEnclaveTest {
         val mailResponse = postedMail.single().encryptedBytes
         // We do not really care of the accuracy of the result, we just want the Pytorch enclave to run correctly.
         val lastLossResult = clientPostOffice.decryptMail(mailResponse).bodyAsBytes
-        assertThat(lastLossResult).isEqualTo("2.2989193603515625".toByteArray())
+        val diff = kotlin.math.abs(String(lastLossResult).toDouble() - 2.2989193603515625)
+        assertThat(diff).isLessThanOrEqualTo(0.0001)
     }
 
     private fun prepareMailWithDataBundle(clientPostOffice: PostOffice): ByteArray {
