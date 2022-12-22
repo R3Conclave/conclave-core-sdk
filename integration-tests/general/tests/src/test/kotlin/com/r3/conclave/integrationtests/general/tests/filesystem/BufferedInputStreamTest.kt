@@ -3,6 +3,7 @@ package com.r3.conclave.integrationtests.general.tests.filesystem
 import com.r3.conclave.integrationtests.general.common.tasks.CloseInputStream
 import com.r3.conclave.integrationtests.general.common.tasks.NewBufferedFileInputStream
 import com.r3.conclave.integrationtests.general.common.tasks.ReadBytesFromInputStream
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -31,6 +32,7 @@ class BufferedInputStreamTest : FileSystemEnclaveTest() {
     @ParameterizedTest
     @ValueSource(strings = ["/buffered-input-stream.data", "/tmp/buffered-input-stream.data"])
     fun readToBuffer(path: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val data = ByteArray(10 * 1024 * 1024) { i -> i.toByte() }
         filesWrite(path, data)
 
