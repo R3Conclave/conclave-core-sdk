@@ -1,11 +1,11 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
-import com.r3.conclave.common.EnclaveMode.SIMULATION
 import com.r3.conclave.host.EnclaveLoadException
 import com.r3.conclave.integrationtests.general.common.tasks.*
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
@@ -53,6 +53,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/parent-dir, false"
     )
     fun createDeleteSingleDirectory(parent: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val child = "$parent/child-dir"
         // Ensure creating a directory without creating its parent first fails with the expected exception
         createDirectoryWithoutParent(child)
@@ -73,6 +74,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/multiple-dir/conclave-test, false"
     )
     fun createDeleteMultipleDirectories(dir: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(3, 2, 1)
         val path = "$dir/file.data"
         // Create parent and child directories at once
@@ -96,6 +98,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/parent-dir",
     )
     fun createDeleteNestedDirectories(parent: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val path = "$parent/child-dir/grandchild-dir"
         callEnclave(WalkAndDelete(path))
         assertThat(callEnclave(FilesExists(path))).isFalse
@@ -107,6 +110,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/parent-dir",
     )
     fun listFilesMultipleTimes(dir: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(3, 2, 1)
         val path1 = "$dir/file1.data"
         val path2 = "$dir/file2.data"
@@ -130,6 +134,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/readBytes.data, false"
     )
     fun readBytes(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(1, 2, 3, 4)
         filesWrite(path, smallFileData)
         // Test Files.readAllBytes
@@ -146,6 +151,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/file-size.data, false"
     )
     fun fileSize(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(4, 3, 2, 1)
         filesWrite(path, smallFileData)
         // Test Files.size
@@ -156,6 +162,7 @@ class FilesTest : FileSystemEnclaveTest() {
     @ParameterizedTest
     @ValueSource(strings = ["/dev/random", "/dev/urandom"])
     fun readRandomDevice(device: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         Handler(uid.getAndIncrement(), device).use {
             it.readSingleByte()
         }
@@ -169,14 +176,17 @@ class FilesTest : FileSystemEnclaveTest() {
         "/tmp/fos-delete-on-close.data, false"
     )
     fun outputStreamDeleteOnClose(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         FilesNewOutputStreamHandler(uid.getAndIncrement(), path).close()
         fileInputStreamNonExistingFile(path, nioApi)
     }
 
     @Test
     fun `an enclave with corrupted persistent filesystem fails`() {
+        graalvmOnlyTest() // CON-1259: Make sure using enclave file system with Gramine produces graceful exception
+
         //  We want this test to run only in SIMULATION mode
-        assumeTrue(SIMULATION.name == System.getProperty("enclaveMode").uppercase())
+        simulationOnlyTest()
 
         copyCorruptedFileSystem()
 
@@ -194,6 +204,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/persistent-fs-dir/,/tmp/in-memory-fs-dir"
     )
     fun `ensure moving directories between filesystems does not throw an error - empty directory`(src: String, dst: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         createDirectory(src)
 
         assertDoesNotThrow {
@@ -210,6 +221,7 @@ class FilesTest : FileSystemEnclaveTest() {
         "/persistent-fs-dir/,/tmp/in-memory-fs-dir"
     )
     fun `ensure moving directories between filesystems throws an error - not an empty directory`(src: String, dst: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         createDirectory(src)
         createDirectory("$src/a")
 

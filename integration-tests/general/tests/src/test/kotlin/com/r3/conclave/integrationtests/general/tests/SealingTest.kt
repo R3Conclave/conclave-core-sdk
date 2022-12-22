@@ -7,6 +7,7 @@ import com.r3.conclave.integrationtests.general.common.tasks.SealData
 import com.r3.conclave.integrationtests.general.common.tasks.UnsealData
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.params.ParameterizedTest
@@ -37,6 +38,7 @@ class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.
     @ParameterizedTest
     @ValueSource(booleans = [ false, true ])
     fun `unseal with different enclave of same MRSIGNER`(withAD: Boolean) {
+        graalvmOnlyTest() // CON-1265: "javax.crypto.AEADBadTagException: Tag mismatch!" thrown when unsealing data in Gramine
         val sameMrsignerEnclave = enclaveHost("com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner")
         assertThat(enclaveHost().mrsigner).isEqualTo(sameMrsignerEnclave.mrsigner)
 
@@ -49,6 +51,7 @@ class SealingTest : AbstractEnclaveActionTest("com.r3.conclave.integrationtests.
     @ParameterizedTest
     @ValueSource(booleans = [ false, true ])
     fun `unseal with enclave of different MRSIGNER`(withAD: Boolean) {
+        graalvmOnlyTest() // CON-1265: "javax.crypto.AEADBadTagException: Tag mismatch!" thrown when unsealing data in Gramine
         val differentMrsignerEnclave = enclaveHost("com.r3.conclave.integrationtests.general.defaultenclave.DefaultEnclave")
         assertThat(enclaveHost().mrsigner).isNotEqualTo(differentMrsignerEnclave.mrsigner)
 

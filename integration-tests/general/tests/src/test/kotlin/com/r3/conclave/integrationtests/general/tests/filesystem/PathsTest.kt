@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.integrationtests.general.common.tasks.PathsGet
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
@@ -14,6 +15,7 @@ class PathsTest : FileSystemEnclaveTest() {
         "/tmp/paths.data, false"
     )
     fun pathsGet(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val fileData = byteArrayOf(1, 2, 3)
         filesWrite(path, fileData)
 
@@ -29,6 +31,7 @@ class PathsTest : FileSystemEnclaveTest() {
 
     )
     fun symlink(path: String, symlinkPath: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val fileData = byteArrayOf(1, 2, 3)
         filesWrite(path, fileData)
 
@@ -43,6 +46,7 @@ class PathsTest : FileSystemEnclaveTest() {
         "/tmp/paths.data, /paths.datalink"
     )
     fun link(path: String, symlinkPath: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val fileData = byteArrayOf(1, 2, 3)
         filesWrite(path, fileData)
 
