@@ -44,21 +44,21 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
-            runDockerCommand(
+            runDockerCommand( listOf(
                 "docker",
                 "build",
                 "--tag", tag.get(),
                 "--build-arg",
                 "jep_version=$JEP_VERSION",
-                conclaveBuildDir
+                conclaveBuildDir)
             )
 
         }
     }
 
-    private fun runDockerCommand(vararg dockerCommand: Any, commandLineConfig: CommandLineConfig = CommandLineConfig()): ExecResult {
+    private fun runDockerCommand(dockerCommand: List<Any?>, commandLineConfig: CommandLineConfig = CommandLineConfig()): ExecResult {
         try {
-            return commandLine(*dockerCommand, commandLineConfig)
+            return commandLine(dockerCommand, commandLineConfig)
         } catch (e: Exception) {
             val message = if (OperatingSystem.current().isLinux) {
                 "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
@@ -122,7 +122,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory) : ConclaveTask(
 
         val dockerCommand = if (buildInDocker(buildInDocker)) getDockerRunArgs(params) else params
         val commandLineConfig = CommandLineConfig(ignoreExitValue = true, errorOutputStream = errorOut)
-        val result = runDockerCommand(dockerCommand, commandLineConfig)
+        val result = runDockerCommand(dockerCommand, commandLineConfig = commandLineConfig)
 
         if (result.exitValue == 137) {
             // 137 = 128 + SIGKILL, which happens when the kernel out-of-memory killer runs.
