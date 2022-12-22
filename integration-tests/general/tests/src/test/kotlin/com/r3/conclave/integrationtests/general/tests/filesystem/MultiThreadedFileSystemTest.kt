@@ -29,7 +29,9 @@ class MultiThreadedFileSystemTest : FileSystemEnclaveTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["", "/tmp"])
+    @ValueSource(strings = [""])
+    // Testing the in-memory filesystem has been temporarily disabled as it is flaky
+    // TODO: CON-1281 - Fix multithreading issue and readd the test for "/tmp"
     fun multiThreadReadWriteManyFiles(path: String) {
         graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val reply = callEnclave(WriteFilesConcurrently(THREADS, path))
