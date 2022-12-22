@@ -14,6 +14,7 @@ import com.r3.conclave.host.internal.SocketHostEnclaveInterface
 import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.utilities.internal.copyResource
 import java.io.IOException
+import java.lang.IllegalArgumentException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -175,6 +176,7 @@ class GramineEnclaveHandle(
     private fun getJavaCommand(port: Int): List<String> {
         return listOf(
             "java",
+            "-XX:-UseCompressedClassPointers", // TODO CON-1165, we need to understand why this is needed
             "-cp",
             GRAMINE_ENCLAVE_JAR,
             "com.r3.conclave.enclave.internal.GramineEntryPoint",

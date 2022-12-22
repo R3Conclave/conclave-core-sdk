@@ -1,12 +1,13 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
+import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.integrationtests.general.common.tasks.*
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.IOException
-import com.r3.conclave.common.EnclaveException
 
 class FileSystemInputStreamTest : FileSystemEnclaveTest() {
 
@@ -49,6 +50,7 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
         "/tmp/filesystem.data, false"
     )
     fun fileSystemStreamReadResetReadBytes(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(1, 2, 3)
         filesWrite(path, smallFileData)
         // Create an InputStream
@@ -71,6 +73,7 @@ class FileSystemInputStreamTest : FileSystemEnclaveTest() {
         "/tmp/filesystem-reset.data, false"
     )
     fun fileSystemResetThrowsException(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(1, 2, 3)
         filesWrite(path, smallFileData)
         // Create an InputStream

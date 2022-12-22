@@ -3,6 +3,7 @@ package com.r3.conclave.integrationtests.general.tests
 import com.r3.conclave.integrationtests.general.common.tasks.GetPersistentMap
 import com.r3.conclave.integrationtests.general.common.tasks.PutPersistentMap
 import com.r3.conclave.integrationtests.general.commontest.AbstractEnclaveActionTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junitpioneer.jupiter.cartesian.CartesianTest
 import org.junitpioneer.jupiter.cartesian.CartesianTest.Enum
@@ -18,6 +19,7 @@ class EnclavePersistentMapTest : AbstractEnclaveActionTest("com.r3.conclave.inte
         @Enum type: CallType,
         @Values(booleans = [false, true]) useKds: Boolean
     ) {
+        if (!useKds) graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         this.useKds = useKds
 
         val threads = 10
