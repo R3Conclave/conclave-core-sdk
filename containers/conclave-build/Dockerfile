@@ -26,5 +26,6 @@ RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramine
 RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | tee /etc/apt/sources.list.d/gramine.list
 RUN apt-get -y update
 
+ARG gramine_version
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        gramine
+        gramine=$gramine_version
