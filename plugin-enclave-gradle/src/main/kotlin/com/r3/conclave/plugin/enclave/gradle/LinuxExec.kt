@@ -1,6 +1,7 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
+import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -19,6 +20,10 @@ import kotlin.io.path.*
 
 open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isPythonEnclave: Boolean) :
     ConclaveTask() {
+
+    companion object {
+        private val GRAMINE_VERSION = getManifestAttribute("Gramine-Version")
+    }
 
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
@@ -49,6 +54,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
                     "docker",
                     "build",
                     "--tag", tag.get(),
+                    "--build-arg",
+                    "gramine_version=$GRAMINE_VERSION",
                     conclaveBuildDir
                 )
             )

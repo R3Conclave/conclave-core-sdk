@@ -21,6 +21,7 @@ source ${containers_script_dir}/common.sh
 
 commit_id=$(getGitCommitId)
 jep_version=$(getJepVersion)
+gramine_version=$(getGramineVersion)
 
 # Downloads or copys Graal from a local directory. This is required for building the sdk build.
 downloadOrCopyGraal() {
@@ -67,7 +68,7 @@ buildContainerSDKBuild() {
 # Builds conclave-build docker image
 buildContainerConclaveBuild() {
   pushd "${code_host_dir}/containers/conclave-build/"
-  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id --build-arg gramine_version="$gramine_version" .
   popd
 }
 
