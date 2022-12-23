@@ -82,4 +82,6 @@ processResources {
             }
         }
     }
+
+    from("${rootProject.projectDir}/scripts/gramine-seccomp.json")
 }

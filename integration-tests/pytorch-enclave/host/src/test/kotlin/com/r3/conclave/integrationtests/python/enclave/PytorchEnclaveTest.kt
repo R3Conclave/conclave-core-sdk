@@ -9,7 +9,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
@@ -17,7 +16,6 @@ import java.nio.file.Paths
 import kotlin.io.path.fileSize
 import kotlin.io.path.readBytes
 
-@Disabled // CON-1272: Pytorch integration test is failing with ModuleNotFoundError
 class PytorchEnclaveTest {
     companion object {
         @JvmStatic
@@ -54,7 +52,8 @@ class PytorchEnclaveTest {
         val mailResponse = postedMail.single().encryptedBytes
         // We do not really care of the accuracy of the result, we just want the Pytorch enclave to run correctly.
         val lastLossResult = clientPostOffice.decryptMail(mailResponse).bodyAsBytes
-        assertThat(lastLossResult).isEqualTo("2.2989193603515625".toByteArray())
+        val diff = kotlin.math.abs(String(lastLossResult).toDouble() - 2.2989193603515625)
+        assertThat(diff).isLessThanOrEqualTo(0.0001)
     }
 
     private fun prepareMailWithDataBundle(clientPostOffice: PostOffice): ByteArray {

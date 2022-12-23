@@ -8,6 +8,7 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
+import com.r3.conclave.plugin.enclave.gradle.LinuxExec
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.toHexString
@@ -22,6 +23,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
@@ -31,12 +33,14 @@ import kotlin.io.path.deleteExisting
 
 open class GenerateGramineBundle @Inject constructor(
     objects: ObjectFactory,
-    private val enclaveMode: EnclaveMode
+    private val enclaveMode: EnclaveMode,
+    private val linuxExec: LinuxExec
 ) : ConclaveTask() {
     companion object {
         const val MANIFEST_TEMPLATE = "$GRAMINE_MANIFEST.template"
         const val PYTHON_ENCLAVE_SIZE = "8G"
         const val JAVA_ENCLAVE_SIZE = "4G"
+        const val DOCKER_IMAGE_ARCHITECTURE = "x86_64-linux-gnu"
     }
 
     @get:Input
@@ -63,27 +67,15 @@ open class GenerateGramineBundle @Inject constructor(
 
     override fun action() {
         enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
+
+        val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
+        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
+
         if (pythonFile.isPresent) {
-            pythonFile.copyToOutputDir(PYTHON_FILE)
+            generateManifestForPythonEnclaves(manifestTemplatePath)
+        } else {
+            generateManifestForJavaEnclaves(manifestTemplatePath)
         }
-
-        // TODO We're relying on gcc, python3, pip3 and jep being installed on the machine that builds the Python
-        //  enclave. https://r3-cev.atlassian.net/browse/CON-1181
-
-        val architecture = commandWithOutput("gcc", "-dumpmachine")
-        val ldPreload = executePython(
-            "from sysconfig import get_config_var; " +
-                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
-        )
-        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
-        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
-        // incorrect then we'll need to come up with a better solution.
-        val pythonPackagesPath = commandWithOutput("pip3", "show", "jep")
-            .splitToSequence("\n")
-            .single { it.startsWith("Location: ") }
-            .substringAfter("Location: ")
-
-        generateManifest(architecture, ldPreload, pythonPackagesPath)
 
         if (enclaveMode != EnclaveMode.SIMULATION) {
             generateSgxManifestAndSigstruct()
@@ -93,63 +85,92 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun generateManifest(architecture: String, ldPreload: String, pythonPackagesPath: String) {
-        val manifestTemplateFile = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
-        javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplateFile)
+    private fun generateManifestForPythonEnclaves(manifestTemplatePath: Path) {
+        // We currently build Python enclaves outside of the conclave-build container
+        // TODO: CON-1215 - Building enclaves with Python inside a Docker container
+        pythonFile.copyToOutputDir(PYTHON_FILE)
 
-        project.exec { spec ->
-            val command = mutableListOf(
-                "gramine-manifest",
-                "-Djava_home=${System.getProperty("java.home")}",
-                "-Darch_libdir=/lib/$architecture",
-                "-Dld_preload=$ldPreload",
-                "-Disv_prod_id=${productId.get()}",
-                "-Disv_svn=${revocationLevel.get() + 1}",
-                "-Dpython_packages_path=$pythonPackagesPath",
-                "-Dis_python_enclave=${pythonFile.isPresent}",
-                "-Denclave_mode=$enclaveMode",
-                "-Denclave_worker_threads=10",
-                "-Dgramine_max_threads=${maxThreads.get()}",
-                "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
-                manifestTemplateFile.absolutePathString(),
-                GRAMINE_MANIFEST
-            )
-            if (enclaveMode == EnclaveMode.SIMULATION) {
-                val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
-                command += "-Dsimulation_mrsigner=$simulationMrSigner"
-            }
-            spec.commandLine = command
-            spec.setWorkingDir(outputDir)
+        val architecture = execCommand("gcc", "-dumpmachine")
+        val pythonLdPreload = executePython(
+            "from sysconfig import get_config_var; " +
+                    "print(get_config_var('LIBPL') + '/' + get_config_var('LDLIBRARY'))"
+        )
+        // The location displayed by 'pip3 show jep' is actually of the site/dist-packages dir, not the specific 'jep'
+        // dir within it. We assume this is the packages dir for other modules as well. If this assumption is
+        // incorrect then we'll need to come up with a better solution.
+        val pythonPackagesPath = execCommand("pip3", "show", "jep")
+            .splitToSequence(System.lineSeparator())
+            .single { it.startsWith("Location: ") }
+            .substringAfter("Location: ")
+        val command = prepareManifestGenerationCommand(
+            architecture,
+            pythonLdPreload,
+            pythonPackagesPath,
+            manifestTemplatePath
+        )
+        execCommand(*command.toTypedArray())
+    }
+
+    private fun generateManifestForJavaEnclaves(manifestTemplatePath: Path) {
+        val command = prepareManifestGenerationCommand(
+            DOCKER_IMAGE_ARCHITECTURE,
+            "",
+            "",
+            manifestTemplatePath
+        )
+        execCommand(*command.toTypedArray())
+    }
+
+    private fun prepareManifestGenerationCommand(
+        architecture: String,
+        ldPreload: String,
+        pythonPackagesPath: String,
+        manifestTemplate: Path
+    ): MutableList<String> {
+        val command = mutableListOf(
+            "gramine-manifest",
+            "-Djava_home=${System.getProperty("java.home")}",
+            "-Darch_libdir=/lib/$architecture",
+            "-Dld_preload=$ldPreload",
+            "-Disv_prod_id=${productId.get()}",
+            "-Disv_svn=${revocationLevel.get() + 1}",
+            "-Dpython_packages_path=$pythonPackagesPath",
+            "-Dis_python_enclave=${pythonFile.isPresent}",
+            "-Denclave_mode=$enclaveMode",
+            "-Denclave_worker_threads=10",
+            "-Dgramine_max_threads=${maxThreads.get()}",
+            "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+            manifestTemplate.absolutePathString(),
+            GRAMINE_MANIFEST
+        )
+        if (enclaveMode == EnclaveMode.SIMULATION) {
+            val simulationMrSigner = computeSigningKeyMeasurement().toHexString()
+            command += "-Dsimulation_mrsigner=$simulationMrSigner"
         }
+        return command
     }
 
     /**
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
-        project.exec { spec ->
-            spec.commandLine = listOf(
-                "gramine-sgx-sign",
-                "--manifest=$GRAMINE_MANIFEST",
-                "--key=${signingKey.get().asFile.absolutePath}",
-                "--output=$GRAMINE_SGX_MANIFEST"
-            )
-            spec.setWorkingDir(outputDir)
-        }
+        execCommand(
+            "gramine-sgx-sign",
+            "--manifest=${GRAMINE_MANIFEST}",
+            "--key=${signingKey.get().asFile.absolutePath}",
+            "--output=${GRAMINE_SGX_MANIFEST}"
+        )
     }
 
     /**
      * This will create a .token file into the output dir
      */
     private fun generateToken() {
-        project.exec { spec ->
-            spec.commandLine = listOf(
-                "gramine-sgx-get-token",
-                "--sig=$GRAMINE_SIGSTRUCT",
-                "--output=$GRAMINE_SGX_TOKEN"
-            )
-            spec.setWorkingDir(outputDir)
-        }
+        execCommand(
+            "gramine-sgx-get-token",
+            "--sig=$GRAMINE_SIGSTRUCT",
+            "--output=${outputDir.file(GRAMINE_SGX_TOKEN).get().asFile.absolutePath}"
+        )
     }
 
     /**
@@ -188,7 +209,15 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun executePython(command: String): String = commandWithOutput("python3", "-c", command)
+    private fun execCommand(vararg command: String): String {
+       return if (pythonFile.isPresent) {
+           commandWithOutput(command = command, workingDir = outputDir.get().asFile.absolutePath)
+        } else {
+            linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
+        }
+    }
+
+    private fun executePython(command: String): String = execCommand("python3", "-c", command)
 
     private fun RegularFileProperty.copyToOutputDir(fileName: String) {
         get().asFile.toPath().copyTo(outputDir.file(fileName).get().asFile.toPath(), REPLACE_EXISTING)

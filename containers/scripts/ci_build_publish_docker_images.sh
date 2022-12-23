@@ -67,7 +67,7 @@ buildContainerSDKBuild() {
 # Builds conclave-build docker image
 buildContainerConclaveBuild() {
   pushd "${code_host_dir}/containers/conclave-build/"
-  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id --build-arg jep_version="$jep_version" .
+  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id .
   popd
 }
 
