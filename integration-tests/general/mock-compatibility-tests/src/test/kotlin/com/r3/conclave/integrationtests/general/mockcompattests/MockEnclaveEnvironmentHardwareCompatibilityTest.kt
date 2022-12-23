@@ -12,6 +12,7 @@ import com.r3.conclave.host.internal.InternalsKt.createMockHost
 import com.r3.conclave.host.internal.InternalsKt.createNonMockHost
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.debugOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner
 import org.assertj.core.api.Assertions.assertThat
@@ -66,6 +67,7 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         @BeforeAll
         fun check() {
             debugOnlyTest()
+            graalvmOnlyTest() // CON-1269: Accessing SGX Key does not work in Gramine
         }
     }
 

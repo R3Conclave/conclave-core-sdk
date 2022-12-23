@@ -157,25 +157,3 @@ processResources {
         }
     }
 }
-
-def genDockerContainerTag() {
-    new ByteArrayOutputStream().withStream { os ->
-        exec {
-            executable = 'bash'
-            args "-c", "${rootProject.projectDir}/scripts/genDockerImageTag.sh" // N.B.: The script must only print to the standard output
-                                                                                // the docker image tag. Printing other information will cause issues
-            standardOutput = os
-        }
-        return os.toString().trim()
-    }
-}
-
-jar {
-    manifest {
-        attributes(
-                "Conclave-GraalVM-Version": conclave_graal_version.toString(),
-                "Jep-Version": jep_version.toString(),
-                "Gramine-Version": gramine_version.toString(),
-                "Docker-Conclave-Build-Tag": genDockerContainerTag())
-    }
-}
