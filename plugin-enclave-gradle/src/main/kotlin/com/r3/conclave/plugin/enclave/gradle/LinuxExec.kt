@@ -7,6 +7,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.process.ExecResult
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Files
@@ -44,28 +45,33 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
-            try {
-                commandLine(
+            runDockerCommand(listOf(
                     "docker",
                     "build",
                     "--tag", tag.get(),
                     conclaveBuildDir
                 )
-            } catch (e: Exception) {
-                val message = if (OperatingSystem.current().isLinux) {
-                    "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
-                            "rerun your build. See https://docs.conclave.net/enclave-modes.html#system-requirements " +
-                            "for more information. If the build still fails, please rerun the build with the " +
-                            "--stacktrace flag and raise an issue at https://github.com/R3Conclave/conclave-core-sdk/issues/new"
-                } else {
-                    "Conclave requires Docker to be installed when building enclaves on non-Linux platforms. Please " +
-                            "install Docker and rerun your build. See " +
-                            "https://docs.conclave.net/running-hello-world.html#prerequisites and " +
-                            "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module for " +
-                            "more information."
-                }
-                throw GradleException(message, e)
+            )
+        }
+    }
+
+    private fun runDockerCommand(dockerCommand: List<Any?>, commandLineConfig: CommandLineConfig = CommandLineConfig()): ExecResult {
+        try {
+            return commandLine(dockerCommand, commandLineConfig)
+        } catch (e: Exception) {
+            val message = if (OperatingSystem.current().isLinux) {
+                "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
+                        "rerun your build. See https://docs.conclave.net/enclave-modes.html#system-requirements " +
+                        "for more information. If the build still fails, please rerun the build with the " +
+                        "--stacktrace flag and raise an issue at https://github.com/R3Conclave/conclave-core-sdk/issues/new"
+            } else {
+                "Conclave requires Docker to be installed when building enclaves on non-Linux platforms. Please " +
+                        "install Docker and rerun your build. See " +
+                        "https://docs.conclave.net/running-hello-world.html#prerequisites and " +
+                        "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module for " +
+                        "more information."
             }
+            throw GradleException(message, e)
         }
     }
 
@@ -117,8 +123,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         val errorOut = ByteArrayOutputStream()
         val stdOut = ByteArrayOutputStream()
 
-        val result = commandLine(
-            command = if (buildInDocker(buildInDocker)) getDockerRunArgs(command, dockerExtraParams) else command,
+        val result = runDockerCommand(
+            dockerCommand = if (buildInDocker(buildInDocker)) getDockerRunArgs(command, dockerExtraParams) else command,
             commandLineConfig = CommandLineConfig(
                 ignoreExitValue = true,
                 standardOutputStream = stdOut,
