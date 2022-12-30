@@ -14,7 +14,7 @@ server, which exposes the REST interface.
 A KDS node can perform the following functions:
 
 * Give keys to external enclaves after validating them.
-* Exchange the master key among other nodes in the cluster. 
+* Send and receive the master key among other nodes in the cluster. 
 
 If an individual node loses the master key, it can recover the master key from the other nodes in the KDS cluster.
 
@@ -29,8 +29,8 @@ There are three types of nodes.
 The seeder node is the first node in a KDS cluster. It provides the root seed for the master key.
 
 When the seeder node is created, it _randomly_ generates the _master key_, seals it in its local machine, and exits. 
-If a previously sealed master key is present in the file system of the node, the process exits with an error. This 
-measure prevents accidental duplication of the master key.
+If a previously sealed master key is present in the node's file system, the process exits with an error. This check 
+prevents accidental duplication of the master key.
 
 The seeder node uses the `--generate-cluster-master-key` command to generate the master key. After generating the 
 master key, the seeder node is changed into a service node using the `--service` command.
