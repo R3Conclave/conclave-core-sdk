@@ -39,7 +39,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     companion object {
         private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Release-Version")
         private val CONCLAVE_GRAALVM_VERSION = getManifestAttribute("Conclave-GraalVM-Version")
-        private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
     }
 
     enum class RuntimeType {
@@ -274,7 +273,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment", isPythonEnclave) { task ->
             task.baseDirectory.set(target.projectDir.toPath().toString())
-            task.tag.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$DOCKER_CONCLAVE_BUILD_TAG")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
             task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
             task.runtimeType.set(runtimeType)

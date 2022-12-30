@@ -1,29 +1,25 @@
 package com.r3.conclave.host.internal.gramine
 
 import com.r3.conclave.common.EnclaveMode
-import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_ENCLAVE_JAR
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
-import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
 import com.r3.conclave.host.internal.loggerFor
-import com.r3.conclave.utilities.internal.copyResource
 import java.io.IOException
-import java.lang.IllegalArgumentException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
-import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 import kotlin.io.path.exists
+import kotlin.io.path.name
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
@@ -33,8 +29,7 @@ class GramineEnclaveHandle(
 
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
-        private const val GRAMINE_SECCOMP = "gramine-seccomp.json"
-        private val dockerImageTag = getManifestAttribute("Docker-Conclave-Build-Tag")
+        const val GRAMINE_ENTRY_POINT = "java"
 
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
@@ -61,14 +56,6 @@ class GramineEnclaveHandle(
 
         /** Create a socket host interface. */
         enclaveInterface = SocketHostEnclaveInterface()
-    }
-
-    private fun runSimpleCommand(vararg command: String): String {
-        val process = ProcessBuilder()
-            .command(command.asList())
-            .start()
-        process.waitFor(5L, TimeUnit.SECONDS)
-        return process.inputStream.reader().use { it.readText() }.trimEnd()
     }
 
 
@@ -152,71 +139,34 @@ class GramineEnclaveHandle(
                     path.createDirectories()
                 } else {
                     Files.copy(zip, path)
+
+                    if (path.name == GRAMINE_ENTRY_POINT && !isPythonEnclave()) {
+                        //  Zip archives are OS-agnostic, and therefore file permissions are not kept when zipping files.
+                        //  Gramine internals need to have "java" (the entry point) as executable, so we set it here as such.
+                        path.toFile().setExecutable(true)
+                    }
                 }
             }
         }
     }
 
     private fun prepareCommand(port: Int): List<String> {
-        val gramineCommand = getGramineExecutable(enclaveMode)
+        val gramineCommand = listOf(getGramineExecutable(enclaveMode))
         val javaCommand = getJavaCommand(port)
 
-        val command = if (isPythonEnclave()) {
-            listOf(gramineCommand) + javaCommand
-        } else {
-            val user = runSimpleCommand("id", "-u")
-            val group = runSimpleCommand("id", "-g")
-            val dockerCommand = if (enclaveMode == EnclaveMode.SIMULATION) {
-                getDockerRun() + getDockerOptions(user, group)
-            } else {
-                getDockerRun() + getHardwareOptions() + getDockerOptions(user, group)
-            }
-            dockerCommand + listOf(gramineCommand) + javaCommand
-        }
+        val command = gramineCommand + javaCommand
         logger.debug("Running enclave with command: ${command.joinToString(" ")}")
         return command
     }
 
     private fun getJavaCommand(port: Int): List<String> {
         return listOf(
-            "java",
+            GRAMINE_ENTRY_POINT,
             "-XX:-UseCompressedClassPointers", // TODO CON-1165, we need to understand why this is needed
             "-cp",
             GRAMINE_ENCLAVE_JAR,
             "com.r3.conclave.enclave.internal.GramineEntryPoint",
             port.toString()
-        )
-    }
-
-    private fun getHardwareOptions(): List<String> {
-        return listOf(
-            "--device=/dev/sgx_enclave",
-            "--device=/dev/sgx_provision",
-            "-v", "/var/run/aesmd:/var/run/aesmd",
-        )
-    }
-
-    private fun getDockerRun(): List<String> {
-        return listOf(
-            "docker",
-            "run"
-        )
-    }
-
-    private fun getDockerOptions(user: String, group: String): List<String> {
-        javaClass.copyResource("/$GRAMINE_SECCOMP", workingDirectory / GRAMINE_SECCOMP)
-        val workingDirectoryPath = workingDirectory.absolutePathString()
-        return listOf(
-            "-u", "$user:$group",
-            "--network",
-            "host",
-            "--rm",
-            //  Map the host's working directory to the Docker container's working directory
-            "-v", "$workingDirectoryPath:$DOCKER_WORKING_DIR",
-            //  Set the directory internally used in Docker as the working directory
-            "-w", DOCKER_WORKING_DIR,
-            "--security-opt", "seccomp=$workingDirectoryPath/$GRAMINE_SECCOMP",
-            "conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$dockerImageTag"
         )
     }
 

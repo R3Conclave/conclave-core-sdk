@@ -23,13 +23,13 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import java.io.File
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.interfaces.RSAPublicKey
 import javax.inject.Inject
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.copyTo
-import kotlin.io.path.deleteExisting
+import kotlin.io.path.*
 
 open class GenerateGramineBundle @Inject constructor(
     objects: ObjectFactory,
@@ -41,6 +41,8 @@ open class GenerateGramineBundle @Inject constructor(
         const val PYTHON_ENCLAVE_SIZE = "8G"
         const val JAVA_ENCLAVE_SIZE = "4G"
         const val DOCKER_IMAGE_ARCHITECTURE = "x86_64-linux-gnu"
+        const val JLINK_OUTPUT_DIRECTORY = "custom_enclave"
+        const val SYSTEM_LIB_DIRECTORY = "custom_system_lib"
     }
 
     @get:Input
@@ -74,6 +76,8 @@ open class GenerateGramineBundle @Inject constructor(
         if (pythonFile.isPresent) {
             generateManifestForPythonEnclaves(manifestTemplatePath)
         } else {
+            createCustomJDK()
+            copyAdditionalSystemFiles()
             generateManifestForJavaEnclaves(manifestTemplatePath)
         }
 
@@ -82,6 +86,46 @@ open class GenerateGramineBundle @Inject constructor(
             generateToken()
             // The .manifest is not needed for debug and release modes
             outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
+        }
+    }
+
+    private fun createCustomJDK() {
+        val jlinkOutputPath = "${outputDir.get()}/$JLINK_OUTPUT_DIRECTORY"
+
+        if (Paths.get(jlinkOutputPath).exists()) {
+            File(jlinkOutputPath).deleteRecursively()
+        }
+        execCommand(
+            "jlink",
+            "--strip-native-debug-symbols", "objcopy=/usr/bin/objcopy",
+            "--no-header-files",
+            "--no-man-pages",
+            "--add-modules", "java.base,java.desktop,java.sql,jdk.crypto.ec",
+            "--output", jlinkOutputPath
+        )
+    }
+
+    private fun copyAdditionalSystemFiles() {
+        //  These files need to be available when running java inside Gramine (leveraging LD_LIBRARY_PATH)
+        //  together with the OS files which are provided inside Gramine itself.
+        val files = listOf(
+            "/usr/lib/x86_64-linux-gnu/libz.so.1",
+            "/usr/lib/x86_64-linux-gnu/libstdc++.so.6",
+            "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1"
+        )
+        val outputSystemDir = outputDir.get().asFile.toPath() / SYSTEM_LIB_DIRECTORY
+
+        if (outputSystemDir.exists()) {
+            outputSystemDir.toFile().deleteRecursively()
+        }
+        files.forEach {
+            val filePath = Paths.get(outputSystemDir.absolutePathString() + it)
+            filePath.parent.run {
+                if (!exists()) {
+                    createDirectories()
+                }
+            }
+            Paths.get(it).copyTo(filePath)
         }
     }
 
@@ -106,6 +150,7 @@ open class GenerateGramineBundle @Inject constructor(
             architecture,
             pythonLdPreload,
             pythonPackagesPath,
+            System.getProperty("java.home"),
             manifestTemplatePath
         )
         execCommand(*command.toTypedArray())
@@ -116,6 +161,7 @@ open class GenerateGramineBundle @Inject constructor(
             DOCKER_IMAGE_ARCHITECTURE,
             "",
             "",
+            JLINK_OUTPUT_DIRECTORY,
             manifestTemplatePath
         )
         execCommand(*command.toTypedArray())
@@ -125,12 +171,16 @@ open class GenerateGramineBundle @Inject constructor(
         architecture: String,
         ldPreload: String,
         pythonPackagesPath: String,
+        javaHomePath: String,
         manifestTemplate: Path
     ): MutableList<String> {
+        // Note that, when running Java enclaves, "java_home" is a relative path (as we are creating the JDK
+        //   with jlink) but, when running Python enclaves, it is an absolute path.
         val command = mutableListOf(
             "gramine-manifest",
-            "-Djava_home=${System.getProperty("java.home")}",
+            "-Djava_home=$javaHomePath",
             "-Darch_libdir=/lib/$architecture",
+            "-Dcustom_system_libdir=$SYSTEM_LIB_DIRECTORY/",
             "-Dld_preload=$ldPreload",
             "-Disv_prod_id=${productId.get()}",
             "-Disv_svn=${revocationLevel.get() + 1}",
@@ -210,8 +260,8 @@ open class GenerateGramineBundle @Inject constructor(
     }
 
     private fun execCommand(vararg command: String): String {
-       return if (pythonFile.isPresent) {
-           commandWithOutput(command = command, workingDir = outputDir.get().asFile.absolutePath)
+        return if (pythonFile.isPresent) {
+            commandWithOutput(command = command, workingDir = outputDir.get().asFile.absolutePath)
         } else {
             linuxExec.exec(command.asList(), listOf("-w", outputDir.get().asFile.absolutePath))
         }

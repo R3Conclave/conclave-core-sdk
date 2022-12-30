@@ -27,7 +27,9 @@ jar {
                 "Conclave-GraalVM-Version": conclave_graal_version.toString(),
                 "Jep-Version": jep_version.toString(),
                 "Gramine-Version": gramine_version.toString(),
-                "Docker-Conclave-Build-Tag": genDockerContainerTag())
+                "Docker-Conclave-Run-Tag": genDockerContainerTag(),
+                "Docker-Conclave-Build-Tag": genDockerContainerTag()
+        )
     }
 }
 

@@ -71,9 +71,12 @@ processResources {
     String linuxSgxBuildDir = "$cppBuildDir/linux-sgx/src/linux-sgx"
     String sgxSdkBuildDir = "$cppBuildDir/linux-sgx/linux-sgx-ext-prefix/src/linux-sgx-ext-build/sgxsdk"
 
-    // conclave-build Dockerfile
     into("conclave-build") {
         from("${rootProject.projectDir}/containers/conclave-build")
+    }
+
+    into("conclave-run") {
+        from("${rootProject.projectDir}/containers/conclave-run")
     }
 
     // C common headers
