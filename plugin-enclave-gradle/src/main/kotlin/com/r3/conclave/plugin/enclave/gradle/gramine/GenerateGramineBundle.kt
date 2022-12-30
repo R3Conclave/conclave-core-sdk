@@ -89,28 +89,33 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
+    private fun findJavaModules(): String {
+        val enclaveJar = outputDir.file(GRAMINE_ENCLAVE_JAR).get().asFile.absolutePath
+
+        val dependentModules = execCommand(
+            "jdeps",
+            "--print-module-deps",
+            "--ignore-missing-deps",
+            enclaveJar
+        ).run { trimEnd().replace(System.lineSeparator(), "").split(",") }
+        // TODO: Provide mechanism to allow the user to add modules needed when using reflection
+        val defaultModules = listOf("java.base", "java.desktop", "java.sql", "jdk.crypto.ec")
+        return (defaultModules + dependentModules).distinct().joinToString(separator = ",")
+    }
+
     private fun createCustomJDK() {
         val jlinkOutputPath = "${outputDir.get()}/$JLINK_OUTPUT_DIRECTORY"
 
         if (Paths.get(jlinkOutputPath).exists()) {
             File(jlinkOutputPath).deleteRecursively()
         }
-
-        val enclaveJar = outputDir.file(GRAMINE_ENCLAVE_JAR).get().asFile.absolutePath
-
-        val modules = execCommand(
-            "jdeps",
-            "--print-module-deps",
-            "--ignore-missing-deps",
-            enclaveJar
-        ).run { trimEnd().replace(System.lineSeparator(), "") }
-
+        val modules = findJavaModules()
         execCommand(
             "jlink",
             "--strip-native-debug-symbols", "objcopy=/usr/bin/objcopy",
             "--no-header-files",
             "--no-man-pages",
-            "--add-modules", "$modules,jdk.crypto.ec",
+            "--add-modules", modules,
             "--output", jlinkOutputPath
         )
     }
