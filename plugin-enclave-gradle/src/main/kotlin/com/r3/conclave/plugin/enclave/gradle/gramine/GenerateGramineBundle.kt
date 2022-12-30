@@ -95,12 +95,22 @@ open class GenerateGramineBundle @Inject constructor(
         if (Paths.get(jlinkOutputPath).exists()) {
             File(jlinkOutputPath).deleteRecursively()
         }
+
+        val enclaveJar = outputDir.file(GRAMINE_ENCLAVE_JAR).get().asFile.absolutePath
+
+        val modules = execCommand(
+            "jdeps",
+            "--print-module-deps",
+            "--ignore-missing-deps",
+            enclaveJar
+        ).run { trimEnd().replace(System.lineSeparator(), "") }
+
         execCommand(
             "jlink",
             "--strip-native-debug-symbols", "objcopy=/usr/bin/objcopy",
             "--no-header-files",
             "--no-man-pages",
-            "--add-modules", "java.base,java.desktop,java.sql,jdk.crypto.ec",
+            "--add-modules", "$modules,jdk.crypto.ec",
             "--output", jlinkOutputPath
         )
     }
