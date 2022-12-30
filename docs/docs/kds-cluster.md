@@ -1,4 +1,4 @@
-# KDS cluster
+# Key Derivation Service cluster (KDS cluster)
 
 The KDS cluster holds the master key, which it uses to _derive_ the keys needed for production enclaves. You can use 
 the KDS cluster to get stable keys for persisting data independent of the physical system on which the enclave is 
