@@ -28,6 +28,7 @@ nav:
         - Enclave constraints: constraints.md
         - Enclave persistence: persistence.md
         - Key Derivation Service configuration: kds-configuration.md
+        - Key Derivation Service cluster: kds-cluster.md
         - Threads: threads.md
         - JavaScript/Python: javascript-python.md
         - Performance: performance.md
