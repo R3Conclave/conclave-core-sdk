@@ -424,7 +424,7 @@ class EnclaveHost private constructor(
             }
 
             // Initialise the enclave before fetching enclave instance info
-            enclaveHandle.initialise(attestationParameters.takeIf { enclaveMode.isHardware })
+            enclaveHandle.initialise(attestationParameters)
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 

@@ -37,7 +37,10 @@ class NativeEnclaveHandle(
     }
 
     init {
-        require(enclaveMode != EnclaveMode.MOCK)
+        require(enclaveMode != EnclaveMode.MOCK) {
+            MOCK_MODE_UNSUPPORTED_MESSAGE
+        }
+
         NativeLoader.loadHostLibraries(enclaveMode)
         enclaveFile = Files.createTempFile(enclaveClassName, "signed.so").toAbsolutePath()
         enclaveFileUrl.openStream().use { Files.copy(it, enclaveFile, REPLACE_EXISTING) }
@@ -52,12 +55,24 @@ class NativeEnclaveHandle(
 
     override fun initialise(attestationParameters: AttestationParameters?) {
         synchronized(this) {
-            quotingService = when(attestationParameters) {
-                is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
-                is AttestationParameters.DCAP -> EnclaveQuoteServiceDCAP
-                null -> EnclaveQuoteServiceMock
-            }
+            quotingService = getQuotingService(attestationParameters)
             initializeEnclave(enclaveClassName)
+        }
+    }
+
+    /** Get the appropriate quoting service. */
+    private fun getQuotingService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
+        /** Ignore the attestation parameters in simulation mode. */
+        if (!enclaveMode.isHardware) {
+            return EnclaveQuoteServiceMock
+        }
+
+        /** If not in simulation mode, ensure that the attestation parameters are not null. */
+        require(attestationParameters != null)
+
+        return when(attestationParameters) {
+            is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
+            is AttestationParameters.DCAP -> EnclaveQuoteServiceDCAP
         }
     }
 
@@ -76,5 +91,6 @@ class NativeEnclaveHandle(
 
     private companion object {
         private val logger = loggerFor<NativeEnclaveHandle>()
+        private const val MOCK_MODE_UNSUPPORTED_MESSAGE = "Native enclave handle does not support mock mode enclaves"
     }
 }
