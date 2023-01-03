@@ -4,6 +4,8 @@ import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.common.kds.MasterKeyType
+import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
 import com.r3.conclave.utilities.internal.*
 import java.nio.ByteBuffer
@@ -32,9 +34,14 @@ interface EnclaveHandle {
     val mockEnclave: Any
 
     /**
+     * The quoting service to use for quote generation & verification.
+     */
+    var quotingService: EnclaveQuoteService
+
+    /**
      * Initialise the enclave.
      */
-    fun initialise()
+    fun initialise(attestationParameters: AttestationParameters?)
 
     /**
      * Destroy the enclave.
@@ -73,8 +80,9 @@ interface EnclaveHandle {
     /**
      * Request a quote for enclave instance info from the enclave.
      */
-    fun getEnclaveInstanceInfoQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-        val returnBuffer = enclaveInterface.executeOutgoingCallWithReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, target.buffer)
+    fun getEnclaveInstanceInfoQuote(): ByteCursor<SgxSignedQuote> {
+        val quotingEnclaveTargetInfo =  quotingService.getQuotingEnclaveInfo()
+        val returnBuffer = enclaveInterface.executeOutgoingCallWithReturn(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, quotingEnclaveTargetInfo.buffer)
         return Cursor.wrap(SgxSignedQuote, returnBuffer.getRemainingBytes())
     }
 

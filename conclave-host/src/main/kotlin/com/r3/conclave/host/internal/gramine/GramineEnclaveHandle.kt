@@ -8,9 +8,13 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
+import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceGramineDCAP
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceMock
 import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.utilities.internal.copyResource
 import java.io.IOException
@@ -53,6 +57,8 @@ class GramineEnclaveHandle(
 
     override val enclaveInterface: SocketHostEnclaveInterface
 
+    override lateinit var quotingService: EnclaveQuoteService
+
     init {
         require(enclaveMode != EnclaveMode.MOCK)
         NativeLoader.loadHostLibraries(enclaveMode)
@@ -72,7 +78,13 @@ class GramineEnclaveHandle(
     }
 
 
-    override fun initialise() {
+    override fun initialise(attestationParameters: AttestationParameters?) {
+        quotingService = when(attestationParameters) {
+            is AttestationParameters.EPID -> throw IllegalArgumentException("EPID is not supported when using the Gramine runtime.")
+            is AttestationParameters.DCAP -> EnclaveQuoteServiceGramineDCAP
+            null -> EnclaveQuoteServiceMock
+        }
+
         /** Bind a port for the interface to use. */
         val port = enclaveInterface.bindPort()
 

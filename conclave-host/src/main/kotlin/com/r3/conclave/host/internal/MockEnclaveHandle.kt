@@ -6,6 +6,9 @@ import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.common.internal.ThreadLocalEnclaveContext
+import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
+import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceMock
 import java.lang.reflect.InvocationTargetException
 
 class MockEnclaveHandle(
@@ -22,7 +25,9 @@ class MockEnclaveHandle(
 
     override val enclaveInterface = MockHostEnclaveInterface(callInterfaceConnector)
 
-    override fun initialise() {
+    override var quotingService: EnclaveQuoteService = EnclaveQuoteServiceMock
+
+    override fun initialise(attestationParameters: AttestationParameters?) {
         try {
             // The Enclave class will only be on the class path for Mock enclaves and we do not want to add
             // a dependency to the Enclave package on the host so we must lookup the class from its name.

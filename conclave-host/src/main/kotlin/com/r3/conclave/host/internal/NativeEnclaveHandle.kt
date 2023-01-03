@@ -1,8 +1,15 @@
 package com.r3.conclave.host.internal
 
 import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.internal.CallHandler
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.HostCallType
+import com.r3.conclave.common.internal.SgxReport
+import com.r3.conclave.host.AttestationParameters
+import com.r3.conclave.host.internal.attestation.*
 import java.io.IOException
 import java.net.URL
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -16,6 +23,18 @@ class NativeEnclaveHandle(
     private val enclaveFile: Path
     private val enclaveId: Long
     override val enclaveInterface: NativeHostEnclaveInterface
+    override lateinit var quotingService: EnclaveQuoteService
+
+    /**
+     * Handler for servicing requests from the enclave for signed quotes.
+     */
+    private inner class GetSignedQuoteHandler : CallHandler {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
+            val report = Cursor.slice(SgxReport, parameterBuffer)
+            val signedQuote = quotingService.retrieveQuote(report)
+            return signedQuote.buffer
+        }
+    }
 
     init {
         require(enclaveMode != EnclaveMode.MOCK)
@@ -25,10 +44,19 @@ class NativeEnclaveHandle(
         enclaveId = Native.createEnclave(enclaveFile.toString(), enclaveMode != EnclaveMode.RELEASE)
         enclaveInterface = NativeHostEnclaveInterface(enclaveId)
         NativeApi.registerHostEnclaveInterface(enclaveId, enclaveInterface)
+
+        enclaveInterface.apply {
+            registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
+        }
     }
 
-    override fun initialise() {
+    override fun initialise(attestationParameters: AttestationParameters?) {
         synchronized(this) {
+            quotingService = when(attestationParameters) {
+                is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
+                is AttestationParameters.DCAP -> EnclaveQuoteServiceDCAP
+                null -> EnclaveQuoteServiceMock
+            }
             initializeEnclave(enclaveClassName)
         }
     }
