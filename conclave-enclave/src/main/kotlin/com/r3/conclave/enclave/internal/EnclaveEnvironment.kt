@@ -159,14 +159,6 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
     }
 
     /**
-     * Get quoting enclave info from the host.
-     */
-    fun getQuotingEnclaveInfo(): ByteCursor<SgxTargetInfo> {
-        val infoBuffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_QUOTING_ENCLAVE_INFO)
-        return Cursor.slice(SgxTargetInfo, infoBuffer)
-    }
-
-    /**
      * Request an attestation from the host.
      */
     fun getAttestation(): Attestation {
