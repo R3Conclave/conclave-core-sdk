@@ -2,6 +2,9 @@ package com.r3.conclave.integrationtests.general.tests.filesystem.db
 
 import com.r3.conclave.integrationtests.general.common.tasks.ExecuteSql
 import com.r3.conclave.integrationtests.general.common.tasks.SqlQuery
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import com.r3.conclave.integrationtests.general.tests.filesystem.FileSystemEnclaveTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
@@ -16,6 +19,14 @@ class DatabaseEnclaveTest : FileSystemEnclaveTest("com.r3.conclave.integrationte
         "true, true"
     )
     fun `sql inside enclave`(restartBetweenCmds: Boolean, useKds: Boolean) {
+        if (restartBetweenCmds) graalvmOnlyTest() // CON-1268: Gramine: cannot access database
+
+        //  For Gramine, we want this test to run only in SIMULATION mode
+        // CON-1268: Gramine: cannot access database
+        if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
+            simulationOnlyTest()
+        }
+
         this.useKds = useKds
 
         callEnclave(ExecuteSql("""

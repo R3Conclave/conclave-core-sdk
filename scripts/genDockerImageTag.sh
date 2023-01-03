@@ -36,8 +36,9 @@ function genDockerImageTag() {
   # that is not tracked by git should not be included in this hash.
   # In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
   # must include the conclave_graal sha512sum as well.
+  # The values for any version argument used inside the Dockerfile must also be included in the hash
   containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
-  docker_image_tag=$(echo $containers_dir_hash-$(getConclaveGraalSha512Sum) | sha256sum | cut -d ' ' -f1)
+  docker_image_tag=$(echo $containers_dir_hash-$(getConclaveGraalSha512Sum)-$(getJepVersion)-$(getGramineVersion) | sha256sum | cut -d ' ' -f1)
   # Return the result
   echo ${docker_image_tag}
 }
