@@ -38,7 +38,7 @@ class NativeEnclaveHandle(
 
     init {
         require(enclaveMode != EnclaveMode.MOCK) {
-            MOCK_MODE_UNSUPPORTED_MESSAGE
+            "Native enclave handle does not support mock mode enclaves"
         }
 
         NativeLoader.loadHostLibraries(enclaveMode)
@@ -48,9 +48,7 @@ class NativeEnclaveHandle(
         enclaveInterface = NativeHostEnclaveInterface(enclaveId)
         NativeApi.registerHostEnclaveInterface(enclaveId, enclaveInterface)
 
-        enclaveInterface.apply {
-            registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
-        }
+        enclaveInterface.registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
     }
 
     override fun initialise(attestationParameters: AttestationParameters?) {
@@ -91,6 +89,5 @@ class NativeEnclaveHandle(
 
     private companion object {
         private val logger = loggerFor<NativeEnclaveHandle>()
-        private const val MOCK_MODE_UNSUPPORTED_MESSAGE = "Native enclave handle does not support mock mode enclaves"
     }
 }

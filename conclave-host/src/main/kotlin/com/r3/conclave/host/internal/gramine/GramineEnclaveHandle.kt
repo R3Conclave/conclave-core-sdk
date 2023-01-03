@@ -80,7 +80,6 @@ class GramineEnclaveHandle(
     }
 
     override fun initialise(attestationParameters: AttestationParameters?) {
-        /** Set up the quoting service. */
         quotingService = getQuotingService(attestationParameters)
 
         /** Bind a port for the interface to use. */
@@ -106,7 +105,6 @@ class GramineEnclaveHandle(
         /** Wait for the local call interface start process to complete. */
         enclaveInterface.start()
 
-        /** Initialise the enclave. */
         initializeEnclave(enclaveClassName)
     }
 
@@ -117,12 +115,11 @@ class GramineEnclaveHandle(
             return EnclaveQuoteServiceMock
         }
 
-        /** If not in simulation mode, ensure that the attestation parameters are not null. */
         require(attestationParameters != null)
 
         /** The gramine runtime does not currently support EPID attestation. */
         return when(attestationParameters) {
-            is AttestationParameters.EPID -> throw IllegalArgumentException("EPID attestation is not supported when using the Gramine runtime.")
+            is AttestationParameters.EPID -> throw IllegalArgumentException("EPID attestation is not supported when using the Conclave Gramine runtime.")
             is AttestationParameters.DCAP -> EnclaveQuoteServiceGramineDCAP
         }
     }

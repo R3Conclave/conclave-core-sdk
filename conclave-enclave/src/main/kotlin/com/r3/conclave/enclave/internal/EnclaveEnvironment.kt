@@ -151,14 +151,6 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
     }
 
     /**
-     * Get a signed quote from the host.
-     */
-    fun getSignedQuote(report: ByteCursor<SgxReport>): ByteCursor<SgxSignedQuote> {
-        val quoteBuffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
-        return Cursor.slice(SgxSignedQuote, quoteBuffer)
-    }
-
-    /**
      * Request an attestation from the host.
      */
     fun getAttestation(): Attestation {
