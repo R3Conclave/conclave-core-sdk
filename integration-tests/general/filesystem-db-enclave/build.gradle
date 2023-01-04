@@ -23,6 +23,7 @@ conclave {
     inMemoryFileSystemSize = "0"
     persistentFileSystemSize = "64m"
     reflectionConfigurationFiles.from("reflect-config.json")
+    extraJavaModules = "java.sql"
     useInternalDockerRegistry = true
 
     kds {
