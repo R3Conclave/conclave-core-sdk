@@ -104,10 +104,10 @@ open class GenerateGramineBundle @Inject constructor(
     }
 
     private fun createCustomJDK() {
-        val jlinkOutputPath = "${outputDir.get()}/$JLINK_OUTPUT_DIRECTORY"
+        val jlinkOutputPath = outputDir.get().asFile.toPath().resolve(JLINK_OUTPUT_DIRECTORY)
 
-        if (Paths.get(jlinkOutputPath).exists()) {
-            File(jlinkOutputPath).deleteRecursively()
+        if (jlinkOutputPath.exists()) {
+            jlinkOutputPath.toFile().deleteRecursively()
         }
         val modules = findJavaModules()
         execCommand(
@@ -116,7 +116,7 @@ open class GenerateGramineBundle @Inject constructor(
             "--no-header-files",
             "--no-man-pages",
             "--add-modules", modules,
-            "--output", jlinkOutputPath
+            "--output", jlinkOutputPath.absolutePathString()
         )
     }
 
