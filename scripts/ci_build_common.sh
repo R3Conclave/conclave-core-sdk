@@ -13,7 +13,6 @@ docker_image_tag=$(${code_host_dir}/scripts/genDockerImageTag.sh)
 # Docker container images
 container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag
 container_image_conclave_build=$container_image_repo/conclave-build:$docker_image_tag
-container_image_conclave_run=$container_image_repo/conclave-run:$docker_image_tag
 container_image_integration_tests_build=$container_image_repo/integration-tests-build:$docker_image_tag
 container_image_sdk_build=$container_image_repo/sdk-build:$docker_image_tag
 

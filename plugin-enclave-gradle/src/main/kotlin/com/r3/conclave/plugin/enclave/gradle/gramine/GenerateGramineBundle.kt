@@ -134,7 +134,7 @@ open class GenerateGramineBundle @Inject constructor(
             outputSystemDir.toFile().deleteRecursively()
         }
         files.forEach {
-            val filePath = Paths.get(outputSystemDir.absolutePathString() + it)
+            val filePath = outputSystemDir.resolve(it)
             filePath.parent.run {
                 if (!exists()) {
                     createDirectories()

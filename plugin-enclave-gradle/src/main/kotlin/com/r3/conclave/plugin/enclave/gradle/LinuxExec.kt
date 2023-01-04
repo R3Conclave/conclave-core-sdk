@@ -23,9 +23,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
     ConclaveTask() {
 
     companion object {
-        private const val CONCLAVE_RUN_IMAGE = "conclave-run"
         private val GRAMINE_VERSION = getManifestAttribute("Gramine-Version")
-        private val DOCKER_CONCLAVE_RUN_TAG = getManifestAttribute("Docker-Conclave-Run-Tag")
         private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
     }
 
@@ -52,14 +50,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-
-        val (imageValue, suffix) = if (runtimeType.get() == GRAMINE) {
-            Pair(CONCLAVE_RUN_IMAGE, DOCKER_CONCLAVE_RUN_TAG)
-        } else {
-            Pair("conclave-build", DOCKER_CONCLAVE_BUILD_TAG)
-        }
-        image = imageValue
-        fullyQualifiedName = "conclave-docker-dev.software.r3.com/com.r3.conclave/$image:$suffix"
+        image = "conclave-build"
+        fullyQualifiedName = "conclave-docker-dev.software.r3.com/com.r3.conclave/$image:$DOCKER_CONCLAVE_BUILD_TAG"
 
         if (buildInDocker(buildInDocker) && !useInternalDockerRegistry.get()) {
             val conclaveBuildDir = temporaryDir.toPath() / image

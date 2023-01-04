@@ -75,10 +75,6 @@ processResources {
         from("${rootProject.projectDir}/containers/conclave-build")
     }
 
-    into("conclave-run") {
-        from("${rootProject.projectDir}/containers/conclave-run")
-    }
-
     // C common headers
     into("include") {
         from("${cppProject.projectDir}/jvm-enclave-common/include/public") {
