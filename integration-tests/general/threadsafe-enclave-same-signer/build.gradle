@@ -11,19 +11,23 @@ conclave {
     productID = 1
     revocationLevel = 0
     runtime = runtimeType
+    useInternalDockerRegistry = true
 
+    //  Note that the content of thread_safe_enclave_private_key_same_signer.pem is the same as
+    //    thread_safe_enclave_private_key.pem in thread_safe_enclave module.
+    //  We avoid relative paths here as Gramine tests would fail otherwise
     simulation {
         signingType = privateKey
-        signingKey = file("../threadsafe-enclave/thread_safe_enclave_private_key.pem")
+        signingKey = file("thread_safe_enclave_private_key_same_signer.pem")
     }
 
     debug {
         signingType = privateKey
-        signingKey = file("../threadsafe-enclave/thread_safe_enclave_private_key.pem")
+        signingKey = file("thread_safe_enclave_private_key_same_signer.pem")
     }
 
     release {
         signingType = privateKey
-        signingKey = file("../threadsafe-enclave/thread_safe_enclave_private_key.pem")
+        signingKey = file("thread_safe_enclave_private_key_same_signer.pem")
     }
 }

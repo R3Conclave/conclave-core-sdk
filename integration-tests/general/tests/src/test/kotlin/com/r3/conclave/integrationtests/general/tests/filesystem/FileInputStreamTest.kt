@@ -1,6 +1,7 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
 import com.r3.conclave.integrationtests.general.common.tasks.*
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -58,6 +59,7 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
         "/tmp/file.data, false"
     )
     fun writeReadDeleteFiles(path: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val smallFileData = byteArrayOf(1, 2, 3)
 
         // Write the file and create a FileInputStream
@@ -91,6 +93,7 @@ class FileInputStreamTest : FileSystemEnclaveTest() {
     @ParameterizedTest
     @ValueSource(strings = ["/dev/random", "/dev/urandom"])
     fun readRandomDevices(device: String) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         Handler(uid.getAndIncrement(), device).use { fis ->
             fis.readSingleByte()
         }

@@ -7,6 +7,7 @@ import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_BUNDLES_PATH
 import com.r3.conclave.common.internal.PluginUtils.ENCLAVE_PROPERTIES
 import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
+import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
 import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
@@ -30,34 +31,18 @@ import org.gradle.util.VersionNumber
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
-import java.util.*
-import java.util.jar.JarFile.MANIFEST_NAME
-import java.util.jar.Manifest
 import java.util.stream.Collectors.toList
 import javax.inject.Inject
 import kotlin.io.path.*
 
 class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout) : Plugin<Project> {
     companion object {
-        private const val CONCLAVE_GRAALVM_VERSION = "22.0.0.2-1.4-SNAPSHOT"
-
-        private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Version")
-
-        fun getManifestAttribute(name: String): String {
-            // Scan all MANIFEST.MF files in the plugin's classpath and find the given manifest attribute.
-            val values = GradleEnclavePlugin::class.java.classLoader
-                .getResources(MANIFEST_NAME)
-                .asSequence()
-                .mapNotNullTo(TreeSet()) { it.openStream().use(::Manifest).mainAttributes.getValue(name) }
-            return when (values.size) {
-                1 -> values.first()
-                0 -> throw IllegalStateException("Could not find manifest attribute $name")
-                else -> throw IllegalStateException("Found multiple values for manifest attribute $name: $values")
-            }
-        }
+        private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Release-Version")
+        private val CONCLAVE_GRAALVM_VERSION = getManifestAttribute("Conclave-GraalVM-Version")
+        private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
     }
 
-    private enum class RuntimeType {
+    enum class RuntimeType {
         GRAMINE,
         GRAALVM;
     }
@@ -112,15 +97,18 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             // has been parsed. This gives us an opportunity to perform actions based on the user configuration
             // of the enclave.
 
-            // If language support is enabled then automatically add the required dependency.
-            if (runtimeType.get() == GRAALVM && conclaveExtension.supportLanguages.get().isNotEmpty()) {
-                // It might be possible that the conclave part of the version not match the current version, e.g. if
-                // SDK is 1.4-SNAPSHOT but we're still using 20.0.0.2-1.3 because we've not had the need to update
-                target.dependencies.add("implementation", "com.r3.conclave:graal-sdk:$CONCLAVE_GRAALVM_VERSION")
+            // Only add the GraalVM SDK as a dependency if the enclave is going to need it.
+            if (runtimeType.get() == GRAALVM) {
+                // If the user has asked for language support, then we need to expose the GraalVM polygot API to
+                // them with "implementation", otherwise "runtimeOnly" is sufficient for a GraalVM enclave.
+                val configuration = if (conclaveExtension.supportLanguages.get().isEmpty()) "runtimeOnly" else "implementation"
+                target.dependencies.add(configuration, "com.r3.conclave:graal-sdk:$CONCLAVE_GRAALVM_VERSION")
             }
+
             // Add dependencies automatically (so developers don't have to)
             target.dependencies.add("implementation", "com.r3.conclave:conclave-enclave:$CONCLAVE_SDK_VERSION")
             target.dependencies.add("testImplementation", "com.r3.conclave:conclave-host:$CONCLAVE_SDK_VERSION")
+
             // Make sure that the user has specified productID, print friendly error message if not
             if (!conclaveExtension.productID.isPresent) {
                 throw GradleException(
@@ -181,10 +169,11 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             enclaveMode: EnclaveMode,
             conclaveExtension: ConclaveExtension,
             enclaveFatJarTask: Jar,
-            signingKey: Provider<RegularFile?>
+            signingKey: Provider<RegularFile?>,
+            linuxExec: LinuxExec
     ): GenerateGramineBundle {
-        return target.createTask("generateGramine${enclaveMode.capitalise()}Bundle", enclaveMode) { task ->
-            // TODO: Build Gramine enclaves in conclave-build container: https://r3-cev.atlassian.net/browse/CON-1229
+        return target.createTask("generateGramine${enclaveMode.capitalise()}Bundle", enclaveMode, linuxExec) { task ->
+            task.dependsOn(linuxExec)
             task.signingKey.set(signingKey)
             task.productId.set(conclaveExtension.productID)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
@@ -231,12 +220,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
      */
     private fun getMainSourceSet(project: Project): SourceSet {
         return (project.properties["sourceSets"] as SourceSetContainer).getByName("main")
-    }
-
-    private fun createMockArtifact(target: Project, enclaveFatJar: Jar) {
-        // Mock mode does not require all the enclave building tasks. The enclave Jar file is just packaged
-        // as an artifact.
-        target.artifacts.add("mock", enclaveFatJar.archiveFile)
     }
 
     private fun registerNonMockArtifacts(
@@ -287,14 +270,14 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.commandLine("tar", "xf", LazyGraalVmFile(target))
         }
 
-        val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment") { task ->
-            task.dependsOn(copyGraalVM)
+        val isPythonEnclave = pythonSourcePath != null
+
+        val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment", isPythonEnclave) { task ->
             task.baseDirectory.set(target.projectDir.toPath().toString())
-            task.tag.set("conclave-build:$CONCLAVE_SDK_VERSION")
-            // Create a 'latest' tag too so users can follow our tutorial documentation using the
-            // tag 'conclave-build:latest' rather than looking up the conclave version.
-            task.tagLatest.set("conclave-build:latest")
+            task.tag.set("conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$DOCKER_CONCLAVE_BUILD_TAG")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
+            task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
+            task.runtimeType.set(runtimeType)
         }
 
         for (enclaveMode in EnclaveMode.values()) {
@@ -348,7 +331,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
                 enclaveMode,
                 conclaveExtension,
                 enclaveFatJarTask,
-                signingKey
+                signingKey,
+                linuxExec
             )
             val gramineBundleZipTask = createGramineBundleZipTask(target, enclaveMode, generateGramineBundleTask)
 

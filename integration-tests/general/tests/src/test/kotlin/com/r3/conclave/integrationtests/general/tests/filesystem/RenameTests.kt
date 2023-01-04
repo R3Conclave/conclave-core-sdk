@@ -1,5 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.filesystem
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -16,6 +17,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/file1.data, /tmp/file2.data, false"
     )
     fun renameFiles(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData = "Test data for a file to rename"
         filesWrite(oldPath, testData.toByteArray())
         renamePath(oldPath, newPath, nioApi)
@@ -29,6 +31,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/file1.data, /tmp/file1.data, false"
     )
     fun renameFilesToThemselves(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData = "Test data for a file to rename"
         filesWrite(oldPath, testData.toByteArray())
         renameSamePath(oldPath, newPath, nioApi)
@@ -42,6 +45,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/file1.data, /tmp/testdir/file1.data, false"
     )
     fun renameFilesWithDir(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData = "Test data for a file to rename"
         filesWrite(oldPath, testData.toByteArray())
         createDirectory(Paths.get(newPath).parent.toString())
@@ -56,6 +60,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/file1.data, /tmp/file2.data, false",
     )
     fun renameNonExistentFiles(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         renameNonExistentPath(oldPath, newPath, nioApi)
     }
 
@@ -67,6 +72,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/file1.data, /tmp/file2.data, false"
     )
     fun renameToExistentFiles(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData1 = "Test data for a file to rename"
         val testData2 = "More data for a file to rename, bigger size than previous one"
         filesWrite(oldPath, testData1.toByteArray())
@@ -84,6 +90,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/emptydir, /tmp/emptydir2, false"
     )
     fun renameEmptyDirectories(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         createDirectory(oldPath)
         renamePath(oldPath, newPath, nioApi)
     }
@@ -96,6 +103,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/nonemptydir, /tmp/nonemptydir2, false"
     )
     fun renameNonEmptyDirectories(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData = "Test data for a file to rename"
         createDirectory(oldPath)
         filesWrite("$oldPath/test_file.txt", testData.toByteArray())
@@ -110,6 +118,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/nonemptydir, /tmp/nonemptydir2, false"
     )
     fun renameToNonEmptyDirectories(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData = "Test data for a file to rename"
         createDirectory(oldPath)
         filesWrite("$oldPath/test_file.txt", testData.toByteArray())
@@ -126,6 +135,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/nonemptydir, /tmp/emptydir2, false"
     )
     fun renameNestedDirectories(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData1 = "Test data1 for a file to rename"
         val testData2 = "Test data2 for a file to rename"
         createDirectory(oldPath)
@@ -162,6 +172,7 @@ class RenameTests : FileSystemEnclaveTest() {
         "/tmp/file1.data, /file1.data, false"
     )
     fun renameAcrossFileSystems(oldPath: String, newPath: String, nioApi: Boolean) {
+        graalvmOnlyTest() // CON-1264: Gramine: accessing filesystem and devices causes InvalidKeyException: Invalid AES key length: 0 bytes
         val testData = "Test data for a file to rename"
         filesWrite(oldPath, testData.toByteArray())
         renamePathAcrossFileSystems(oldPath, newPath, nioApi)

@@ -1,5 +1,7 @@
 package com.r3.conclave.integrationtests.tribuo.client
 
+import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.simulationOnlyTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.data.Offset
 import org.junit.jupiter.api.*
@@ -25,13 +27,17 @@ class RegressionTest : TribuoTest() {
         @BeforeAll
         @JvmStatic
         fun regressionSetup() {
+            // CON-1280: Multiple Tribuo tests fail for Gramine in debug mode
+            if (TestUtils.runtimeType == TestUtils.RuntimeType.GRAMINE) {
+                simulationOnlyTest()
+            }
             regression = Regression(client)
         }
 
         @AfterAll
         @JvmStatic
         fun regressionTearDown() {
-            regression.close()
+            if (::regression.isInitialized) regression.close()
         }
     }
 

@@ -23,6 +23,7 @@ conclave {
     inMemoryFileSystemSize = "0"
     persistentFileSystemSize = "64m"
     reflectionConfigurationFiles.from("reflect-config.json")
+    useInternalDockerRegistry = true
 
     kds {
         kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"
@@ -37,16 +38,16 @@ conclave {
 
     simulation {
         signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingKey = file("sample_private_key.pem")
     }
 
     debug {
         signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingKey = file("sample_private_key.pem")
     }
 
     release {
         signingType = privateKey
-        signingKey = file("../signing/sample_private_key.pem")
+        signingKey = file("sample_private_key.pem")
     }
 }
