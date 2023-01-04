@@ -3,6 +3,7 @@ package com.r3.conclave.plugin.enclave.gradle
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -22,7 +23,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
     ConclaveTask() {
 
     companion object {
-        const val CONCLAVE_RUN_IMAGE = "conclave-run"
+        private const val CONCLAVE_RUN_IMAGE = "conclave-run"
         private val GRAMINE_VERSION = getManifestAttribute("Gramine-Version")
         private val DOCKER_CONCLAVE_RUN_TAG = getManifestAttribute("Docker-Conclave-Run-Tag")
         private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
@@ -38,12 +39,12 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
     val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val runtimeType: Property<GradleEnclavePlugin.RuntimeType> =
-        objects.property(GradleEnclavePlugin.RuntimeType::class.java)
+    val runtimeType: Property<RuntimeType> =
+        objects.property(RuntimeType::class.java)
 
     private lateinit var image: String
 
-    private lateinit var tag: String
+    private lateinit var fullyQualifiedName: String
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -52,13 +53,13 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
 
-        val (imageValue, suffix) = if (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE) {
+        val (imageValue, suffix) = if (runtimeType.get() == GRAMINE) {
             Pair(CONCLAVE_RUN_IMAGE, DOCKER_CONCLAVE_RUN_TAG)
         } else {
             Pair("conclave-build", DOCKER_CONCLAVE_BUILD_TAG)
         }
         image = imageValue
-        tag = "conclave-docker-dev.software.r3.com/com.r3.conclave/$image:$suffix"
+        fullyQualifiedName = "conclave-docker-dev.software.r3.com/com.r3.conclave/$image:$suffix"
 
         if (buildInDocker(buildInDocker) && !useInternalDockerRegistry.get()) {
             val conclaveBuildDir = temporaryDir.toPath() / image
@@ -68,7 +69,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
                 listOf(
                     "docker",
                     "build",
-                    "--tag", tag,
+                    "--tag", fullyQualifiedName,
                     "--build-arg",
                     "gramine_version=$GRAMINE_VERSION",
                     conclaveBuildDir
@@ -111,7 +112,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
         // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
         // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
-        return !OperatingSystem.current().isLinux || (buildInDocker.get() && !isPythonEnclave) || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave)
+        return !OperatingSystem.current().isLinux || (buildInDocker.get() && !isPythonEnclave) || (runtimeType.get() == GRAMINE && !isPythonEnclave)
     }
 
     /**
@@ -197,6 +198,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
             "-u", "$userId:$groupId",
             "-v", "${baseDirectory.get()}:$DOCKER_WORKING_DIR"
         )
-        return dockerRun + dockerizedExtraParams + tag + dockerizedCommand
+        return dockerRun + dockerizedExtraParams + fullyQualifiedName + dockerizedCommand
     }
 }

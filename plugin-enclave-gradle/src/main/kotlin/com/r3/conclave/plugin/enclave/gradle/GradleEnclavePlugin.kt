@@ -9,9 +9,9 @@ import com.r3.conclave.common.internal.PluginUtils.GRAALVM_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_BUNDLE_NAME
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask.Companion.CONCLAVE_GROUP
-import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAALVM
-import com.r3.conclave.plugin.enclave.gradle.GradleEnclavePlugin.RuntimeType.GRAMINE
 import com.r3.conclave.plugin.enclave.gradle.gramine.GenerateGramineBundle
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAALVM
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.*
 import org.gradle.api.artifacts.ExternalDependency
@@ -39,11 +39,6 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
     companion object {
         private val CONCLAVE_SDK_VERSION = getManifestAttribute("Conclave-Release-Version")
         private val CONCLAVE_GRAALVM_VERSION = getManifestAttribute("Conclave-GraalVM-Version")
-    }
-
-    enum class RuntimeType {
-        GRAMINE,
-        GRAALVM;
     }
 
     private var pythonSourcePath: Path? = null
