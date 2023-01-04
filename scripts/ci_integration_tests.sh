@@ -4,6 +4,11 @@ set -xeuo pipefail
 script_dir=$(dirname ${BASH_SOURCE[0]})
 source ${script_dir}/ci_build_common.sh
 
+if [[ $# -ne 2 ]]; then
+    echo "Wrong number of parameters, enter enclave mode and runtime type." >&2
+    exit 1
+fi
+
 # Set parameters to lowercase
 enclaveMode=${1,,}
 runtimeType=${2,,}
