@@ -1,7 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -25,5 +24,5 @@ class GenerateAppResourcesConfigTest : AbstractPluginTaskTest() {
         assertThat(resourcesConfig()["includes"].map { it["pattern"].textValue() }).contains("test-resource.txt")
     }
 
-    private fun resourcesConfig(): JsonNode = ObjectMapper().readTree(output.toFile())["resources"]
+    private fun resourcesConfig(): JsonNode = Gson().readTree(output.toFile())["resources"]
 }

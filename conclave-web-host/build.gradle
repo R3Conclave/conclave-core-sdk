@@ -8,6 +8,7 @@ dependencies {
 
     implementation project(":conclave-host")
     implementation "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
+    implementation 'com.google.code.gson:gson:2.10'
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     testImplementation(project(":internal-testing")) {

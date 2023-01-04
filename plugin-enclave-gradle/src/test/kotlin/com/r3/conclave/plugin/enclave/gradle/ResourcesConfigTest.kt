@@ -1,6 +1,7 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.gradle.internal.impldep.com.google.gson.Gson
+import org.gradle.internal.impldep.com.google.gson.JsonParser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -8,13 +9,13 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 
 class ResourcesConfigTest {
-    private val mapper = jacksonObjectMapper()
+    private val gson = Gson()
 
     @Test
     fun generateResourcesConfig(@TempDir dir: Path) {
         val outputFile = dir / "output"
         ResourcesConfig.create(includes = listOf(".*/intel-.*pem")).writeToFile(outputFile.toFile())
-        val generatedJSON = mapper.readTree(outputFile.readText())
+        val generatedJSON = JsonParser.parseString(outputFile.readText())
 
         val expectedJSON = """
         {
@@ -25,7 +26,7 @@ class ResourcesConfigTest {
                 ]
             }
         }
-        """.let(mapper::readTree)
+        """.let(JsonParser::parseString)
 
         assertEquals(expectedJSON, generatedJSON)
     }

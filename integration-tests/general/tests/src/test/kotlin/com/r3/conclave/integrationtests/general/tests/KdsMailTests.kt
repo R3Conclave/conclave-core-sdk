@@ -1,6 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.Gson
 import com.r3.conclave.client.PostOfficeBuilder
 import com.r3.conclave.common.EnclaveConstraint
 import com.r3.conclave.common.InvalidEnclaveException
@@ -257,7 +257,7 @@ class KdsMailTests {
             .uri(kdsUrl.toURI().resolve("/public"))
             .header("API-VERSION", "1")
             .header("Content-Type", "application/json; utf-8")
-            .POST(BodyPublishers.ofString(ObjectMapper().writeValueAsString(jsonBody)))
+            .POST(BodyPublishers.ofString(Gson().toJson(jsonBody)))
             .build()
         val httpClient = HttpClient.newHttpClient()
         val response: HttpResponse<InputStream> = httpClient.send(request, BodyHandlers.ofInputStream())

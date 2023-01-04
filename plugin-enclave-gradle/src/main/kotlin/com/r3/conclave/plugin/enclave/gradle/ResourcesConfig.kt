@@ -1,7 +1,12 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.gradle.internal.impldep.com.google.gson.Gson
 import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+
+
+
 
 data class ResourcesConfig(val resources: Resources) {
     companion object {
@@ -13,7 +18,7 @@ data class ResourcesConfig(val resources: Resources) {
     }
 
     fun writeToFile(outputFile: File) {
-        jacksonObjectMapper().writeValue(outputFile, this)
+        FileWriter(outputFile).use { writer -> Gson().toJson(this, writer) }
     }
 }
 

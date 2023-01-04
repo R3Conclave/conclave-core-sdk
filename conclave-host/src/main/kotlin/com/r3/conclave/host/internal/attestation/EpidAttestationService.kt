@@ -6,12 +6,13 @@ import com.r3.conclave.common.internal.SgxSignedQuote
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
 import com.r3.conclave.common.internal.attestation.AttestationUtils
 import com.r3.conclave.common.internal.attestation.EpidAttestation
-import com.r3.conclave.common.internal.attestation.attestationObjectMapper
+import com.r3.conclave.common.internal.attestation.attestationGson
 import com.r3.conclave.host.internal.debug
 import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.utilities.internal.getRemainingBytes
 import com.r3.conclave.utilities.internal.readFully
 import java.io.IOException
+import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
@@ -44,9 +45,9 @@ class EpidAttestationService(override val isRelease: Boolean, private val subscr
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Ocp-Apim-Subscription-Key", subscriptionKey)
             connection.outputStream.use {
-                attestationObjectMapper.writeValue(
-                    it,
-                    ReportRequest(isvEnclaveQuote = signedQuote.buffer.getRemainingBytes(avoidCopying = true))
+                attestationGson.toJson(
+                    ReportRequest(isvEnclaveQuote = signedQuote.buffer.getRemainingBytes(avoidCopying = true)),
+                    OutputStreamWriter(it)
                 )
             }
             if (connection.responseCode != HTTP_OK) {

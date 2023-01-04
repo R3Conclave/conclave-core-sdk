@@ -1,7 +1,6 @@
 package com.r3.conclave.integrationtests.general.tests.plugin
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.r3.conclave.integrationtests.general.commontest.TestUtils.RuntimeType.GRAALVM
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -25,5 +24,5 @@ class GenerateReflectionConfigTest : AbstractPluginTaskTest() {
             .doesNotContain("com.test.enclave.TestEnclave")
     }
 
-    private fun reflectionConfig(): JsonNode = ObjectMapper().readTree(output.toFile())
+    private fun reflectionConfig(): JsonNode = Gson().readTree(output.toFile())
 }
