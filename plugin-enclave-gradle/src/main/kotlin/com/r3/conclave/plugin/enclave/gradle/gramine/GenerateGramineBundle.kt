@@ -59,6 +59,9 @@ open class GenerateGramineBundle @Inject constructor(
     @get:InputFile
     val enclaveJar: RegularFileProperty = objects.fileProperty()
 
+    @get:Input
+    val extraJavaModules: Property<String> = objects.property(String::class.java)
+
     @get:InputFile
     @get:Optional
     val pythonFile: RegularFileProperty = objects.fileProperty()
@@ -97,9 +100,16 @@ open class GenerateGramineBundle @Inject constructor(
             "--ignore-missing-deps",
             enclaveJar
         ).run { trimEnd().replace(System.lineSeparator(), "").split(",") }
-        // TODO: Provide mechanism to allow the user to add modules needed when using reflection
-        val defaultModules = listOf("java.base", "java.desktop", "java.sql", "jdk.crypto.ec")
-        return (defaultModules + dependentModules).distinct().joinToString(separator = ",")
+        val modules = getExtraModules()
+        return (modules + dependentModules).distinct().joinToString(separator = ",")
+    }
+
+    private fun getExtraModules(): List<String> {
+        return if (extraJavaModules.get().isNotEmpty()) {
+            extraJavaModules.get().lowercase().replace(" ", "").split(",")
+        } else {
+            emptyList()
+        }
     }
 
     private fun createCustomJDK() {
@@ -133,7 +143,7 @@ open class GenerateGramineBundle @Inject constructor(
             outputSystemDir.toFile().deleteRecursively()
         }
         files.forEach {
-            val filePath = outputSystemDir.resolve(it)
+            val filePath = Paths.get(outputSystemDir.absolutePathString() + it)
             filePath.parent.run {
                 if (!exists()) {
                     createDirectories()

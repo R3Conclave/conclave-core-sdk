@@ -37,8 +37,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
     val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val runtimeType: Property<RuntimeType> =
-        objects.property(RuntimeType::class.java)
+    val runtimeType: Property<RuntimeType> = objects.property(RuntimeType::class.java)
 
     private lateinit var image: String
 

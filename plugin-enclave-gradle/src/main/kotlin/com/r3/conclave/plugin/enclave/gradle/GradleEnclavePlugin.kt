@@ -173,6 +173,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
             task.revocationLevel.set(conclaveExtension.revocationLevel)
             task.maxThreads.set(conclaveExtension.maxThreads)
             task.enclaveJar.set(enclaveFatJarTask.archiveFile)
+            task.extraJavaModules.set(conclaveExtension.extraJavaModules)
+
             if (pythonSourcePath != null) {
                 val pythonFiles = target.fileTree(pythonSourcePath).files
                 task.pythonFile.set(pythonFiles.first())
