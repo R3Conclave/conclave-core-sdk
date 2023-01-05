@@ -99,7 +99,7 @@ open class GenerateGramineBundle @Inject constructor(
             "--print-module-deps",
             "--ignore-missing-deps",
             enclaveJar
-        ).run { trimEnd().replace(System.lineSeparator(), "").split(",") }
+        ).run { trimEnd().split(",") }
         val modules = getExtraModules()
         return (modules + dependentModules).distinct().joinToString(separator = ",")
     }
