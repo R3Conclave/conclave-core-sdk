@@ -32,6 +32,8 @@ conclave {
         signingType = dummyKey
     }
 
+    extraJavaModules = "java.logging"
+
     maxHeapSize = "5g"
     persistentFileSystemSize = "1g"
     reflectionConfigurationFiles.from("reflect-config.json")
