@@ -27,6 +27,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.io.PrintStream
 import java.io.UTFDataFormatException
+import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PrivateKey
