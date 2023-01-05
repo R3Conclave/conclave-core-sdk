@@ -1,6 +1,6 @@
 # Configuring Conclave to use the KDS
 
-This page explains how to configure an enclave to use the Key Derivation Service (KDS). You can find more information 
+This page describes how to configure an enclave to use the Key Derivation Service (KDS). You can find more information 
 about the architecture of the KDS [here](kds-detail.md).
 
 ## What is the KDS?
