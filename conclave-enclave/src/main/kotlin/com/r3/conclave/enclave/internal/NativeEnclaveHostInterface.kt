@@ -1,9 +1,7 @@
 package com.r3.conclave.enclave.internal
 
-import com.r3.conclave.common.EnclaveStartException
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.EnclaveUtils.sanitiseThrowable
-import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.getAllBytes
 import java.nio.ByteBuffer
 import kotlin.collections.ArrayDeque
@@ -17,7 +15,7 @@ typealias StackFrame = CallInterfaceStackFrame<HostCallType>
  *  - Route calls from the host to the appropriate enclave side call handler, see [com.r3.conclave.common.internal.CallInterface]
  *  - Handle the low-level details of the messaging protocol (ECalls and OCalls).
  */
-class NativeEnclaveHostInterface : EnclaveHostInterface() {
+class NativeEnclaveHostInterface : CallInterface<HostCallType, EnclaveCallType>() {
     /** In release mode we want to sanitise exceptions to prevent leakage of information from the enclave */
     var sanitiseExceptions: Boolean = false
 

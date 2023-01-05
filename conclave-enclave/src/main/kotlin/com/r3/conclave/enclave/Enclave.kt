@@ -156,7 +156,7 @@ abstract class Enclave {
      * Create an enclave instance info object.
      */
     private fun generateEnclaveInstanceInfo(): EnclaveInstanceInfoImpl {
-        val attestation = env.hostInterface.getAttestation()
+        val attestation = env.getAttestation()
         val attestationReportBody = attestation.reportBody
         val enclaveReportBody = getEnclaveInstanceInfoQuoteCallHandler.mostRecentQuote[quote][reportBody]
 
@@ -253,7 +253,7 @@ abstract class Enclave {
             registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
         }
 
-        env.hostInterface.setEnclaveInfo(signatureKey, encryptionKeyPair)
+        env.setEnclaveInfo(signatureKey, encryptionKeyPair)
     }
 
     /**
@@ -923,7 +923,7 @@ abstract class Enclave {
                 putLong(hostThreadId)
                 payload(this)
             }
-            env.hostInterface.sendEnclaveMessageResponse(buffer)
+            env.sendEnclaveMessageResponse(buffer)
         }
 
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {

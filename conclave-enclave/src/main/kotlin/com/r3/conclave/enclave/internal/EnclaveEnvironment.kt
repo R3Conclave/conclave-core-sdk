@@ -2,8 +2,11 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import java.nio.ByteBuffer
+import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 
 abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: EnclaveKdsConfig?) {
@@ -43,7 +46,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
 
     abstract val enclaveMode: EnclaveMode
 
-    abstract val hostInterface: EnclaveHostInterface
+    abstract val hostInterface: CallInterface<HostCallType, EnclaveCallType>
 
     // Enclave properties from build system
     open val productID: Int = enclaveProperties.getProperty("productID").toInt()
@@ -129,6 +132,38 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
         inMemoryMountPath: String,
         persistentMountPath: String,
         encryptionKey: ByteArray)
+
+    /** Call interface functions */
+    /**
+     * Send enclave info to the host.
+     * TODO: It would be better to return enclave info from the initialise enclave call
+     *       but that doesn't work in mock mode at the moment.
+     */
+    fun setEnclaveInfo(signatureKey: PublicKey, encryptionKeyPair: KeyPair) {
+        val encodedSigningKey = signatureKey.encoded                    // 44 bytes
+        val encodedEncryptionKey = encryptionKeyPair.public.encoded     // 32 bytes
+        val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
+        val buffer = ByteBuffer.allocate(payloadSize).apply {
+            put(encodedSigningKey)
+            put(encodedEncryptionKey)
+        }
+        hostInterface.executeOutgoingCall(HostCallType.SET_ENCLAVE_INFO, buffer)
+    }
+
+    /**
+     * Request an attestation from the host.
+     */
+    fun getAttestation(): Attestation {
+        val buffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
+        return Attestation.getFromBuffer(buffer)
+    }
+
+    /**
+     * Send a response to the host enclave message handler.
+     */
+    fun sendEnclaveMessageResponse(response: ByteBuffer) {
+        hostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, response)
+    }
 }
 
 /**
