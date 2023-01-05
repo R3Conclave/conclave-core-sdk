@@ -103,7 +103,7 @@ class GramineEnclaveHandle(
         Runtime.getRuntime().addShutdownHook(Thread(gramineProcess::destroyForcibly))
 
         /** Wait for the local call interface start process to complete. */
-        enclaveInterface.start()
+        enclaveInterface.start { gramineProcess.isAlive }
 
         initializeEnclave(enclaveClassName)
     }
