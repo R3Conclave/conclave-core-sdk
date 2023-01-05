@@ -130,7 +130,8 @@ class NativeEnclaveEnvironment(
         //  In Native mode, the targetInfo  (also called "quoting enclave info")
         //    is retrieved by the host, which calls SGX native functions.
         val report = createReport(targetInfo, reportData)
-        return hostInterface.getSignedQuote(report)
+        val quoteBuffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
+        return Cursor.slice(SgxSignedQuote, quoteBuffer)
     }
 
     override fun setupFileSystems(

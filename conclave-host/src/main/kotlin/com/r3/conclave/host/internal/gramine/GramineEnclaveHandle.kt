@@ -8,9 +8,11 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
+import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.internal.EnclaveHandle
 import com.r3.conclave.host.internal.NativeLoader
 import com.r3.conclave.host.internal.SocketHostEnclaveInterface
+import com.r3.conclave.host.internal.attestation.*
 import com.r3.conclave.host.internal.loggerFor
 import com.r3.conclave.utilities.internal.copyResource
 import java.io.IOException
@@ -34,6 +36,7 @@ class GramineEnclaveHandle(
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
         private const val GRAMINE_SECCOMP = "gramine-seccomp.json"
+        private const val MOCK_MODE_UNSUPPORTED_MESSAGE = "Gramine enclave handle does not support mock mode enclaves"
         private val dockerImageTag = getManifestAttribute("Docker-Conclave-Build-Tag")
 
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
@@ -41,7 +44,7 @@ class GramineEnclaveHandle(
                 EnclaveMode.SIMULATION -> "gramine-direct"
                 EnclaveMode.DEBUG -> "gramine-sgx"
                 EnclaveMode.RELEASE -> "gramine-sgx"
-                EnclaveMode.MOCK -> throw IllegalArgumentException("MOCK mode is not supported in Gramine")
+                EnclaveMode.MOCK -> throw IllegalArgumentException(MOCK_MODE_UNSUPPORTED_MESSAGE)
             }
     }
 
@@ -53,8 +56,13 @@ class GramineEnclaveHandle(
 
     override val enclaveInterface: SocketHostEnclaveInterface
 
+    override lateinit var quotingService: EnclaveQuoteService
+
     init {
-        require(enclaveMode != EnclaveMode.MOCK)
+        require(enclaveMode != EnclaveMode.MOCK) {
+            MOCK_MODE_UNSUPPORTED_MESSAGE
+        }
+
         NativeLoader.loadHostLibraries(enclaveMode)
         unzipEnclaveBundle()
         enclaveManifestPath = getManifestFromUnzippedBundle()
@@ -71,8 +79,9 @@ class GramineEnclaveHandle(
         return process.inputStream.reader().use { it.readText() }.trimEnd()
     }
 
+    override fun initialise(attestationParameters: AttestationParameters?) {
+        quotingService = getQuotingService(attestationParameters)
 
-    override fun initialise() {
         /** Bind a port for the interface to use. */
         val port = enclaveInterface.bindPort()
 
@@ -96,8 +105,23 @@ class GramineEnclaveHandle(
         /** Wait for the local call interface start process to complete. */
         enclaveInterface.start()
 
-        /** Initialise the enclave. */
-        enclaveInterface.initializeEnclave(enclaveClassName)
+        initializeEnclave(enclaveClassName)
+    }
+
+    /** Get the appropriate quoting service. */
+    private fun getQuotingService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
+        /** Ignore the attestation parameters in simulation mode. */
+        if (!enclaveMode.isHardware) {
+            return EnclaveQuoteServiceMock
+        }
+
+        require(attestationParameters != null)
+
+        /** The gramine runtime does not currently support EPID attestation. */
+        return when(attestationParameters) {
+            is AttestationParameters.EPID -> throw IllegalArgumentException("EPID attestation is not supported when using the Conclave Gramine runtime.")
+            is AttestationParameters.DCAP -> EnclaveQuoteServiceGramineDCAP
+        }
     }
 
     override fun destroy() {

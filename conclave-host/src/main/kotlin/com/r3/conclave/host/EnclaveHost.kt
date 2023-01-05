@@ -347,7 +347,6 @@ class EnclaveHost private constructor(
     val mockEnclave: Any get() = enclaveHandle.mockEnclave
 
     private lateinit var attestationService: AttestationService
-    private lateinit var quotingService: EnclaveQuoteService
 
     @Throws(EnclaveLoadException::class)
     @Synchronized
@@ -413,21 +412,19 @@ class EnclaveHost private constructor(
 
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
-        quotingService = getEnclaveQuoteService(attestationParameters?.takeIf { enclaveMode.isHardware })
 
         try {
             this.commandsCallback = commandsCallback
 
             // Register call handlers
             enclaveHandle.enclaveInterface.apply {
-                registerCallHandler(HostCallType.GET_SIGNED_QUOTE, GetSignedQuoteHandler())
                 registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
                 registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
                 registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
             }
 
             // Initialise the enclave before fetching enclave instance info
-            enclaveHandle.initialise()
+            enclaveHandle.initialise(attestationParameters)
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 
@@ -436,12 +433,12 @@ class EnclaveHost private constructor(
                 this.kdsConfiguration = kdsConfiguration
                 // TODO We can avoid this ECALL if we get the enclave to send its persistence key spec when it's
                 //  first initialised.
-                val persistenceKeySpec = enclaveHandle.enclaveInterface.getKdsPersistenceKeySpec()
+                val persistenceKeySpec = enclaveHandle.getKdsPersistenceKeySpec()
                 //  If the enclave is configured also with KDS spec for persistence, we trigger the private key request.
                 //    Note that the kdsConfiguration is also used in the context of KdsPostOffice
                 if (persistenceKeySpec != null) {
                     val kdsResponse = executeKdsPrivateKeyRequest(persistenceKeySpec, kdsConfiguration)
-                    enclaveHandle.enclaveInterface.setKdsPersistenceKey(kdsResponse)
+                    enclaveHandle.setKdsPersistenceKey(kdsResponse)
                 }
             }
 
@@ -449,7 +446,7 @@ class EnclaveHost private constructor(
                 log.info("Setting up persistent enclave file system...")
             }
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
-            enclaveHandle.enclaveInterface.startEnclave(sealedState)
+            enclaveHandle.startEnclave(sealedState)
             if (enclaveFileSystemFile != null) {
                 log.info("Setup of the file system completed successfully.")
             }
@@ -457,14 +454,6 @@ class EnclaveHost private constructor(
             hostStateManager.state = Started
         } catch (e: Exception) {
             throw EnclaveLoadException("Unable to start enclave", e)
-        }
-    }
-
-    private fun getEnclaveQuoteService(attestationParameters: AttestationParameters?): EnclaveQuoteService {
-        return when (attestationParameters) {
-            is AttestationParameters.EPID -> EnclaveQuoteServiceEPID(attestationParameters)
-            is AttestationParameters.DCAP -> if (enclaveHandle is NativeEnclaveHandle) EnclaveQuoteServiceDCAP else EnclaveQuoteServiceGramineDCAP
-            null -> EnclaveQuoteServiceMock
         }
     }
 
@@ -540,9 +529,7 @@ class EnclaveHost private constructor(
     }
 
     private fun getAttestation(): Attestation {
-        val quotingEnclaveTargetInfo = quotingService.getQuotingEnclaveInfo()
-        log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
-        val signedQuote = enclaveHandle.enclaveInterface.getEnclaveInstanceInfoQuote(quotingEnclaveTargetInfo)
+        val signedQuote = enclaveHandle.getEnclaveInstanceInfoQuote()
         log.debug { "Got quote $signedQuote" }
         return attestationService.attestQuote(signedQuote)
     }
@@ -727,7 +714,7 @@ class EnclaveHost private constructor(
         if (hostStateManager.state !is Started) return
         try {
             // Ask the enclave to close so all its resources are released before the enclave is destroyed
-            enclaveHandle.enclaveInterface.stopEnclave()
+            enclaveHandle.stopEnclave()
 
             // Destroy the enclave
             enclaveHandle.destroy()
@@ -739,17 +726,6 @@ class EnclaveHost private constructor(
     }
 
     private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
-
-    /**
-     * Handler for servicing requests from the enclave for signed quotes.
-     */
-    private inner class GetSignedQuoteHandler : CallHandler {
-        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
-            val report = Cursor.slice(SgxReport, parameterBuffer)
-            val signedQuote = quotingService.retrieveQuote(report)
-            return signedQuote.buffer
-        }
-    }
 
     /**
      * Handler for servicing attestation requests from the enclave.
@@ -972,7 +948,7 @@ class EnclaveHost private constructor(
                 putLong(threadID)
                 payload(this)
             }
-            enclaveHandle.enclaveInterface.sendMessageHandlerCommand(buffer)
+            enclaveHandle.sendMessageHandlerCommand(buffer)
         }
     }
 
