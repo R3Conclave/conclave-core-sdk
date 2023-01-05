@@ -133,7 +133,7 @@ data class EpidAttestation(
             check(verify(signature.bytes)) { "The signature of the EPID attestation report is invalid." }
         }
 
-        report = attestationObjectMapper.readValue(reportBytesBytes, EpidVerificationReport::class.java)
+        report = attestationGson.fromJson(reportBytesBytes.decodeToString(), EpidVerificationReport::class.java)
 
         check(report.version == 4) { "Unknown version of EPID attestation report ${report.version}" }
     }

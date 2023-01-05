@@ -1,6 +1,6 @@
 package com.r3.conclave.common.internal.attestation
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.JsonParser
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.Cursor
@@ -26,12 +26,12 @@ class EpidVerificationReportTest {
             isvEnclaveQuoteBody = isvEnclaveQuoteBody
         )
 
-        val jsonTree = ObjectMapper().readTree(attestationObjectMapper.writeValueAsBytes(report))
-        assertThat(jsonTree["id"].textValue()).isEqualTo("165171271757108173876306223827987629752")
-        assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
-        assertThat(jsonTree["version"].intValue()).isEqualTo(3)
-        assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(
+        val jsonTree = attestationGson.toJsonTree(report).asJsonObject
+        assertThat(jsonTree["id"].asString).isEqualTo("165171271757108173876306223827987629752")
+        assertThat(jsonTree["timestamp"].asString).isEqualTo("2015-09-29T10:07:26.711023")
+        assertThat(jsonTree["version"].asInt).isEqualTo(3)
+        assertThat(jsonTree["isvEnclaveQuoteStatus"].asString).isEqualTo("OK")
+        assertThat(jsonTree["isvEnclaveQuoteBody"].asString).isEqualTo(
             Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes)
         )
         assertThat(jsonTree["platformInfoBlob"]).isNull()
@@ -57,7 +57,7 @@ class EpidVerificationReportTest {
             """.trimIndent()
 
 
-        val report = attestationObjectMapper.readValue(json, EpidVerificationReport::class.java)
+        val report = attestationGson.fromJson(json, EpidVerificationReport::class.java)
         assertThat(report.id).isEqualTo("165171271757108173876306223827987629752")
         assertThat(report.timestamp).isEqualTo(ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant())
         assertThat(report.version).isEqualTo(3)
@@ -86,20 +86,20 @@ class EpidVerificationReportTest {
             epidPseudonym = epidPseudonym
         )
 
-        val jsonTree = ObjectMapper().readTree(attestationObjectMapper.writeValueAsBytes(report))
-        assertThat(jsonTree["id"].textValue()).isEqualTo("165171271757108173876306223827987629752")
-        assertThat(jsonTree["timestamp"].textValue()).isEqualTo("2015-09-29T10:07:26.711023")
-        assertThat(jsonTree["version"].intValue()).isEqualTo(3)
-        assertThat(jsonTree["isvEnclaveQuoteStatus"].textValue()).isEqualTo("OK")
-        assertThat(jsonTree["isvEnclaveQuoteBody"].textValue()).isEqualTo(
+        val jsonTree = attestationGson.toJsonTree(report).asJsonObject
+        assertThat(jsonTree["id"].asString).isEqualTo("165171271757108173876306223827987629752")
+        assertThat(jsonTree["timestamp"].asString).isEqualTo("2015-09-29T10:07:26.711023")
+        assertThat(jsonTree["version"].asInt).isEqualTo(3)
+        assertThat(jsonTree["isvEnclaveQuoteStatus"].asString).isEqualTo("OK")
+        assertThat(jsonTree["isvEnclaveQuoteBody"].asString).isEqualTo(
             Base64.getEncoder().encodeToString(isvEnclaveQuoteBody.bytes)
         )
-        assertThat(jsonTree["platformInfoBlob"].textValue()).isEqualToIgnoringCase(platformInfoBlob.toString())
-        assertThat(jsonTree["revocationReason"].intValue()).isEqualTo(1)
-        assertThat(jsonTree["pseManifestStatus"].textValue()).isEqualTo("INVALID")
-        assertThat(jsonTree["pseManifestHash"].textValue()).isEqualToIgnoringCase(pseManifestHash.toString())
-        assertThat(jsonTree["nonce"].textValue()).isEqualTo("12345")
-        assertThat(jsonTree["epidPseudonym"].textValue()).isEqualTo(
+        assertThat(jsonTree["platformInfoBlob"].asString).isEqualToIgnoringCase(platformInfoBlob.toString())
+        assertThat(jsonTree["revocationReason"].asInt).isEqualTo(1)
+        assertThat(jsonTree["pseManifestStatus"].asString).isEqualTo("INVALID")
+        assertThat(jsonTree["pseManifestHash"].asString).isEqualToIgnoringCase(pseManifestHash.toString())
+        assertThat(jsonTree["nonce"].asString).isEqualTo("12345")
+        assertThat(jsonTree["epidPseudonym"].asString).isEqualTo(
             Base64.getEncoder().encodeToString(epidPseudonym.bytes)
         )
     }
@@ -127,7 +127,7 @@ class EpidVerificationReportTest {
             }
             """.trimIndent()
 
-        val report = attestationObjectMapper.readValue(json, EpidVerificationReport::class.java)
+        val report = attestationGson.fromJson(json, EpidVerificationReport::class.java)
         assertThat(report.id).isEqualTo("165171271757108173876306223827987629752")
         assertThat(report.timestamp).isEqualTo(ZonedDateTime.of(2015, 9, 29, 10, 7, 26, 711_023_000, UTC).toInstant())
         assertThat(report.version).isEqualTo(3)
@@ -167,7 +167,7 @@ class SignedTcbInfoTest {
   "pcesvn":9
 }
             """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, Tcb::class.java)
+        val result = attestationGson.fromJson(json, Tcb::class.java)
         assertThat(1).isEqualTo(result.sgxtcbcomp01svn)
     }
 
@@ -182,7 +182,7 @@ class SignedTcbInfoTest {
               "signature":"$signature"
             }
             """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, SignedTcbInfo::class.java)
+        val result = attestationGson.fromJson(json, SignedTcbInfo::class.java)
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse(signature))
     }
 
@@ -205,7 +205,7 @@ class SignedTcbInfoTest {
 "signature":"$signature"
 }
         """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, SignedTcbInfo::class.java)
+        val result = attestationGson.fromJson(json, SignedTcbInfo::class.java)
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse(signature))
         assertThat(result.tcbInfo.version).isEqualTo(2)
         assertThat(result.tcbInfo.issueDate).isEqualTo(Instant.parse("2020-01-02T03:04:05Z"))
@@ -238,7 +238,7 @@ class SignedEnclaveIdentityTest {
     "signature":"$signature"
 }
         """.trimIndent()
-        val result = attestationObjectMapper.readValue(json, SignedEnclaveIdentity::class.java)
+        val result = attestationGson.fromJson(json, SignedEnclaveIdentity::class.java)
         assertThat(result.signature).isEqualTo(OpaqueBytes.parse(signature))
     }
 }

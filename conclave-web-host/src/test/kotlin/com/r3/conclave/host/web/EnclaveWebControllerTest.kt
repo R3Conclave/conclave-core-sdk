@@ -1,6 +1,6 @@
 package com.r3.conclave.host.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.*
 import com.r3.conclave.common.EnclaveException
 import com.r3.conclave.common.EnclaveInstanceInfo
 import com.r3.conclave.enclave.Enclave
@@ -130,8 +130,8 @@ class EnclaveWebControllerTest {
             expectedContentType = ContentType.APPLICATION_JSON
         )
 
-        val jsonResponse = ObjectMapper().readTree(response)
-        assertThat(jsonResponse["error"]?.textValue()).isEqualTo("MAIL_DECRYPTION")
+        val jsonResponse = JsonParser.parseString(response.decodeToString()).asJsonObject
+        assertThat(jsonResponse["error"]?.asString).isEqualTo("MAIL_DECRYPTION")
     }
 
     @Test
@@ -142,9 +142,11 @@ class EnclaveWebControllerTest {
             expectedStatusCode = HttpStatus.SC_BAD_REQUEST,
             expectedContentType = ContentType.APPLICATION_JSON
         )
-        val jsonResponse = ObjectMapper().readTree(response)
-        assertThat(jsonResponse["error"]?.textValue()).isEqualTo("ENCLAVE_EXCEPTION")
-        assertThat(jsonResponse["message"]?.textValue()).isEqualTo("bang!")  // This is only available for non-release enclaves
+
+
+        val jsonResponse = JsonParser.parseString(response.decodeToString()).asJsonObject
+        assertThat(jsonResponse["error"]?.asString).isEqualTo("ENCLAVE_EXCEPTION")
+        assertThat(jsonResponse["message"]?.asString).isEqualTo("bang!")  // This is only available for non-release enclaves
     }
 
     private fun downloadEnclaveInstanceInfo(): EnclaveInstanceInfo {

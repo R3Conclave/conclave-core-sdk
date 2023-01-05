@@ -6,6 +6,7 @@ import com.r3.conclave.utilities.internal.getIntLengthPrefixBytes
 import com.r3.conclave.utilities.internal.getIntLengthPrefixString
 import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.io.DataOutputStream
+import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
@@ -42,7 +43,8 @@ data class QuoteCollateral(
     }
 
     private inline fun <reified T> parseJson(bytes: OpaqueBytes): T {
-        return attestationObjectMapper.readValue(bytes.inputStream(), T::class.java)
+        // This is not correct. Please revise before creating a PR
+        return attestationGson.fromJson(InputStreamReader(bytes.inputStream()), T::class.java)
     }
 
     fun serialiseTo(dos: DataOutputStream) {

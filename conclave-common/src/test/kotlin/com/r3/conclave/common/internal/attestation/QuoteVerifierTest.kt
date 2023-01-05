@@ -97,7 +97,7 @@ class QuoteVerifierTest {
         val (signedQuote, collateral) = loadSampleDcapAttestation()
         val badSignedTcbInfo = collateral.signedTcbInfo.copy(signature = OpaqueBytes(Random.nextBytes(128)))
         val badTcbInfoCollateral = collateral.copy(
-            rawSignedTcbInfo = OpaqueBytes(attestationObjectMapper.writeValueAsBytes(badSignedTcbInfo))
+            rawSignedTcbInfo = OpaqueBytes(attestationGson.toJson(badSignedTcbInfo).encodeToByteArray())
         )
 
         val (status) = QuoteVerifier.verify(
@@ -114,7 +114,7 @@ class QuoteVerifierTest {
         val good = collateral.signedTcbInfo
         val bad = good.copy(tcbInfo = good.tcbInfo.copy(pceId = OpaqueBytes.parse("112233445566")))
         val badTcbInfoCollateral = collateral.copy(
-            rawSignedTcbInfo = OpaqueBytes(attestationObjectMapper.writeValueAsBytes(bad))
+            rawSignedTcbInfo = OpaqueBytes(attestationGson.toJson(bad).encodeToByteArray())
         )
 
         val (status) = QuoteVerifier.verify(

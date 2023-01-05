@@ -1,27 +1,13 @@
 package com.r3.conclave.common.internal.attestation
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonFormat
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.*
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.google.gson.*
+import com.google.gson.annotations.JsonAdapter
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.SHA256Hash
-import com.r3.conclave.common.internal.ByteCursor
-import com.r3.conclave.common.internal.Cursor
-import com.r3.conclave.common.internal.SgxQuote
-import com.r3.conclave.common.internal.SgxSignedQuote
+import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.gson.*
 import java.time.Instant
+import java.util.*
 
 // We could avoid the redundant usage of @JsonProperty if we used the Kotlin Jackson module. However that makes shading
 // Kotlin more difficult and so we just put up with this minor boilerplate.
@@ -78,82 +64,39 @@ import java.time.Instant
  * This is only populated if [isvEnclaveQuoteStatus] is either [EpidQuoteStatus.GROUP_OUT_OF_DATE], [EpidQuoteStatus.CONFIGURATION_NEEDED],
  * [EpidQuoteStatus.SW_HARDENING_NEEDED] or [EpidQuoteStatus.CONFIGURATION_AND_SW_HARDENING_NEEDED].
  */
-@JsonInclude(NON_NULL)
-data class EpidVerificationReport @JsonCreator constructor(
-    @JsonProperty("id")
+data class EpidVerificationReport constructor(
+
     val id: String,
 
-    @JsonProperty("isvEnclaveQuoteStatus")
     val isvEnclaveQuoteStatus: EpidQuoteStatus,
 
-    @JsonProperty("isvEnclaveQuoteBody")
-    @JsonSerialize(using = SgxQuoteSerializer::class)
-    @JsonDeserialize(using = SgxQuoteDeserializer::class)
+    @JsonAdapter(GsonByteCursorSGXQuoteTypeAdapterBase64Format::class)
     val isvEnclaveQuoteBody: ByteCursor<SgxQuote>,
 
-    @JsonProperty("platformInfoBlob")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val platformInfoBlob: OpaqueBytes? = null,
 
-    @JsonProperty("revocationReason")
     val revocationReason: Int? = null,
 
-    @JsonProperty("pseManifestStatus")
     val pseManifestStatus: ManifestStatus? = null,
 
-    @JsonProperty("pseManifestHash")
-    @JsonSerialize(using = ToStringSerializer::class)
-    @JsonDeserialize(using = Sha256Deserializer::class)
+    @JsonAdapter(GsonSHA256HashTypeAdapter::class)
     val pseManifestHash: SHA256Hash? = null,
 
-    @JsonProperty("nonce")
     val nonce: String? = null,
 
-    @JsonProperty("epidPseudonym")
-    @JsonSerialize(using = Base64Serializer::class)
-    @JsonDeserialize(using = Base64Deserializer::class)
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase64Format::class)
     val epidPseudonym: OpaqueBytes? = null,
 
-    @JsonProperty("advisoryURL")
     val advisoryURL: String? = null,
 
-    @JsonProperty("advisoryIDs")
     val advisoryIDs: List<String>? = null,
 
-    @JsonProperty("timestamp")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS", timezone = "UTC")
+    @JsonAdapter(GsonInstantTypeAdapterTimestamp::class)
     val timestamp: Instant,
 
-    @JsonProperty("version")
     val version: Int
-) {
-    private class SgxQuoteSerializer : JsonSerializer<ByteCursor<SgxQuote>>() {
-        override fun serialize(value: ByteCursor<SgxQuote>, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeBinary(value.bytes)
-        }
-    }
-
-    private class SgxQuoteDeserializer : JsonDeserializer<ByteCursor<SgxQuote>>() {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteCursor<SgxQuote> {
-            return Cursor.wrap(SgxQuote, p.binaryValue)
-        }
-    }
-
-    private class Sha256Deserializer : StdDeserializer<SHA256Hash>(SHA256Hash::class.java) {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): SHA256Hash {
-            return SHA256Hash.parse(p.valueAsString)
-        }
-    }
-
-    private class Base64Serializer : StdSerializer<OpaqueBytes>(OpaqueBytes::class.java) {
-        override fun serialize(value: OpaqueBytes, gen: JsonGenerator, provider: SerializerProvider) {
-            gen.writeBinary(value.bytes)
-        }
-    }
-
-    private class Base64Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes = OpaqueBytes(p.binaryValue)
-    }
-}
+)
 
 /**
  * https://api.portal.trustedservices.intel.com/documentation#pcs-tcb-info-v2
@@ -161,11 +104,10 @@ data class EpidVerificationReport @JsonCreator constructor(
  * @property signature Signature calculated over [tcbInfo] body without whitespaces using TCB Signing Key
  * i.e: `{"version":2,"issueDate":"2019-07-30T12:00:00Z","nextUpdate":"2019-08-30T12:00:00Z",...}`
  */
-data class SignedTcbInfo @JsonCreator constructor(
-    @JsonProperty("tcbInfo")
+data class SignedTcbInfo constructor(
     val tcbInfo: TcbInfo,
 
-    @JsonProperty("signature")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val signature: OpaqueBytes
 )
 
@@ -190,31 +132,25 @@ data class SignedTcbInfo @JsonCreator constructor(
  *
  * @property tcbLevels Sorted list of supported TCB levels for given FMSPC.
  */
-data class TcbInfo @JsonCreator constructor(
-    @JsonProperty("version")
+data class TcbInfo constructor(
     val version: Int,
 
-    @JsonProperty("issueDate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+    @JsonAdapter(GsonInstantTypeAdapterDateTime::class)
     val issueDate: Instant,
 
-    @JsonProperty("nextUpdate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+    @JsonAdapter(GsonInstantTypeAdapterDateTime::class)
     val nextUpdate: Instant,
 
-    @JsonProperty("fmspc")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val fmspc: OpaqueBytes,
 
-    @JsonProperty("pceId")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val pceId: OpaqueBytes,
 
-    @JsonProperty("tcbType")
     val tcbType: Int,
 
-    @JsonProperty("tcbEvaluationDataNumber")
     val tcbEvaluationDataNumber: Int,
 
-    @JsonProperty("tcbLevels")
     val tcbLevels: List<TcbLevel>
 )
 
@@ -227,18 +163,14 @@ data class TcbInfo @JsonCreator constructor(
  * @property advisoryIDs Array of Advisory IDs describing vulnerabilities that this TCB level is vulnerable to.
 
  */
-data class TcbLevel @JsonCreator constructor(
-    @JsonProperty("tcb")
+data class TcbLevel constructor(
     val tcb: Tcb,
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    @JsonProperty("tcbDate")
+    @JsonAdapter(GsonInstantTypeAdapterDateTime::class)
     val tcbDate: Instant,
 
-    @JsonProperty("tcbStatus")
     val tcbStatus: TcbStatus,
 
-    @JsonProperty("advisoryIDs")
     val advisoryIDs: List<String>? = null
 )
 
@@ -272,40 +204,23 @@ enum class TcbStatus : VerificationStatus {
     Revoked
 }
 
-data class Tcb @JsonCreator constructor(
-    @JsonProperty("sgxtcbcomp01svn")
+data class Tcb constructor(
     val sgxtcbcomp01svn: Int,
-    @JsonProperty("sgxtcbcomp02svn")
     val sgxtcbcomp02svn: Int,
-    @JsonProperty("sgxtcbcomp03svn")
     val sgxtcbcomp03svn: Int,
-    @JsonProperty("sgxtcbcomp04svn")
     val sgxtcbcomp04svn: Int,
-    @JsonProperty("sgxtcbcomp05svn")
     val sgxtcbcomp05svn: Int,
-    @JsonProperty("sgxtcbcomp06svn")
     val sgxtcbcomp06svn: Int,
-    @JsonProperty("sgxtcbcomp07svn")
     val sgxtcbcomp07svn: Int,
-    @JsonProperty("sgxtcbcomp08svn")
     val sgxtcbcomp08svn: Int,
-    @JsonProperty("sgxtcbcomp09svn")
     val sgxtcbcomp09svn: Int,
-    @JsonProperty("sgxtcbcomp10svn")
     val sgxtcbcomp10svn: Int,
-    @JsonProperty("sgxtcbcomp11svn")
     val sgxtcbcomp11svn: Int,
-    @JsonProperty("sgxtcbcomp12svn")
     val sgxtcbcomp12svn: Int,
-    @JsonProperty("sgxtcbcomp13svn")
     val sgxtcbcomp13svn: Int,
-    @JsonProperty("sgxtcbcomp14svn")
     val sgxtcbcomp14svn: Int,
-    @JsonProperty("sgxtcbcomp15svn")
     val sgxtcbcomp15svn: Int,
-    @JsonProperty("sgxtcbcomp16svn")
     val sgxtcbcomp16svn: Int,
-    @JsonProperty("pcesvn")
     val pcesvn: Int
 )
 
@@ -314,11 +229,9 @@ data class Tcb @JsonCreator constructor(
  *
  * @property signature Signature calculated over qeIdentity body (without whitespaces) using TCB Info Signing Key.
  */
-data class SignedEnclaveIdentity @JsonCreator constructor(
-    @JsonProperty("enclaveIdentity")
+data class SignedEnclaveIdentity constructor(
     val enclaveIdentity: EnclaveIdentity,
-
-    @JsonProperty("signature")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val signature: OpaqueBytes
 )
 
@@ -351,43 +264,36 @@ data class SignedEnclaveIdentity @JsonCreator constructor(
  *
  * @property tcbLevels Sorted list of supported Enclave TCB levels for given QE.
  */
-data class EnclaveIdentity @JsonCreator constructor(
-    @JsonProperty("id")
+data class EnclaveIdentity constructor(
     val id: String,
 
-    @JsonProperty("version")
     val version: Int,
 
-    @JsonProperty("issueDate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+    @JsonAdapter(GsonInstantTypeAdapterDateTime::class)
     val issueDate: Instant,
 
-    @JsonProperty("nextUpdate")
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+    @JsonAdapter(GsonInstantTypeAdapterDateTime::class)
     val nextUpdate: Instant,
 
-    @JsonProperty("tcbEvaluationDataNumber")
     val tcbEvaluationDataNumber: Int,
 
-    @JsonProperty("miscselect")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val miscselect: OpaqueBytes,
 
-    @JsonProperty("miscselectMask")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val miscselectMask: OpaqueBytes,
 
-    @JsonProperty("attributes")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val attributes: OpaqueBytes,
 
-    @JsonProperty("attributesMask")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val attributesMask: OpaqueBytes,
 
-    @JsonProperty("mrsigner")
+    @JsonAdapter(GsonOpaqueBytesTypeAdapterBase16Format::class)
     val mrsigner: OpaqueBytes,
 
-    @JsonProperty("isvprodid")
     val isvprodid: Int,
 
-    @JsonProperty("tcbLevels")
     val tcbLevels: List<EnclaveTcbLevel>
 )
 
@@ -397,15 +303,12 @@ data class EnclaveIdentity @JsonCreator constructor(
  *
  * @property tcbStatus TCB level status.
  */
-data class EnclaveTcbLevel @JsonCreator constructor(
-    @JsonProperty("tcb")
+data class EnclaveTcbLevel constructor(
     val tcb: EnclaveTcb,
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    @JsonProperty("tcbDate")
+    @JsonAdapter(GsonInstantTypeAdapterDateTime::class)
     val tcbDate: Instant,
 
-    @JsonProperty("tcbStatus")
     val tcbStatus: EnclaveTcbStatus
 )
 
@@ -423,21 +326,8 @@ enum class EnclaveTcbStatus {
 /**
  * @property isvsvn SGX Enclave’s ISV SVN.
  */
-data class EnclaveTcb @JsonCreator constructor(
-    @JsonProperty("isvsvn")
+data class EnclaveTcb constructor(
     val isvsvn: Int
 )
 
-val attestationObjectMapper = ObjectMapper().apply {
-    registerModule(SimpleModule().apply {
-        addDeserializer(OpaqueBytes::class.java, Base16Deserializer())
-        addSerializer(OpaqueBytes::class.java, ToStringSerializer.instance)
-    })
-    registerModule(JavaTimeModule())
-}
-
-private class Base16Deserializer : StdDeserializer<OpaqueBytes>(OpaqueBytes::class.java) {
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
-        return OpaqueBytes.parse(p.valueAsString)
-    }
-}
+val attestationGson = GsonBuilder().disableHtmlEscaping().create()

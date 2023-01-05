@@ -16,6 +16,7 @@ dependencies {
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation project(":general:common")
     testImplementation project(":general:common-test")
+    testImplementation 'com.google.code.gson:gson:2.10'
     testRuntimeOnly project(path: ":general:default-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:persisting-enclave", configuration: enclaveMode)
     testRuntimeOnly project(path: ":general:threadsafe-enclave", configuration: enclaveMode)

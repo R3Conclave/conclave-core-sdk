@@ -1,7 +1,8 @@
 package com.r3.conclave.client.web
 
 import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.r3.conclave.client.EnclaveClient
 import com.r3.conclave.client.EnclaveTransport
 import com.r3.conclave.client.EnclaveTransport.ClientConnection
@@ -112,12 +113,12 @@ class WebEnclaveTransport(
                 }
                 if (response.code == HttpStatus.SC_BAD_REQUEST) {
                     val errorResponse = try {
-                        objectMapper.readTree(responseBytes)
+                        JsonParser.parseString(responseBytes.decodeToString()).asJsonObject
                     } catch (e: JsonParseException) {
                         throw IOException("Received invalid error response (${String(responseBytes)})", e)
                     }
-                    val message = errorResponse["message"]?.textValue()
-                    val error = errorResponse["error"]?.textValue()
+                    val message = errorResponse["message"]?.asString
+                    val error = errorResponse["error"]?.asString
                     throw when (error) {
                         "MAIL_DECRYPTION" -> MailDecryptionException(message)
                         "ENCLAVE_EXCEPTION" -> EnclaveException(message)
@@ -138,9 +139,5 @@ class WebEnclaveTransport(
         override fun disconnect() {
             // No-op
         }
-    }
-
-    private companion object {
-        private val objectMapper = ObjectMapper()
     }
 }

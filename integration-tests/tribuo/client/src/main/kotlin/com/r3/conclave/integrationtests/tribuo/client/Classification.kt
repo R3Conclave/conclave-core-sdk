@@ -2,6 +2,7 @@ package com.r3.conclave.integrationtests.tribuo.client
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.google.gson.GsonBuilder
 import com.oracle.labs.mlrg.olcut.config.json.JsonProvenanceModule
 import com.oracle.labs.mlrg.olcut.provenance.ProvenanceUtil
 import com.r3.conclave.integrationtests.tribuo.common.*
@@ -99,10 +100,13 @@ class Classification(private val client: Client) : IClassification, Closeable {
      * @return data provenance in JSON format.
      */
     fun jsonProvenance(): String {
-        var objMapper = ObjectMapper()
-        objMapper.registerModule(JsonProvenanceModule())
-        objMapper = objMapper.enable(SerializationFeature.INDENT_OUTPUT)
-        return objMapper.writeValueAsString(ProvenanceUtil.marshalProvenance(model.value.provenance))
+        // This need to be fixed before merging
+        // JsonProvenanceModule uses Jackson internally so we need to look for an alternative
+        // This is an integration test so if we end up using Jackson it won't be that mad
+//        var gson = GsonBuilder().registerTypeAdapter(JsonProvenanceModule()).create()
+//        gson = gson.enable(SerializationFeature.INDENT_OUTPUT)
+//        return gson.writeValueAsString(ProvenanceUtil.marshalProvenance(model.value.provenance))
+        return ""
     }
 
     /**
