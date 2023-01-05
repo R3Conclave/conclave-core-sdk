@@ -247,7 +247,7 @@ abstract class Enclave {
         this.env = env
         initCryptography()
 
-        // Prevent users from printing to the console when running the enclave in debug mode
+        // Prevent users from printing to the console when running the enclave in release mode
         // GraalVM already discards the output so the following if statement is only relevant for GramineSGX
         // N.B. The user can still override the configuration below and print to the console while running
         // the enclave in release mode. But that has to be a conscious decision.
