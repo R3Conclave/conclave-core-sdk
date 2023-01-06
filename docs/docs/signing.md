@@ -201,7 +201,7 @@ Invoke Gradle to generate the files that need to be signed by the external signi
 ./gradlew prepareForSigning -PenclaveMode="Release"
 ```
 
-The output of this stage is a file that contains the material to be signed in ```enclave/build/enclave/Release/signing_material.bin```
+The output of this stage is a file that contains the material to be signed in ```enclave/build/enclave/release/signing_material.bin```
 
 #### Sign the material
 
