@@ -7,11 +7,15 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
 import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
+import com.r3.conclave.common.internal.PluginUtils.JLINK_CUSTOM_JDK_DIRECTORY
+import com.r3.conclave.common.internal.PluginUtils.SYSTEM_LIB_DIRECTORY
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.plugin.enclave.gradle.LinuxExec
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.toHexString
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
@@ -23,12 +27,16 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import shadow.org.apache.commons.io.IOUtils
+import java.io.*
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.interfaces.RSAPublicKey
+import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 import kotlin.io.path.*
+
 
 open class GenerateGramineBundle @Inject constructor(
     objects: ObjectFactory,
@@ -40,8 +48,6 @@ open class GenerateGramineBundle @Inject constructor(
         const val PYTHON_ENCLAVE_SIZE = "8G"
         const val JAVA_ENCLAVE_SIZE = "4G"
         const val DOCKER_IMAGE_ARCHITECTURE = "x86_64-linux-gnu"
-        const val JLINK_OUTPUT_DIRECTORY = "custom_enclave"
-        const val SYSTEM_LIB_DIRECTORY = "custom_system_lib"
     }
 
     @get:Input
@@ -78,9 +84,7 @@ open class GenerateGramineBundle @Inject constructor(
         if (pythonFile.isPresent) {
             generateManifestForPythonEnclaves(manifestTemplatePath)
         } else {
-            createCustomJDK()
-            copyAdditionalSystemFiles()
-            generateManifestForJavaEnclaves(manifestTemplatePath)
+            prepareBundleForJavaEnclaves(manifestTemplatePath)
         }
 
         if (enclaveMode != EnclaveMode.SIMULATION) {
@@ -88,6 +92,80 @@ open class GenerateGramineBundle @Inject constructor(
             generateToken()
             // The .manifest is not needed for debug and release modes
             outputDir.file(GRAMINE_MANIFEST).get().asFile.toPath().deleteExisting()
+        }
+
+        if (!pythonFile.isPresent) {
+            deleteJavaSystemFiles()
+        }
+    }
+
+    private fun deleteJavaSystemFiles() {
+        listOf(JLINK_CUSTOM_JDK_DIRECTORY, SYSTEM_LIB_DIRECTORY).forEach { it ->
+            outputDir.get().asFile.toPath().resolve(it).toFile().deleteRecursively()
+        }
+    }
+
+    private fun prepareBundleForJavaEnclaves(manifestTemplatePath: Path) {
+        val jlinkOutputPath = outputDir.get().asFile.toPath().resolve(JLINK_CUSTOM_JDK_DIRECTORY)
+
+        if (jlinkOutputPath.exists()) {
+            jlinkOutputPath.toFile().deleteRecursively()
+        }
+        createCustomJDK(jlinkOutputPath)
+
+        val outputSystemDir = outputDir.get().asFile.toPath().resolve(SYSTEM_LIB_DIRECTORY)
+
+        if (outputSystemDir.exists()) {
+            outputSystemDir.toFile().deleteRecursively()
+        }
+        copyAdditionalSystemFiles(outputSystemDir)
+        generateManifestForJavaEnclaves(manifestTemplatePath)
+        compressFiles(jlinkOutputPath, outputSystemDir)
+    }
+
+    private fun compressFiles(jlinkOutputPath: Path, outputSystemDir: Path) {
+        createTarFile("$jlinkOutputPath")
+        createTarFile("$outputSystemDir")
+    }
+
+    private fun addFilesToTarGZ(filePath: String, parent: String, tarArchive: TarArchiveOutputStream) {
+        val file = File(filePath)
+        val entryName = parent + file.name
+        tarArchive.putArchiveEntry(TarArchiveEntry(file, entryName))
+        if (file.isFile) {
+            val fis = FileInputStream(file)
+            val bis = BufferedInputStream(fis)
+
+            IOUtils.copy(bis, tarArchive)
+            tarArchive.closeArchiveEntry()
+            bis.close()
+        } else if (file.isDirectory) {
+            tarArchive.closeArchiveEntry()
+
+            if (file.listFiles() != null) {
+                for (f in file.listFiles()!!) {
+                    addFilesToTarGZ(f.absolutePath, entryName + File.separator, tarArchive)
+                }
+            }
+        }
+    }
+
+    private fun createTarFile(sourceDir: String) {
+        var tarOs: TarArchiveOutputStream? = null
+        try {
+            val source = File(sourceDir)
+            val fos = FileOutputStream(source.absolutePath + ".tar.gz")
+            val gos = GZIPOutputStream(BufferedOutputStream(fos))
+            tarOs = TarArchiveOutputStream(gos)
+            addFilesToTarGZ(sourceDir, "", tarOs)
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            try {
+                tarOs!!.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -112,12 +190,7 @@ open class GenerateGramineBundle @Inject constructor(
         }
     }
 
-    private fun createCustomJDK() {
-        val jlinkOutputPath = outputDir.get().asFile.toPath().resolve(JLINK_OUTPUT_DIRECTORY)
-
-        if (jlinkOutputPath.exists()) {
-            jlinkOutputPath.toFile().deleteRecursively()
-        }
+    private fun createCustomJDK(jlinkOutputPath: Path) {
         val modules = findJavaModules()
         execCommand(
             "jlink",
@@ -129,20 +202,15 @@ open class GenerateGramineBundle @Inject constructor(
         )
     }
 
-    private fun copyAdditionalSystemFiles() {
+    private fun copyAdditionalSystemFiles(outputSystemDir: Path) {
         //  These files need to be available when running java inside Gramine (leveraging LD_LIBRARY_PATH)
         //  together with the OS files which are provided inside Gramine itself.
-        val files = listOf(
+        val systemFiles = listOf(
             "/usr/lib/x86_64-linux-gnu/libz.so.1",
             "/usr/lib/x86_64-linux-gnu/libstdc++.so.6",
             "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1"
         )
-        val outputSystemDir = outputDir.get().asFile.toPath() / SYSTEM_LIB_DIRECTORY
-
-        if (outputSystemDir.exists()) {
-            outputSystemDir.toFile().deleteRecursively()
-        }
-        files.forEach {
+        systemFiles.forEach {
             val filePath = Paths.get(outputSystemDir.absolutePathString() + it)
             filePath.parent.run {
                 if (!exists()) {
@@ -185,7 +253,7 @@ open class GenerateGramineBundle @Inject constructor(
             DOCKER_IMAGE_ARCHITECTURE,
             "",
             "",
-            JLINK_OUTPUT_DIRECTORY,
+            JLINK_CUSTOM_JDK_DIRECTORY,
             manifestTemplatePath
         )
         execCommand(*command.toTypedArray())

@@ -14,16 +14,18 @@ import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceGramineDCAP
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceMock
 import com.r3.conclave.host.internal.loggerFor
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.utils.IOUtils
+import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
-import kotlin.io.path.createDirectories
-import kotlin.io.path.div
-import kotlin.io.path.exists
-import kotlin.io.path.name
+import kotlin.io.path.*
+
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
@@ -156,20 +158,46 @@ class GramineEnclaveHandle(
         return false
     }
 
+    private fun unTarFile(tarGz: Path, outputDir: Path) {
+        tarGz.inputStream().use { fis ->
+            GZIPInputStream(fis).use { gis ->
+                TarArchiveInputStream(gis).use { tis ->
+                    var tarEntry = tis.nextTarEntry
+
+                    while (tarEntry != null) {
+                        val outputFile = outputDir / tarEntry.name
+                        if (tarEntry.isDirectory) {
+                            if (!outputFile.exists()) {
+                                outputFile.toFile().mkdirs()
+                            }
+                        } else {
+                            outputDir.toFile().mkdirs()
+                            FileOutputStream(outputFile.toFile()).use {
+                                IOUtils.copy(tis, it)
+                            }
+                            if (outputFile.toFile().name == GRAMINE_ENTRY_POINT && !isPythonEnclave()) {
+                                outputFile.toFile().setExecutable(true)
+                            }
+                        }
+                        tarEntry = tis.nextTarEntry
+                    }
+                }
+            }
+        }
+    }
+
     private fun unzipEnclaveBundle() {
         ZipInputStream(zipFileUrl.openStream()).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
                 val path = workingDirectory.resolve(entry.name)
+
                 if (entry.isDirectory) {
                     path.createDirectories()
                 } else {
                     Files.copy(zip, path)
-
-                    if (path.name == GRAMINE_ENTRY_POINT && !isPythonEnclave()) {
-                        //  Zip archives are OS-agnostic, and therefore file permissions are not kept when zipping files.
-                        //  Gramine internals need to have "java" (the entry point) as executable, so we set it here as such.
-                        path.toFile().setExecutable(true)
+                    if (entry.name.endsWith("tar.gz")) {
+                        unTarFile(path, workingDirectory)
                     }
                 }
             }

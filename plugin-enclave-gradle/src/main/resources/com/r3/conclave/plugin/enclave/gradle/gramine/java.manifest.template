@@ -59,7 +59,7 @@ fs.mounts = [
     #   present in the same directory as the enclave.jar and that has a relative path
     #   (hence we add a "/" at the beginning of the path)
   { path = "/{{ java_home }}",           uri = "file:{{ java_home }}" },
-  { path = "/usr/lib",                   uri = "file:{{ custom_system_libdir }}/usr/lib" }
+  { path = "/usr/lib",                   uri = "file:{{ custom_system_libdir }}usr/lib" }
 {% endif %}
 ]
 
