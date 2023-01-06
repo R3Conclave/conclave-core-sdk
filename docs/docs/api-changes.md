@@ -11,8 +11,9 @@ The default value for the Conclave configuration field `maxThreads` has been inc
 to cover most of the use-cases when the logic inside the enclaves uses a large number of threads. There should be no
 major performance impact.
 
-The new path of [`signing_material.bin`](signing.md#generate-the-signing-material), which is generated when the enclave is being prepared to be signed, is
-`enclave/build/enclave/release`. Notice that the name of the directory `release` is no longer capitalized.
+The default path for the [`signing_material.bin`](signing.md#generate-the-signing-material) when using an external
+signing process has changed to be all lowercase. For example, previously it used to be `build/enclave/Release/signing_material.bin`,
+now it is `build/enclave/release/signing_material.bin`.
 
 ## 1.2 to 1.3
 
