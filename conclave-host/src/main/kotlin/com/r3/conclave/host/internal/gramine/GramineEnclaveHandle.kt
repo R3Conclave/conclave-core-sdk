@@ -91,11 +91,14 @@ class GramineEnclaveHandle(
          */
         val command = prepareCommand(port)
 
-        gramineProcess = ProcessBuilder()
-            .inheritIO()
+        val gramineProcessBuilder = ProcessBuilder()
             .directory(workingDirectory.toFile())
             .command(command)
-            .start()
+
+        if(enclaveMode != EnclaveMode.RELEASE)
+            gramineProcessBuilder.inheritIO()
+
+        gramineProcess = gramineProcessBuilder.start()
 
         // The user should be calling EnclaveHost.close(), but in case they forget, or for some other reason the
         // enclave process hasn't terminated, make sure as a last resort to kill it when the host terminates. This is
