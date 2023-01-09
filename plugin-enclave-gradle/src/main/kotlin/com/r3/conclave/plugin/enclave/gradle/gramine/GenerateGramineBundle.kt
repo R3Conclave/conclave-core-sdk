@@ -152,12 +152,12 @@ open class GenerateGramineBundle @Inject constructor(
     }
 
     private fun createTarFile(sourceDir: String) {
-        var tarOs: TarArchiveOutputStream? = null
         val source = File(sourceDir)
         val fos = FileOutputStream(source.absolutePath + ".tar.gz")
         val gos = GZIPOutputStream(BufferedOutputStream(fos))
-        tarOs = TarArchiveOutputStream(gos)
-        addFilesToTarGZ(sourceDir, "", tarOs)
+        TarArchiveOutputStream(gos).use {
+            addFilesToTarGZ(sourceDir, "", it)
+        }
     }
 
     private fun findJavaModules(): String {
