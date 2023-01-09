@@ -159,28 +159,22 @@ class GramineEnclaveHandle(
     }
 
     private fun unTarFile(tarGz: Path, outputDir: Path) {
-        tarGz.inputStream().use { fis ->
-            GZIPInputStream(fis).use { gis ->
-                TarArchiveInputStream(gis).use { tis ->
-                    var tarEntry = tis.nextTarEntry
+        TarArchiveInputStream(GZIPInputStream(tarGz.inputStream())).use { tis ->
+            var tarEntry = tis.nextTarEntry
 
-                    while (tarEntry != null) {
-                        val outputFile = outputDir / tarEntry.name
-                        if (tarEntry.isDirectory) {
-                            if (!outputFile.exists()) {
-                                outputFile.toFile().mkdirs()
-                            }
-                        } else {
-                            outputDir.toFile().mkdirs()
-                            Files.copy(tis, outputFile)
+            while (tarEntry != null) {
+                val outputFile = outputDir / tarEntry.name
+                if (tarEntry.isDirectory) {
+                    outputFile.createDirectories()
+                } else {
+                    outputDir.toFile().mkdirs()
+                    Files.copy(tis, outputFile)
 
-                            if (outputFile.toFile().name == GRAMINE_ENTRY_POINT && !isPythonEnclave()) {
-                                outputFile.toFile().setExecutable(true)
-                            }
-                        }
-                        tarEntry = tis.nextTarEntry
+                    if (outputFile.toFile().name == GRAMINE_ENTRY_POINT && !isPythonEnclave()) {
+                        outputFile.toFile().setExecutable(true)
                     }
                 }
+                tarEntry = tis.nextTarEntry
             }
         }
     }
