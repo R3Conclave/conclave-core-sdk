@@ -195,7 +195,7 @@ To generate `host-release.jar`:
     ```
     3. Generate a signature from the signing material. The password for the sample external key is '12345'.
     ```bash
-    openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
+    openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/release/signing_material.bin
     ```    
     4. Build the signed enclave:
     ```bash
@@ -211,7 +211,7 @@ To generate `host-release.jar`:
     ```
     3. Generate a signature from the signing material. The password for the sample external key is '12345'.
     ```bash
-    openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/Release/signing_material.bin
+    openssl dgst -sha256 -out signing/signature.bin -sign signing/external_signing_private.pem -keyform PEM enclave/build/enclave/release/signing_material.bin
     ```
     4. Build the signed enclave:
     ```bash
