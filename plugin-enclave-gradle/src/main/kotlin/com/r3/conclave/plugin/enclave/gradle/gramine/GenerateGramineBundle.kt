@@ -6,16 +6,16 @@ import com.r3.conclave.common.internal.PluginUtils.GRAMINE_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_MANIFEST
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SGX_TOKEN
 import com.r3.conclave.common.internal.PluginUtils.GRAMINE_SIGSTRUCT
-import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.common.internal.PluginUtils.JLINK_CUSTOM_JDK_DIRECTORY
+import com.r3.conclave.common.internal.PluginUtils.PYTHON_FILE
 import com.r3.conclave.common.internal.PluginUtils.SYSTEM_LIB_DIRECTORY
 import com.r3.conclave.plugin.enclave.gradle.ConclaveTask
 import com.r3.conclave.plugin.enclave.gradle.LinuxExec
 import com.r3.conclave.utilities.internal.copyResource
 import com.r3.conclave.utilities.internal.digest
 import com.r3.conclave.utilities.internal.toHexString
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
@@ -27,8 +27,10 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
-import shadow.org.apache.commons.io.IOUtils
-import java.io.*
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -128,17 +130,15 @@ open class GenerateGramineBundle @Inject constructor(
         createTarFile("$outputSystemDir")
     }
 
-    private fun addFilesToTarGZ(filePath: String, parent: String, tarArchive: TarArchiveOutputStream) {
-        val file = File(filePath)
-        val entryName = parent + file.name
-        tarArchive.putArchiveEntry(TarArchiveEntry(file, entryName))
-        if (file.isFile) {
-            val fis = FileInputStream(file)
-            val bis = BufferedInputStream(fis)
+    private fun addFilesToTarGZ(filePathString: String, parent: String, tarArchive: TarArchiveOutputStream) {
+        val filePath = Paths.get(filePathString)
+        val entryName = parent + filePath.name
+        tarArchive.putArchiveEntry(TarArchiveEntry(filePath, entryName))
+        val file = filePath.toFile()
 
-            IOUtils.copy(bis, tarArchive)
+        if (file.isFile) {
+            Files.copy(filePath, tarArchive)
             tarArchive.closeArchiveEntry()
-            bis.close()
         } else if (file.isDirectory) {
             tarArchive.closeArchiveEntry()
 
@@ -152,21 +152,11 @@ open class GenerateGramineBundle @Inject constructor(
 
     private fun createTarFile(sourceDir: String) {
         var tarOs: TarArchiveOutputStream? = null
-        try {
-            val source = File(sourceDir)
-            val fos = FileOutputStream(source.absolutePath + ".tar.gz")
-            val gos = GZIPOutputStream(BufferedOutputStream(fos))
-            tarOs = TarArchiveOutputStream(gos)
-            addFilesToTarGZ(sourceDir, "", tarOs)
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            try {
-                tarOs!!.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
+        val source = File(sourceDir)
+        val fos = FileOutputStream(source.absolutePath + ".tar.gz")
+        val gos = GZIPOutputStream(BufferedOutputStream(fos))
+        tarOs = TarArchiveOutputStream(gos)
+        addFilesToTarGZ(sourceDir, "", tarOs)
     }
 
     private fun findJavaModules(): String {

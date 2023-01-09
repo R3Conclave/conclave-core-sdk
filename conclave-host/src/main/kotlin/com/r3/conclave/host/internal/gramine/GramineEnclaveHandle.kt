@@ -172,9 +172,8 @@ class GramineEnclaveHandle(
                             }
                         } else {
                             outputDir.toFile().mkdirs()
-                            FileOutputStream(outputFile.toFile()).use {
-                                IOUtils.copy(tis, it)
-                            }
+                            Files.copy(tis, outputFile)
+
                             if (outputFile.toFile().name == GRAMINE_ENTRY_POINT && !isPythonEnclave()) {
                                 outputFile.toFile().setExecutable(true)
                             }
