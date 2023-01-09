@@ -4,6 +4,7 @@ import com.r3.conclave.common.EnclaveMode
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import javax.inject.Inject
@@ -36,7 +37,7 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Input
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     @get:Input
-    val extraJavaModules: Property<String> = objects.property(String::class.java).convention("")
+    val extraJavaModules: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
     @get:InputFiles
     val reflectionConfigurationFiles: ConfigurableFileCollection = objects.fileCollection()
     @get:InputFiles

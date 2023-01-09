@@ -32,7 +32,7 @@ conclave {
         signingType = dummyKey
     }
 
-    extraJavaModules = "java.logging,java.xml"
+    extraJavaModules = ["java.logging", "java.xml"]
 
     maxHeapSize = "5g"
     persistentFileSystemSize = "1g"

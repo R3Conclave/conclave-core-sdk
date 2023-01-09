@@ -22,6 +22,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
@@ -68,7 +69,7 @@ open class GenerateGramineBundle @Inject constructor(
     val enclaveJar: RegularFileProperty = objects.fileProperty()
 
     @get:Input
-    val extraJavaModules: Property<String> = objects.property(String::class.java)
+    val extraJavaModules: ListProperty<String> = objects.listProperty(String::class.java)
 
     @get:InputFile
     @get:Optional
@@ -168,19 +169,11 @@ open class GenerateGramineBundle @Inject constructor(
             "--ignore-missing-deps",
             enclaveJar
         ).run { trimEnd().split(",") }
-        val userModules = getExtraModules()
+        val userModules = extraJavaModules.get()
         //  jdk.crypto.ec is always used in the context of attestation, but it is not retrieved correctly
         //    using jdeps, hence we need to add it here.
         val defaultModules = listOf("jdk.crypto.ec")
         return (defaultModules + userModules + dependentModules).distinct().joinToString(separator = ",")
-    }
-
-    private fun getExtraModules(): List<String> {
-        return if (extraJavaModules.get().isNotEmpty()) {
-            extraJavaModules.get().lowercase().replace(" ", "").split(",")
-        } else {
-            emptyList()
-        }
     }
 
     private fun createCustomJDK(jlinkOutputPath: Path) {
