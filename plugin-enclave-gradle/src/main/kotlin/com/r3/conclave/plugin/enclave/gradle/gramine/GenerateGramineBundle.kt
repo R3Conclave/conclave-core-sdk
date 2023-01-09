@@ -178,8 +178,11 @@ open class GenerateGramineBundle @Inject constructor(
             "--ignore-missing-deps",
             enclaveJar
         ).run { trimEnd().split(",") }
-        val modules = getExtraModules()
-        return (modules + dependentModules).distinct().joinToString(separator = ",")
+        val userModules = getExtraModules()
+        //  jdk.crypto.ec is always used in the context of attestation, but it is not retrieved correctly
+        //    using jdeps, hence we need to add it here.
+        val defaultModules = listOf("jdk.crypto.ec")
+        return (defaultModules + userModules + dependentModules).distinct().joinToString(separator = ",")
     }
 
     private fun getExtraModules(): List<String> {

@@ -16,5 +16,4 @@ conclave {
     revocationLevel = 0
     runtime = runtimeType
     useInternalDockerRegistry = true
-    extraJavaModules = "jdk.crypto.ec"
 }
