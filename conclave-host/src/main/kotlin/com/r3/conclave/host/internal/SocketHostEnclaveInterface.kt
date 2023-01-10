@@ -68,22 +68,29 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
             try {
                 /** Wait for IO sockets, then close the server socket. */
                 serverSocket.use {
-                    it.soTimeout = 100
-
                     /**
                      * Attempt to receive the maximum number of concurrent calls from the enclave.
                      * Check the enclave subprocess periodically to ensure that it's still alive.
                      */
-                    while (true) {
-                        try {
-                            it.accept().use { initialSocket ->
-                                maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
-                            }
-                            break
-                        } catch (e: SocketTimeoutException) {
-                            check(everythingOkay())
+                    var connectionSuccessful = false
+
+                    val initialConnectionThread = Thread {
+                        it.accept().use { initialSocket ->
+                            maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
                         }
+                        connectionSuccessful = true
                     }
+
+                    initialConnectionThread.start()
+
+                    while (!connectionSuccessful) {
+                        check(everythingOkay()) {
+                            "Error establishing initial connection "
+                        }
+                        Thread.sleep(50)
+                    }
+
+                    initialConnectionThread.join()
 
                     /**
                      * Set up a pool of re-usable call contexts, each with their own socket.
