@@ -11,7 +11,6 @@ conclave {
     productID = 1
     revocationLevel = 0
     runtime = runtimeType
-    useInternalDockerRegistry = true
 
     //  Note that the content of thread_safe_enclave_private_key_same_signer.pem is the same as
     //    thread_safe_enclave_private_key.pem in thread_safe_enclave module.

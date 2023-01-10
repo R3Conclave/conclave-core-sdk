@@ -1,9 +1,9 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
-import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
@@ -24,24 +24,19 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
 
     companion object {
         private val GRAMINE_VERSION = getManifestAttribute("Gramine-Version")
-        private val DOCKER_CONCLAVE_BUILD_TAG = getManifestAttribute("Docker-Conclave-Build-Tag")
     }
 
     @get:Input
     val baseDirectory: Property<String> = objects.property(String::class.java)
 
     @get:Input
+    val tag: Property<String> = objects.property(String::class.java)
+
+    @get:Input
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
-
-    @get:Input
     val runtimeType: Property<RuntimeType> = objects.property(RuntimeType::class.java)
-
-    private lateinit var image: String
-
-    private lateinit var fullyQualifiedName: String
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -49,18 +44,15 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-        image = "conclave-build"
-        fullyQualifiedName = "conclave-docker-dev.software.r3.com/com.r3.conclave/$image:$DOCKER_CONCLAVE_BUILD_TAG"
-
-        if (buildInDocker(buildInDocker) && !useInternalDockerRegistry.get()) {
-            val conclaveBuildDir = temporaryDir.toPath() / image
-            LinuxExec::class.java.copyResource("/$image/Dockerfile", conclaveBuildDir / "Dockerfile")
+        if (buildInDocker(buildInDocker)) {
+            val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
+            LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
             runDockerCommand(
                 listOf(
                     "docker",
                     "build",
-                    "--tag", fullyQualifiedName,
+                    "--tag", tag.get(),
                     "--build-arg",
                     "gramine_version=$GRAMINE_VERSION",
                     conclaveBuildDir
@@ -180,6 +172,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // to support Windows.
         val userId = commandWithOutput("id", "-u")
         val groupId = commandWithOutput("id", "-g")
+        val image = tag.get()
         val dockerizedCommand = command.mapToDockerWorkingDirectory()
         val dockerizedExtraParams = extraParams.mapToDockerWorkingDirectory()
         val dockerRun = listOf(
@@ -189,6 +182,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
             "-u", "$userId:$groupId",
             "-v", "${baseDirectory.get()}:$DOCKER_WORKING_DIR"
         )
-        return dockerRun + dockerizedExtraParams + fullyQualifiedName + dockerizedCommand
+        return dockerRun + dockerizedExtraParams + image + dockerizedCommand
     }
 }

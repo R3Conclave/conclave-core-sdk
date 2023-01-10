@@ -270,8 +270,8 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
 
         val linuxExec = target.createTask<LinuxExec>("setupLinuxExecEnvironment", isPythonEnclave) { task ->
             task.baseDirectory.set(target.projectDir.toPath().toString())
+            task.tag.set("conclave-build:latest")
             task.buildInDocker.set(conclaveExtension.buildInDocker)
-            task.useInternalDockerRegistry.set(conclaveExtension.useInternalDockerRegistry)
             task.runtimeType.set(runtimeType)
         }
 

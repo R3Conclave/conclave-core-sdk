@@ -15,8 +15,6 @@ import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceGramineDCAP
 import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceMock
 import com.r3.conclave.host.internal.loggerFor
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.utils.IOUtils
-import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URL
 import java.nio.file.Files
@@ -24,8 +22,10 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
-import kotlin.io.path.*
-
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
 
 class GramineEnclaveHandle(
     override val enclaveMode: EnclaveMode,
@@ -35,7 +35,7 @@ class GramineEnclaveHandle(
 
     companion object {
         private val logger = loggerFor<GramineEnclaveHandle>()
-        const val GRAMINE_ENTRY_POINT = "java"
+        private const val GRAMINE_ENTRY_POINT = "java"
         private const val MOCK_MODE_UNSUPPORTED_MESSAGE = "Gramine enclave handle does not support mock mode enclaves"
 
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
@@ -198,6 +198,7 @@ class GramineEnclaveHandle(
                     path.createDirectories()
                 } else {
                     Files.copy(zip, path)
+
                     if (entry.name.endsWith("tar.gz")) {
                         unTarFile(path, workingDirectory)
                     }

@@ -33,8 +33,6 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Input
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     @get:Input
-    val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
-    @get:Input
     val supportLanguages: Property<String> = objects.property(String::class.java).convention("")
     @get:Input
     val extraJavaModules: ListProperty<String> = objects.listProperty(String::class.java).convention(emptyList())
