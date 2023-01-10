@@ -5,7 +5,6 @@ plugins {
 conclave {
     productID = 100
     revocationLevel = 2
-    useInternalDockerRegistry = true
 
     release {
         signingType = dummyKey

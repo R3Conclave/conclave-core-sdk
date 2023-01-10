@@ -27,5 +27,4 @@ conclave {
     runtime = findProperty("runtimeType").toString()  // This is provided by AbstractPluginTaskTest
     reflectionConfigurationFiles.from("reflectionconfig.json")
     serializationConfigurationFiles.from("serializationconfig.json")
-    useInternalDockerRegistry = true
 }

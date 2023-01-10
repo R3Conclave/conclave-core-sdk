@@ -35,9 +35,6 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val useInternalDockerRegistry: Property<Boolean> = objects.property(Boolean::class.java)
-
-    @get:Input
     val runtimeType: Property<GradleEnclavePlugin.RuntimeType> = objects.property(GradleEnclavePlugin.RuntimeType::class.java)
 
     override fun action() {
@@ -46,7 +43,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // Building the enclave requires docker container to make the experience consistent between all OSs.
         // This helps with using Gramine too, as it's included in the docker container and users don't need to
         // installed it by themselves. Only Python Gramine enclaves are built outside the container.
-        if (buildInDocker(buildInDocker) && !useInternalDockerRegistry.get()) {
+        if (buildInDocker(buildInDocker)) {
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
