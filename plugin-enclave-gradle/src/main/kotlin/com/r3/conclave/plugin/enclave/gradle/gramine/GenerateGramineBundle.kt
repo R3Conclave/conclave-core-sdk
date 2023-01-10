@@ -68,7 +68,6 @@ open class GenerateGramineBundle @Inject constructor(
 
     override fun action() {
         enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
-        signingKey.copyToOutputDir(SIGNING_KEY)
 
         val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
@@ -156,12 +155,15 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
+        signingKey.copyToOutputDir(SIGNING_KEY)
         execCommand(
             "gramine-sgx-sign",
             "--manifest=${GRAMINE_MANIFEST}",
             "--key=${SIGNING_KEY}",
             "--output=${GRAMINE_SGX_MANIFEST}"
         )
+        //  We can remove the copy of the signing key so that it does not get packaged in the bundle
+        outputDir.file(SIGNING_KEY).get().asFile.toPath().deleteExisting()
     }
 
     /**
