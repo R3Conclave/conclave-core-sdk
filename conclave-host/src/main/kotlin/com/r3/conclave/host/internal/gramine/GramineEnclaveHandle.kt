@@ -37,7 +37,6 @@ class GramineEnclaveHandle(
         private val logger = loggerFor<GramineEnclaveHandle>()
         private const val GRAMINE_SECCOMP = "gramine-seccomp.json"
         private const val MOCK_MODE_UNSUPPORTED_MESSAGE = "Gramine enclave handle does not support mock mode enclaves"
-        private val dockerImageTag = getManifestAttribute("Docker-Conclave-Build-Tag")
 
         private fun getGramineExecutable(enclaveMode: EnclaveMode) =
             when (enclaveMode) {
@@ -249,7 +248,7 @@ class GramineEnclaveHandle(
             //  Set the directory internally used in Docker as the working directory
             "-w", DOCKER_WORKING_DIR,
             "--security-opt", "seccomp=$workingDirectoryPath/$GRAMINE_SECCOMP",
-            "conclave-docker-dev.software.r3.com/com.r3.conclave/conclave-build:$dockerImageTag"
+            "conclave-build:latest"
         )
     }
 
