@@ -445,13 +445,21 @@ object QuoteVerifier {
         return EnclaveTcbStatus.Revoked
     }
 
-    private fun getMatchingTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
+    private fun getMatchingTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbLevel {
         val pckTcbs = IntArray(16) { pckExtensions.getInt("${SGX_TCB_OID}.${it + 1}") }
         val pckPceSvn = pckExtensions.getInt(SGX_PCESVN_OID)
 
-        for (lvl in tcbInfo.tcbLevels) {
-            if (isCpuSvnHigherOrEqual(pckTcbs, lvl.tcb) && pckPceSvn >= lvl.tcb.pcesvn) {
-                return lvl.tcbStatus
+        /**
+         * Ignore TDX quotes for now
+         * TODO: CON-1273, Audit changes to the intel QVL
+         */
+        require(tcbInfo.id != TypeID.TDX) {
+            "TDX quotes are not supported."
+        }
+
+        for (tcbLevel in tcbInfo.tcbLevels) {
+            if (isCpuSvnHigherOrEqual(pckTcbs, tcbLevel.tcb) && pckPceSvn >= tcbLevel.tcb.pcesvn) {
+                return tcbLevel
             }
         }
 
@@ -461,41 +469,25 @@ object QuoteVerifier {
     private fun isCpuSvnHigherOrEqual(pckTcb: IntArray, jsonTcb: Tcb): Boolean {
         for (j in pckTcb.indices) {
             // If *ANY* CPUSVN component is lower then CPUSVN is considered lower
-            if (pckTcb[j] < getSgxTcbComponentSvn(jsonTcb, j)) return false
+            if (pckTcb[j] < jsonTcb.sgxtcbcompsvn[j]) return false
         }
         // but for CPUSVN to be considered higher it requires that *EVERY* CPUSVN component to be higher or equal
         return true
     }
 
     private fun checkTcbLevel(pckExtensions: SGXExtensionASN1Parser, tcbInfo: TcbInfo): TcbStatus {
-        val tcbLevelStatus = getMatchingTcbLevel(pckExtensions, tcbInfo)
-        check(tcbInfo.version == 2 || tcbLevelStatus != TcbStatus.OutOfDateConfigurationNeeded) {
-            "TCB_UNRECOGNIZED_STATUS"
-        }
-        return tcbLevelStatus
-    }
+        val tcbLevel = getMatchingTcbLevel(pckExtensions, tcbInfo)
 
-    private fun getSgxTcbComponentSvn(tcb: Tcb, index: Int): Int {
-        // 0 base index
-        return when (index) {
-            0 -> tcb.sgxtcbcomp01svn
-            1 -> tcb.sgxtcbcomp02svn
-            2 -> tcb.sgxtcbcomp03svn
-            3 -> tcb.sgxtcbcomp04svn
-            4 -> tcb.sgxtcbcomp05svn
-            5 -> tcb.sgxtcbcomp06svn
-            6 -> tcb.sgxtcbcomp07svn
-            7 -> tcb.sgxtcbcomp08svn
-            8 -> tcb.sgxtcbcomp09svn
-            9 -> tcb.sgxtcbcomp10svn
-            10 -> tcb.sgxtcbcomp11svn
-            11 -> tcb.sgxtcbcomp12svn
-            12 -> tcb.sgxtcbcomp13svn
-            13 -> tcb.sgxtcbcomp14svn
-            14 -> tcb.sgxtcbcomp15svn
-            15 -> tcb.sgxtcbcomp16svn
-            else -> throw GeneralSecurityException("Invalid sgxtcbcompsvn index $index")
+        /**
+         * This check will currently always pass, but is added for safety in case of future modifications.
+         * Logic comes from the Intel QVL
+         * TODO: CON-1273, Audit changes to the intel QVL
+         */
+        check (!(tcbLevel.tcbStatus == TcbStatus.OutOfDateConfigurationNeeded && tcbInfo.version.id < 2)) {
+            "TCB_UNRCOGNISED_STATUS"
         }
+
+        return tcbLevel.tcbStatus
     }
 
     private fun verify(check: Boolean, status: ErrorStatus) {
